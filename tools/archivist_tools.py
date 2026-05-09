@@ -1,16 +1,21 @@
 import os
 import re
 from datetime import datetime
+from functools import lru_cache
 from pathlib import Path
 
 from dotenv import load_dotenv
+from langchain_chroma import Chroma
 from langchain_core.tools import tool
+from langchain_text_splitters import RecursiveCharacterTextSplitter
 
 from schemas.pkm_models import MemoryEntry
 
 load_dotenv()
 
 VAULT_PATH = Path(os.getenv("OBSIDIAN_VAULT_PATH", "./memories"))
+
+_vs_cache: dict = {}  # {"mtime_sum": float, "vs": Chroma}
 
 _VAULT_FOLDERS = [
     "00_Inbox",
@@ -33,6 +38,14 @@ def init_vault_structure() -> None:
 
 
 init_vault_structure()
+
+
+
+@lru_cache(maxsize=1)
+def get_embeddings():
+    print("\n[System]: ⏳ กำลังเตรียมระบบความจำ (Semantic Search)... (อาจใช้เวลาโหลดโมเดลสักครู่ในครั้งแรก)")
+    from langchain_huggingface import HuggingFaceEmbeddings
+    return HuggingFaceEmbeddings(model_name="sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2")
 
 
 @tool
@@ -92,50 +105,39 @@ def save_memory(
 
     if file_path.exists():
         existing = file_path.read_text(encoding="utf-8")
-        file_path.write_text(existing + "\n\n---\n\n" + body, encoding="utf-8")
+        if existing.startswith("---"):
+            parts = existing.split("---", 2)
+            if len(parts) >= 3:
+                fm = re.sub(r'\nlast_updated: .+', '', parts[1]).rstrip()
+                fm += f"\nlast_updated: {date_str}\n"
+                existing = "---" + fm + "---" + parts[2]
+        update_header = f"## Update — {date_str}\n\n"
+        file_path.write_text(existing + "\n\n---\n\n" + update_header + body, encoding="utf-8")
+        _rebuild_index()
         return f"เพิ่มข้อมูลสำเร็จ (append): {file_path}"
 
     file_path.write_text(frontmatter + body, encoding="utf-8")
+    _rebuild_index()
     return f"บันทึกสำเร็จ (new): {file_path}"
 
 
 @tool
-def search_knowledge(query: str, strategy: str = "keyword") -> str:
-    """ค้นหาข้อมูลในทุกไฟล์ .md ภายใน Vault รวมโฟลเดอร์ย่อย พร้อมแสดง context รอบๆ
+def write_raw_markdown(content: str, folder_path: str, filename: str) -> str:
+    """บันทึกไฟล์ Markdown ดิบลง Vault โดยตรง ไม่แปลงหรือประมวลผลเนื้อหา
+    ใช้สำหรับข้อมูลที่มี YAML frontmatter พร้อมแล้ว เช่น ผลลัพธ์จาก Researcher tools
 
     Args:
-        query: คำหรือวลีที่ต้องการค้นหา
-        strategy: 'keyword' (default) หรือ 'semantic'
+        content: เนื้อหา Markdown พร้อม frontmatter ที่ต้องการบันทึก
+        folder_path: โฟลเดอร์ปลายทาง เช่น '30_Knowledge_Base/Macroeconomics'
+        filename: ชื่อไฟล์ไม่รวมนามสกุล เช่น 'Macro_Snapshot_2025-01-15'
     """
-    # TODO: Vector RAG สำหรับ strategy='semantic'
-
-    md_files = list(VAULT_PATH.rglob("*.md"))
-    if not md_files:
-        return "ยังไม่มีไฟล์ความจำใดใน Vault"
-
-    results = []
-    query_lower = query.lower()
-    context_window = 2
-
-    for file_path in md_files:
-        lines = file_path.read_text(encoding="utf-8").splitlines()
-        matches = []
-        for i, line in enumerate(lines):
-            if query_lower in line.lower():
-                start = max(0, i - context_window)
-                end = min(len(lines), i + context_window + 1)
-                excerpt = "\n".join(
-                    f"  {'>' if j == i else ' '} {lines[j]}" for j in range(start, end)
-                )
-                matches.append(f"  บรรทัด {i + 1}:\n{excerpt}")
-        if matches:
-            rel_path = file_path.relative_to(VAULT_PATH)
-            results.append(f"[{rel_path}]\n" + "\n".join(matches))
-
-    if not results:
-        return f"ไม่พบคำว่า '{query}' ในไฟล์ความจำใดเลย"
-
-    return f"ผลการค้นหา '{query}':\n\n" + "\n\n".join(results)
+    target_dir = VAULT_PATH / folder_path
+    target_dir.mkdir(parents=True, exist_ok=True)
+    safe_name = filename.replace("/", "-").replace("\\", "-")
+    file_path = target_dir / f"{safe_name}.md"
+    file_path.write_text(content, encoding="utf-8")
+    _rebuild_index()
+    return f"บันทึกสำเร็จ (raw): {file_path}"
 
 
 @tool
@@ -149,7 +151,10 @@ def read_file(filepath: str) -> str:
     if not file_path.exists():
         return f"ไม่พบไฟล์: {filepath}"
 
+    _READ_FILE_LIMIT = 8000
     content = file_path.read_text(encoding="utf-8")
+    if len(content) > _READ_FILE_LIMIT:
+        content = content[:_READ_FILE_LIMIT] + f"\n\n...[ตัดทอน — ไฟล์ยาว {len(content)} ตัวอักษร]"
     return f"=== {filepath} ===\n\n{content}"
 
 
@@ -174,22 +179,18 @@ def write_log(action: str, target: str, summary: str) -> str:
     return f"บันทึก log สำเร็จ: [{timestamp}] {action} | {target}"
 
 
-@tool
-def update_master_index() -> str:
-    """สแกน Vault และสร้าง/อัปเดตสารบัญ index.md อัตโนมัติ จัดกลุ่มตาม Folder
-    ข้ามโฟลเดอร์ 00_Inbox และ Daily_Logs รวมถึงไฟล์ระบบ log.md และ index.md
-    """
+def _rebuild_index() -> str:
+    """สแกน Vault และเขียน index.md ใหม่ — เรียกได้ทั้งจาก tool และจาก save functions โดยตรง"""
     _SYSTEM_FILES = {"log.md", "index.md"}
-    all_files = sorted(VAULT_PATH.rglob("*.md"))
+    all_files = [
+        f for f in sorted(VAULT_PATH.rglob("*.md"))
+        if f.name not in _SYSTEM_FILES
+        and not any(excl in f.parts for excl in _INDEX_EXCLUDE)
+    ]
 
     folder_map: dict[str, list[tuple[str, str]]] = {}
     for file_path in all_files:
         rel = file_path.relative_to(VAULT_PATH)
-        if rel.name in _SYSTEM_FILES:
-            continue
-        if any(excl in rel.parts for excl in _INDEX_EXCLUDE):
-            continue
-
         folder = str(rel.parent) if rel.parent != Path(".") else "Root"
         content = file_path.read_text(encoding="utf-8")
         m = re.search(r'^entity_type:\s*(.+)$', content, re.MULTILINE)
@@ -220,12 +221,24 @@ def update_master_index() -> str:
 
 
 @tool
+def update_master_index() -> str:
+    """สแกน Vault และสร้าง/อัปเดตสารบัญ index.md อัตโนมัติ จัดกลุ่มตาม Folder
+    ข้ามโฟลเดอร์ 00_Inbox และ Daily_Logs รวมถึงไฟล์ระบบ log.md และ index.md
+    """
+    return _rebuild_index()
+
+
+@tool
 def lint_structural_health() -> str:
     """ตรวจสุขภาพเชิงโครงสร้างของ Vault: ค้นหา Orphan files (ไม่มีไฟล์ใด Wikilink โยงมา)
     และ Empty files (ไม่มีเนื้อหา) ส่งรายงานกลับมาให้ทราบว่าไฟล์ไหนต้องจัดการ
     """
     _SYSTEM_FILES = {"log.md", "index.md"}
-    all_files = [f for f in VAULT_PATH.rglob("*.md") if f.name not in _SYSTEM_FILES]
+    all_files = [
+        f for f in VAULT_PATH.rglob("*.md")
+        if f.name not in _SYSTEM_FILES
+        and not any(excl in f.parts for excl in _INDEX_EXCLUDE)
+    ]
 
     if not all_files:
         return "ไม่มีไฟล์ใดใน Vault ที่จะตรวจสอบ"
@@ -310,6 +323,64 @@ def lint_semantic_conflict(target_folder_or_entity: str) -> str:
             content = content[:_SEMANTIC_CONTENT_LIMIT] + "\n...[ตัดทอน]"
         rel = file_path.relative_to(VAULT_PATH)
         parts.append(f"## [{rel}]\n{content}\n")
+
+    return "\n".join(parts)
+
+
+@tool
+def search_all_memories(keyword: str) -> str:
+    """ค้นหาความจำทั้งหมดใน Vault ด้วย Semantic Search (Vector RAG) แบบ Local
+    เหมาะสำหรับคำถามที่ต้องการความเข้าใจความหมาย ไม่ใช่แค่ keyword ตรงๆ
+
+    Args:
+        keyword: คำถามหรือวลีที่ต้องการค้นหาตามความหมาย
+    """
+    md_files = [
+        f for f in VAULT_PATH.rglob("*.md")
+        if not any(excl in f.parts for excl in _INDEX_EXCLUDE)
+    ]
+    if not md_files:
+        return "ยังไม่มีไฟล์ความจำใดใน Vault"
+
+    # ตรวจว่า vault เปลี่ยนแปลงหรือไม่ ถ้าไม่เปลี่ยนใช้ vectorstore ที่แคชไว้
+    mtime_sum = sum(f.stat().st_mtime for f in md_files)
+    if _vs_cache.get("mtime_sum") != mtime_sum:
+        splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
+        split_texts: list[str] = []
+        split_metas: list[dict] = []
+        for file_path in md_files:
+            content = file_path.read_text(encoding="utf-8")
+            rel = str(file_path.relative_to(VAULT_PATH))
+            for chunk in splitter.split_text(content):
+                split_texts.append(chunk)
+                split_metas.append({"source": rel})
+
+        if not split_texts:
+            return "ไม่พบเนื้อหาในไฟล์ความจำที่สามารถค้นหาได้"
+
+        try:
+            vectorstore = Chroma.from_texts(
+                texts=split_texts,
+                metadatas=split_metas,
+                embedding=get_embeddings(),
+            )
+            _vs_cache["mtime_sum"] = mtime_sum
+            _vs_cache["vs"] = vectorstore
+        except Exception as e:
+            return f"เกิดข้อผิดพลาดในการสร้าง vectorstore: {e}"
+
+    try:
+        results = _vs_cache["vs"].similarity_search(keyword, k=5)
+    except Exception as e:
+        return f"เกิดข้อผิดพลาดในการค้นหา: {e}"
+
+    if not results:
+        return f"ไม่พบความจำที่เกี่ยวข้องกับ '{keyword}'"
+
+    parts = [f"ผลการค้นหาเชิงความหมายสำหรับ '{keyword}' ({len(results)} ผลลัพธ์):\n"]
+    for i, doc in enumerate(results, 1):
+        source = doc.metadata.get("source", "ไม่ทราบแหล่งที่มา")
+        parts.append(f"--- ผลลัพธ์ที่ {i} | แหล่งที่มา: [{source}] ---\n{doc.page_content}\n")
 
     return "\n".join(parts)
 

@@ -5,30 +5,27 @@ from dotenv import load_dotenv
 from langgraph.checkpoint.memory import MemorySaver
 from prompt_toolkit import prompt
 
+from core.utils import normalize_content
+
 load_dotenv()
 
 
-def _safe_content(msg) -> str:
-    """ดึงเนื้อหาจาก message อย่างปลอดภัย รองรับทั้ง str และ list (Google Gemini format)"""
-    content = getattr(msg, "content", "")
-    if isinstance(content, list):
-        return " ".join(
-            part.get("text", "") if isinstance(part, dict) else str(part)
-            for part in content
-        ).strip()
-    return str(content).strip() if content else ""
-
-
 def _display(node_name: str, msg) -> None:
-    content = _safe_content(msg)
+    content = normalize_content(getattr(msg, "content", ""))
     if not content:
         return
     if content.startswith("[Manager → Archivist]"):
         body = content[len("[Manager → Archivist]"):].strip()
         print(f"\n  [Manager → Archivist]: {body}")
-    elif content.startswith("[Archivist → Manager]"):
-        body = content[len("[Archivist → Manager]"):].strip()
-        print(f"  [Archivist → Manager]: {body}")
+    elif content.startswith("[Archivist]"):
+        body = content[len("[Archivist]"):].strip()
+        print(f"  [Archivist]: {body}")
+    elif content.startswith("[Manager → Researcher]"):
+        body = content[len("[Manager → Researcher]"):].strip()
+        print(f"\n  [Manager → Researcher]: {body}")
+    elif content.startswith("[Researcher → Manager]"):
+        body = content[len("[Researcher → Manager]"):].strip()
+        print(f"  [Researcher → Manager]: {body}")
     else:
         print(f"\n[{node_name}]: {content}")
 
@@ -43,13 +40,13 @@ def main():
 
     print("=" * 60)
     print("  Investment Manager AI — Multi-Agent System")
-    print("  Supervisor: The Manager | Worker: The Archivist")
+    print("  Supervisor: The Manager | Workers: The Archivist, The Researcher")
     print("  พิมพ์ 'quit' 'exit' หรือ 'ออก' เพื่อออกจากโปรแกรม")
     print("=" * 60)
 
     memory = MemorySaver()
     graph = build_graph(checkpointer=memory)
-    config = {"configurable": {"thread_id": "1"}, "recursion_limit": 15}
+    config = {"configurable": {"thread_id": "1"}, "recursion_limit": 25}
 
     while True:
         try:
