@@ -1,5 +1,6 @@
 import os
 import re
+import shutil
 from datetime import datetime
 from functools import lru_cache
 from pathlib import Path
@@ -14,6 +15,8 @@ from schemas.pkm_models import MemoryEntry
 load_dotenv()
 
 VAULT_PATH = Path(os.getenv("OBSIDIAN_VAULT_PATH", "./memories"))
+CHROMA_PATH = VAULT_PATH / ".chroma_index"
+_CHROMA_MTIME_FILE = VAULT_PATH / ".chroma_mtime"
 
 _vs_cache: dict = {}  # {"mtime_sum": float, "vs": Chroma}
 
@@ -135,9 +138,11 @@ def write_raw_markdown(content: str, folder_path: str, filename: str) -> str:
     target_dir.mkdir(parents=True, exist_ok=True)
     safe_name = filename.replace("/", "-").replace("\\", "-")
     file_path = target_dir / f"{safe_name}.md"
+    existed = file_path.exists()
     file_path.write_text(content, encoding="utf-8")
     _rebuild_index()
-    return f"บันทึกสำเร็จ (raw): {file_path}"
+    action = "overwritten" if existed else "new"
+    return f"บันทึกสำเร็จ (raw, {action}): {file_path}"
 
 
 @tool
@@ -160,6 +165,7 @@ def read_file(filepath: str) -> str:
 
 _LINKED_CONTENT_LIMIT = 1500
 _INDEX_EXCLUDE = ("00_Inbox", "01_Daily_Logs")
+_VAULT_SYSTEM_FILES = {"log.md", "index.md"}
 
 
 @tool
@@ -181,10 +187,9 @@ def write_log(action: str, target: str, summary: str) -> str:
 
 def _rebuild_index() -> str:
     """สแกน Vault และเขียน index.md ใหม่ — เรียกได้ทั้งจาก tool และจาก save functions โดยตรง"""
-    _SYSTEM_FILES = {"log.md", "index.md"}
     all_files = [
         f for f in sorted(VAULT_PATH.rglob("*.md"))
-        if f.name not in _SYSTEM_FILES
+        if f.name not in _VAULT_SYSTEM_FILES
         and not any(excl in f.parts for excl in _INDEX_EXCLUDE)
     ]
 
@@ -233,10 +238,9 @@ def lint_structural_health() -> str:
     """ตรวจสุขภาพเชิงโครงสร้างของ Vault: ค้นหา Orphan files (ไม่มีไฟล์ใด Wikilink โยงมา)
     และ Empty files (ไม่มีเนื้อหา) ส่งรายงานกลับมาให้ทราบว่าไฟล์ไหนต้องจัดการ
     """
-    _SYSTEM_FILES = {"log.md", "index.md"}
     all_files = [
         f for f in VAULT_PATH.rglob("*.md")
-        if f.name not in _SYSTEM_FILES
+        if f.name not in _VAULT_SYSTEM_FILES
         and not any(excl in f.parts for excl in _INDEX_EXCLUDE)
     ]
 
@@ -244,25 +248,26 @@ def lint_structural_health() -> str:
         return "ไม่มีไฟล์ใดใน Vault ที่จะตรวจสอบ"
 
     stem_to_path = {f.stem: f for f in all_files}
+    file_contents = {f: f.read_text(encoding="utf-8") for f in all_files}
 
-    outbound: dict[str, set[str]] = {f.stem: set() for f in all_files}
     inbound: dict[str, set[str]] = {f.stem: set() for f in all_files}
+    empty_files: list[str] = []
+
     for file_path in all_files:
-        for raw in re.findall(r'\[\[(.*?)\]\]', file_path.read_text(encoding="utf-8")):
+        content = file_contents[file_path]
+
+        for raw in re.findall(r'\[\[(.*?)\]\]', content):
             target = raw.split("|")[0].strip()
             if target in stem_to_path:
-                outbound[file_path.stem].add(target)
                 inbound[target].add(file_path.stem)
 
-    orphans = sorted(s for s in stem_to_path if not outbound[s] and not inbound[s])
-
-    empty_files = []
-    for file_path in all_files:
-        raw = file_path.read_text(encoding="utf-8").strip()
-        parts = raw.split("---", 2) if raw.startswith("---") else ["", "", raw]
-        body = parts[2].strip() if len(parts) >= 3 else raw
+        stripped = content.strip()
+        parts = stripped.split("---", 2) if stripped.startswith("---") else ["", "", stripped]
+        body = parts[2].strip() if len(parts) >= 3 else stripped
         if not body:
             empty_files.append(file_path.stem)
+
+    orphans = sorted(s for s in stem_to_path if not inbound[s])
 
     lines = [
         "# Vault Health Report",
@@ -335,42 +340,73 @@ def search_all_memories(keyword: str) -> str:
     Args:
         keyword: คำถามหรือวลีที่ต้องการค้นหาตามความหมาย
     """
+    _SEARCH_SYSTEM_FILES = {"log.md", "index.md"}
     md_files = [
         f for f in VAULT_PATH.rglob("*.md")
-        if not any(excl in f.parts for excl in _INDEX_EXCLUDE)
+        if f.name not in _SEARCH_SYSTEM_FILES
+        and not any(excl in f.parts for excl in _INDEX_EXCLUDE)
     ]
     if not md_files:
         return "ยังไม่มีไฟล์ความจำใดใน Vault"
 
-    # ตรวจว่า vault เปลี่ยนแปลงหรือไม่ ถ้าไม่เปลี่ยนใช้ vectorstore ที่แคชไว้
     mtime_sum = sum(f.stat().st_mtime for f in md_files)
-    if _vs_cache.get("mtime_sum") != mtime_sum:
-        splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
-        split_texts: list[str] = []
-        split_metas: list[dict] = []
-        for file_path in md_files:
-            content = file_path.read_text(encoding="utf-8")
-            rel = str(file_path.relative_to(VAULT_PATH))
-            for chunk in splitter.split_text(content):
-                split_texts.append(chunk)
-                split_metas.append({"source": rel})
 
-        if not split_texts:
-            return "ไม่พบเนื้อหาในไฟล์ความจำที่สามารถค้นหาได้"
+    # 1) In-memory cache hit — ไม่ต้องทำอะไรเพิ่ม
+    if _vs_cache.get("mtime_sum") == mtime_sum and "vs" in _vs_cache:
+        vectorstore = _vs_cache["vs"]
+    else:
+        # 2) On-disk cache hit — โหลดจาก persist_directory ถ้า mtime ตรงกัน
+        stored_mtime: float | None = None
+        if _CHROMA_MTIME_FILE.exists():
+            try:
+                stored_mtime = float(_CHROMA_MTIME_FILE.read_text().strip())
+            except (ValueError, OSError):
+                pass
 
-        try:
-            vectorstore = Chroma.from_texts(
-                texts=split_texts,
-                metadatas=split_metas,
-                embedding=get_embeddings(),
-            )
-            _vs_cache["mtime_sum"] = mtime_sum
-            _vs_cache["vs"] = vectorstore
-        except Exception as e:
-            return f"เกิดข้อผิดพลาดในการสร้าง vectorstore: {e}"
+        vectorstore = None
+        if stored_mtime == mtime_sum and CHROMA_PATH.exists():
+            try:
+                vectorstore = Chroma(
+                    persist_directory=str(CHROMA_PATH),
+                    embedding_function=get_embeddings(),
+                )
+            except Exception:
+                vectorstore = None  # ล้มเหลว → rebuild
+
+        # 3) Rebuild จาก scratch แล้ว persist ลงดิสก์
+        if vectorstore is None:
+            splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
+            split_texts: list[str] = []
+            split_metas: list[dict] = []
+            for file_path in md_files:
+                content = file_path.read_text(encoding="utf-8")
+                rel = str(file_path.relative_to(VAULT_PATH))
+                for chunk in splitter.split_text(content):
+                    split_texts.append(chunk)
+                    split_metas.append({"source": rel})
+
+            if not split_texts:
+                return "ไม่พบเนื้อหาในไฟล์ความจำที่สามารถค้นหาได้"
+
+            if CHROMA_PATH.exists():
+                shutil.rmtree(CHROMA_PATH)
+
+            try:
+                vectorstore = Chroma.from_texts(
+                    texts=split_texts,
+                    metadatas=split_metas,
+                    embedding=get_embeddings(),
+                    persist_directory=str(CHROMA_PATH),
+                )
+                _CHROMA_MTIME_FILE.write_text(str(mtime_sum))
+            except Exception as e:
+                return f"เกิดข้อผิดพลาดในการสร้าง vectorstore: {e}"
+
+        _vs_cache["mtime_sum"] = mtime_sum
+        _vs_cache["vs"] = vectorstore
 
     try:
-        results = _vs_cache["vs"].similarity_search(keyword, k=5)
+        results = vectorstore.similarity_search(keyword, k=5)
     except Exception as e:
         return f"เกิดข้อผิดพลาดในการค้นหา: {e}"
 
@@ -395,13 +431,12 @@ def _find_file_by_name(name: str, all_files: list[Path]) -> Path | None:
 
 
 @tool
-def search_graph_context(entity_name: str, depth: int = 1) -> str:
+def search_graph_context(entity_name: str) -> str:
     """ค้นหาข้อมูล entity พร้อม linked entities ในรูปแบบ Graph (GraphRAG)
     ใช้เมื่อต้องการวิเคราะห์บริษัท, บุคคล, หรือเหตุการณ์แบบเจาะลึกพร้อมบริบทโดยรอบ
 
     Args:
         entity_name: ชื่อ entity ที่ต้องการค้นหา เช่น 'PTT', 'Somchai'
-        depth: ความลึกของการ traverse (1 = entity หลัก + linked entities ชั้นแรก)
     """
     all_files = list(VAULT_PATH.rglob("*.md"))
     if not all_files:
@@ -420,7 +455,7 @@ def search_graph_context(entity_name: str, depth: int = 1) -> str:
     output = f"--- Main Entity: {main_file.stem} ---\n{main_content}\n"
 
     # Step 4-5: อ่าน linked files
-    if depth >= 1 and wikilinks:
+    if wikilinks:
         output += "\n--- Linked Connections ---\n"
         seen = set()
         for link_name in wikilinks:

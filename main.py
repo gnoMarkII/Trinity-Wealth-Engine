@@ -5,29 +5,29 @@ from dotenv import load_dotenv
 from langgraph.checkpoint.memory import MemorySaver
 from prompt_toolkit import prompt
 
+from core.security import PIIMiddleware
 from core.utils import normalize_content
 
 load_dotenv()
+
+
+_PREFIX_LABELS: dict[str, str] = {
+    "[Manager → Archivist]": "Manager → Archivist",
+    "[Manager → Researcher]": "Manager → Researcher",
+    "[Archivist]": "Archivist",
+    "[Researcher → Manager]": "Researcher → Manager",
+}
 
 
 def _display(node_name: str, msg) -> None:
     content = normalize_content(getattr(msg, "content", ""))
     if not content:
         return
-    if content.startswith("[Manager → Archivist]"):
-        body = content[len("[Manager → Archivist]"):].strip()
-        print(f"\n  [Manager → Archivist]: {body}")
-    elif content.startswith("[Archivist]"):
-        body = content[len("[Archivist]"):].strip()
-        print(f"  [Archivist]: {body}")
-    elif content.startswith("[Manager → Researcher]"):
-        body = content[len("[Manager → Researcher]"):].strip()
-        print(f"\n  [Manager → Researcher]: {body}")
-    elif content.startswith("[Researcher → Manager]"):
-        body = content[len("[Researcher → Manager]"):].strip()
-        print(f"  [Researcher → Manager]: {body}")
-    else:
-        print(f"\n[{node_name}]: {content}")
+    for prefix, label in _PREFIX_LABELS.items():
+        if content.startswith(prefix):
+            print(f"\n  [{label}]: {content[len(prefix):].strip()}")
+            return
+    print(f"\n[{node_name}]: {content}")
 
 
 def main():
@@ -47,6 +47,7 @@ def main():
     memory = MemorySaver()
     graph = build_graph(checkpointer=memory)
     config = {"configurable": {"thread_id": "1"}, "recursion_limit": 25}
+    pii = PIIMiddleware()
 
     while True:
         try:
@@ -61,6 +62,10 @@ def main():
         if user_input.lower() in ("quit", "exit", "q", "ออก"):
             print("ออกจากโปรแกรม...")
             break
+
+        user_input, had_pii = pii.anonymize(user_input)
+        if had_pii:
+            print("[Security] ตรวจพบและลบข้อมูล PII ก่อนส่งเข้าประมวลผล")
 
         print("\n[กำลังประมวลผล...]")
 
