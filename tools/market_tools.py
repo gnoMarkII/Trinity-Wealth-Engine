@@ -210,7 +210,7 @@ def ingest_stock_fundamentals(ticker: str) -> str:
 
     md_lines = [
         "---",
-        f"title: {short_name} ({ticker_upper}) — Fundamentals {today}",
+        f"title: {ticker_upper} Fundamentals {today}",
         "entity_type: Company",
         f"date: {today}",
         f"last_updated: {now_time}",
@@ -298,7 +298,7 @@ def ingest_stock_news(ticker: str) -> str:
 
     md_lines = [
         "---",
-        f"title: {ticker_upper} — Latest News {today}",
+        f"title: {ticker_upper} Latest News {today}",
         "entity_type: Company_News",
         f"ticker: {ticker_upper}",
         f"date: {today}",
@@ -374,7 +374,7 @@ def ingest_stock_consensus(ticker: str) -> str:
 
     md_lines = [
         "---",
-        f"title: {short_name} ({ticker_upper}) — Analyst Consensus {today}",
+        f"title: {ticker_upper} Analyst Consensus {today}",
         "entity_type: Analyst_Consensus",
         f"ticker: {ticker_upper}",
         f"date: {today}",
@@ -444,7 +444,7 @@ def ingest_financial_trends(ticker: str) -> str:
 
     md_lines = [
         "---",
-        f"title: {short_name} ({ticker_upper}) — Financial Trends {today}",
+        f"title: {ticker_upper} Financial Trends {today}",
         "entity_type: Financial_Trends",
         f"ticker: {ticker_upper}",
         f"date: {today}",
@@ -551,7 +551,7 @@ def ingest_stock_momentum(ticker: str) -> str:
 
     md_lines = [
         "---",
-        f"title: {short_name} ({ticker_upper}) — Momentum & Insider {today}",
+        f"title: {ticker_upper} Momentum Insider {today}",
         "entity_type: Stock_Momentum",
         f"ticker: {ticker_upper}",
         f"date: {today}",
@@ -630,7 +630,7 @@ def ingest_financial_health(ticker: str) -> str:
 
     md_lines = [
         "---",
-        f"title: {short_name} ({ticker_upper}) — Financial Health {today}",
+        f"title: {ticker_upper} Financial Health {today}",
         "entity_type: Financial_Health",
         f"ticker: {ticker_upper}",
         f"date: {today}",

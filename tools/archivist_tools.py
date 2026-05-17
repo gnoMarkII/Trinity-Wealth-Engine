@@ -137,6 +137,8 @@ def write_raw_markdown(content: str, folder_path: str, filename: str) -> str:
     target_dir = VAULT_PATH / folder_path
     target_dir.mkdir(parents=True, exist_ok=True)
     safe_name = filename.replace("/", "-").replace("\\", "-")
+    safe_name = re.sub(r'[,()\[\].—–]', '', safe_name)
+    safe_name = re.sub(r'_{2,}', '_', safe_name).strip('_')
     file_path = target_dir / f"{safe_name}.md"
     existed = file_path.exists()
     file_path.write_text(content, encoding="utf-8")
