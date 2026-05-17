@@ -114,16 +114,58 @@ uv sync
 
 **2. ตั้งค่า Environment Variables**
 
-สร้างไฟล์ `.env` ที่ root ของโปรเจกต์:
-```env
-GOOGLE_API_KEY=your_google_api_key_here
-FRED_API_KEY=your_fred_api_key_here
-OBSIDIAN_VAULT_PATH=./memories
+คัดลอก `.env.example` แล้วใส่ค่า API Key ของตัวเอง:
+```bash
+cp .env.example .env
 ```
 
-> **ขอ API Key:**
-> - Google Gemini: [Google AI Studio](https://aistudio.google.com/app/apikey)
-> - FRED: [fred.stlouisfed.org](https://fred.stlouisfed.org/docs/api/api_key.html) (ฟรี)
+```env
+# =========================================
+# 📡 Model Keys
+# =========================================
+
+# Google Gemini — ขอได้ที่ https://aistudio.google.com/app/apikey
+GOOGLE_API_KEY=your_google_api_key_here
+
+# Anthropic Claude — ขอได้ที่ https://console.anthropic.com/ (optional)
+ANTHROPIC_API_KEY=your_anthropic_api_key_here
+
+# =========================================
+# 📁 Path
+# =========================================
+
+# โฟลเดอร์ที่ใช้เก็บ Obsidian Vault (ค่าเริ่มต้น: ./memories)
+OBSIDIAN_VAULT_PATH=./memories
+
+# =========================================
+# 📊 Data Sources
+# =========================================
+
+# FRED API — ขอได้ฟรีที่ https://fred.stlouisfed.org/docs/api/api_key.html
+FRED_API_KEY=your_fred_api_key_here
+
+# =========================================
+# 🔭 LangSmith Observability (optional)
+# =========================================
+
+# เปิดใช้ LangSmith Tracing — ลบออกหรือตั้งเป็น false เพื่อปิด
+LANGCHAIN_TRACING_V2=true
+LANGCHAIN_ENDPOINT="https://api.smith.langchain.com"
+
+# LangSmith API Key — ขอได้ที่ https://smith.langchain.com/
+LANGCHAIN_API_KEY=your_langsmith_api_key_here
+
+# ชื่อ Project ใน LangSmith Dashboard
+LANGCHAIN_PROJECT="Trinity-Wealth-Engine"
+```
+
+> **API Keys ที่จำเป็น:**
+> | Key | จำเป็น | ขอได้ที่ |
+> |-----|--------|---------|
+> | `GOOGLE_API_KEY` | ✅ บังคับ | [Google AI Studio](https://aistudio.google.com/app/apikey) |
+> | `FRED_API_KEY` | ✅ บังคับ (Hard Data) | [fred.stlouisfed.org](https://fred.stlouisfed.org/docs/api/api_key.html) — ฟรี |
+> | `ANTHROPIC_API_KEY` | ⬜ optional | [console.anthropic.com](https://console.anthropic.com/) |
+> | `LANGCHAIN_API_KEY` | ⬜ optional | [smith.langchain.com](https://smith.langchain.com/) — ฟรี |
 
 **3. รันระบบ**
 ```bash
