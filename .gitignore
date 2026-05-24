@@ -1,43 +1,60 @@
 # =========================================
-# 🛑 1. Secrets & API Keys (สำคัญระดับสูงสุด)
+# 1. Secrets & API Keys
 # =========================================
 .env
 .env.*
 !.env.example
 
 # =========================================
-# 🧠 2. Personal Data & State (ข้อมูลส่วนตัวและความจำ AI)
+# 2. Personal Data & State
 # =========================================
-# โฟลเดอร์ memories น่าจะเก็บประวัติการแชทหรือ Checkpoint ของ LangGraph
-# เราไม่ควรเอาประวัติการคุยเรื่องการลงทุนขึ้น Git ครับ
 memories/
 *.sqlite
 *.sqlite3
 *.db
 
 # =========================================
-# 🐍 3. Python & Virtual Environment
+# 3. Python & Virtual Environment
 # =========================================
-# สิ่งที่มีในรูปของคุณที่ต้อง ignore
 __pycache__/
 .venv/
-
-# ไฟล์ Python ขยะอื่นๆ
 *.py[cod]
 *$py.class
 *.so
 .uv/
 
 # =========================================
-# 📋 4. Code Review & Dev Utilities
+# 4. Test & Coverage Artifacts
+# =========================================
+.pytest_cache/
+.coverage
+coverage.xml
+htmlcov/
+
+# =========================================
+# 5. Build & Distribution
+# =========================================
+dist/
+build/
+*.egg-info/
+*.egg
+
+# =========================================
+# 6. Code Review & Dev Utilities
 # =========================================
 code_review.txt
 gen_code_review.py
+scripts/
 
 # =========================================
-# 💻 5. OS & IDE (ไฟล์ตั้งค่าโปรแกรม)
+# 7. OS & IDE
 # =========================================
 .vscode/
 .idea/
 .DS_Store
 Thumbs.db
+
+# =========================================
+# 8. Claude Code
+# =========================================
+.claude/settings.local.json

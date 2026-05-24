@@ -1,8 +1,8 @@
 import re
 
+_THAI_ID_PATTERN = re.compile(r'\b(\d)-?(\d{4})-?(\d{5})-?(\d{2})-?(\d)\b')
+
 _PII_PATTERNS: list[tuple[re.Pattern, str]] = [
-    # Thai national ID: 13 digits in 1-4-5-2-1 format, with or without dashes
-    (re.compile(r'\b\d-?\d{4}-?\d{5}-?\d{2}-?\d\b'), "[REDACTED_THAI_ID]"),
     # Credit card with separators: 4-4-4-4 groups (Visa/MC/Discover/etc.)
     (re.compile(r'\b\d{4}[ -]\d{4}[ -]\d{4}[ -]\d{4}\b'), "[REDACTED_CREDIT_CARD]"),
     # Credit card without separators: major BIN prefixes only (Visa/MC/Amex)
@@ -16,10 +16,23 @@ _PII_PATTERNS: list[tuple[re.Pattern, str]] = [
 ]
 
 
-class PIIMiddleware:
-    def anonymize(self, text: str) -> tuple[str, bool]:
-        """Redact PII from text. Returns (cleaned_text, was_pii_found)."""
-        result = text
-        for pattern, placeholder in _PII_PATTERNS:
-            result = pattern.sub(placeholder, result)
-        return result, result != text
+def _is_valid_thai_id(digits: str) -> bool:
+    """Validate Thai national ID via official mod-11 checksum."""
+    if len(digits) != 13 or not digits.isdigit():
+        return False
+    total = sum(int(d) * (13 - i) for i, d in enumerate(digits[:12]))
+    check = (11 - (total % 11)) % 10
+    return check == int(digits[12])
+
+
+def _redact_thai_id(match: re.Match) -> str:
+    digits = "".join(match.groups())
+    return "[REDACTED_THAI_ID]" if _is_valid_thai_id(digits) else match.group(0)
+
+
+def anonymize_pii(text: str) -> tuple[str, bool]:
+    """Redact PII from text. Returns (cleaned_text, was_pii_found)."""
+    result = _THAI_ID_PATTERN.sub(_redact_thai_id, text)
+    for pattern, placeholder in _PII_PATTERNS:
+        result = pattern.sub(placeholder, result)
+    return result, result != text

@@ -1,8 +1,46 @@
 from datetime import datetime, timedelta
+from typing import Literal
 
 import pandas as pd
 import yfinance as yf
 from langchain_core.tools import tool
+
+from core.logger import get_logger
+from core.retry import with_retry as _with_retry
+
+log = get_logger(__name__)
+
+
+Market = Literal["TH", "US"]
+
+
+def _normalize_yf_ticker(ticker: str, market: Market = "US") -> str:
+    """แปลง ticker → format ที่ yfinance รู้จัก
+    TH: เติม .BK ถ้ายังไม่มี (SET listings เช่น PTT → PTT.BK)
+    US: คืนตรงๆ (NYSE/Nasdaq ไม่ต้อง suffix)
+    """
+    sym = ticker.strip().upper()
+    if market == "TH" and not sym.endswith(".BK"):
+        return f"{sym}.BK"
+    return sym
+
+
+def _currency_for(market: Market) -> str:
+    """Derive currency code ของรายงานราคา/งบจาก market"""
+    return "THB" if market == "TH" else "USD"
+
+
+def _yf_info(ticker: str) -> dict:
+    """ดึง yf.Ticker(ticker).info พร้อม retry — wrap ทุก info call เพื่อกัน rate-limit"""
+    return _with_retry(lambda: yf.Ticker(ticker).info)
+
+
+def _yf_news(ticker: str) -> list:
+    return _with_retry(lambda: yf.Ticker(ticker).news)
+
+
+def _yf_financials(ticker: str):
+    return _with_retry(lambda: yf.Ticker(ticker).financials)
 
 
 def _fmt_number(value, fmt=".2f", suffix="") -> str:
@@ -17,8 +55,8 @@ def _fmt_number(value, fmt=".2f", suffix="") -> str:
         return "N/A"
 
 
-def _fmt_large(value) -> str:
-    """แปลง marketCap เป็น B/M/T เพื่ออ่านง่าย"""
+def _fmt_large(value, currency_code: str = "USD") -> str:
+    """แปลง marketCap เป็น B/M/T พร้อมระบุสกุล (default USD เพื่อ back-compat)"""
     if value is None:
         return "N/A"
     try:
@@ -28,16 +66,16 @@ def _fmt_large(value) -> str:
     except (TypeError, ValueError):
         return "N/A"
     if v >= 1e12:
-        return f"{v / 1e12:.2f}T USD"
+        return f"{v / 1e12:.2f}T {currency_code}"
     if v >= 1e9:
-        return f"{v / 1e9:.2f}B USD"
+        return f"{v / 1e9:.2f}B {currency_code}"
     if v >= 1e6:
-        return f"{v / 1e6:.2f}M USD"
-    return f"{v:.0f} USD"
+        return f"{v / 1e6:.2f}M {currency_code}"
+    return f"{v:.0f} {currency_code}"
 
 
-def _fmt_fin(value) -> str:
-    """แปลงตัวเลขงบการเงินเป็น B/M USD — คืน N/A ถ้า None หรือ NaN"""
+def _fmt_fin(value, currency_code: str = "USD") -> str:
+    """แปลงตัวเลขงบการเงินเป็น B/M พร้อมสกุล (default USD) — คืน N/A ถ้า None/NaN"""
     if value is None:
         return "N/A"
     try:
@@ -54,7 +92,7 @@ def _fmt_fin(value) -> str:
             s = f"{a / 1e6:.2f}M"
         else:
             s = f"{a:.0f}"
-        return f"-{s} USD" if neg else f"{s} USD"
+        return f"-{s} {currency_code}" if neg else f"{s} {currency_code}"
     except (TypeError, ValueError):
         return "N/A"
 
@@ -62,7 +100,7 @@ def _fmt_fin(value) -> str:
 def _summarize_insider_transactions(tk: yf.Ticker) -> str:
     """สรุปการซื้อ/ขายหุ้นของคนวงในใน 6 เดือนล่าสุดจาก insider_transactions"""
     try:
-        df = tk.insider_transactions
+        df = _with_retry(lambda: tk.insider_transactions)
         if df is None or df.empty:
             return "ไม่พบข้อมูล"
 
@@ -94,34 +132,38 @@ def _summarize_insider_transactions(tk: yf.Ticker) -> str:
 
 
 @tool
-def ingest_stock_fundamentals(ticker: str) -> str:
-    """ดึงข้อมูลพื้นฐานของหุ้นสหรัฐฯ รายตัวจาก Yahoo Finance
+def ingest_stock_fundamentals(ticker: str, market: Market = "US") -> str:
+    """ดึงข้อมูลพื้นฐานของหุ้นรายตัวจาก Yahoo Finance (รองรับ TH/US)
     ครอบคลุม: ข้อมูลทั่วไป, มูลค่าบริษัท, Valuation, ประสิทธิภาพ, ราคา
     Return เป็น Markdown พร้อม YAML frontmatter — ไม่บันทึกไฟล์ด้วยตัวเอง
 
     Args:
-        ticker: Ticker symbol เช่น 'AAPL', 'MSFT', 'NVDA'
+        ticker: Ticker symbol เช่น 'AAPL', 'PTT' (ห้ามมี .BK suffix — ระบบเติมให้)
+        market: 'TH' (SET, เติม .BK ให้) หรือ 'US' (default — NYSE/Nasdaq)
     """
-    ticker_upper = ticker.strip().upper()
+    display_sym = ticker.strip().upper().removesuffix(".BK")
+    yf_sym = _normalize_yf_ticker(display_sym, market)
+    currency = _currency_for(market)
     today = datetime.now().strftime("%Y-%m-%d")
     now_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
     try:
-        tk = yf.Ticker(ticker_upper)
-        info = tk.info
+        tk = yf.Ticker(yf_sym)
+        info = _with_retry(lambda: tk.info)
     except Exception as e:
-        return f"ERROR: ไม่สามารถดึงข้อมูล {ticker_upper} ได้: {e}"
+        log.warning("yfinance fetch failed | %s (%s): %s", display_sym, market, e)
+        return f"ERROR: ไม่สามารถดึงข้อมูล {display_sym} ({market}) ได้: {e}"
 
     if not info or info.get("quoteType") is None:
-        return f"ERROR: ไม่พบข้อมูลสำหรับ ticker '{ticker_upper}' — ตรวจสอบว่า Symbol ถูกต้อง"
+        return f"ERROR: ไม่พบข้อมูลสำหรับ ticker '{display_sym}' market={market} — ตรวจสอบว่า Symbol ถูกต้อง"
 
     # --- General ---
-    short_name = info.get("shortName") or ticker_upper
+    short_name = info.get("shortName") or display_sym
     sector = info.get("sector") or "N/A"
     industry = info.get("industry") or "N/A"
 
     # --- Valuation ---
-    market_cap = _fmt_large(info.get("marketCap"))
+    market_cap = _fmt_large(info.get("marketCap"), currency)
     trailing_pe = _fmt_number(info.get("trailingPE"))
     forward_pe = _fmt_number(info.get("forwardPE"))
     price_to_book = _fmt_number(info.get("priceToBook"))
@@ -141,7 +183,7 @@ def ingest_stock_fundamentals(ticker: str) -> str:
     # --- ESG Scores (optional — ไม่มีข้อมูลสำหรับหุ้นบางตัว) ---
     esg_section: list[str] = []
     try:
-        sustain = tk.sustainability
+        sustain = _with_retry(lambda: tk.sustainability)
         if sustain is not None and not sustain.empty:
             def _esg_val(df, keys: list[str]):
                 for k in keys:
@@ -200,7 +242,7 @@ def ingest_stock_fundamentals(ticker: str) -> str:
     )
 
     # --- Price ---
-    current_price = _fmt_number(info.get("currentPrice"), fmt=",.2f", suffix=" USD")
+    current_price = _fmt_number(info.get("currentPrice"), fmt=",.2f", suffix=f" {currency}")
     week52_change_raw = info.get("52WeekChange")
     week52_change = _fmt_number(
         week52_change_raw * 100 if week52_change_raw is not None else None,
@@ -210,14 +252,15 @@ def ingest_stock_fundamentals(ticker: str) -> str:
 
     md_lines = [
         "---",
-        f"title: {ticker_upper} Fundamentals {today}",
+        f"title: {display_sym} Fundamentals {today}",
         "entity_type: Company",
+        f"market: {market}",
         f"date: {today}",
         f"last_updated: {now_time}",
-        f"tags: [stock_analysis, {ticker_upper.lower()}]",
+        f"tags: [stock_analysis, {display_sym.lower()}, market_{market.lower()}]",
         "---",
         "",
-        f"# {short_name} ({ticker_upper})",
+        f"# {short_name} ({display_sym}, {market})",
         "",
         "## ข้อมูลทั่วไป",
         "",
@@ -264,6 +307,10 @@ def ingest_stock_fundamentals(ticker: str) -> str:
         md_lines += esg_section
 
     md_lines += [
+        "## Related",
+        "",
+        f"- [[{display_sym}]]",
+        "",
         "## หมายเหตุ",
         "",
         "> ข้อมูลจาก Yahoo Finance — ใช้ประกอบการวิเคราะห์เท่านั้น ไม่ใช่คำแนะนำการลงทุน",
@@ -274,39 +321,43 @@ def ingest_stock_fundamentals(ticker: str) -> str:
 
 
 @tool
-def ingest_stock_news(ticker: str) -> str:
-    """ดึงพาดหัวข่าวล่าสุด 5 ข่าวของหุ้นสหรัฐฯ รายตัวจาก Yahoo Finance
+def ingest_stock_news(ticker: str, market: Market = "US") -> str:
+    """ดึงพาดหัวข่าวล่าสุด 5 ข่าวของหุ้นรายตัวจาก Yahoo Finance (รองรับ TH/US)
     แสดง title, publisher, และ link — Return Markdown พร้อม YAML frontmatter
     ไม่บันทึกไฟล์ด้วยตัวเอง
 
     Args:
-        ticker: Ticker symbol เช่น 'AAPL', 'TSLA', 'NVDA'
+        ticker: Ticker symbol เช่น 'AAPL', 'PTT' (ห้ามมี .BK suffix — ระบบเติมให้)
+        market: 'TH' (SET) หรือ 'US' (default)
     """
-    ticker_upper = ticker.strip().upper()
+    display_sym = ticker.strip().upper().removesuffix(".BK")
+    yf_sym = _normalize_yf_ticker(display_sym, market)
     today = datetime.now().strftime("%Y-%m-%d")
     now_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
     try:
-        news_list = yf.Ticker(ticker_upper).news
+        news_list = _yf_news(yf_sym)
     except Exception as e:
-        return f"ERROR: ไม่สามารถดึงข่าวของ {ticker_upper} ได้: {e}"
+        log.warning("yfinance news fetch failed | %s (%s): %s", display_sym, market, e)
+        return f"ERROR: ไม่สามารถดึงข่าวของ {display_sym} ({market}) ได้: {e}"
 
     if not news_list:
-        return f"ERROR: ไม่พบข่าวสำหรับ {ticker_upper}"
+        return f"ERROR: ไม่พบข่าวสำหรับ {display_sym} ({market})"
 
     items = news_list[:5]
 
     md_lines = [
         "---",
-        f"title: {ticker_upper} Latest News {today}",
+        f"title: {display_sym} Latest News {today}",
         "entity_type: Company_News",
-        f"ticker: {ticker_upper}",
+        f"ticker: {display_sym}",
+        f"market: {market}",
         f"date: {today}",
         f"last_updated: {now_time}",
-        f"tags: [news, {ticker_upper.lower()}, stock_analysis]",
+        f"tags: [news, {display_sym.lower()}, market_{market.lower()}, stock_analysis]",
         "---",
         "",
-        f"# ข่าวล่าสุด: {ticker_upper}",
+        f"# ข่าวล่าสุด: {display_sym} ({market})",
         "",
     ]
 
@@ -324,6 +375,10 @@ def ingest_stock_news(ticker: str) -> str:
         ]
 
     md_lines += [
+        "## Related",
+        "",
+        f"- [[{display_sym}]]",
+        "",
         "## หมายเหตุ",
         "",
         "> ข่าวจาก Yahoo Finance — ใช้ประกอบการวิเคราะห์เท่านั้น",
@@ -334,30 +389,34 @@ def ingest_stock_news(ticker: str) -> str:
 
 
 @tool
-def ingest_stock_consensus(ticker: str) -> str:
-    """ดึงมุมมองนักวิเคราะห์ (Analyst Consensus) ของหุ้นสหรัฐฯ รายตัวจาก Yahoo Finance
+def ingest_stock_consensus(ticker: str, market: Market = "US") -> str:
+    """ดึงมุมมองนักวิเคราะห์ (Analyst Consensus) ของหุ้นรายตัวจาก Yahoo Finance (รองรับ TH/US)
     ครอบคลุม: ราคาเป้าหมาย (ต่ำ/เฉลี่ย/สูง), คำแนะนำ, จำนวนนักวิเคราะห์
     Return เป็น Markdown พร้อม YAML frontmatter — ไม่บันทึกไฟล์ด้วยตัวเอง
 
     Args:
-        ticker: Ticker symbol เช่น 'AAPL', 'TSLA', 'NVDA'
+        ticker: Ticker symbol เช่น 'AAPL', 'PTT' (ห้ามมี .BK suffix — ระบบเติมให้)
+        market: 'TH' (SET) หรือ 'US' (default) — TH อาจไม่มี consensus จาก nyfinance
     """
-    ticker_upper = ticker.strip().upper()
+    display_sym = ticker.strip().upper().removesuffix(".BK")
+    yf_sym = _normalize_yf_ticker(display_sym, market)
+    currency = _currency_for(market)
     today = datetime.now().strftime("%Y-%m-%d")
     now_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
     try:
-        info = yf.Ticker(ticker_upper).info
+        info = _yf_info(yf_sym)
     except Exception as e:
-        return f"ERROR: ไม่สามารถดึงข้อมูล {ticker_upper} ได้: {e}"
+        log.warning("yfinance fetch failed | %s (%s): %s", display_sym, market, e)
+        return f"ERROR: ไม่สามารถดึงข้อมูล {display_sym} ({market}) ได้: {e}"
 
     if not info or info.get("quoteType") is None:
-        return f"ERROR: ไม่พบข้อมูลสำหรับ ticker '{ticker_upper}' — ตรวจสอบว่า Symbol ถูกต้อง"
+        return f"ERROR: ไม่พบข้อมูลสำหรับ ticker '{display_sym}' market={market} — ตรวจสอบว่า Symbol ถูกต้อง"
 
-    target_low = _fmt_number(info.get("targetLowPrice"), fmt=",.2f", suffix=" USD")
-    target_mean = _fmt_number(info.get("targetMeanPrice"), fmt=",.2f", suffix=" USD")
-    target_high = _fmt_number(info.get("targetHighPrice"), fmt=",.2f", suffix=" USD")
-    current_price = _fmt_number(info.get("currentPrice"), fmt=",.2f", suffix=" USD")
+    target_low = _fmt_number(info.get("targetLowPrice"), fmt=",.2f", suffix=f" {currency}")
+    target_mean = _fmt_number(info.get("targetMeanPrice"), fmt=",.2f", suffix=f" {currency}")
+    target_high = _fmt_number(info.get("targetHighPrice"), fmt=",.2f", suffix=f" {currency}")
+    current_price = _fmt_number(info.get("currentPrice"), fmt=",.2f", suffix=f" {currency}")
     recommendation = (info.get("recommendationKey") or "N/A").upper()
     num_analysts = info.get("numberOfAnalystOpinions")
     num_analysts_str = str(num_analysts) if num_analysts is not None else "N/A"
@@ -370,19 +429,20 @@ def ingest_stock_consensus(ticker: str) -> str:
     else:
         upside_pct = "N/A"
 
-    short_name = info.get("shortName") or ticker_upper
+    short_name = info.get("shortName") or display_sym
 
     md_lines = [
         "---",
-        f"title: {ticker_upper} Analyst Consensus {today}",
+        f"title: {display_sym} Analyst Consensus {today}",
         "entity_type: Analyst_Consensus",
-        f"ticker: {ticker_upper}",
+        f"ticker: {display_sym}",
+        f"market: {market}",
         f"date: {today}",
         f"last_updated: {now_time}",
-        f"tags: [analyst_consensus, {ticker_upper.lower()}, stock_analysis]",
+        f"tags: [analyst_consensus, {display_sym.lower()}, market_{market.lower()}, stock_analysis]",
         "---",
         "",
-        f"# มุมมองนักวิเคราะห์: {short_name} ({ticker_upper})",
+        f"# มุมมองนักวิเคราะห์: {short_name} ({display_sym}, {market})",
         "",
         "## Analyst Consensus",
         "",
@@ -396,6 +456,10 @@ def ingest_stock_consensus(ticker: str) -> str:
         f"| **Recommendation** | {recommendation} | คำแนะนำรวม (BUY/HOLD/SELL) |",
         f"| **จำนวนนักวิเคราะห์** | {num_analysts_str} คน | จำนวนนักวิเคราะห์ที่ให้ความเห็น |",
         "",
+        "## Related",
+        "",
+        f"- [[{display_sym}]]",
+        "",
         "## หมายเหตุ",
         "",
         "> ข้อมูลจาก Yahoo Finance — Consensus มาจากนักวิเคราะห์ Wall Street ใช้ประกอบการตัดสินใจเท่านั้น",
@@ -406,27 +470,32 @@ def ingest_stock_consensus(ticker: str) -> str:
 
 
 @tool
-def ingest_financial_trends(ticker: str) -> str:
-    """ดึงแนวโน้มงบการเงินย้อนหลัง (รายได้รวม + กำไรสุทธิ) ของหุ้นสหรัฐฯ รายตัวจาก Yahoo Finance
+def ingest_financial_trends(ticker: str, market: Market = "US") -> str:
+    """ดึงแนวโน้มงบการเงินย้อนหลัง (รายได้รวม + กำไรสุทธิ) ของหุ้นรายตัวจาก Yahoo Finance (รองรับ TH/US)
     ครอบคลุม: Total Revenue และ Net Income ย้อนหลัง 4 ปีงบการเงิน
     Return เป็น Markdown พร้อม YAML frontmatter — ไม่บันทึกไฟล์ด้วยตัวเอง
 
     Args:
-        ticker: Ticker symbol เช่น 'AAPL', 'MSFT', 'NVDA'
+        ticker: Ticker symbol เช่น 'AAPL', 'PTT' (ห้ามมี .BK suffix — ระบบเติมให้)
+        market: 'TH' (SET) หรือ 'US' (default)
     """
-    ticker_upper = ticker.strip().upper()
+    display_sym = ticker.strip().upper().removesuffix(".BK")
+    yf_sym = _normalize_yf_ticker(display_sym, market)
+    currency = _currency_for(market)
     today = datetime.now().strftime("%Y-%m-%d")
     now_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
     try:
-        tk = yf.Ticker(ticker_upper)
-        financials = tk.financials
-        short_name = tk.info.get("shortName") or ticker_upper
+        tk = yf.Ticker(yf_sym)
+        financials = _with_retry(lambda: tk.financials)
+        info = _with_retry(lambda: tk.info)
+        short_name = info.get("shortName") or display_sym
     except Exception as e:
-        return f"ERROR: ไม่สามารถดึงข้อมูล {ticker_upper} ได้: {e}"
+        log.warning("yfinance fetch failed | %s (%s): %s", display_sym, market, e)
+        return f"ERROR: ไม่สามารถดึงข้อมูล {display_sym} ({market}) ได้: {e}"
 
     if financials is None or financials.empty:
-        return f"ERROR: ไม่พบข้อมูลงบการเงินสำหรับ {ticker_upper}"
+        return f"ERROR: ไม่พบข้อมูลงบการเงินสำหรับ {display_sym} ({market})"
 
     def _find_series(df: pd.DataFrame, candidates: list[str]):
         for key in candidates:
@@ -444,15 +513,16 @@ def ingest_financial_trends(ticker: str) -> str:
 
     md_lines = [
         "---",
-        f"title: {ticker_upper} Financial Trends {today}",
+        f"title: {display_sym} Financial Trends {today}",
         "entity_type: Financial_Trends",
-        f"ticker: {ticker_upper}",
+        f"ticker: {display_sym}",
+        f"market: {market}",
         f"date: {today}",
         f"last_updated: {now_time}",
-        f"tags: [financial_trends, {ticker_upper.lower()}, stock_analysis]",
+        f"tags: [financial_trends, {display_sym.lower()}, market_{market.lower()}, stock_analysis]",
         "---",
         "",
-        f"# แนวโน้มงบการเงิน: {short_name} ({ticker_upper})",
+        f"# แนวโน้มงบการเงิน: {short_name} ({display_sym}, {market})",
         "",
         "## รายได้รวมและกำไรสุทธิ (ย้อนหลัง 4 ปีงบการเงิน)",
         "",
@@ -462,15 +532,15 @@ def ingest_financial_trends(ticker: str) -> str:
 
     for col in cols:
         year_str = col.strftime("%Y") if hasattr(col, "strftime") else str(col)[:4]
-        rev = _fmt_fin(revenue_s[col] if revenue_s is not None else None)
-        ni = _fmt_fin(net_income_s[col] if net_income_s is not None else None)
+        rev = _fmt_fin(revenue_s[col] if revenue_s is not None else None, currency)
+        ni = _fmt_fin(net_income_s[col] if net_income_s is not None else None, currency)
         md_lines.append(f"| {year_str} | {rev} | {ni} |")
 
     md_lines += [
         "",
         "## หมายเหตุ",
         "",
-        "> ข้อมูลจาก Yahoo Finance — B = พันล้าน USD, M = ล้าน USD, T = ล้านล้าน USD",
+        f"> ข้อมูลจาก Yahoo Finance — B = พันล้าน {currency}, M = ล้าน {currency}, T = ล้านล้าน {currency}",
         "",
     ]
 
@@ -485,41 +555,52 @@ def ingest_financial_trends(ticker: str) -> str:
         md_lines += [f"- {n}" for n in notices]
         md_lines.append("")
 
+    md_lines += [
+        "## Related",
+        "",
+        f"- [[{display_sym}]]",
+        "",
+    ]
+
     return "\n".join(md_lines)
 
 
 @tool
-def ingest_stock_momentum(ticker: str) -> str:
-    """ดึงข้อมูลสัญญาณเทคนิค/โมเมนตัมราคา ข้อมูลคนวงใน สถาบัน และ Short Interest ของหุ้นสหรัฐฯ
+def ingest_stock_momentum(ticker: str, market: Market = "US") -> str:
+    """ดึงข้อมูลสัญญาณเทคนิค/โมเมนตัมราคา ข้อมูลคนวงใน สถาบัน และ Short Interest (รองรับ TH/US)
     ครอบคลุม: MA50, MA200, 52W High/Low, % Insider/Institution Hold, Short Ratio, Short % Float
     Return เป็น Markdown พร้อม YAML frontmatter — ไม่บันทึกไฟล์ด้วยตัวเอง
 
     Args:
-        ticker: Ticker symbol เช่น 'AAPL', 'MSFT', 'NVDA'
+        ticker: Ticker symbol เช่น 'AAPL', 'PTT' (ห้ามมี .BK suffix — ระบบเติมให้)
+        market: 'TH' (SET) หรือ 'US' (default) — TH อาจมี short/institution data น้อยกว่า
     """
-    ticker_upper = ticker.strip().upper()
+    display_sym = ticker.strip().upper().removesuffix(".BK")
+    yf_sym = _normalize_yf_ticker(display_sym, market)
+    currency = _currency_for(market)
     today = datetime.now().strftime("%Y-%m-%d")
     now_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
     try:
-        tk = yf.Ticker(ticker_upper)
-        info = tk.info
+        tk = yf.Ticker(yf_sym)
+        info = _with_retry(lambda: tk.info)
     except Exception as e:
-        return f"ERROR: ไม่สามารถดึงข้อมูล {ticker_upper} ได้: {e}"
+        log.warning("yfinance fetch failed | %s (%s): %s", display_sym, market, e)
+        return f"ERROR: ไม่สามารถดึงข้อมูล {display_sym} ({market}) ได้: {e}"
 
     if not info or info.get("quoteType") is None:
-        return f"ERROR: ไม่พบข้อมูลสำหรับ ticker '{ticker_upper}' — ตรวจสอบว่า Symbol ถูกต้อง"
+        return f"ERROR: ไม่พบข้อมูลสำหรับ ticker '{display_sym}' market={market} — ตรวจสอบว่า Symbol ถูกต้อง"
 
-    short_name = info.get("shortName") or ticker_upper
+    short_name = info.get("shortName") or display_sym
     cur = info.get("currentPrice")
     m50 = info.get("fiftyDayAverage")
     m200 = info.get("twoHundredDayAverage")
 
-    current_price = _fmt_number(cur, fmt=",.2f", suffix=" USD")
-    ma50 = _fmt_number(m50, fmt=",.2f", suffix=" USD")
-    ma200 = _fmt_number(m200, fmt=",.2f", suffix=" USD")
-    high52 = _fmt_number(info.get("fiftyTwoWeekHigh"), fmt=",.2f", suffix=" USD")
-    low52 = _fmt_number(info.get("fiftyTwoWeekLow"), fmt=",.2f", suffix=" USD")
+    current_price = _fmt_number(cur, fmt=",.2f", suffix=f" {currency}")
+    ma50 = _fmt_number(m50, fmt=",.2f", suffix=f" {currency}")
+    ma200 = _fmt_number(m200, fmt=",.2f", suffix=f" {currency}")
+    high52 = _fmt_number(info.get("fiftyTwoWeekHigh"), fmt=",.2f", suffix=f" {currency}")
+    low52 = _fmt_number(info.get("fiftyTwoWeekLow"), fmt=",.2f", suffix=f" {currency}")
 
     signal_parts = []
     if cur and m50:
@@ -551,15 +632,16 @@ def ingest_stock_momentum(ticker: str) -> str:
 
     md_lines = [
         "---",
-        f"title: {ticker_upper} Momentum Insider {today}",
+        f"title: {display_sym} Momentum Insider {today}",
         "entity_type: Stock_Momentum",
-        f"ticker: {ticker_upper}",
+        f"ticker: {display_sym}",
+        f"market: {market}",
         f"date: {today}",
         f"last_updated: {now_time}",
-        f"tags: [stock_momentum, {ticker_upper.lower()}, stock_analysis, technical]",
+        f"tags: [stock_momentum, {display_sym.lower()}, market_{market.lower()}, stock_analysis, technical]",
         "---",
         "",
-        f"# โมเมนตัมราคาและคนวงใน: {short_name} ({ticker_upper})",
+        f"# โมเมนตัมราคาและคนวงใน: {short_name} ({display_sym}, {market})",
         "",
         "## สัญญาณเทคนิค (Technical Signals)",
         "",
@@ -588,6 +670,10 @@ def ingest_stock_momentum(ticker: str) -> str:
         f"| **Short Ratio** | {short_ratio} | จำนวนวันที่ต้องใช้ปิด Short ทั้งหมด — >5 วัน = ความเสี่ยง Short Squeeze สูง |",
         f"| **Short % of Float** | {short_pct} | % หุ้นที่ถูก Short เทียบหุ้นที่ซื้อขายได้ — >10% = มี Bearish Sentiment สูง |",
         "",
+        "## Related",
+        "",
+        f"- [[{display_sym}]]",
+        "",
         "## หมายเหตุ",
         "",
         "> ข้อมูลจาก Yahoo Finance — MA = Moving Average | Insider Hold = % หุ้นที่ผู้บริหารถือครอง",
@@ -599,46 +685,51 @@ def ingest_stock_momentum(ticker: str) -> str:
 
 
 @tool
-def ingest_financial_health(ticker: str) -> str:
-    """ดึงข้อมูลสุขภาพการเงินและกระแสเงินสดของหุ้นสหรัฐฯ รายตัวจาก Yahoo Finance
+def ingest_financial_health(ticker: str, market: Market = "US") -> str:
+    """ดึงข้อมูลสุขภาพการเงินและกระแสเงินสดของหุ้นรายตัวจาก Yahoo Finance (รองรับ TH/US)
     ครอบคลุม: Operating/Free Cash Flow, Total Cash, Total Debt, Debt/Equity Ratio, Current Ratio
     Return เป็น Markdown พร้อม YAML frontmatter — ไม่บันทึกไฟล์ด้วยตัวเอง
 
     Args:
-        ticker: Ticker symbol เช่น 'AAPL', 'MSFT', 'NVDA'
+        ticker: Ticker symbol เช่น 'AAPL', 'PTT' (ห้ามมี .BK suffix — ระบบเติมให้)
+        market: 'TH' (SET) หรือ 'US' (default)
     """
-    ticker_upper = ticker.strip().upper()
+    display_sym = ticker.strip().upper().removesuffix(".BK")
+    yf_sym = _normalize_yf_ticker(display_sym, market)
+    currency = _currency_for(market)
     today = datetime.now().strftime("%Y-%m-%d")
     now_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
     try:
-        info = yf.Ticker(ticker_upper).info
+        info = _yf_info(yf_sym)
     except Exception as e:
-        return f"ERROR: ไม่สามารถดึงข้อมูล {ticker_upper} ได้: {e}"
+        log.warning("yfinance fetch failed | %s (%s): %s", display_sym, market, e)
+        return f"ERROR: ไม่สามารถดึงข้อมูล {display_sym} ({market}) ได้: {e}"
 
     if not info or info.get("quoteType") is None:
-        return f"ERROR: ไม่พบข้อมูลสำหรับ ticker '{ticker_upper}' — ตรวจสอบว่า Symbol ถูกต้อง"
+        return f"ERROR: ไม่พบข้อมูลสำหรับ ticker '{display_sym}' market={market} — ตรวจสอบว่า Symbol ถูกต้อง"
 
-    short_name = info.get("shortName") or ticker_upper
+    short_name = info.get("shortName") or display_sym
 
-    op_cf = _fmt_fin(info.get("operatingCashflow"))
-    free_cf = _fmt_fin(info.get("freeCashflow"))
-    total_cash = _fmt_fin(info.get("totalCash"))
-    total_debt = _fmt_fin(info.get("totalDebt"))
+    op_cf = _fmt_fin(info.get("operatingCashflow"), currency)
+    free_cf = _fmt_fin(info.get("freeCashflow"), currency)
+    total_cash = _fmt_fin(info.get("totalCash"), currency)
+    total_debt = _fmt_fin(info.get("totalDebt"), currency)
     debt_to_equity = _fmt_number(info.get("debtToEquity"), fmt=".2f", suffix="%")
     current_ratio = _fmt_number(info.get("currentRatio"), fmt=".2f", suffix="x")
 
     md_lines = [
         "---",
-        f"title: {ticker_upper} Financial Health {today}",
+        f"title: {display_sym} Financial Health {today}",
         "entity_type: Financial_Health",
-        f"ticker: {ticker_upper}",
+        f"ticker: {display_sym}",
+        f"market: {market}",
         f"date: {today}",
         f"last_updated: {now_time}",
-        f"tags: [health_check, {ticker_upper.lower()}, stock_analysis]",
+        f"tags: [health_check, {display_sym.lower()}, market_{market.lower()}, stock_analysis]",
         "---",
         "",
-        f"# สุขภาพการเงินและกระแสเงินสด: {short_name} ({ticker_upper})",
+        f"# สุขภาพการเงินและกระแสเงินสด: {short_name} ({display_sym}, {market})",
         "",
         "## กระแสเงินสด (Cash Flow)",
         "",
@@ -656,9 +747,13 @@ def ingest_financial_health(ticker: str) -> str:
         f"| **Debt/Equity** | {debt_to_equity} | อัตราส่วนหนี้ต่อทุน — ค่าสูง = leverage สูง |",
         f"| **Current Ratio** | {current_ratio} | สภาพคล่องระยะสั้น — >1x = ปลอดภัย, <1x = เสี่ยง |",
         "",
+        "## Related",
+        "",
+        f"- [[{display_sym}]]",
+        "",
         "## หมายเหตุ",
         "",
-        "> ข้อมูลจาก Yahoo Finance — B = พันล้าน USD, M = ล้าน USD | ใช้ประกอบการวิเคราะห์เท่านั้น",
+        f"> ข้อมูลจาก Yahoo Finance — B = พันล้าน {currency}, M = ล้าน {currency} | ใช้ประกอบการวิเคราะห์เท่านั้น",
         "> Debt/Equity แสดงในรูป % (เช่น 150% = หนี้ 1.5 เท่าของทุน)",
         "",
     ]

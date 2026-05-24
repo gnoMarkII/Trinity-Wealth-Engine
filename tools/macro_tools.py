@@ -6,6 +6,10 @@ import yfinance as yf
 from fredapi import Fred
 from langchain_core.tools import tool
 
+from core.logger import get_logger
+from core.retry import with_retry as _with_retry
+
+log = get_logger(__name__)
 _FETCH_TIMEOUT = 10  # seconds per symbol
 
 # Price display format per symbol: (format_spec, suffix)
@@ -117,26 +121,23 @@ _MACRO_GROUPS: list[tuple[str, list[str]]] = [
 ]
 
 
-def _fetch_price(symbol: str) -> tuple[float | None, float | None]:
-    """คืน (last_price, previous_close) พร้อม timeout ป้องกันเน็ตค้าง"""
-    def _do_fetch():
-        ticker = yf.Ticker(symbol)
-        fi = ticker.fast_info
-        last = getattr(fi, "last_price", None)
-        prev = getattr(fi, "previous_close", None)
-        if last is None:
-            hist = ticker.history(period="2d")
-            if not hist.empty:
-                last = float(hist["Close"].iloc[-1])
-                prev = float(hist["Close"].iloc[-2]) if len(hist) > 1 else None
-        return last, prev
+def _fetch_price_once(symbol: str) -> tuple[float | None, float | None]:
+    ticker = yf.Ticker(symbol)
+    fi = ticker.fast_info
+    last = getattr(fi, "last_price", None)
+    prev = getattr(fi, "previous_close", None)
+    if last is None:
+        hist = ticker.history(period="2d")
+        if not hist.empty:
+            last = float(hist["Close"].iloc[-1])
+            prev = float(hist["Close"].iloc[-2]) if len(hist) > 1 else None
+    return last, prev
 
-    with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
-        future = executor.submit(_do_fetch)
-        try:
-            return future.result(timeout=_FETCH_TIMEOUT)
-        except concurrent.futures.TimeoutError:
-            raise TimeoutError(f"Timeout >{_FETCH_TIMEOUT}s")
+
+def _fetch_price(symbol: str) -> tuple[float | None, float | None]:
+    """คืน (last_price, previous_close) — ครอบด้วย retry (transient errors only)
+    sync เพราะ caller ทำ parallelism + timeout ผ่าน outer pool"""
+    return _with_retry(_fetch_price_once, symbol)
 
 
 @tool
@@ -155,25 +156,34 @@ def ingest_daily_macro() -> str:
 
     with concurrent.futures.ThreadPoolExecutor(max_workers=len(all_symbols)) as executor:
         futures = {executor.submit(_fetch_price, sym): sym for sym in all_symbols}
-        for future in concurrent.futures.as_completed(futures):
-            sym = futures[future]
-            name, description = _MACRO_TICKERS[sym]
-            try:
-                last, prev = future.result()
-                if last is not None:
-                    change_pct = ((last - prev) / prev * 100) if prev else 0.0
-                    rows_by_symbol[sym] = {
-                        "symbol": sym,
-                        "name": name,
-                        "description": description,
-                        "price": last,
-                        "change_pct": change_pct,
-                        "direction": "▲" if change_pct >= 0 else "▼",
-                    }
-                else:
-                    errors.append(f"{sym}: ไม่พบข้อมูลราคา")
-            except Exception as e:
-                errors.append(f"{sym}: {e}")
+        try:
+            for future in concurrent.futures.as_completed(futures, timeout=_FETCH_TIMEOUT * 2):
+                sym = futures[future]
+                name, description = _MACRO_TICKERS[sym]
+                try:
+                    last, prev = future.result()
+                    if last is not None:
+                        change_pct = ((last - prev) / prev * 100) if prev else 0.0
+                        rows_by_symbol[sym] = {
+                            "symbol": sym,
+                            "name": name,
+                            "description": description,
+                            "price": last,
+                            "change_pct": change_pct,
+                            "direction": "▲" if change_pct >= 0 else "▼",
+                        }
+                    else:
+                        errors.append(f"{sym}: ไม่พบข้อมูลราคา")
+                except Exception as e:
+                    errors.append(f"{sym}: {e}")
+        except concurrent.futures.TimeoutError:
+            stuck = [futures[f] for f in futures if not f.done()]
+            for sym in stuck:
+                errors.append(f"{sym}: Timeout >{_FETCH_TIMEOUT * 2}s (pool deadline)")
+
+    if not rows_by_symbol:
+        log.error("Macro batch failed for all symbols | errors=%d | first: %s", len(errors), '; '.join(errors[:3]))
+        return f"ERROR: ดึง Macro data ล้มเหลวทุก symbol ({len(errors)} errors): {'; '.join(errors[:3])}"
 
     md_lines = [
         "---",
@@ -287,25 +297,34 @@ def ingest_us_sectors() -> str:
 
     with concurrent.futures.ThreadPoolExecutor(max_workers=len(symbols)) as executor:
         futures = {executor.submit(_fetch_price, sym): sym for sym in symbols}
-        for future in concurrent.futures.as_completed(futures):
-            sym = futures[future]
-            name, description = _US_SECTORS[sym]
-            try:
-                last, prev = future.result()
-                if last is not None:
-                    change_pct = ((last - prev) / prev * 100) if prev else 0.0
-                    rows.append({
-                        "symbol": sym,
-                        "name": name,
-                        "description": description,
-                        "price": last,
-                        "change_pct": change_pct,
-                        "direction": "▲" if change_pct >= 0 else "▼",
-                    })
-                else:
-                    errors.append(f"{sym}: ไม่พบข้อมูลราคา")
-            except Exception as e:
-                errors.append(f"{sym}: {e}")
+        try:
+            for future in concurrent.futures.as_completed(futures, timeout=_FETCH_TIMEOUT * 2):
+                sym = futures[future]
+                name, description = _US_SECTORS[sym]
+                try:
+                    last, prev = future.result()
+                    if last is not None:
+                        change_pct = ((last - prev) / prev * 100) if prev else 0.0
+                        rows.append({
+                            "symbol": sym,
+                            "name": name,
+                            "description": description,
+                            "price": last,
+                            "change_pct": change_pct,
+                            "direction": "▲" if change_pct >= 0 else "▼",
+                        })
+                    else:
+                        errors.append(f"{sym}: ไม่พบข้อมูลราคา")
+                except Exception as e:
+                    errors.append(f"{sym}: {e}")
+        except concurrent.futures.TimeoutError:
+            stuck = [futures[f] for f in futures if not f.done()]
+            for sym in stuck:
+                errors.append(f"{sym}: Timeout >{_FETCH_TIMEOUT * 2}s (pool deadline)")
+
+    if not rows:
+        log.error("US Sectors batch failed for all symbols | errors=%d | first: %s", len(errors), '; '.join(errors[:3]))
+        return f"ERROR: ดึง US Sectors data ล้มเหลวทุก symbol ({len(errors)} errors): {'; '.join(errors[:3])}"
 
     rows.sort(key=lambda r: r["change_pct"], reverse=True)
 
@@ -397,25 +416,34 @@ def ingest_regional_pulse() -> str:
 
     with concurrent.futures.ThreadPoolExecutor(max_workers=len(symbols)) as executor:
         futures = {executor.submit(_fetch_price, sym): sym for sym in symbols}
-        for future in concurrent.futures.as_completed(futures):
-            sym = futures[future]
-            name, description = _REGIONAL_TICKERS[sym]
-            try:
-                last, prev = future.result()
-                if last is not None:
-                    change_pct = ((last - prev) / prev * 100) if prev else 0.0
-                    rows.append({
-                        "symbol": sym,
-                        "name": name,
-                        "description": description,
-                        "price": last,
-                        "change_pct": change_pct,
-                        "direction": "▲" if change_pct >= 0 else "▼",
-                    })
-                else:
-                    errors.append(f"{sym}: ไม่พบข้อมูลราคา")
-            except Exception as e:
-                errors.append(f"{sym}: {e}")
+        try:
+            for future in concurrent.futures.as_completed(futures, timeout=_FETCH_TIMEOUT * 2):
+                sym = futures[future]
+                name, description = _REGIONAL_TICKERS[sym]
+                try:
+                    last, prev = future.result()
+                    if last is not None:
+                        change_pct = ((last - prev) / prev * 100) if prev else 0.0
+                        rows.append({
+                            "symbol": sym,
+                            "name": name,
+                            "description": description,
+                            "price": last,
+                            "change_pct": change_pct,
+                            "direction": "▲" if change_pct >= 0 else "▼",
+                        })
+                    else:
+                        errors.append(f"{sym}: ไม่พบข้อมูลราคา")
+                except Exception as e:
+                    errors.append(f"{sym}: {e}")
+        except concurrent.futures.TimeoutError:
+            stuck = [futures[f] for f in futures if not f.done()]
+            for sym in stuck:
+                errors.append(f"{sym}: Timeout >{_FETCH_TIMEOUT * 2}s (pool deadline)")
+
+    if not rows:
+        log.error("Regional Pulse batch failed for all symbols | errors=%d | first: %s", len(errors), '; '.join(errors[:3]))
+        return f"ERROR: ดึง Regional Pulse data ล้มเหลวทุก symbol ({len(errors)} errors): {'; '.join(errors[:3])}"
 
     order = {sym: i for i, sym in enumerate(symbols)}
     rows.sort(key=lambda r: order.get(r["symbol"], 99))
@@ -578,12 +606,16 @@ _FRED_GROUPS: list[tuple[str, list[str]]] = [
 ]
 
 
-def _fetch_fred_series(args: tuple):
-    """ดึง FRED series เดี่ยว — ออกแบบมาสำหรับ ThreadPoolExecutor"""
-    fred, series_id = args
+def _fetch_fred_once(fred: Fred, series_id: str):
     if series_id in _FRED_YOY_SERIES:
         return fred.get_series(series_id, units="pc1").dropna()
     return fred.get_series(series_id).dropna()
+
+
+def _fetch_fred_series(args: tuple):
+    """ดึง FRED series เดี่ยว พร้อม retry — ออกแบบมาสำหรับ ThreadPoolExecutor"""
+    fred, series_id = args
+    return _with_retry(_fetch_fred_once, fred, series_id)
 
 
 @tool
@@ -606,6 +638,7 @@ def ingest_economic_fundamentals() -> str:
     try:
         fred = Fred(api_key=api_key)
     except Exception as e:
+        log.error("FRED API init failed: %s", e)
         return f"ERROR: ไม่สามารถเชื่อมต่อ FRED API ได้: {e}"
 
     today = datetime.now().strftime("%Y-%m-%d")
@@ -639,6 +672,10 @@ def ingest_economic_fundamentals() -> str:
                 }
             except Exception as e:
                 errors.append(f"{series_id}: {e}")
+
+    if not rows_by_id:
+        log.error("FRED batch failed for all series | errors=%d | first: %s", len(errors), '; '.join(errors[:3]))
+        return f"ERROR: ดึง FRED data ล้มเหลวทุก series ({len(errors)} errors): {'; '.join(errors[:3])}"
 
     md_lines = [
         "---",

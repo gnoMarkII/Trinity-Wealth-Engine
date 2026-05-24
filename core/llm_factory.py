@@ -6,8 +6,51 @@ from langchain_anthropic import ChatAnthropic
 from langchain_core.language_models import BaseChatModel
 from langchain_core.runnables import RunnableWithFallbacks
 from langchain_google_genai import ChatGoogleGenerativeAI
+from langchain_openai import ChatOpenAI
 
-_GOOGLE_FALLBACK_MODEL = "gemini-2.5-flash"
+from core.logger import get_logger
+
+log = get_logger(__name__)
+
+# Cross-provider fallback — รุ่นที่ถูกเรียกเมื่อ primary fail ใน get_llm(use_fallback=True)
+FALLBACK_MODEL = "openai/gpt-oss-120b:free"
+
+
+def detect_provider(model_name: str) -> str:
+    """Auto-detect provider จาก model name (override ได้ผ่าน LLM_PROVIDER env)
+
+    Rules:
+      - claude-*              → anthropic
+      - gemini-* / models/gemini-*  → google
+      - มี '/' ใน name         → openrouter
+      - default               → google
+    """
+    override = os.getenv("LLM_PROVIDER")
+    if override:
+        return override
+    name = model_name.lower()
+    if name.startswith("claude"):
+        return "anthropic"
+    if name.startswith(("gemini", "models/gemini")):
+        return "google"
+    if "/" in model_name:
+        return "openrouter"
+    return "google"
+
+
+def _build_primary(provider: str, model_name: str, temperature: float) -> BaseChatModel:
+    if provider == "google":
+        return ChatGoogleGenerativeAI(model=model_name, temperature=temperature)
+    if provider == "anthropic":
+        return ChatAnthropic(model=model_name, temperature=temperature)
+    if provider == "openrouter":
+        return ChatOpenAI(
+            api_key=os.getenv("OPENROUTER_API_KEY"),
+            base_url="https://openrouter.ai/api/v1",
+            model=model_name,
+            temperature=temperature,
+        )
+    raise ValueError(f"Unknown provider '{provider}'. Choose 'anthropic', 'google', or 'openrouter'.")
 
 
 def get_llm(
@@ -16,25 +59,25 @@ def get_llm(
     temperature: float = 0.0,
     use_fallback: bool = False,
 ) -> BaseChatModel | RunnableWithFallbacks:
-    """สร้าง LLM instance ตาม provider ที่กำหนด
+    """สร้าง LLM instance ตาม provider — เลือก wrap ด้วย cross-provider fallback ได้
 
     Args:
-        provider: "anthropic" หรือ "google"
-        model_name: ชื่อ model เช่น "gemini-2.5-flash", "claude-sonnet-4-6"
+        provider: "google", "anthropic" หรือ "openrouter"
+        model_name: ชื่อ model เช่น "gemini-3.1-flash-lite-preview", "claude-sonnet-4-6",
+                    "openai/gpt-oss-120b:free"
         temperature: ระดับความสร้างสรรค์ (0.0 = deterministic)
-        use_fallback: True = ผูก fallback model ไว้ (Google: gemini-2.5-flash)
-                      ใช้กับ .invoke()/.stream() โดยตรง
-                      ถ้าต้องการ with_structured_output ให้สร้าง fallback chain แยก
+        use_fallback: True = wrap primary ด้วย FALLBACK_MODEL (ข้าม provider ได้)
+                      ใช้กับ .invoke()/.stream() ตรงๆ
+                      สำหรับ with_structured_output ให้สร้าง fallback chain เองภายนอก
     """
-    if provider == "google":
-        primary = ChatGoogleGenerativeAI(model=model_name, temperature=temperature)
-        if use_fallback and model_name != _GOOGLE_FALLBACK_MODEL:
-            fallback = ChatGoogleGenerativeAI(model=_GOOGLE_FALLBACK_MODEL, temperature=temperature)
-            return primary.with_fallbacks([fallback])
-        return primary
-    if provider == "anthropic":
-        return ChatAnthropic(model=model_name, temperature=temperature)
-    raise ValueError(f"Unknown provider '{provider}'. Choose 'anthropic' or 'google'.")
+    primary = _build_primary(provider, model_name, temperature)
+
+    if use_fallback and model_name != FALLBACK_MODEL:
+        fallback_provider = detect_provider(FALLBACK_MODEL)
+        fallback = _build_primary(fallback_provider, FALLBACK_MODEL, temperature)
+        return primary.with_fallbacks([fallback])
+
+    return primary
 
 
 def _fetch_google_models() -> list[str]:
@@ -46,7 +89,7 @@ def _fetch_google_models() -> list[str]:
             if "gemini" in m.name.lower()
         ]
     except Exception as e:
-        print(f"[llm_factory] Google fetch error: {e}")
+        log.warning("Google models fetch failed: %s", e)
         return []
 
 
@@ -55,7 +98,20 @@ def _fetch_anthropic_models() -> list[str]:
         client = anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
         return [m.id for m in client.models.list().data]
     except Exception as e:
-        print(f"[llm_factory] Anthropic fetch error: {e}")
+        log.warning("Anthropic models fetch failed: %s", e)
+        return []
+
+
+def _fetch_openrouter_models() -> list[str]:
+    try:
+        import httpx
+        api_key = os.getenv("OPENROUTER_API_KEY")
+        headers = {"Authorization": f"Bearer {api_key}"} if api_key else {}
+        resp = httpx.get("https://openrouter.ai/api/v1/models", headers=headers, timeout=10)
+        resp.raise_for_status()
+        return [m["id"] for m in resp.json().get("data", [])]
+    except Exception as e:
+        log.warning("OpenRouter models fetch failed: %s", e)
         return []
 
 
@@ -63,7 +119,7 @@ def list_available_models(provider: str | None = None) -> list[str] | dict[str, 
     """ดึงรายชื่อโมเดลจาก Server ของ Provider โดยตรง (Dynamic Fetch)
 
     Args:
-        provider: "anthropic", "google" หรือ None เพื่อดึงทั้งสองค่าย
+        provider: "google", "anthropic", "openrouter" หรือ None เพื่อดึงทั้งหมด
 
     Returns:
         list[str] ถ้าระบุ provider / dict[str, list[str]] ถ้าไม่ระบุ
@@ -72,9 +128,12 @@ def list_available_models(provider: str | None = None) -> list[str] | dict[str, 
         return _fetch_google_models()
     if provider == "anthropic":
         return _fetch_anthropic_models()
+    if provider == "openrouter":
+        return _fetch_openrouter_models()
     if provider is None:
         return {
             "google": _fetch_google_models(),
             "anthropic": _fetch_anthropic_models(),
+            "openrouter": _fetch_openrouter_models(),
         }
-    raise ValueError(f"Unknown provider '{provider}'. Choose 'anthropic', 'google', or None.")
+    raise ValueError(f"Unknown provider '{provider}'. Choose 'google', 'anthropic', 'openrouter', or None.")

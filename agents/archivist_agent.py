@@ -1,7 +1,7 @@
-from langgraph.prebuilt import create_react_agent
 from langchain_core.language_models import BaseChatModel
+from langchain_core.runnables import Runnable
+from langgraph.prebuilt import create_react_agent
 
-from core.llm_factory import get_llm
 from tools.archivist_tools import (
     lint_semantic_conflict,
     lint_structural_health,
@@ -10,7 +10,6 @@ from tools.archivist_tools import (
     search_all_memories,
     search_graph_context,
     update_master_index,
-    write_log,
     write_raw_markdown,
 )
 
@@ -35,18 +34,39 @@ ARCHIVIST_SYSTEM_PROMPT = """คุณคือ The Archivist บรรณาร
 [Immutable Inbox] ไฟล์ในโฟลเดอร์ 00_Inbox คือข้อมูลดิบ ห้ามแก้ไขหรือบันทึกทับเด็ดขาด \
 ให้อ่านแล้วไปสร้างไฟล์ใหม่ในโฟลเดอร์อื่นเท่านั้น ห้ามแต่งหรือสรุปเนื้อหาเอง
 
-[Always Log] เมื่อสร้างหรือแก้ไขไฟล์สำเร็จ ให้เรียกใช้ write_log ทันทีเสมอ
-
 [Smart Linting] หากถูกสั่งให้ตรวจสุขภาพ Vault ให้ใช้ lint_structural_health ก่อน \
 หากต้องการตรวจความถูกต้องของเนื้อหา ให้ใช้ lint_semantic_conflict \
 โดยบังคับระบุเป้าหมายให้แคบที่สุดเสมอ (ระบุ Folder หรือ Entity ที่ต้องการ ไม่ใช่ทั้ง Vault)
 
 [Folder Mapping — write_raw_markdown]
 ใช้ folder_path ตาม entity_type ของ YAML frontmatter ดังนี้:
-- macro_daily / us_sectors_pulse / regional_macro / economic_fundamentals → 30_Knowledge_Base/Macroeconomics
+- macro_daily / us_sectors_pulse / regional_macro / economic_fundamentals → 30_Knowledge_Base/Macroeconomics/Daily_Snapshots
+  (ระบบจะเติม subfolder วันที่จาก YAML `date:` อัตโนมัติ — ไม่ต้องใส่วันเอง)
 - Company / Financial_Trends / Financial_Health / Stock_Momentum / Analyst_Consensus / Company_News → 30_Knowledge_Base/Stocks
-- Strategy / Concept → 30_Knowledge_Base/Strategies
+  (ระบบจะเติม subfolder ชื่อหุ้นจาก YAML `ticker:` อัตโนมัติ — ไม่ต้องใส่ชื่อหุ้นในพาธ)
+- Strategy / Concept → 30_Knowledge_Base/Strategies \
+  (เฉพาะกลยุทธ์/แนวคิดการลงทุนทั่วไป — ห้ามสับสนกับ financial_goal หรือ entity_type: goal)
+- goal / financial_goal → ไม่ใช่หน้าที่ของ Archivist ห้ามบันทึกไฟล์ประเภทนี้เด็ดขาด \
+  เจ้าของไฟล์คือ Bookkeeper ที่ 20_Portfolio_Management/Goals/Items/ \
+  ให้แจ้ง Manager ทันทีว่าต้องส่งให้ Bookkeeper จัดการ
+- youtube_insight → 30_Knowledge_Base/YouTube_Summaries
+- article_note → 30_Knowledge_Base/Articles
+- book_note → 30_Knowledge_Base/Books
 ใช้ค่า title ใน YAML frontmatter เป็น filename (แทนที่ space ด้วย _) ถ้าไม่มีให้ใช้รูปแบบ {TYPE}_{DATE}
+
+[YouTube Summaries]
+เมื่อได้รับข้อมูลสรุปคลิป YouTube จาก Researcher (entity_type: youtube_insight) \
+ให้ใช้ write_raw_markdown บันทึกลง folder_path='30_Knowledge_Base/YouTube_Summaries' ทันที \
+โฟลเดอร์นี้ถูกสร้างไว้แล้วในระบบ ไม่ต้องสร้างใหม่ \
+filename ให้ใช้รูปแบบ YouTube_Insight_{video_id}_{date} โดยดึงจาก YAML frontmatter
+
+[Articles & Books]
+เมื่อได้รับข้อมูลจาก Researcher (entity_type: article_note) \
+ให้ใช้ write_raw_markdown บันทึกลง folder_path='30_Knowledge_Base/Articles' \
+filename ให้ใช้ค่า title จาก YAML frontmatter (แทนที่ space ด้วย _ และตัด path-unsafe chars)
+เมื่อผู้ใช้ส่ง book note มาให้บันทึก (entity_type: book_note) \
+ให้ใช้ write_raw_markdown บันทึกลง folder_path='30_Knowledge_Base/Books' \
+filename ให้ใช้ค่า title จาก YAML frontmatter
 
 [Brevity] เมื่อบันทึกไฟล์สำเร็จ ตอบกลับเพียง 1 บรรทัด ระบุชื่อไฟล์และ folder ที่บันทึก \
 ห้ามสรุปหรืออธิบายเนื้อหาที่บันทึกลงไป
@@ -62,15 +82,12 @@ _archivist_tools = [
     search_all_memories,
     search_graph_context,
     read_file,
-    write_log,
     update_master_index,
     lint_structural_health,
     lint_semantic_conflict,
 ]
 
 
-def create_archivist(model: BaseChatModel | None = None):
-    """สร้าง Archivist ReAct agent พร้อม PKM tools"""
-    if model is None:
-        model = get_llm(provider="google", model_name="gemini-3-flash-preview", use_fallback=True)
+def create_archivist(model: BaseChatModel | Runnable):
+    """สร้าง Archivist ReAct agent พร้อม PKM tools — caller ต้องส่ง model มาเสมอ"""
     return create_react_agent(model, _archivist_tools, prompt=ARCHIVIST_SYSTEM_PROMPT)
