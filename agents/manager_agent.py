@@ -10,6 +10,7 @@ from pydantic import BaseModel, Field
 from agents.archivist_agent import create_archivist
 from agents.bookkeeper_agent import create_bookkeeper
 from agents.researcher_agent import create_researcher
+from agents.macro_analyst_agent import create_macro_analyst
 from core.agent_log import log_routing
 from core.llm_factory import FALLBACK_MODEL, detect_provider, get_llm
 from core.logger import get_logger
@@ -24,6 +25,7 @@ _ROUTER_MODEL = os.getenv("ROUTER_MODEL", _MANAGER_MODEL)
 _ARCHIVIST_MODEL = os.getenv("ARCHIVIST_MODEL", "gemini-3.1-flash-lite-preview")
 _RESEARCHER_MODEL = os.getenv("RESEARCHER_MODEL", "gemini-3.1-flash-lite-preview")
 _BOOKKEEPER_MODEL = os.getenv("BOOKKEEPER_MODEL", "gemini-3.1-flash-lite-preview")
+_MACRO_ANALYST_MODEL = os.getenv("MACRO_ANALYST_MODEL", "gemini-3.1-flash-lite-preview")
 _ROUTER_HISTORY_LIMIT = 20
 
 
@@ -45,6 +47,7 @@ ROUTER_PROMPT = """คุณคือ The Manager ผู้จัดการก
 
 [แตกงาน — สำคัญที่สุด]
 - ผู้ใช้พิมพ์หลายคำสั่งใน turn เดียวได้ → แตกเป็นหลาย task เรียงตามลำดับที่ควรทำ (1 task = 1 worker call)
+- สำหรับงานดึงข้อมูล (researcher) หากดึงข้อมูลคนละประเภทหรือคนละตลาด/พื้นที่ร่วมกัน (เช่น ทั้งดึงข้อมูลเศรษฐกิจมหภาคของไทย ของสหรัฐฯ และของภูมิภาค) → ให้แตกเป็นหลาย task แยกกันส่งให้ researcher (1 task ต่อ 1 ชิ้นงาน เช่น ดึงข้อมูลไทย, ดึงข้อมูลสหรัฐฯ, ดึงข้อมูลภูมิภาค) เพื่อให้ Researcher เรียกใช้เครื่องมือได้ครบถ้วน (ห้ามรวบเป็น task เดียว)
 - คำสั่งเดียว → tasks มี 1 ชิ้น
 - ตอบเองได้จากบริบทเดิม หรือคำถามทั่วไปที่ไม่ต้องดึง/แก้ข้อมูล → tasks = [] (ว่าง) แล้วใส่คำตอบใน response_text
 - กฎ XOR: ถ้ามี task อย่างน้อย 1 ชิ้น → response_text ต้องว่าง (ปล่อยให้ worker เป็นคนตอบ) ห้ามใส่พร้อมกัน
@@ -58,6 +61,7 @@ ROUTER_PROMPT = """คุณคือ The Manager ผู้จัดการก
 - "researcher" → ดึงข้อมูลภายนอก: macro/sector/regional/FRED economic data, TH/US stocks (fundamentals, financials, momentum, consensus, news, ESG — Researcher จะเลือก market='TH'|'US' ตาม ticker), YouTube clip summaries, บทความจาก URL (เว็บ/สื่อการเงิน/บล็อก), ไฟล์ PDF (รายงาน/งบการเงิน/บทวิเคราะห์)
   (Researcher จะส่งผลให้ Archivist บันทึกอัตโนมัติ — ไม่ต้องส่ง archivist ซ้ำ)
 - "archivist" → อ่าน/ค้นหาข้อมูลใน Vault (ข้อมูลความรู้/Entity ที่บันทึกไว้, สุขภาพ Vault, semantic search), บันทึก book note หรือ knowledge ที่ผู้ใช้พิมพ์/วางมาเองโดยตรง (entity_type: book_note)
+- "macro_analyst" → วิเคราะห์สภาวะเศรษฐกิจมหภาคและการจัดสรรสินทรัพย์: คำนวณคะแนนสภาวะเศรษฐกิจของแต่ละประเทศ/ภูมิภาค ประเมินจัดทำ Matrix และรายงานสรุปสภาวะเศรษฐกิจ
 - "bookkeeper" → พอร์ตการลงทุนจริง:
   - ธุรกรรม: ซื้อ/ขาย/ฝาก/ถอน (THB/USD แยก pot), dividend/interest/rental, FX update, แก้ไข holding ที่ผิด
   - สถานะ/รายงาน: NAV, P/L, holdings, เงินสด, allocation % (asset_type/currency), performance trend ย้อนหลัง
@@ -84,7 +88,7 @@ ROUTER_PROMPT = """คุณคือ The Manager ผู้จัดการก
 
 class WorkerTask(BaseModel):
     """งานย่อย 1 ชิ้น ที่ route ไปยัง worker หนึ่งตัว"""
-    target: Literal["archivist", "researcher", "bookkeeper"]
+    target: Literal["archivist", "researcher", "bookkeeper", "macro_analyst"]
     instruction: str = Field(
         description="คำสั่งสำหรับ worker ตัวนี้ — กระชับ ชัดเจน ตัดคำนำหน้า/คำพ่วงที่ไม่เกี่ยวออก"
     )
@@ -148,6 +152,14 @@ def _get_bookkeeper_graph():
 
 
 @lru_cache(maxsize=1)
+def _get_macro_analyst_graph():
+    provider = detect_provider(_MACRO_ANALYST_MODEL)
+    return create_macro_analyst(
+        get_llm(provider=provider, model_name=_MACRO_ANALYST_MODEL, use_fallback=True)
+    )
+
+
+@lru_cache(maxsize=1)
 def _get_router_model():
     # router_model ต้องใช้ with_structured_output ซึ่งไม่มีบน RunnableWithFallbacks
     # → wrap primary + fallback แยกชั้น
@@ -163,28 +175,39 @@ def _get_router_model():
     return structured.with_fallbacks([fallback.with_structured_output(RouterDecision)])
 
 
+def extract_worker_reply(messages: list) -> str:
+    start_idx = 0
+    for i in range(len(messages) - 1, -1, -1):
+        if isinstance(messages[i], HumanMessage) and getattr(messages[i], "name", None) == "manager":
+            start_idx = i
+            break
+    recent_msgs = messages[start_idx:]
+    tool_msg = next((m for m in reversed(recent_msgs) if isinstance(m, ToolMessage)), None)
+    return normalize_content(tool_msg.content if tool_msg is not None else recent_msgs[-1].content)
+
+
 def build_graph(checkpointer=None) -> StateGraph:
     archivist_graph = _get_archivist_graph()
     researcher_graph = _get_researcher_graph()
     bookkeeper_graph = _get_bookkeeper_graph()
+    macro_analyst_graph = _get_macro_analyst_graph()
     router_model = _get_router_model()
 
-    def supervisor_node(state: AgentState) -> Command[Literal["archivist", "researcher", "bookkeeper", "__end__"]]:
+    def supervisor_node(state: AgentState) -> Command[Literal["prepare_archivist", "researcher", "bookkeeper", "macro_analyst", "__end__"]]:
         messages = state["messages"]
 
-        if isinstance(messages[-1], HumanMessage):
+        if isinstance(messages[-1], HumanMessage) and getattr(messages[-1], "name", None) != "manager":
             # turn ใหม่จาก user → วางแผนงานทั้ง turn (ยิง LLM ครั้งเดียว แล้ว drain คิว)
             router_messages = [
                 {"role": "system", "content": ROUTER_PROMPT},
                 *[{"role": _msg_role(m), "content": normalize_content(m.content)}
-                  for m in messages[-_ROUTER_HISTORY_LIMIT:]],
+                  for m in messages[-_ROUTER_HISTORY_LIMIT:] if not isinstance(m, ToolMessage)],
             ]
             decision: RouterDecision = router_model.invoke(router_messages)
             log.info("route plan: tasks=%d", len(decision.tasks))
 
             if not decision.tasks:
                 # respond — ใช้ response_text ตรงๆ ไม่ยิง LLM รอบ 2
-                # fallback กันเคส LLM คืน tasks ว่าง + response_text ว่าง → ไม่งั้นจอเงียบ
                 reply = decision.response_text.strip() or "ขอโทษครับ ผมยังไม่เข้าใจคำสั่ง ลองพิมพ์ใหม่อีกครั้งได้ไหมครับ"
                 log_routing("manager", "user", content=reply)
                 return Command(
@@ -197,7 +220,7 @@ def build_graph(checkpointer=None) -> StateGraph:
                 )
             queue = [t.model_dump() for t in decision.tasks]
         else:
-            # วนกลับจาก worker (last = AIMessage) → ทำ task ที่เหลือต่อ ไม่ re-plan
+            # วนกลับจาก worker (last != user original message) → ทำ task ที่เหลือต่อ
             queue = state.get("task_queue") or []
 
         if not queue:
@@ -211,32 +234,31 @@ def build_graph(checkpointer=None) -> StateGraph:
         if target == "researcher":
             meta["save_to_vault"] = task.get("save_to_vault", True)
             reason = f"save_to_vault={meta['save_to_vault']}"
+        
         log_routing("manager", target, reason=reason, content=task["instruction"])
+        
+        goto_target = "prepare_archivist" if target == "archivist" else target
+        
         return Command(
-            goto=target,
+            goto=goto_target,
             update={
-                "messages": [AIMessage(content=task["instruction"])],
+                "messages": [HumanMessage(content=task["instruction"], name="manager")],
                 "route_meta": meta,
                 "task_queue": rest,
             },
         )
 
-    def archivist_node(state: AgentState) -> Command[Literal["supervisor"]]:
-        from tools.archivist_tools import flush_index_if_dirty
-
-        last_msg = normalize_content(state["messages"][-1].content)
+    def prepare_archivist_node(state: AgentState) -> Command[Literal["archivist"]]:
         meta = state.get("route_meta") or {}
-
-        if meta.get("source") == "researcher":
+        
+        if meta.get("source") == "researcher" or meta.get("source") == "macro_analyst":
+            last_msg = extract_worker_reply(state["messages"])
             task = f"บันทึกข้อมูลดิบต่อไปนี้ลง Vault ทันที\n\n[ข้อมูลดิบ]\n{last_msg}"
         else:
-            # Manager มักสร้าง instruction สั้นๆ เมื่อผู้ใช้วาง content ยาว (เช่น book note)
-            # ดึง HumanMessage ต้นฉบับกลับมาถ้า instruction สั้นกว่า user content มาก
-            # — heuristic นี้ปลอดภัยเฉพาะ turn ที่มีงานเดียว: ถ้าเป็น multi-task (มี worker
-            #   ตัวอื่นตอบไปก่อนใน turn นี้) raw_user จะมีคำสั่งของ task อื่นปนมา ห้ามกู้
+            last_msg = normalize_content(state["messages"][-1].content) # This is the manager's instruction
             msgs = state["messages"]
             last_human_idx = next(
-                (i for i in range(len(msgs) - 1, -1, -1) if isinstance(msgs[i], HumanMessage)),
+                (i for i in range(len(msgs) - 1, -1, -1) if isinstance(msgs[i], HumanMessage) and getattr(msgs[i], "name", None) != "manager"),
                 -1,
             )
             raw_user = normalize_content(msgs[last_human_idx].content) if last_human_idx >= 0 else ""
@@ -244,95 +266,117 @@ def build_graph(checkpointer=None) -> StateGraph:
                 isinstance(m, AIMessage) and normalize_content(m.content).strip()
                 for m in msgs[last_human_idx + 1:-1]
             )
-            if not mid_drain and "---" in raw_user and len(raw_user) > len(last_msg) * 2:
+            if not mid_drain and _has_researcher_frontmatter(raw_user) and len(raw_user) > len(last_msg) * 2:
                 task = f"บันทึกข้อมูลดิบต่อไปนี้ลง Vault ทันที\n\n[ข้อมูลดิบ]\n{raw_user}"
             else:
                 task = last_msg
 
-        log.info("archivist input: source=%s len=%d", meta.get("source"), len(task))
-        result = archivist_graph.invoke({"messages": [HumanMessage(content=task)]})
-        archivist_reply = normalize_content(result["messages"][-1].content)
+        log.info("prepare_archivist: source=%s len=%d", meta.get("source"), len(task))
+        return Command(
+            goto="archivist",
+            update={
+                "messages": [HumanMessage(content=task, name="manager")]
+            }
+        )
 
+    def post_archivist_node(state: AgentState) -> Command[Literal["supervisor"]]:
+        from tools.archivist.indexer import flush_index_if_dirty
+        archivist_reply = extract_worker_reply(state["messages"])
         flush_index_if_dirty()
-
         log_routing("archivist", "user", content=archivist_reply)
         return Command(
             goto="supervisor",
             update={
                 "messages": [AIMessage(content=archivist_reply)],
-                "route_meta": {"source": "archivist", "target": "user"},
-            },
+                "route_meta": {"source": "archivist", "target": "user"}
+            }
         )
 
-    def researcher_node(state: AgentState) -> Command[Literal["archivist", "supervisor"]]:
-        instruction = normalize_content(state["messages"][-1].content)
+    def post_researcher_node(state: AgentState) -> Command[Literal["supervisor", "prepare_archivist"]]:
         meta = state.get("route_meta") or {}
         save_to_vault = meta.get("save_to_vault", True)
+        researcher_reply = extract_worker_reply(state["messages"])
 
-        log.info("researcher input: save=%s len=%d", save_to_vault, len(instruction))
-        result = researcher_graph.invoke({"messages": [HumanMessage(content=instruction)]})
-
-        # ดึง raw tool output ตรง ๆ — Gemini มักคืน AIMessage ว่างหลัง tool call
-        # ทำให้ reply เป็น "" → frontmatter check fail → graph end เงียบ ๆ
-        tool_msg = next(
-            (m for m in reversed(result["messages"]) if isinstance(m, ToolMessage)),
-            None,
-        )
-        researcher_reply = normalize_content(
-            tool_msg.content if tool_msg is not None else result["messages"][-1].content
-        )
-
-        # ไม่มี frontmatter → ไม่ใช่ payload ของจริง (error/unstructured) — ส่งให้ user ตรงๆ
         if not _has_researcher_frontmatter(researcher_reply):
             log_routing("researcher", "user", reason="no_frontmatter", content=researcher_reply)
             return Command(
-                goto="supervisor",
+                goto="supervisor", 
                 update={
                     "messages": [AIMessage(content=researcher_reply)],
-                    "route_meta": {"source": "researcher", "target": "user"},
-                },
+                    "route_meta": {"source": "researcher", "target": "user"}
+                }
             )
 
         if not save_to_vault:
             log_routing("researcher", "user", reason="no_save", content=researcher_reply)
             return Command(
-                goto="supervisor",
+                goto="supervisor", 
                 update={
                     "messages": [AIMessage(content=researcher_reply)],
-                    "route_meta": {"source": "researcher", "target": "user"},
-                },
+                    "route_meta": {"source": "researcher", "target": "user"}
+                }
             )
 
         log_routing("researcher", "archivist", reason="save_to_vault", content=researcher_reply)
         return Command(
-            goto="archivist",
+            goto="prepare_archivist", 
             update={
                 "messages": [AIMessage(content=researcher_reply)],
-                "route_meta": {"source": "researcher", "target": "archivist"},
-            },
+                "route_meta": {"source": "researcher", "target": "archivist"}
+            }
         )
 
-    def bookkeeper_node(state: AgentState) -> Command[Literal["supervisor"]]:
-        task = normalize_content(state["messages"][-1].content)
-        log.info("bookkeeper input: len=%d", len(task))
-
-        result = bookkeeper_graph.invoke({"messages": [HumanMessage(content=task)]})
-        bookkeeper_reply = normalize_content(result["messages"][-1].content)
-
+    def post_bookkeeper_node(state: AgentState) -> Command[Literal["supervisor"]]:
+        bookkeeper_reply = extract_worker_reply(state["messages"])
         log_routing("bookkeeper", "user", content=bookkeeper_reply)
         return Command(
-            goto="supervisor",
+            goto="supervisor", 
             update={
                 "messages": [AIMessage(content=bookkeeper_reply)],
-                "route_meta": {"source": "bookkeeper", "target": "user"},
-            },
+                "route_meta": {"source": "bookkeeper", "target": "user"}
+            }
+        )
+
+    def post_macro_analyst_node(state: AgentState) -> Command[Literal["supervisor", "prepare_archivist"]]:
+        macro_analyst_reply = extract_worker_reply(state["messages"])
+        
+        if _has_researcher_frontmatter(macro_analyst_reply):
+            log_routing("macro_analyst", "archivist", reason="save_to_vault", content=macro_analyst_reply)
+            return Command(
+                goto="prepare_archivist", 
+                update={
+                    "messages": [AIMessage(content=macro_analyst_reply)],
+                    "route_meta": {"source": "macro_analyst", "target": "archivist"}
+                }
+            )
+        
+        log_routing("macro_analyst", "user", content=macro_analyst_reply)
+        return Command(
+            goto="supervisor", 
+            update={
+                "messages": [AIMessage(content=macro_analyst_reply)],
+                "route_meta": {"source": "macro_analyst", "target": "user"}
+            }
         )
 
     builder = StateGraph(AgentState)
     builder.add_node("supervisor", supervisor_node)
-    builder.add_node("archivist", archivist_node)
-    builder.add_node("researcher", researcher_node)
-    builder.add_node("bookkeeper", bookkeeper_node)
+    builder.add_node("prepare_archivist", prepare_archivist_node)
+    builder.add_node("archivist", archivist_graph)
+    builder.add_node("researcher", researcher_graph)
+    builder.add_node("bookkeeper", bookkeeper_graph)
+    builder.add_node("macro_analyst", macro_analyst_graph)
+    
+    builder.add_node("post_archivist", post_archivist_node)
+    builder.add_node("post_researcher", post_researcher_node)
+    builder.add_node("post_bookkeeper", post_bookkeeper_node)
+    builder.add_node("post_macro_analyst", post_macro_analyst_node)
+
     builder.add_edge(START, "supervisor")
+    
+    builder.add_edge("archivist", "post_archivist")
+    builder.add_edge("researcher", "post_researcher")
+    builder.add_edge("bookkeeper", "post_bookkeeper")
+    builder.add_edge("macro_analyst", "post_macro_analyst")
 
     return builder.compile(checkpointer=checkpointer)

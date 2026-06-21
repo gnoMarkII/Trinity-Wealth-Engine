@@ -29,7 +29,11 @@ __pycache__/
 .pytest_cache/
 .coverage
 coverage.xml
+coverage_report/
 htmlcov/
+test_report.html
+testing_report.html
+qa_dashboard.html
 
 # =========================================
 # 5. Build & Distribution
@@ -45,6 +49,7 @@ build/
 code_review.txt
 gen_code_review.py
 scripts/
+scratch/
 
 # =========================================
 # 7. OS & IDE

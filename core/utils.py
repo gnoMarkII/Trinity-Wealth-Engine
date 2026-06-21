@@ -1,3 +1,6 @@
+from langsmith import traceable
+
+@traceable(run_type="parser")
 def normalize_content(content) -> str:
     """Normalize LLM message content to str (handles Gemini list[dict] format)."""
     if isinstance(content, list):

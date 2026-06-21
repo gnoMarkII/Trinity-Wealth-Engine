@@ -1,0 +1,372 @@
+from langsmith import traceable
+import concurrent.futures
+import csv
+import json
+import os
+import re
+import tempfile
+from datetime import datetime, timedelta
+from pathlib import Path
+from typing import Literal
+
+import frontmatter
+import yfinance as yf
+from filelock import FileLock, Timeout
+from langchain_core.tools import tool
+from pydantic import BaseModel, ConfigDict, Field, field_validator
+
+from core.logger import get_logger
+
+log = get_logger(__name__)
+
+_GOALS_KEY_ORDER = ("doc_type", "last_updated", "goals")
+
+
+from tools._atomic_io import _atomic_write_to
+from .core import _load_or_init, _save, _recalc_all, _recalc_holding, _recalc_summary, _find_holding, _require_cash, _require_fx, get_portfolio_state, _holding_currency, compute_allocation_breakdown
+from .models import _now_iso, _coerce_iso_string, Holding, Summary, PortfolioState, WatchlistItem, WatchlistState, GoalItem, GoalsState
+
+
+VAULT_PATH = Path(os.getenv("OBSIDIAN_VAULT_PATH", "./memories"))
+PORTFOLIO_REL = os.getenv("PORTFOLIO_FILE", "20_Portfolio_Management/Current_Holdings/Portfolio_Holdings.md")
+PORTFOLIO_PATH = VAULT_PATH / PORTFOLIO_REL
+TRADING_JOURNAL_REL = os.getenv(
+    "TRADING_JOURNAL_FILE",
+    "20_Portfolio_Management/Journals_and_Reports/Trading_Journal.md",
+)
+TRADING_JOURNAL_PATH = VAULT_PATH / TRADING_JOURNAL_REL
+WATCHLIST_REL = os.getenv(
+    "WATCHLIST_FILE",
+    "20_Portfolio_Management/Current_Holdings/Watchlist.md",
+)
+WATCHLIST_PATH = VAULT_PATH / WATCHLIST_REL
+PERFORMANCE_LOG_REL = os.getenv(
+    "PERFORMANCE_LOG_FILE",
+    "20_Portfolio_Management/Journals_and_Reports/Performance_Log.csv",
+)
+PERFORMANCE_LOG_PATH = VAULT_PATH / PERFORMANCE_LOG_REL
+_PERFORMANCE_LOG_HEADER = ["Date", "Total_NAV", "Total_Cost", "Unrealized_PnL", "Cash_Balance"]
+
+# Derived sidecar folders (master = Portfolio_Holdings.md / Watchlist.md)
+HOLDINGS_DIR = VAULT_PATH / "20_Portfolio_Management/Current_Holdings/Holdings"
+WATCHLIST_ITEMS_DIR = VAULT_PATH / "20_Portfolio_Management/Current_Holdings/WatchlistItems"
+
+CASH_THB_SYMBOL = "CASH_THB"
+CASH_USD_SYMBOL = "CASH_USD"
+_CASH_SYMBOLS = (CASH_THB_SYMBOL, CASH_USD_SYMBOL)
+# Back-compat alias — call sites and tests still reference CASH_SYMBOL
+CASH_SYMBOL = CASH_THB_SYMBOL
+
+_FLOAT_EPS = 1e-6
+_MONEY_DP = 2
+_COST_DP = 4
+_PCT_DP = 2
+
+_LOCK_TIMEOUT = 15  # seconds — wait up to 15s for another process to release
+_PRICE_FETCH_TIMEOUT = 6  # seconds per symbol when refreshing
+
+_PORTFOLIO_LOCK_PATH = str(PORTFOLIO_PATH) + ".lock"
+_portfolio_lock = FileLock(_PORTFOLIO_LOCK_PATH, timeout=_LOCK_TIMEOUT)
+
+
+
+def _atomic_write_goals(serialized: str) -> None:
+    parent = GOALS_PATH.parent
+    parent.mkdir(parents=True, exist_ok=True)
+    fd, tmp_name = tempfile.mkstemp(prefix=".goals_", suffix=".md.tmp", dir=str(parent))
+    tmp_path = Path(tmp_name)
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as f:
+            f.write(serialized)
+        os.replace(tmp_path, GOALS_PATH)
+    except Exception:
+        tmp_path.unlink(missing_ok=True)
+        raise
+
+
+def _goal_item_to_md(goal: GoalItem) -> str:
+    lines = [
+        "---",
+        "entity_type: goal",
+        f"name: {goal.name}",
+        f"goal_type: {goal.goal_type}",
+        f"target_amount_thb: {goal.target_amount_thb}",
+        f"created_date: {goal.created_date}",
+    ]
+    if goal.deadline is not None:
+        lines.append(f"deadline: {goal.deadline}")
+    if goal.notes is not None:
+        notes_escaped = goal.notes.replace('"', '\\"')
+        lines.append(f'notes: "{notes_escaped}"')
+    lines.append("---")
+    lines.append("")
+    return "\n".join(lines)
+
+
+def _sync_goals_sidecars(state: GoalsState) -> None:
+    GOALS_ITEMS_DIR.mkdir(parents=True, exist_ok=True)
+    live: set[str] = set()
+
+    for goal in state.goals:
+        safe = goal.name.replace("/", "_").replace(" ", "_")
+        _atomic_write_to(GOALS_ITEMS_DIR / f"{safe}.md", _goal_item_to_md(goal))
+        live.add(safe)
+
+    for old in GOALS_ITEMS_DIR.glob("*.md"):
+        if old.stem not in live:
+            old.unlink(missing_ok=True)
+            log.debug("[SIDECAR DEL] | goals/%s", old.name)
+
+
+def _save_goals(post: frontmatter.Post, state: GoalsState) -> None:
+    state.last_updated = _now_iso()
+    dump = state.model_dump(exclude_none=True)
+
+    ordered: dict = {}
+    for key in _GOALS_KEY_ORDER:
+        if key in dump:
+            ordered[key] = dump.pop(key)
+    ordered.update(dump)
+
+    post.metadata.clear()
+    post.metadata.update(ordered)
+    post.content = ""
+
+    _atomic_write_goals(frontmatter.dumps(post, sort_keys=False))
+    _sync_goals_sidecars(state)
+
+
+def _load_or_init_goals() -> tuple[frontmatter.Post, GoalsState]:
+    if not GOALS_PATH.exists():
+        GOALS_PATH.parent.mkdir(parents=True, exist_ok=True)
+        post = frontmatter.Post(content="")
+        state = GoalsState(last_updated=_now_iso())
+        _save_goals(post, state)
+        return post, state
+
+    with GOALS_PATH.open("r", encoding="utf-8") as f:
+        post = frontmatter.load(f)
+
+    if not post.metadata:
+        log.warning("Goals.md ไม่มี YAML frontmatter — บูตข้อมูลใหม่")
+        state = GoalsState(last_updated=_now_iso())
+        _save_goals(post, state)
+        return post, state
+
+    state = GoalsState.model_validate(post.metadata)
+    return post, state
+
+
+@tool
+@traceable(run_type="tool")
+def set_goal(
+    name: str,
+    goal_type: Literal["nav_target", "cash_target", "passive_income_ytd"],
+    target_amount_thb: float,
+    deadline: str | None = None,
+    years_from_now: int | None = None,
+    notes: str | None = None,
+) -> str:
+    """บันทึก/อัปเดตเป้าหมายทางการเงิน (idempotent upsert ตาม name)
+
+    goal_type:
+        'nav_target'          — เป้าหมาย NAV รวมพอร์ต (summary.total_value_thb)
+        'cash_target'         — เป้าหมายเงินสดสะสม (CASH_THB + CASH_USD×fx ในหน่วย THB)
+        'passive_income_ytd'  — เป้าหมาย passive income รายปี
+                                 (YTD counter รีเซ็ตทุก 1 มกราคม — intentional behavior)
+
+    progress ไม่ถูก store ลงไฟล์ — คำนวณเฉพาะตอนเรียก get_goals_progress
+
+    Args:
+        name: ชื่อเป้าหมาย (ใช้เป็น key — ถ้าซ้ำจะ overwrite)
+        goal_type: ประเภทเป้าหมาย (ดูด้านบน)
+        target_amount_thb: ยอดเป้าหมายใน THB (>0)
+        deadline: วันกำหนด format 'YYYY-MM-DD' (optional)
+        notes: หมายเหตุ (optional)
+
+    Raises:
+        ValueError: name ว่าง, target_amount_thb <= 0, deadline format ผิด
+    """
+    nm = name.strip()
+    if not nm:
+        raise ValueError("name ต้องไม่ว่าง")
+    if target_amount_thb <= 0:
+        raise ValueError("target_amount_thb ต้องมากกว่า 0")
+    if years_from_now is not None:
+        if years_from_now <= 0:
+            raise ValueError("years_from_now ต้องมากกว่า 0")
+        if deadline is not None:
+            raise ValueError("ห้ามระบุทั้ง deadline และ years_from_now พร้อมกัน")
+        
+        # วันสิ้นปีของปีเป้าหมาย
+        target_year = datetime.now().year + years_from_now
+        deadline = f"{target_year}-12-31"
+        
+    if deadline is not None:
+        try:
+            datetime.strptime(deadline, "%Y-%m-%d")
+        except ValueError:
+            raise ValueError(f"deadline ต้องอยู่ในรูปแบบ 'YYYY-MM-DD' (got '{deadline}')")
+
+    try:
+        with _goals_lock:
+            post, state = _load_or_init_goals()
+            today = datetime.now().strftime("%Y-%m-%d")
+
+            existing_idx = next(
+                (i for i, g in enumerate(state.goals) if g.name == nm), None
+            )
+            preserved_date = (
+                state.goals[existing_idx].created_date if existing_idx is not None else today
+            )
+            new_goal = GoalItem(
+                name=nm,
+                goal_type=goal_type,
+                target_amount_thb=target_amount_thb,
+                deadline=deadline,
+                notes=notes,
+                created_date=preserved_date,
+            )
+            if existing_idx is not None:
+                state.goals[existing_idx] = new_goal
+                action = "[GOAL UPD]"
+            else:
+                state.goals.append(new_goal)
+                action = "[GOAL SET]"
+            _save_goals(post, state)
+            total = len(state.goals)
+    except Timeout:
+        raise ValueError(f"goals lock timeout ({_LOCK_TIMEOUT}s) — มี operation อื่นทำงาน")
+
+    dl_note = f" | deadline: {deadline}" if deadline else ""
+    return f"{action} {nm} ({goal_type}) target: {target_amount_thb:,.2f} THB{dl_note} | total: {total}"
+
+
+@tool
+@traceable(run_type="tool")
+def remove_goal(name: str) -> str:
+    """ลบเป้าหมายทางการเงินออกจากระบบ
+
+    Args:
+        name: ชื่อเป้าหมายที่ต้องการลบ
+
+    Raises:
+        ValueError: name ว่าง หรือไม่พบเป้าหมาย
+    """
+    nm = name.strip()
+    if not nm:
+        raise ValueError("name ต้องไม่ว่าง")
+
+    try:
+        with _goals_lock:
+            post, state = _load_or_init_goals()
+            existing = next((g for g in state.goals if g.name == nm), None)
+            if existing is None:
+                raise ValueError(f"ไม่พบเป้าหมาย '{nm}'")
+            state.goals.remove(existing)
+            _save_goals(post, state)
+            remaining = len(state.goals)
+    except Timeout:
+        raise ValueError(f"goals lock timeout ({_LOCK_TIMEOUT}s) — มี operation อื่นทำงาน")
+
+    return f"[GOAL DEL] {nm} | remaining: {remaining}"
+
+
+@tool
+@traceable(run_type="tool")
+def get_goals_progress() -> str:
+    """คำนวณ progress ของเป้าหมายทางการเงินทั้งหมด เทียบกับสถานะพอร์ตปัจจุบัน
+
+    Progress คำนวณจาก portfolio state ณ ขณะเรียก — ไม่ถูก cache หรือ store
+
+    goal_type progress:
+        nav_target          → summary.total_value_thb / target × 100%
+        cash_target         → (CASH_THB + CASH_USD×fx) / target × 100%
+                              (combined liquidity in THB — same as Performance_Log.Cash_Balance)
+        passive_income_ytd  → summary.passive_income_ytd / target × 100%
+                              (YTD resets every Jan 1 — intentional for annual goal tracking)
+
+    Lock ordering: _portfolio_lock acquired first, then _goals_lock (prevents deadlock)
+
+    Returns:
+        JSON string: {n_goals, goals: [{name, goal_type, target_amount_thb,
+                      current_amount_thb, progress_pct, deadline, deadline_days_left, notes}],
+                      generated_at}
+    """
+    try:
+        # portfolio lock ก่อนเสมอ — consistent ordering ป้องกัน deadlock
+        with _portfolio_lock:
+            _, port_state = _load_or_init()
+            _recalc_all(port_state)
+            current_fx = port_state.fx_rates.get("USDTHB", 0.0) or 0.0
+            cash_thb = next(
+                (h.units for h in port_state.holdings if h.symbol == CASH_THB_SYMBOL), 0.0
+            )
+            cash_usd = next(
+                (h.units for h in port_state.holdings if h.symbol == CASH_USD_SYMBOL), 0.0
+            )
+            total_cash_thb = round(cash_thb + cash_usd * current_fx, _MONEY_DP)
+            nav = port_state.summary.total_value_thb
+            passive_ytd = port_state.summary.passive_income_ytd
+
+            with _goals_lock:
+                _, goals_state = _load_or_init_goals()
+
+    except Timeout:
+        return json.dumps(
+            {"error": f"lock timeout ({_LOCK_TIMEOUT}s) — มี operation อื่นทำงาน"},
+            ensure_ascii=False,
+        )
+
+    now = datetime.now()
+    results = []
+    for g in goals_state.goals:
+        if g.goal_type == "nav_target":
+            current = nav
+        elif g.goal_type == "cash_target":
+            current = total_cash_thb
+        else:  # passive_income_ytd
+            current = passive_ytd
+
+        pct = round(
+            (current / g.target_amount_thb * 100) if g.target_amount_thb > 0 else 0.0,
+            _PCT_DP,
+        )
+
+        entry: dict = {
+            "name": g.name,
+            "goal_type": g.goal_type,
+            "target_amount_thb": g.target_amount_thb,
+            "current_amount_thb": round(current, _MONEY_DP),
+            "progress_pct": pct,
+        }
+        if g.deadline:
+            try:
+                dl = datetime.strptime(g.deadline, "%Y-%m-%d")
+                entry["deadline"] = g.deadline
+                entry["deadline_days_left"] = (dl - now).days
+            except ValueError:
+                entry["deadline"] = g.deadline
+        if g.notes:
+            entry["notes"] = g.notes
+        results.append(entry)
+
+    return json.dumps(
+        {
+            "n_goals": len(results),
+            "goals": results,
+            "generated_at": _now_iso(),
+        },
+        ensure_ascii=False,
+        indent=2,
+    )
+
+
+
+
+
+GOALS_ITEMS_DIR = VAULT_PATH / "20_Portfolio_Management/Goals/Items"
+GOALS_REL = os.getenv("GOALS_FILE", "20_Portfolio_Management/Goals/Goals.md")
+GOALS_PATH = VAULT_PATH / GOALS_REL
+_GOALS_LOCK_PATH = str(GOALS_PATH) + ".lock"
+_goals_lock = FileLock(_GOALS_LOCK_PATH, timeout=_LOCK_TIMEOUT)

@@ -1,4 +1,4 @@
-"""Shared retry helper สำหรับ external API calls (yfinance, FRED ฯลฯ)
+"""Shared retry helper สำหรับ external API calls (yfinance, FRED, LLM APIs)
 
 ใช้ pattern เดียวกับ main.py loop:
   - ตรวจ transient HTTP codes (429/500/502/503/504) + network errors
@@ -9,11 +9,14 @@ Exception coverage:
   - built-in TimeoutError / ConnectionError
   - requests.exceptions.{Timeout, ConnectionError, HTTPError}
   - curl_cffi.requests.exceptions.{Timeout, ConnectionError, HTTPError}  (yfinance ≥0.2.50)
+  - httpx.{TimeoutException, ConnectError, HTTPStatusError}
+  - google.genai.errors.APIError
   - yfinance.exceptions.YFRateLimitError
   - fallback: regex บน str(exc) สำหรับ exception ที่ถูก wrap/chain
 """
 import re
 import time
+from typing import Any, Callable
 
 # Optional imports — แต่ละ HTTP stack อาจไม่ติดตั้งครบทุกตัว
 _NETWORK_CLASSES: list[type] = [TimeoutError, ConnectionError]
@@ -30,6 +33,19 @@ try:
     import curl_cffi.requests.exceptions as _ccf_exc
     _NETWORK_CLASSES += [_ccf_exc.Timeout, _ccf_exc.ConnectionError]
     _HTTP_ERROR_CLASSES.append(_ccf_exc.HTTPError)
+except ImportError:
+    pass
+
+try:
+    import httpx as _httpx
+    _NETWORK_CLASSES += [_httpx.TimeoutException, _httpx.ConnectError]
+    _HTTP_ERROR_CLASSES.append(_httpx.HTTPStatusError)
+except ImportError:
+    pass
+
+try:
+    from google.genai import errors as _genai_errors
+    _HTTP_ERROR_CLASSES.append(_genai_errors.APIError)
 except ImportError:
     pass
 
@@ -52,11 +68,15 @@ _TRANSIENT_PATTERN = re.compile(
 
 
 def _http_status(exc: Exception) -> int | None:
-    """ดึง HTTP status code จาก exception ที่ผูกกับ Response (ถ้ามี)"""
+    """ดึง HTTP status code จาก exception — รองรับหลายรูปแบบ (.code, .status_code, .response.status_code)"""
+    for attr in ("code", "status_code", "http_status"):
+        v = getattr(exc, attr, None)
+        if isinstance(v, int):
+            return v
     resp = getattr(exc, "response", None)
-    if resp is None:
-        return None
-    return getattr(resp, "status_code", None)
+    if resp is not None:
+        return getattr(resp, "status_code", None)
+    return None
 
 
 def is_transient_error(exc: Exception) -> bool:
@@ -73,7 +93,7 @@ def is_transient_error(exc: Exception) -> bool:
     return bool(_TRANSIENT_PATTERN.search(str(exc)))
 
 
-def with_retry(fn, *args, **kwargs):
+def with_retry(fn: Callable[..., Any], *args: Any, **kwargs: Any) -> Any:
     """รัน fn พร้อม exponential backoff retry — re-raise ถ้า exhaust budget หรือ non-transient
 
     Args:

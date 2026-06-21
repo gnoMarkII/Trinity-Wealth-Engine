@@ -1,17 +1,12 @@
 from langchain_core.language_models import BaseChatModel
 from langchain_core.runnables import Runnable
-from langgraph.prebuilt import create_react_agent
+from langchain.agents import create_agent
 
-from tools.archivist_tools import (
-    lint_semantic_conflict,
-    lint_structural_health,
-    read_file,
-    save_memory,
-    search_all_memories,
-    search_graph_context,
-    update_master_index,
-    write_raw_markdown,
-)
+from tools.archivist.core import read_file
+from tools.archivist.writer import save_memory, write_raw_markdown
+from tools.archivist.indexer import update_master_index
+from tools.archivist.search import search_all_memories, search_graph_context
+from tools.archivist.linter import lint_structural_health, lint_semantic_conflict
 
 ARCHIVIST_SYSTEM_PROMPT = """คุณคือ The Archivist บรรณารักษ์ผู้จัดการความรู้ด้านการลงทุนใน Obsidian
 หน้าที่ของคุณคือ บันทึก และ ค้นหาข้อมูล เท่านั้น — ห้ามสรุป วิเคราะห์ หรือแปลงเนื้อหาเอง
@@ -90,4 +85,4 @@ _archivist_tools = [
 
 def create_archivist(model: BaseChatModel | Runnable):
     """สร้าง Archivist ReAct agent พร้อม PKM tools — caller ต้องส่ง model มาเสมอ"""
-    return create_react_agent(model, _archivist_tools, prompt=ARCHIVIST_SYSTEM_PROMPT)
+    return create_agent(model=model, tools=_archivist_tools, system_prompt=ARCHIVIST_SYSTEM_PROMPT)

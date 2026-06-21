@@ -2,29 +2,18 @@ import os
 
 from langchain_core.language_models import BaseChatModel
 from langchain_core.runnables import Runnable
-from langgraph.prebuilt import create_react_agent
+from langchain.agents import create_agent
 
-from tools.portfolio_tools import (
-    add_to_watchlist,
-    append_trading_journal,
-    batch_import_holdings,
-    compute_allocation_breakdown,
-    edit_holding,
-    execute_trade,
-    get_goals_progress,
-    get_portfolio_state,
-    manage_cash_flow,
-    read_performance_history,
-    read_trading_journal,
-    read_watchlist,
-    record_income,
-    record_performance_snapshot,
-    remove_from_watchlist,
-    remove_goal,
-    set_goal,
-    sync_market_prices,
-    update_fx_rate,
+from tools.portfolio.core import get_portfolio_state, compute_allocation_breakdown
+from tools.portfolio.trading import (
+    execute_trade, record_income, batch_import_holdings,
+    manage_cash_flow, update_fx_rate, edit_holding,
 )
+from tools.portfolio.watchlist import add_to_watchlist, remove_from_watchlist, read_watchlist
+from tools.portfolio.goals import set_goal, remove_goal, get_goals_progress
+from tools.portfolio.journal import append_trading_journal, read_trading_journal
+from tools.portfolio.prices import sync_market_prices
+from tools.portfolio.performance import record_performance_snapshot, read_performance_history
 
 _FUND_NAME = os.getenv("FUND_NAME", "กองทุนส่วนตัว")
 
@@ -180,4 +169,4 @@ _bookkeeper_tools = [
 
 def create_bookkeeper(model: BaseChatModel | Runnable):
     """สร้าง Bookkeeper ReAct agent พร้อม Portfolio tools — caller ต้องส่ง model มาเสมอ"""
-    return create_react_agent(model, _bookkeeper_tools, prompt=BOOKKEEPER_SYSTEM_PROMPT)
+    return create_agent(model=model, tools=_bookkeeper_tools, system_prompt=BOOKKEEPER_SYSTEM_PROMPT)

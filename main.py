@@ -1,50 +1,19 @@
 import os
-import re
 import time
+import uuid
 
-import httpx
 from dotenv import load_dotenv
-from google.genai import errors as genai_errors
 from langgraph.checkpoint.memory import MemorySaver
 from prompt_toolkit import prompt
 
 from core.agent_log import log_routing
 from core.logger import setup_logging
+from core.retry import is_transient_error as _is_transient_error
 from core.security import anonymize_pii
 from core.utils import normalize_content
 
 load_dotenv()
 setup_logging()
-
-_TRANSIENT_HTTP_CODES = {429, 500, 502, 503, 504}
-_TRANSIENT_MSG_PATTERN = re.compile(
-    r'\b(429|500|502|503|504|rate.?limit|resource.?exhausted|deadline.?exceeded|service.?unavailable)\b',
-    re.IGNORECASE,
-)
-
-
-def _http_code(exc: Exception) -> int | None:
-    """พยายามดึง HTTP status code จาก exception หลายรูปแบบ"""
-    for attr in ("code", "status_code", "http_status"):
-        v = getattr(exc, attr, None)
-        if isinstance(v, int):
-            return v
-    resp = getattr(exc, "response", None)
-    if resp is not None:
-        return getattr(resp, "status_code", None)
-    return None
-
-
-def _is_transient_error(exc: Exception) -> bool:
-    """ตรวจว่า error ควร retry หรือไม่ — รองรับ genai SDK, httpx, network และ LangChain-wrapped errors"""
-    if isinstance(exc, (TimeoutError, ConnectionError, httpx.TimeoutException, httpx.ConnectError)):
-        return True
-    if isinstance(exc, (genai_errors.APIError, httpx.HTTPStatusError)):
-        code = _http_code(exc)
-        if code in _TRANSIENT_HTTP_CODES:
-            return True
-    # LangChain มักจะ wrap original error เป็น message string — fallback ตรวจจาก text
-    return bool(_TRANSIENT_MSG_PATTERN.search(str(exc)))
 
 
 def _label_from_route(meta: dict | None, node_name: str) -> str:
@@ -81,7 +50,7 @@ def main():
         return
 
     from agents.manager_agent import build_graph
-    from tools.archivist_tools import init_vault_structure
+    from tools.archivist.core import init_vault_structure
 
     init_vault_structure()
 
@@ -93,7 +62,15 @@ def main():
 
     memory = MemorySaver()
     graph = build_graph(checkpointer=memory)
-    config = {"configurable": {"thread_id": "1"}, "recursion_limit": 25}
+    config = {
+        "configurable": {"thread_id": str(uuid.uuid4())},
+        "recursion_limit": 40,
+        "tags": ["invest-agents", "cli-session"],
+        "metadata": {
+            "run_type": "chain",
+            "session_source": "terminal"
+        }
+    }
 
     while True:
         try:
