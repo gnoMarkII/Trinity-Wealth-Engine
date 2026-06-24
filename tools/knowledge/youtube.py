@@ -42,7 +42,7 @@ def _find_existing_insight(video_id: str) -> Path | None:
     """คืน Path ของไฟล์ insight ที่มีอยู่แล้ว หรือ None ถ้ายังไม่เคย ingest"""
     if not _YOUTUBE_SUMMARIES_PATH.exists():
         return None
-    matches = list(_YOUTUBE_SUMMARIES_PATH.glob(f"YouTube_Insight_{video_id}_*.md"))
+    matches = list(_YOUTUBE_SUMMARIES_PATH.rglob(f"YouTube_Insight_{video_id}_*.md"))
     return matches[0] if matches else None
 
 
@@ -54,6 +54,20 @@ def _entries_to_text(entries) -> str:
         if text:
             parts.append(text)
     return " ".join(parts)
+
+
+def _get_channel_name(video_id: str) -> str:
+    """สกัดชื่อช่องจากหน้าวิดีโอ"""
+    import urllib.request
+    url = f"https://www.youtube.com/watch?v={video_id}"
+    req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
+    try:
+        html = urllib.request.urlopen(req).read().decode('utf-8', errors='ignore')
+        import re
+        m = re.search(r'<link itemprop="name" content="([^"]+)">', html)
+        return m.group(1).strip() if m else "Unknown_Channel"
+    except Exception:
+        return "Unknown_Channel"
 
 
 def _get_raw_transcript(video_id: str) -> str:
@@ -140,12 +154,15 @@ def ingest_youtube_transcript(url: str) -> str:
         log.warning("YouTube LLM extraction failed | video_id=%s: %s", video_id, e)
         return f"ERROR: LLM Extraction ล้มเหลว (OpenRouter): {e}"
 
+    channel_name = _get_channel_name(video_id)
+
     # 6. Build Markdown output พร้อม YAML frontmatter
     thumbnail = f"https://img.youtube.com/vi/{video_id}/maxresdefault.jpg"
-    return "\n".join([
+    content = "\n".join([
         "---",
         f"title: YouTube Insight {video_id} {today}",
         "entity_type: youtube_insight",
+        f"channel: {channel_name}",
         f"video_id: {video_id}",
         f"source_url: {url}",
         f"image: {thumbnail}",
@@ -155,7 +172,7 @@ def ingest_youtube_transcript(url: str) -> str:
         "---",
         "",
         f"# YouTube Investment Insight — `{video_id}`",
-        f"> แหล่งที่มา: {url}",
+        f"> แหล่งที่มา: {url} | ช่อง: {channel_name}",
         "",
         f'<iframe width="560" height="315" src="https://www.youtube.com/embed/{video_id}" frameborder="0" allowfullscreen></iframe>',
         "",
@@ -166,3 +183,5 @@ def ingest_youtube_transcript(url: str) -> str:
         "> สกัดข้อมูลจาก YouTube Transcript ผ่าน LLM — ตรวจสอบความถูกต้องก่อนนำไปใช้ตัดสินใจลงทุน",
         "",
     ])
+
+    return content

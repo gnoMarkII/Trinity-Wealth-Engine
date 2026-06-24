@@ -33,6 +33,7 @@ def _parse_float_from_str(s: str) -> float | None:
         return None
 
 def _parse_markdown_table_rows(content: str) -> list[dict]:
+    """Legacy parser for flat tables"""
     lines = [ln.strip() for ln in content.splitlines() if ln.strip()]
     table_lines = []
     for ln in lines:
@@ -47,4 +48,41 @@ def _parse_markdown_table_rows(content: str) -> list[dict]:
         cells = [c.strip() for c in ln.split("|")[1:-1]]
         if len(cells) == len(headers):
             rows.append(dict(zip(headers, cells)))
+    return rows
+
+def _parse_markdown_with_context(content: str) -> list[dict]:
+    """Parse markdown tables and attach the current heading hierarchy to each row."""
+    lines = [ln.strip() for ln in content.splitlines() if ln.strip()]
+    rows = []
+    current_h1 = ""
+    current_h2 = ""
+    current_h3 = ""
+    
+    headers = []
+    
+    for ln in lines:
+        if ln.startswith("# "):
+            current_h1 = ln[2:].strip()
+            current_h2 = ""
+            current_h3 = ""
+        elif ln.startswith("## "):
+            current_h2 = ln[3:].strip()
+            current_h3 = ""
+        elif ln.startswith("### "):
+            current_h3 = ln[4:].strip()
+        elif ln.startswith("|"):
+            cells = [c.strip() for c in ln.split("|")[1:-1]]
+            # Detect header row
+            if "---" in ln.replace("|", ""):
+                continue
+            if cells and any(h in cells[0] for h in ["ดัชนี", "ตัวชี้วัด", "อันดับ", "ภูมิภาค"]):
+                headers = cells
+                continue
+            
+            if headers and len(cells) == len(headers):
+                row_dict = dict(zip(headers, cells))
+                row_dict["_H1"] = current_h1
+                row_dict["_H2"] = current_h2
+                row_dict["_H3"] = current_h3
+                rows.append(row_dict)
     return rows

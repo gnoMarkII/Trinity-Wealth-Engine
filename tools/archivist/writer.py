@@ -25,6 +25,8 @@ from .core import _atomic_write_text, _sanitize_filename, VAULT_PATH
 from .parser import _split_bullets, _parse_h3_subsections, _parse_h2_sections, _strip_frontmatter, _extract_asset_tickers, _TICKER_FRONTMATTER_RE, _VIDEO_ID_FRONTMATTER_RE, _SOURCE_URL_FRONTMATTER_RE
 from .indexer import update_master_index, _index_upsert
 
+_CHANNEL_FRONTMATTER_RE = re.compile(r'^channel:\s*(.+)$', re.MULTILINE)
+
 
 
 
@@ -137,6 +139,7 @@ def write_raw_markdown(content: str, folder_path: str, filename: str) -> str:
     """
     resolved_path = _maybe_inject_date_subfolder(folder_path, content)
     resolved_path = _maybe_inject_ticker_subfolder(resolved_path, content)
+    resolved_path = _maybe_inject_channel_subfolder(resolved_path, content)
     target_dir = VAULT_PATH / resolved_path
     target_dir.mkdir(parents=True, exist_ok=True)
     safe_name = _sanitize_filename(filename)
@@ -338,5 +341,22 @@ def _maybe_inject_ticker_subfolder(folder_path: str, content: str) -> str:
         return folder_path
     ticker = _sanitize_filename(m.group(1).strip().upper())
     return f"{normalized}/{ticker}" if ticker else folder_path
+
+
+def _maybe_inject_channel_subfolder(folder_path: str, content: str) -> str:
+    """ถ้า folder_path ลงท้ายด้วย 'YouTube_Summaries' → แทรกชื่อช่องจาก YAML `channel:` เป็น subfolder
+    
+    ตัวอย่าง:
+        '30_Knowledge_Base/YouTube_Summaries' + channel=FINNOMENA
+        → '30_Knowledge_Base/YouTube_Summaries/FINNOMENA'
+    """
+    normalized = folder_path.rstrip("/")
+    if not normalized.endswith("YouTube_Summaries"):
+        return folder_path
+    m = _CHANNEL_FRONTMATTER_RE.search(content)
+    if not m:
+        return folder_path
+    channel = _sanitize_filename(m.group(1).strip())
+    return f"{normalized}/{channel}" if channel else folder_path
 
 
