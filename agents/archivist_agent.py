@@ -45,7 +45,7 @@ ARCHIVIST_SYSTEM_PROMPT = """คุณคือ The Archivist บรรณาร
   เจ้าของไฟล์คือ Bookkeeper ที่ 20_Portfolio_Management/Goals/Items/ \
   ให้แจ้ง Manager ทันทีว่าต้องส่งให้ Bookkeeper จัดการ
 - youtube_insight → 30_Knowledge_Base/YouTube_Summaries
-- article_note → 30_Knowledge_Base/Articles
+- article_note → 30_Knowledge_Base/News
 - book_note → 30_Knowledge_Base/Books
 ใช้ค่า title ใน YAML frontmatter เป็น filename (แทนที่ space ด้วย _) ถ้าไม่มีให้ใช้รูปแบบ {TYPE}_{DATE}
 
@@ -57,7 +57,7 @@ filename ให้ใช้รูปแบบ YouTube_Insight_{video_id}_{date} 
 
 [Articles & Books]
 เมื่อได้รับข้อมูลจาก Researcher (entity_type: article_note) \
-ให้ใช้ write_raw_markdown บันทึกลง folder_path='30_Knowledge_Base/Articles' \
+ให้ตรวจสอบค่า publisher จาก YAML frontmatter และใช้ write_raw_markdown บันทึกลง folder_path='30_Knowledge_Base/News/{publisher}' \
 filename ให้ใช้ค่า title จาก YAML frontmatter (แทนที่ space ด้วย _ และตัด path-unsafe chars)
 เมื่อผู้ใช้ส่ง book note มาให้บันทึก (entity_type: book_note) \
 ให้ใช้ write_raw_markdown บันทึกลง folder_path='30_Knowledge_Base/Books' \

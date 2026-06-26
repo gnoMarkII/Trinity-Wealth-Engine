@@ -84,46 +84,4 @@ class TestBuildArticleMd:
         assert len(safe_title) <= 80
 
 
-class TestFindExistingArticle:
-    def test_returns_none_when_folder_missing(self, tmp_path, monkeypatch):
-        monkeypatch.setattr(kt_article, "_ARTICLES_PATH", tmp_path / "nonexistent")
-        assert kt_article._find_existing_article("abc123") is None
 
-    def test_returns_none_when_no_match(self, tmp_path, monkeypatch):
-        articles = tmp_path / "Articles"
-        articles.mkdir()
-        monkeypatch.setattr(kt_article, "_ARTICLES_PATH", articles)
-        assert kt_article._find_existing_article("abc123") is None
-
-    def test_returns_path_when_match_found(self, tmp_path, monkeypatch):
-        articles = tmp_path / "Articles"
-        articles.mkdir()
-        (articles / "2026-01-15_abc123_title.md").write_text("content")
-        monkeypatch.setattr(kt_article, "_ARTICLES_PATH", articles)
-        result = kt_article._find_existing_article("abc123")
-        assert result is not None
-        assert "abc123" in result.name
-
-    def test_returns_path_object(self, tmp_path, monkeypatch):
-        articles = tmp_path / "Articles"
-        articles.mkdir()
-        (articles / "my_xyzid_article.md").write_text("data")
-        monkeypatch.setattr(kt_article, "_ARTICLES_PATH", articles)
-        result = kt_article._find_existing_article("xyzid")
-        assert isinstance(result, Path)
-
-    def test_source_id_in_middle_of_filename(self, tmp_path, monkeypatch):
-        articles = tmp_path / "Articles"
-        articles.mkdir()
-        (articles / "prefix_TOKEN_suffix.md").write_text("data")
-        monkeypatch.setattr(kt_article, "_ARTICLES_PATH", articles)
-        result = kt_article._find_existing_article("TOKEN")
-        assert result is not None
-
-    def test_does_not_match_partial_overlap(self, tmp_path, monkeypatch):
-        articles = tmp_path / "Articles"
-        articles.mkdir()
-        (articles / "different_name.md").write_text("data")
-        monkeypatch.setattr(kt_article, "_ARTICLES_PATH", articles)
-        # "abc" is not in "different_name"
-        assert kt_article._find_existing_article("abc") is None

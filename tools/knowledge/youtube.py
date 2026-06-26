@@ -130,10 +130,16 @@ def ingest_youtube_transcript(url: str) -> str:
             f"ERROR: ไม่พบ Transcript ในคลิปนี้ (ID: {video_id}) — "
             "ลองคลิปอื่นที่มีซับไตเติลอัตโนมัติหรือที่ผู้สร้างเพิ่มไว้"
         )
-    except VideoUnavailable:
+    except VideoUnavailable as e:
+        if "live event" in str(e).lower() or "premieres" in str(e).lower():
+            log.warning("YouTube video is upcoming live | video_id=%s", video_id)
+            return f"ข้าม: วิดีโอนี้ยังไม่ถึงเวลา Live หรือกำลังรอ Premiere (ID: {video_id})"
         log.warning("YouTube video unavailable | video_id=%s", video_id)
         return f"ERROR: ไม่พบวิดีโอ (ID: {video_id}) — อาจถูกลบ, เป็น Private, หรือ Region-locked"
     except Exception as e:
+        if "live event" in str(e).lower() or "premieres" in str(e).lower():
+            log.warning("YouTube video is upcoming live | video_id=%s", video_id)
+            return f"ข้าม: วิดีโอนี้ยังไม่ถึงเวลา Live หรือกำลังรอ Premiere (ID: {video_id})"
         log.warning("YouTube transcript fetch failed | video_id=%s: %s", video_id, e)
         return f"ERROR: ดึง Transcript ล้มเหลว (ID: {video_id}): {e}"
 

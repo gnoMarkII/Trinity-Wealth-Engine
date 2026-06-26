@@ -170,11 +170,14 @@ import pytest
 import tools.portfolio.core as core
 
 class TestLoadOrInitCore:
-    def test_load_no_metadata(self, isolated_portfolio):
+    def test_load_no_metadata(self, isolated_portfolio, tmp_vault, monkeypatch):
         pt = isolated_portfolio
+        test_path = tmp_vault / "20_Portfolio_Management/Current_Holdings/Portfolio_Holdings.md"
+        monkeypatch.setattr(core, "PORTFOLIO_PATH", test_path)
+        
         # Create a blank markdown file
-        core.PORTFOLIO_PATH.parent.mkdir(parents=True, exist_ok=True)
-        with open(core.PORTFOLIO_PATH, "w", encoding="utf-8") as f:
+        test_path.parent.mkdir(parents=True, exist_ok=True)
+        with open(test_path, "w", encoding="utf-8") as f:
             f.write("Hello World")
         
         # It should log warning and init new state

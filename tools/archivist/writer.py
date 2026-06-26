@@ -140,6 +140,7 @@ def write_raw_markdown(content: str, folder_path: str, filename: str) -> str:
     resolved_path = _maybe_inject_date_subfolder(folder_path, content)
     resolved_path = _maybe_inject_ticker_subfolder(resolved_path, content)
     resolved_path = _maybe_inject_channel_subfolder(resolved_path, content)
+    resolved_path = _maybe_inject_publisher_subfolder(resolved_path, content)
     target_dir = VAULT_PATH / resolved_path
     target_dir.mkdir(parents=True, exist_ok=True)
     safe_name = _sanitize_filename(filename)
@@ -162,10 +163,74 @@ def write_raw_markdown(content: str, folder_path: str, filename: str) -> str:
             _create_youtube_canvas(file_path, content)
         except Exception as e:
             log.warning("[CANVAS FAIL] | %s: %s", file_path.name, e)
+        _mark_youtube_digest_read(content)
+
+    if "News" in resolved_path.split("/"):
+        _mark_news_radar_read(content)
 
     action = "overwritten" if existed else "new"
     return f"บันทึกสำเร็จ (raw, {action}): {file_path}"
 
+
+def _mark_news_radar_read(content: str) -> None:
+    """ขีดฆ่าข่าวใน News-Radar-Daily หลังจากดึงข้อมูลสำเร็จ"""
+    m_url = _SOURCE_URL_FRONTMATTER_RE.search(content)
+    if not m_url:
+        return
+    url = m_url.group(1).strip()
+    
+    inbox_dir = VAULT_PATH / "30_Knowledge_Base/News/Inbox"
+    if not inbox_dir.exists():
+        return
+        
+    for md_file in inbox_dir.glob("News-Radar-Daily_*.md"):
+        try:
+            text = md_file.read_text(encoding="utf-8")
+            if url in text and f"({url})~~" not in text:
+                new_text = re.sub(
+                    rf'\[([^\]]+)\]\({re.escape(url)}\)',
+                    rf'~~[\1]({url})~~',
+                    text
+                )
+                if new_text != text:
+                    try:
+                        _atomic_write_text(md_file, new_text)
+                    except PermissionError:
+                        md_file.write_text(new_text, encoding="utf-8")
+                    log.info(f"Marked {url} as read in {md_file.name}")
+        except Exception as e:
+            log.warning(f"Failed to update News-Radar-Daily: {e}")
+
+
+def _mark_youtube_digest_read(content: str) -> None:
+    """ขีดฆ่าลิงก์วิดีโอใน Weekly_Digest หลังจากดึงข้อมูลสำเร็จ"""
+    m_url = _SOURCE_URL_FRONTMATTER_RE.search(content)
+    if not m_url:
+        return
+    url = m_url.group(1).strip()
+    
+    inbox_dir = VAULT_PATH / "30_Knowledge_Base/YouTube_Summaries/Inbox"
+    if not inbox_dir.exists():
+        return
+        
+    for md_file in inbox_dir.glob("Weekly_Digest_*.md"):
+        try:
+            text = md_file.read_text(encoding="utf-8")
+            if url in text and f"]({url})~~" not in text and f"({url})~~" not in text:
+                import re
+                new_text = re.sub(
+                    rf'\[([^\]]+)\]\({re.escape(url)}\)',
+                    rf'~~[\1]({url})~~',
+                    text
+                )
+                if new_text != text:
+                    try:
+                        _atomic_write_text(md_file, new_text)
+                    except PermissionError:
+                        md_file.write_text(new_text, encoding="utf-8")
+                    log.info(f"Marked YouTube {url} as read in {md_file.name}")
+        except Exception as e:
+            log.warning(f"Failed to update Weekly_Digest: {e}")
 
 def _create_youtube_canvas(md_path: Path, content: str) -> None:
     """สร้างไฟล์ .canvas ที่ pair กับ YouTube Insight .md — เรียกอัตโนมัติจาก write_raw_markdown"""
@@ -356,7 +421,31 @@ def _maybe_inject_channel_subfolder(folder_path: str, content: str) -> str:
     m = _CHANNEL_FRONTMATTER_RE.search(content)
     if not m:
         return folder_path
-    channel = _sanitize_filename(m.group(1).strip())
-    return f"{normalized}/{channel}" if channel else folder_path
+    channel_name = _sanitize_filename(m.group(1).strip())
+    if "YouTube_Summaries" in folder_path:
+        return f"{folder_path}/{channel_name}"
+    return folder_path
 
 
+def _maybe_inject_publisher_subfolder(path: str, content: str) -> str:
+    """ถ้าโฟลเดอร์คือ News ให้ดึง publisher จาก YAML มาทำ subfolder"""
+    if "News" not in path.split("/"):
+        return path
+    
+    m = re.search(r"^publisher:\s*(.+)$", content, re.MULTILINE)
+    if not m:
+        return path
+        
+    publisher_name = m.group(1).strip().strip("'\"").strip()
+    
+    if publisher_name.lower().startswith("www."):
+        publisher_name = publisher_name[4:]
+        
+    parts = publisher_name.split('.')
+    publisher_name = '.'.join(p.capitalize() for p in parts)
+    
+    safe_pub = re.sub(r'[/\\?%*:|"<>]', '', publisher_name)
+    if not safe_pub:
+        return path
+        
+    return f"{path}/{safe_pub}"

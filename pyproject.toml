@@ -29,6 +29,11 @@ dependencies = [
     "filelock>=3.13.0",
     "langchain-mcp-adapters>=0.3.0",
     "mcp>=1.28.0",
+    "feedparser>=6.0.12",
+    "beautifulsoup4>=4.14.3",
+    "playwright>=1.60.0",
+    "requests>=2.33.1",
+    "playwright-stealth>=2.0.3",
 ]
 
 [dependency-groups]

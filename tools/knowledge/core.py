@@ -1,6 +1,7 @@
 import os
 from functools import lru_cache
 from pathlib import Path
+from urllib.parse import urlparse
 
 import httpx
 
@@ -96,6 +97,7 @@ def _build_article_md(extracted: str, source_url: str, title: str, today: str, n
         f"title: {safe_title}",
         "entity_type: article_note",
         f"source_url: {source_url}",
+        f"publisher: {urlparse(source_url).netloc.replace('www.', '')}",
         *image_line,
         f"date: {today}",
         f"last_updated: {now_time}",
