@@ -23,6 +23,7 @@ _GOALS_KEY_ORDER = ("doc_type", "last_updated", "goals")
 
 
 from tools._atomic_io import _atomic_write_to
+from tools.tool_errors import LOCK_TIMEOUT, validation_error
 from .core import _load_or_init, _save, _recalc_all, _recalc_holding, _recalc_summary, _find_holding, _require_cash, _require_fx, get_portfolio_state, _holding_currency, compute_allocation_breakdown
 from .models import _now_iso, _coerce_iso_string, Holding, Summary, PortfolioState, WatchlistItem, WatchlistState, GoalItem, GoalsState
 
@@ -158,7 +159,6 @@ def _load_or_init_goals() -> tuple[frontmatter.Post, GoalsState]:
 
 
 @tool
-@traceable(run_type="tool")
 def set_goal(
     name: str,
     goal_type: Literal["nav_target", "cash_target", "passive_income_ytd"],
@@ -167,36 +167,37 @@ def set_goal(
     years_from_now: int | None = None,
     notes: str | None = None,
 ) -> str:
-    """บันทึก/อัปเดตเป้าหมายทางการเงิน (idempotent upsert ตาม name)
+    """บันทึกหรืออัปเดตเป้าหมายทางการเงิน (Financial Goals)
 
-    goal_type:
-        'nav_target'          — เป้าหมาย NAV รวมพอร์ต (summary.total_value_thb)
-        'cash_target'         — เป้าหมายเงินสดสะสม (CASH_THB + CASH_USD×fx ในหน่วย THB)
-        'passive_income_ytd'  — เป้าหมาย passive income รายปี
-                                 (YTD counter รีเซ็ตทุก 1 มกราคม — intentional behavior)
+    [Usage/When to use]
+    ใช้ตั้งเป้าหมายทางการเงิน เช่น เป้าหมายมูลค่าพอร์ต (NAV), จำนวนเงินสดสำรอง, หรือรายได้ Passive Income
 
-    progress ไม่ถูก store ลงไฟล์ — คำนวณเฉพาะตอนเรียก get_goals_progress
+    [Caution]
+    - ข้อมูลเป้าหมายจะถูกใช้เมื่อสั่งคำนวณ Progress
 
     Args:
-        name: ชื่อเป้าหมาย (ใช้เป็น key — ถ้าซ้ำจะ overwrite)
-        goal_type: ประเภทเป้าหมาย (ดูด้านบน)
-        target_amount_thb: ยอดเป้าหมายใน THB (>0)
-        deadline: วันกำหนด format 'YYYY-MM-DD' (optional)
-        notes: หมายเหตุ (optional)
+        name (str): ชื่อเป้าหมาย
+        goal_type (Literal["nav_target", "cash_target", "passive_income_ytd"]): ประเภทเป้าหมาย
+        target_amount_thb (float): จำนวนเป้าหมาย (บาท)
+        deadline (str | None): กำหนดเวลา (ถ้ามี)
+        years_from_now (int | None): จำนวนปีจากปัจจุบัน (ถ้ามี)
+        notes (str | None): บันทึกเพิ่มเติม
+    Returns:
+        str: ข้อความยืนยันการบันทึกเป้าหมาย
 
     Raises:
         ValueError: name ว่าง, target_amount_thb <= 0, deadline format ผิด
     """
     nm = name.strip()
     if not nm:
-        raise ValueError("name ต้องไม่ว่าง")
+        return validation_error("name ต้องไม่ว่าง")
     if target_amount_thb <= 0:
-        raise ValueError("target_amount_thb ต้องมากกว่า 0")
+        return validation_error("target_amount_thb ต้องมากกว่า 0")
     if years_from_now is not None:
         if years_from_now <= 0:
-            raise ValueError("years_from_now ต้องมากกว่า 0")
+            return validation_error("years_from_now ต้องมากกว่า 0")
         if deadline is not None:
-            raise ValueError("ห้ามระบุทั้ง deadline และ years_from_now พร้อมกัน")
+            return validation_error("ห้ามระบุทั้ง deadline และ years_from_now พร้อมกัน")
         
         # วันสิ้นปีของปีเป้าหมาย
         target_year = datetime.now().year + years_from_now
@@ -206,7 +207,7 @@ def set_goal(
         try:
             datetime.strptime(deadline, "%Y-%m-%d")
         except ValueError:
-            raise ValueError(f"deadline ต้องอยู่ในรูปแบบ 'YYYY-MM-DD' (got '{deadline}')")
+            return validation_error(f"deadline ต้องอยู่ในรูปแบบ 'YYYY-MM-DD' (got '{deadline}')")
 
     try:
         with _goals_lock:
@@ -236,62 +237,54 @@ def set_goal(
             _save_goals(post, state)
             total = len(state.goals)
     except Timeout:
-        raise ValueError(f"goals lock timeout ({_LOCK_TIMEOUT}s) — มี operation อื่นทำงาน")
+        return LOCK_TIMEOUT.format(detail=f"goals lock {_LOCK_TIMEOUT}s")
+    except ValueError as e:
+        return f"Error: {e}"
 
     dl_note = f" | deadline: {deadline}" if deadline else ""
     return f"{action} {nm} ({goal_type}) target: {target_amount_thb:,.2f} THB{dl_note} | total: {total}"
 
 
 @tool
-@traceable(run_type="tool")
 def remove_goal(name: str) -> str:
     """ลบเป้าหมายทางการเงินออกจากระบบ
 
-    Args:
-        name: ชื่อเป้าหมายที่ต้องการลบ
+    [Usage/When to use]
+    ใช้เมื่อต้องการยกเลิกหรือลบเป้าหมายที่ไม่ต้องการติดตามแล้ว
 
-    Raises:
-        ValueError: name ว่าง หรือไม่พบเป้าหมาย
+    Args:
+        name (str): ชื่อเป้าหมายที่ต้องการลบ
     """
     nm = name.strip()
     if not nm:
-        raise ValueError("name ต้องไม่ว่าง")
+        return validation_error("name ต้องไม่ว่าง")
 
     try:
         with _goals_lock:
             post, state = _load_or_init_goals()
             existing = next((g for g in state.goals if g.name == nm), None)
             if existing is None:
-                raise ValueError(f"ไม่พบเป้าหมาย '{nm}'")
+                return validation_error(f"ไม่พบเป้าหมาย '{nm}'")
             state.goals.remove(existing)
             _save_goals(post, state)
             remaining = len(state.goals)
     except Timeout:
-        raise ValueError(f"goals lock timeout ({_LOCK_TIMEOUT}s) — มี operation อื่นทำงาน")
+        return LOCK_TIMEOUT.format(detail=f"goals lock {_LOCK_TIMEOUT}s")
+    except ValueError as e:
+        return f"Error: {e}"
 
     return f"[GOAL DEL] {nm} | remaining: {remaining}"
 
 
 @tool
-@traceable(run_type="tool")
 def get_goals_progress() -> str:
-    """คำนวณ progress ของเป้าหมายทางการเงินทั้งหมด เทียบกับสถานะพอร์ตปัจจุบัน
+    """เรียกดูความคืบหน้าของเป้าหมายทั้งหมด
 
-    Progress คำนวณจาก portfolio state ณ ขณะเรียก — ไม่ถูก cache หรือ store
-
-    goal_type progress:
-        nav_target          → summary.total_value_thb / target × 100%
-        cash_target         → (CASH_THB + CASH_USD×fx) / target × 100%
-                              (combined liquidity in THB — same as Performance_Log.Cash_Balance)
-        passive_income_ytd  → summary.passive_income_ytd / target × 100%
-                              (YTD resets every Jan 1 — intentional for annual goal tracking)
-
-    Lock ordering: _portfolio_lock acquired first, then _goals_lock (prevents deadlock)
+    [Usage/When to use]
+    ใช้เมื่อต้องการคำนวณ Progress (%) เทียบยอดเงินใน Portfolio กับเป้าหมายที่บันทึกไว้
 
     Returns:
-        JSON string: {n_goals, goals: [{name, goal_type, target_amount_thb,
-                      current_amount_thb, progress_pct, deadline, deadline_days_left, notes}],
-                      generated_at}
+        str: JSON string ประกอบด้วยสถานะของแต่ละเป้าหมาย
     """
     try:
         # portfolio lock ก่อนเสมอ — consistent ordering ป้องกัน deadlock

@@ -90,12 +90,23 @@ def init_vault_structure() -> None:
 
 
 @tool
-@traceable(run_type="retriever")
 def read_file(filepath: str) -> str:
-    """อ่านเนื้อหาไฟล์ .md จาก Vault
+    """อ่านเนื้อหาไฟล์ .md จาก Obsidian Vault (ดึงข้อมูลดิบเต็มไฟล์)
+
+    [Usage/When to use]
+    ใช้เมื่อต้องการอ่านข้อมูลจากไฟล์ที่ทราบ path หรือชื่อไฟล์ชัดเจน
+    - ควรเริ่มด้วยการเรียก read_file('.system/master_index.json') ก่อนเสมอ หากต้องการภาพรวมของ Vault
+    - ใช้เพื่อดึงเนื้อหาที่ถูกระบุในหน้า Index มาอ่านแบบเต็มๆ
+
+    [Caution]
+    - ไม่เหมาะกับการค้นหาข้อมูลที่ไม่ทราบชื่อไฟล์ ให้ใช้ `search_all_memories` แทน
+    - ข้อมูลอาจถูกตัดทอนหากไฟล์มีความยาวเกินกำหนด
 
     Args:
-        filepath: path ของไฟล์ภายใน Vault เช่น '30_Knowledge_Base/Macroeconomics/GDP.md'
+        filepath (str): path ของไฟล์ภายใน Vault (อ้างอิงจาก root ของ Vault) เช่น '30_Knowledge_Base/Macroeconomics/GDP.md' หรือ '.system/master_index.json'
+
+    Returns:
+        str: เนื้อหาของไฟล์พร้อม header ระบุชื่อไฟล์ (หรือข้อความแจ้งเตือนหากไม่พบไฟล์)
     """
     file_path = VAULT_PATH / filepath
     if not file_path.exists():

@@ -23,6 +23,7 @@ _EDITABLE_HOLDING_FIELDS = ("units", "avg_cost", "accumulated_dividend_thb", "as
 
 
 from tools._atomic_io import _atomic_write_to
+from tools.tool_errors import CASH_VIA_MANAGE, LOCK_TIMEOUT, validation_error
 from .models import _now_iso, _coerce_iso_string, Holding, Summary, PortfolioState, WatchlistItem, WatchlistState, GoalItem, GoalsState
 from .core import _load_or_init, _save, _recalc_all, _recalc_holding, _recalc_summary, _find_holding, _require_cash, _require_fx, get_portfolio_state, _holding_currency, compute_allocation_breakdown
 from .prices import fetch_latest_price, _fetch_last_price, _fetch_fx_rate, _refresh_prices, sync_market_prices, _USDTHB_TICKER
@@ -73,7 +74,6 @@ _portfolio_lock = FileLock(_PORTFOLIO_LOCK_PATH, timeout=_LOCK_TIMEOUT)
 
 
 @tool
-@traceable(run_type="tool")
 def execute_trade(
     symbol: str,
     asset_type: str,
@@ -82,44 +82,42 @@ def execute_trade(
     price: float,
     currency: Literal["THB", "USD"] = "THB",
 ) -> str:
-    """ดำเนินการเทรดซื้อหรือขายสินทรัพย์ พร้อมจัดการเงินสด weighted-avg cost และ realized P&L
+    """ดำเนินการเทรดซื้อหรือขายสินทรัพย์ พร้อมจัดการเงินสดและคำนวณต้นทุน/กำไรอัตโนมัติ
 
-    [Buy] เช็คเงินสด → หักจาก CASH_THB → ถ้า holding ใหม่ให้สร้างพร้อม fields ครบ
-          ถ้ามีอยู่แล้วให้คำนวณ weighted-average cost ตามสกุลเงิน
-    [Sell] เช็คว่าขายไม่เกินที่มี → คำนวณ realized profit (USD คูณ fx_rate ปัจจุบัน)
-           บวกเข้า summary.total_realized_profit_ytd → คืนเงินเข้า CASH_THB
-           ถ้า units เหลือ 0 จะลบ holding ออกจาก list
+    [Usage/When to use]
+    ใช้เมื่อผู้ใช้สั่งซื้อ (buy) หรือขาย (sell) สินทรัพย์
+    - [Buy] หักเงินสด (CASH) อัตโนมัติและสร้าง/อัปเดต Holding พร้อมคำนวณ Weighted-average cost
+    - [Sell] เพิ่มเงินสด (CASH) อัตโนมัติและคำนวณ Realized P&L
+    - ห้ามใช้เพื่อเพิ่มสินทรัพย์แบบดื้อๆ โดยไม่หักเงิน ให้ใช้ `batch_import_holdings` ถ้าเป็นการย้ายพอร์ตมา
+
+    [Caution]
+    - ต้องมีเงินสด (CASH_THB/USD) เพียงพอสำหรับการซื้อ หากไม่พอ Trade จะถูกปฏิเสธ
+    - การแก้ไขข้อผิดพลาดในการเทรดต้องใช้ `edit_holding` หรือถอนเงินเข้า/ออกผ่าน `manage_cash_flow`
 
     Args:
-        symbol: ticker หรือชื่อย่อสินทรัพย์ เช่น 'AAPL', 'PTT' (ห้ามใช้ CASH_THB)
-        asset_type: ประเภทสินทรัพย์ เช่น 'Stock', 'ETF', 'REIT', 'Bond'
-        action: 'buy' หรือ 'sell'
-        units: จำนวนหน่วยที่เทรด (>0)
-        price: ราคาต่อหน่วยในสกุลเงินของสินทรัพย์
-        currency: 'THB' (ดีฟอลต์) หรือ 'USD' — ระบุสกุลเงินของ price/avg_cost ของสินทรัพย์นี้
-
-    Raises:
-        ValueError: ถ้าซื้อเกินเงินสด, ขายเกินที่มี, หรือ currency ไม่ตรงกับ holding เดิม
+        symbol (str): Ticker ของสินทรัพย์ (เช่น 'AAPL', 'PTT')
+        asset_type (str): ประเภทสินทรัพย์ (เช่น 'Stock', 'ETF', 'Bond')
+        action (Literal["buy", "sell"]): ประเภทคำสั่ง
+        units (float): จำนวนหน่วยที่ทำรายการ (>0)
+        price (float): ราคาต่อหน่วย
+        currency (Literal["THB", "USD"]): สกุลเงินที่ใช้เทรด (มีผลกับบัญชี Cash ที่หัก/รับ)
     """
     if symbol.strip().upper() in _CASH_SYMBOLS:
-        raise ValueError(
-            f"ห้ามเทรด cash sentinel ({'/'.join(_CASH_SYMBOLS)}) ผ่าน execute_trade "
-            f"— ใช้ manage_cash_flow แทน"
-        )
+        return CASH_VIA_MANAGE.format(symbols="/".join(_CASH_SYMBOLS))
     if units <= 0:
-        raise ValueError("units ต้องมากกว่า 0")
+        return validation_error("units ต้องมากกว่า 0")
     if price <= 0:
-        raise ValueError("price ต้องมากกว่า 0")
+        return validation_error("price ต้องมากกว่า 0")
     if action not in ("buy", "sell"):
-        raise ValueError("action ต้องเป็น 'buy' หรือ 'sell'")
+        return validation_error("action ต้องเป็น 'buy' หรือ 'sell'")
 
     try:
         with _portfolio_lock:
             return _execute_trade_locked(symbol, asset_type, action, units, price, currency)
     except Timeout:
-        raise ValueError(
-            f"portfolio lock timeout ({_LOCK_TIMEOUT}s) — มี operation อื่นกำลังทำงาน"
-        )
+        return LOCK_TIMEOUT.format(detail=f"portfolio lock {_LOCK_TIMEOUT}s")
+    except ValueError as e:
+        return f"Error: {e}"
 
 
 def _execute_trade_locked(
@@ -244,39 +242,33 @@ def _execute_trade_locked(
 
 
 @tool
-@traceable(run_type="tool")
 def record_income(
     income_type: Literal["Dividend", "Interest", "Rental", "Other"],
     amount_thb: float,
     source_symbol: str | None = None,
 ) -> str:
-    """บันทึกรายรับ passive (เงินปันผล/ดอกเบี้ย/ค่าเช่า/อื่นๆ) เข้า portfolio
+    """บันทึกรายรับ Passive Income (เช่น เงินปันผล, ดอกเบี้ย)
 
-    Effects:
-        - บวกเงินเข้า CASH_THB.units
-        - บวกเข้า summary.passive_income_ytd
-        - บวกเข้า summary.total_accumulated_dividend
-        - ถ้าระบุ source_symbol → บวกเข้า holdings[source].accumulated_dividend_thb ด้วย
+    [Usage/When to use]
+    ใช้เมื่อผู้ใช้ได้รับเงินปันผล หรือรายรับอื่นๆ ที่ไม่ต้องขายสินทรัพย์
+    - ระบบจะบวกเงินสดเข้า CASH_THB อัตโนมัติ และอัปเดตสถิติ Passive Income YTD
+    - หากระบุ `source_symbol` จะบันทึกเป็นเงินปันผลสะสมของสินทรัพย์นั้นๆ ด้วย
 
     Args:
-        income_type: ประเภทรายรับ — 'Dividend' / 'Interest' / 'Rental' / 'Other'
-        amount_thb: จำนวนเงินใน THB (>0)
-        source_symbol: ticker ของสินทรัพย์ที่จ่ายรายรับนี้ (ถ้ามี) เช่น 'PTT'
-                       ห้ามใส่ CASH_THB
-
-    Raises:
-        ValueError: ถ้า amount ไม่ถูกต้อง, ไม่พบ source_symbol, หรือ source เป็น CASH_THB
+        income_type (Literal["Dividend", "Interest", "Rental", "Other"]): ประเภทรายได้
+        amount_thb (float): จำนวนเงิน (บาท)
+        source_symbol (str | None): Ticker ต้นทางที่จ่ายปันผล (ถ้ามี)
     """
     if amount_thb <= 0:
-        raise ValueError("amount_thb ต้องมากกว่า 0")
+        return validation_error("amount_thb ต้องมากกว่า 0")
 
     try:
         with _portfolio_lock:
             return _record_income_locked(income_type, amount_thb, source_symbol)
     except Timeout:
-        raise ValueError(
-            f"portfolio lock timeout ({_LOCK_TIMEOUT}s) — มี operation อื่นกำลังทำงาน"
-        )
+        return LOCK_TIMEOUT.format(detail=f"portfolio lock {_LOCK_TIMEOUT}s")
+    except ValueError as e:
+        return f"Error: {e}"
 
 
 def _record_income_locked(
@@ -320,50 +312,39 @@ def _record_income_locked(
 
 
 @tool
-@traceable(run_type="tool")
 def batch_import_holdings(
     assets_list: list[dict],
     mode: Literal["overwrite", "merge"] = "merge",
     reset_cash_usd: bool = False,
 ) -> str:
-    """Smart Paste Import: บันทึก holdings หลายรายการพร้อมกัน + auto-fetch ราคาตลาดให้ที่ขาด
+    """นำเข้า (Import) รายการสินทรัพย์หลายรายการพร้อมกัน
 
-    รับ list ของ asset dict แต่ละตัวต้องมี keys:
-      symbol (str), asset_type (str), units (float), avg_cost (float), currency ('THB'|'USD')
-      current_price (float, optional) — ถ้าไม่ส่งมา ระบบจะ parallel-fetch จาก yfinance ให้
-                                         ถ้าดึงไม่ได้ใช้ avg_cost เป็น fallback (unrealized P/L = 0 ชั่วคราว)
+    [Usage/When to use]
+    ใช้เมื่อผู้ใช้ต้องการย้ายพอร์ต หรือบันทึกสินทรัพย์เริ่มต้นโดยไม่ต้องผ่านการเทรดแบบหัก Cash
+    - โหมด 'merge' จะอัปเดตสินทรัพย์เดิมและเพิ่มสินทรัพย์ใหม่
+    - โหมด 'overwrite' จะล้างพอร์ตเดิม (ยกเว้นเงินสด) และทับด้วยข้อมูลใหม่
 
-    Mode:
-      'merge' (default) — อัปเดต holding ที่มี symbol ตรงกัน, ที่ไม่มีให้เพิ่ม (เก็บ accumulated_dividend_thb ของเดิม)
-      'overwrite' — ล้าง holdings ที่ไม่ใช่ Cash ทั้งหมดก่อน
-
-    reset_cash_usd: True = ศูนย์ CASH_USD.units ด้วย (ใช้คู่กับ mode='overwrite' ตอน full portfolio reset)
-                    False (default) = คง CASH_USD ไว้ (backward-compatible)
-
-    Anti-Drift: หลัง mutate จะรัน _recalc_all bottom-up อัตโนมัติผ่าน _save (Market Value → Summary)
-    Atomic Storage: บันทึก Portfolio_Holdings.md ผ่าน tempfile + os.replace
+    [Caution]
+    - การใช้โหมด 'overwrite' จะลบประวัติพอร์ตเก่า ต้องระวัง!
 
     Args:
-        assets_list: รายการสินทรัพย์ที่จะ import (ห้ามมี CASH_THB/CASH_USD, ห้ามมี symbol ซ้ำใน list)
-        mode: 'merge' หรือ 'overwrite'
-        reset_cash_usd: True = ล้าง CASH_USD เป็น 0 ด้วย (สำหรับ full reset เท่านั้น)
-
-    Raises:
-        ValueError: ถ้า list ว่าง, validation ล้มเหลว, symbol ซ้ำ, หรือมี cash sentinel
+        assets_list (list[dict]): รายการสินทรัพย์ (symbol, asset_type, units, avg_cost, currency)
+        mode (Literal["overwrite", "merge"]): โหมดนำเข้า ค่าเริ่มต้นคือ 'merge'
+        reset_cash_usd (bool): หาก True จะตั้งค่าเงินสด USD เป็น 0 ด้วย
     """
     if mode not in ("overwrite", "merge"):
-        raise ValueError("mode ต้องเป็น 'overwrite' หรือ 'merge'")
+        return validation_error("mode ต้องเป็น 'overwrite' หรือ 'merge'")
     if not isinstance(assets_list, list):
-        raise ValueError("assets_list ต้องเป็น list")
+        return validation_error("assets_list ต้องเป็น list")
     if not assets_list and mode != "overwrite":
-        raise ValueError("assets_list ต้องเป็น list ที่ไม่ว่าง")
+        return validation_error("assets_list ต้องเป็น list ที่ไม่ว่าง")
 
     # ─── 1. Pre-validate + normalize + duplicate check (ไม่ต้องล็อก) ───
     normalized: list[dict] = []
     seen: set[str] = set()
     for i, a in enumerate(assets_list):
         if not isinstance(a, dict):
-            raise ValueError(f"item ลำดับ {i} ไม่ใช่ dict")
+            return validation_error(f"item ลำดับ {i} ไม่ใช่ dict")
         try:
             sym = str(a["symbol"]).strip().upper()
             asset_type = str(a["asset_type"]).strip()
@@ -371,23 +352,20 @@ def batch_import_holdings(
             avg_cost = float(a["avg_cost"])
             currency = str(a["currency"]).strip().upper()
         except (KeyError, TypeError, ValueError) as e:
-            raise ValueError(f"item ลำดับ {i}: field ขาดหรือ format ผิด — {e}")
+            return validation_error(f"item ลำดับ {i}: field ขาดหรือ format ผิด — {e}")
 
         if not sym:
-            raise ValueError(f"item ลำดับ {i}: symbol ว่าง")
+            return validation_error(f"item ลำดับ {i}: symbol ว่าง")
         if sym in _CASH_SYMBOLS:
-            raise ValueError(
-                f"ห้าม import cash sentinel ({'/'.join(_CASH_SYMBOLS)}) ผ่าน batch_import "
-                f"— ใช้ manage_cash_flow แทน"
-            )
+            return CASH_VIA_MANAGE.format(symbols="/".join(_CASH_SYMBOLS))
         if units <= 0:
-            raise ValueError(f"{sym}: units ต้องมากกว่า 0")
+            return validation_error(f"{sym}: units ต้องมากกว่า 0")
         if avg_cost <= 0:
-            raise ValueError(f"{sym}: avg_cost ต้องมากกว่า 0")
+            return validation_error(f"{sym}: avg_cost ต้องมากกว่า 0")
         if currency not in ("THB", "USD"):
-            raise ValueError(f"{sym}: currency ต้องเป็น 'THB' หรือ 'USD' (got '{currency}')")
+            return validation_error(f"{sym}: currency ต้องเป็น 'THB' หรือ 'USD' (got '{currency}')")
         if sym in seen:
-            raise ValueError(f"symbol '{sym}' ซ้ำใน assets_list")
+            return validation_error(f"symbol '{sym}' ซ้ำใน assets_list")
         seen.add(sym)
 
         cp_raw = a.get("current_price")
@@ -396,9 +374,9 @@ def batch_import_holdings(
             try:
                 current_price = float(cp_raw)
             except (TypeError, ValueError) as e:
-                raise ValueError(f"{sym}: current_price format ผิด — {e}")
+                return validation_error(f"{sym}: current_price format ผิด — {e}")
             if current_price <= 0:
-                raise ValueError(f"{sym}: current_price ต้องมากกว่า 0 (หรือส่ง None เพื่อให้ระบบดึงให้)")
+                return validation_error(f"{sym}: current_price ต้องมากกว่า 0 (หรือส่ง None เพื่อให้ระบบดึงให้)")
 
         normalized.append({
             "symbol": sym,
@@ -480,7 +458,9 @@ def batch_import_holdings(
             total_nav = state.summary.total_value_thb
             non_cash = sum(1 for h in state.holdings if h.asset_type != "Cash")
     except Timeout:
-        raise ValueError(f"portfolio lock timeout ({_LOCK_TIMEOUT}s)")
+        return LOCK_TIMEOUT.format(detail=f"portfolio lock {_LOCK_TIMEOUT}s")
+    except ValueError as e:
+        return f"Error: {e}"
 
     # ─── 4. รายงานผล (Channel B format §4.2) ───
     counts = {"provided": 0, "fetched": 0, "fallback_avg_cost": 0, "fallback_timeout": 0}
@@ -497,45 +477,39 @@ def batch_import_holdings(
 
 
 @tool
-@traceable(run_type="tool")
 def manage_cash_flow(
     amount: float,
     action: Literal["deposit", "withdraw"],
     currency: Literal["THB", "USD"] = "THB",
 ) -> str:
-    """ฝาก/ถอนเงินสดเข้า/ออก cash pot ของพอร์ต (CASH_THB หรือ CASH_USD)
+    """ฝาก (Deposit) หรือ ถอน (Withdraw) เงินสดเข้า/ออกจากพอร์ตโฟลิโอ
 
-    Effects:
-        deposit  → +amount เข้า CASH_{currency} (เม็ดเงินใหม่เข้าพอร์ต)
-        withdraw → -amount จาก CASH_{currency} (ต้องมีเงินพอ)
+    [Usage/When to use]
+    ใช้เมื่อผู้ใช้เติมเงินเข้าพอร์ต (Deposit) หรือถอนเงินออกไปใช้จ่าย (Withdraw)
+    - เปลี่ยนแปลงยอดเงินใน CASH_THB หรือ CASH_USD ทันที
 
-    Anti-Drift: ฐานเงินทุน (cost basis) คำนวณ bottom-up อัตโนมัติผ่าน _compute_total_cost
-    — cash sentinel นับเป็น cost = units (THB) หรือ units × fx (USD)
-    ดังนั้นการ mutate cash.units อย่างเดียวก็ทำให้ทั้ง NAV และ cost basis sync กัน
-    Unrealized P/L ไม่เพี้ยน (เพราะ NAV เพิ่ม = cost เพิ่ม เท่ากัน)
+    [Caution]
+    - ไม่ใช่การเทรดสินทรัพย์ ใช้จัดการเฉพาะเงินสดที่รอลงทุนเท่านั้น
 
     Args:
-        amount: จำนวนเงิน (>0) ในสกุล currency
-        action: 'deposit' หรือ 'withdraw'
-        currency: 'THB' (default) หรือ 'USD'
-
-    Raises:
-        ValueError: amount < 0, action/currency invalid, withdraw เกิน cash ที่มี
+        amount (float): จำนวนเงิน
+        action (Literal["deposit", "withdraw"]): ฝากหรือถอน
+        currency (Literal["THB", "USD"]): สกุลเงิน
     """
     if amount <= 0:
-        raise ValueError("amount ต้องมากกว่า 0")
+        return validation_error("amount ต้องมากกว่า 0")
     if action not in ("deposit", "withdraw"):
-        raise ValueError("action ต้องเป็น 'deposit' หรือ 'withdraw'")
+        return validation_error("action ต้องเป็น 'deposit' หรือ 'withdraw'")
     if currency not in ("THB", "USD"):
-        raise ValueError(f"currency ต้องเป็น 'THB' หรือ 'USD' (got '{currency}')")
+        return validation_error(f"currency ต้องเป็น 'THB' หรือ 'USD' (got '{currency}')")
 
     try:
         with _portfolio_lock:
             return _manage_cash_flow_locked(amount, action, currency)
     except Timeout:
-        raise ValueError(
-            f"portfolio lock timeout ({_LOCK_TIMEOUT}s) — มี operation อื่นทำงาน"
-        )
+        return LOCK_TIMEOUT.format(detail=f"portfolio lock {_LOCK_TIMEOUT}s")
+    except ValueError as e:
+        return f"Error: {e}"
 
 
 def _manage_cash_flow_locked(
@@ -570,36 +544,27 @@ def _manage_cash_flow_locked(
 
 
 @tool
-@traceable(run_type="tool")
 def update_fx_rate(rate: float | None = None) -> str:
-    """อัปเดต USD/THB exchange rate ของพอร์ต — manual rate หรือ auto-fetch จาก yfinance
+    """อัปเดตอัตราแลกเปลี่ยน USD/THB ของพอร์ต
 
-    เรียกเมื่อผู้ใช้บอกค่าเงินบาทเปลี่ยน หรือ "อัปเดต FX / refresh อัตราแลกเปลี่ยน"
-
-    Effects:
-        - mutate state.fx_rates['USDTHB']
-        - _save → _recalc_all bottom-up: ทุก USD market_value, CASH_USD value,
-          total NAV, unrealized P/L ถูกคำนวณใหม่ด้วย fx ใหม่ทันที (Anti-Drift §3.2)
+    [Usage/When to use]
+    ใช้เมื่อต้องการอัปเดตอัตราแลกเปลี่ยน (FX Rate) เพื่อให้มูลค่าพอร์ตที่เป็น USD ถูกคำนวณกลับมาเป็น THB อย่างแม่นยำ
+    - ดึงข้อมูลจาก yfinance อัตโนมัติหากไม่ระบุ `rate`
+    - ทำให้ Unrealized P/L และ NAV ถูกคำนวณใหม่ทั้งพอร์ตทันที
 
     Args:
-        rate: USDTHB rate ใหม่ (>0). ถ้า None → auto-fetch จาก yfinance (USDTHB=X)
-
-    Raises:
-        ValueError: rate <= 0, auto-fetch ไม่สำเร็จ, หรือ lock timeout
-
-    Returns:
-        prefix-token — [FX] | USDTHB: old → new (±X%) | NAV: before → after | unrealized: before → after
+        rate (float | None): อัตราแลกเปลี่ยนใหม่ที่กำหนดเอง (หากเป็น None จะดึงอัตโนมัติ)
     """
     if rate is not None and rate <= 0:
-        raise ValueError("rate ต้องมากกว่า 0")
+        return validation_error("rate ต้องมากกว่า 0")
 
     try:
         with _portfolio_lock:
             return _update_fx_rate_locked(rate)
     except Timeout:
-        raise ValueError(
-            f"portfolio lock timeout ({_LOCK_TIMEOUT}s) — มี operation อื่นทำงาน"
-        )
+        return LOCK_TIMEOUT.format(detail=f"portfolio lock {_LOCK_TIMEOUT}s")
+    except ValueError as e:
+        return f"Error: {e}"
 
 
 def _update_fx_rate_locked(rate: float | None) -> str:
@@ -635,7 +600,6 @@ def _update_fx_rate_locked(rate: float | None) -> str:
 
 
 @tool
-@traceable(run_type="tool")
 def edit_holding(
     symbol: str,
     units: float | None = None,
@@ -644,43 +608,34 @@ def edit_holding(
     asset_type: str | None = None,
     reason: str = "",
 ) -> str:
-    """แก้ไขข้อมูล holding ที่บันทึกผิด (correction tool) — เช่น พิมพ์ผิด, ลืมหารโบนัสหุ้น
+    """แก้ไขข้อมูล Holding ที่บันทึกผิด (Correction Tool)
 
-    เปิดให้แก้เฉพาะ fields ปลอดภัย — ไม่แตะ:
-        - market_value_thb / unrealized_pnl_percent → computed (auto-recalc)
-        - current_price_* → ใช้ sync_market_prices
-        - fx_rate ของ holding → historical cost-basis (ห้ามเขียนทับ)
-        - symbol → ใช้ ลบ + import ใหม่แทน
-        - summary.total_realized_profit_ytd → historical, ห้าม rewrite (per-trade booking)
+    [Usage/When to use]
+    ใช้เมื่อผู้ใช้พิมพ์ผิด แจ้งต้นทุนผิด หรือต้องการแก้จำนวนหุ้นหลังจาก Corporate Action (เช่น แตกพาร์)
+    - แก้ไขได้เฉพาะข้อมูลดิบ (units, avg_cost, ฯลฯ) ข้อมูลที่คำนวณจะอัปเดตอัตโนมัติ
 
-    avg_cost auto-route ไป avg_cost_usd หรือ avg_cost_thb ตามสกุลที่ holding เดิมใช้
-
-    Auto-side-effect: append เหตุผลลง Trading_Journal เพื่อ audit trail
+    [Caution]
+    - หลีกเลี่ยงการใช้คำสั่งนี้แทนการซื้อ/ขาย (`execute_trade`)
 
     Args:
-        symbol: ticker ของ holding ที่จะแก้ (ห้ามเป็น CASH_THB / CASH_USD — ใช้ manage_cash_flow)
-        units: จำนวนหน่วยใหม่ (>0)
-        avg_cost: avg cost ใหม่ (>0) — ระบบเลือก THB/USD field ตาม holding เดิม
-        accumulated_dividend_thb: ยอดสะสมปันผลใหม่ (>=0)
-        asset_type: เปลี่ยนหมวด (Stock/ETF/REIT/Bond ฯลฯ)
-        reason: เหตุผลที่ต้องแก้ (audit log) — ควรระบุชัดเสมอ
-
-    Raises:
-        ValueError: symbol ไม่พบ, symbol เป็น cash, ไม่ส่ง field ไหนมาแก้, validation ค่าไม่ถูกต้อง
+        symbol (str): Ticker ที่ต้องการแก้ไข
+        units (float | None): จำนวนหน่วยใหม่
+        avg_cost (float | None): ต้นทุนเฉลี่ยใหม่
+        accumulated_dividend_thb (float | None): เงินปันผลสะสมใหม่
+        asset_type (str | None): ประเภทสินทรัพย์ใหม่
+        reason (str): เหตุผลที่แก้ไข (เพื่อบันทึกลง Log)
     """
     sym = symbol.strip().upper()
     if sym in _CASH_SYMBOLS:
-        raise ValueError(
-            f"ห้ามแก้ {sym} ผ่าน edit_holding — ใช้ manage_cash_flow สำหรับ cash"
-        )
+        return CASH_VIA_MANAGE.format(symbols="/".join(_CASH_SYMBOLS))
     if all(v is None for v in (units, avg_cost, accumulated_dividend_thb, asset_type)):
-        raise ValueError(f"ต้องระบุอย่างน้อย 1 field ที่จะแก้ ({', '.join(_EDITABLE_HOLDING_FIELDS)})")
+        return validation_error(f"ต้องระบุอย่างน้อย 1 field ที่จะแก้ ({', '.join(_EDITABLE_HOLDING_FIELDS)})")
     if units is not None and units <= 0:
-        raise ValueError("units ต้องมากกว่า 0")
+        return validation_error("units ต้องมากกว่า 0")
     if avg_cost is not None and avg_cost <= 0:
-        raise ValueError("avg_cost ต้องมากกว่า 0")
+        return validation_error("avg_cost ต้องมากกว่า 0")
     if accumulated_dividend_thb is not None and accumulated_dividend_thb < 0:
-        raise ValueError("accumulated_dividend_thb ต้อง >= 0")
+        return validation_error("accumulated_dividend_thb ต้อง >= 0")
 
     try:
         with _portfolio_lock:
@@ -688,9 +643,9 @@ def edit_holding(
                 sym, units, avg_cost, accumulated_dividend_thb, asset_type, reason
             )
     except Timeout:
-        raise ValueError(
-            f"portfolio lock timeout ({_LOCK_TIMEOUT}s) — มี operation อื่นทำงาน"
-        )
+        return LOCK_TIMEOUT.format(detail=f"portfolio lock {_LOCK_TIMEOUT}s")
+    except ValueError as e:
+        return f"Error: {e}"
 
 
 def _edit_holding_locked(

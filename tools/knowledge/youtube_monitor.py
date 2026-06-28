@@ -21,7 +21,21 @@ _SAVE_DIR = Path(__file__).resolve().parents[2] / "memories" / "30_Knowledge_Bas
 
 @tool
 def generate_weekly_youtube_digest() -> str:
-    """ดึงคลิป YouTube ล่าสุด (ย้อนหลัง 7 วัน) จากช่องที่สนใจ และบันทึกเป็น Markdown Checklist ในโฟลเดอร์ Inbox เพื่อให้ผู้ใช้เลือก"""
+    """สร้างรายงานสรุปวิดีโอใหม่ในสัปดาห์ (Weekly Digest) จากช่อง YouTube ที่ติดตามไว้ผ่าน RSS
+
+    [Usage/When to use]
+    ใช้เมื่อต้องการอัปเดตรายการวิดีโอล่าสุดจากช่อง YouTube ที่เราสนใจ
+    - ตรวจสอบรายการช่องที่ตั้งค่าไว้ (ในตัวแปร _CHANNELS)
+    - ดึงข้อมูลจาก RSS ว่ามีคลิปไหนบ้างที่เผยแพร่ในสัปดาห์นี้
+    - รวบรวมข้อมูลทั้งหมดเป็น Digest เดียว
+
+    [Caution]
+    - เครื่องมือนี้แค่ส่งคืนข้อความ Markdown (ไม่บันทึกไฟล์เอง)
+    - **ต้อง** นำผลลัพธ์ที่ได้ไปส่งให้ Archivist บันทึกไฟล์ต่อด้วย `write_raw_markdown` ลงใน Inbox
+
+    Returns:
+        str: รายงาน Weekly Digest ในรูปแบบ Markdown พร้อม YAML Frontmatter
+    """
     today = datetime.now(timezone.utc)
     seven_days_ago = today - timedelta(days=7)
     

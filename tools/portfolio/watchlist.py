@@ -23,6 +23,7 @@ _WATCHLIST_KEY_ORDER = ("doc_type", "last_updated", "items")
 
 
 from tools._atomic_io import _atomic_write_to
+from tools.tool_errors import LOCK_TIMEOUT, validation_error
 from .core import _load_or_init, _save, _recalc_all, _recalc_holding, _recalc_summary, _find_holding, _require_cash, _require_fx, get_portfolio_state, _holding_currency, compute_allocation_breakdown
 from .models import _now_iso, _coerce_iso_string, Holding, Summary, PortfolioState, WatchlistItem, WatchlistState, GoalItem, GoalsState
 
@@ -160,29 +161,29 @@ def _load_or_init_watchlist() -> tuple[frontmatter.Post, WatchlistState]:
 
 
 @tool
-@traceable(run_type="tool")
 def add_to_watchlist(
     symbol: str,
     asset_type: str,
     target_price: float | None = None,
     notes: str | None = None,
 ) -> str:
-    """เพิ่มสินทรัพย์เข้า Watchlist — ถ้า symbol มีอยู่แล้วจะอัปเดต fields ทับ (idempotent upsert)
+    """เพิ่มหรืออัปเดตสินทรัพย์ใน Watchlist
+
+    [Usage/When to use]
+    ใช้เมื่อต้องการจับตาสินทรัพย์ที่สนใจลงทุนในอนาคต พร้อมระบุราคาเป้าหมาย (Target Price)
+    - สามารถอัปเดต Target Price สำหรับสินทรัพย์ที่มีอยู่แล้วได้ (Upsert)
 
     Args:
-        symbol: ticker เช่น 'NVDA', 'PTT' (auto upper + strip)
-        asset_type: ประเภท เช่น 'Stock', 'ETF', 'REIT', 'Crypto'
-        target_price: ราคาเป้าหมายที่ตั้งใจซื้อ (optional)
-        notes: หมายเหตุ/เหตุผลที่จับตา (optional)
-
-    Raises:
-        ValueError: ถ้า symbol ว่าง หรือ target_price <= 0
+        symbol (str): Ticker ของสินทรัพย์
+        asset_type (str): ประเภทสินทรัพย์
+        target_price (float | None): ราคาที่ต้องการแจ้งเตือนเมื่อถึงเป้า
+        notes (str | None): บันทึกเตือนความจำเพิ่มเติม
     """
     sym = symbol.strip().upper()
     if not sym:
-        raise ValueError("symbol ต้องไม่ว่าง")
+        return validation_error("symbol ต้องไม่ว่าง")
     if target_price is not None and target_price <= 0:
-        raise ValueError("target_price ต้องมากกว่า 0")
+        return validation_error("target_price ต้องมากกว่า 0")
 
     try:
         with _watchlist_lock:
@@ -212,51 +213,54 @@ def add_to_watchlist(
             _save_watchlist(post, state)
             total_items = len(state.items)
     except Timeout:
-        raise ValueError(f"watchlist lock timeout ({_LOCK_TIMEOUT}s) — มี operation อื่นทำงาน")
+        return LOCK_TIMEOUT.format(detail=f"watchlist lock {_LOCK_TIMEOUT}s")
+    except ValueError as e:
+        return f"Error: {e}"
 
     tp_note = f" target ฿{target_price:.2f}" if target_price else ""
     return f"{action} {sym} ({asset_type}){tp_note} | total: {total_items}"
 
 
 @tool
-@traceable(run_type="tool")
 def remove_from_watchlist(symbol: str) -> str:
     """ลบสินทรัพย์ออกจาก Watchlist
 
-    Args:
-        symbol: ticker ที่ต้องการลบ
+    [Usage/When to use]
+    ใช้ลบสินทรัพย์ที่เลิกสนใจติดตามแล้ว
 
-    Raises:
-        ValueError: ถ้า symbol ว่าง หรือไม่พบใน watchlist
+    Args:
+        symbol (str): Ticker ที่ต้องการลบ
     """
     sym = symbol.strip().upper()
     if not sym:
-        raise ValueError("symbol ต้องไม่ว่าง")
+        return validation_error("symbol ต้องไม่ว่าง")
 
     try:
         with _watchlist_lock:
             post, state = _load_or_init_watchlist()
             existing = next((it for it in state.items if it.symbol == sym), None)
             if existing is None:
-                raise ValueError(f"ไม่พบ {sym} ใน Watchlist")
+                return validation_error(f"ไม่พบ {sym} ใน Watchlist")
             state.items.remove(existing)
             _save_watchlist(post, state)
             remaining = len(state.items)
     except Timeout:
-        raise ValueError(f"watchlist lock timeout ({_LOCK_TIMEOUT}s) — มี operation อื่นทำงาน")
+        return LOCK_TIMEOUT.format(detail=f"watchlist lock {_LOCK_TIMEOUT}s")
+    except ValueError as e:
+        return f"Error: {e}"
 
     return f"[WATCH DEL] {sym} | remaining: {remaining}"
 
 
 @tool
-@traceable(run_type="tool")
 def read_watchlist() -> str:
-    """อ่าน Watchlist ทั้งหมดคืนเป็น JSON string
+    """อ่านรายการสินทรัพย์ที่อยู่ใน Watchlist
 
-    เรียกเมื่อ user ถาม "ดู watchlist", "สินทรัพย์จับตา", "หุ้นที่ตั้ง target ไว้"
+    [Usage/When to use]
+    ใช้เพื่อดูรายการสินทรัพย์ที่จับตาดูอยู่และราคาเป้าหมาย
 
     Returns:
-        JSON string: {n_items, last_updated, items:[{symbol, asset_type, target_price, notes, added_date}]}
+        str: ข้อมูล Watchlist ในรูปแบบ JSON String
     """
     try:
         with _watchlist_lock:

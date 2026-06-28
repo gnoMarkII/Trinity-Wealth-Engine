@@ -22,6 +22,7 @@ log = get_logger(__name__)
 _DATE_FRONTMATTER_RE = re.compile(r'^date:\s*["\']?(\d{4}-\d{2}-\d{2})', re.MULTILINE)
 
 from .core import _atomic_write_text, _sanitize_filename, VAULT_PATH
+from tools.tool_errors import GOAL_VIA_BOOKKEEPER
 from .parser import _split_bullets, _parse_h3_subsections, _parse_h2_sections, _strip_frontmatter, _extract_asset_tickers, _TICKER_FRONTMATTER_RE, _VIDEO_ID_FRONTMATTER_RE, _SOURCE_URL_FRONTMATTER_RE
 from .indexer import update_master_index, _index_upsert
 
@@ -37,7 +38,6 @@ INDEX_LOCK = str(INDEX_PATH) + ".lock"
 
 
 @tool
-@traceable(run_type="tool")
 def save_memory(
     title: str,
     content: str,
@@ -49,14 +49,26 @@ def save_memory(
 ) -> str:
     """บันทึก MemoryEntry ลง Obsidian Vault พร้อม YAML frontmatter และ Wikilinks
 
+    [Usage/When to use]
+    ใช้เมื่อต้องการบันทึกข้อมูลที่เป็น Entity ใหม่ หรือต้องการอัปเดต Entity เดิมที่มีอยู่แล้ว
+    เช่น สร้างประวัติบริษัท, ข้อมูลบุคคล, หรือเหตุการณ์สำคัญ
+    (ข้อมูลที่ต้องผ่านการจัดโครงสร้างแบบมี Field เฉพาะ และต้องการโยง Wikilink)
+
+    [Caution]
+    - ห้ามใช้เครื่องมือนี้กับเนื้อหา Markdown ดิบที่มี YAML Frontmatter สำเร็จรูปมาแล้ว (เช่น ผลลัพธ์จาก Researcher) ให้ใช้ `write_raw_markdown` แทน
+    - ข้อมูลใน Entity ต้องกระชับ ไม่รวมข่าวรายวันหรือ snapshots
+
     Args:
-        title: ชื่อ entity หรือหัวข้อ ใช้เป็นชื่อไฟล์ .md
-        content: เนื้อหาหลักในรูปแบบ Markdown เกี่ยวกับ entity นี้โดยตรง
-        folder_path: โฟลเดอร์ปลายทาง เช่น '30_Knowledge_Base/Stocks'
-        tags: รายการ tag เช่น ['energy', 'SET100']
-        entity_type: ประเภทของ entity เช่น 'Company', 'Executive', 'Macro_Event'
-        aliases: ชื่อเรียกอื่นๆ เช่น ['ปตท.', 'PTT PCL']
-        linked_files: ชื่อไฟล์ที่ต้องการสร้าง Wikilinks (ไม่รวม .md)
+        title (str): ชื่อ entity หรือหัวข้อ ใช้เป็นชื่อไฟล์ .md (เช่น 'PTT PCL')
+        content (str): เนื้อหาหลักในรูปแบบ Markdown เกี่ยวกับ entity นี้โดยตรง
+        folder_path (str): โฟลเดอร์ปลายทาง เช่น '30_Knowledge_Base/Stocks' หรือ '30_Knowledge_Base/People'
+        tags (list[str]): รายการ tag เช่น ['energy', 'SET100']
+        entity_type (str): ประเภทของ entity เช่น 'Company', 'Executive', 'Macro_Event'
+        aliases (list[str], optional): ชื่อเรียกอื่นๆ เช่น ['ปตท.', 'PTT PCL']. Defaults to [].
+        linked_files (list[str], optional): ชื่อไฟล์ที่ต้องการสร้าง Wikilinks เชื่อมโยงไปหา (ไม่รวม .md). Defaults to [].
+
+    Returns:
+        str: ข้อความยืนยันสถานะการบันทึก (new หรือ append) พร้อม path ของไฟล์
     """
     entry = MemoryEntry(
         title=title,
@@ -121,22 +133,48 @@ def save_memory(
 
 
 @tool
-@traceable(run_type="tool")
 def write_raw_markdown(content: str, folder_path: str, filename: str) -> str:
-    """บันทึกไฟล์ Markdown ดิบลง Vault โดยตรง ไม่แปลงหรือประมวลผลเนื้อหา
-    ใช้สำหรับข้อมูลที่มี YAML frontmatter พร้อมแล้ว เช่น ผลลัพธ์จาก Researcher tools
+    """บันทึกข้อมูลผลลัพธ์สำเร็จรูปในรูปแบบ Markdown ลงใน Obsidian Vault
 
-    Auto-routing (deterministic จาก YAML frontmatter):
-      - ถ้า path ลงท้าย 'Daily_Snapshots' → แทรก subfolder วันที่จาก `date:` field
-      - ถ้า path ลงท้าย 'Stocks'           → แทรก subfolder ชื่อหุ้นจาก `ticker:` field
-    เป็น single source of truth ป้องกัน LLM พิมพ์ path ผิดหรือ date/ticker คลาดเคลื่อน
+    [Usage/When to use]
+    ใช้เมื่อต้องการบันทึกข้อมูลที่มี YAML frontmatter พร้อมแล้ว เช่น:
+    - ผลลัพธ์จากการสกัดเนื้อหาด้วย ingest_article_url, ingest_youtube_transcript, ingest_pdf
+    - ข้อมูล Macro Snapshot, Regional Pulse, US Sectors Pulse จาก Researcher
+    - รายงานสรุปข่าวรายวัน (entity_type: article_note)
+    ระบบจะทำการ Auto-route สร้าง subfolder ย่อยตามข้อมูลใน YAML อัตโนมัติ:
+    - path ลงท้าย 'Daily_Snapshots' → เติม subfolder วันที่จาก `date:` field
+    - path ลงท้าย 'Stocks' → เติม subfolder ชื่อหุ้นจาก `ticker:` field
+    - path ลงท้าย 'YouTube_Summaries' → เติม subfolder ชื่อช่องจาก `channel:` field
+    - path มีคำว่า 'News' → เติม subfolder สำนักข่าวจาก `publisher:` field
+
+    [Caution]
+    - ห้ามใช้เครื่องมือนี้ในการสร้างหรืออัปเดต Entity หลักของระบบ (เช่น ข้อมูลบริษัท, ข้อมูลบุคคล) ให้ใช้ `save_memory` แทน
+    - content ต้องเป็น Markdown ที่มี YAML frontmatter (---...---) อยู่ด้านบนสุดเสมอ
+    - filename ห้ามมีนามสกุล .md — ระบบเติมให้อัตโนมัติ
+    - ห้ามระบุโฟลเดอร์ย่อย (เช่น วันที่ หรือ Ticker) ใน folder_path ด้วยตัวเอง เพราะระบบจะดึงจาก YAML มาเติมให้เอง
+
+    [Folder Mapping ตาม entity_type ใน YAML]
+    - macro_daily / us_sectors_pulse / regional_macro / economic_fundamentals 
+      → folder_path='30_Knowledge_Base/Macroeconomics/Daily_Snapshots'
+    - Company / Financial_Trends / Financial_Health / Stock_Momentum / Analyst_Consensus / Company_News 
+      → folder_path='30_Knowledge_Base/Stocks'
+    - youtube_insight → folder_path='30_Knowledge_Base/YouTube_Summaries'
+    - article_note → folder_path='30_Knowledge_Base/News'
+    - book_note → folder_path='30_Knowledge_Base/Books'
+    - Strategy / Concept → folder_path='30_Knowledge_Base/Strategies'
+    - goal / financial_goal → ห้ามบันทึกด้วย tool นี้ ให้หยุดและแจ้งผู้ใช้ให้ใช้คำสั่งของ Bookkeeper แทน
 
     Args:
-        content: เนื้อหา Markdown พร้อม frontmatter ที่ต้องการบันทึก
-        folder_path: โฟลเดอร์ปลายทาง เช่น '30_Knowledge_Base/Macroeconomics/Daily_Snapshots'
-                     หรือ '30_Knowledge_Base/Stocks'
-        filename: ชื่อไฟล์ไม่รวมนามสกุล เช่น 'Macro_Snapshot_2025-01-15', 'TSLA_Fundamentals_2025-01-15'
+        content (str): เนื้อหา Markdown พร้อม YAML frontmatter ที่ต้องการบันทึก
+        folder_path (str): โฟลเดอร์ปลายทางหลัก (root path ของหมวดหมู่นั้นๆ) เช่น '30_Knowledge_Base/Macroeconomics/Daily_Snapshots' หรือ '30_Knowledge_Base/News'
+        filename (str): ชื่อไฟล์ไม่รวมนามสกุล เช่น 'Macro_Snapshot_2025-01-15' หรือ 'Stock_Market_News'
+
+    Returns:
+        str: ข้อความยืนยันสถานะการบันทึกไฟล์ (เช่น raw, new หรือ raw, overwritten)
     """
+    if re.search(r"^entity_type:\s*(goal|financial_goal)\b", content, re.MULTILINE):
+        return GOAL_VIA_BOOKKEEPER
+
     resolved_path = _maybe_inject_date_subfolder(folder_path, content)
     resolved_path = _maybe_inject_ticker_subfolder(resolved_path, content)
     resolved_path = _maybe_inject_channel_subfolder(resolved_path, content)

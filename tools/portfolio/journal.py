@@ -26,6 +26,7 @@ _JOURNAL_BLOCK_RE = re.compile(
 )
 
 from tools._atomic_io import _atomic_write_to
+from tools.tool_errors import validation_error
 from .core import _load_or_init, _save, _recalc_all, _recalc_holding, _recalc_summary, _find_holding, _require_cash, _require_fx, get_portfolio_state, _holding_currency, compute_allocation_breakdown
 from .models import _now_iso, _coerce_iso_string, Holding, Summary, PortfolioState, WatchlistItem, WatchlistState, GoalItem, GoalsState
 
@@ -99,52 +100,51 @@ def _write_journal_entry(content: str) -> str:
 
 
 @tool
-@traceable(run_type="tool")
 def append_trading_journal(entry: str) -> str:
-    """ต่อท้ายบันทึกการเทรดลง Trading_Journal.md พร้อม timestamp อัตโนมัติ
+    """บันทึกการเทรดและข้อคิดเห็น (Trading Journal)
 
-    ใช้บันทึก เหตุผลซื้อ/ขาย, การวิเคราะห์เชิงคุณภาพ, สภาพตลาด, learning, mistakes
-    ที่ไม่สามารถ encode เป็น YAML structured state ได้ — เก็บแยกจาก Portfolio_Holdings.md
-    เพื่อรักษา YAML-only contract ของ source-of-truth file
+    [Usage/When to use]
+    ใช้จดบันทึกเหตุผลที่ซื้อ/ขาย สภาพตลาด บทเรียนที่ได้ หรือข้อผิดพลาด (Mistakes)
+    - เพื่อแยกข้อมูล Qualitative (เหตุผล) ออกจากข้อมูล Quantitative (ตัวเลข Portfolio)
+
+    [Caution]
+    - ไม่ใช้เพื่อแก้ข้อมูลพอร์ต ให้ใช้บันทึกเป็น Text เท่านั้น
 
     Args:
-        entry: เนื้อหาบันทึกในรูปแบบ Markdown ทั่วไป (ไม่ต้องใส่ timestamp เอง ระบบใส่ให้)
-
-    Returns:
-        บรรทัด confirmation พร้อม timestamp ที่บันทึก
+        entry (str): เนื้อหาที่จะบันทึก (ระบบจะลง Timestamp ให้อัตโนมัติ)
     """
     content = (entry or "").strip()
     if not content:
-        raise ValueError("entry ต้องไม่ว่าง")
+        return validation_error("entry ต้องไม่ว่าง")
 
     timestamp = _write_journal_entry(content)
     return f"[JOURNAL] บันทึกสำเร็จ | [{timestamp}] | {len(content)} chars"
 
 
 @tool
-@traceable(run_type="tool")
 def read_trading_journal(
     days: int = 30,
     keyword: str | None = None,
     limit: int = 20,
 ) -> str:
-    """อ่าน entries ใน Trading_Journal.md ย้อนหลัง + filter ตาม keyword
+    """อ่านบันทึกการเทรด (Trading Journal) ย้อนหลัง
 
-    เรียกเมื่อ user ถาม "ดูบันทึก", "ทบทวน mistake", "ทำไมซื้อ X", "บันทึกอะไรไว้บ้าง"
+    [Usage/When to use]
+    ใช้ดึงประวัติการบันทึกการลงทุน (Journal) เพื่อทบทวนเหตุผล ข้อคิด หรือสรุปบทเรียน
+    - สามารถระบุ keyword เพื่อกรองเฉพาะบันทึกที่เกี่ยวข้องได้
 
     Args:
-        days: ดู entries ย้อนหลังกี่วัน (>0, default 30)
-        keyword: ค้น substring case-insensitive ใน content (optional)
-        limit: คืนสูงสุดกี่ entries (>0, default 20) — เรียงใหม่สุดก่อน
-
+        days (int): จำนวนวันย้อนหลังที่ต้องการดึง
+        keyword (str | None): คำที่ต้องการค้นหา
+        limit (int): จำนวนบันทึกสูงสุดที่จะแสดง
     Returns:
-        JSON string: {n_total_in_window, n_returned, filters_used, entries:[{timestamp, content}]}
+        str: JSON string: {n_total_in_window, n_returned, filters_used, entries:[{timestamp, content}]}
         entries เรียงจากใหม่สุดไปเก่าสุด
     """
     if days <= 0:
-        raise ValueError("days ต้องมากกว่า 0")
+        return validation_error("days ต้องมากกว่า 0")
     if limit <= 0:
-        raise ValueError("limit ต้องมากกว่า 0")
+        return validation_error("limit ต้องมากกว่า 0")
 
     if not TRADING_JOURNAL_PATH.exists():
         return json.dumps(

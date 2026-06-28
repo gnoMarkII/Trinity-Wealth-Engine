@@ -39,14 +39,16 @@ import tools.portfolio.watchlist as watchlist
 class TestAddToWatchlist:
     def test_add_empty_symbol_raises(self, isolated_portfolio):
         pt = isolated_portfolio
-        with pytest.raises(ValueError, match="symbol ต้องไม่ว่าง"):
-            pt.add_to_watchlist.func(symbol="", asset_type="Stock")
+        result = pt.add_to_watchlist.func(symbol="", asset_type="Stock")
 
+        assert isinstance(result, str) and result.startswith("Error:")
+        assert "symbol ต้องไม่ว่าง" in result
     def test_add_negative_target_raises(self, isolated_portfolio):
         pt = isolated_portfolio
-        with pytest.raises(ValueError, match="target_price ต้องมากกว่า 0"):
-            pt.add_to_watchlist.func(symbol="PTT", asset_type="Stock", target_price=-10.0)
+        result = pt.add_to_watchlist.func(symbol="PTT", asset_type="Stock", target_price=-10.0)
 
+        assert isinstance(result, str) and result.startswith("Error:")
+        assert "target_price ต้องมากกว่า 0" in result
     def test_add_existing_updates(self, isolated_portfolio):
         pt = isolated_portfolio
         pt.add_to_watchlist.func(symbol="PTT", asset_type="Stock", target_price=30.0)
@@ -66,9 +68,10 @@ class TestAddToWatchlist:
             raise Timeout("mock")
         monkeypatch.setattr("tools.portfolio.watchlist._watchlist_lock.acquire", mock_lock)
         
-        with pytest.raises(ValueError, match="watchlist lock timeout"):
-            pt.add_to_watchlist.func(symbol="PTT", asset_type="Stock")
+        result = pt.add_to_watchlist.func(symbol="PTT", asset_type="Stock")
 
+        assert isinstance(result, str) and result.startswith("Error:")
+        assert "watchlist lock" in result
 class TestRemoveFromWatchlist:
     def test_remove_success(self, isolated_portfolio):
         pt = isolated_portfolio
@@ -79,14 +82,16 @@ class TestRemoveFromWatchlist:
 
     def test_remove_empty_symbol_raises(self, isolated_portfolio):
         pt = isolated_portfolio
-        with pytest.raises(ValueError, match="symbol ต้องไม่ว่าง"):
-            pt.remove_from_watchlist.func(symbol="")
+        result = pt.remove_from_watchlist.func(symbol="")
 
+        assert isinstance(result, str) and result.startswith("Error:")
+        assert "symbol ต้องไม่ว่าง" in result
     def test_remove_not_found_raises(self, isolated_portfolio):
         pt = isolated_portfolio
-        with pytest.raises(ValueError, match="ไม่พบ PTT ใน Watchlist"):
-            pt.remove_from_watchlist.func(symbol="PTT")
+        result = pt.remove_from_watchlist.func(symbol="PTT")
 
+        assert isinstance(result, str) and result.startswith("Error:")
+        assert "ไม่พบ PTT ใน Watchlist" in result
     def test_remove_lock_timeout(self, isolated_portfolio, monkeypatch):
         pt = isolated_portfolio
         def mock_lock(*args, **kwargs):
@@ -94,9 +99,10 @@ class TestRemoveFromWatchlist:
             raise Timeout("mock")
         monkeypatch.setattr("tools.portfolio.watchlist._watchlist_lock.acquire", mock_lock)
         
-        with pytest.raises(ValueError, match="watchlist lock timeout"):
-            pt.remove_from_watchlist.func(symbol="PTT")
+        result = pt.remove_from_watchlist.func(symbol="PTT")
 
+        assert isinstance(result, str) and result.startswith("Error:")
+        assert "watchlist lock" in result
 class TestReadWatchlistExceptions:
     def test_read_lock_timeout(self, isolated_portfolio, monkeypatch):
         pt = isolated_portfolio
@@ -109,7 +115,7 @@ class TestReadWatchlistExceptions:
         import json
         data = json.loads(result)
         assert "error" in data
-        assert "watchlist lock timeout" in data["error"]
+        assert "watchlist lock" in data["error"]
 
 class TestLoadOrInitWatchlist:
     def test_load_no_metadata(self, isolated_portfolio):

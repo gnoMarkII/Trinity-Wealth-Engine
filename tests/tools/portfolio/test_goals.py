@@ -42,26 +42,28 @@ class TestGoals:
 
     def test_set_goal_invalid_name_raises(self, isolated_portfolio):
         pt = isolated_portfolio
-        with pytest.raises(Exception, match="name"):
-            pt.set_goal.invoke({
-                "name": "   ", "goal_type": "nav_target", "target_amount_thb": 1e6,
-            })
+        result = pt.set_goal.invoke({
+            "name": "   ", "goal_type": "nav_target", "target_amount_thb": 1e6,
+        })
 
+        assert isinstance(result, str) and result.startswith("Error:")
+        assert "name" in result
     def test_set_goal_invalid_target_raises(self, isolated_portfolio):
         pt = isolated_portfolio
-        with pytest.raises(Exception):
-            pt.set_goal.invoke({
-                "name": "X", "goal_type": "nav_target", "target_amount_thb": 0.0,
-            })
+        result = pt.set_goal.invoke({
+            "name": "X", "goal_type": "nav_target", "target_amount_thb": 0.0,
+        })
 
+        assert isinstance(result, str) and result.startswith("Error:")
     def test_set_goal_invalid_deadline_raises(self, isolated_portfolio):
         pt = isolated_portfolio
-        with pytest.raises(Exception, match="deadline"):
-            pt.set_goal.invoke({
-                "name": "X", "goal_type": "nav_target",
-                "target_amount_thb": 1e6, "deadline": "31-12-2031",
-            })
+        result = pt.set_goal.invoke({
+            "name": "X", "goal_type": "nav_target",
+            "target_amount_thb": 1e6, "deadline": "31-12-2031",
+        })
 
+        assert isinstance(result, str) and result.startswith("Error:")
+        assert "deadline" in result
     def test_set_goal_years_from_now(self, isolated_portfolio):
         pt = isolated_portfolio
         from datetime import datetime
@@ -74,20 +76,21 @@ class TestGoals:
 
     def test_set_goal_years_from_now_invalid_raises(self, isolated_portfolio):
         pt = isolated_portfolio
-        with pytest.raises(Exception, match="years_from_now"):
-            pt.set_goal.invoke({
-                "name": "Bad", "goal_type": "nav_target",
-                "target_amount_thb": 1e6, "years_from_now": 0,
-            })
+        result = pt.set_goal.invoke({
+            "name": "Bad", "goal_type": "nav_target",
+            "target_amount_thb": 1e6, "years_from_now": 0,
+        })
 
+        assert isinstance(result, str) and result.startswith("Error:")
+        assert "years_from_now" in result
     def test_set_goal_years_from_now_and_deadline_raises(self, isolated_portfolio):
         pt = isolated_portfolio
-        with pytest.raises(Exception):
-            pt.set_goal.invoke({
-                "name": "Conflict", "goal_type": "nav_target",
-                "target_amount_thb": 1e6, "deadline": "2030-12-31", "years_from_now": 5,
-            })
+        result = pt.set_goal.invoke({
+            "name": "Conflict", "goal_type": "nav_target",
+            "target_amount_thb": 1e6, "deadline": "2030-12-31", "years_from_now": 5,
+        })
 
+        assert isinstance(result, str) and result.startswith("Error:")
     def test_set_goal_preserves_created_date_on_update(self, isolated_portfolio):
         pt = isolated_portfolio
         pt.set_goal.invoke({"name": "G", "goal_type": "nav_target", "target_amount_thb": 1e6})
@@ -111,9 +114,10 @@ class TestGoals:
 
     def test_remove_goal_not_found_raises(self, isolated_portfolio):
         pt = isolated_portfolio
-        with pytest.raises(Exception, match="ไม่พบ"):
-            pt.remove_goal.invoke({"name": "ไม่มีอยู่จริง"})
+        result = pt.remove_goal.invoke({"name": "ไม่มีอยู่จริง"})
 
+        assert isinstance(result, str) and result.startswith("Error:")
+        assert "ไม่พบ" in result
     def test_get_goals_progress_nav_target(self, isolated_portfolio):
         pt = isolated_portfolio
         # เติมเงินสด → NAV = 200,000
@@ -245,15 +249,17 @@ class TestSetGoalExceptions:
             raise Timeout("mock")
         monkeypatch.setattr("tools.portfolio.goals._goals_lock.acquire", mock_lock)
         
-        with pytest.raises(ValueError, match="goals lock timeout"):
-            pt.set_goal.func(name="A", goal_type="nav_target", target_amount_thb=1e6)
+        result = pt.set_goal.func(name="A", goal_type="nav_target", target_amount_thb=1e6)
 
+        assert isinstance(result, str) and result.startswith("Error:")
+        assert "goals lock" in result
 class TestRemoveGoalExceptions:
     def test_remove_empty_name(self, isolated_portfolio):
         pt = isolated_portfolio
-        with pytest.raises(ValueError, match="name ต้องไม่ว่าง"):
-            pt.remove_goal.func(name="   ")
+        result = pt.remove_goal.func(name="   ")
 
+        assert isinstance(result, str) and result.startswith("Error:")
+        assert "name ต้องไม่ว่าง" in result
     def test_remove_lock_timeout(self, isolated_portfolio, monkeypatch):
         pt = isolated_portfolio
         def mock_lock(*args, **kwargs):
@@ -261,9 +267,10 @@ class TestRemoveGoalExceptions:
             raise Timeout("mock")
         monkeypatch.setattr("tools.portfolio.goals._goals_lock.acquire", mock_lock)
         
-        with pytest.raises(ValueError, match="goals lock timeout"):
-            pt.remove_goal.func(name="A")
+        result = pt.remove_goal.func(name="A")
 
+        assert isinstance(result, str) and result.startswith("Error:")
+        assert "goals lock" in result
 class TestGetGoalsProgressExceptions:
     def test_get_progress_lock_timeout(self, isolated_portfolio, monkeypatch):
         pt = isolated_portfolio

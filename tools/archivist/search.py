@@ -69,16 +69,23 @@ def _searchable_files() -> list[Path]:
 
 
 @tool
-@traceable(run_type="retriever")
 def search_all_memories(keyword: str) -> str:
     """ค้นหาความจำทั้งหมดใน Vault ด้วย Semantic Search (Vector RAG) แบบ Local
-    เหมาะสำหรับคำถามที่ต้องการความเข้าใจความหมาย ไม่ใช่แค่ keyword ตรงๆ
 
-    Index เป็นแบบ incremental — รีเฟรชเฉพาะไฟล์ที่ mtime เปลี่ยน, ลบไฟล์ที่หายไป
-    ไม่ rebuild ทั้ง Chroma store เหมือนเวอร์ชันก่อน
+    [Usage/When to use]
+    ใช้เมื่อต้องการค้นหาข้อมูลจากคลังความรู้แต่ไม่ทราบชื่อไฟล์ชัดเจน
+    - เหมาะสำหรับคำถามที่ต้องการความเข้าใจความหมายและบริบท ไม่ใช่แค่ Keyword ตรงๆ (เช่น 'กลยุทธ์เมื่อดอกเบี้ยขึ้น', 'หุ้นสื่อสารที่น่าสนใจ')
+    - เมื่อหาไฟล์จาก `read_file('index.md')` ไม่พบ
+
+    [Caution]
+    - ผลลัพธ์ที่ได้จะเป็นการสรุปและดึงเฉพาะส่วนที่เกี่ยวข้อง (Top-K snippets) ไม่ใช่เนื้อหาเต็มทั้งไฟล์
+    - หากต้องการข้อมูลแบบเจาะลึกทั้ง Entity พร้อมความสัมพันธ์ ให้ใช้ `search_graph_context` แทน
 
     Args:
-        keyword: คำถามหรือวลีที่ต้องการค้นหาตามความหมาย
+        keyword (str): คำถาม ประโยค หรือวลีที่ต้องการค้นหาความหมายจากคลังข้อมูล
+
+    Returns:
+        str: ผลลัพธ์การค้นหาที่ถูกจัดรูปแบบ (รวมรายชื่อไฟล์และเนื้อหาที่สกัดมา)
     """
     md_files = _searchable_files()
     if not md_files:
@@ -193,13 +200,23 @@ def _find_file_by_name(name: str, all_files: list[Path]) -> Path | None:
 
 
 @tool
-@traceable(run_type="retriever")
 def search_graph_context(entity_name: str) -> str:
-    """ค้นหาข้อมูล entity พร้อม linked entities ในรูปแบบ Graph (GraphRAG)
-    ใช้เมื่อต้องการวิเคราะห์บริษัท, บุคคล, หรือเหตุการณ์แบบเจาะลึกพร้อมบริบทโดยรอบ
+    """ค้นหาข้อมูล Entity พร้อมดึงเนื้อหาจาก Linked Entities ที่เชื่อมโยงกัน (GraphRAG)
+
+    [Usage/When to use]
+    ใช้เมื่อต้องการวิเคราะห์บริษัท, บุคคล, กลยุทธ์, หรือเหตุการณ์แบบเจาะลึก 360 องศา
+    - เครื่องมือนี้จะดึงเนื้อหาจาก "ไฟล์เป้าหมาย" และ "ไฟล์ทั้งหมดที่เป้าหมายนั้นทำ Wikilink โยงไปหา" มาให้ในครั้งเดียว
+    - เหมาะสำหรับการดูภาพรวมเครือข่ายความสัมพันธ์ของ Entity ใด Entity หนึ่ง
+
+    [Caution]
+    - ไม่เหมาะสำหรับการค้นหากว้างๆ หรือ Semantic Search (ให้ใช้ `search_all_memories` แทน)
+    - ต้องระบุชื่อ Entity ที่มีแนวโน้มเป็นชื่อไฟล์จริงๆ ในระบบ
 
     Args:
-        entity_name: ชื่อ entity ที่ต้องการค้นหา เช่น 'PTT', 'Somchai'
+        entity_name (str): ชื่อ Entity หรือชื่อไฟล์เป้าหมายที่ต้องการเจาะลึก เช่น 'PTT', 'Somchai', 'Interest_Rate_Hike'
+
+    Returns:
+        str: เนื้อหาของ Entity หลัก พร้อมกับเนื้อหาแบบตัดทอนของไฟล์ทั้งหมดที่เชื่อมโยงอยู่ (หรือแจ้งเตือนหากไม่พบไฟล์)
     """
     all_files = list(VAULT_PATH.rglob("*.md"))
     if not all_files:

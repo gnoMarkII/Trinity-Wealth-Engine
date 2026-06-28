@@ -183,11 +183,19 @@ def _rebuild_index() -> str:
 
 
 @tool
-@traceable(run_type="tool")
 def update_master_index() -> str:
-    """สแกน Vault และสร้าง/อัปเดตสารบัญ index.md อัตโนมัติ จัดกลุ่มตาม Folder
-    ข้ามโฟลเดอร์ 00_Inbox และ 01_Daily_Logs รวมถึงไฟล์ระบบ index.md
+    """สร้างหรืออัปเดตไฟล์ Master Index (index.md) อัตโนมัติ
+
+    [Usage/When to use]
+    ใช้เมื่อมีการเปลี่ยนแปลงโครงสร้างไฟล์อย่างมีนัยสำคัญ (เช่น เพิ่มไฟล์หลายไฟล์พร้อมกัน, ลบไฟล์, แก้ไขชื่อไฟล์)
+    - ระบบจะทำการสแกน Markdown ไฟล์ทั้งหมดใน Vault และสร้างสารบัญแยกตาม Folder Hierarchy
+    - ช่วยให้ `read_file('index.md')` มองเห็นโครงสร้างล่าสุดเสมอ
+
+    [Caution]
+    - ไม่จำเป็นต้องเรียกใช้เมื่อบันทึกไฟล์แค่ไฟล์เดียวด้วย `save_memory` หรือ `write_raw_markdown` เพราะเครื่องมือเหล่านั้นมีกลไก update index ตัวเองอยู่แล้ว
+    - จะใช้เวลาทำงานสักพักเนื่องจากต้องสแกนไฟล์ทั้ง Vault
+
+    Returns:
+        str: สถานะการอัปเดต Index และสถิติจำนวนไฟล์
     """
     return _rebuild_index()
-
-

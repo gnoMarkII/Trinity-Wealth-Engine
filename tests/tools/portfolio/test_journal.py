@@ -13,14 +13,16 @@ class TestReadTradingJournal:
 
     def test_invalid_days_raises(self, isolated_portfolio):
         pt = isolated_portfolio
-        with pytest.raises(ValueError, match="days"):
-            pt.read_trading_journal.invoke({"days": 0})
+        result = pt.read_trading_journal.invoke({"days": 0})
 
+        assert isinstance(result, str) and result.startswith("Error:")
+        assert "days" in result
     def test_invalid_limit_raises(self, isolated_portfolio):
         pt = isolated_portfolio
-        with pytest.raises(ValueError, match="limit"):
-            pt.read_trading_journal.invoke({"limit": 0})
+        result = pt.read_trading_journal.invoke({"limit": 0})
 
+        assert isinstance(result, str) and result.startswith("Error:")
+        assert "limit" in result
     def test_reads_entries_newest_first(self, isolated_portfolio):
         pt = isolated_portfolio
         pt.append_trading_journal.invoke({"entry": "first entry — buy AAPL"})
@@ -115,9 +117,10 @@ class TestInjectJournalWikilinks:
 class TestAppendTradingJournalExceptions:
     def test_append_empty_raises(self, isolated_portfolio):
         pt = isolated_portfolio
-        with pytest.raises(ValueError, match="entry ต้องไม่ว่าง"):
-            pt.append_trading_journal.func(entry="   ")
+        result = pt.append_trading_journal.func(entry="   ")
 
+        assert isinstance(result, str) and result.startswith("Error:")
+        assert "entry ต้องไม่ว่าง" in result
 class TestReadTradingJournalExceptions:
     def test_read_journal_bad_datetime(self, isolated_portfolio, tmp_vault):
         pt = isolated_portfolio

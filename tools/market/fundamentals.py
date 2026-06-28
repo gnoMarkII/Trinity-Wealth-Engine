@@ -10,15 +10,22 @@ from .core import Market, _normalize_yf_ticker, _currency_for, _yf_info, _yf_new
 log = get_logger(__name__)
 
 @tool
-@traceable(run_type="tool")
 def ingest_stock_fundamentals(ticker: str, market: Market = "US") -> str:
-    """ดึงข้อมูลพื้นฐานของหุ้นรายตัวจาก Yahoo Finance (รองรับ TH/US)
-    ครอบคลุม: ข้อมูลทั่วไป, มูลค่าบริษัท, Valuation, ประสิทธิภาพ, ราคา
-    Return เป็น Markdown พร้อม YAML frontmatter — ไม่บันทึกไฟล์ด้วยตัวเอง
+    """ดึงข้อมูลพื้นฐานของหุ้นรายตัว (Fundamentals Snapshot) จาก Yahoo Finance (รองรับ TH/US)
+
+    [Usage/When to use]
+    ใช้เมื่อต้องการข้อมูลพื้นฐาน **ณ ปัจจุบัน** ของบริษัท
+    - ครอบคลุม: ข้อมูลทั่วไป, มูลค่าบริษัท, Valuation (P/E, P/B), ประสิทธิภาพ (ROE), ราคา
+    - คำค้นที่เกี่ยวข้อง: "วิเคราะห์หุ้น", "valuation", "P/E", "Market Cap"
+
+    [Caution]
+    - ห้ามใช้ดึงข้อมูลย้อนหลัง (ให้ใช้ `ingest_financial_trends` แทน)
+    - เครื่องมือนี้แค่ส่งคืนข้อความ Markdown (ไม่บันทึกไฟล์เอง)
+    - **ต้อง** นำผลลัพธ์ที่ได้ไปส่งให้ Archivist บันทึกไฟล์ต่อด้วย `write_raw_markdown`
 
     Args:
-        ticker: Ticker symbol เช่น 'AAPL', 'PTT' (ห้ามมี .BK suffix — ระบบเติมให้)
-        market: 'TH' (SET, เติม .BK ให้) หรือ 'US' (default — NYSE/Nasdaq)
+        ticker (str): Ticker symbol เช่น 'AAPL', 'PTT' (ห้ามมี .BK suffix — ระบบจะเติมให้)
+        market (Market): 'TH' สำหรับหุ้นไทย (SET) หรือ 'US' สำหรับหุ้นอเมริกา (default)
     """
     display_sym = ticker.strip().upper().removesuffix(".BK")
     yf_sym = _normalize_yf_ticker(display_sym, market)
@@ -200,15 +207,22 @@ def ingest_stock_fundamentals(ticker: str, market: Market = "US") -> str:
 
 
 @tool
-@traceable(run_type="tool")
 def ingest_financial_health(ticker: str, market: Market = "US") -> str:
     """ดึงข้อมูลสุขภาพการเงินและกระแสเงินสดของหุ้นรายตัวจาก Yahoo Finance (รองรับ TH/US)
-    ครอบคลุม: Operating/Free Cash Flow, Total Cash, Total Debt, Debt/Equity Ratio, Current Ratio
-    Return เป็น Markdown พร้อม YAML frontmatter — ไม่บันทึกไฟล์ด้วยตัวเอง
+
+    [Usage/When to use]
+    ใช้เมื่อต้องการดูข้อมูลสุขภาพทางการเงิน **ณ ปัจจุบัน**
+    - ครอบคลุม: Operating/Free Cash Flow, Total Cash, Total Debt, Debt/Equity Ratio, Current Ratio
+    - คำค้นที่เกี่ยวข้อง: "สุขภาพการเงิน", "หนี้สิน", "กระแสเงินสด", "สภาพคล่อง"
+
+    [Caution]
+    - หากผู้ใช้ถามหา "กระแสเงินสด/หนี้สิน **ย้อนหลัง**" ให้ใช้ `ingest_financial_trends` แทน
+    - เครื่องมือนี้แค่ส่งคืนข้อความ Markdown (ไม่บันทึกไฟล์เอง)
+    - **ต้อง** นำผลลัพธ์ที่ได้ไปส่งให้ Archivist บันทึกไฟล์ต่อด้วย `write_raw_markdown`
 
     Args:
-        ticker: Ticker symbol เช่น 'AAPL', 'PTT' (ห้ามมี .BK suffix — ระบบเติมให้)
-        market: 'TH' (SET) หรือ 'US' (default)
+        ticker (str): Ticker symbol เช่น 'AAPL', 'PTT' (ห้ามมี .BK suffix — ระบบจะเติมให้)
+        market (Market): 'TH' สำหรับหุ้นไทย (SET) หรือ 'US' สำหรับหุ้นอเมริกา (default)
     """
     display_sym = ticker.strip().upper().removesuffix(".BK")
     yf_sym = _normalize_yf_ticker(display_sym, market)

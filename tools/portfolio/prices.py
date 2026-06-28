@@ -23,6 +23,7 @@ _USDTHB_TICKER = "USDTHB=X"
 
 
 from tools._atomic_io import _atomic_write_to
+from tools.tool_errors import LOCK_TIMEOUT, validation_error
 from .core import _load_or_init, _save, _recalc_all, _recalc_holding, _recalc_summary, _find_holding, _require_cash, _require_fx, get_portfolio_state, _holding_currency, compute_allocation_breakdown
 from .models import _now_iso, _coerce_iso_string, Holding, Summary, PortfolioState, WatchlistItem, WatchlistState, GoalItem, GoalsState
 
@@ -166,18 +167,18 @@ def _refresh_prices(state: PortfolioState) -> dict[str, str]:
 
 
 @tool
-@traceable(run_type="tool")
 def sync_market_prices() -> str:
-    """ดึงราคาตลาดล่าสุดของทุก holding (ยกเว้น Cash) จาก yfinance แล้วบันทึกลงไฟล์
+    """ดึงราคาตลาดล่าสุดของทุกสินทรัพย์ในพอร์ตโฟลิโอ
 
-    Anti-Drift: หลัง fetch ราคาเสร็จ จะรัน _recalc_all bottom-up อัตโนมัติผ่าน _save
-    (Per-Asset market_value → Summary total_value_thb → Summary total_unrealized_profit)
-    Atomic Storage: บันทึกผ่าน tempfile + os.replace (กัน partial-write)
+    [Usage/When to use]
+    ใช้เพื่ออัปเดตราคาตลาดปัจจุบันและคำนวณ NAV + Unrealized P/L ของพอร์ตใหม่ทั้งหมด
+    - ดึงราคาจาก yfinance ให้กับทุก Holding (ยกเว้น Cash)
 
-    เรียกใช้เมื่อผู้ใช้ขอ "อัปเดตพอร์ต / refresh ราคา / sync ตลาด / ดึงราคาล่าสุด"
+    [Caution]
+    - อาจใช้เวลาสักพักหากมีสินทรัพย์จำนวนมาก
 
     Returns:
-        prefix-token format — [SYNC] | refreshed N/M [issues...] | NAV before → after | unrealized: ±X
+        str: สรุปผลการอัปเดตราคาตลาด
     """
     try:
         with _portfolio_lock:
@@ -188,7 +189,9 @@ def sync_market_prices() -> str:
             nav_after = state.summary.total_value_thb
             unrealized_after = state.summary.total_unrealized_profit
     except Timeout:
-        raise ValueError(f"portfolio lock timeout ({_LOCK_TIMEOUT}s) — มี operation อื่นทำงาน")
+        return LOCK_TIMEOUT.format(detail=f"portfolio lock {_LOCK_TIMEOUT}s")
+    except ValueError as e:
+        return f"Error: {e}"
 
     total = len(refresh_info)
     if total == 0:

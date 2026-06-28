@@ -32,10 +32,19 @@ INDEX_LOCK = str(INDEX_PATH) + ".lock"
 
 
 @tool
-@traceable(run_type="tool")
 def lint_structural_health() -> str:
-    """ตรวจสุขภาพเชิงโครงสร้างของ Vault: ค้นหา Orphan files (ไม่มีไฟล์ใด Wikilink โยงมา)
-    และ Empty files (ไม่มีเนื้อหา) ส่งรายงานกลับมาให้ทราบว่าไฟล์ไหนต้องจัดการ
+    """ตรวจสอบสุขภาพระดับโครงสร้างของ Vault (Orphan/Empty files)
+
+    [Usage/When to use]
+    ใช้เมื่อถูกสั่งให้ตรวจสุขภาพของ Vault โดยรวม หรือตรวจสอบโครงสร้างไฟล์
+    - ตรวจหาไฟล์ที่ไม่มีใครเชื่อมโยงถึง (Orphan) และไฟล์ที่ไม่มีเนื้อหาหรือสั้นเกินไป (Empty/Stub)
+    
+    [Caution]
+    - เครื่องมือนี้ไม่รับพารามิเตอร์ใดๆ และจะสแกนทั้ง Vault ทันที
+    - ไม่ได้ตรวจสอบความถูกต้องของเนื้อหา (ใช้ `lint_semantic_conflict` สำหรับเนื้อหา)
+
+    Returns:
+        str: รายงานผลการสแกนในรูปแบบ Markdown
     """
     all_files = [
         f for f in VAULT_PATH.rglob("*.md")
@@ -91,14 +100,22 @@ def lint_structural_health() -> str:
 
 
 @tool
-@traceable(run_type="tool")
 def lint_semantic_conflict(target_folder_or_entity: str) -> str:
-    """ดึงเนื้อหาไฟล์ใน Folder หรือ Entity ที่ระบุ เพื่อให้ LLM ตรวจหาความขัดแย้งของข้อมูล
-    Python ทำหน้าที่ดึงและจำกัดขอบเขต ส่วน LLM อ่านผลลัพธ์เพื่อวิเคราะห์ความสอดคล้อง
+    """ตรวจสอบความขัดแย้งเชิงความหมายและเนื้อหาซ้ำซ้อนภายในโฟลเดอร์เป้าหมาย
+
+    [Usage/When to use]
+    ใช้เมื่อต้องการตรวจความถูกต้องของเนื้อหา หาจุดที่ขัดแย้งกัน หรือความซ้ำซ้อนของข้อมูล
+    - ตัวอย่าง: "มีข้อมูลของ PTT ขัดแย้งกันไหม", "ช่วยตรวจ folder Strategy ว่ามีข้อมูลซ้ำซ้อนกันหรือเปล่า"
+    
+    [Caution]
+    - บังคับระบุเป้าหมาย `target_path` ให้แคบที่สุดเสมอ (เช่น '30_Knowledge_Base/Stocks/PTT' หรือเจาะจงโฟลเดอร์)
+    - ห้ามรันสแกนที่ Root level หรือทั้ง Vault เพราะอาจทำให้เปลือง Token และเวลาประมวลผลสูง
 
     Args:
-        target_folder_or_entity: โฟลเดอร์ (เช่น '30_Knowledge_Base/Stocks')
-                                  หรือชื่อ Entity (เช่น 'PTT') ที่ต้องการตรวจสอบ
+        target_path (str): path ภายใน Vault ที่ต้องการสแกน เช่น '30_Knowledge_Base/Stocks/PTT' หรือระบุเฉพาะเจาะจง
+
+    Returns:
+        str: รายงานผลการวิเคราะห์ความขัดแย้งและความซ้ำซ้อน (หรือแจ้งว่าไม่พบปัญหา)
     """
     target_path = VAULT_PATH / target_folder_or_entity
 

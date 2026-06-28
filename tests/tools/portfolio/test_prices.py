@@ -95,14 +95,16 @@ class TestUpdateFxRate:
 
     def test_negative_rate_raises(self, isolated_portfolio):
         pt = isolated_portfolio
-        with pytest.raises(ValueError, match="rate ต้องมากกว่า 0"):
-            pt.update_fx_rate.invoke({"rate": -1.0})
+        result = pt.update_fx_rate.invoke({"rate": -1.0})
 
+        assert isinstance(result, str) and result.startswith("Error:")
+        assert "rate ต้องมากกว่า 0" in result
     def test_zero_rate_raises(self, isolated_portfolio):
         pt = isolated_portfolio
-        with pytest.raises(ValueError, match="rate ต้องมากกว่า 0"):
-            pt.update_fx_rate.invoke({"rate": 0})
+        result = pt.update_fx_rate.invoke({"rate": 0})
 
+        assert isinstance(result, str) and result.startswith("Error:")
+        assert "rate ต้องมากกว่า 0" in result
     def test_fx_change_affects_usd_holding_market_value(self, isolated_portfolio):
         """FX ขึ้น → market_value USD holding ใน THB เพิ่ม + unrealized P/L (THB) เพิ่ม"""
         pt = isolated_portfolio
@@ -259,9 +261,10 @@ class TestSyncMarketPricesExceptions:
             raise Timeout("mock")
         monkeypatch.setattr(prices._portfolio_lock, "acquire", mock_lock)
         
-        with pytest.raises(ValueError, match="portfolio lock timeout"):
-            sync_market_prices.func()
+        result = sync_market_prices.func()
 
+        assert isinstance(result, str) and result.startswith("Error:")
+        assert "portfolio lock" in result
     def test_sync_market_prices_empty_portfolio(self, monkeypatch, isolated_portfolio):
         pt = isolated_portfolio
         monkeypatch.setattr(prices, "_refresh_prices", lambda state: {})

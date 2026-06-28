@@ -38,9 +38,19 @@ def _is_url_fetched(url: str) -> bool:
 
 @tool
 def generate_news_radar_daily() -> str:
-    """สร้างไฟล์ News Radar (ตารางสรุปข่าวรายวัน) จาก RSS Feeds
-    ดึงข่าวเศรษฐกิจมหภาค (Macro News) จากแหล่งต่างๆ เช่น Investing.com, Reuters, BOT
-    และเซฟลงใน 30_Knowledge_Base/News/Inbox/News-Radar-Daily_{Date}.md
+    """สร้างเรดาร์ข่าวเศรษฐกิจมหภาครายวัน (News Radar) จาก RSS Feeds
+
+    [Usage/When to use]
+    ใช้เมื่อต้องการสรุปข่าวสารเศรษฐกิจมหภาค (Macro News) ล่าสุดจากแหล่งข่าวสำคัญ (เช่น Investing.com, Reuters, BOT)
+    - สร้างเป็นตารางสรุปข่าวพร้อม URL อ้างอิง
+    - เป็นการดึงข้อมูลจากแหล่งข่าว ไม่ใช่การดึงเนื้อหาเต็มของแต่ละข่าว
+
+    [Caution]
+    - เครื่องมือนี้แค่ส่งคืนข้อความ Markdown (ไม่บันทึกไฟล์เอง)
+    - **ต้อง** นำผลลัพธ์ที่ได้ไปส่งให้ Archivist บันทึกไฟล์ต่อด้วย `write_raw_markdown` ลงใน Inbox
+
+    Returns:
+        str: รายงาน News Radar รายวันในรูปแบบ Markdown พร้อม YAML Frontmatter
     """
     _SAVE_DIR.mkdir(parents=True, exist_ok=True)
     today = datetime.now()

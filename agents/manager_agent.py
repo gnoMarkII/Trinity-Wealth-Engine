@@ -1,4 +1,6 @@
 import os
+import time
+import uuid
 from functools import lru_cache
 from typing import Literal, TypedDict
 
@@ -11,7 +13,7 @@ from agents.archivist_agent import create_archivist
 from agents.bookkeeper_agent import create_bookkeeper
 from agents.researcher_agent import create_researcher
 from agents.macro_analyst_agent import create_macro_analyst
-from core.agent_log import log_routing
+from core.agent_log import log_turn_start, log_manager_plan, log_worker_result, log_system_action, log_routing
 from core.llm_factory import FALLBACK_MODEL, detect_provider, get_llm
 from core.logger import get_logger
 from core.utils import normalize_content
@@ -27,6 +29,7 @@ _RESEARCHER_MODEL = os.getenv("RESEARCHER_MODEL", "gemini-3.1-flash-lite-preview
 _BOOKKEEPER_MODEL = os.getenv("BOOKKEEPER_MODEL", "gemini-3.1-flash-lite-preview")
 _MACRO_ANALYST_MODEL = os.getenv("MACRO_ANALYST_MODEL", "gemini-3.1-flash-lite-preview")
 _ROUTER_HISTORY_LIMIT = 20
+_MAX_REPLAN = 2
 
 
 class RouteMeta(TypedDict, total=False):
@@ -34,12 +37,15 @@ class RouteMeta(TypedDict, total=False):
     source: str   # "manager" | "researcher"
     target: str   # "archivist" | "researcher" | "bookkeeper" | "user"
     save_to_vault: bool
+    worker_started_at: float | None
 
 
 class AgentState(MessagesState):
-    """MessagesState + routing metadata + pending multi-task queue"""
+    """MessagesState + routing metadata + pending multi-task queue + replan safety"""
     route_meta: RouteMeta
     task_queue: list[dict]
+    replan_count: int
+    turn_id: str
 
 
 # ROUTER_PROMPT: กฎการแตกคำขอเป็น tasks + เลือก worker ของแต่ละ task + กฎเหล็ก
@@ -83,7 +89,13 @@ ROUTER_PROMPT = """คุณคือ The Manager ผู้จัดการก
 [กฎเหล็ก]
 - ห้ามนำข้อมูลดิบที่ Researcher ดึงมาสรุป/วิเคราะห์ซ้ำในคำตอบ
 - ห้ามมั่วข้อมูล — ต้องดึงจากแหล่งที่เชื่อถือได้
-- ห้ามตอบตัวเลขพอร์ตจากความจำเก่า — ต้องให้ Bookkeeper อ่านสถานะปัจจุบันก่อนเสมอ"""
+- ห้ามตอบตัวเลขพอร์ตจากความจำเก่า — ต้องให้ Bookkeeper อ่านสถานะปัจจุบันก่อนเสมอ
+
+[กฎ Re-plan — เมื่อเห็น [REPLAN]]
+- ข้อความที่ขึ้นต้นด้วย [REPLAN] แสดงว่างานก่อนหน้าล้มเหลว
+- ให้วิเคราะห์ว่า Error เกิดจากอะไร แล้ววางแผนงานใหม่ที่แก้ต้นเหตุ
+- ตัวอย่าง: ถ้า Macro Analyst บอก "ไม่พบไฟล์ Global_Macro_Snapshot" → สั่ง Researcher ดึงข้อมูล Global Macro ก่อน แล้วค่อยส่ง Macro Analyst อีกครั้ง
+- ห้ามทำซ้ำแผนเดิมที่ล้มเหลว — ต้องเปลี่ยนแนวทาง"""
 
 
 class WorkerTask(BaseModel):
@@ -112,6 +124,23 @@ class RouterDecision(BaseModel):
         description="คำตอบที่ส่งกลับให้ผู้ใช้โดยตรง (ภาษาไทย กระชับ) — ใช้เมื่อ tasks ว่างเท่านั้น "
                     "ไม่นำข้อมูลดิบจาก Researcher มาวิเคราะห์ซ้ำ",
     )
+
+
+def _is_worker_error(messages: list) -> str | None:
+    """ตรวจสอบว่า Worker ล่าสุดส่ง Error กลับมาหรือไม่
+
+    Returns:
+        ข้อความ Error ถ้าพบ, None ถ้าสำเร็จ
+    """
+    if not messages:
+        return None
+    last = messages[-1]
+    if not isinstance(last, AIMessage):
+        return None
+    content = normalize_content(last.content).strip()
+    if content.startswith("Error:"):
+        return content
+    return None
 
 
 def _msg_role(m) -> str:
@@ -186,6 +215,15 @@ def extract_worker_reply(messages: list) -> str:
     return normalize_content(tool_msg.content if tool_msg is not None else recent_msgs[-1].content)
 
 
+def _get_elapsed(meta: dict) -> float | None:
+    """คำนวณ elapsed time แบบปลอดภัย ทนต่อ LangGraph checkpoint resume"""
+    started_at = meta.get("worker_started_at")
+    if started_at is None or not isinstance(started_at, (int, float)):
+        return None
+    elapsed = time.monotonic() - started_at
+    return elapsed if elapsed >= 0 else None
+
+
 def build_graph(checkpointer=None) -> StateGraph:
     archivist_graph = _get_archivist_graph()
     researcher_graph = _get_researcher_graph()
@@ -195,9 +233,13 @@ def build_graph(checkpointer=None) -> StateGraph:
 
     def supervisor_node(state: AgentState) -> Command[Literal["prepare_archivist", "researcher", "bookkeeper", "macro_analyst", "__end__"]]:
         messages = state["messages"]
+        turn_id = state.get("turn_id")
 
         if isinstance(messages[-1], HumanMessage) and getattr(messages[-1], "name", None) != "manager":
-            # turn ใหม่จาก user → วางแผนงานทั้ง turn (ยิง LLM ครั้งเดียว แล้ว drain คิว)
+            # turn ใหม่จาก user
+            turn_id = uuid.uuid4().hex[:8]
+            log_turn_start(turn_id, messages[-1].content)
+            
             router_messages = [
                 {"role": "system", "content": ROUTER_PROMPT},
                 *[{"role": _msg_role(m), "content": normalize_content(m.content)}
@@ -207,44 +249,109 @@ def build_graph(checkpointer=None) -> StateGraph:
             log.info("route plan: tasks=%d", len(decision.tasks))
 
             if not decision.tasks:
-                # respond — ใช้ response_text ตรงๆ ไม่ยิง LLM รอบ 2
                 reply = decision.response_text.strip() or "ขอโทษครับ ผมยังไม่เข้าใจคำสั่ง ลองพิมพ์ใหม่อีกครั้งได้ไหมครับ"
-                log_routing("manager", "user", content=reply)
+                log_worker_result(turn_id, "manager", reply, status="info")
                 return Command(
                     goto=END,
                     update={
                         "messages": [AIMessage(content=reply)],
                         "route_meta": {"source": "manager", "target": "user"},
                         "task_queue": [],
+                        "replan_count": 0,
+                        "turn_id": turn_id,
                     },
                 )
+            log_manager_plan(turn_id, [t.model_dump() for t in decision.tasks])
             queue = [t.model_dump() for t in decision.tasks]
+            messages_update = []
+            replan_count_update = 0
         else:
             # วนกลับจาก worker (last != user original message) → ทำ task ที่เหลือต่อ
-            queue = state.get("task_queue") or []
+            error_msg = _is_worker_error(messages)
+            replan_count = state.get("replan_count", 0)
+
+            if error_msg and replan_count < _MAX_REPLAN:
+                log.warning("worker error detected, re-planning (attempt %d/%d): %s",
+                            replan_count + 1, _MAX_REPLAN, error_msg[:100])
+                log_system_action(turn_id, "Re-plan Triggered", error_msg, status="warning")
+                
+                replan_hint = HumanMessage(
+                    content=(
+                        f"[REPLAN] งานก่อนหน้าล้มเหลว: {error_msg}\n"
+                        "กรุณาวางแผนงานใหม่เพื่อแก้ปัญหา — "
+                        "อาจต้องสั่ง Researcher ดึงข้อมูลที่ขาดก่อน แล้วค่อยทำงานต่อ"
+                    ),
+                    name="manager",
+                )
+                
+                router_messages = [
+                    {"role": "system", "content": ROUTER_PROMPT},
+                    *[{"role": _msg_role(m), "content": normalize_content(m.content)}
+                      for m in messages[-_ROUTER_HISTORY_LIMIT:]
+                      if not isinstance(m, ToolMessage)],
+                    {"role": "human", "content": replan_hint.content},
+                ]
+                decision: RouterDecision = router_model.invoke(router_messages)
+                log.info("replan result: tasks=%d", len(decision.tasks))
+                
+                if not decision.tasks:
+                    reply = decision.response_text.strip() or error_msg
+                    log_worker_result(turn_id, "manager", reply, status="warning")
+                    return Command(
+                        goto=END,
+                        update={
+                            "messages": [replan_hint, AIMessage(content=reply)],
+                            "route_meta": {"source": "manager", "target": "user"},
+                            "task_queue": [],
+                            "replan_count": replan_count + 1,
+                            "turn_id": turn_id,
+                        },
+                    )
+                log_manager_plan(turn_id, [t.model_dump() for t in decision.tasks])
+                queue = [t.model_dump() for t in decision.tasks]
+                messages_update = [replan_hint]
+                replan_count_update = replan_count + 1
+            elif error_msg:
+                log.error("max replan reached, returning error to user: %s", error_msg[:100])
+                log_system_action(turn_id, "Re-plan Exhausted", error_msg, status="failure")
+                return Command(
+                    goto=END,
+                    update={
+                        "messages": [AIMessage(content=f"ขออภัยครับ ระบบพยายามแก้ปัญหาแล้วแต่ยังไม่สำเร็จ: {error_msg}")],
+                        "route_meta": {"source": "manager", "target": "user"},
+                        "task_queue": [],
+                        "replan_count": replan_count,
+                        "turn_id": turn_id,
+                    },
+                )
+            else:
+                queue = state.get("task_queue") or []
+                messages_update = []
+                replan_count_update = replan_count
 
         if not queue:
-            # คิวหมด → จบ turn เงียบ ๆ (ไม่เพิ่ม message ใหม่)
-            return Command(goto=END)
+            return Command(
+                goto=END,
+                update={"replan_count": 0, "turn_id": turn_id}
+            )
 
         task, rest = queue[0], queue[1:]
         target = task["target"]
         meta: RouteMeta = {"source": "manager", "target": target}
-        reason = None
         if target == "researcher":
             meta["save_to_vault"] = task.get("save_to_vault", True)
-            reason = f"save_to_vault={meta['save_to_vault']}"
         
-        log_routing("manager", target, reason=reason, content=task["instruction"])
-        
+        meta["worker_started_at"] = time.monotonic()
         goto_target = "prepare_archivist" if target == "archivist" else target
         
         return Command(
             goto=goto_target,
             update={
-                "messages": [HumanMessage(content=task["instruction"], name="manager")],
+                "messages": messages_update + [HumanMessage(content=task["instruction"], name="manager")],
                 "route_meta": meta,
                 "task_queue": rest,
+                "replan_count": replan_count_update,
+                "turn_id": turn_id,
             },
         )
 
@@ -283,12 +390,17 @@ def build_graph(checkpointer=None) -> StateGraph:
         from tools.archivist.indexer import flush_index_if_dirty
         archivist_reply = extract_worker_reply(state["messages"])
         flush_index_if_dirty()
-        log_routing("archivist", "user", content=archivist_reply)
+        
+        turn_id = state.get("turn_id", "unknown")
+        elapsed = _get_elapsed(state.get("route_meta") or {})
+        log_worker_result(turn_id, "archivist", archivist_reply, status="success", elapsed_sec=elapsed)
+        
         return Command(
             goto="supervisor",
             update={
                 "messages": [AIMessage(content=archivist_reply)],
-                "route_meta": {"source": "archivist", "target": "user"}
+                "route_meta": {"source": "archivist", "target": "user"},
+                "turn_id": turn_id,
             }
         )
 
@@ -296,66 +408,80 @@ def build_graph(checkpointer=None) -> StateGraph:
         meta = state.get("route_meta") or {}
         save_to_vault = meta.get("save_to_vault", True)
         researcher_reply = extract_worker_reply(state["messages"])
+        turn_id = state.get("turn_id", "unknown")
+        elapsed = _get_elapsed(meta)
 
         if not _has_researcher_frontmatter(researcher_reply):
-            log_routing("researcher", "user", reason="no_frontmatter", content=researcher_reply)
+            log_worker_result(turn_id, "researcher", researcher_reply, status="warning", elapsed_sec=elapsed)
             return Command(
                 goto="supervisor", 
                 update={
                     "messages": [AIMessage(content=researcher_reply)],
-                    "route_meta": {"source": "researcher", "target": "user"}
+                    "route_meta": {"source": "researcher", "target": "user"},
+                    "turn_id": turn_id,
                 }
             )
 
         if not save_to_vault:
-            log_routing("researcher", "user", reason="no_save", content=researcher_reply)
+            log_worker_result(turn_id, "researcher", researcher_reply, status="info", elapsed_sec=elapsed)
             return Command(
                 goto="supervisor", 
                 update={
                     "messages": [AIMessage(content=researcher_reply)],
-                    "route_meta": {"source": "researcher", "target": "user"}
+                    "route_meta": {"source": "researcher", "target": "user"},
+                    "turn_id": turn_id,
                 }
             )
 
-        log_routing("researcher", "archivist", reason="save_to_vault", content=researcher_reply)
+        log_worker_result(turn_id, "researcher", researcher_reply, status="success", elapsed_sec=elapsed)
         return Command(
             goto="prepare_archivist", 
             update={
                 "messages": [AIMessage(content=researcher_reply)],
-                "route_meta": {"source": "researcher", "target": "archivist"}
+                "route_meta": {"source": "researcher", "target": "archivist", "worker_started_at": time.monotonic()},
+                "turn_id": turn_id,
             }
         )
 
     def post_bookkeeper_node(state: AgentState) -> Command[Literal["supervisor"]]:
         bookkeeper_reply = extract_worker_reply(state["messages"])
-        log_routing("bookkeeper", "user", content=bookkeeper_reply)
+        turn_id = state.get("turn_id", "unknown")
+        elapsed = _get_elapsed(state.get("route_meta") or {})
+        
+        log_worker_result(turn_id, "bookkeeper", bookkeeper_reply, status="success", elapsed_sec=elapsed)
         return Command(
             goto="supervisor", 
             update={
                 "messages": [AIMessage(content=bookkeeper_reply)],
-                "route_meta": {"source": "bookkeeper", "target": "user"}
+                "route_meta": {"source": "bookkeeper", "target": "user"},
+                "turn_id": turn_id,
             }
         )
 
     def post_macro_analyst_node(state: AgentState) -> Command[Literal["supervisor", "prepare_archivist"]]:
         macro_analyst_reply = extract_worker_reply(state["messages"])
+        turn_id = state.get("turn_id", "unknown")
+        elapsed = _get_elapsed(state.get("route_meta") or {})
         
         if _has_researcher_frontmatter(macro_analyst_reply):
-            log_routing("macro_analyst", "archivist", reason="save_to_vault", content=macro_analyst_reply)
+            log_worker_result(turn_id, "macro_analyst", macro_analyst_reply, status="success", elapsed_sec=elapsed)
             return Command(
                 goto="prepare_archivist", 
                 update={
                     "messages": [AIMessage(content=macro_analyst_reply)],
-                    "route_meta": {"source": "macro_analyst", "target": "archivist"}
+                    "route_meta": {"source": "macro_analyst", "target": "archivist", "worker_started_at": time.monotonic()},
+                    "turn_id": turn_id,
                 }
             )
         
-        log_routing("macro_analyst", "user", content=macro_analyst_reply)
+        status = "failure" if macro_analyst_reply.strip().startswith("Error:") else "info"
+        log_worker_result(turn_id, "macro_analyst", macro_analyst_reply, status=status, elapsed_sec=elapsed)
         return Command(
             goto="supervisor", 
             update={
                 "messages": [AIMessage(content=macro_analyst_reply)],
-                "route_meta": {"source": "macro_analyst", "target": "user"}
+                "route_meta": {"source": "macro_analyst", "target": "user"},
+                "turn_id": turn_id,
             }
         )
 

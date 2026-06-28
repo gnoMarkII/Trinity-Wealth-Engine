@@ -216,7 +216,24 @@
 
 ---
 
-## 8. การจัดการความสะอาดของ Workspace และไฟล์ทดสอบ (Workspace Cleanliness & Generated Files)
+## 8. การสร้าง Tools และระบบ Self-Correction Loop (Tool Interface & Error Handling)
+
+การออกแบบเครื่องมือ (Tools) สำหรับให้ LLM ใช้งาน ต้องเอื้อต่อการดักจับข้อผิดพลาดและให้ Agent สามารถแก้ไขตัวเองได้ (Self-Correction) แทนการทำให้ระบบ Crash
+
+1. **Return Error String แทนการ Raise Exception ใน Interface Layer:**
+   - ฟังก์ชันที่ครอบด้วย `@tool` (Interface Layer) **ห้ามปล่อย Exception ทะลุกลับไปหา LLM** (เช่น `ValueError`, `TimeoutError`) เพราะจะทำให้ LangChain/Agent ล้มเหลวและหยุดทำงาน
+   - ให้ใช้ `try/except` ดักจับ Exception เหล่านั้น แล้ว Return เป็น String ที่เริ่มต้นด้วย `"Error: "` เสมอ (เช่น `return f"Error: {str(e)}"` หรือใช้ `validation_error(...)` ใน `tool_errors.py`)
+   - การทำเช่นนี้จะช่วยให้ LLM ได้รับ String ข้อผิดพลาดกลับไปคิดทบทวน และเรียกใช้ Tool ใหม่อีกครั้งด้วย Argument ที่ถูกต้อง (Self-Correction Loop)
+2. **รักษา Internal Logic ให้เป็น Pythonic Exception:**
+   - ลอจิกที่อยู่ข้างใต้ฟังก์ชันย่อย (Internal/Private functions เช่น `_*_locked`) ให้ใช้การ `raise ValueError` หรือ Exception ตามปกติ เพื่อความแข็งแกร่งของ Business Logic และเอื้อต่อการเขียน Unit Test
+3. **ใช้ Google Style Docstrings เพื่อกำหนด Tool Description (Native Tool Calling):**
+   - **ห้าม** ใส่เงื่อนไขการเลือกใช้ Tool หรือคำอธิบายการใช้งานไว้ใน System Prompt ของ Agent
+   - คำอธิบาย, เงื่อนไข (Usage/When to use, Caution), พารามิเตอร์ (Args), และข้อควรระวังต่างๆ ต้องถูกระบุอย่างละเอียดใน **Docstring (Google Style)** ของฟังก์ชันที่ครอบด้วย `@tool` เสมอ
+   - เพื่อให้ Agent พึ่งพาระบบ `bind_tools` ในการดึงข้อมูล Schema ไปประมวลผลการตัดสินใจด้วยตัวเอง ซึ่งช่วยลด Token ใน Prompt และทำให้โค้ดสั้นกระชับขึ้น
+
+---
+
+## 9. การจัดการความสะอาดของ Workspace และไฟล์ทดสอบ (Workspace Cleanliness & Generated Files)
 
 1. **Test Reports & Artifacts:** ไฟล์รายงานผลที่สร้างจากการรัน Test (เช่น `testing_report.html`, `coverage_report/`, `coverage.xml`) หรือไฟล์จำลองต่างๆ (Mock/Temp Files) ต้องถูกตั้งค่าให้ไปจัดเก็บไว้ในโฟลเดอร์ที่เกี่ยวข้อง (เช่น `tests/`) เท่านั้น ห้ามปล่อยให้ตกค้างหรือสร้างทิ้งไว้ใน Root Directory เด็ดขาด เพื่อไม่ให้ปะปนกับโค้ดหลัก
 2. **Scratch & Temp Files:** หากมีการสร้างไฟล์เพื่อทดสอบโค้ดชั่วคราว, เขียนสคริปต์สั้นๆ เพื่อดีบัก หรือสร้างไฟล์ล็อก (เช่น `temp_*.py`, `debug.txt`) ต้องสร้างไว้ในโฟลเดอร์ `scratch/` หรือถูกลบทิ้ง (Clean up) ทันทีเมื่อไม่ใช้งานแล้ว
@@ -224,7 +241,7 @@
 
 ---
 
-## 9. มาตรฐานการทำ Tracing ด้วย LangSmith (LangSmith Observability)
+## 10. มาตรฐานการทำ Tracing ด้วย LangSmith (LangSmith Observability)
 
 เพื่อประสิทธิภาพในการดีบักและติดตามการทำงานของ Agent (Tracing) ทุกฟังก์ชันที่เกี่ยวข้องกับ Agent ต้องปฏิบัติตามมาตรฐานดังนี้:
 1. **ครอบฟังก์ชันด้วย `@traceable` เสมอ:** ฟังก์ชันทุกตัวในระบบ (โดยเฉพาะในโฟลเดอร์ `tools/` และ `core/`) ที่ถูกใช้งานโดย Agent หรือทำงานเป็นสเตปที่ชัดเจน ต้องถูกครอบด้วย `@traceable` (จาก `langsmith`)
@@ -239,7 +256,7 @@
 
 ---
 
-## 10. หลักปฏิบัติสุดท้าย (Final Doctrine)
+## 11. หลักปฏิบัติสุดท้าย (Final Doctrine)
 
 1. **เมื่อได้รับคำสั่งเขียนโค้ด** — เสนอแผนงานและรออนุมัติ (Plan-First Workflow) ห้ามแก้ไขไฟล์ทันที
 2. **เมื่อสงสัย** — ถาม ไม่ใช่เดา
@@ -251,6 +268,8 @@
 8. **เมื่อใช้ API Keys** — ดึงจาก env เท่านั้น ห้าม Hardcode
 9. **เมื่อจัดการ Tools** — แยกไฟล์ตามโดเมน ห้ามสร้าง God-files
 10. **เมื่อสร้างไฟล์ชั่วคราว/Report** — เก็บใน `tests/` หรือ `scratch/` เสมอ ห้ามวางทิ้งให้รก Root Directory
-11. **เมื่อเขียนฟังก์ชัน/เครื่องมือใหม่ให้ Agent** — ต้องครอบ `@traceable(run_type="...")` ให้ถูกหมวดหมู่เสมอ
+11. **เมื่อสร้าง Tools ใหม่** — คืนค่า `"Error: ..."` เสมอแทนที่จะปล่อย Exception ทะลุ (Self-Correction)
+12. **เมื่อเขียนฟังก์ชัน/เครื่องมือใหม่ให้ Agent** — ต้องครอบ `@traceable(run_type="...")` ให้ถูกหมวดหมู่เสมอ
+13. **เมื่อกำหนดวิธีใช้ Tool** — เขียนเงื่อนไขและวิธีใช้งานลงใน Docstring (Google Style) ของ `@tool` เท่านั้น ห้ามใส่ใน System Prompt
 
 > *"Code is read far more often than it is written. Optimize for the reader — and the reader of a financial system is auditing for correctness, not admiring cleverness."*

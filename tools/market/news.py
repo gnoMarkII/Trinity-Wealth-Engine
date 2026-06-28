@@ -10,15 +10,21 @@ from .core import Market, _normalize_yf_ticker, _currency_for, _yf_info, _yf_new
 log = get_logger(__name__)
 
 @tool
-@traceable(run_type="tool")
 def ingest_stock_news(ticker: str, market: Market = "US") -> str:
     """ดึงพาดหัวข่าวล่าสุด 5 ข่าวของหุ้นรายตัวจาก Yahoo Finance (รองรับ TH/US)
-    แสดง title, publisher, และ link — Return Markdown พร้อม YAML frontmatter
-    ไม่บันทึกไฟล์ด้วยตัวเอง
+
+    [Usage/When to use]
+    ใช้เมื่อต้องการทราบข่าวสารล่าสุดเกี่ยวกับบริษัทหรือหุ้นนั้นๆ โดยเฉพาะ
+    - ครอบคลุม: Title, Publisher, และ Link
+
+    [Caution]
+    - ข่าวจะเป็นหัวข้อข่าวเท่านั้น หากต้องการเนื้อหาเต็มต้องใช้ `ingest_article_url` ภายหลัง
+    - เครื่องมือนี้แค่ส่งคืนข้อความ Markdown (ไม่บันทึกไฟล์เอง)
+    - **ต้อง** นำผลลัพธ์ที่ได้ไปส่งให้ Archivist บันทึกไฟล์ต่อด้วย `write_raw_markdown`
 
     Args:
-        ticker: Ticker symbol เช่น 'AAPL', 'PTT' (ห้ามมี .BK suffix — ระบบเติมให้)
-        market: 'TH' (SET) หรือ 'US' (default)
+        ticker (str): Ticker symbol เช่น 'AAPL', 'PTT' (ห้ามมี .BK suffix — ระบบจะเติมให้)
+        market (Market): 'TH' สำหรับหุ้นไทย (SET) หรือ 'US' สำหรับหุ้นอเมริกา (default)
     """
     display_sym = ticker.strip().upper().removesuffix(".BK")
     yf_sym = _normalize_yf_ticker(display_sym, market)

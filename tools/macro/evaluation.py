@@ -33,9 +33,17 @@ from .scoring import _generate_agentic_rationales
 log = get_logger(__name__)
 
 @tool
-@traceable(run_type="tool")
 def evaluate_macro_matrix() -> str:
-    """ประเมินข้อมูลเศรษฐกิจมหภาคและสร้างรายงาน"""
+    """ประเมินข้อมูลเศรษฐกิจมหภาคและสร้างรายงาน (Macro Matrix Score)
+
+    [Usage/When to use]
+    ใช้เมื่อต้องการวิเคราะห์สภาวะเศรษฐกิจ (Economic State) และคำนวณ Macro Matrix Score
+    - ดึงข้อมูลจากไฟล์ Daily Snapshots ล่าสุดเพื่อประเมินสถานการณ์
+    - สรุปผลเป็นรายงาน Markdown พร้อมตารางคะแนน 4 มิติ (Monetary Policy, Growth, Inflation, Geopolitics)
+
+    Returns:
+        str: รายงานผลวิเคราะห์ Macro Matrix ในรูปแบบ Markdown
+    """
     today_str = os.environ.get("EVAL_DATE", datetime.now().strftime("%Y-%m-%d"))
     
     # Paths based on test_macro.py expectations

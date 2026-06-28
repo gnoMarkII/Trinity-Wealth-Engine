@@ -35,6 +35,7 @@ def _compute_total_cost(state, current_fx: float) -> float:
     return round(total, 2)
 
 from tools._atomic_io import _atomic_write_to
+from tools.tool_errors import LOCK_TIMEOUT, validation_error
 from .models import _now_iso, _coerce_iso_string, Holding, Summary, PortfolioState, WatchlistItem, WatchlistState, GoalItem, GoalsState
 from .core import _load_or_init, _save, _recalc_all, _recalc_holding, _recalc_summary, _find_holding, _require_cash, _require_fx, get_portfolio_state, _holding_currency, compute_allocation_breakdown
 from .prices import fetch_latest_price, _fetch_last_price, _fetch_fx_rate, _refresh_prices, sync_market_prices
@@ -85,16 +86,18 @@ _portfolio_lock = FileLock(_PORTFOLIO_LOCK_PATH, timeout=_LOCK_TIMEOUT)
 
 
 @tool
-@traceable(run_type="tool")
 def record_performance_snapshot(refresh_prices: bool = True) -> str:
-    """บันทึก snapshot สถานะพอร์ตวันนี้ลง Performance_Log.csv (append-only time-series)
+    """บันทึก Snapshot สถานะพอร์ตโฟลิโอ ณ สิ้นวัน (Performance Logging)
 
-    คอลัมน์: Date, Total_NAV, Total_Cost, Unrealized_PnL, Cash_Balance
-    ใช้สำหรับติดตามการเติบโตของพอร์ตข้ามวัน — ควรเรียกวันละครั้ง (เช่นปลายวัน)
+    [Usage/When to use]
+    ใช้บันทึกประวัติการเติบโตของพอร์ตประจำวัน (Time-series) ลงใน CSV
+    - บันทึก Date, Total_NAV, Total_Cost, Unrealized_PnL, Cash_Balance
+
+    [Caution]
+    - ควรเรียกใช้งานแค่วันละครั้งเพื่อป้องกันข้อมูลซ้ำซ้อนเกินไป
 
     Args:
-        refresh_prices: True (default) = ดึงราคาตลาดล่าสุดก่อน snapshot
-                        False = ใช้ราคาที่บันทึกไว้ (สำหรับ test/replay)
+        refresh_prices (bool): True (อัปเดตราคาล่าสุดก่อนบันทึก, default)
     """
     try:
         with _portfolio_lock:
@@ -117,7 +120,9 @@ def record_performance_snapshot(refresh_prices: bool = True) -> str:
                 _MONEY_DP,
             )
     except Timeout:
-        raise ValueError(f"portfolio lock timeout ({_LOCK_TIMEOUT}s) — มี operation อื่นทำงาน")
+        return LOCK_TIMEOUT.format(detail=f"portfolio lock {_LOCK_TIMEOUT}s")
+    except ValueError as e:
+        return f"Error: {e}"
 
     today = datetime.now().strftime("%Y-%m-%d")
     row = [
@@ -146,30 +151,22 @@ def record_performance_snapshot(refresh_prices: bool = True) -> str:
 
 
 @tool
-@traceable(run_type="tool")
 def read_performance_history(days: int = 30) -> str:
-    """อ่าน Performance_Log.csv ย้อนหลัง N วัน + คำนวณ metrics สำหรับรายงาน trend
+    """อ่านประวัติและวิเคราะห์ผลตอบแทนของพอร์ตโฟลิโอ (Performance Analytics)
 
-    เรียกเมื่อ user ถาม "NAV ขึ้นกี่ % เดือนนี้", "ผลตอบแทนช่วงนี้", "drawdown สูงสุดเท่าไหร่",
-    "พอร์ตเป็นยังไงช่วงที่ผ่านมา"
-
-    Metrics ทุกตัวคำนวณ deterministically ใน Python — ห้าม agent คิดเลขเอง (No Mental Math §2.2)
-        latest_nav: NAV ล่าสุดในช่วง
-        first_nav: NAV แรกในช่วง (baseline)
-        change_abs: latest - first (THB)
-        change_pct: (latest - first) / first × 100
-        max_nav / min_nav: peak / trough ในช่วง
-        max_drawdown_pct: drop สูงสุดจาก peak ที่ผ่านมา (running peak vs current)
-        n_observations: จำนวน snapshot ที่อ่านได้
+    [Usage/When to use]
+    ใช้เมื่อต้องการวิเคราะห์การเติบโต NAV, Drawdown, หรือผลตอบแทนย้อนหลัง
+    - ระบบจะคำนวณ metrics เช่น P&L, Drawdown ให้อัตโนมัติ
 
     Args:
-        days: จำนวนวันย้อนหลังที่จะอ่าน (>0, default 30) — tail rows จาก CSV
+        days (int): จำนวนวันย้อนหลังที่ต้องการวิเคราะห์ (default 30)
 
     Returns:
-        JSON string ของ metrics + raw rows (Date, Total_NAV, Total_Cost, Unrealized_PnL, Cash_Balance)
+        str: สรุปผลตอบแทนและ Metrics ในรูปแบบ Markdown
     """
+
     if days <= 0:
-        raise ValueError("days ต้องมากกว่า 0")
+        return validation_error("days ต้องมากกว่า 0")
 
     if not PERFORMANCE_LOG_PATH.exists():
         return json.dumps(

@@ -11,13 +11,21 @@ from .core import _call_extractor_llm, _build_article_md
 log = get_logger(__name__)
 
 @tool
-@traceable(run_type="tool")
 def ingest_pdf(file_path: str) -> str:
-    """อ่าน PDF และสกัดข้อมูลการลงทุนด้วย LLM
-    รองรับ PDF รายงานบริษัท, งบการเงิน, บทวิเคราะห์ — Return Markdown พร้อม YAML frontmatter ไม่บันทึกไฟล์เอง
+    """อ่านและสกัดข้อมูลจากไฟล์ PDF เป็น Markdown
+
+    ใช้เมื่อต้องการอ่านข้อมูลจากเอกสาร PDF (เช่น รายงานประจำปี, บทวิเคราะห์, หรือรายงานเศรษฐกิจ)
+    - รองรับการอ่านไฟล์จาก Path ท้องถิ่นเท่านั้น
+
+    Caution:
+    - เครื่องมือนี้แค่ส่งคืนข้อความ Markdown (ไม่บันทึกไฟล์เอง)
+    - ต้องนำผลลัพธ์ที่ได้ไปส่งให้ Archivist บันทึกไฟล์ต่อด้วย `write_raw_markdown` เท่านั้น
 
     Args:
-        file_path: path ของไฟล์ PDF เช่น 'C:/Downloads/annual_report_2024.pdf' หรือ './reports/analysis.pdf'
+        file_path (str): Path ของไฟล์ PDF บนเครื่อง (เช่น 'C:/Downloads/report.pdf')
+
+    Returns:
+        str: เนื้อหาภายในเอกสารในรูปแบบ Markdown พร้อม YAML Frontmatter
     """
     today = datetime.now().strftime("%Y-%m-%d")
     now_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")

@@ -43,9 +43,20 @@ def _fetch_fred_series(args: tuple):
     return _with_retry(_fetch_fred_once, fred, series_id)
 
 @tool
-@traceable(run_type="tool")
 def ingest_global_macro() -> str:
-    """ดึงข้อมูลเศรษฐกิจระดับโลก จัดกลุ่ม 4 มิติ (Monetary Policy, Growth, Inflation, Geopolitics)"""
+    """ดึงข้อมูลเศรษฐกิจระดับโลก จัดกลุ่ม 4 มิติ (Monetary Policy, Growth, Inflation, Geopolitics)
+
+    [Usage/When to use]
+    ใช้เมื่อต้องการภาพรวมของสภาวะตลาดโลก (Global Macro)
+    - ดึงข้อมูลดัชนีสำคัญเช่น Yield Curve, VIX, DXY, ทองคำ, น้ำมัน, Bitcoin
+
+    [Caution]
+    - เครื่องมือนี้แค่ส่งคืนข้อความ Markdown (ไม่บันทึกไฟล์เอง)
+    - **ต้อง** นำผลลัพธ์ที่ได้ไปส่งให้ Archivist บันทึกไฟล์ต่อด้วย `write_raw_markdown`
+
+    Returns:
+        str: ข้อมูล Global Macro Snapshot ในรูปแบบ Markdown พร้อม YAML Frontmatter
+    """
     today = datetime.now().strftime("%Y-%m-%d")
     now_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
@@ -100,9 +111,20 @@ def ingest_global_macro() -> str:
     return "\n".join(md_lines)
 
 @tool
-@traceable(run_type="tool")
 def ingest_regional_macro() -> str:
-    """ดึงข้อมูล Regional Proxy ETF จัดกลุ่มตามภูมิภาค และ 4 มิติ"""
+    """ดึงข้อมูล Regional Proxy ETF จัดกลุ่มตามภูมิภาค และ 4 มิติ
+
+    [Usage/When to use]
+    ใช้เมื่อต้องการภาพรวมของสภาวะตลาดรายภูมิภาค (Regional Macro)
+    - ดึงข้อมูล ETF ที่เป็นตัวแทนของภูมิภาคต่างๆ เช่น LatAm, EU, EM, Asia
+
+    [Caution]
+    - เครื่องมือนี้แค่ส่งคืนข้อความ Markdown (ไม่บันทึกไฟล์เอง)
+    - **ต้อง** นำผลลัพธ์ที่ได้ไปส่งให้ Archivist บันทึกไฟล์ต่อด้วย `write_raw_markdown`
+
+    Returns:
+        str: ข้อมูล Regional Macro Snapshot ในรูปแบบ Markdown พร้อม YAML Frontmatter
+    """
     today = datetime.now().strftime("%Y-%m-%d")
     now_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     symbols = list(_REGIONAL_TICKERS.keys())
@@ -156,9 +178,20 @@ def ingest_regional_macro() -> str:
     return "\n".join(md_lines)
 
 @tool
-@traceable(run_type="tool")
 def ingest_country_macro() -> str:
-    """ดึงตัวเลขเศรษฐกิจพื้นฐานของประเทศสหรัฐฯ (FRED) และไทย จัดกลุ่มเป็น 4 มิติ"""
+    """ดึงตัวเลขเศรษฐกิจพื้นฐานของประเทศสหรัฐฯ (FRED) และไทย จัดกลุ่มเป็น 4 มิติ
+
+    [Usage/When to use]
+    ใช้เมื่อต้องการตัวเลขเศรษฐกิจพื้นฐาน (Hard Data) แบบรายประเทศ
+    - ดึงข้อมูลจากฐานข้อมูล FRED สำหรับสหรัฐฯ และจำลองข้อมูลสำหรับประเทศไทย
+
+    [Caution]
+    - เครื่องมือนี้แค่ส่งคืนข้อความ Markdown (ไม่บันทึกไฟล์เอง)
+    - **ต้อง** นำผลลัพธ์ที่ได้ไปส่งให้ Archivist บันทึกไฟล์ต่อด้วย `write_raw_markdown`
+
+    Returns:
+        str: ข้อมูล Country Macro Snapshot ในรูปแบบ Markdown พร้อม YAML Frontmatter
+    """
     today = datetime.now().strftime("%Y-%m-%d")
     now_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
@@ -293,9 +326,20 @@ def ingest_country_macro() -> str:
     return "\n".join(md_lines)
 
 @tool
-@traceable(run_type="tool")
 def ingest_us_sectors() -> str:
-    """ดึงข้อมูล US Sector ETF ครบ 11 กลุ่ม GICS"""
+    """ดึงข้อมูล US Sector ETF ครบ 11 กลุ่ม GICS
+
+    [Usage/When to use]
+    ใช้เมื่อต้องการวิเคราะห์กระแสเงินไหลเวียน (Sector Rotation) ของตลาดหุ้นสหรัฐฯ
+    - ดึงข้อมูลผลตอบแทนของทั้ง 11 กลุ่มอุตสาหกรรม (GICS Sectors)
+
+    [Caution]
+    - เครื่องมือนี้แค่ส่งคืนข้อความ Markdown (ไม่บันทึกไฟล์เอง)
+    - **ต้อง** นำผลลัพธ์ที่ได้ไปส่งให้ Archivist บันทึกไฟล์ต่อด้วย `write_raw_markdown`
+
+    Returns:
+        str: ข้อมูล US Sectors Pulse ในรูปแบบ Markdown พร้อม YAML Frontmatter
+    """
     today = datetime.now().strftime("%Y-%m-%d")
     now_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     symbols = list(_US_SECTORS.keys())

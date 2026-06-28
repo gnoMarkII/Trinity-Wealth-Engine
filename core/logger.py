@@ -1,36 +1,20 @@
 import logging
+import logging.handlers
 import os
 import sys
-from datetime import datetime
-
-from core.agent_log import _ensure_file, _lock, _today_path, _truncate
+from pathlib import Path
 
 
-class _DailyMarkdownHandler(logging.Handler):
-    """Append WARNING/ERROR จากทุก Python logger ลง daily Markdown log
-    Format: ### [HH:MM:SS] LEVEL [logger.name]\nmessage
-    """
-
-    def emit(self, record: logging.LogRecord) -> None:
-        try:
-            time_str = datetime.now().strftime("%H:%M:%S")
-            entry = (
-                f"### [{time_str}] {record.levelname} [{record.name}]\n"
-                f"{_truncate(record.getMessage(), 500)}"
-            )
-            path = _today_path()
-            with _lock:
-                _ensure_file(path)
-                with path.open("a", encoding="utf-8") as f:
-                    f.write(entry + "\n\n")
-        except Exception:
-            self.handleError(record)
-
+_SETUP_DONE = False
 
 def setup_logging(level: str | None = None) -> None:
     """ตั้งค่า root logger — เรียกครั้งเดียวจาก main entry point
     Level ดึงจาก LOG_LEVEL env (default: INFO) หรือ override ผ่าน argument
     """
+    global _SETUP_DONE
+    if _SETUP_DONE:
+        return
+
     log_level = (level or os.getenv("LOG_LEVEL", "INFO")).upper()
     logging.basicConfig(
         level=getattr(logging, log_level, logging.INFO),
@@ -42,14 +26,22 @@ def setup_logging(level: str | None = None) -> None:
     for noisy in ("httpx", "httpcore", "urllib3", "chromadb"):
         logging.getLogger(noisy).setLevel(logging.WARNING)
     # yfinance log HTTP 404 ที่ระดับ ERROR เมื่อ fallback endpoint แม้ดึงข้อมูลสำเร็จ
-    # (เช่น quoteSummary fail → fallback scrape ได้ครบ) — ปิดเสียงทั้งหมดเพราะ tool
-    # มี try/except + graceful Thai error message รองรับ failure ตัวจริงอยู่แล้ว
     logging.getLogger("yfinance").setLevel(logging.CRITICAL)
 
-    # เพิ่ม file handler — capture WARNING+ ลง daily Markdown log
-    file_handler = _DailyMarkdownHandler()
+    # เพิ่ม file handler — capture WARNING+ ลง system.log
+    log_dir = Path(__file__).resolve().parents[1] / "logs"
+    log_dir.mkdir(exist_ok=True)
+    log_file = log_dir / "system.log"
+    
+    file_handler = logging.handlers.TimedRotatingFileHandler(
+        log_file, when="midnight", interval=1, backupCount=7, encoding="utf-8"
+    )
     file_handler.setLevel(logging.WARNING)
+    formatter = logging.Formatter("%(asctime)s [%(name)s] %(levelname)s: %(message)s")
+    file_handler.setFormatter(formatter)
+    
     logging.getLogger().addHandler(file_handler)
+    _SETUP_DONE = True
 
 
 def get_logger(name: str) -> logging.Logger:

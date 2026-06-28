@@ -4,9 +4,7 @@ import uuid
 
 from dotenv import load_dotenv
 from langgraph.checkpoint.memory import MemorySaver
-from prompt_toolkit import prompt
 
-from core.agent_log import log_routing
 from core.logger import setup_logging
 from core.retry import is_transient_error as _is_transient_error
 from core.security import anonymize_pii
@@ -16,31 +14,25 @@ load_dotenv()
 setup_logging()
 
 
-def _label_from_route(meta: dict | None, node_name: str) -> str:
-    """สร้าง display label จาก route_meta — ถ้าไม่มี ก็ใช้ node_name fallback"""
-    if not meta:
-        return node_name
-    source = meta.get("source", node_name)
-    target = meta.get("target", "")
-    if target in ("", "user"):
-        return source.capitalize()
-    label = f"{source.capitalize()} → {target.capitalize()}"
-    if target == "researcher" and meta.get("save_to_vault") is False:
-        label += " (no save)"
-    return label
-
+from langchain_core.messages import HumanMessage, AIMessage
 
 def _display(node_name: str, state: dict) -> None:
     messages = state.get("messages") if isinstance(state, dict) else None
     if not messages:
         return
     last = messages[-1] if isinstance(messages, list) else messages
+    
+    # ข้าม HumanMessage(name="manager") ที่เป็น internal instruction
+    if isinstance(last, HumanMessage) and getattr(last, "name", None) == "manager":
+        return
+        
     content = normalize_content(getattr(last, "content", ""))
     if not content:
         return
-    meta = state.get("route_meta") if isinstance(state, dict) else None
-    label = _label_from_route(meta, node_name)
-    print(f"\n[{label}]: {content}")
+        
+    if isinstance(last, AIMessage):
+        sender = node_name.replace("post_", "").capitalize()
+        print(f"\n[{sender}]: {content}")
 
 
 def main():
@@ -74,7 +66,7 @@ def main():
 
     while True:
         try:
-            user_input = prompt("\nคุณ: ").strip()
+            user_input = input("\nคุณ: ").strip()
         except (KeyboardInterrupt, EOFError):
             print("\nออกจากโปรแกรม...")
             break
@@ -90,7 +82,7 @@ def main():
         if had_pii:
             print("[Security] ตรวจพบและลบข้อมูล PII ก่อนส่งเข้าประมวลผล")
 
-        log_routing("user", "manager", content=user_input)
+
         print("\n[กำลังประมวลผล...]")
 
         inputs = {"messages": [("user", user_input)]}

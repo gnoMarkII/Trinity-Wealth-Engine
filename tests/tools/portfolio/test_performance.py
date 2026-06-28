@@ -43,9 +43,10 @@ class TestReadPerformanceHistory:
 
     def test_invalid_days_raises(self, isolated_portfolio):
         pt = isolated_portfolio
-        with pytest.raises(ValueError, match="days"):
-            pt.read_performance_history.invoke({"days": 0})
+        result = pt.read_performance_history.invoke({"days": 0})
 
+        assert isinstance(result, str) and result.startswith("Error:")
+        assert "days" in result
     def test_metrics_calculation(self, isolated_portfolio, tmp_vault):
         pt = isolated_portfolio
         # เขียน CSV ตรงๆ ด้วย rows ที่ควบคุมได้ — เลี่ยง yfinance + simulate trend
@@ -132,9 +133,10 @@ class TestPerformanceSnapshotAddons:
             raise Timeout("mock")
         monkeypatch.setattr("tools.portfolio.performance._portfolio_lock.acquire", mock_lock)
         
-        with pytest.raises(ValueError, match="portfolio lock timeout"):
-            pt.record_performance_snapshot.func()
+        result = pt.record_performance_snapshot.func()
 
+        assert isinstance(result, str) and result.startswith("Error:")
+        assert "portfolio lock" in result
 class TestReadPerformanceHistoryAddons:
     def test_empty_csv(self, isolated_portfolio, tmp_vault):
         pt = isolated_portfolio

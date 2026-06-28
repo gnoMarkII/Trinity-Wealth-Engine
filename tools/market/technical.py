@@ -44,15 +44,21 @@ def _summarize_insider_transactions(tk: yf.Ticker) -> str:
 
 
 @tool
-@traceable(run_type="tool")
 def ingest_stock_momentum(ticker: str, market: Market = "US") -> str:
-    """ดึงข้อมูลสัญญาณเทคนิค/โมเมนตัมราคา ข้อมูลคนวงใน สถาบัน และ Short Interest (รองรับ TH/US)
-    ครอบคลุม: MA50, MA200, 52W High/Low, % Insider/Institution Hold, Short Ratio, Short % Float
-    Return เป็น Markdown พร้อม YAML frontmatter — ไม่บันทึกไฟล์ด้วยตัวเอง
+    """ดึงข้อมูลสัญญาณเทคนิค/โมเมนตัมราคา และข้อมูลผู้ถือหุ้น (รองรับ TH/US)
+
+    [Usage/When to use]
+    ใช้เมื่อต้องการข้อมูลเชิงเทคนิคหรือความเคลื่อนไหวของผู้ถือหุ้นใหญ่
+    - ครอบคลุม: MA50, MA200, 52W High/Low, % Insider/Institution Hold, Short Ratio, Short % Float
+
+    [Caution]
+    - หุ้นไทย (TH) อาจไม่มีข้อมูล Short หรือ Institution ครบถ้วนจาก Yahoo Finance
+    - เครื่องมือนี้แค่ส่งคืนข้อความ Markdown (ไม่บันทึกไฟล์เอง)
+    - **ต้อง** นำผลลัพธ์ที่ได้ไปส่งให้ Archivist บันทึกไฟล์ต่อด้วย `write_raw_markdown`
 
     Args:
-        ticker: Ticker symbol เช่น 'AAPL', 'PTT' (ห้ามมี .BK suffix — ระบบเติมให้)
-        market: 'TH' (SET) หรือ 'US' (default) — TH อาจมี short/institution data น้อยกว่า
+        ticker (str): Ticker symbol เช่น 'AAPL', 'PTT' (ห้ามมี .BK suffix — ระบบจะเติมให้)
+        market (Market): 'TH' สำหรับหุ้นไทย (SET) หรือ 'US' สำหรับหุ้นอเมริกา (default)
     """
     display_sym = ticker.strip().upper().removesuffix(".BK")
     yf_sym = _normalize_yf_ticker(display_sym, market)

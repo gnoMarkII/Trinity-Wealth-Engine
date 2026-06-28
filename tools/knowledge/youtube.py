@@ -93,14 +93,23 @@ def _get_raw_transcript(video_id: str) -> str:
 
 
 @tool
-@traceable(run_type="tool")
 def ingest_youtube_transcript(url: str) -> str:
-    """ดึง Transcript จากคลิป YouTube แล้วสกัดข้อมูลการลงทุนด้วย LLM (LLM-as-a-Tool pattern)
-    รองรับ URL ทุกรูปแบบ (youtube.com/watch, youtu.be, /shorts/) และ Video ID ตรงๆ
-    ใช้ OPENROUTER_API_KEY ใน .env — Return Markdown พร้อม YAML frontmatter ไม่บันทึกไฟล์เอง
+    """ดึงซับไตเติ้ล (Transcript) จากวิดีโอ YouTube และแปลงเป็น Markdown
+
+    [Usage/When to use]
+    ใช้เมื่อผู้ใช้ส่ง URL ของ YouTube ให้สรุป หรือสั่งให้ดึงข้อมูลจากคลิป YouTube
+    - สามารถดึงข้อมูล Channel Name, วันที่เผยแพร่, และ Title มาใส่ใน YAML ให้อัตโนมัติ
+
+    [Caution]
+    - **Live Event**: หากวิดีโอยังเป็น Live Stream ที่ยังไม่จบ หรือรอ Live จะไม่สามารถดึง Transcript ได้
+    - เครื่องมือนี้แค่ส่งคืนข้อความ Markdown (ไม่บันทึกไฟล์เอง)
+    - **ต้อง** นำผลลัพธ์ที่ได้ไปส่งให้ Archivist บันทึกไฟล์ต่อด้วย `write_raw_markdown` เท่านั้น
 
     Args:
-        url: YouTube URL หรือ Video ID เช่น 'https://youtu.be/dQw4w9WgXcQ' หรือ 'dQw4w9WgXcQ'
+        url (str): ลิงก์วิดีโอ YouTube หรือ Video ID (เช่น 'https://www.youtube.com/watch?v=RjOEkDIZFZU' หรือ 'RjOEkDIZFZU')
+
+    Returns:
+        str: เนื้อหา Transcript ในรูปแบบ Markdown พร้อม YAML Frontmatter
     """
     today = datetime.now().strftime("%Y-%m-%d")
     now_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")

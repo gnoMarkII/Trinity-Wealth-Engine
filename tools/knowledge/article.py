@@ -32,13 +32,23 @@ def _is_url_already_processed(url: str) -> bool:
     return False
 
 @tool
-@traceable(run_type="tool")
 def ingest_article_url(url: str) -> str:
-    """ดึงเนื้อหาจาก URL บทความและสกัดข้อมูลการลงทุนด้วย LLM
-    รองรับบทความทั่วไป, สื่อการเงิน, บล็อก — Return Markdown พร้อม YAML frontmatter ไม่บันทึกไฟล์เอง
+    """ดึงเนื้อหาจาก URL ของบทความ/บล็อก/ข่าวการลงทุน และแปลงเป็น Markdown
+
+    [Usage/When to use]
+    ใช้เมื่อต้องการสรุปเนื้อหาจาก URL หรือเมื่อผู้ใช้ส่งลิงก์บทความมาให้สรุป
+    - ดึงเนื้อหาโดยใช้ 3-Tier Fallback (Firecrawl → Trafilatura → BeautifulSoup)
+    - สามารถดึง Title มาใช้ตั้งชื่อไฟล์ได้อัตโนมัติ
+
+    [Caution]
+    - เครื่องมือนี้แค่ส่งคืนข้อความ Markdown (ไม่บันทึกไฟล์เอง)
+    - **ต้อง** นำผลลัพธ์ที่ได้ไปส่งให้ Bookkeeper หรือ Archivist บันทึกไฟล์ต่อด้วย `write_raw_markdown` เท่านั้น
 
     Args:
-        url: URL ของบทความที่ต้องการ ingest เช่น 'https://example.com/article'
+        url (str): ลิงก์ URL ของบทความที่ต้องการสกัดข้อมูล
+
+    Returns:
+        str: เนื้อหาในรูปแบบ Markdown พร้อม YAML Frontmatter (หรือข้อความ Error)
     """
     if _is_url_already_processed(url):
         return f"ข้าม: ข่าวนี้เคยถูกดึงและบันทึกไปแล้ว ({url})"

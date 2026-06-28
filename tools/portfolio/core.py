@@ -22,6 +22,7 @@ log = get_logger(__name__)
 _TOP_LEVEL_KEY_ORDER = ("doc_type", "last_updated", "holdings", "cash")
 
 from tools._atomic_io import _atomic_write_to
+from tools.tool_errors import LOCK_TIMEOUT, validation_error
 from .models import _now_iso, _coerce_iso_string, Holding, Summary, PortfolioState, WatchlistItem, WatchlistState, GoalItem, GoalsState
 
 
@@ -282,19 +283,21 @@ def _require_fx(state: PortfolioState) -> float:
 
 
 @tool
-@traceable(run_type="tool")
 def get_portfolio_state(refresh_prices: bool = True) -> str:
-    """อ่านสถานะ portfolio ปัจจุบันคืนเป็น JSON string
+    """อ่านสถานะ Portfolio ปัจจุบันคืนเป็น JSON string (Read-only)
 
-    เมื่อ refresh_prices=True (ค่าเริ่มต้น) — ดึงราคาตลาดล่าสุดจาก yfinance ทุก holding
-    (USD ใช้ ticker ตรง, THB เติม .BK) แล้ว recalc + persist ลงไฟล์ทันที
-    เมื่อ refresh_prices=False — แค่ recalc จากราคาที่บันทึกไว้ (ใช้เมื่อไม่ต้องการ network call)
+    [Usage/When to use]
+    ใช้เมื่อต้องการสรุปภาพรวมพอร์ตโฟลิโอ สินทรัพย์ที่ถือครอง หรือคำนวณ NAV
+    - ดึงราคาตลาดล่าสุดจาก yfinance อัตโนมัติ (ยกเว้นสั่ง refresh_prices=False)
+
+    [Caution]
+    - ไม่ทำการเปลี่ยนแปลงสถานะพอร์ต
 
     Args:
-        refresh_prices: True = ดึงราคาตลาดล่าสุดก่อน recalc (default), False = skip network
+        refresh_prices (bool): True (ดึงราคาตลาดล่าสุด, default), False (ใช้ราคาเดิม)
 
     Returns:
-        JSON string ของ PortfolioState — มี field _price_refresh พิเศษบอกผลการดึงราคา
+        str: JSON string ของ PortfolioState พร้อมสถานะการอัปเดตราคา (_price_refresh)
     """
     try:
         with _portfolio_lock:
@@ -333,27 +336,19 @@ def _holding_currency(h: Holding) -> str:
 
 
 @tool
-@traceable(run_type="tool")
 def compute_allocation_breakdown(
     group_by: Literal["asset_type", "currency"] = "asset_type",
 ) -> str:
-    """คำนวณสัดส่วน Asset Allocation ของพอร์ตเป็น % โดยจัดกลุ่มตามมิติที่เลือก
+    """Calculate portfolio Asset Allocation breakdown.
 
-    เรียกเมื่อ user ถาม "หุ้น vs เงินสด % เท่าไหร่", "หุ้นนอก vs หุ้นไทย",
-    "TECH/REIT/Bond คิดเป็นกี่ %", "allocation พอร์ต"
-
-    Group dimensions:
-        'asset_type' (default) → Stock, ETF, REIT, Bond, Cash, ฯลฯ (จาก field asset_type)
-        'currency' → THB, USD (จาก symbol ของ cash + avg_cost field ของ holding)
-
-    Anti-Drift: read-only — ไม่ mutate state. Recalc ก่อนคำนวณเพื่อให้ market_value_thb fresh
+    Args:
+        group_by: Dimension to group by ('asset_type' or 'currency'). Defaults to 'asset_type'.
 
     Returns:
         JSON string: {group_by, total_nav_thb, breakdown: [{group, value_thb, pct, count}], generated_at}
-        breakdown เรียงจาก value_thb มากไปน้อย
     """
     if group_by not in ("asset_type", "currency"):
-        raise ValueError("group_by ต้องเป็น 'asset_type' หรือ 'currency'")
+        return validation_error("group_by ต้องเป็น 'asset_type' หรือ 'currency'")
 
     try:
         with _portfolio_lock:
@@ -368,7 +363,9 @@ def compute_allocation_breakdown(
                 b["value_thb"] += h.market_value_thb
                 b["count"] += 1
     except Timeout:
-        raise ValueError(f"portfolio lock timeout ({_LOCK_TIMEOUT}s) — มี operation อื่นทำงาน")
+        return LOCK_TIMEOUT.format(detail=f"portfolio lock {_LOCK_TIMEOUT}s")
+    except ValueError as e:
+        return f"Error: {e}"
 
     breakdown = [
         {

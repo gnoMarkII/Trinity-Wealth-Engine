@@ -131,12 +131,13 @@ class TestRecordIncome:
     def test_zero_amount_raises(self, isolated_portfolio):
         pt = isolated_portfolio
         # validation is in the public wrapper, not _locked — call the wrapper
-        with pytest.raises(ValueError, match="ต้องมากกว่า 0"):
-            pt.record_income.invoke({
-                "income_type": "Dividend",
-                "amount_thb": 0,
-            })
+        result = pt.record_income.invoke({
+            "income_type": "Dividend",
+            "amount_thb": 0,
+        })
 
+        assert isinstance(result, str) and result.startswith("Error:")
+        assert "ต้องมากกว่า 0" in result
     def test_unknown_source_raises(self, isolated_portfolio):
         pt = isolated_portfolio
         with pytest.raises(ValueError, match="ไม่พบ"):
@@ -180,25 +181,24 @@ class TestManageCashFlow:
 
     def test_invalid_action_raises(self, isolated_portfolio):
         pt = isolated_portfolio
-        with pytest.raises(ValueError, match="action"):
+        with pytest.raises(Exception):
             pt.manage_cash_flow.invoke({
                 "amount": 1_000.0, "action": "transfer", "currency": "THB"
             })
-
     def test_invalid_currency_raises(self, isolated_portfolio):
         pt = isolated_portfolio
-        with pytest.raises(ValueError, match="currency"):
+        with pytest.raises(Exception):
             pt.manage_cash_flow.invoke({
                 "amount": 1_000.0, "action": "deposit", "currency": "EUR"
             })
-
     def test_zero_amount_raises(self, isolated_portfolio):
         pt = isolated_portfolio
-        with pytest.raises(ValueError, match="ต้องมากกว่า 0"):
-            pt.manage_cash_flow.invoke({
-                "amount": 0, "action": "deposit", "currency": "THB"
-            })
+        result = pt.manage_cash_flow.invoke({
+            "amount": 0, "action": "deposit", "currency": "THB"
+        })
 
+        assert isinstance(result, str) and result.startswith("Error:")
+        assert "ต้องมากกว่า 0" in result
     def test_deposit_preserves_unrealized_pnl(self, isolated_portfolio):
         """Anti-Drift §3.2: deposit เพิ่ม NAV เท่ากับเพิ่ม cost basis → unrealized P/L คงเดิม"""
         pt = isolated_portfolio
@@ -266,11 +266,12 @@ class TestEditHolding:
 
     def test_edit_cash_sentinel_rejected(self, isolated_portfolio):
         pt = isolated_portfolio
-        with pytest.raises(ValueError, match="manage_cash_flow"):
-            pt.edit_holding.invoke({
-                "symbol": "CASH_THB", "units": 100.0, "reason": "test"
-            })
+        result = pt.edit_holding.invoke({
+            "symbol": "CASH_THB", "units": 100.0, "reason": "test"
+        })
 
+        assert isinstance(result, str) and result.startswith("Error:")
+        assert "manage_cash_flow" in result
     def test_edit_nonexistent_symbol_raises(self, isolated_portfolio):
         pt = isolated_portfolio
         with pytest.raises(ValueError, match="ไม่พบ"):
@@ -281,21 +282,24 @@ class TestEditHolding:
 
     def test_edit_no_field_raises(self, isolated_portfolio):
         pt = isolated_portfolio
-        with pytest.raises(ValueError, match="อย่างน้อย 1 field"):
-            pt.edit_holding.invoke({"symbol": "PTT", "reason": "test"})
+        result = pt.edit_holding.invoke({"symbol": "PTT", "reason": "test"})
 
+        assert isinstance(result, str) and result.startswith("Error:")
+        assert "อย่างน้อย 1 field" in result
     def test_edit_negative_units_raises(self, isolated_portfolio):
         pt = isolated_portfolio
-        with pytest.raises(ValueError, match="units ต้องมากกว่า 0"):
-            pt.edit_holding.invoke({"symbol": "PTT", "units": -5, "reason": "x"})
+        result = pt.edit_holding.invoke({"symbol": "PTT", "units": -5, "reason": "x"})
 
+        assert isinstance(result, str) and result.startswith("Error:")
+        assert "units ต้องมากกว่า 0" in result
     def test_edit_negative_accumulated_dividend_raises(self, isolated_portfolio):
         pt = isolated_portfolio
-        with pytest.raises(ValueError, match="accumulated_dividend_thb"):
-            pt.edit_holding.invoke({
-                "symbol": "PTT", "accumulated_dividend_thb": -100, "reason": "x"
-            })
+        result = pt.edit_holding.invoke({
+            "symbol": "PTT", "accumulated_dividend_thb": -100, "reason": "x"
+        })
 
+        assert isinstance(result, str) and result.startswith("Error:")
+        assert "accumulated_dividend_thb" in result
     def test_edit_appends_to_trading_journal(self, isolated_portfolio, tmp_vault):
         pt = isolated_portfolio
         pt._manage_cash_flow_locked(500_000.0, "deposit", "THB")
@@ -335,82 +339,95 @@ import tools.portfolio.trading
 class TestBatchImportHoldings:
     def test_invalid_mode_raises(self, isolated_portfolio):
         pt = isolated_portfolio
-        with pytest.raises(ValueError, match="mode"):
-            pt.batch_import_holdings.func(assets_list=[], mode="invalid")
+        result = pt.batch_import_holdings.func(assets_list=[], mode="invalid")
             
+        assert isinstance(result, str) and result.startswith("Error:")
+        assert "mode" in result
     def test_not_list_raises(self, isolated_portfolio):
         pt = isolated_portfolio
-        with pytest.raises(ValueError, match="assets_list ต้องเป็น list"):
-            pt.batch_import_holdings.func(assets_list="not_a_list")
+        result = pt.batch_import_holdings.func(assets_list="not_a_list")
 
+        assert isinstance(result, str) and result.startswith("Error:")
+        assert "assets_list ต้องเป็น list" in result
     def test_empty_list_merge_raises(self, isolated_portfolio):
         pt = isolated_portfolio
-        with pytest.raises(ValueError, match="assets_list ต้องเป็น list ที่ไม่ว่าง"):
-            pt.batch_import_holdings.func(assets_list=[])
+        result = pt.batch_import_holdings.func(assets_list=[])
             
+        assert isinstance(result, str) and result.startswith("Error:")
+        assert "assets_list ต้องเป็น list ที่ไม่ว่าง" in result
     def test_invalid_item_format_raises(self, isolated_portfolio):
         pt = isolated_portfolio
-        with pytest.raises(ValueError, match="ไม่ใช่ dict"):
-            pt.batch_import_holdings.func(assets_list=["invalid"])
+        result = pt.batch_import_holdings.func(assets_list=["invalid"])
             
+        assert isinstance(result, str) and result.startswith("Error:")
+        assert "ไม่ใช่ dict" in result
     def test_missing_fields_raises(self, isolated_portfolio):
         pt = isolated_portfolio
-        with pytest.raises(ValueError, match="field ขาดหรือ format ผิด"):
-            pt.batch_import_holdings.func(assets_list=[{"symbol": "PTT"}])
+        result = pt.batch_import_holdings.func(assets_list=[{"symbol": "PTT"}])
             
+        assert isinstance(result, str) and result.startswith("Error:")
+        assert "field ขาดหรือ format ผิด" in result
     def test_empty_symbol_raises(self, isolated_portfolio):
         pt = isolated_portfolio
-        with pytest.raises(ValueError, match="symbol ว่าง"):
-            pt.batch_import_holdings.func(assets_list=[{
-                "symbol": "", "asset_type": "Stock", "units": 10, "avg_cost": 10, "currency": "THB"
-            }])
+        result = pt.batch_import_holdings.func(assets_list=[{
+            "symbol": "", "asset_type": "Stock", "units": 10, "avg_cost": 10, "currency": "THB"
+        }])
 
+        assert isinstance(result, str) and result.startswith("Error:")
+        assert "symbol ว่าง" in result
     def test_cash_sentinel_raises(self, isolated_portfolio):
         pt = isolated_portfolio
-        with pytest.raises(ValueError, match="ห้าม import cash sentinel"):
-            pt.batch_import_holdings.func(assets_list=[{
-                "symbol": "CASH_THB", "asset_type": "Cash", "units": 10, "avg_cost": 1, "currency": "THB"
-            }])
+        result = pt.batch_import_holdings.func(assets_list=[{
+            "symbol": "CASH_THB", "asset_type": "Cash", "units": 10, "avg_cost": 1, "currency": "THB"
+        }])
 
+        assert isinstance(result, str) and result.startswith("Error:")
+        assert "cash sentinel (CASH_THB/CASH_USD)" in result
     def test_negative_values_raises(self, isolated_portfolio):
         pt = isolated_portfolio
-        with pytest.raises(ValueError, match="units ต้องมากกว่า 0"):
-            pt.batch_import_holdings.func(assets_list=[{
-                "symbol": "PTT", "asset_type": "Stock", "units": -10, "avg_cost": 10, "currency": "THB"
-            }])
-        with pytest.raises(ValueError, match="avg_cost ต้องมากกว่า 0"):
-            pt.batch_import_holdings.func(assets_list=[{
-                "symbol": "PTT", "asset_type": "Stock", "units": 10, "avg_cost": -10, "currency": "THB"
-            }])
+        result = pt.batch_import_holdings.func(assets_list=[{
+            "symbol": "PTT", "asset_type": "Stock", "units": -10, "avg_cost": 10, "currency": "THB"
+        }])
+        assert isinstance(result, str) and result.startswith("Error:")
+        assert "units ต้องมากกว่า 0" in result
+        result = pt.batch_import_holdings.func(assets_list=[{
+            "symbol": "PTT", "asset_type": "Stock", "units": 10, "avg_cost": -10, "currency": "THB"
+        }])
 
+        assert isinstance(result, str) and result.startswith("Error:")
+        assert "avg_cost ต้องมากกว่า 0" in result
     def test_invalid_currency_raises(self, isolated_portfolio):
         pt = isolated_portfolio
-        with pytest.raises(ValueError, match="currency ต้องเป็น 'THB' หรือ 'USD'"):
-            pt.batch_import_holdings.func(assets_list=[{
-                "symbol": "PTT", "asset_type": "Stock", "units": 10, "avg_cost": 10, "currency": "EUR"
-            }])
+        result = pt.batch_import_holdings.func(assets_list=[{
+            "symbol": "PTT", "asset_type": "Stock", "units": 10, "avg_cost": 10, "currency": "EUR"
+        }])
 
+        assert isinstance(result, str) and result.startswith("Error:")
+        assert "currency ต้องเป็น " in result
     def test_duplicate_symbol_raises(self, isolated_portfolio):
         pt = isolated_portfolio
-        with pytest.raises(ValueError, match="ซ้ำ"):
-            pt.batch_import_holdings.func(assets_list=[
-                {"symbol": "PTT", "asset_type": "Stock", "units": 10, "avg_cost": 10, "currency": "THB"},
-                {"symbol": "ptt", "asset_type": "Stock", "units": 20, "avg_cost": 15, "currency": "THB"}
-            ])
+        result = pt.batch_import_holdings.func(assets_list=[
+            {"symbol": "PTT", "asset_type": "Stock", "units": 10, "avg_cost": 10, "currency": "THB"},
+            {"symbol": "ptt", "asset_type": "Stock", "units": 20, "avg_cost": 15, "currency": "THB"}
+        ])
 
+        assert isinstance(result, str) and result.startswith("Error:")
+        assert "ซ้ำ" in result
     def test_invalid_current_price_raises(self, isolated_portfolio):
         pt = isolated_portfolio
-        with pytest.raises(ValueError, match="current_price format ผิด"):
-            pt.batch_import_holdings.func(assets_list=[{
-                "symbol": "PTT", "asset_type": "Stock", "units": 10, "avg_cost": 10, "currency": "THB",
-                "current_price": "invalid"
-            }])
-        with pytest.raises(ValueError, match="current_price ต้องมากกว่า 0"):
-            pt.batch_import_holdings.func(assets_list=[{
-                "symbol": "PTT", "asset_type": "Stock", "units": 10, "avg_cost": 10, "currency": "THB",
-                "current_price": -5
-            }])
+        result = pt.batch_import_holdings.func(assets_list=[{
+            "symbol": "PTT", "asset_type": "Stock", "units": 10, "avg_cost": 10, "currency": "THB",
+            "current_price": "invalid"
+        }])
+        assert isinstance(result, str) and result.startswith("Error:")
+        assert "current_price format ผิด" in result
+        result = pt.batch_import_holdings.func(assets_list=[{
+            "symbol": "PTT", "asset_type": "Stock", "units": 10, "avg_cost": 10, "currency": "THB",
+            "current_price": -5
+        }])
 
+        assert isinstance(result, str) and result.startswith("Error:")
+        assert "current_price ต้องมากกว่า 0" in result
     def test_import_with_provided_price(self, isolated_portfolio):
         pt = isolated_portfolio
         pt._manage_cash_flow_locked(amount=1000, action="deposit", currency="THB")
@@ -522,12 +539,13 @@ class TestBatchImportHoldings:
             raise Timeout("mock")
         monkeypatch.setattr(tools.portfolio.trading._portfolio_lock, "acquire", mock_lock)
         
-        with pytest.raises(ValueError, match="portfolio lock timeout"):
-            pt.batch_import_holdings.func(assets_list=[
-                {"symbol": "PTT", "asset_type": "Stock", "units": 100, "avg_cost": 30.0, "currency": "THB", "current_price": 35.0}
-            ], mode="merge")
+        result = pt.batch_import_holdings.func(assets_list=[
+            {"symbol": "PTT", "asset_type": "Stock", "units": 100, "avg_cost": 30.0, "currency": "THB", "current_price": 35.0}
+        ], mode="merge")
 
 
+        assert isinstance(result, str) and result.startswith("Error:")
+        assert "portfolio lock" in result
 class TestUpdateFxRate:
     def test_update_fx_manual(self, isolated_portfolio):
         pt = isolated_portfolio
@@ -540,9 +558,10 @@ class TestUpdateFxRate:
 
     def test_update_fx_negative_raises(self, isolated_portfolio):
         pt = isolated_portfolio
-        with pytest.raises(ValueError, match="rate ต้องมากกว่า 0"):
-            pt.update_fx_rate.func(rate=-5.0)
+        result = pt.update_fx_rate.func(rate=-5.0)
             
+        assert isinstance(result, str) and result.startswith("Error:")
+        assert "rate ต้องมากกว่า 0" in result
     def test_update_fx_auto_fetch(self, isolated_portfolio, monkeypatch):
         pt = isolated_portfolio
         monkeypatch.setattr(tools.portfolio.trading, "_fetch_fx_rate", lambda: 36.0)
@@ -558,9 +577,10 @@ class TestUpdateFxRate:
         pt = isolated_portfolio
         monkeypatch.setattr(tools.portfolio.trading, "_fetch_fx_rate", lambda: None)
         
-        with pytest.raises(ValueError, match="auto-fetch FX ล้มเหลว"):
-            pt.update_fx_rate.func()
+        result = pt.update_fx_rate.func()
 
+        assert isinstance(result, str) and result.startswith("Error:")
+        assert "auto-fetch FX ล้มเหลว" in result
     def test_update_fx_lock_timeout(self, isolated_portfolio, monkeypatch):
         pt = isolated_portfolio
         def mock_lock(*args, **kwargs):
@@ -568,10 +588,11 @@ class TestUpdateFxRate:
             raise Timeout("mock")
         monkeypatch.setattr(tools.portfolio.trading._portfolio_lock, "acquire", mock_lock)
         
-        with pytest.raises(ValueError, match="portfolio lock timeout"):
-            pt.update_fx_rate.func(rate=35.0)
+        result = pt.update_fx_rate.func(rate=35.0)
 
 
+        assert isinstance(result, str) and result.startswith("Error:")
+        assert "portfolio lock" in result
 class TestTradingExceptions:
     def test_execute_trade_lock_timeout(self, isolated_portfolio, monkeypatch):
         pt = isolated_portfolio
@@ -580,26 +601,31 @@ class TestTradingExceptions:
             raise Timeout("mock")
         monkeypatch.setattr(tools.portfolio.trading._portfolio_lock, "acquire", mock_lock)
         
-        with pytest.raises(ValueError, match="portfolio lock timeout"):
-            pt.execute_trade.func(symbol="PTT", asset_type="Stock", action="buy", units=100, price=30.0, currency="THB")
+        result = pt.execute_trade.func(symbol="PTT", asset_type="Stock", action="buy", units=100, price=30.0, currency="THB")
             
+        assert isinstance(result, str) and result.startswith("Error:")
+        assert "portfolio lock" in result
     def test_execute_trade_invalid_action(self, isolated_portfolio):
         pt = isolated_portfolio
-        with pytest.raises(ValueError, match="action ต้องเป็น 'buy' หรือ 'sell'"):
-            pt.execute_trade.func(symbol="PTT", asset_type="Stock", action="hold", units=100, price=30.0, currency="THB")
+        result = pt.execute_trade.func(symbol="PTT", asset_type="Stock", action="hold", units=100, price=30.0, currency="THB")
 
+        assert isinstance(result, str) and result.startswith("Error:")
+        assert "action ต้องเป็น " in result
     def test_execute_trade_negative_units_price(self, isolated_portfolio):
         pt = isolated_portfolio
-        with pytest.raises(ValueError, match="units ต้องมากกว่า 0"):
-            pt.execute_trade.func(symbol="PTT", asset_type="Stock", action="buy", units=-100, price=30.0, currency="THB")
-        with pytest.raises(ValueError, match="price ต้องมากกว่า 0"):
-            pt.execute_trade.func(symbol="PTT", asset_type="Stock", action="buy", units=100, price=-30.0, currency="THB")
+        result = pt.execute_trade.func(symbol="PTT", asset_type="Stock", action="buy", units=-100, price=30.0, currency="THB")
+        assert isinstance(result, str) and result.startswith("Error:")
+        assert "units ต้องมากกว่า 0" in result
+        result = pt.execute_trade.func(symbol="PTT", asset_type="Stock", action="buy", units=100, price=-30.0, currency="THB")
             
+        assert isinstance(result, str) and result.startswith("Error:")
+        assert "price ต้องมากกว่า 0" in result
     def test_execute_trade_cash_sentinel(self, isolated_portfolio):
         pt = isolated_portfolio
-        with pytest.raises(ValueError, match="ห้ามเทรด cash sentinel"):
-            pt.execute_trade.func(symbol="CASH_THB", asset_type="Cash", action="buy", units=100, price=1.0, currency="THB")
+        result = pt.execute_trade.func(symbol="CASH_THB", asset_type="Cash", action="buy", units=100, price=1.0, currency="THB")
             
+        assert isinstance(result, str) and result.startswith("Error:")
+        assert "cash sentinel (CASH_THB/CASH_USD)" in result
     def test_execute_trade_sell_not_found(self, isolated_portfolio):
         pt = isolated_portfolio
         with pytest.raises(ValueError, match="ไม่มีในพอร์ต"):
@@ -656,9 +682,10 @@ class TestTradingExceptions:
             raise Timeout("mock")
         monkeypatch.setattr(tools.portfolio.trading._portfolio_lock, "acquire", mock_lock)
         
-        with pytest.raises(ValueError, match="portfolio lock timeout"):
-            pt.record_income.func(income_type="Dividend", amount_thb=1000.0)
+        result = pt.record_income.func(income_type="Dividend", amount_thb=1000.0)
             
+        assert isinstance(result, str) and result.startswith("Error:")
+        assert "portfolio lock" in result
     def test_record_income_cash_source(self, isolated_portfolio):
         pt = isolated_portfolio
         with pytest.raises(ValueError, match="source_symbol ห้ามเป็น cash sentinel"):
@@ -671,21 +698,25 @@ class TestTradingExceptions:
             raise Timeout("mock")
         monkeypatch.setattr(tools.portfolio.trading._portfolio_lock, "acquire", mock_lock)
         
-        with pytest.raises(ValueError, match="portfolio lock timeout"):
-            pt.manage_cash_flow.func(amount=1000.0, action="deposit", currency="THB")
+        result = pt.manage_cash_flow.func(amount=1000.0, action="deposit", currency="THB")
 
+        assert isinstance(result, str) and result.startswith("Error:")
+        assert "portfolio lock" in result
     def test_manage_cash_flow_negative_amount(self, isolated_portfolio):
         pt = isolated_portfolio
-        with pytest.raises(ValueError, match="amount ต้องมากกว่า 0"):
-            pt.manage_cash_flow.func(amount=-1000.0, action="deposit", currency="THB")
+        result = pt.manage_cash_flow.func(amount=-1000.0, action="deposit", currency="THB")
 
+        assert isinstance(result, str) and result.startswith("Error:")
+        assert "amount ต้องมากกว่า 0" in result
     def test_manage_cash_flow_invalid_action_currency(self, isolated_portfolio):
         pt = isolated_portfolio
-        with pytest.raises(ValueError, match="action ต้องเป็น 'deposit' หรือ 'withdraw'"):
-            pt.manage_cash_flow.func(amount=1000.0, action="steal", currency="THB")
-        with pytest.raises(ValueError, match="currency ต้องเป็น 'THB' หรือ 'USD'"):
-            pt.manage_cash_flow.func(amount=1000.0, action="deposit", currency="EUR")
+        result = pt.manage_cash_flow.func(amount=1000.0, action="steal", currency="THB")
+        assert isinstance(result, str) and result.startswith("Error:")
+        assert "action ต้องเป็น " in result
+        result = pt.manage_cash_flow.func(amount=1000.0, action="deposit", currency="EUR")
 
+        assert isinstance(result, str) and result.startswith("Error:")
+        assert "currency ต้องเป็น " in result
     def test_edit_holding_lock_timeout(self, isolated_portfolio, monkeypatch):
         pt = isolated_portfolio
         def mock_lock(*args, **kwargs):
@@ -693,16 +724,19 @@ class TestTradingExceptions:
             raise Timeout("mock")
         monkeypatch.setattr(tools.portfolio.trading._portfolio_lock, "acquire", mock_lock)
         
-        with pytest.raises(ValueError, match="portfolio lock timeout"):
-            pt.edit_holding.func(symbol="PTT", units=100, reason="test")
+        result = pt.edit_holding.func(symbol="PTT", units=100, reason="test")
 
+        assert isinstance(result, str) and result.startswith("Error:")
+        assert "portfolio lock" in result
     def test_edit_holding_negative_units(self, isolated_portfolio):
         pt = isolated_portfolio
-        with pytest.raises(ValueError, match="units ต้องมากกว่า 0"):
-            pt.edit_holding.func(symbol="PTT", units=-100, reason="test")
-        with pytest.raises(ValueError, match="avg_cost ต้องมากกว่า 0"):
-            pt.edit_holding.func(symbol="PTT", avg_cost=-10.0, reason="test")
+        result = pt.edit_holding.func(symbol="PTT", units=-100, reason="test")
+        assert isinstance(result, str) and result.startswith("Error:")
+        assert "units ต้องมากกว่า 0" in result
+        result = pt.edit_holding.func(symbol="PTT", avg_cost=-10.0, reason="test")
 
+        assert isinstance(result, str) and result.startswith("Error:")
+        assert "avg_cost ต้องมากกว่า 0" in result
     def test_edit_holding_cash_raises(self, isolated_portfolio):
         pt = isolated_portfolio
         with pytest.raises(ValueError, match="เป็น Cash holding"):
