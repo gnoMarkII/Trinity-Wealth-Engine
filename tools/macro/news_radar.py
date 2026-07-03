@@ -1,14 +1,30 @@
 import os
 import re
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 import feedparser
 
 from langchain_core.tools import tool
 from core.logger import get_logger
+from core.nlp_utils import group_similar_news, select_representative_news, calculate_freshness
+from core.retry import with_retry
+from schemas.macro_schemas import ThemeCategory
 from tools._atomic_io import _atomic_write_to
+import email.utils
 
 log = get_logger(__name__)
+
+def _fetch_rss_with_retry(url: str):
+    def _fetch():
+        import feedparser
+        feed = feedparser.parse(url)
+        status = getattr(feed, 'status', 200)
+        if status >= 400:
+            raise ConnectionError(f"HTTP Error {status} for {url}")
+        if getattr(feed, 'bozo', 0) and isinstance(getattr(feed, 'bozo_exception', None), Exception):
+            raise feed.bozo_exception
+        return feed
+    return with_retry(_fetch)
 
 _SAVE_DIR = Path(__file__).resolve().parents[2] / "memories" / "30_Knowledge_Base" / "News" / "Inbox"
 _NEWS_DIR = Path(__file__).resolve().parents[2] / "memories" / "30_Knowledge_Base" / "News"
@@ -47,68 +63,124 @@ def generate_news_radar_daily() -> str:
 
     [Caution]
     - เครื่องมือนี้แค่ส่งคืนข้อความ Markdown (ไม่บันทึกไฟล์เอง)
-    - **ต้อง** นำผลลัพธ์ที่ได้ไปส่งให้ Archivist บันทึกไฟล์ต่อด้วย `write_raw_markdown` ลงใน Inbox
+
+    Args:
+        None
 
     Returns:
         str: รายงาน News Radar รายวันในรูปแบบ Markdown พร้อม YAML Frontmatter
     """
-    _SAVE_DIR.mkdir(parents=True, exist_ok=True)
-    today = datetime.now()
+    try:
+        _SAVE_DIR.mkdir(parents=True, exist_ok=True)
+        today = datetime.now()
     
-    md_lines = [
-        "---",
-        f"title: News Radar Daily {today.strftime('%Y-%m-%d')}",
-        "entity_type: news_radar",
-        "tags: [news, radar, inbox]",
-        "---",
-        "",
-        f"# 📡 Macro News Radar ({today.strftime('%d/%m/%Y')})",
-        f"อัปเดตเมื่อ: {today.strftime('%Y-%m-%d %H:%M:%S')} (UTC)",
-        "",
-        "ติ๊ก `[x]` ข่าวที่สนใจ จากนั้นสั่งให้ Agent เจาะลึกข่าว (Deep Diver) ได้เลย",
-        ""
-    ]
-    
-    found_any = False
-    
-    for feed in FEEDS:
-        md_lines.append(f"## 📰 {feed['name']}")
+        md_lines = [
+            "---",
+            f"title: News Radar Daily {today.strftime('%Y-%m-%d')}",
+            "entity_type: news_radar",
+            "tags: [news, radar, inbox]",
+            "---",
+            "",
+            f"# 📡 Macro News Radar ({today.strftime('%d/%m/%Y')})",
+            f"อัปเดตเมื่อ: {today.strftime('%Y-%m-%d %H:%M:%S')} (UTC)",
+            "",
+            "ติ๊ก `[x]` ข่าวที่สนใจ จากนั้นสั่งให้ Agent เจาะลึกข่าว (Deep Diver) ได้เลย",
+            ""
+        ]
         
-        try:
-            parsed = feedparser.parse(feed['url'])
-            if not parsed.entries:
-                md_lines.append("> [!WARNING]\n> ไม่พบข่าว หรือดึงข้อมูลจาก RSS ไม่สำเร็จ\n")
+        all_news_items = []
+        now_utc = datetime.now(timezone.utc)
+        
+        for feed in FEEDS:
+            try:
+                feed_data = _fetch_rss_with_retry(feed['url'])
+                if not feed_data.entries:
+                    continue
+                
+                for entry in feed_data.entries[:20]: # Fetch more initially for dedup
+                    title = entry.title.replace("|", "｜").replace("\n", " ")
+                    link = entry.link
+                    
+                    # Parse date
+                    pub_date_str = getattr(entry, "published", "")
+                    published_at = None
+                    parsed_time = getattr(entry, "published_parsed", None)
+                    if parsed_time:
+                        import calendar
+                        published_at = datetime.fromtimestamp(calendar.timegm(parsed_time), tz=timezone.utc)
+                    else:
+                        if pub_date_str:
+                            try:
+                                parsed_tuple = email.utils.parsedate_tz(pub_date_str)
+                                if parsed_tuple:
+                                    published_at = email.utils.to_datetime(parsed_tuple)
+                                    if published_at.tzinfo is None:
+                                        published_at = published_at.replace(tzinfo=timezone.utc)
+                            except Exception:
+                                pass
+                    
+                    if published_at:
+                        age_hours = int((now_utc - published_at).total_seconds() / 3600)
+                        freshness_score, freshness_reason = calculate_freshness(age_hours, ThemeCategory.POLICY)
+                        is_stale = age_hours > 48
+                    else:
+                        age_hours = 9999
+                        freshness_score = 0.0
+                        freshness_reason = "Unknown age (parse failed)"
+                        is_stale = True
+                    
+                    all_news_items.append({
+                        "title": title,
+                        "source": feed['name'],
+                        "link": link,
+                        "published_at": published_at,
+                        "pub_date_str": pub_date_str,
+                        "age_hours": age_hours,
+                        "freshness_reason": freshness_reason,
+                        "is_stale": age_hours > 48
+                    })
+            except Exception as e:
+                log.error(f"Error parsing feed {feed['name']}: {e}")
                 continue
+
+        if not all_news_items:
+            md_lines.append("> 📭 ไม่มีข่าวใหม่ในวันนี้")
+        else:
+            # Deduplicate across all feeds
+            clusters = group_similar_news(all_news_items, threshold=0.75)
+            representatives = []
+            for cluster in clusters:
+                rep = select_representative_news(cluster)
+                representatives.append(rep)
                 
-            md_lines.append("| เลือก | หัวข้อข่าว | วันที่ |")
-            md_lines.append("|:---:|---|:---:|")
+            # Sort by confidence then recency
+            representatives.sort(key=lambda x: (x.get('sources_count', 1), -x.get('age_hours', 9999)), reverse=True)
             
-            # ดึงมาแค่ 10 ข่าวล่าสุดต่อ Feed ก็พอ
-            for entry in parsed.entries[:10]:
-                title = entry.title.replace("|", "｜").replace("\n", " ")
-                link = entry.link
-                # บาง feed ไม่มี published
-                pub_date = getattr(entry, "published", "")
-                
+            md_lines.append("## 📰 Top Macro News (Deduplicated)")
+            md_lines.append("| เลือก | หัวข้อข่าว | ความใหม่ | แหล่งข่าว |")
+            md_lines.append("|:---:|---|---|---|")
+            
+            for item in representatives[:15]: # Show top 15
+                title = item['title']
+                link = item['link']
                 is_fetched = _is_url_fetched(link)
                 checkbox = "[x]" if is_fetched else "[ ]"
                 title_display = f"~~{title}~~" if is_fetched else title
                 
-                md_lines.append(f"| {checkbox} | [{title_display}]({link}) | {pub_date} |")
+                sources_count = item.get('sources_count', 1)
+                source_display = f"{item['source']}" + (f" (+{sources_count-1})" if sources_count > 1 else "")
                 
+                stale_flag = " ⚠️" if item.get('is_stale') else ""
+                age_h = item.get('age_hours', 0)
+                freshness = f"Age: {age_h}h | {item.get('freshness_reason', 'N/A')}{stale_flag}"
+                
+                md_lines.append(f"| {checkbox} | [{title_display}]({link}) | {freshness} | {source_display} (Sources: {sources_count}) |")
+            
             md_lines.append("")
-            found_any = True
             
-        except Exception as e:
-            log.error(f"Error parsing RSS for {feed['name']}: {e}")
-            md_lines.append(f"> [!WARNING]\n> เกิดข้อผิดพลาดในการเชื่อมต่อ: {e}\n")
-            
-    if not found_any:
-        md_lines.append("> 📭 ไม่มีข่าวใหม่ในวันนี้")
+        content = "\n".join(md_lines)
         
-    content = "\n".join(md_lines)
-    save_path = _SAVE_DIR / f"News-Radar-Daily_{today.strftime('%Y-%m-%d')}.md"
-    
-    _atomic_write_to(save_path, content)
-    
-    return f"สร้างไฟล์ News Radar สำเร็จแล้วที่: {save_path}"
+        return content
+    except Exception as e:
+        log.error(f"Error generating news radar: {e}")
+        return f"Error: ไม่สามารถสร้าง News Radar ได้ ({str(e)})"

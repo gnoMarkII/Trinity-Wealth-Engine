@@ -34,29 +34,7 @@ log = get_logger(__name__)
 from tools._atomic_io import _atomic_write_to
 
 
-VAULT_PATH = Path(os.getenv("OBSIDIAN_VAULT_PATH", "./memories"))
-PORTFOLIO_REL = os.getenv("PORTFOLIO_FILE", "20_Portfolio_Management/Current_Holdings/Portfolio_Holdings.md")
-PORTFOLIO_PATH = VAULT_PATH / PORTFOLIO_REL
-TRADING_JOURNAL_REL = os.getenv(
-    "TRADING_JOURNAL_FILE",
-    "20_Portfolio_Management/Journals_and_Reports/Trading_Journal.md",
-)
-TRADING_JOURNAL_PATH = VAULT_PATH / TRADING_JOURNAL_REL
-WATCHLIST_REL = os.getenv(
-    "WATCHLIST_FILE",
-    "20_Portfolio_Management/Current_Holdings/Watchlist.md",
-)
-WATCHLIST_PATH = VAULT_PATH / WATCHLIST_REL
-PERFORMANCE_LOG_REL = os.getenv(
-    "PERFORMANCE_LOG_FILE",
-    "20_Portfolio_Management/Journals_and_Reports/Performance_Log.csv",
-)
-PERFORMANCE_LOG_PATH = VAULT_PATH / PERFORMANCE_LOG_REL
-_PERFORMANCE_LOG_HEADER = ["Date", "Total_NAV", "Total_Cost", "Unrealized_PnL", "Cash_Balance"]
-
-# Derived sidecar folders (master = Portfolio_Holdings.md / Watchlist.md)
-HOLDINGS_DIR = VAULT_PATH / "20_Portfolio_Management/Current_Holdings/Holdings"
-WATCHLIST_ITEMS_DIR = VAULT_PATH / "20_Portfolio_Management/Current_Holdings/WatchlistItems"
+from .constants import *
 
 CASH_THB_SYMBOL = "CASH_THB"
 CASH_USD_SYMBOL = "CASH_USD"

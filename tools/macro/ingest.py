@@ -52,7 +52,7 @@ def ingest_global_macro() -> str:
 
     [Caution]
     - เครื่องมือนี้แค่ส่งคืนข้อความ Markdown (ไม่บันทึกไฟล์เอง)
-    - **ต้อง** นำผลลัพธ์ที่ได้ไปส่งให้ Archivist บันทึกไฟล์ต่อด้วย `write_raw_markdown`
+    - ผลลัพธ์จะถูกนำไปส่งให้ Archivist บันทึกไฟล์ต่อโดยอัตโนมัติ
 
     Returns:
         str: ข้อมูล Global Macro Snapshot ในรูปแบบ Markdown พร้อม YAML Frontmatter
@@ -120,7 +120,7 @@ def ingest_regional_macro() -> str:
 
     [Caution]
     - เครื่องมือนี้แค่ส่งคืนข้อความ Markdown (ไม่บันทึกไฟล์เอง)
-    - **ต้อง** นำผลลัพธ์ที่ได้ไปส่งให้ Archivist บันทึกไฟล์ต่อด้วย `write_raw_markdown`
+    - ผลลัพธ์จะถูกนำไปส่งให้ Archivist บันทึกไฟล์ต่อโดยอัตโนมัติ
 
     Returns:
         str: ข้อมูล Regional Macro Snapshot ในรูปแบบ Markdown พร้อม YAML Frontmatter
@@ -128,7 +128,7 @@ def ingest_regional_macro() -> str:
     today = datetime.now().strftime("%Y-%m-%d")
     now_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     symbols = list(_REGIONAL_TICKERS.keys())
-    
+
     rows_by_symbol: dict[str, dict] = {}
     with concurrent.futures.ThreadPoolExecutor(max_workers=len(symbols)) as executor:
         futures = {executor.submit(_fetch_price, sym): sym for sym in symbols}
@@ -187,7 +187,7 @@ def ingest_country_macro() -> str:
 
     [Caution]
     - เครื่องมือนี้แค่ส่งคืนข้อความ Markdown (ไม่บันทึกไฟล์เอง)
-    - **ต้อง** นำผลลัพธ์ที่ได้ไปส่งให้ Archivist บันทึกไฟล์ต่อด้วย `write_raw_markdown`
+    - ผลลัพธ์จะถูกนำไปส่งให้ Archivist บันทึกไฟล์ต่อโดยอัตโนมัติ
 
     Returns:
         str: ข้อมูล Country Macro Snapshot ในรูปแบบ Markdown พร้อม YAML Frontmatter
@@ -216,14 +216,14 @@ def ingest_country_macro() -> str:
                                 ma_period = 4  # Quarterly
                             else:
                                 ma_period = 12  # Monthly
-                            
+
                             val = float(raw.iloc[-1])
                             prev_val = float(raw.iloc[-2]) if len(raw) > 1 else val
                             ma_val = float(raw.tail(ma_period).mean()) if len(raw) >= ma_period else val
-                            
+
                             rows_by_id[sid] = {
                                 "series_id": sid, "name": name, "description": description,
-                                "value": val, "prev": prev_val, "ma": ma_val, "unit": unit, 
+                                "value": val, "prev": prev_val, "ma": ma_val, "unit": unit,
                                 "date": raw.index[-1].strftime("%Y-%m-%d"),
                             }
                     except Exception:
@@ -247,13 +247,14 @@ def ingest_country_macro() -> str:
 
     # Mocks for tests
     rows_by_id["Policy Rate"] = {"series_id": "Policy Rate", "name": "Policy Rate", "description": "อัตราดอกเบี้ยนโยบาย", "value": 2.50, "prev": 2.50, "ma": 2.50, "unit": "%", "date": today, "change": "-"}
+    rows_by_id["TH10Y"] = {"series_id": "TH10Y", "name": "Thailand 10Y Gov Bond Yield [StaticProxy]", "description": "StaticProxy: Thailand 10-Year Government Bond Yield proxy; invalid for HIGH/MEDIUM confidence without live feed", "value": 2.65, "prev": 2.65, "ma": 2.65, "unit": "%", "date": today, "change": "StaticProxy", "provider": "StaticProxy", "is_valid": False, "confidence": "low"}
     rows_by_id["CPI Inflation"] = {"series_id": "CPI Inflation", "name": "CPI Inflation", "description": "อัตราเงินเฟ้อทั่วไป", "value": 1.0, "prev": 1.0, "ma": 1.0, "unit": "%", "date": today, "change": "-"}
     rows_by_id["Exports Growth"] = {"series_id": "Exports Growth", "name": "Exports Growth", "description": "การส่งออก", "value": 2.0, "prev": 2.0, "ma": 2.0, "unit": "%", "date": today, "change": "-"}
     rows_by_id["Tourism Growth"] = {"series_id": "Tourism Growth", "name": "Tourism Growth", "description": "การท่องเที่ยว", "value": 5.0, "prev": 5.0, "ma": 5.0, "unit": "%", "date": today, "change": "-"}
     rows_by_id["Domestic Stimulus"] = {"series_id": "Domestic Stimulus", "name": "Domestic Stimulus", "description": "นโยบายกระตุ้นเศรษฐกิจ", "value": 1.0, "prev": 1.0, "ma": 1.0, "unit": "", "date": today, "change": "-"}
 
     _THAI_GROUPS_MOCK = [
-        ("🏦 Monetary Policy & Liquidity", ["THB=X", "Policy Rate"]),
+        ("🏦 Monetary Policy & Liquidity", ["THB=X", "Policy Rate", "TH10Y"]),
         ("📈 Economic Growth", ["^SET.BK", "Exports Growth", "Tourism Growth"]),
         ("💰 Inflation", ["CPI Inflation"]),
         ("🛡️ Geopolitics & Risk Sentiment", ["Domestic Stimulus"])
@@ -269,7 +270,7 @@ def ingest_country_macro() -> str:
         "---",
         "",
     ]
-    
+
     regions = [
         ("🇺🇸 United States", _US_GROUPS),
         ("🇹🇭 Thailand", _THAI_GROUPS_MOCK),
@@ -279,7 +280,7 @@ def ingest_country_macro() -> str:
         ("🇮🇳 India", _INDIA_GROUPS),
         ("🌎 Latin America", _LATAM_GROUPS)
     ]
-    
+
     # Fallback default values for missing data based on metric type
     def get_mock_value(sid: str) -> float:
         if "GDP" in sid or "INDPRO" in sid or "CLVMNAC" in sid:
@@ -306,7 +307,7 @@ def ingest_country_macro() -> str:
                     unit = _FRED_UNIT_DISPLAY.get(sid, "")
                     group_rows.append({
                         "series_id": sid, "name": f"{name} [Mock]", "description": desc,
-                        "value": mock_val, "prev": mock_val, "ma": mock_val, 
+                        "value": mock_val, "prev": mock_val, "ma": mock_val,
                         "unit": unit, "date": today, "change": "-"
                     })
             if not group_rows: continue
@@ -335,7 +336,7 @@ def ingest_us_sectors() -> str:
 
     [Caution]
     - เครื่องมือนี้แค่ส่งคืนข้อความ Markdown (ไม่บันทึกไฟล์เอง)
-    - **ต้อง** นำผลลัพธ์ที่ได้ไปส่งให้ Archivist บันทึกไฟล์ต่อด้วย `write_raw_markdown`
+    - ผลลัพธ์จะถูกนำไปส่งให้ Archivist บันทึกไฟล์ต่อโดยอัตโนมัติ
 
     Returns:
         str: ข้อมูล US Sectors Pulse ในรูปแบบ Markdown พร้อม YAML Frontmatter

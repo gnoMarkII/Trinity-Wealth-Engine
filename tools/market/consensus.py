@@ -20,7 +20,6 @@ def ingest_stock_consensus(ticker: str, market: Market = "US") -> str:
     [Caution]
     - หุ้นไทย (TH) อาจไม่มีข้อมูล Analyst Consensus ครบถ้วนจาก Yahoo Finance
     - เครื่องมือนี้แค่ส่งคืนข้อความ Markdown (ไม่บันทึกไฟล์เอง)
-    - **ต้อง** นำผลลัพธ์ที่ได้ไปส่งให้ Archivist บันทึกไฟล์ต่อด้วย `write_raw_markdown`
 
     Args:
         ticker (str): Ticker symbol เช่น 'AAPL', 'PTT' (ห้ามมี .BK suffix — ระบบจะเติมให้)

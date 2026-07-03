@@ -12,8 +12,6 @@ from .core import _call_extractor_llm, _build_article_md
 
 log = get_logger(__name__)
 
-_ARTICLES_PATH = Path(os.getenv("OBSIDIAN_VAULT_PATH", "./memories")) / "30_Knowledge_Base/Articles"
-
 def _is_url_already_processed(url: str) -> bool:
     """ตรวจสอบว่า URL นี้เคยถูกอ่านและเซฟลง Knowledge Base แล้วหรือยัง"""
     vault = Path(os.getenv("OBSIDIAN_VAULT_PATH", "./memories"))
@@ -42,7 +40,6 @@ def ingest_article_url(url: str) -> str:
 
     [Caution]
     - เครื่องมือนี้แค่ส่งคืนข้อความ Markdown (ไม่บันทึกไฟล์เอง)
-    - **ต้อง** นำผลลัพธ์ที่ได้ไปส่งให้ Bookkeeper หรือ Archivist บันทึกไฟล์ต่อด้วย `write_raw_markdown` เท่านั้น
 
     Args:
         url (str): ลิงก์ URL ของบทความที่ต้องการสกัดข้อมูล
@@ -156,7 +153,7 @@ def ingest_article_url(url: str) -> str:
         return f"ERROR: {e}"
     except Exception as e:
         log.warning("Article LLM extraction failed | url=%s: %s", url, e)
-        return f"ERROR: LLM Extraction ล้มเหลว (OpenRouter): {e}"
+        return f"ERROR: LLM Extraction ล้มเหลว: {e}"
 
     return _build_article_md(extracted, url, title, today, now_time, image=og_image)
 

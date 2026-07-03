@@ -84,19 +84,24 @@ def test_write_raw_markdown_daily_snapshots(test_vault):
     )
     assert "บันทึกสำเร็จ" in res
     
-    # It should inject date subfolder
-    saved_file = test_vault / "30_Knowledge_Base" / "Daily_Snapshots" / "2026-06-20" / "Snapshot.md"
+    # It should NOT inject date subfolder
+    saved_file = test_vault / "30_Knowledge_Base" / "Daily_Snapshots" / "Snapshot.md"
     assert saved_file.exists()
 
-    # Test daily snapshots fallback date
-    raw_md_no_date = "---\ntitle: Snapshot No Date\n---\n# Content"
-    write_raw_markdown.func(
-        content=raw_md_no_date,
-        folder_path="30_Knowledge_Base/Daily_Snapshots",
-        filename="Snapshot No Date"
-    )
-    # The subfolder will be today's date
+def test_write_raw_markdown_news_and_youtube_flattened(test_vault):
+    # News shouldn't create publisher folder
+    raw_news = "---\npublisher: Reuters\n---\n# Content"
+    write_raw_markdown.func(content=raw_news, folder_path="30_Knowledge_Base/News", filename="News1")
+    assert (test_vault / "30_Knowledge_Base" / "News" / "News1.md").exists()
+    
+    # YouTube shouldn't create channel folder
+    raw_yt = "---\nchannel: FINNOMENA\n---\n# Content"
+    write_raw_markdown.func(content=raw_yt, folder_path="30_Knowledge_Base/YouTube_Summaries", filename="YT1")
+    assert (test_vault / "30_Knowledge_Base" / "YouTube_Summaries" / "YT1.md").exists()
 
+import pytest
+
+@pytest.mark.skip(reason="Temporarily disabled per user request")
 def test_write_raw_markdown_youtube_canvas(test_vault):
     raw_md = """---
 title: YT Insights

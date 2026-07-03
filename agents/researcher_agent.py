@@ -13,11 +13,7 @@ from tools.market.technical import ingest_stock_momentum
 from tools.market.news import ingest_stock_news
 from tools.market.consensus import ingest_stock_consensus
 from tools.market.financials import ingest_financial_trends
-from tools.knowledge.article import ingest_article_url
 from tools.knowledge.document import ingest_pdf
-from tools.knowledge.youtube import ingest_youtube_transcript
-from tools.knowledge.youtube_monitor import generate_weekly_youtube_digest
-from tools.macro.news_radar import generate_news_radar_daily
 
 RESEARCHER_SYSTEM_PROMPT = """คุณคือ The Researcher หน่วยดึงข้อมูลจากภายนอก
 
@@ -44,10 +40,6 @@ _researcher_tools = [
     ingest_regional_macro,
     ingest_country_macro,
     ingest_us_sectors,
-    ingest_article_url,
-    ingest_youtube_transcript,
-    generate_weekly_youtube_digest,
-    generate_news_radar_daily,
     ingest_pdf,
 ]
 

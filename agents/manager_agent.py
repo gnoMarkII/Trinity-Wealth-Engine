@@ -1,8 +1,10 @@
 import os
 import time
 import uuid
+import json
+from datetime import datetime
 from functools import lru_cache
-from typing import Literal, TypedDict
+from typing import Literal, TypedDict, Optional
 
 from langchain_core.messages import AIMessage, HumanMessage, ToolMessage
 from langgraph.graph import END, START, MessagesState, StateGraph
@@ -12,7 +14,11 @@ from pydantic import BaseModel, Field
 from agents.archivist_agent import create_archivist
 from agents.bookkeeper_agent import create_bookkeeper
 from agents.researcher_agent import create_researcher
-from agents.macro_analyst_agent import create_macro_analyst
+from agents.macro_quant_agent import create_macro_quant
+from agents.macro_economist_agent import create_macro_economist
+from agents.strategic_allocator import invoke_strategic_allocator
+from schemas.macro_schemas import MarketObservable
+from tools.macro.report_formatter import format_macro_strategy_report
 from core.agent_log import log_turn_start, log_manager_plan, log_worker_result, log_system_action, log_routing
 from core.llm_factory import FALLBACK_MODEL, detect_provider, get_llm
 from core.logger import get_logger
@@ -27,7 +33,9 @@ _ROUTER_MODEL = os.getenv("ROUTER_MODEL", _MANAGER_MODEL)
 _ARCHIVIST_MODEL = os.getenv("ARCHIVIST_MODEL", "gemini-3.1-flash-lite-preview")
 _RESEARCHER_MODEL = os.getenv("RESEARCHER_MODEL", "gemini-3.1-flash-lite-preview")
 _BOOKKEEPER_MODEL = os.getenv("BOOKKEEPER_MODEL", "gemini-3.1-flash-lite-preview")
-_MACRO_ANALYST_MODEL = os.getenv("MACRO_ANALYST_MODEL", "gemini-3.1-flash-lite-preview")
+_MACRO_QUANT_MODEL = os.getenv("MACRO_QUANT_MODEL", "gemini-3.1-flash-lite-preview")
+_MACRO_ECONOMIST_MODEL = os.getenv("MACRO_ECONOMIST_MODEL", "gemini-3.1-flash-lite-preview")
+_STRATEGIC_ALLOCATOR_MODEL = os.getenv("STRATEGIC_ALLOCATOR_MODEL", "gemini-3.1-flash-lite-preview")
 _ROUTER_HISTORY_LIMIT = 20
 _MAX_REPLAN = 2
 
@@ -47,6 +55,12 @@ class AgentState(MessagesState):
     replan_count: int
     turn_id: str
 
+    # Macro Pipeline State
+    quant_raw: Optional[str]
+    quant_score: Optional[dict]
+    narrative_raw: Optional[str]
+    narrative_context: Optional[dict]
+
 
 # ROUTER_PROMPT: กฎการแตกคำขอเป็น tasks + เลือก worker ของแต่ละ task + กฎเหล็ก
 ROUTER_PROMPT = """คุณคือ The Manager ผู้จัดการกองทุนส่วนตัว หน้าที่: แตกคำขอของผู้ใช้ออกเป็น "รายการงาน" (tasks) แล้วส่งให้ worker ที่เหมาะสมตามลำดับ
@@ -62,12 +76,14 @@ ROUTER_PROMPT = """คุณคือ The Manager ผู้จัดการก
 [ลำดับงาน]
 - โดยทั่วไปเรียงตามที่ผู้ใช้พิมพ์
 - ถ้า turn เดียวมีทั้งงานพอร์ต (bookkeeper) และงานบันทึก/ความรู้ (archivist) → เรียง bookkeeper ก่อน archivist เสมอ
+- [Proactive Data Fetching]: หากมีงาน "macro_intel" ต้องอาศัยข้อมูล Snapshot 3 ระดับ (Global, Regional, Country) ดังนั้นหากผู้ใช้สั่ง "วิเคราะห์เศรษฐกิจ" หรือ "จัดพอร์ต" โดยไม่ได้ให้ข้อมูลมา ให้คุณ **สร้าง task ให้ researcher ไปดึงข้อมูล Global, Regional และ Country (แยกเป็น 3 tasks)** วางไว้ก่อนหน้า task ของ macro_intel เสมอ โดยห้ามใช้คำว่า "บันทึก" ใน instruction ของ researcher (ระบบจะบันทึกให้อัตโนมัติ) และต้องตามด้วย task "macro_intel" ปิดท้ายเสมอ
+- [Proactive Freshness Check]: หากผู้ใช้ถามถึง "ข่าว (News)" หรือ "เนื้อหา YouTube" (ที่มีในระบบ) ให้สร้าง task ให้ Archivist ช่วยตรวจสอบและอ่านข้อมูลดูก่อนว่าเก่าเกินไปหรือไม่ หากพบว่าไม่มีข้อมูลหรือเก่าเกินไป Manager ควรเว้นให้ระบบมีการอัปเดตข้อมูลเหล่านั้นก่อนนำมาใช้วิเคราะห์
 
 [เลือก target ของแต่ละ task ตามประเภทคำขอ]
-- "researcher" → ดึงข้อมูลภายนอก: macro/sector/regional/FRED economic data, TH/US stocks (fundamentals, financials, momentum, consensus, news, ESG — Researcher จะเลือก market='TH'|'US' ตาม ticker), YouTube clip summaries, บทความจาก URL (เว็บ/สื่อการเงิน/บล็อก), ไฟล์ PDF (รายงาน/งบการเงิน/บทวิเคราะห์)
+- "researcher" → ดึงข้อมูลภายนอก: macro/sector/regional/FRED economic data, TH/US stocks (fundamentals, financials, momentum, consensus, news — Researcher จะเลือก market='TH'|'US' ตาม ticker), ไฟล์ PDF (รายงาน/งบการเงิน/บทวิเคราะห์)
   (Researcher จะส่งผลให้ Archivist บันทึกอัตโนมัติ — ไม่ต้องส่ง archivist ซ้ำ)
 - "archivist" → อ่าน/ค้นหาข้อมูลใน Vault (ข้อมูลความรู้/Entity ที่บันทึกไว้, สุขภาพ Vault, semantic search), บันทึก book note หรือ knowledge ที่ผู้ใช้พิมพ์/วางมาเองโดยตรง (entity_type: book_note)
-- "macro_analyst" → วิเคราะห์สภาวะเศรษฐกิจมหภาคและการจัดสรรสินทรัพย์: คำนวณคะแนนสภาวะเศรษฐกิจของแต่ละประเทศ/ภูมิภาค ประเมินจัดทำ Matrix และรายงานสรุปสภาวะเศรษฐกิจ
+- "macro_intel" → วิเคราะห์สภาวะเศรษฐกิจมหภาคและการจัดสรรสินทรัพย์: คำนวณคะแนนสภาวะเศรษฐกิจ ประเมินเชิงคุณภาพ และออกรายงานทิศทางกลยุทธ์
 - "bookkeeper" → พอร์ตการลงทุนจริง:
   - ธุรกรรม: ซื้อ/ขาย/ฝาก/ถอน (THB/USD แยก pot), dividend/interest/rental, FX update, แก้ไข holding ที่ผิด
   - สถานะ/รายงาน: NAV, P/L, holdings, เงินสด, allocation % (asset_type/currency), performance trend ย้อนหลัง
@@ -81,7 +97,7 @@ ROUTER_PROMPT = """คุณคือ The Manager ผู้จัดการก
 - Bookkeeper = ตัวเลขพอร์ตจริง (เช่น "ซื้อ AAPL 10 หุ้น", "เงินสดเหลือเท่าไหร่")
 
 [วิธีกรอกแต่ละ task]
-- target = worker ที่รับงาน (archivist/researcher/bookkeeper)
+- target = worker ที่รับงาน (archivist/researcher/bookkeeper/macro_intel)
 - instruction = คำสั่งของ task นั้น กระชับ ชัดเจน
 - save_to_vault = ใช้กับ researcher เท่านั้น: True (ค่าเริ่มต้น) = Archivist เซฟอัตโนมัติ,
   False = ผู้ใช้บอกชัดเจนไม่ต้องเซฟ ('ดูเฉยๆ', 'ไม่ต้องเซฟ', 'แค่อยากรู้', 'เช็คเฉยๆ')
@@ -94,13 +110,13 @@ ROUTER_PROMPT = """คุณคือ The Manager ผู้จัดการก
 [กฎ Re-plan — เมื่อเห็น [REPLAN]]
 - ข้อความที่ขึ้นต้นด้วย [REPLAN] แสดงว่างานก่อนหน้าล้มเหลว
 - ให้วิเคราะห์ว่า Error เกิดจากอะไร แล้ววางแผนงานใหม่ที่แก้ต้นเหตุ
-- ตัวอย่าง: ถ้า Macro Analyst บอก "ไม่พบไฟล์ Global_Macro_Snapshot" → สั่ง Researcher ดึงข้อมูล Global Macro ก่อน แล้วค่อยส่ง Macro Analyst อีกครั้ง
+- ตัวอย่าง: ถ้า macro_intel บอก "ไม่พบไฟล์ Global_Macro_Snapshot" → สั่ง Researcher ดึงข้อมูล Global Macro ก่อน แล้วค่อยส่ง macro_intel อีกครั้ง
 - ห้ามทำซ้ำแผนเดิมที่ล้มเหลว — ต้องเปลี่ยนแนวทาง"""
 
 
 class WorkerTask(BaseModel):
     """งานย่อย 1 ชิ้น ที่ route ไปยัง worker หนึ่งตัว"""
-    target: Literal["archivist", "researcher", "bookkeeper", "macro_analyst"]
+    target: Literal["archivist", "researcher", "bookkeeper", "macro_intel"]
     instruction: str = Field(
         description="คำสั่งสำหรับ worker ตัวนี้ — กระชับ ชัดเจน ตัดคำนำหน้า/คำพ่วงที่ไม่เกี่ยวออก"
     )
@@ -110,6 +126,14 @@ class WorkerTask(BaseModel):
                     "False = แค่ดึงข้อมูลแล้วแสดง ไม่เซฟ "
                     "(เลือก False เมื่อผู้ใช้บอกชัดเจน เช่น 'ดูเฉยๆ', 'ไม่ต้องเซฟ', 'แค่อยากรู้')",
     )
+
+    from pydantic import model_validator
+    @model_validator(mode='before')
+    @classmethod
+    def alias_target(cls, values):
+        if isinstance(values, dict) and values.get("target") == "macro_analyst":
+            values["target"] = "macro_intel"
+        return values
 
 
 class RouterDecision(BaseModel):
@@ -127,18 +151,13 @@ class RouterDecision(BaseModel):
 
 
 def _is_worker_error(messages: list) -> str | None:
-    """ตรวจสอบว่า Worker ล่าสุดส่ง Error กลับมาหรือไม่
-
-    Returns:
-        ข้อความ Error ถ้าพบ, None ถ้าสำเร็จ
-    """
     if not messages:
         return None
     last = messages[-1]
     if not isinstance(last, AIMessage):
         return None
     content = normalize_content(last.content).strip()
-    if content.startswith("Error:"):
+    if content.startswith("Error:") or content.startswith("Error "):
         return content
     return None
 
@@ -148,7 +167,6 @@ def _msg_role(m) -> str:
 
 
 def _has_researcher_frontmatter(text: str) -> bool:
-    """ตรวจว่า Researcher reply เป็น Markdown ที่มี YAML frontmatter ของจริง (entity_type:)"""
     stripped = text.lstrip()
     if not stripped.startswith("---"):
         return False
@@ -159,45 +177,40 @@ def _has_researcher_frontmatter(text: str) -> bool:
 @lru_cache(maxsize=1)
 def _get_archivist_graph():
     provider = detect_provider(_ARCHIVIST_MODEL)
-    return create_archivist(
-        get_llm(provider=provider, model_name=_ARCHIVIST_MODEL, use_fallback=True)
-    )
+    return create_archivist(get_llm(provider=provider, model_name=_ARCHIVIST_MODEL, use_fallback=True))
 
 
 @lru_cache(maxsize=1)
 def _get_researcher_graph():
     provider = detect_provider(_RESEARCHER_MODEL)
-    return create_researcher(
-        get_llm(provider=provider, model_name=_RESEARCHER_MODEL, use_fallback=True)
-    )
+    return create_researcher(get_llm(provider=provider, model_name=_RESEARCHER_MODEL, use_fallback=True))
 
 
 @lru_cache(maxsize=1)
 def _get_bookkeeper_graph():
     provider = detect_provider(_BOOKKEEPER_MODEL)
-    return create_bookkeeper(
-        get_llm(provider=provider, model_name=_BOOKKEEPER_MODEL, use_fallback=True)
-    )
+    return create_bookkeeper(get_llm(provider=provider, model_name=_BOOKKEEPER_MODEL, use_fallback=True))
 
 
 @lru_cache(maxsize=1)
-def _get_macro_analyst_graph():
-    provider = detect_provider(_MACRO_ANALYST_MODEL)
-    return create_macro_analyst(
-        get_llm(provider=provider, model_name=_MACRO_ANALYST_MODEL, use_fallback=True)
-    )
+def _get_macro_quant_graph():
+    provider = detect_provider(_MACRO_QUANT_MODEL)
+    return create_macro_quant(get_llm(provider=provider, model_name=_MACRO_QUANT_MODEL, use_fallback=True))
+
+@lru_cache(maxsize=1)
+def _get_macro_economist_graph():
+    provider = detect_provider(_MACRO_ECONOMIST_MODEL)
+    return create_macro_economist(get_llm(provider=provider, model_name=_MACRO_ECONOMIST_MODEL, use_fallback=True))
 
 
 @lru_cache(maxsize=1)
 def _get_router_model():
-    # router_model ต้องใช้ with_structured_output ซึ่งไม่มีบน RunnableWithFallbacks
-    # → wrap primary + fallback แยกชั้น
     provider = detect_provider(_ROUTER_MODEL)
     primary = get_llm(provider=provider, model_name=_ROUTER_MODEL)
     structured = primary.with_structured_output(RouterDecision)
 
     if _ROUTER_MODEL == FALLBACK_MODEL:
-        return structured  # ป้องกัน wrap ตัวเองเป็น fallback
+        return structured
 
     fallback_provider = detect_provider(FALLBACK_MODEL)
     fallback = get_llm(provider=fallback_provider, model_name=FALLBACK_MODEL)
@@ -216,7 +229,6 @@ def extract_worker_reply(messages: list) -> str:
 
 
 def _get_elapsed(meta: dict) -> float | None:
-    """คำนวณ elapsed time แบบปลอดภัย ทนต่อ LangGraph checkpoint resume"""
     started_at = meta.get("worker_started_at")
     if started_at is None or not isinstance(started_at, (int, float)):
         return None
@@ -228,18 +240,18 @@ def build_graph(checkpointer=None) -> StateGraph:
     archivist_graph = _get_archivist_graph()
     researcher_graph = _get_researcher_graph()
     bookkeeper_graph = _get_bookkeeper_graph()
-    macro_analyst_graph = _get_macro_analyst_graph()
+    macro_quant_graph = _get_macro_quant_graph()
+    macro_economist_graph = _get_macro_economist_graph()
     router_model = _get_router_model()
 
-    def supervisor_node(state: AgentState) -> Command[Literal["prepare_archivist", "researcher", "bookkeeper", "macro_analyst", "__end__"]]:
+    def supervisor_node(state: AgentState) -> Command[Literal["prepare_archivist", "researcher", "bookkeeper", "macro_quant", "__end__"]]:
         messages = state["messages"]
         turn_id = state.get("turn_id")
 
         if isinstance(messages[-1], HumanMessage) and getattr(messages[-1], "name", None) != "manager":
-            # turn ใหม่จาก user
             turn_id = uuid.uuid4().hex[:8]
             log_turn_start(turn_id, messages[-1].content)
-            
+
             router_messages = [
                 {"role": "system", "content": ROUTER_PROMPT},
                 *[{"role": _msg_role(m), "content": normalize_content(m.content)}
@@ -266,15 +278,13 @@ def build_graph(checkpointer=None) -> StateGraph:
             messages_update = []
             replan_count_update = 0
         else:
-            # วนกลับจาก worker (last != user original message) → ทำ task ที่เหลือต่อ
             error_msg = _is_worker_error(messages)
             replan_count = state.get("replan_count", 0)
 
             if error_msg and replan_count < _MAX_REPLAN:
-                log.warning("worker error detected, re-planning (attempt %d/%d): %s",
-                            replan_count + 1, _MAX_REPLAN, error_msg[:100])
+                log.warning("worker error detected, re-planning (attempt %d/%d): %s", replan_count + 1, _MAX_REPLAN, error_msg[:100])
                 log_system_action(turn_id, "Re-plan Triggered", error_msg, status="warning")
-                
+
                 replan_hint = HumanMessage(
                     content=(
                         f"[REPLAN] งานก่อนหน้าล้มเหลว: {error_msg}\n"
@@ -283,7 +293,7 @@ def build_graph(checkpointer=None) -> StateGraph:
                     ),
                     name="manager",
                 )
-                
+
                 router_messages = [
                     {"role": "system", "content": ROUTER_PROMPT},
                     *[{"role": _msg_role(m), "content": normalize_content(m.content)}
@@ -292,8 +302,7 @@ def build_graph(checkpointer=None) -> StateGraph:
                     {"role": "human", "content": replan_hint.content},
                 ]
                 decision: RouterDecision = router_model.invoke(router_messages)
-                log.info("replan result: tasks=%d", len(decision.tasks))
-                
+
                 if not decision.tasks:
                     reply = decision.response_text.strip() or error_msg
                     log_worker_result(turn_id, "manager", reply, status="warning")
@@ -340,10 +349,15 @@ def build_graph(checkpointer=None) -> StateGraph:
         meta: RouteMeta = {"source": "manager", "target": target}
         if target == "researcher":
             meta["save_to_vault"] = task.get("save_to_vault", True)
-        
+
         meta["worker_started_at"] = time.monotonic()
-        goto_target = "prepare_archivist" if target == "archivist" else target
-        
+
+        goto_target = target
+        if target == "archivist":
+            goto_target = "prepare_archivist"
+        elif target == "macro_intel":
+            goto_target = "macro_quant"
+
         return Command(
             goto=goto_target,
             update={
@@ -357,12 +371,12 @@ def build_graph(checkpointer=None) -> StateGraph:
 
     def prepare_archivist_node(state: AgentState) -> Command[Literal["archivist"]]:
         meta = state.get("route_meta") or {}
-        
-        if meta.get("source") == "researcher" or meta.get("source") == "macro_analyst":
+
+        if meta.get("source") in ["researcher", "macro_intel"]:
             last_msg = extract_worker_reply(state["messages"])
             task = f"บันทึกข้อมูลดิบต่อไปนี้ลง Vault ทันที\n\n[ข้อมูลดิบ]\n{last_msg}"
         else:
-            last_msg = normalize_content(state["messages"][-1].content) # This is the manager's instruction
+            last_msg = normalize_content(state["messages"][-1].content)
             msgs = state["messages"]
             last_human_idx = next(
                 (i for i in range(len(msgs) - 1, -1, -1) if isinstance(msgs[i], HumanMessage) and getattr(msgs[i], "name", None) != "manager"),
@@ -378,7 +392,6 @@ def build_graph(checkpointer=None) -> StateGraph:
             else:
                 task = last_msg
 
-        log.info("prepare_archivist: source=%s len=%d", meta.get("source"), len(task))
         return Command(
             goto="archivist",
             update={
@@ -390,11 +403,11 @@ def build_graph(checkpointer=None) -> StateGraph:
         from tools.archivist.indexer import flush_index_if_dirty
         archivist_reply = extract_worker_reply(state["messages"])
         flush_index_if_dirty()
-        
+
         turn_id = state.get("turn_id", "unknown")
         elapsed = _get_elapsed(state.get("route_meta") or {})
         log_worker_result(turn_id, "archivist", archivist_reply, status="success", elapsed_sec=elapsed)
-        
+
         return Command(
             goto="supervisor",
             update={
@@ -411,21 +424,13 @@ def build_graph(checkpointer=None) -> StateGraph:
         turn_id = state.get("turn_id", "unknown")
         elapsed = _get_elapsed(meta)
 
-        if not _has_researcher_frontmatter(researcher_reply):
-            log_worker_result(turn_id, "researcher", researcher_reply, status="warning", elapsed_sec=elapsed)
+        if not _has_researcher_frontmatter(researcher_reply) or not save_to_vault:
+            status = "info" if save_to_vault else "info"
+            if _has_researcher_frontmatter(researcher_reply) is False and save_to_vault is True:
+                status = "warning"
+            log_worker_result(turn_id, "researcher", researcher_reply, status=status, elapsed_sec=elapsed)
             return Command(
-                goto="supervisor", 
-                update={
-                    "messages": [AIMessage(content=researcher_reply)],
-                    "route_meta": {"source": "researcher", "target": "user"},
-                    "turn_id": turn_id,
-                }
-            )
-
-        if not save_to_vault:
-            log_worker_result(turn_id, "researcher", researcher_reply, status="info", elapsed_sec=elapsed)
-            return Command(
-                goto="supervisor", 
+                goto="supervisor",
                 update={
                     "messages": [AIMessage(content=researcher_reply)],
                     "route_meta": {"source": "researcher", "target": "user"},
@@ -435,7 +440,7 @@ def build_graph(checkpointer=None) -> StateGraph:
 
         log_worker_result(turn_id, "researcher", researcher_reply, status="success", elapsed_sec=elapsed)
         return Command(
-            goto="prepare_archivist", 
+            goto="prepare_archivist",
             update={
                 "messages": [AIMessage(content=researcher_reply)],
                 "route_meta": {"source": "researcher", "target": "archivist", "worker_started_at": time.monotonic()},
@@ -447,10 +452,10 @@ def build_graph(checkpointer=None) -> StateGraph:
         bookkeeper_reply = extract_worker_reply(state["messages"])
         turn_id = state.get("turn_id", "unknown")
         elapsed = _get_elapsed(state.get("route_meta") or {})
-        
+
         log_worker_result(turn_id, "bookkeeper", bookkeeper_reply, status="success", elapsed_sec=elapsed)
         return Command(
-            goto="supervisor", 
+            goto="supervisor",
             update={
                 "messages": [AIMessage(content=bookkeeper_reply)],
                 "route_meta": {"source": "bookkeeper", "target": "user"},
@@ -458,32 +463,160 @@ def build_graph(checkpointer=None) -> StateGraph:
             }
         )
 
-    def post_macro_analyst_node(state: AgentState) -> Command[Literal["supervisor", "prepare_archivist"]]:
-        macro_analyst_reply = extract_worker_reply(state["messages"])
+    # --- Macro Pipeline Sequence ---
+    def post_quant_node(state: AgentState) -> Command[Literal["macro_economist", "supervisor"]]:
+        reply = extract_worker_reply(state["messages"])
+        try:
+            parsed = json.loads(reply)
+            from schemas.macro_schemas import QuantScore
+            validated = QuantScore.model_validate(parsed)
+            validated_json = validated.model_dump(mode="json")
+            instruction = (
+                "วิเคราะห์ปัจจัยเชิงคุณภาพ (Narrative) จากข้อมูลใน Vault\n"
+                f"ผลลัพธ์จาก Quant Agent (ใช้อ้างอิง): {json.dumps(validated_json, ensure_ascii=False)}"
+            )
+            return Command(
+                goto="macro_economist",
+                update={"quant_raw": reply, "quant_score": validated_json, "messages": [HumanMessage(content=instruction, name="manager")]}
+            )
+        except Exception as e:
+            # If it's not JSON, it might be an error from the tool
+            log_worker_result(state.get("turn_id", "unknown"), "macro_quant", f"Error: {e}\n{reply}", status="failure")
+            return Command(
+                goto="supervisor",
+                update={"messages": [AIMessage(content=f"Error: (Quant) {str(e)} - {reply}")]}
+            )
+
+    def post_economist_node(state: AgentState) -> Command[Literal["strategic_allocator", "supervisor"]]:
+        reply = extract_worker_reply(state["messages"])
+        import re
+        reply_clean = re.sub(r'^```(?:json)?\s*|\s*```$', '', reply.strip(), flags=re.MULTILINE)
+        try:
+            parsed = json.loads(reply_clean)
+            from schemas.macro_schemas import NarrativeContext
+            validated = NarrativeContext.model_validate(parsed)
+            validated_json = validated.model_dump(mode="json")
+
+            # Save deterministic baseline for future pivot comparisons
+            from tools.macro.baselines import save_macro_baseline
+            save_macro_baseline(validated_json)
+
+            return Command(
+                goto="strategic_allocator",
+                update={"narrative_raw": reply, "narrative_context": validated_json}
+            )
+        except Exception as e:
+            log_worker_result(state.get("turn_id", "unknown"), "macro_economist", f"Validation fallback: {e}\n{reply}", status="warning")
+            from datetime import datetime, timezone
+            fallback_dict = {
+                "evaluated_at": datetime.now(timezone.utc).isoformat(),
+                "dominant_themes": [],
+                "market_sentiment": "neutral",
+                "tail_risks": [],
+                "policy_signals": [],
+                "key_narratives_by_region": {},
+                "sources_summary": f"Data fetch failed: {str(e)}"
+            }
+            from schemas.macro_schemas import NarrativeContext
+            validated_fallback = NarrativeContext.model_validate(fallback_dict)
+            return Command(
+                goto="strategic_allocator",
+                update={"narrative_raw": reply, "narrative_context": validated_fallback.model_dump(mode="json")}
+            )
+
+    def strategic_allocator_node(state: AgentState) -> Command[Literal["post_macro_intel", "supervisor"]]:
+        try:
+            provider = detect_provider(_STRATEGIC_ALLOCATOR_MODEL)
+            model = get_llm(provider=provider, model_name=_STRATEGIC_ALLOCATOR_MODEL)
+
+            quant_data = state.get("quant_score", {}) or {}
+            observable_registry: dict[str, MarketObservable] = {}
+            if isinstance(quant_data, dict):
+                for raw in quant_data.get("market_observables", []) or []:
+                    try:
+                        obs = raw if isinstance(raw, MarketObservable) else MarketObservable.model_validate(raw)
+                    except Exception:
+                        continue
+                    observable_registry[obs.observable_id] = obs
+
+            valid_observables = []
+            unverified_observables = []
+            for obs in observable_registry.values():
+                item = {
+                    "observable_id": obs.observable_id,
+                    "asset_bucket": obs.asset_bucket,
+                    "region": obs.region,
+                    "indicator": obs.indicator,
+                    "value": obs.value,
+                    "unit": obs.unit,
+                    "observed_at": obs.observed_at,
+                    "source_file": obs.source_file,
+                    "provider": obs.provider,
+                    "stale_reason": obs.stale_reason,
+                }
+                if obs.is_valid:
+                    valid_observables.append(item)
+                else:
+                    unverified_observables.append(item)
+
+            allocator_quant_data = dict(quant_data) if isinstance(quant_data, dict) else {}
+            allocator_quant_data["market_observables_by_validity"] = {
+                "VALID INSTITUTIONAL HARD DATA OBSERVABLES (USE FOR HIGH/MEDIUM CONFIDENCE)": valid_observables,
+                "UNVERIFIED PROXIES & STALE INDICATORS (DO NOT USE FOR CONFIDENCE / LOW CONFIDENCE ONLY)": unverified_observables,
+            }
+            evaluated_source_files = {
+                obs.source_file for obs in observable_registry.values() if obs.source_file
+            }
+            evaluated_date = os.getenv("EVAL_DATE") or str(allocator_quant_data.get("evaluated_at", ""))[:10]
+            if not evaluated_date or len(evaluated_date) != 10:
+                evaluated_date = datetime.now().strftime("%Y-%m-%d")
+            evaluated_source_files.add(f"Macro_Baseline_{evaluated_date}.md")
+            allocator_quant_data["evaluated_source_files"] = sorted(evaluated_source_files)
+
+            quant_json = json.dumps(allocator_quant_data, ensure_ascii=False)
+            narrative_json = json.dumps(state.get("narrative_context", {}), ensure_ascii=False)
+
+            direction = invoke_strategic_allocator(model, quant_json, narrative_json)
+            direction = direction.revalidate_with_registry(observable_registry)
+            for source_file in sorted(evaluated_source_files):
+                if source_file not in direction.source_files:
+                    direction.source_files.append(source_file)
+            report = format_macro_strategy_report(direction)
+
+            return Command(
+                goto="post_macro_intel",
+                update={"messages": [AIMessage(content=report)]}
+            )
+        except Exception as e:
+            log_worker_result(state.get("turn_id", "unknown"), "strategic_allocator", f"Error: {e}", status="failure")
+            return Command(
+                goto="supervisor",
+                update={"messages": [AIMessage(content=f"Error: (Strategic Allocator) {str(e)}")]}
+            )
+
+    def post_macro_intel_node(state: AgentState) -> Command[Literal["supervisor", "prepare_archivist"]]:
+        report = state["messages"][-1].content
         turn_id = state.get("turn_id", "unknown")
         elapsed = _get_elapsed(state.get("route_meta") or {})
-        
-        if _has_researcher_frontmatter(macro_analyst_reply):
-            log_worker_result(turn_id, "macro_analyst", macro_analyst_reply, status="success", elapsed_sec=elapsed)
+
+        if _has_researcher_frontmatter(report):
+            log_worker_result(turn_id, "macro_intel", report, status="success", elapsed_sec=elapsed)
             return Command(
-                goto="prepare_archivist", 
+                goto="prepare_archivist",
                 update={
-                    "messages": [AIMessage(content=macro_analyst_reply)],
-                    "route_meta": {"source": "macro_analyst", "target": "archivist", "worker_started_at": time.monotonic()},
-                    "turn_id": turn_id,
+                    "route_meta": {"source": "macro_intel", "target": "archivist", "worker_started_at": time.monotonic()}
                 }
             )
-        
-        status = "failure" if macro_analyst_reply.strip().startswith("Error:") else "info"
-        log_worker_result(turn_id, "macro_analyst", macro_analyst_reply, status=status, elapsed_sec=elapsed)
+
+        status = "failure" if report.strip().startswith("Error:") else "info"
+        log_worker_result(turn_id, "macro_intel", report, status=status, elapsed_sec=elapsed)
         return Command(
-            goto="supervisor", 
+            goto="supervisor",
             update={
-                "messages": [AIMessage(content=macro_analyst_reply)],
-                "route_meta": {"source": "macro_analyst", "target": "user"},
-                "turn_id": turn_id,
+                "route_meta": {"source": "macro_intel", "target": "user"}
             }
         )
+
 
     builder = StateGraph(AgentState)
     builder.add_node("supervisor", supervisor_node)
@@ -491,18 +624,38 @@ def build_graph(checkpointer=None) -> StateGraph:
     builder.add_node("archivist", archivist_graph)
     builder.add_node("researcher", researcher_graph)
     builder.add_node("bookkeeper", bookkeeper_graph)
-    builder.add_node("macro_analyst", macro_analyst_graph)
-    
+
+    # Macro Intel Pipeline
+    def macro_quant_wrapper(state: AgentState):
+        result = macro_quant_graph.invoke({"messages": [state["messages"][-1]]})
+        reply = extract_worker_reply(result["messages"])
+        return {"messages": [AIMessage(content=reply, name="macro_quant")]}
+
+    def macro_economist_wrapper(state: AgentState):
+        result = macro_economist_graph.invoke({"messages": [state["messages"][-1]]})
+        reply = extract_worker_reply(result["messages"])
+        return {"messages": [AIMessage(content=reply, name="macro_economist")]}
+
+    builder.add_node("macro_quant", macro_quant_wrapper)
+    builder.add_node("macro_economist", macro_economist_wrapper)
+    builder.add_node("strategic_allocator", strategic_allocator_node)
+
     builder.add_node("post_archivist", post_archivist_node)
     builder.add_node("post_researcher", post_researcher_node)
     builder.add_node("post_bookkeeper", post_bookkeeper_node)
-    builder.add_node("post_macro_analyst", post_macro_analyst_node)
+
+    builder.add_node("post_quant", post_quant_node)
+    builder.add_node("post_economist", post_economist_node)
+    builder.add_node("post_macro_intel", post_macro_intel_node)
 
     builder.add_edge(START, "supervisor")
-    
+
     builder.add_edge("archivist", "post_archivist")
     builder.add_edge("researcher", "post_researcher")
     builder.add_edge("bookkeeper", "post_bookkeeper")
-    builder.add_edge("macro_analyst", "post_macro_analyst")
+
+    builder.add_edge("macro_quant", "post_quant")
+    builder.add_edge("macro_economist", "post_economist")
+    builder.add_edge("strategic_allocator", "post_macro_intel")
 
     return builder.compile(checkpointer=checkpointer)

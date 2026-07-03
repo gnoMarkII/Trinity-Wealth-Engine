@@ -207,7 +207,7 @@ invest-agents/
 │   ├── researcher_agent.py      # Data fetching ReAct agent
 │   ├── archivist_agent.py       # PKM management ReAct agent
 │   ├── bookkeeper_agent.py      # Portfolio & accounting ReAct agent
-│   └── macro_analyst_agent.py   # Macroeconomic state analysis ReAct agent
+│   └── macro_economist_agent.py   # Macroeconomic state analysis ReAct agent
 ├── tools/
 │   ├── macro/                   # Macro & Economic tools (FRED, Yield Curve)
 │   ├── market/                  # Stock market tools (Yahoo Finance, Fundamentals)
@@ -231,16 +231,15 @@ invest-agents/
 │   ├── integration/             # End-to-end flow tests
 │   └── conftest.py              # Shared fixtures
 ├── memories/                    # Obsidian Vault (gitignored)
-│   ├── 00_Inbox/
 │   ├── 01_Daily_Logs/
 │   ├── 20_Portfolio_Management/
 │   ├── 30_Knowledge_Base/
 │   │   ├── Macroeconomics/
 │   │   ├── Stocks/
 │   │   ├── YouTube_Summaries/
-│   │   ├── Articles/
+│   │   ├── News/
+│   │   ├── Books/
 │   │   └── Strategies/
-│   └── 40_Finance_and_Tax/
 ├── .env.example
 └── pyproject.toml
 ```

@@ -21,7 +21,6 @@ def ingest_stock_fundamentals(ticker: str, market: Market = "US") -> str:
     [Caution]
     - ห้ามใช้ดึงข้อมูลย้อนหลัง (ให้ใช้ `ingest_financial_trends` แทน)
     - เครื่องมือนี้แค่ส่งคืนข้อความ Markdown (ไม่บันทึกไฟล์เอง)
-    - **ต้อง** นำผลลัพธ์ที่ได้ไปส่งให้ Archivist บันทึกไฟล์ต่อด้วย `write_raw_markdown`
 
     Args:
         ticker (str): Ticker symbol เช่น 'AAPL', 'PTT' (ห้ามมี .BK suffix — ระบบจะเติมให้)
@@ -218,7 +217,6 @@ def ingest_financial_health(ticker: str, market: Market = "US") -> str:
     [Caution]
     - หากผู้ใช้ถามหา "กระแสเงินสด/หนี้สิน **ย้อนหลัง**" ให้ใช้ `ingest_financial_trends` แทน
     - เครื่องมือนี้แค่ส่งคืนข้อความ Markdown (ไม่บันทึกไฟล์เอง)
-    - **ต้อง** นำผลลัพธ์ที่ได้ไปส่งให้ Archivist บันทึกไฟล์ต่อด้วย `write_raw_markdown`
 
     Args:
         ticker (str): Ticker symbol เช่น 'AAPL', 'PTT' (ห้ามมี .BK suffix — ระบบจะเติมให้)

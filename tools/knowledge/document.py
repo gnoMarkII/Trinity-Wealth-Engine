@@ -19,7 +19,6 @@ def ingest_pdf(file_path: str) -> str:
 
     Caution:
     - เครื่องมือนี้แค่ส่งคืนข้อความ Markdown (ไม่บันทึกไฟล์เอง)
-    - ต้องนำผลลัพธ์ที่ได้ไปส่งให้ Archivist บันทึกไฟล์ต่อด้วย `write_raw_markdown` เท่านั้น
 
     Args:
         file_path (str): Path ของไฟล์ PDF บนเครื่อง (เช่น 'C:/Downloads/report.pdf')

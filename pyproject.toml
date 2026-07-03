@@ -46,4 +46,7 @@ dev = [
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 filterwarnings = ["ignore::DeprecationWarning"]
+markers = [
+    "integration: live/provider integration tests",
+]
 addopts = "--html=tests/testing_report.html --self-contained-html --cov=tools --cov-report=html:tests/coverage_report --cov-report=xml:tests/coverage.xml"

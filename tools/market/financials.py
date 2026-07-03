@@ -22,7 +22,6 @@ def ingest_financial_trends(ticker: str, market: Market = "US") -> str:
     [Caution]
     - ห้ามใช้เครื่องมือนี้สำหรับดึง Snapshot ปัจจุบัน (ใช้ ingest_financial_health หรือ ingest_stock_fundamentals แทน)
     - เครื่องมือนี้แค่ส่งคืนข้อความ Markdown (ไม่บันทึกไฟล์เอง)
-    - **ต้อง** นำผลลัพธ์ที่ได้ไปส่งให้ Archivist บันทึกไฟล์ต่อด้วย `write_raw_markdown`
 
     Args:
         ticker (str): Ticker symbol เช่น 'AAPL', 'PTT' (ห้ามมี .BK suffix — ระบบจะเติมให้)

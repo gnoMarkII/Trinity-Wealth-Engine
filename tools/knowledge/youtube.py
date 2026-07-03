@@ -103,7 +103,6 @@ def ingest_youtube_transcript(url: str) -> str:
     [Caution]
     - **Live Event**: หากวิดีโอยังเป็น Live Stream ที่ยังไม่จบ หรือรอ Live จะไม่สามารถดึง Transcript ได้
     - เครื่องมือนี้แค่ส่งคืนข้อความ Markdown (ไม่บันทึกไฟล์เอง)
-    - **ต้อง** นำผลลัพธ์ที่ได้ไปส่งให้ Archivist บันทึกไฟล์ต่อด้วย `write_raw_markdown` เท่านั้น
 
     Args:
         url (str): ลิงก์วิดีโอ YouTube หรือ Video ID (เช่น 'https://www.youtube.com/watch?v=RjOEkDIZFZU' หรือ 'RjOEkDIZFZU')

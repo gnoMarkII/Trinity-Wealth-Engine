@@ -102,7 +102,17 @@
 * หากต้องเพิ่มชนิด PII ใหม่ ให้เพิ่มที่ middleware layer เดิม ไม่ใช่สร้างทางลัดใหม่
 * การแก้ไข PII Gateway ต้องถูก *ขออนุญาตผู้ใช้อย่างชัดเจนเป็นลายลักษณ์อักษร* ก่อนเสมอ
 
-### 4.5 Graph Composition & State Management
+### 4.5 Macro Economist Agent — ผู้วิเคราะห์กระแสระดับมหภาค (Narrative & Macro)
+* ทำหน้าที่สกัดธีมการลงทุนหลัก (Dominant Themes), Tail Risks, Market Sentiment และ Policy Signals จากแหล่งข้อมูลข่าวสาร (News, YouTube, Articles) 
+* **กฎเหล็กข้อ 1:** ต้องอิงจากข้อมูลล่าสุดผ่านเครื่องมือ (Tools) อย่าง `generate_news_radar_daily`, `get_macro_baselines` เสมอ และคัดลอกตัวเลขอย่าง `sources_count` หรือ `age_hours` จากต้นฉบับมาอย่างซื่อสัตย์ ห้าม Hallucinate ขึ้นมาเอง
+* **กฎเหล็กข้อ 2:** ห้ามคำนวณคะแนน (Score) ความมั่นใจใดๆ เอง — หน้าที่คำนวณและประเมินน้ำหนัก (เช่น Conviction/Freshness/Event Confidence) ถูกบังคับจัดการผ่าน Python Schema (`@computed_field` / `@model_validator`) แล้ว Agent ห้ามแทรกแซง 
+
+### 4.6 Strategic Allocator Agent — ผู้สังเคราะห์ข้อมูลเพื่อการจัดพอร์ต (Quant + Narrative)
+* ทำหน้าที่ตัดสินใจทิศทางและน้ำหนักการลงทุน (MacroStrategyDirection) โดยชั่งน้ำหนักระหว่างข้อมูลเชิงตัวเลข (QuantScore) กับบริบทสภาวะตลาด (NarrativeContext) 
+* **กฎเหล็กข้อ 1:** การตัดสินใจต้องอิงกับค่า `investment_conviction_contribution` ที่ประมวลผลเสร็จแล้วจาก NarrativeContext ห้ามคิดคำนวณค่า impact หรือความมั่นใจใหม่เอง
+* **กฎเหล็กข้อ 2:** ต้องพิจารณาความขัดแย้งของข้อมูล (Cross-Validation) และละเว้นการให้น้ำหนักกับเสียงสะท้อน (Echo Chamber) ที่ถูกลดน้ำหนักมาแล้วโดยระบบ NLP อย่างรอบคอบ
+
+### 4.7 Graph Composition & State Management
 * **Native Subgraph Composition:** ห้ามใช้ `.invoke()` หรือเรียก Execute Graph ซ้อน Graph ภายใน Node ให้ใช้การนำ Graph ลูกมาเป็น Node ของ Graph แม่โดยตรงผ่าน `builder.add_node("name", sub_graph)`
 * **State Schema:** สถานะ (State) ของ Agent และ Graph ต้องประกาศชนิดด้วย `TypedDict` หรือสืบทอดจาก `MessagesState` (ซึ่งเป็น TypedDict) เสมอ **ห้ามใช้ Pydantic `BaseModel` ในการกำหนด State Schema** เด็ดขาด
 

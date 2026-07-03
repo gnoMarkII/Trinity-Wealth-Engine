@@ -94,7 +94,7 @@ def save_memory(
         body += f"\n\n## Related\n{wikilinks}\n"
 
     if file_path.exists():
-        post = fm.load(file_path)
+        post = fm.loads(file_path.read_text(encoding="utf-8"))
         meta = dict(post.metadata)
 
         # Merge: union tags/aliases, append linked_files unique, update last_updated
@@ -175,10 +175,7 @@ def write_raw_markdown(content: str, folder_path: str, filename: str) -> str:
     if re.search(r"^entity_type:\s*(goal|financial_goal)\b", content, re.MULTILINE):
         return GOAL_VIA_BOOKKEEPER
 
-    resolved_path = _maybe_inject_date_subfolder(folder_path, content)
-    resolved_path = _maybe_inject_ticker_subfolder(resolved_path, content)
-    resolved_path = _maybe_inject_channel_subfolder(resolved_path, content)
-    resolved_path = _maybe_inject_publisher_subfolder(resolved_path, content)
+    resolved_path = _maybe_inject_ticker_subfolder(folder_path, content)
     target_dir = VAULT_PATH / resolved_path
     target_dir.mkdir(parents=True, exist_ok=True)
     safe_name = _sanitize_filename(filename)
@@ -198,7 +195,9 @@ def write_raw_markdown(content: str, folder_path: str, filename: str) -> str:
     # Auto-create Obsidian Canvas for YouTube Insights
     if re.search(r"^entity_type:\s*youtube_insight\b", content, re.MULTILINE):
         try:
-            _create_youtube_canvas(file_path, content)
+            # Temporarily disabled per user request
+            # _create_youtube_canvas(file_path, content)
+            pass
         except Exception as e:
             log.warning("[CANVAS FAIL] | %s: %s", file_path.name, e)
         _mark_youtube_digest_read(content)
@@ -410,21 +409,6 @@ def _ensure_stock_entity_stub(target_dir: Path, ticker: str) -> None:
     _index_upsert(stub_path)
 
 
-def _maybe_inject_date_subfolder(folder_path: str, content: str) -> str:
-    """ถ้า folder_path ลงท้ายด้วย 'Daily_Snapshots' → แทรกวันที่จาก YAML frontmatter เป็น subfolder
-
-    ตัวอย่าง:
-        '30_Knowledge_Base/Macroeconomics/Daily_Snapshots'
-        → '30_Knowledge_Base/Macroeconomics/Daily_Snapshots/2026-05-21'
-    ใช้ค่า date จาก frontmatter เป็น single source of truth (ป้องกัน LLM พิมพ์วันที่เพี้ยน)
-    fallback เป็นวันนี้ถ้าไม่มี date field
-    """
-    normalized = folder_path.rstrip("/")
-    if not normalized.endswith("Daily_Snapshots"):
-        return folder_path
-    m = _DATE_FRONTMATTER_RE.search(content)
-    date_str = m.group(1) if m else datetime.now().strftime("%Y-%m-%d")
-    return f"{normalized}/{date_str}"
 
 
 def _maybe_inject_ticker_subfolder(folder_path: str, content: str) -> str:
@@ -445,45 +429,3 @@ def _maybe_inject_ticker_subfolder(folder_path: str, content: str) -> str:
     ticker = _sanitize_filename(m.group(1).strip().upper())
     return f"{normalized}/{ticker}" if ticker else folder_path
 
-
-def _maybe_inject_channel_subfolder(folder_path: str, content: str) -> str:
-    """ถ้า folder_path ลงท้ายด้วย 'YouTube_Summaries' → แทรกชื่อช่องจาก YAML `channel:` เป็น subfolder
-    
-    ตัวอย่าง:
-        '30_Knowledge_Base/YouTube_Summaries' + channel=FINNOMENA
-        → '30_Knowledge_Base/YouTube_Summaries/FINNOMENA'
-    """
-    normalized = folder_path.rstrip("/")
-    if not normalized.endswith("YouTube_Summaries"):
-        return folder_path
-    m = _CHANNEL_FRONTMATTER_RE.search(content)
-    if not m:
-        return folder_path
-    channel_name = _sanitize_filename(m.group(1).strip())
-    if "YouTube_Summaries" in folder_path:
-        return f"{folder_path}/{channel_name}"
-    return folder_path
-
-
-def _maybe_inject_publisher_subfolder(path: str, content: str) -> str:
-    """ถ้าโฟลเดอร์คือ News ให้ดึง publisher จาก YAML มาทำ subfolder"""
-    if "News" not in path.split("/"):
-        return path
-    
-    m = re.search(r"^publisher:\s*(.+)$", content, re.MULTILINE)
-    if not m:
-        return path
-        
-    publisher_name = m.group(1).strip().strip("'\"").strip()
-    
-    if publisher_name.lower().startswith("www."):
-        publisher_name = publisher_name[4:]
-        
-    parts = publisher_name.split('.')
-    publisher_name = '.'.join(p.capitalize() for p in parts)
-    
-    safe_pub = re.sub(r'[/\\?%*:|"<>]', '', publisher_name)
-    if not safe_pub:
-        return path
-        
-    return f"{path}/{safe_pub}"
