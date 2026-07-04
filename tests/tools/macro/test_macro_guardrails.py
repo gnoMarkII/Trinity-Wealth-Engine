@@ -272,3 +272,127 @@ def test_why_not_high_is_overridden_when_asset_is_downgraded():
     gold = next(a for a in direction.asset_allocation if a.asset_class == "Gold")
     assert gold.confidence == "medium"
     assert "ไม่มีเหตุผล" not in gold.why_not_high
+
+
+def test_staticproxy_invalidity():
+    from tools.macro.evaluation import _apply_validity
+    from schemas.macro_schemas import MarketObservable
+    obs = MarketObservable(
+        observable_id="TH10Y",
+        asset_bucket="fixed_income",
+        region="TH",
+        indicator="TH10Y",
+        name="Thailand 10Y [StaticProxy]",
+        value="2.65",
+        unit="%",
+        observed_at="2026-07-03",
+        source_file="Country_Macro_Snapshot_2026-07-03.md",
+        provider="StaticProxy",
+    )
+    valid_obs = _apply_validity(obs, "2026-07-03")
+    assert valid_obs.is_valid is False
+    assert valid_obs.confidence == "low"
+    assert "Mock/static proxy" in str(valid_obs.stale_reason)
+
+
+def test_gold_allowlist_cross_bucket():
+    obs_dfii = MarketObservable(
+        observable_id="obs_dfii10",
+        indicator="DFII10",
+        name="10-Year Treasury Inflation-Indexed Security",
+        value="2.05",
+        unit="%",
+        observed_at="2026-07-03",
+        source_file="Global_Macro_Snapshot_2026-07-03.md",
+        source_section="US Real Yields",
+        asset_bucket="fixed_income",
+        region="US",
+        confidence="high",
+        provider="FRED",
+        is_valid=True,
+    )
+    asset = AssetAllocationView(
+        asset_class="Gold",
+        stance=AssetStance.OVERWEIGHT,
+        rationale="Gold benefits from real yield DFII10 trends at 2.05%",
+        confidence="high",
+        supporting_data=["DFII10 = 2.05%"],
+        observable_refs=["obs_dfii10"],
+        source_refs=["Global_Macro_Snapshot_2026-07-03.md", "Regional_Macro_Snapshot_2026-07-03.md"],
+    )
+    direction = MacroStrategyDirection(
+        evaluated_at="2026-07-03T00:00:00Z",
+        overall_regime=EconomicState.GOLDILOCKS,
+        asset_allocation=[asset],
+        focus_themes=["Gold"],
+        conviction_level="high",
+        conviction_rationale="Real yield anchoring",
+        quant_narrative_alignment="aligned",
+        observable_registry={"obs_dfii10": obs_dfii},
+    )
+    gold = next(a for a in direction.asset_allocation if a.asset_class == "Gold")
+    assert gold.confidence == "high"
+    assert "obs_dfii10" in gold.observable_refs
+
+
+def test_auto_extraction_safety_net():
+    asset = AssetAllocationView(
+        asset_class="US Equities",
+        stance=AssetStance.OVERWEIGHT,
+        rationale="S&P 500 index target around 5600 points with strong earnings growth.",
+        confidence="high",
+        supporting_data=[],
+        observable_refs=[],
+        source_refs=["Global_Macro_Snapshot_2026-07-03.md", "Regional_Macro_Snapshot_2026-07-03.md"],
+    )
+    assert len(asset.supporting_data) > 0
+    assert any("[From rationale]" in s for s in asset.supporting_data)
+    assert asset.confidence in ["medium", "low"]
+
+
+def test_pair_trade_sizing_consistency():
+    obs_ratio = MarketObservable(
+        observable_id="obs_ratio_hyg_lqd",
+        indicator="HYG/LQD",
+        name="Credit Spread Ratio",
+        value="0.80",
+        unit="",
+        observed_at="2026-07-03",
+        source_file="Global_Macro_Snapshot_2026-07-03.md",
+        source_section="Credit Spread",
+        asset_bucket="fixed_income",
+        region="US",
+        confidence="high",
+        provider="Derived",
+        is_valid=True,
+    )
+    trade = PairTradeStrategy(
+        long_leg="High Yield Credit",
+        short_leg="Investment Grade Credit",
+        thesis="ใช้ beta เชิงเครดิตจาก ratio HYG/LQD 0.80 เพื่อเล่น risk-on spread",
+        catalyst="Credit spread ratio 0.80 เริ่มฟื้น",
+        risk="หาก spread กลับทิศ 3% ให้ลดความเสี่ยง",
+        time_horizon="1-3 Months",
+        confidence="high",
+        sizing_guidance="high_risk_budget",
+        supporting_data=["HYG/LQD ratio = 0.80"],
+        observable_refs=["obs_ratio_hyg_lqd"],
+        instrument_proxy="Long HYG / Short LQD via ETFs",
+        hedge_ratio="0.80x HYG per 1.00x LQD",
+        stop_loss_trigger="Stop loss if ratio falls below 0.76 (-5.0%)",
+        target_gain_or_rebalance="Take profit if ratio reaches 0.86 (+7.5%)",
+        max_drawdown_limit="Max drawdown limit 4.0%",
+    )
+    direction = MacroStrategyDirection(
+        evaluated_at="2026-07-03T00:00:00Z",
+        overall_regime=EconomicState.GOLDILOCKS,
+        asset_allocation=[],
+        focus_themes=["Credit relative value"],
+        conviction_level="medium",
+        conviction_rationale="Relative spread evidence is available",
+        quant_narrative_alignment="aligned",
+        pair_trades=[trade],
+        observable_registry={"obs_ratio_hyg_lqd": obs_ratio},
+    )
+    assert direction.pair_trades[0].confidence == "medium"
+    assert direction.pair_trades[0].sizing_guidance == "medium_risk_budget"

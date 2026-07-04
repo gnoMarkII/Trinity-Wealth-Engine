@@ -297,6 +297,18 @@ def _asset_bucket_from_name(asset_class: str) -> str | None:
     return None
 
 
+def _is_allowed_cross_bucket(target_bucket: str | None, obs: "MarketObservable") -> bool:
+    if not target_bucket:
+        return False
+    if target_bucket == obs.asset_bucket:
+        return True
+    if target_bucket == "commodities" and obs.asset_bucket == "fixed_income":
+        text = (obs.indicator + " " + obs.observable_id).lower()
+        if any(k in text for k in ["yield", "tips", "dfii10", "rate", "treasury", "policy", "fed"]):
+            return True
+    return False
+
+
 def _infer_observable_refs_from_text(
     text: str,
     observable_registry: dict[str, "MarketObservable"],
@@ -310,7 +322,7 @@ def _infer_observable_refs_from_text(
     for obs_id, obs in observable_registry.items():
         if not obs.is_valid:
             continue
-        if asset_bucket and obs.asset_bucket != asset_bucket:
+        if asset_bucket and not _is_allowed_cross_bucket(asset_bucket, obs):
             continue
         indicator_terms = [part for part in re.split(r"[^a-zA-Z0-9]+", obs.indicator.lower()) if len(part) >= 3]
         value_token = str(obs.value).replace(",", "").split()[0].lower()
@@ -326,7 +338,7 @@ def _infer_observable_refs_from_text(
             break
     if len(matches) < max_refs and asset_bucket:
         for obs_id, obs in observable_registry.items():
-            if obs.is_valid and obs.asset_bucket == asset_bucket and obs_id not in matches:
+            if obs.is_valid and _is_allowed_cross_bucket(asset_bucket, obs) and obs_id not in matches:
                 matches.append(obs_id)
                 if len(matches) >= max_refs:
                     break
@@ -374,6 +386,8 @@ def _downgrade_pair_trade_statistical_overclaim(
     )
     if has_single_point_relative and not has_historical:
         pair_trade.confidence = "medium"
+        if pair_trade.sizing_guidance == "high_risk_budget":
+            pair_trade.sizing_guidance = "medium_risk_budget"
         _add_warning_idempotent(
             pair_trade.validation_warnings,
             "Pair Trade Graceful Downgrade: Used single-point relative spread/ratio evidence instead of historical beta/correlation time series.",
@@ -418,6 +432,13 @@ class AssetAllocationView(BaseModel):
             if self.confidence == "high":
                 self.confidence = "medium"
             _add_warning_idempotent(self.validation_warnings, "Single-Source Penalty: Downgraded confidence to MEDIUM because view relies on only 1 source reference.")
+        if not _has_hard_data_numbers(self.supporting_data):
+            _auto_extract_with_provenance(self.supporting_data, self.rationale, "rationale")
+            _auto_extract_with_provenance(self.supporting_data, self.why_not_high, "why_not_high")
+        has_only_auto_extracted = self.supporting_data and all(item.startswith("[From ") for item in self.supporting_data)
+        if len(self.source_refs) == 1 or (not self.observable_refs and has_only_auto_extracted):
+            if self.confidence == "high":
+                self.confidence = "medium"
         if not _has_hard_data_numbers(self.supporting_data):
             self.confidence = "low"
             _add_warning_idempotent(self.validation_warnings, "Defensive Degradation: Downgraded confidence to LOW due to lack of numeric hard data in supporting_data.")
@@ -860,7 +881,7 @@ class MacroStrategyDirection(BaseModel):
             if self.observable_registry and bucket and not a.observable_refs:
                 refs = [
                     obs_id for obs_id, obs in self.observable_registry.items()
-                    if obs.is_valid and obs.asset_bucket == bucket
+                    if obs.is_valid and _is_allowed_cross_bucket(bucket, obs)
                 ][:3]
                 if refs:
                     a.observable_refs = refs

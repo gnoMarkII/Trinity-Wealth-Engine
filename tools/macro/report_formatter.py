@@ -108,6 +108,10 @@ def _translate_warning(message: str) -> str:
         return message.replace("Regime Probability Sum Warning:", "คำเตือนผลรวมความน่าจะเป็น regime:")
     if message.startswith("Regime Consistency Adjustment:"):
         return message.replace("Regime Consistency Adjustment:", "ปรับ regime ให้สอดคล้อง:")
+    if message.startswith("Risk Budget Guardrail:"):
+        return "คำเตือนกรอบความเสี่ยง: " + _translate_report_text(message.split(":", 1)[1].strip())
+    if message.startswith("Mandatory Field Missing:"):
+        return "ข้อมูลสำคัญขาดหาย: " + _translate_report_text(message.split(":", 1)[1].strip())
     return message
 
 
@@ -128,6 +132,44 @@ def _translate_report_text(value: str) -> str:
     }
     for old, new in replacements.items():
         text = text.replace(old, new)
+    return text
+
+
+def _sanitize_english_prefixes_catch_all(text: str) -> str:
+    """Sanitize any remaining English warning/guardrail prefixes in the final report."""
+    prefix_map = {
+        "Defensive Degradation:": "ลดระดับความมั่นใจ (Defensive):",
+        "Single-Source Penalty:": "ลดความมั่นใจ (Single-Source):",
+        "Stale Data Degradation:": "ลดระดับความมั่นใจ (Stale Data):",
+        "Active Allocation Guardrail:": "กรอบควบคุมมุมมองเชิงรุก:",
+        "Risk Budget Guardrail:": "กรอบควบคุมงบความเสี่ยง:",
+        "Mandatory Field Missing:": "ข้อมูลสำคัญขาดหาย:",
+        "Contradiction Degradation:": "ลดความมั่นใจเนื่องจากความขัดแย้ง:",
+        "Contradiction Warning:": "คำเตือนความขัดแย้ง:",
+        "Coverage Warning:": "คำเตือนความครอบคลุม:",
+        "Coverage Backfill:": "เติมเต็มความครอบคลุม:",
+        "Source Reference Warning:": "คำเตือนแหล่งอ้างอิง:",
+        "Source Reference Penalty:": "ลดระดับจากแหล่งอ้างอิง:",
+        "Source Reference Backfill:": "เติมเต็มแหล่งอ้างอิง:",
+        "Pair Trade Execution Guardrail:": "กรอบควบคุมการปฏิบัติการ Pair Trade:",
+        "Pair Trade Graceful Downgrade:": "ปรับลดความมั่นใจ Pair Trade:",
+        "Regime Probability Coverage Warning:": "คำเตือนความครอบคลุมสภาวะเศรษฐกิจ:",
+        "Regime Probability Sum Warning:": "คำเตือนผลรวมความน่าจะเป็นสภาวะเศรษฐกิจ:",
+        "Regime Consistency Adjustment:": "ปรับสภาวะเศรษฐกิจให้สอดคล้อง:",
+        "Portfolio Conviction Cap:": "เพดานความมั่นใจพอร์ตรวม:",
+        "Implementation Confidence Cap:": "เพดานความมั่นใจการปฏิบัติการ:",
+        "Gold Rationale Warning:": "คำเตือนเหตุผลทองคำ:",
+    }
+    for eng_prefix, thai_replacement in prefix_map.items():
+        text = text.replace(eng_prefix, thai_replacement)
+
+    def _fallback_sub(match: re.Match) -> str:
+        label = match.group(1)
+        if any(w in label for w in ["Guardrail", "Penalty", "Degradation", "Warning", "Backfill", "Cap", "Graceful", "Drop", "Missing", "Note", "Notice"]):
+            return f"คำเตือนระบบ ({label}):"
+        return match.group(0)
+
+    text = re.sub(r"\b([A-Z][a-zA-Z\s\-]+):\s", _fallback_sub, text)
     return text
 
 
@@ -361,4 +403,6 @@ def format_macro_strategy_report(direction: MacroStrategyDirection) -> str:
         "ไม่ถือเป็นคำแนะนำการลงทุนรายบุคคล คำสั่งซื้อขาย หรือการชี้ชวนให้ซื้อขายหลักทรัพย์ใดๆ ผู้ใช้งานควรประเมินข้อจำกัดและความเสี่ยงของพอร์ตการลงทุนก่อนดำเนินการเสมอ"
     )
 
-    return repair_mojibake("\n".join(lines))
+    raw_markdown = "\n".join(lines)
+    repaired_markdown = repair_mojibake(raw_markdown)
+    return _sanitize_english_prefixes_catch_all(repaired_markdown)

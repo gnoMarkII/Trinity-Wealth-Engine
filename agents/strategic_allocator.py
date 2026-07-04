@@ -19,10 +19,10 @@ STRATEGIC_ALLOCATOR_PROMPT = """คุณคือ Strategic Allocator ระด
 3. 3-Part Confidence Scoring & "Why Not HIGH":
    - ประเมินความมั่นใจผ่าน 3 แกน พร้อมระบุเหตุผลภาษาไทยใน `why_not_high` เสมอหากความมั่นใจไม่ถึง HIGH
 4. Contradiction Guardrails & Observables:
-   - ทุกเหตุผลต้องมีตัวเลขเชิงปริมาณจริงใน `supporting_data`
+   - ทุกเหตุผลต้องมีตัวเลขเชิงปริมาณจริงใน `supporting_data` เสมอ โดยให้คัดลอกตัวเลข Hard Data จากคำอธิบาย `rationale` หรือ `thesis` ลงใน `supporting_data` ด้วยเพื่อรับประกันหลักฐานเชิงตัวเลข
    - หากเงินเฟ้อสูงกว่า 3% หรือเร่งตัวขึ้น ห้ามสรุปสภาวะเป็น Dovish Reflation ง่ายๆ และหากแนะนำ Overweight หุ้นเติบโตแต่มีสัญญาณขัดแย้ง (เช่น Yields พุ่ง, Nasdaq อ่อน, Consumer sentiment ต่ำ, Housing starts อ่อน) ให้ลดความมั่นใจเหลือ MEDIUM
    - หากแนะนำ Overweight หุ้นเติบโตและพันธบัตรระยะยาวพร้อมกัน ต้องอธิบายภาษาไทยให้ชัดเจนว่าเป็น "Barbell Strategy" หรือ "Duration Hedge"
-   - หากแนะนำ Overweight ทองคำ (Gold) ห้ามอ้างอิงเพียงความเสี่ยงภูมิรัฐศาสตร์ลอยๆ บังคับว่าต้องอ้างอิง Real Yields, ทิศทางนโยบาย Fed, Policy Uncertainty, หรือแรงซื้อของธนาคารกลางเสมอ
+   - หากแนะนำ Overweight ทองคำ (Gold) ห้ามอ้างอิงเพียงความเสี่ยงภูมิรัฐศาสตร์ลอยๆ บังคับว่าต้องอ้างอิง Real Yields (เช่น DFII10 / TIPS Yield), ทิศทางนโยบาย Fed, หรือดัชนีค่าเงินดอลลาร์ (เช่น DTWEXBGS ดัชนีดอลลาร์แบบกว้างของ FRED ซึ่งแตกต่างจาก DXY ของ Yahoo) เสมอ
 5. Executable Relative Value (Pair Trades):
    - Use `market_observables_by_validity` from the quantitative input. Only IDs from `VALID INSTITUTIONAL HARD DATA OBSERVABLES (USE FOR HIGH/MEDIUM CONFIDENCE)` may support HIGH or MEDIUM confidence.
    - Put at least 2 to 3 distinct selected observable IDs into `observable_refs` for every `AssetAllocationView` and every `PairTradeStrategy` (e.g. `['obs_001', 'obs_005']`), and mirror the actual values in `supporting_data`. Distribute observables across multiple indicators/sources to avoid single-source penalties.
@@ -49,6 +49,8 @@ def invoke_strategic_allocator(model: BaseChatModel, quant_json: str, narrative_
                 f"[QUALITATIVE NARRATIVE]\n{narrative_json}\n\n"
                 "Return a MacroStrategyDirection object. Use only evidence present in the inputs. "
                 "If a core asset class lacks enough evidence, include a low-confidence neutral view instead of inventing data. "
+                "Always copy concrete numeric values from rationale/thesis into `supporting_data` to ensure quantitative provenance. "
+                "For Gold views, reference real yields (DFII10) or broad dollar index (DTWEXBGS from FRED, distinct from DXY). "
                 "Every asset view and pair trade MUST fill `observable_refs` with at least 2 to 3 distinct IDs from valid observables when claiming medium/high confidence. "
                 "Set `source_files` and each asset `source_refs` from observable `source_file` values (at least 2 distinct source references per asset if available). "
                 "Always include a dedicated Currencies/FX asset view; Thai Equities does not satisfy FX coverage. "

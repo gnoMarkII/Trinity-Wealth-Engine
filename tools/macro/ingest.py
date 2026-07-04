@@ -252,10 +252,12 @@ def ingest_country_macro() -> str:
     rows_by_id["Exports Growth"] = {"series_id": "Exports Growth", "name": "Exports Growth", "description": "การส่งออก", "value": 2.0, "prev": 2.0, "ma": 2.0, "unit": "%", "date": today, "change": "-"}
     rows_by_id["Tourism Growth"] = {"series_id": "Tourism Growth", "name": "Tourism Growth", "description": "การท่องเที่ยว", "value": 5.0, "prev": 5.0, "ma": 5.0, "unit": "%", "date": today, "change": "-"}
     rows_by_id["Domestic Stimulus"] = {"series_id": "Domestic Stimulus", "name": "Domestic Stimulus", "description": "นโยบายกระตุ้นเศรษฐกิจ", "value": 1.0, "prev": 1.0, "ma": 1.0, "unit": "", "date": today, "change": "-"}
+    rows_by_id["Current Account"] = {"series_id": "Current Account", "name": "Thailand Current Account [StaticProxy]", "description": "StaticProxy: ดุลบัญชีเดินสะพัดไทย proxy ตัวอย่างสำหรับการทดสอบเท่านั้น; invalid for HIGH/MEDIUM confidence without live feed", "value": 1.2, "prev": 1.2, "ma": 1.2, "unit": "B USD", "date": today, "change": "StaticProxy", "provider": "StaticProxy", "is_valid": False, "confidence": "low"}
+    rows_by_id["Tourist Arrivals"] = {"series_id": "Tourist Arrivals", "name": "Foreign Tourist Arrivals [StaticProxy]", "description": "StaticProxy: จำนวนนักท่องเที่ยวต่างชาติเข้าไทย proxy ตัวอย่างสำหรับการทดสอบเท่านั้น; invalid for HIGH/MEDIUM confidence without live feed", "value": 2.85, "prev": 2.85, "ma": 2.85, "unit": "M persons", "date": today, "change": "StaticProxy", "provider": "StaticProxy", "is_valid": False, "confidence": "low"}
 
     _THAI_GROUPS_MOCK = [
-        ("🏦 Monetary Policy & Liquidity", ["THB=X", "Policy Rate", "TH10Y"]),
-        ("📈 Economic Growth", ["^SET.BK", "Exports Growth", "Tourism Growth"]),
+        ("🏦 Monetary Policy & Liquidity", ["THB=X", "Policy Rate", "TH10Y", "Current Account"]),
+        ("📈 Economic Growth", ["^SET.BK", "Exports Growth", "Tourism Growth", "Tourist Arrivals"]),
         ("💰 Inflation", ["CPI Inflation"]),
         ("🛡️ Geopolitics & Risk Sentiment", ["Domestic Stimulus"])
     ]

@@ -59,9 +59,9 @@ def _extract_observed_at(raw_date: str, fallback_date: str) -> str:
 def _infer_asset_bucket(indicator: str, source_key: str) -> str:
     text = indicator.lower()
     symbol = _extract_symbol(indicator).lower()
-    if any(k in text or k in symbol for k in ["dgs", "tnx", "tyx", "fvx", "t10y", "yield", "treasury", "bond", "spread", "lqd", "hyg"]):
+    if any(k in text or k in symbol for k in ["dgs", "tnx", "tyx", "fvx", "t10y", "yield", "treasury", "bond", "spread", "lqd", "hyg", "dfii10", "tips"]):
         return "fixed_income"
-    if any(k in text or k in symbol for k in ["dxy", "dollar", "usd", "eur", "jpy", "cny", "thb", "=x"]):
+    if any(k in text or k in symbol for k in ["dxy", "dollar", "usd", "eur", "jpy", "cny", "thb", "=x", "dtwexbgs", "current account", "tourist arrivals"]):
         return "fx"
     if any(k in text or k in symbol for k in ["gold", "oil", "wti", "brent", "copper", "gas", "gc=f", "cl=f", "hg=f", "ng=f"]):
         return "commodities"
@@ -77,7 +77,7 @@ def _infer_asset_bucket(indicator: str, source_key: str) -> str:
 def _infer_provider(indicator: str, source_key: str) -> str:
     text = indicator.lower()
     symbol = _extract_symbol(indicator)
-    if "staticproxy" in text or "static proxy" in text or "mock" in text or symbol.upper() == "TH10Y":
+    if "staticproxy" in text or "static proxy" in text or "mock" in text or symbol.upper() in ["TH10Y", "CURRENT ACCOUNT", "TOURIST ARRIVALS"]:
         return "StaticProxy"
     if symbol and any(token in symbol for token in ["=", "^", "-USD"]):
         return "Yahoo"

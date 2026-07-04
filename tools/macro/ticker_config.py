@@ -413,6 +413,14 @@ _FRED_SERIES: dict[str, tuple[str, str]] = {
         "10Y-2Y Yield Spread",
         "ส่วนต่างผลตอบแทน 10Y ลบ 2Y — ค่าติดลบ = Inverted Yield Curve สัญญาณ Recession ล่วงหน้า",
     ),
+    "DFII10": (
+        "10-Year Real Yield (TIPS)",
+        "อัตราผลตอบแทนพันธบัตรที่แท้จริง 10 ปี (TIPS Yield) — ต้นทุนค่าเสียโอกาสที่สำคัญที่สุดของทองคำ",
+    ),
+    "DTWEXBGS": (
+        "US Dollar Index (Nominal Broad - FRED)",
+        "ดัชนีค่าเงินดอลลาร์สหรัฐฯ แบบกว้าง (Nominal Broad) — ตัวชี้วัดโมเมนตัมค่าเงินและแรงกดดันต่อสินทรัพย์ EM",
+    ),
     # --- Inflation & Expectations ---
     "CPIAUCSL": (
         "CPI (YoY %)",
@@ -515,6 +523,8 @@ _FRED_UNIT_DISPLAY: dict[str, str] = {
     "FEDFUNDS": "%",
     "DGS2": "%",
     "T10Y2Y": "% pts",
+    "DFII10": "%",
+    "DTWEXBGS": "Index",
     "CPIAUCSL": "% YoY",
     "PCEPI": "% YoY",
     "PCEPILFE": "% YoY",
@@ -539,7 +549,7 @@ _FRED_UNIT_DISPLAY: dict[str, str] = {
 }
 
 _US_GROUPS: list[tuple[str, list[str]]] = [
-    ("🏦 Monetary Policy & Liquidity", ["FEDFUNDS", "DGS2", "T10Y2Y", "M2SL", "BAA10Y", "BAMLH0A0HYM2"]),
+    ("🏦 Monetary Policy & Liquidity", ["FEDFUNDS", "DGS2", "T10Y2Y", "DFII10", "DTWEXBGS", "M2SL", "BAA10Y", "BAMLH0A0HYM2"]),
     ("📈 Economic Growth", ["GDPC1", "INDPRO", "RSAFS", "HOUST", "UNRATE", "ICSA"]),
     ("💰 Inflation", ["CPIAUCSL", "PCEPI", "PCEPILFE", "PPIACO", "T5YIE", "T10YIE"]),
     ("🛡️ Geopolitics & Risk Sentiment", ["UMCSENT"]),

@@ -148,3 +148,25 @@ def test_formatter_sanitizes_stale_low_and_weak_why_not_high():
     assert "ไม่มีเหตุผลที่ความมั่นใจไม่ถึงระดับสูง" not in report
     assert "อ้างอิงแหล่งข้อมูลโดยตรงเพียงแหล่งเดียว" in report
     assert "Macro_Baseline_" in report
+
+
+def test_catch_all_sanitization_negative_assertions():
+    from tools.macro.report_formatter import _sanitize_english_prefixes_catch_all
+    sample_text = (
+        "> - ⚠️ **คำเตือน (Warning):** Defensive Degradation: Portfolio conviction downgraded to LOW because >=50% of asset views lack numeric hard data.\n"
+        "> - ⚠️ **คำเตือน (Warning):** Single-Source Penalty: Downgraded confidence to MEDIUM.\n"
+        "> - ⚠️ **คำเตือน (Warning):** Stale Data Degradation: Downgraded overall conviction level from HIGH to MEDIUM.\n"
+        "> - ⚠️ **คำเตือน (Warning):** Active Allocation Guardrail: Changed stance from Overweight to Neutral.\n"
+        "> - ⚠️ **คำเตือน (Warning):** Unknown Future Guardrail: Some fallback message.\n"
+    )
+    sanitized = _sanitize_english_prefixes_catch_all(sample_text)
+    assert "Defensive Degradation:" not in sanitized
+    assert "Single-Source Penalty:" not in sanitized
+    assert "Stale Data Degradation:" not in sanitized
+    assert "Active Allocation Guardrail:" not in sanitized
+    assert "Unknown Future Guardrail:" not in sanitized
+    assert "ลดระดับความมั่นใจ (Defensive):" in sanitized
+    assert "ลดความมั่นใจ (Single-Source):" in sanitized
+    assert "ลดระดับความมั่นใจ (Stale Data):" in sanitized
+    assert "กรอบควบคุมมุมมองเชิงรุก:" in sanitized
+    assert "คำเตือนระบบ (Unknown Future Guardrail):" in sanitized
