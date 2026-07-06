@@ -91,6 +91,9 @@ STATISTICAL_OVERCLAIM = "STATISTICAL_OVERCLAIM"
 ALLOCATION_DELTA_INVALID = "ALLOCATION_DELTA_INVALID"
 FX_STANCE_MISMATCH = "FX_STANCE_MISMATCH"
 SYSTEM_PLACEHOLDER = "SYSTEM_PLACEHOLDER"
+HALLUCINATED_ATTRIBUTION_CLEANED = "HALLUCINATED_ATTRIBUTION_CLEANED"
+SUPPORTING_DATA_MISMATCH = "SUPPORTING_DATA_MISMATCH"
+MISSING_OBSERVABLE_REFS = "MISSING_OBSERVABLE_REFS"
 
 # Lean MVP Upgrade Warnings
 VALUATION_RICH_WARNING = "VALUATION_RICH_WARNING"
@@ -102,6 +105,7 @@ CORRELATION_BREAKDOWN_WARNING = "CORRELATION_BREAKDOWN_WARNING"
 RETRYABLE_CRITICAL_IDS: set[str] = {
     COVERAGE_WARNING_INCOMPLETE,
     MISSING_ASSET_BUCKET,
+    MISSING_OBSERVABLE_REFS,
     PT_MANDATORY_FIELD_MISSING,
     PT_EXECUTION_GUARDRAIL,
     GRACEFUL_DROP_PAIR_TRADES,
@@ -154,6 +158,8 @@ THAI_TEMPLATES: Dict[str, str] = {
         "source_refs ว่าง จึงไม่ควรถือว่าความมั่นใจด้านข้อมูลเป็นระดับสูง",
     SOURCE_REF_WARNING_OMITTED:
         "มุมมองสินทรัพย์ไม่ได้ระบุ source_refs",
+    MISSING_OBSERVABLE_REFS:
+        "มุมมองสินทรัพย์ '{asset_class}' ยังไม่ได้ระบุ observable_refs กรุณาเลือกรหัส observable ที่ตรงกับตัวเลขใน supporting_data มาใส่ใน observable_refs อย่างน้อย 2 รายการ",
     ACTIVE_ALLOC_GUARDRAIL:
         "ปรับมุมมองเป็น Neutral เพราะความมั่นใจเป็น LOW หรือขาดตัวเลข hard data",
     COVERAGE_BACKFILL_VIEW:
@@ -232,6 +238,10 @@ THAI_TEMPLATES: Dict[str, str] = {
         "แจ้งเตือนระดับความเสี่ยงด้านสินเชื่อ: High Yield Bond Spread กว้างกว่าเกณฑ์ 5.0% หรือปรับตัวกว้างขึ้นอย่างรวดเร็วในช่วง 3 เดือนที่ผ่านมา",
     CORRELATION_BREAKDOWN_WARNING:
         "แจ้งเตือนความสัมพันธ์ระหว่างหุ้นกับพันธบัตร: Stock-Bond Correlation ในรอบ 60 วันมีค่าเป็นบวก (> 0.30) ซึ่งอาจทำให้พันธบัตรไม่สามารถป้องกันความเสี่ยง (Hedge) ให้กับตลาดหุ้นได้อย่างมีประสิทธิภาพ ควรพิจารณาใช้ Cash, Gold หรือ Options แทน",
+    HALLUCINATED_ATTRIBUTION_CLEANED:
+        "ตรวจพบและทำความสะอาดการอ้างอิงที่ไม่ถูกต้องหรือหลุดรูปแบบ (เช่น อ้างอิงข่าวในรูปแบบ YouTube Channel)",
+    SUPPORTING_DATA_MISMATCH:
+        "แจ้งเตือนความคลาดเคลื่อน: ตัวเลขใน supporting_data มีค่าไม่ตรงกับ observable_registry ที่ระบบบันทึกไว้จริง",
 }
 
 

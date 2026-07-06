@@ -8,11 +8,11 @@
     "Recession / Deflation": 5
   },
   "regime_evidence": [
-    {"dimension": "Growth", "signal": "Expansion", "evidence": "GDP 2.5%", "conflict": "-", "confidence": "high", "observable_refs": ["obs_gdp", "obs_indpro"], "source_refs": ["us_macro.md"]},
-    {"dimension": "Inflation", "signal": "Disinflation", "evidence": "CPI 2.4%", "conflict": "-", "confidence": "high", "observable_refs": ["obs_cpi", "obs_pce"], "source_refs": ["us_macro.md"]},
-    {"dimension": "Liquidity", "signal": "Easing", "evidence": "Fed Funds 4.75%", "conflict": "-", "confidence": "high", "observable_refs": ["obs_fedfunds", "obs_nfci"], "source_refs": ["us_macro.md"]},
-    {"dimension": "Risk sentiment", "signal": "Bullish", "evidence": "VIX 15.2", "conflict": "-", "confidence": "high", "observable_refs": ["obs_vix", "obs_pcall"], "source_refs": ["us_macro.md"]},
-    {"dimension": "Regional Inflation Risk", "signal": "Elevated", "evidence": "EU CPI 2.8%", "conflict": "ความผันผวนของราคาพลังงานในยุโรปอาจทำให้เงินเฟ้อลดลงช้ากว่าสหรัฐฯ", "confidence": "medium", "observable_refs": ["obs_eu_cpi"], "source_refs": ["eu_macro.md"]}
+    {"dimension": "Growth", "signal": "Expansion", "evidence": "US Real GDP YoY 2.5%", "conflict": "-", "confidence": "high", "observable_refs": ["obs_us_gdp", "obs_us_indpro"], "source_refs": ["us_macro.md"]},
+    {"dimension": "Inflation", "signal": "Disinflation", "evidence": "US CPI YoY 2.4%", "conflict": "-", "confidence": "high", "observable_refs": ["obs_cpi_us", "obs_pce_us"], "source_refs": ["us_macro.md"]},
+    {"dimension": "Liquidity", "signal": "Easing", "evidence": "Fed Funds Rate 4.75%", "conflict": "-", "confidence": "high", "observable_refs": ["obs_fedfunds", "obs_nfci"], "source_refs": ["us_macro.md"]},
+    {"dimension": "Risk sentiment", "signal": "Bullish", "evidence": "CBOE VIX 15.2", "conflict": "-", "confidence": "high", "observable_refs": ["obs_vix", "obs_pcall"], "source_refs": ["us_macro.md"]},
+    {"dimension": "Regional Inflation Risk", "signal": "Elevated", "evidence": "EU CPI YoY 2.8%", "conflict": "ความผันผวนของราคาพลังงานในยุโรปอาจทำให้เงินเฟ้อลดลงช้ากว่าสหรัฐฯ", "confidence": "medium", "observable_refs": ["obs_eu_cpi"], "source_refs": ["eu_macro.md"]}
   ],
   "asset_allocation": [
     {
@@ -25,8 +25,8 @@
       "time_horizon": "3-6 months",
       "rationale": "ได้รับแรงหนุนจากดอกเบี้ยขาลงและผลประกอบการกลุ่มเทคโนโลยีแข็งแกร่ง",
       "why_not_high": "-",
-      "supporting_data": ["EPS growth 10%", "Real Yield 1.8%"],
-      "observable_refs": ["obs_001", "obs_002"],
+      "supporting_data": ["S&P 500 Forward Earnings Yield 4.63%", "Equity Risk Premium 0.14%"],
+      "observable_refs": ["obs_ey_gspc", "obs_erp_gspc"],
       "source_refs": ["fred_macro.md", "us_sector.md"]
     },
     {
@@ -39,8 +39,8 @@
       "time_horizon": "3-6 months",
       "rationale": "ผลตอบแทนยังน่าสนใจแต่มีความเสี่ยงจากปริมาณการออกพันธบัตรใหม่",
       "why_not_high": "ความผันผวนของอุปทานพันธบัตรสหรัฐฯ ในระยะยาว",
-      "supporting_data": ["10Y Yield 4.2%"],
-      "observable_refs": ["obs_003", "obs_004"],
+      "supporting_data": ["US 10Y Treasury Yield 4.25%", "US CPI YoY 2.4%"],
+      "observable_refs": ["obs_us_10y", "obs_cpi_us"],
       "source_refs": ["fred_macro.md", "global_snapshot.md"]
     },
     {
@@ -53,8 +53,8 @@
       "time_horizon": "3-6 months",
       "rationale": "ได้รับแรงหนุนจากการลดลงของ Real Yields และความต้องการสินทรัพย์ปลอดภัย",
       "why_not_high": "-",
-      "supporting_data": ["DFII10 1.8%", "DTWEXBGS 102.5"],
-      "observable_refs": ["obs_005", "obs_006"],
+      "supporting_data": ["US 10Y Real Yield 1.85%", "US Dollar Index 102.5"],
+      "observable_refs": ["obs_dfii10", "obs_dx_idx"],
       "source_refs": ["fred_macro.md", "global_snapshot.md"]
     },
     {
@@ -67,8 +67,8 @@
       "time_horizon": "1-3 months",
       "rationale": "เงินดอลลาร์มีแนวโน้มแข็งค่าเมื่อเทียบกับเงินบาท จากส่วนต่างดอกเบี้ยและฤดูกาลท่องเที่ยวไทยที่ชะลอตัว",
       "why_not_high": "ความไม่แน่นอนของการแทรกแซงจากธนาคารแห่งประเทศไทย",
-      "supporting_data": ["USD/THB 36.5", "Policy diff 2.25%"],
-      "observable_refs": ["obs_007", "obs_008"],
+      "supporting_data": ["USD/THB Spot 36.50", "US vs TH Policy Rate Spread 2.25%"],
+      "observable_refs": ["obs_usd_thb", "obs_rate_diff_th_us"],
       "source_refs": ["th_macro.md", "fred_macro.md"]
     },
     {
@@ -81,8 +81,8 @@
       "time_horizon": "1-3 months",
       "rationale": "ลดสัดส่วนเงินสดเพื่อนำไปลงทุนในสินทรัพย์เสี่ยงที่ได้รับประโยชน์จากดอกเบี้ยขาลง",
       "why_not_high": "-",
-      "supporting_data": ["3M T-Bill 4.6%"],
-      "observable_refs": ["obs_009", "obs_010"],
+      "supporting_data": ["US 3M Treasury Bill Yield 4.60%"],
+      "observable_refs": ["obs_us_3m"],
       "source_refs": ["fred_macro.md", "global_snapshot.md"]
     }
   ],
@@ -101,8 +101,8 @@
       "thesis": "หุ้นเทคโนโลยีสหรัฐฯ มีอัตราการเติบโตของกำไรสูงกว่ายุโรปอย่างมีนัยสำคัญ",
       "catalyst": "รายงานผลประกอบการไตรมาสและแนวโน้มการลงทุน AI",
       "risk": "ความเสี่ยงด้านกฎระเบียบเทคโนโลยีและอัตราแลกเปลี่ยน EUR/USD",
-      "supporting_data": ["QQQ EPS +15%", "VGK EPS +2%"],
-      "observable_refs": ["obs_001", "obs_011"]
+      "supporting_data": ["QQQ Forward P/E 26.5x", "VGK Forward P/E 13.2x"],
+      "observable_refs": ["obs_pe_qqq", "obs_pe_vgk"]
     }
   ],
   "risk_scenarios": [

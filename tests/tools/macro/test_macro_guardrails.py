@@ -810,3 +810,61 @@ def test_institutional_review_guardrails():
     )
     assert direction.conviction_rationale == "ความเชื่อมั่นระดับสูงเกิดจากสภาพคล่องทั่วโลก"
     assert any("CONVICTION_CONTRADICTION" in str(w) or "ความขัดแย้งด้านระดับความเชื่อมั่น" in str(w) for w in direction.validation_warnings)
+
+
+def test_hallucinated_attribution_cleaning_and_supporting_data_mismatch():
+    from schemas.macro_schemas import AssetAllocationView, AssetStance, MarketObservable, EconomicState
+    
+    obs = MarketObservable(
+        observable_id="obs_qqq_spy",
+        asset_bucket="equities",
+        region="US",
+        indicator="US Tech vs US Market Ratio (QQQ/SPY)",
+        value="0.92",
+        unit="Ratio",
+        observed_at="2026-07-05",
+        source_file="test.py",
+        is_valid=True
+    )
+    
+    # Create asset view with hallucinated attribution and mismatched supporting data
+    asset = AssetAllocationView(
+        asset_class="US Equities",
+        asset_bucket="equities",
+        stance=AssetStance.OVERWEIGHT,
+        rationale="การปรับตัวของราคาน้ำมันดิบจาก OPEC+ (Channel: Yahoo Finance: 0h)",
+        confidence="high",
+        supporting_data=["QQQ/SPY Ratio = 5089.9998"],
+        observable_refs=["obs_qqq_spy"],
+        source_refs=["Global_Macro_Snapshot.md"]
+    )
+    
+    # 1. Verify hallucinated attribution (Channel: Yahoo Finance: 0h) was cleaned to (Source: Yahoo Finance)
+    assert "(Source: Yahoo Finance)" in asset.rationale
+    assert "Channel: Yahoo Finance" not in asset.rationale
+    
+    # 2. When direction is created, check supporting data mismatch warning
+    direction = MacroStrategyDirection(
+        overall_regime=EconomicState.REFLATION,
+        time_horizon="3-6 เดือน",
+        conviction_level="high",
+        quant_narrative_alignment="aligned",
+        evaluated_at="2026-07-05T10:00:00",
+        focus_themes=["AI Tech Growth (Channel: Reuters: 2d)"],
+        asset_allocation=[asset],
+        pair_trades=[],
+        conviction_rationale="Solid data across markets",
+        divergence_note="-",
+        source_files=["Global_Macro_Snapshot.md"],
+        observable_registry={"obs_qqq_spy": obs}
+    )
+    
+    # Check that focus_themes attribution was also cleaned
+    assert "(Source: Reuters)" in direction.focus_themes[0]
+    
+    # Check warnings
+    assert any("HALLUCINATED_ATTRIBUTION_CLEANED" in str(w) or "ทำความสะอาดการอ้างอิง" in str(w) for w in direction.validation_warnings)
+    assert any("SUPPORTING_DATA_MISMATCH" in str(w) or "ตัวเลขใน supporting_data มีค่าไม่ตรงกับ" in str(w) for w in asset.validation_warnings)
+    # Also verify asset confidence downgraded from high to medium due to supporting data mismatch
+    assert asset.confidence == "medium"
+

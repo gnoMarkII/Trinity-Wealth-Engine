@@ -34,7 +34,20 @@ def create_macro_economist(model: BaseChatModel):
         except Exception as e:
             news_text = f"Error fetching news: {e}"
             
-        context = f"=== Baseline ===\n{baseline_text}\n\n=== News ===\n{news_text}"
+        try:
+            from tools.knowledge.youtube_monitor import load_recent_youtube_insights
+            from core.logger import get_logger
+            youtube_text = load_recent_youtube_insights(lookback_days=14, max_chars=15_000)
+            if youtube_text:
+                n_clips = youtube_text.count("[") if "[" in youtube_text else 1
+                get_logger(__name__).info(f"Loaded youtube clips ({n_clips} blocks, {len(youtube_text)} chars)")
+            youtube_section = f"\n\n=== YouTube Analyst Insights ===\n{youtube_text}" if youtube_text else ""
+        except Exception as e:
+            from core.logger import get_logger
+            get_logger(__name__).warning("Error loading youtube insights: %s", e)
+            youtube_section = f"\n\n=== YouTube Analyst Insights ===\nError fetching YouTube insights: {e}"
+            
+        context = f"=== Baseline ===\n{baseline_text}\n\n=== News ===\n{news_text}{youtube_section}"
         
         # 2. Use structured output to force correct schema
         structured = model.with_structured_output(NarrativeContext)

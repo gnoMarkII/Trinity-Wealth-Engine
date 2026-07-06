@@ -1,4 +1,5 @@
 import os
+import re
 import time
 import uuid
 import json
@@ -28,6 +29,18 @@ from core.utils import normalize_content
 
 log = get_logger(__name__)
 
+
+def _msg_role(m) -> str:
+    return "human" if isinstance(m, HumanMessage) else "assistant"
+
+
+def _sanitize_researcher_instruction(instruction: str) -> str:
+    """ตัดคำที่อาจชักจูงให้ Researcher พยายามเรียก tool บันทึกไฟล์เอง"""
+    sanitized = re.sub(r'(แล้ว)?(ให้)?บันทึก(\s*(ลง|ใน|ไปที่|ไปยัง)?\s*(Vault|วอลท์|vault)?)?', '', instruction, flags=re.IGNORECASE)
+    sanitized = re.sub(r'\bsave\s+(to\s+)?vault\b', '', sanitized, flags=re.IGNORECASE)
+    return sanitized.strip()
+
+
 # Single-tier config: ทุก agent ใช้ gemini-3.1-flash-lite-preview เป็น default
 # Fallback chain (core/llm_factory.FALLBACK_MODEL) = openai/gpt-oss-120b:free (OpenRouter)
 _MANAGER_MODEL = os.getenv("MANAGER_MODEL", "gemini-3.1-flash-lite-preview")
@@ -39,7 +52,7 @@ _MACRO_QUANT_MODEL = os.getenv("MACRO_QUANT_MODEL", "gemini-3.1-flash-lite-previ
 _MACRO_ECONOMIST_MODEL = os.getenv("MACRO_ECONOMIST_MODEL", "gemini-3.1-flash-lite-preview")
 _STRATEGIC_ALLOCATOR_MODEL = os.getenv("STRATEGIC_ALLOCATOR_MODEL", "gemini-3.1-flash-lite-preview")
 _ROUTER_HISTORY_LIMIT = 20
-_MAX_REPLAN = 2
+_MAX_REPLAN = 5
 
 
 class RouteMeta(TypedDict, total=False):
@@ -311,10 +324,15 @@ def build_graph(checkpointer=None) -> StateGraph:
         elif target == "macro_intel":
             goto_target = "macro_quant"
 
+        if target == "researcher":
+            instruction = _sanitize_researcher_instruction(task["instruction"])
+        else:
+            instruction = task["instruction"]
+
         return Command(
             goto=goto_target,
             update={
-                "messages": messages_update + [HumanMessage(content=task["instruction"], name="manager")],
+                "messages": messages_update + [HumanMessage(content=instruction, name="manager")],
                 "route_meta": meta,
                 "task_queue": rest,
                 "replan_count": replan_count_update,
@@ -428,9 +446,17 @@ def build_graph(checkpointer=None) -> StateGraph:
                 "วิเคราะห์ปัจจัยเชิงคุณภาพ (Narrative) จากข้อมูลใน Vault\n"
                 f"ผลลัพธ์จาก Quant Agent (ใช้อ้างอิง): {json.dumps(validated_json, ensure_ascii=False)}"
             )
+            turn_id = state.get("turn_id", "unknown")
+            elapsed = _get_elapsed(state.get("route_meta") or {})
+            log_worker_result(turn_id, "macro_quant", reply, status="success", elapsed_sec=elapsed)
             return Command(
                 goto="macro_economist",
-                update={"quant_raw": reply, "quant_score": validated_json, "messages": [HumanMessage(content=instruction, name="manager")]}
+                update={
+                    "quant_raw": reply,
+                    "quant_score": validated_json,
+                    "messages": [HumanMessage(content=instruction, name="manager")],
+                    "route_meta": {"source": "macro_quant", "target": "macro_economist", "worker_started_at": time.monotonic()},
+                }
             )
         except Exception as e:
             # If it's not JSON, it might be an error from the tool
@@ -454,9 +480,17 @@ def build_graph(checkpointer=None) -> StateGraph:
             from tools.macro.baselines import save_macro_baseline
             save_macro_baseline(validated_json)
 
+            turn_id = state.get("turn_id", "unknown")
+            elapsed = _get_elapsed(state.get("route_meta") or {})
+            log_worker_result(turn_id, "macro_economist", reply, status="success", elapsed_sec=elapsed)
+
             return Command(
                 goto="strategic_allocator",
-                update={"narrative_raw": reply, "narrative_context": validated_json}
+                update={
+                    "narrative_raw": reply,
+                    "narrative_context": validated_json,
+                    "route_meta": {"source": "macro_economist", "target": "strategic_allocator", "worker_started_at": time.monotonic()},
+                }
             )
         except Exception as e:
             log_worker_result(state.get("turn_id", "unknown"), "macro_economist", f"Validation fallback: {e}\n{reply}", status="warning")
@@ -552,7 +586,7 @@ def build_graph(checkpointer=None) -> StateGraph:
         elapsed = _get_elapsed(state.get("route_meta") or {})
 
         if _has_researcher_frontmatter(report):
-            log_worker_result(turn_id, "macro_intel", report, status="success", elapsed_sec=elapsed)
+            log_worker_result(turn_id, "strategic_allocator", report, status="success", elapsed_sec=elapsed)
             return Command(
                 goto="prepare_archivist",
                 update={
@@ -561,7 +595,7 @@ def build_graph(checkpointer=None) -> StateGraph:
             )
 
         status = "failure" if report.strip().startswith("Error:") else "info"
-        log_worker_result(turn_id, "macro_intel", report, status=status, elapsed_sec=elapsed)
+        log_worker_result(turn_id, "strategic_allocator", report, status=status, elapsed_sec=elapsed)
         return Command(
             goto="supervisor",
             update={

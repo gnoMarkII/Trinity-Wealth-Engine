@@ -72,3 +72,48 @@ def test_risk_correlation_valid_and_breakdown():
     assert spy_tlt.is_valid is True
     assert spy_tlt.value == "0.35"
     assert spy_tlt.metadata.get("is_breakdown") is True
+
+
+def test_etf_price_mapping_does_not_use_index_levels():
+    # Test that ^GSPC index level (7483.24) is NOT mistakenly mapped to SPY ETF price
+    obs_gspc = MarketObservable(
+        observable_id="^GSPC",
+        asset_bucket="equities",
+        region="US",
+        indicator="S&P 500 Index Level",
+        value="7483.24",
+        unit="Index",
+        observed_at="2026-07-05",
+        source_file="test.py",
+        is_valid=True
+    )
+    obs_qqq = MarketObservable(
+        observable_id="obs_qqq",
+        asset_bucket="equities",
+        region="US",
+        indicator="Invesco QQQ Trust",
+        value="508.99",
+        unit="USD",
+        observed_at="2026-07-05",
+        source_file="test.py",
+        is_valid=True
+    )
+    
+    # If price getter returns true ETF price for SPY (550.0)
+    def mock_price_getter(sym):
+        if sym == "SPY":
+            return 550.00
+        return None
+
+    results = build_derived_pair_observables(
+        existing_observables=[obs_gspc, obs_qqq],
+        price_getter=mock_price_getter,
+        use_mock_fallback=True
+    )
+    qqq_spy = next((o for o in results if o.observable_id == "obs_pair_qqq_spy"), None)
+    assert qqq_spy is not None
+    # If 7483.24 was used, ratio would be 508.99 / 7483.24 = 0.068
+    # With correct 550.00 ETF price, ratio is 508.99 / 550.00 = 0.925
+    val_float = float(qqq_spy.value)
+    assert 0.8 < val_float < 1.1, f"Ratio {val_float} should be realistic ETF price ratio around ~0.92, not index level ratio!"
+

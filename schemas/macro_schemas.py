@@ -3,6 +3,9 @@ from enum import Enum
 from typing import Literal, Optional, Any
 from pydantic import BaseModel, Field, computed_field, field_validator, model_validator
 import re
+import logging
+
+logger = logging.getLogger(__name__)
 from schemas.warning_registry import (
     WarningMessage,
     DEFENSIVE_LOW_SUPPORTING_DATA,
@@ -32,6 +35,9 @@ from schemas.warning_registry import (
     STATISTICAL_OVERCLAIM,
     ALLOCATION_DELTA_INVALID,
     FX_STANCE_MISMATCH,
+    HALLUCINATED_ATTRIBUTION_CLEANED,
+    SUPPORTING_DATA_MISMATCH,
+    MISSING_OBSERVABLE_REFS,
 )
 from schemas.report_labels import DOWNGRADE_WARNING_IDS, WHY_NOT_HIGH_MESSAGES
 
@@ -418,6 +424,102 @@ def _downgrade_pair_trade_statistical_overclaim(
             str(WarningMessage(PT_GRACEFUL_DOWNGRADE)),
         )
 
+
+def _clean_hallucinated_attributions(text: str) -> str:
+    """ทำความสะอาดการอ้างอิงที่หลุดรูปแบบหรืออ้างข่าวในรูปแบบ YouTube Channel เช่น (Channel: Yahoo Finance: 0h)"""
+    if not text or not isinstance(text, str):
+        return text
+    def replace_fake(m):
+        source = m.group(1).strip()
+        ref = m.group(2).strip()
+        if re.match(r'^(age_)?\d+[hdms]$', ref, re.IGNORECASE) or any(k in source.lower() for k in ["yahoo", "reuters", "bloomberg", "cnbc", "news", "fred", "investing.com", "infoquest", "wsj", "ft.com", "settrade", "bangkok post"]):
+            return f"(Source: {source})"
+        return m.group(0)
+    return re.sub(r'[\(\[]\s*Channel\s*:\s*([^:\]\)]+)\s*:\s*([^\]\)]+)\s*[\)\]]', replace_fake, text, flags=re.IGNORECASE)
+
+
+def _split_supporting_clauses(item: str) -> list[str]:
+    """แตก supporting_data string เป็นท่อนย่อยตาม comma/semicolon
+    เพื่อไม่ให้ตัวเลขจากคนละสถิติ (เช่น Ratio vs Z-score) ถูกเทียบข้ามกัน"""
+    return [c.strip() for c in re.split(r'[,;]', str(item)) if c.strip()]
+
+
+def _is_excluded_number(num: float) -> bool:
+    """ตัวเลขปีหรือตัวเลขจำนวนเต็มเล็กๆ (เช่น เปอร์เซ็นต์แบบง่าย) ไม่ต้องเช็ค"""
+    if 1990 <= num <= 2050 and num == int(num):
+        return True
+    if num == int(num) and num <= 100:
+        return True
+    return False
+
+
+def _validate_supporting_data_against_registry(
+    supporting_data: list[str],
+    observable_refs: list[str],
+    observable_registry: dict[str, Any],
+    warnings_list: list[str]
+) -> None:
+    """ตรวจสอบความสอดคล้องของตัวเลขใน supporting_data เทียบกับ observable_registry
+    หลักการ: แต่ละตัวเลขต้อง 'ใกล้เคียง' กับ indicator ที่ token คาบเกี่ยวอย่างน้อย 1 ตัว
+    ถ้ามี indicator ที่ match ได้อย่างสมเหตุสมผล ไม่ถือว่าผิด แม้จะมี indicator อื่นที่ token
+    คาบเกี่ยวกันด้วยแต่ค่าต่างกันมาก (เพราะ token ทั่วไปเช่น 'yield'/'rate' คาบเกี่ยวหลาย indicator ได้)
+    """
+    if not supporting_data or not observable_registry:
+        return
+    indicator_val_map: list[tuple[str, float]] = []
+    for oid, obs in observable_registry.items():
+        try:
+            val_str = str(getattr(obs, "value", "")).replace(",", "").strip()
+            v = float(val_str)
+            ind_name = str(getattr(obs, "indicator", oid)).lower()
+            indicator_val_map.append((ind_name, v))
+        except (ValueError, TypeError):
+            continue
+
+    mismatch_found = False
+    for item in supporting_data:
+        if mismatch_found:
+            break
+        for clause in _split_supporting_clauses(item):
+            if mismatch_found:
+                break
+            clause_str = clause.lower()
+            nums_in_clause = [
+                float(x.replace(",", "")) for x in re.findall(r'\b\d+(?:\.\d+)?\b', clause)
+            ]
+            if not nums_in_clause:
+                continue
+
+            matched_vals = [
+                reg_v for ind_name, reg_v in indicator_val_map
+                if abs(reg_v) > 1e-5
+                and any(
+                    token in clause_str
+                    for token in re.findall(r'[a-z0-9/]+', ind_name)
+                    if len(token) >= 3
+                    and token not in ("ratio", "the", "and", "for", "from", "with", "market", "equities", "equity")
+                )
+            ]
+            if not matched_vals:
+                continue
+
+            for num in nums_in_clause:
+                if _is_excluded_number(num):
+                    continue
+                # ถือว่า "ตรง" ถ้าใกล้เคียงกับ indicator ที่ match ได้ตัวใดตัวหนึ่งก็พอ
+                close_to_any = any(
+                    num / abs(v) <= 10.0 and abs(v) / (num if num > 0 else 1e-9) <= 10.0
+                    for v in matched_vals
+                )
+                if not close_to_any:
+                    mismatch_found = True
+                    break
+
+    if mismatch_found:
+        _add_warning_idempotent(warnings_list, str(WarningMessage(SUPPORTING_DATA_MISMATCH)))
+
+
+
 class RegimeEvidenceComponent(BaseModel):
     dimension: str = Field(description="มิติที่พิจารณา เช่น Growth, Inflation")
     signal: str = Field(description="ทิศทางสัญญาณ")
@@ -470,6 +572,8 @@ class AssetAllocationView(BaseModel):
 
     @model_validator(mode='after')
     def validate_hard_data(self) -> 'AssetAllocationView':
+        self.rationale = _clean_hallucinated_attributions(self.rationale)
+        self.supporting_data = [_clean_hallucinated_attributions(sd) for sd in self.supporting_data]
         if self.asset_bucket is None:
             _add_warning_idempotent(self.validation_warnings, str(WarningMessage(MISSING_ASSET_BUCKET)))
         if len(self.source_refs) == 1:
@@ -535,6 +639,8 @@ class PairTradeStrategy(BaseModel):
 
     @model_validator(mode='after')
     def validate_evidence_and_sizing(self) -> 'PairTradeStrategy':
+        self.thesis = _clean_hallucinated_attributions(self.thesis)
+        self.supporting_data = [_clean_hallucinated_attributions(sd) for sd in self.supporting_data]
         for fname, val in [
             ("long_leg", self.long_leg),
             ("short_leg", self.short_leg),
@@ -619,6 +725,7 @@ class RiskMitigationScenario(BaseModel):
 
     @model_validator(mode='after')
     def validate_quality_gate(self) -> 'RiskMitigationScenario':
+        self.supporting_data = [_clean_hallucinated_attributions(sd) for sd in self.supporting_data]
         has_numeric_execution = (
             bool(re.search(r'\d', str(self.trigger_to_activate)))
             and bool(re.search(r'\d', str(self.volume_threshold)))
@@ -746,6 +853,46 @@ class MacroStrategyDirection(BaseModel):
 
     @model_validator(mode='after')
     def validate_portfolio_conviction(self) -> 'MacroStrategyDirection':
+        old_cr = self.conviction_rationale
+        self.conviction_rationale = _clean_hallucinated_attributions(self.conviction_rationale)
+        cleaned_att = (old_cr != self.conviction_rationale)
+
+        for a in self.asset_allocation:
+            old_r = a.rationale
+            a.rationale = _clean_hallucinated_attributions(a.rationale)
+            a.supporting_data = [_clean_hallucinated_attributions(sd) for sd in a.supporting_data]
+            if old_r != a.rationale:
+                cleaned_att = True
+            _validate_supporting_data_against_registry(a.supporting_data, a.observable_refs, self.observable_registry, a.validation_warnings)
+            if any("SUPPORTING_DATA_MISMATCH" in w for w in a.validation_warnings):
+                if a.confidence == "high":
+                    a.confidence = "medium"
+
+        for pt in self.pair_trades:
+            old_t = pt.thesis
+            pt.thesis = _clean_hallucinated_attributions(pt.thesis)
+            pt.supporting_data = [_clean_hallucinated_attributions(sd) for sd in pt.supporting_data]
+            if old_t != pt.thesis:
+                cleaned_att = True
+            _validate_supporting_data_against_registry(pt.supporting_data, pt.observable_refs, self.observable_registry, pt.validation_warnings)
+
+        for rs in self.risk_scenarios:
+            rs.supporting_data = [_clean_hallucinated_attributions(sd) for sd in rs.supporting_data]
+            _validate_supporting_data_against_registry(rs.supporting_data, [], self.observable_registry, rs.validation_warnings)
+
+        old_ft = list(self.focus_themes or [])
+        self.focus_themes = [_clean_hallucinated_attributions(ft) for ft in old_ft]
+        if old_ft != self.focus_themes:
+            cleaned_att = True
+
+        old_dn = str(self.divergence_note or "")
+        self.divergence_note = _clean_hallucinated_attributions(old_dn)
+        if old_dn != self.divergence_note:
+            cleaned_att = True
+
+        if cleaned_att:
+            _add_warning_idempotent(self.validation_warnings, str(WarningMessage(HALLUCINATED_ATTRIBUTION_CLEANED)))
+
         if self.observable_registry and not self.source_files:
             self.source_files = []
             for obs in self.observable_registry.values():
@@ -785,6 +932,7 @@ class MacroStrategyDirection(BaseModel):
                 self.conviction_level = "medium"
 
         for a in self.asset_allocation:
+            logger.debug(f"[DEBUG] asset={a.asset_class} observable_refs={a.observable_refs}")
             bucket = a.asset_bucket
             if self.observable_registry and a.observable_refs and bucket:
                 valid_refs = []
@@ -799,9 +947,12 @@ class MacroStrategyDirection(BaseModel):
                     a.source_refs = sorted(list(set(a.source_refs or []) | set(valid_ref_files)))
             valid_source_files = _valid_source_files_for_refs(a.observable_refs, self.observable_registry) if self.observable_registry else set()
             if len(valid_source_files) >= 2:
+                was_single = any("Single-Source Penalty" in str(w) or "SINGLE_SOURCE_PENALTY" in str(w) for w in a.validation_warnings)
                 a.validation_warnings = [
                     w for w in a.validation_warnings if "Single-Source Penalty" not in w and "SINGLE_SOURCE_PENALTY" not in w
                 ]
+                if was_single and a.confidence == "medium" and not _asset_has_downgrade_warning(a):
+                    a.confidence = "high"
 
         valid_pair_trades = []
         dropped_pair_trades = 0
@@ -833,7 +984,32 @@ class MacroStrategyDirection(BaseModel):
             _add_warning_idempotent(self.validation_warnings, str(WarningMessage(GRACEFUL_DROP_RISK_SCENARIOS, {"count": str(dropped_risk_scenarios)})))
 
         for a in self.asset_allocation:
-            if not a.source_refs and self.source_files:
+            if a.confidence != "low" and not a.observable_refs:
+                _add_warning_idempotent(
+                    a.validation_warnings,
+                    str(WarningMessage(MISSING_OBSERVABLE_REFS, {"asset_class": a.asset_class}))
+                )
+
+            inferred_source_refs = not a.source_refs or (self.source_files and set(a.source_refs) == set(self.source_files))
+
+            if self.source_files and inferred_source_refs:
+                filtered_sources = []
+                bucket = (a.asset_bucket or "").lower()
+                for sf in self.source_files:
+                    sf_lower = sf.lower()
+                    if "global" in sf_lower:
+                        filtered_sources.append(sf)
+                    elif bucket == "equities" and any(k in sf_lower for k in ["country", "stocks", "val", "youtube", "eq", "spy"]):
+                        filtered_sources.append(sf)
+                    elif bucket == "fixed_income" and any(k in sf_lower for k in ["country", "regional", "fred", "macro", "bond", "yield", "rate"]):
+                        filtered_sources.append(sf)
+                    elif bucket == "fx" and any(k in sf_lower for k in ["regional", "country", "th_", "us_", "fx", "curr"]):
+                        filtered_sources.append(sf)
+                    elif bucket in ("commodities", "cash") and any(k in sf_lower for k in ["global", "country", "fred", "comm", "cash", "gold"]):
+                        filtered_sources.append(sf)
+                a.source_refs = sorted(list(set(filtered_sources))) if filtered_sources else sorted(list(self.source_files))
+
+            if inferred_source_refs and self.source_files and self.observable_registry:
                 has_valid_obs = _refs_supported_by_source_files(
                     a.observable_refs,
                     self.observable_registry,
@@ -845,7 +1021,6 @@ class MacroStrategyDirection(BaseModel):
                     msg = str(WarningMessage(SOURCE_REF_PENALTY))
                     _add_warning_idempotent(a.validation_warnings, msg)
                     _add_warning_idempotent(self.validation_warnings, msg)
-                a.source_refs = sorted(list(self.source_files))
 
         from validators.contradiction_rules import validate_all_contradictions
         validate_all_contradictions(self)

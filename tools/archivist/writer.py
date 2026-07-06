@@ -163,7 +163,7 @@ def write_raw_markdown(content: str, folder_path: str, filename: str) -> str:
     - youtube_insight → folder_path='30_Knowledge_Base/YouTube_Summaries'
     - article_note → folder_path='30_Knowledge_Base/News'
     - book_note → folder_path='30_Knowledge_Base/Books'
-    - Strategy / Concept → folder_path='30_Knowledge_Base/Strategies'
+    - Strategy / Concept / macro_strategy / Macro_Strategy_Direction → folder_path='30_Knowledge_Base/Strategies'
     - goal / financial_goal → ห้ามบันทึกด้วย tool นี้ ให้หยุดและแจ้งผู้ใช้ให้ใช้คำสั่งของ Bookkeeper แทน
 
     Args:

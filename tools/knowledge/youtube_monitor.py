@@ -1,7 +1,7 @@
 import os
 import urllib.request
 import xml.etree.ElementTree as ET
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta, timezone, date
 from pathlib import Path
 from langchain_core.tools import tool
 from core.retry import with_retry
@@ -150,3 +150,124 @@ def generate_weekly_youtube_digest() -> str:
         return content
     except Exception as e:
         return f"Error: ไม่สามารถสร้าง YouTube Digest ได้ ({str(e)})"
+
+
+def load_recent_youtube_insights(
+    lookback_days: int = 14,
+    max_chars: int = 15_000,
+    max_bullets_per_clip: int = 3,
+    reference_date: os.PathLike | str | None = None, # Allowed signature flexible for testing or date passing
+) -> str:
+    """อ่าน YouTube Insight ล่าสุดจากคลัง Vault แบบ Deterministic พร้อม Pre-aggregation Condensation
+    และ File-Boundary Truncation
+    """
+    from tools.archivist.parser import extract_yaml_frontmatter_value
+    from core.logger import get_logger
+
+    log = get_logger(__name__)
+
+    vault_path = Path(os.getenv("OBSIDIAN_VAULT_PATH", "./memories")).resolve()
+    summaries_dir = vault_path / "30_Knowledge_Base" / "YouTube_Summaries"
+    if not summaries_dir.exists():
+        return ""
+
+    if reference_date and isinstance(reference_date, date):
+        cutoff_date = reference_date - timedelta(days=lookback_days)
+    elif reference_date and isinstance(reference_date, datetime):
+        cutoff_date = reference_date.date() - timedelta(days=lookback_days)
+    else:
+        cutoff_date = datetime.now(timezone.utc).date() - timedelta(days=lookback_days)
+
+    collected_clips = []
+
+    for md_file in summaries_dir.glob("*.md"):
+        try:
+            content = md_file.read_text(encoding="utf-8")
+            entity_type = extract_yaml_frontmatter_value(content, "entity_type")
+            if entity_type != "youtube_insight":
+                continue
+
+            date_str = extract_yaml_frontmatter_value(content, "date")
+            if not date_str:
+                continue
+            try:
+                clip_date = datetime.strptime(date_str[:10], "%Y-%m-%d").date()
+            except ValueError:
+                continue
+
+            if clip_date < cutoff_date:
+                continue
+
+            video_id = extract_yaml_frontmatter_value(content, "video_id")
+            if not video_id or video_id.strip() == "" or video_id.lower() == "none":
+                # Fallback to stem extraction
+                stem_parts = md_file.stem.split(" ")
+                if len(stem_parts) >= 3:
+                    video_id = stem_parts[2]
+                else:
+                    video_id = md_file.stem
+
+            channel = extract_yaml_frontmatter_value(content, "channel")
+            if not channel or channel.strip() == "" or channel.lower() == "none":
+                channel = "Unknown Channel"
+            else:
+                channel = channel.strip()
+
+            # Extract ## ใจความสำคัญ
+            bullets = []
+            lines = content.splitlines()
+            in_section = False
+            for line in lines:
+                stripped = line.strip()
+                if stripped.startswith("## ใจความสำคัญ"):
+                    in_section = True
+                    continue
+                elif in_section and stripped.startswith("## "):
+                    break
+                elif in_section:
+                    if stripped.startswith("- ") or stripped.startswith("* "):
+                        bullets.append(stripped)
+                        if len(bullets) >= max_bullets_per_clip:
+                            break
+
+            if not bullets:
+                continue
+
+            clip_text = f"[{channel}: {video_id} | {date_str[:10]}]\n" + "\n".join(bullets)
+            collected_clips.append((clip_date, clip_text))
+
+        except Exception as e:
+            log.warning("Error processing youtube insight file %s: %s", md_file, e)
+            continue
+
+    if not collected_clips:
+        return ""
+
+    # Sort Newest First
+    collected_clips.sort(key=lambda x: x[0], reverse=True)
+
+    # File-Boundary Truncation
+    output_blocks = []
+    total_chars = 0
+    truncated = False
+
+    for _, clip_text in collected_clips:
+        block_len = len(clip_text) + (2 if output_blocks else 0)  # account for \n\n
+        if total_chars + block_len > max_chars:
+            if output_blocks:
+                truncated = True
+                break
+            else:
+                # If even the very first clip exceeds max_chars, take it up to max_chars
+                output_blocks.append(clip_text[:max_chars])
+                total_chars = len(output_blocks[0])
+                truncated = True
+                break
+        output_blocks.append(clip_text)
+        total_chars += block_len
+
+    result = "\n\n".join(output_blocks)
+    if truncated:
+        result += f"\n... [ตัดทอน — แสดงเฉพาะคลิปที่ใหม่ที่สุด ไม่เกิน {max_chars:,} ตัวอักษร]"
+
+    return result

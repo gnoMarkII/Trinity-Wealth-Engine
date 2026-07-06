@@ -80,11 +80,11 @@ def build_derived_pair_observables(
                 val_num = float(str(val_str).replace(",", ""))
                 if "qqq" in id_lower:
                     price_map["QQQ"] = val_num
-                elif "spy" in id_lower or "gspc" in id_lower:
+                elif "spy" in id_lower and "gspc" not in id_lower and "spx" not in id_lower:
                     price_map["SPY"] = val_num
                 elif "vgk" in id_lower:
                     price_map["VGK"] = val_num
-                elif "gld" in id_lower or "gold" in id_lower:
+                elif "gld" in id_lower and "gold" not in id_lower and "xau" not in id_lower:
                     price_map["GLD"] = val_num
             except (ValueError, TypeError):
                 continue

@@ -119,6 +119,23 @@ def build_valuation_observables(
                 trailing_pe = val_tpe_num
                 trailing_symbol_used = sym
 
+    if forward_pe is None:
+        log.info("Forward P/E missing from index/ETF symbols (%s). Attempting Top S&P 500 Mega-Cap Consensus Proxy...", ", ".join(lookup_order))
+        top_sp500_proxies = ["AAPL", "MSFT", "NVDA", "AMZN", "GOOGL", "META", "BRK-B", "LLY", "AVGO", "JPM"]
+        proxy_fpes = []
+        for sym in top_sp500_proxies:
+            try:
+                info = ticker_info_getter(sym)
+                val_fpe_num = _parse_val_to_float(info.get("forwardPE") or info.get("forward_pe"))
+                if val_fpe_num is not None and val_fpe_num > 0:
+                    proxy_fpes.append(val_fpe_num)
+            except Exception:
+                pass
+        if proxy_fpes and len(proxy_fpes) >= 3:
+            forward_pe = sum(proxy_fpes) / len(proxy_fpes)
+            symbol_used = f"S&P 500 Top Holdings Consensus Proxy ({len(proxy_fpes)} stocks)"
+            log.info("Computed S&P 500 Consensus Proxy Forward P/E: %.2f from %d stocks", forward_pe, len(proxy_fpes))
+
     # 3. Create Observables based on rules
     if forward_pe is not None and forward_pe > 0:
         ey_decimal = 1.0 / forward_pe
