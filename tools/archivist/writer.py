@@ -23,7 +23,7 @@ _DATE_FRONTMATTER_RE = re.compile(r'^date:\s*["\']?(\d{4}-\d{2}-\d{2})', re.MULT
 
 from .core import _atomic_write_text, _sanitize_filename, VAULT_PATH
 from tools.tool_errors import GOAL_VIA_BOOKKEEPER
-from .parser import _split_bullets, _parse_h3_subsections, _parse_h2_sections, _strip_frontmatter, _extract_asset_tickers, _TICKER_FRONTMATTER_RE, _VIDEO_ID_FRONTMATTER_RE, _SOURCE_URL_FRONTMATTER_RE
+from .parser import _split_bullets, _parse_h3_subsections, _parse_h2_sections, _strip_frontmatter, _extract_asset_tickers, _TICKER_FRONTMATTER_RE, _VIDEO_ID_FRONTMATTER_RE, _SOURCE_URL_FRONTMATTER_RE, extract_yaml_frontmatter_value
 from .indexer import update_master_index, _index_upsert
 
 _CHANNEL_FRONTMATTER_RE = re.compile(r'^channel:\s*(.+)$', re.MULTILINE)
@@ -140,6 +140,7 @@ def write_raw_markdown(content: str, folder_path: str, filename: str) -> str:
     ใช้เมื่อต้องการบันทึกข้อมูลที่มี YAML frontmatter พร้อมแล้ว เช่น:
     - ผลลัพธ์จากการสกัดเนื้อหาด้วย ingest_article_url, ingest_youtube_transcript, ingest_pdf
     - ข้อมูล Macro Snapshot, Regional Pulse, US Sectors Pulse จาก Researcher
+    - รายงาน Macro Strategy Direction จาก Strategic Allocator / Macro Intel
     - รายงานสรุปข่าวรายวัน (entity_type: article_note)
     ระบบจะทำการ Auto-route สร้าง subfolder ย่อยตามข้อมูลใน YAML อัตโนมัติ:
     - path ลงท้าย 'Daily_Snapshots' → เติม subfolder วันที่จาก `date:` field
@@ -154,6 +155,7 @@ def write_raw_markdown(content: str, folder_path: str, filename: str) -> str:
     - ห้ามระบุโฟลเดอร์ย่อย (เช่น วันที่ หรือ Ticker) ใน folder_path ด้วยตัวเอง เพราะระบบจะดึงจาก YAML มาเติมให้เอง
 
     [Folder Mapping ตาม entity_type ใน YAML]
+    - macro_strategy → ให้บันทึกลงทั้ง 2 โฟลเดอร์ คือ '30_Knowledge_Base/Macroeconomics/Daily_Snapshots' และ '30_Knowledge_Base/Strategies'
     - macro_daily / us_sectors_pulse / regional_macro / economic_fundamentals 
       → folder_path='30_Knowledge_Base/Macroeconomics/Daily_Snapshots'
     - Company / Financial_Trends / Financial_Health / Stock_Momentum / Analyst_Consensus / Company_News 
@@ -172,7 +174,8 @@ def write_raw_markdown(content: str, folder_path: str, filename: str) -> str:
     Returns:
         str: ข้อความยืนยันสถานะการบันทึกไฟล์ (เช่น raw, new หรือ raw, overwritten)
     """
-    if re.search(r"^entity_type:\s*(goal|financial_goal)\b", content, re.MULTILINE):
+    entity_type_val = extract_yaml_frontmatter_value(content, "entity_type")
+    if entity_type_val in {"goal", "financial_goal"}:
         return GOAL_VIA_BOOKKEEPER
 
     resolved_path = _maybe_inject_ticker_subfolder(folder_path, content)
@@ -186,14 +189,28 @@ def write_raw_markdown(content: str, folder_path: str, filename: str) -> str:
     _atomic_write_text(file_path, content)
     _index_upsert(file_path)
 
+    # Dual-Path Archiving for Macro Strategy Direction
+    if entity_type_val == "macro_strategy":
+        other_path = "30_Knowledge_Base/Strategies" if "Daily_Snapshots" in str(resolved_path) else "30_Knowledge_Base/Macroeconomics/Daily_Snapshots"
+        other_dir = VAULT_PATH / other_path
+        other_dir.mkdir(parents=True, exist_ok=True)
+        other_file = other_dir / f"{safe_name}.md"
+        if other_file.resolve() != file_path.resolve():
+            _atomic_write_text(other_file, content)
+            _index_upsert(other_file)
+
     # Layer-1 Entity stub — auto-create {ticker}.md hub for Stocks snapshots
     if "Stocks" in resolved_path.split("/"):
-        m = _TICKER_FRONTMATTER_RE.search(content)
-        if m:
-            _ensure_stock_entity_stub(target_dir, m.group(1).strip())
+        ticker_val = extract_yaml_frontmatter_value(content, "ticker") or extract_yaml_frontmatter_value(content, "tickers")
+        if not ticker_val:
+            m = _TICKER_FRONTMATTER_RE.search(content)
+            if m:
+                ticker_val = m.group(1).strip()
+        if ticker_val:
+            _ensure_stock_entity_stub(target_dir, ticker_val)
 
     # Auto-create Obsidian Canvas for YouTube Insights
-    if re.search(r"^entity_type:\s*youtube_insight\b", content, re.MULTILINE):
+    if entity_type_val == "youtube_insight":
         try:
             # Temporarily disabled per user request
             # _create_youtube_canvas(file_path, content)

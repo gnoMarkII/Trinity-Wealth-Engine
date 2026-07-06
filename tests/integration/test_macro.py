@@ -108,7 +108,7 @@ def test_macro_analysis_flow_mocked_router(mock_llm, mock_router, mock_archivist
         evaluated_at="2024-05-20T10:00:00Z",
         overall_regime=EconomicState.GOLDILOCKS,
         asset_allocation=[
-            AssetAllocationView(asset_class="equity", stance=AssetStance.NEUTRAL, rationale="Test")
+            AssetAllocationView(asset_class="equity", asset_bucket="equities", stance=AssetStance.NEUTRAL, rationale="Test")
         ],
         focus_themes=["dummy"],
         conviction_level="medium",

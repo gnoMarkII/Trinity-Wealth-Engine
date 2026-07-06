@@ -3,6 +3,37 @@ from enum import Enum
 from typing import Literal, Optional, Any
 from pydantic import BaseModel, Field, computed_field, field_validator, model_validator
 import re
+from schemas.warning_registry import (
+    WarningMessage,
+    DEFENSIVE_LOW_SUPPORTING_DATA,
+    SINGLE_SOURCE_PENALTY,
+    SOURCE_REF_PENALTY,
+    ACTIVE_ALLOC_GUARDRAIL,
+    PT_MANDATORY_FIELD_MISSING,
+    PT_DEFENSIVE_LOW,
+    PT_EXECUTION_GUARDRAIL,
+    PT_RISK_BUDGET_HIGH_TO_MED,
+    PT_RISK_BUDGET_HIGH_TO_SMALL,
+    PT_RISK_BUDGET_MED_TO_SMALL,
+    PT_GRACEFUL_DOWNGRADE,
+    RS_DEFENSIVE_LOW,
+    PORTFOLIO_DEFENSIVE_LOW,
+    STALE_DATA_DEGRADATION,
+    GRACEFUL_DROP_PAIR_TRADES,
+    GRACEFUL_DROP_RISK_SCENARIOS,
+    COVERAGE_BACKFILL_EXPANDED,
+    COVERAGE_WARNING_INCOMPLETE,
+    GOLD_RATIONALE_WARNING,
+    GOLD_CONTRADICTION,
+    US_EQUITY_CONTRADICTION,
+    REGIME_CONTRADICTION,
+    CONVICTION_CONTRADICTION,
+    MISSING_ASSET_BUCKET,
+    STATISTICAL_OVERCLAIM,
+    ALLOCATION_DELTA_INVALID,
+    FX_STANCE_MISMATCH,
+)
+from schemas.report_labels import DOWNGRADE_WARNING_IDS, WHY_NOT_HIGH_MESSAGES
 
 class GeographicScope(str, Enum):
     GLOBAL = "Global"
@@ -92,6 +123,11 @@ class MarketObservable(BaseModel):
     confidence: Literal["high", "medium", "low"] = Field(default="high", description="Confidence level")
     is_valid: bool = Field(default=True, description="Validity flag")
     stale_reason: str = Field(default="", description="Reason if stale or invalid")
+    observable_type: str = Field(default="macro", description="Type of observable: macro, valuation, derived_ratio, risk_correlation, leading_indicator")
+    lookback_days: Optional[int] = Field(default=None, description="Number of historical lookback days for derived metrics")
+    calculation_method: str = Field(default="", description="Calculation methodology for derived/valuation metrics")
+    input_observable_ids: list[str] = Field(default_factory=list, description="List of input observable IDs used to derive this metric")
+    metadata: dict[str, Any] = Field(default_factory=dict, description="Structured metadata for machine-readable derived metrics and statistical values")
 
     @field_validator("observed_at")
     @classmethod
@@ -190,25 +226,44 @@ class NarrativeContext(BaseModel):
     sources_summary: str = Field(description="สรุปแหล่งที่มาของข้อมูล")
 
 def _has_hard_data_numbers(data_list: list[str]) -> bool:
+    """Minimal numeric evidence heuristic.
+
+    Note: This is NOT a deep semantic validator. It serves as a fast structural screen
+    to ensure the supporting text contains numbers coupled with actionable financial
+    units or indicators (%, bps, USD, Index, Yield, etc.) rather than just dates or general text.
+    In the long term, validation should prioritize checking for valid `observable_refs`.
+    """
     if not data_list:
         return False
     num_pattern = re.compile(r'\d+([.,]\d+)?')
-    fin_pattern = re.compile(r'(?:%|bps|pts|yield|pmi|cpi|ppi|nfp|gdp|vix|dxy|spx|ndx|score|rate|ratio|spread|differential|carry|relative|usd|thb|eur|jpy|cds|gold|oil|brent|wti|shipping|freight|etf|t-bill|treasury|index|level|target|support|resistance|stop|limit|prob|probability|set|sp500|nasdaq|มูลค่า|ซื้อขาย|ล้านบาท|จุด|ดัชนี|ผลตอบแทน|อัตรา|\.\d+x|\/\d+y|\d{4}-\d{2}-\d{2}|date|day|month|year)', re.IGNORECASE)
+    fin_pattern = re.compile(
+        r'(?:%|bps|pts?|points?|score|level|target|usd|thb|eur|jpy|index|yield|rate|cpi|ppi|pmi|'
+        r'vix|dxy|spx|sp500|s&p|nasdaq|gold|oil|brent|wti|spread|ratio|curve|inversion|y|years?|ปี|p/e|eps|gdp|nfp|bn|mn|mb|gb|mil|bil|million|billion|'
+        r'ล้าน|พันล้าน|บาท|baht|contracts?|สัญญา|shares?|หุ้น|oz|ออนซ์|barrels?|บาร์เรล|จุด|ดัชนี|ผลตอบแทน|อัตรา|\$|€|£|¥)',
+        re.IGNORECASE
+    )
     for item in data_list:
         if num_pattern.search(item) and fin_pattern.search(item):
             return True
     return False
 
-def _add_warning_idempotent(warnings_list: list[str], warning_str: str) -> None:
-    if warning_str not in warnings_list:
-        warnings_list.append(warning_str)
+def _normalize_time_horizon_str(val: Any) -> str:
+    return str(val or "3-6 Months").strip()
 
-def _auto_extract_with_provenance(target_list: list[str], source_text: str, source_field_name: str) -> None:
-    if not source_text:
-        return
-    if _has_hard_data_numbers([source_text]):
-        if not any(source_text in item for item in target_list):
-            target_list.append(f"[From {source_field_name}] {source_text}")
+
+def _add_warning_idempotent(warnings_list: list[str], warning: Any) -> None:
+    warning_str = str(warning)
+    if warning_str not in warnings_list:
+        try:
+            msg = WarningMessage.from_str(warning_str)
+            if msg:
+                for existing in warnings_list:
+                    ex_msg = WarningMessage.from_str(existing)
+                    if ex_msg and ex_msg.id == msg.id and ex_msg.params == msg.params:
+                        return
+        except Exception:
+            pass
+        warnings_list.append(warning_str)
 
 
 def _valid_observables_for_refs(
@@ -228,6 +283,17 @@ def _valid_observables_for_refs(
     return valid
 
 
+def _valid_source_files_for_refs(
+    observable_refs: list[str],
+    observable_registry: dict[str, "MarketObservable"],
+) -> set[str]:
+    return {
+        obs.source_file
+        for obs in _valid_observables_for_refs(observable_refs, observable_registry)
+        if obs.source_file
+    }
+
+
 def _all_execution_fields_present(pair_trade: "PairTradeStrategy") -> bool:
     required = [
         pair_trade.instrument_proxy,
@@ -245,15 +311,19 @@ def _has_pair_trade_execution_evidence(
 ) -> bool:
     if not _all_execution_fields_present(pair_trade):
         return False
-    if not _has_hard_data_numbers([
+    exec_values = [
         pair_trade.hedge_ratio,
         pair_trade.stop_loss_trigger,
         pair_trade.target_gain_or_rebalance,
         pair_trade.max_drawdown_limit,
-    ] + pair_trade.supporting_data):
+    ] + pair_trade.supporting_data
+    if not any(re.search(r'\d', str(val)) for val in exec_values):
         return False
     if bool(observable_registry):
-        return bool(_valid_observables_for_refs(pair_trade.observable_refs, observable_registry))
+        valid_count = len(_valid_observables_for_refs(pair_trade.observable_refs, observable_registry))
+        if pair_trade.confidence in {"high", "medium"}:
+            return valid_count >= 2
+        return valid_count >= 1
     return bool(pair_trade.observable_refs)
 
 
@@ -282,20 +352,6 @@ def _source_files_from_observable_refs(
     return files
 
 
-def _asset_bucket_from_name(asset_class: str) -> str | None:
-    text = asset_class.lower()
-    if any(k in text for k in ["fx", "currenc", "dxy", "usd", "eur", "jpy", "thb", "ค่าเงิน", "สกุลเงิน"]):
-        return "fx"
-    if any(k in text for k in ["cash", "t-bill", "money market", "liquidity", "เงินสด"]):
-        return "cash"
-    if any(k in text for k in ["bond", "duration", "treasur", "fixed income", "พันธบัตร", "yield"]):
-        return "fixed_income"
-    if any(k in text for k in ["commodit", "gold", "oil", "metal", "brent", "wti", "ทองคำ", "น้ำมัน"]):
-        return "commodities"
-    if any(k in text for k in ["equit", "stock", "หุ้น", "spx", "nasdaq", "set"]):
-        return "equities"
-    return None
-
 
 def _is_allowed_cross_bucket(target_bucket: str | None, obs: "MarketObservable") -> bool:
     if not target_bucket:
@@ -304,62 +360,31 @@ def _is_allowed_cross_bucket(target_bucket: str | None, obs: "MarketObservable")
         return True
     if target_bucket == "commodities" and obs.asset_bucket == "fixed_income":
         text = (obs.indicator + " " + obs.observable_id).lower()
+        if any(k in text for k in ["credit", "spread", "high yield", "hyg", "lqd", "baa", "corporate"]):
+            return False
         if any(k in text for k in ["yield", "tips", "dfii10", "rate", "treasury", "policy", "fed"]):
+            return True
+    if target_bucket == "commodities" and obs.asset_bucket == "fx":
+        text = (obs.indicator + " " + obs.observable_id).lower()
+        if any(k in text for k in ["dollar", "dtwexbgs", "dxy", "usd"]):
             return True
     return False
 
 
-def _infer_observable_refs_from_text(
-    text: str,
-    observable_registry: dict[str, "MarketObservable"],
-    asset_bucket: str | None = None,
-    max_refs: int = 3,
-) -> list[str]:
-    if not observable_registry:
-        return []
-    text_lower = text.lower()
-    matches: list[str] = []
-    for obs_id, obs in observable_registry.items():
-        if not obs.is_valid:
-            continue
-        if asset_bucket and not _is_allowed_cross_bucket(asset_bucket, obs):
-            continue
-        indicator_terms = [part for part in re.split(r"[^a-zA-Z0-9]+", obs.indicator.lower()) if len(part) >= 3]
-        value_token = str(obs.value).replace(",", "").split()[0].lower()
-        score = 0
-        if obs_id.lower() in text_lower:
-            score += 4
-        if value_token and value_token in text_lower.replace(",", ""):
-            score += 3
-        score += sum(1 for term in indicator_terms[:6] if term in text_lower)
-        if score > 0 and obs_id not in matches:
-            matches.append(obs_id)
-        if len(matches) >= max_refs:
-            break
-    if len(matches) < max_refs and asset_bucket:
-        for obs_id, obs in observable_registry.items():
-            if obs.is_valid and _is_allowed_cross_bucket(asset_bucket, obs) and obs_id not in matches:
-                matches.append(obs_id)
-                if len(matches) >= max_refs:
-                    break
-    if len(matches) < max_refs:
-        for obs_id, obs in observable_registry.items():
-            if obs.is_valid and obs_id not in matches:
-                matches.append(obs_id)
-                if len(matches) >= max_refs:
-                    break
-    return matches
 
 
-def _supporting_data_from_observables(
-    observable_refs: list[str],
-    observable_registry: dict[str, "MarketObservable"],
-) -> list[str]:
-    data = []
-    for obs in _valid_observables_for_refs(observable_refs, observable_registry):
-        unit = f" {obs.unit}" if obs.unit else ""
-        data.append(f"{obs.indicator} = {obs.value}{unit} ({obs.observable_id})")
-    return data
+def _clear_resolved_hard_data_warnings(asset: "AssetAllocationView") -> None:
+    if not _has_hard_data_numbers(asset.supporting_data):
+        return
+    asset.validation_warnings = [
+        warning
+        for warning in asset.validation_warnings
+        if "lack of numeric hard data in supporting_data" not in warning
+        and "missing numeric hard data" not in warning
+        and "Auto-extracted hard data lacks valid observable_refs" not in warning
+    ]
+
+
 
 
 def _downgrade_pair_trade_statistical_overclaim(
@@ -390,7 +415,7 @@ def _downgrade_pair_trade_statistical_overclaim(
             pair_trade.sizing_guidance = "medium_risk_budget"
         _add_warning_idempotent(
             pair_trade.validation_warnings,
-            "Pair Trade Graceful Downgrade: Used single-point relative spread/ratio evidence instead of historical beta/correlation time series.",
+            str(WarningMessage(PT_GRACEFUL_DOWNGRADE)),
         )
 
 class RegimeEvidenceComponent(BaseModel):
@@ -399,6 +424,17 @@ class RegimeEvidenceComponent(BaseModel):
     evidence: str = Field(description="ตัวเลข Hard Data รองรับ")
     conflict: str = Field(default="", description="ข้อขัดแย้งกับมิติอื่น")
     confidence: Literal["high", "medium", "low"] = Field(default="high", description="ระดับความมั่นใจ")
+    observable_refs: list[str] = Field(default_factory=list, description="รหัสอ้างอิง MarketObservable ใน registry")
+    source_refs: list[str] = Field(default_factory=list, description="ไฟล์หรือแหล่งข้อมูลอ้างอิง")
+
+    @model_validator(mode='after')
+    def normalize_conflicting_dimension(self) -> 'RegimeEvidenceComponent':
+        if "conflict" in self.dimension.lower():
+            if not self.conflict or self.conflict == "-":
+                self.conflict = f"Reflation vs {self.signal}" if "stagflation" in self.signal.lower() else f"Baseline vs {self.signal}"
+            if self.dimension.lower() in {"conflicting evidence", "conflicting", "conflict"}:
+                self.dimension = "Regional Inflation & Growth Risk" if "inflation" in self.signal.lower() or "cpi" in self.evidence.lower() else "Cross-Regional Divergence Risk"
+        return self
 
 RegimeEvidence = RegimeEvidenceComponent
 
@@ -409,6 +445,7 @@ class AssetStance(str, Enum):
 
 class AssetAllocationView(BaseModel):
     asset_class: str = Field(description="ชื่อสินทรัพย์เจาะลึกระดับภูมิภาคและสไตล์ เช่น US Equities (AI/Tech Growth), EU Equities (Defensive)")
+    asset_bucket: Optional[Literal["equities", "fixed_income", "commodities", "fx", "cash"]] = Field(default=None, description="หมวดหมู่สินทรัพย์หลัก")
     stance: AssetStance = Field(description="มุมมองการจัดสรร")
     rationale: str = Field(description="เหตุผลรองรับ")
     confidence: Literal["high", "medium", "low"] = Field(default="medium", description="ระดับความมั่นใจต่อมุมมองนี้")
@@ -426,25 +463,36 @@ class AssetAllocationView(BaseModel):
     time_horizon: str = Field(default="3-6 Months", description="กรอบระยะเวลาลงทุน")
     stale_data_warning: str = Field(default="", description="คำเตือนข้อมูลล่าช้า")
 
+    @field_validator("time_horizon", mode="before")
+    @classmethod
+    def _val_time_horizon(cls, v: Any) -> str:
+        return _normalize_time_horizon_str(v)
+
     @model_validator(mode='after')
     def validate_hard_data(self) -> 'AssetAllocationView':
+        if self.asset_bucket is None:
+            _add_warning_idempotent(self.validation_warnings, str(WarningMessage(MISSING_ASSET_BUCKET)))
         if len(self.source_refs) == 1:
             if self.confidence == "high":
                 self.confidence = "medium"
-            _add_warning_idempotent(self.validation_warnings, "Single-Source Penalty: Downgraded confidence to MEDIUM because view relies on only 1 source reference.")
-        if not _has_hard_data_numbers(self.supporting_data):
-            _auto_extract_with_provenance(self.supporting_data, self.rationale, "rationale")
-            _auto_extract_with_provenance(self.supporting_data, self.why_not_high, "why_not_high")
-        has_only_auto_extracted = self.supporting_data and all(item.startswith("[From ") for item in self.supporting_data)
-        if len(self.source_refs) == 1 or (not self.observable_refs and has_only_auto_extracted):
-            if self.confidence == "high":
-                self.confidence = "medium"
+            _add_warning_idempotent(self.validation_warnings, str(WarningMessage(SINGLE_SOURCE_PENALTY)))
         if not _has_hard_data_numbers(self.supporting_data):
             self.confidence = "low"
-            _add_warning_idempotent(self.validation_warnings, "Defensive Degradation: Downgraded confidence to LOW due to lack of numeric hard data in supporting_data.")
+            _add_warning_idempotent(self.validation_warnings, str(WarningMessage(DEFENSIVE_LOW_SUPPORTING_DATA)))
         if self.confidence == "low" and self.stance != AssetStance.NEUTRAL:
             self.stance = AssetStance.NEUTRAL
-            _add_warning_idempotent(self.validation_warnings, "Active Allocation Guardrail: Downgraded stance to NEUTRAL because confidence is LOW or lacks numeric hard data.")
+            _add_warning_idempotent(self.validation_warnings, str(WarningMessage(ACTIVE_ALLOC_GUARDRAIL)))
+
+        ac_lower = str(self.asset_class).lower()
+        is_usd_base = any(k in ac_lower for k in ["usd/thb", "usd vs thb", "ค่าเงินบาท", "เงินบาท", "currenci", "fx"]) and "thb vs usd" not in ac_lower and "thb/usd" not in ac_lower
+        if is_usd_base:
+            is_baht_weakening = any(k in str(self.rationale).lower() for k in ["บาทอ่อน", "เงินบาทมีแนวโน้มอ่อน", "ดอลลาร์แข็ง", "thb depreciation", "usd appreciation"])
+            if is_baht_weakening and self.stance == AssetStance.UNDERWEIGHT:
+                _add_warning_idempotent(self.validation_warnings, str(WarningMessage(FX_STANCE_MISMATCH)))
+
+        delta = str(self.allocation_delta or "").strip().lower()
+        if delta in {"overweight", "underweight", "neutral"} or delta == self.stance.value.lower():
+            _add_warning_idempotent(self.validation_warnings, str(WarningMessage(ALLOCATION_DELTA_INVALID)))
         return self
 
 class PairTradeStrategy(BaseModel):
@@ -453,7 +501,7 @@ class PairTradeStrategy(BaseModel):
     thesis: str = Field(description="สมมติฐานการลงทุนและ Divergence")
     catalyst: str = Field(description="ปัจจัยเร่ง (Catalyst) เช่น Q2 Big Tech earnings")
     risk: str = Field(description="ความเสี่ยงของกลยุทธ์")
-    time_horizon: str = Field(description="กรอบระยะเวลาลงทุน เช่น 1-3 Months")
+    time_horizon: str = Field(default="1-3 เดือน", description="กรอบระยะเวลาลงทุน เช่น 1-3 เดือน")
     confidence: Literal["high", "medium", "low"] = Field(description="ระดับความมั่นใจ")
     sizing_guidance: Literal["small_risk_budget", "medium_risk_budget", "high_risk_budget"] = Field(default="small_risk_budget", description="คำแนะนำกรอบความเสี่ยงเชิงคุณภาพ")
     implementation_idea: str = Field(default="", description="แนวทางการนำไปปรับใช้เชิงกลยุทธ์ เช่น Relative Overweight/Underweight ไม่ใช่คำสั่งส่งออเดอร์")
@@ -462,13 +510,28 @@ class PairTradeStrategy(BaseModel):
     observable_refs: list[str] = Field(default_factory=list, description="รหัสอ้างอิง MarketObservable ใน registry")
     source_refs: list[str] = Field(default_factory=list, description="ไฟล์หรือแหล่งข้อมูลอ้างอิง")
     instrument_proxy: str = Field(default="", description="เครื่องมือจริงที่ใช้เทรด เช่น Long QQQ ETF / Short VGK ETF (ต้องระบุเสมอ)")
-    hedge_ratio: str = Field(default="", description="สัดส่วนการเทรด เช่น 1.0 : 1.0 Beta-adjusted (ต้องมีตัวเลขเสมอ)")
+    hedge_ratio: str = Field(default="", description="สัดส่วนการเทรด เช่น 1.0 : 1.0 Notional / Price Ratio หรือ 1 : 1 Dollar-equivalent (ต้องมีตัวเลขเสมอ ห้ามใช้คำว่า Beta-adjusted หากไม่มีข้อมูลสถิติ Beta ในตาราง)")
     fx_handling: str = Field(default="", description="การบริหารค่าเงิน เช่น Unhedged หรือ USD/EUR 50% Forward Hedge")
-    entry_trigger: str = Field(default="", description="จุดเข้าเทรด เช่น Spread widening > 1.5 SD (ต้องมีตัวเลขเสมอ)")
+    entry_trigger: str = Field(default="", description="จุดเข้าเทรด เช่น Relative spread divergence > 2.0% หรือ Ratio > 1.5x (ต้องมีตัวเลขเสมอ ห้ามใช้คำว่า SD หากไม่มีข้อมูล Historical SD ในตาราง)")
     stop_loss_trigger: str = Field(default="", description="จุดตัดขาดทุน เช่น -3.0% relative spread divergence (ต้องระบุตัวเลขเสมอ)")
     target_gain_or_rebalance: str = Field(default="", description="เป้าหมายทำกำไรหรือปรับพอร์ต เช่น +6.0% relative spread convergence (ต้องระบุตัวเลขเสมอ)")
     max_drawdown_limit: str = Field(default="", description="ขีดจำกัดผลขาดทุนสูงสุด เช่น -4.5% of allocated risk budget (ต้องระบุตัวเลขเสมอ)")
     review_frequency: str = Field(default="", description="ความถี่ทบทวนกลยุทธ์ เช่น Weekly หรือ Bi-weekly review")
+
+    @classmethod
+    def __get_pydantic_json_schema__(
+        cls, core_schema: Any, handler: Any
+    ) -> dict[str, Any]:
+        json_schema = handler(core_schema)
+        json_schema = handler.resolve_ref_schema(json_schema)
+        if "properties" in json_schema:
+            json_schema["required"] = list(json_schema["properties"].keys())
+        return json_schema
+
+    @field_validator("time_horizon", mode="before")
+    @classmethod
+    def _val_time_horizon(cls, v: Any) -> str:
+        return _normalize_time_horizon_str(v)
 
     @model_validator(mode='after')
     def validate_evidence_and_sizing(self) -> 'PairTradeStrategy':
@@ -482,32 +545,48 @@ class PairTradeStrategy(BaseModel):
             if not str(val).strip():
                 self.confidence = "low"
                 self.sizing_guidance = "small_risk_budget"
-                _add_warning_idempotent(self.validation_warnings, f"Mandatory Field Missing: '{fname}' is empty after strip.")
-
-        if not _has_hard_data_numbers(self.supporting_data):
-            _auto_extract_with_provenance(self.supporting_data, self.thesis, "thesis")
-            _auto_extract_with_provenance(self.supporting_data, self.catalyst, "catalyst")
-            _auto_extract_with_provenance(self.supporting_data, self.risk, "risk")
+                _add_warning_idempotent(self.validation_warnings, str(WarningMessage(PT_MANDATORY_FIELD_MISSING, {"field": fname})))
 
         if not _has_hard_data_numbers(self.supporting_data):
             self.confidence = "low"
-            _add_warning_idempotent(self.validation_warnings, "Defensive Degradation: Downgraded confidence to LOW due to missing numeric hard data.")
+            _add_warning_idempotent(self.validation_warnings, str(WarningMessage(PT_DEFENSIVE_LOW)))
+
+        import re
+        has_stat_evidence = any(
+            re.search(r'(?i)\b(beta|z-score|standard deviation|sd|correlation)\b', str(d))
+            for d in (self.supporting_data + self.observable_refs)
+        )
+        if not has_stat_evidence:
+            if re.search(r'(?i)\bbeta[- ]?adjusted\b', str(self.hedge_ratio)) or re.search(r'(?i)\b(\d+(?:\.\d+)?)\s*(?:sd|z-score)\b', str(self.entry_trigger)):
+                if self.confidence == "high":
+                    self.confidence = "medium"
+                _add_warning_idempotent(self.validation_warnings, str(WarningMessage(STATISTICAL_OVERCLAIM)))
+
+        trigger_str = str(self.entry_trigger).lower() + " " + str(self.stop_loss_trigger).lower()
+        needs_rel = any(k in trigger_str for k in ["spread", "divergence", "convergence", "relative", "ratio", "beta", "sd", "z-score"])
+        has_rel = any(any(k in str(d).lower() for k in ["/", "ratio", "spread", "diff", "diverging", "vs", "relative", "beta", "z-score"]) and not "hyg/lqd" in str(d).lower() for d in self.supporting_data)
+        if needs_rel and not has_rel:
+            if self.confidence == "high":
+                self.confidence = "medium"
+            if self.sizing_guidance == "high_risk_budget":
+                self.sizing_guidance = "medium_risk_budget"
+            _add_warning_idempotent(self.validation_warnings, str(WarningMessage(PT_GRACEFUL_DOWNGRADE)))
 
         if not _all_execution_fields_present(self):
             if self.confidence in ["high", "medium"]:
                 self.confidence = "low"
-            _add_warning_idempotent(self.validation_warnings, "Pair Trade Execution Guardrail: Downgraded confidence to LOW due to missing mandatory executable pair trade controls.")
+            _add_warning_idempotent(self.validation_warnings, str(WarningMessage(PT_EXECUTION_GUARDRAIL)))
 
         if self.sizing_guidance == "high_risk_budget":
             if self.confidence == "medium":
                 self.sizing_guidance = "medium_risk_budget"
-                _add_warning_idempotent(self.validation_warnings, "Risk Budget Guardrail: Downgraded sizing_guidance from high to medium_risk_budget because confidence is MEDIUM.")
+                _add_warning_idempotent(self.validation_warnings, str(WarningMessage(PT_RISK_BUDGET_HIGH_TO_MED)))
             elif self.confidence == "low":
                 self.sizing_guidance = "small_risk_budget"
-                _add_warning_idempotent(self.validation_warnings, "Risk Budget Guardrail: Downgraded sizing_guidance from high to small_risk_budget because confidence is LOW.")
+                _add_warning_idempotent(self.validation_warnings, str(WarningMessage(PT_RISK_BUDGET_HIGH_TO_SMALL)))
         elif self.sizing_guidance == "medium_risk_budget" and self.confidence == "low":
             self.sizing_guidance = "small_risk_budget"
-            _add_warning_idempotent(self.validation_warnings, "Risk Budget Guardrail: Downgraded sizing_guidance from medium to small_risk_budget because confidence is LOW.")
+            _add_warning_idempotent(self.validation_warnings, str(WarningMessage(PT_RISK_BUDGET_MED_TO_SMALL)))
         return self
 
 class RiskMitigationScenario(BaseModel):
@@ -528,18 +607,21 @@ class RiskMitigationScenario(BaseModel):
     hedge_size: str = Field(default="", description="ขนาดป้องกันความเสี่ยง เช่น 10% of portfolio value (ต้องระบุตัวเลขเสมอ)")
     hedge_purpose: str = Field(default="portfolio_hedge", description="วัตถุประสงค์การป้องกันความเสี่ยง")
 
+    @classmethod
+    def __get_pydantic_json_schema__(
+        cls, core_schema: Any, handler: Any
+    ) -> dict[str, Any]:
+        json_schema = handler(core_schema)
+        json_schema = handler.resolve_ref_schema(json_schema)
+        if "properties" in json_schema:
+            json_schema["required"] = list(json_schema["properties"].keys())
+        return json_schema
+
     @model_validator(mode='after')
     def validate_quality_gate(self) -> 'RiskMitigationScenario':
-        if not _has_hard_data_numbers(self.supporting_data):
-            _auto_extract_with_provenance(self.supporting_data, self.trigger_to_activate, "trigger_to_activate")
-            for ind in self.early_warning_indicators:
-                _auto_extract_with_provenance(self.supporting_data, ind, "early_warning_indicator")
-            for hdg in self.hedge_instruments:
-                _auto_extract_with_provenance(self.supporting_data, hdg, "hedge_instrument")
-
         has_numeric_execution = (
-            _has_hard_data_numbers([self.trigger_to_activate])
-            and _has_hard_data_numbers([self.volume_threshold])
+            bool(re.search(r'\d', str(self.trigger_to_activate)))
+            and bool(re.search(r'\d', str(self.volume_threshold)))
             and bool(str(self.trigger_type).strip())
             and bool(str(self.unwind_or_cover_condition).strip())
         )
@@ -550,20 +632,13 @@ class RiskMitigationScenario(BaseModel):
             or not has_numeric_execution
         ):
             self.confidence = "low"
-            _add_warning_idempotent(self.validation_warnings, "Defensive Degradation: Downgraded confidence to LOW due to incomplete indicators/hedges or missing numeric hard data.")
+            _add_warning_idempotent(self.validation_warnings, str(WarningMessage(RS_DEFENSIVE_LOW)))
         return self
 
 def _asset_has_downgrade_warning(asset: AssetAllocationView) -> bool:
     return any(
-        key in warning
+        any(wid in warning for wid in DOWNGRADE_WARNING_IDS)
         for warning in asset.validation_warnings
-        for key in [
-            "Single-Source Penalty",
-            "Contradiction Degradation",
-            "Source Reference Penalty",
-            "Defensive Degradation",
-            "Active Allocation Guardrail",
-        ]
     )
 
 
@@ -579,13 +654,15 @@ def _why_not_high_is_weak(asset: AssetAllocationView) -> bool:
             "n/a",
             "no reason",
             "ไม่มีเหตุผล",
-            "à¹„à¸¡à¹ˆà¸¡à¸µà¹€à¸«à¸•à¸¸à¸œà¸¥",
+            WHY_NOT_HIGH_MESSAGES["default"].lower(),
+            WHY_NOT_HIGH_MESSAGES["low_confidence"].lower(),
         ]
     )
 
 
 def _normalize_why_not_high(asset: AssetAllocationView) -> None:
     if asset.confidence == "high":
+        asset.why_not_high = "-"
         return
     current = str(asset.why_not_high or "").strip().lower()
     weak_values = {
@@ -596,27 +673,46 @@ def _normalize_why_not_high(asset: AssetAllocationView) -> None:
         "ไม่มี",
         "ไม่มีเหตุผล",
         "ไม่มีเหตุผลที่ความมั่นใจไม่ถึงระดับสูง",
+        WHY_NOT_HIGH_MESSAGES["default"].lower(),
+        WHY_NOT_HIGH_MESSAGES["low_confidence"].lower(),
     }
     if current not in weak_values and "ไม่มีเหตุผล" not in current:
         return
-    if any("Single-Source Penalty" in warning for warning in asset.validation_warnings):
-        asset.why_not_high = "ความมั่นใจถูกจำกัดไว้ที่ MEDIUM เพราะมุมมองนี้อ้างอิงแหล่งข้อมูลโดยตรงเพียงแหล่งเดียว"
-    elif any("Gold Overweight" in warning or "Gold" in warning for warning in asset.validation_warnings):
-        asset.why_not_high = "ความมั่นใจถูกจำกัดไว้ที่ MEDIUM เพราะเหตุผลของทองคำยังต้องผูกกับ real yields เงินเฟ้อ หรือนโยบายการเงินให้ชัดขึ้น"
-    elif any("Contradiction" in warning for warning in asset.validation_warnings):
-        asset.why_not_high = "ความมั่นใจถูกจำกัดไว้ที่ MEDIUM เพราะพบสัญญาณมหภาคที่ขัดแย้งกับมุมมองเชิงรุก"
-    elif any("Source Reference Penalty" in warning for warning in asset.validation_warnings):
-        asset.why_not_high = "ความมั่นใจถูกจำกัดไว้ที่ MEDIUM เพราะแหล่งอ้างอิงถูกอนุมานจากระบบและยังต้องตรวจสอบซ้ำ"
+    warnings = [str(w) for w in asset.validation_warnings]
+    if any(f"[{SINGLE_SOURCE_PENALTY}]" in w for w in warnings):
+        asset.why_not_high = WHY_NOT_HIGH_MESSAGES["single_source"]
+    elif any(f"[{GOLD_CONTRADICTION}]" in w or f"[{GOLD_RATIONALE_WARNING}]" in w for w in warnings):
+        asset.why_not_high = WHY_NOT_HIGH_MESSAGES["gold_schema"]
+    elif any("CONTRADICTION" in w for w in warnings):
+        asset.why_not_high = WHY_NOT_HIGH_MESSAGES["contradiction"]
+    elif any(f"[{SOURCE_REF_PENALTY}]" in w for w in warnings):
+        asset.why_not_high = WHY_NOT_HIGH_MESSAGES["source_ref_inferred"]
     elif asset.confidence == "low":
-        asset.why_not_high = "ข้อมูลตัวเลขและหลักฐานอ้างอิงยังไม่เพียงพอสำหรับความมั่นใจระดับ HIGH"
+        asset.why_not_high = WHY_NOT_HIGH_MESSAGES["low_confidence"]
     else:
-        asset.why_not_high = "ยังมีข้อจำกัดด้านข้อมูลหรือการนำไปปฏิบัติ จึงยังไม่เหมาะกับความมั่นใจระดับ HIGH"
+        asset.why_not_high = WHY_NOT_HIGH_MESSAGES["default"]
+
+
+
+def _is_leading_indicator(obs: Any) -> bool:
+    id_lower = getattr(obs, "observable_id", "").lower()
+    ind_lower = getattr(obs, "indicator", "").lower()
+    leading_ids = {"nfci", "icsa", "ccsa", "t5yie", "t10yie", "t10y2y", "umcsent", "houst", "dgs2", "dfii10", "pmi"}
+    if any(lid in id_lower for lid in leading_ids):
+        return True
+    leading_keywords = [
+        "pmi", "leading", "claims", "breakeven", "sentiment", "housing starts",
+        "nfci", "icsa", "ccsa", "financial conditions", "ดัชนีสภาวะทางการเงิน", "สวัสดิการว่างงาน"
+    ]
+    if any(kw in ind_lower for kw in leading_keywords):
+        return True
+    return False
 
 
 class MacroStrategyDirection(BaseModel):
     evaluated_at: str = Field(description="ISO format string")
     overall_regime: EconomicState = Field(description="สภาวะเศรษฐกิจองค์รวม")
-    time_horizon: str = Field(default="3-6 Months", description="กรอบเวลาของกลยุทธ์")
+    time_horizon: str = Field(default="3-6 เดือน", description="กรอบเวลาของกลยุทธ์")
     key_assumptions: list[str] = Field(default_factory=list, description="สมมติฐานหลักของสภาวะเศรษฐกิจ")
     asset_allocation: list[AssetAllocationView] = Field(description="มุมมองจัดสรรสินทรัพย์")
     focus_themes: list[str] = Field(description="ธีมการลงทุนที่ควรเน้น")
@@ -635,6 +731,11 @@ class MacroStrategyDirection(BaseModel):
     regime_probabilities: dict[str, Any] = Field(default_factory=dict, description="การกระจายความน่าจะเป็นของสภาวะเศรษฐกิจ")
     regime_evidence: list[RegimeEvidenceComponent] = Field(default_factory=list, description="หลักฐานรองรับสภาวะเศรษฐกิจใน 5 มิติ")
 
+    @field_validator("time_horizon", mode="before")
+    @classmethod
+    def _val_time_horizon(cls, v: Any) -> str:
+        return _normalize_time_horizon_str(v)
+
     def revalidate_with_registry(
         self, registry: dict[str, MarketObservable]
     ) -> "MacroStrategyDirection":
@@ -651,88 +752,56 @@ class MacroStrategyDirection(BaseModel):
                 if obs.is_valid and obs.source_file and obs.source_file not in self.source_files:
                     self.source_files.append(obs.source_file)
 
-        if self.stale_data_warnings:
-            was_stale_low = any(
-                warning.startswith("Stale Data Degradation:") and "LOW" in warning and "stale data warnings" in warning
-                for warning in self.validation_warnings
-            )
-            self.validation_warnings = [
-                warning for warning in self.validation_warnings
-                if not (
-                    warning.startswith("Stale Data Degradation:")
-                    and "LOW" in warning
-                    and "stale data warnings" in warning
+        was_stale = any(
+            "STALE_DATA_DEGRADATION" in str(w) or "ข้อมูลล่าช้า" in str(w) or "Stale Data Degradation:" in str(w)
+            for w in self.validation_warnings
+        )
+        if self.stale_data_warnings or was_stale:
+            is_exempt_from_stale = False
+            if self.observable_registry:
+                cited_ids = set()
+                for ev in getattr(self, "regime_evidence", []):
+                    cited_ids.update(getattr(ev, "observable_refs", []) or [])
+                for a in getattr(self, "asset_allocation", []):
+                    cited_ids.update(getattr(a, "observable_refs", []) or [])
+                valid_leading_count = sum(
+                    1 for oid in cited_ids
+                    if oid in self.observable_registry
+                    and getattr(self.observable_registry[oid], "is_valid", False)
+                    and _is_leading_indicator(self.observable_registry[oid])
                 )
+                if valid_leading_count >= 2:
+                    is_exempt_from_stale = True
+
+            self.validation_warnings = [
+                w for w in self.validation_warnings
+                if not ("STALE_DATA_DEGRADATION" in str(w) or "ข้อมูลล่าช้า" in str(w) or "Stale Data Degradation:" in str(w))
             ]
-            if self.conviction_level == "high" or (self.conviction_level == "low" and was_stale_low):
+            if not is_exempt_from_stale:
+                if self.conviction_level == "high" or (self.conviction_level == "low" and was_stale):
+                    self.conviction_level = "medium"
+                _add_warning_idempotent(self.validation_warnings, str(WarningMessage(STALE_DATA_DEGRADATION)))
+            elif is_exempt_from_stale and was_stale and self.conviction_level == "low":
                 self.conviction_level = "medium"
-            _add_warning_idempotent(self.validation_warnings, "Stale Data Degradation: Downgraded overall conviction level from HIGH to MEDIUM due to presence of stale data warnings.")
 
         for a in self.asset_allocation:
-            if self.observable_registry and len(a.observable_refs) < 3:
-                text = " ".join([a.asset_class, a.rationale, " ".join(a.supporting_data)])
-                inferred = _infer_observable_refs_from_text(
-                    text,
-                    self.observable_registry,
-                    _asset_bucket_from_name(a.asset_class),
-                    max_refs=3,
-                )
-                for r in inferred:
-                    if r not in a.observable_refs:
-                        a.observable_refs.append(r)
+            bucket = a.asset_bucket
+            if self.observable_registry and a.observable_refs and bucket:
+                valid_refs = []
+                for ref in a.observable_refs:
+                    obs = self.observable_registry.get(ref)
+                    if obs and obs.is_valid and _is_allowed_cross_bucket(bucket, obs):
+                        valid_refs.append(ref)
+                a.observable_refs = valid_refs
             if self.observable_registry and a.observable_refs:
                 valid_ref_files = _source_files_from_observable_refs(a.observable_refs, self.observable_registry)
-                for vf in valid_ref_files:
-                    if vf not in a.source_refs:
-                        a.source_refs.append(vf)
-            has_valid_obs = bool(_valid_observables_for_refs(a.observable_refs, self.observable_registry)) if self.observable_registry else False
-            if (bool(self.regime_probabilities) or has_valid_obs) and self.source_files and len(a.source_refs) < 2:
-                for sf in self.source_files:
-                    if sf not in a.source_refs:
-                        a.source_refs.append(sf)
-            if len(a.source_refs) >= 2:
+                if valid_ref_files:
+                    a.source_refs = sorted(list(set(a.source_refs or []) | set(valid_ref_files)))
+            valid_source_files = _valid_source_files_for_refs(a.observable_refs, self.observable_registry) if self.observable_registry else set()
+            if len(valid_source_files) >= 2:
                 a.validation_warnings = [
-                    w for w in a.validation_warnings if "Single-Source Penalty" not in w
+                    w for w in a.validation_warnings if "Single-Source Penalty" not in w and "SINGLE_SOURCE_PENALTY" not in w
                 ]
-
-        for pt in self.pair_trades:
-            if self.observable_registry and len(_valid_observables_for_refs(pt.observable_refs, self.observable_registry)) < 2:
-                text = " ".join([
-                    pt.long_leg,
-                    pt.short_leg,
-                    pt.thesis,
-                    pt.catalyst,
-                    pt.risk,
-                    pt.hedge_ratio,
-                    " ".join(pt.supporting_data),
-                ])
-                inferred = _infer_observable_refs_from_text(text, self.observable_registry, None, max_refs=3)
-                for r in inferred:
-                    if r not in pt.observable_refs:
-                        pt.observable_refs.append(r)
-            if bool(self.regime_probabilities):
-                if not pt.observable_refs:
-                    pt.observable_refs = ["obs_001", "obs_005"]
-                if not pt.instrument_proxy.strip():
-                    pt.instrument_proxy = f"Long {pt.long_leg} / Short {pt.short_leg} Futures/ETF Proxy"
-                if not _has_hard_data_numbers([pt.hedge_ratio]):
-                    pt.hedge_ratio = f"{pt.hedge_ratio} (1.0 : 1.0 Beta-adjusted ratio)".strip()
-                if not _has_hard_data_numbers([pt.stop_loss_trigger]):
-                    pt.stop_loss_trigger = f"{pt.stop_loss_trigger} (-3.0% spread divergence)".strip()
-                if not _has_hard_data_numbers([pt.target_gain_or_rebalance]):
-                    pt.target_gain_or_rebalance = f"{pt.target_gain_or_rebalance} (+6.0% spread convergence)".strip()
-                if not _has_hard_data_numbers([pt.max_drawdown_limit]):
-                    pt.max_drawdown_limit = f"{pt.max_drawdown_limit} (-4.5% risk budget)".strip()
-                if not _has_hard_data_numbers(pt.supporting_data) and pt.observable_refs and self.observable_registry:
-                    pt.supporting_data = _supporting_data_from_observables(pt.observable_refs, self.observable_registry)
-                if not _has_hard_data_numbers(pt.supporting_data):
-                    pt.supporting_data = [f"Relative spread threshold target 1.5x ({pt.long_leg} vs {pt.short_leg})"]
-                if self.observable_registry and len(_valid_observables_for_refs(pt.observable_refs, self.observable_registry)) < 2:
-                    for obs_id, obs in self.observable_registry.items():
-                        if obs.is_valid and obs_id not in pt.observable_refs:
-                            pt.observable_refs.append(obs_id)
-                            if len(_valid_observables_for_refs(pt.observable_refs, self.observable_registry)) >= 2:
-                                break
 
         valid_pair_trades = []
         dropped_pair_trades = 0
@@ -744,157 +813,63 @@ class MacroStrategyDirection(BaseModel):
                 dropped_pair_trades += 1
         self.pair_trades = valid_pair_trades
         if dropped_pair_trades > 0:
-            _add_warning_idempotent(self.validation_warnings, f"Graceful Drop: {dropped_pair_trades} pair trade(s) omitted due to insufficient numeric market data or missing executable controls.")
-
-        for rs in self.risk_scenarios:
-            if bool(self.regime_probabilities):
-                if not getattr(rs, "hedge_instruments", []):
-                    rs.hedge_instruments = ["Long Gold Futures", "Put Options on S&P 500 (SPX)"]
-                if not _has_hard_data_numbers([getattr(rs, "volume_threshold", "")]):
-                    rs.volume_threshold = f"{getattr(rs, 'volume_threshold', '')} (Daily trading volume > 50,000 contracts)".strip()
-                if not _has_hard_data_numbers([getattr(rs, "trigger_to_activate", "")]):
-                    rs.trigger_to_activate = f"{getattr(rs, 'trigger_to_activate', '')} (VIX Index > 25.0)".strip()
-                if not _has_hard_data_numbers(rs.supporting_data):
-                    rs.supporting_data = ["VIX Index level > 25.0 threshold", "Gold spot resistance breach > 4,200 USD/oz"]
+            _add_warning_idempotent(self.validation_warnings, str(WarningMessage(GRACEFUL_DROP_PAIR_TRADES, {"count": str(dropped_pair_trades)})))
 
         valid_risk_scenarios = []
         dropped_risk_scenarios = 0
         for rs in self.risk_scenarios:
-            if (
-                _has_hard_data_numbers(rs.supporting_data)
-                and bool(getattr(rs, "hedge_instruments", []))
-                and _has_hard_data_numbers([getattr(rs, "volume_threshold", "")])
-                and _has_hard_data_numbers([getattr(rs, "trigger_to_activate", "")])
-            ):
+            exec_params = [
+                getattr(rs, "volume_threshold", ""),
+                getattr(rs, "trigger_to_activate", ""),
+                getattr(rs, "hedge_size", ""),
+                getattr(rs, "unwind_or_cover_condition", ""),
+            ] + rs.supporting_data
+            if any(re.search(r'\d', str(val)) for val in exec_params) and bool(getattr(rs, "hedge_instruments", [])):
                 valid_risk_scenarios.append(rs)
             else:
                 dropped_risk_scenarios += 1
         self.risk_scenarios = valid_risk_scenarios
         if dropped_risk_scenarios > 0:
-            _add_warning_idempotent(self.validation_warnings, f"Graceful Drop: {dropped_risk_scenarios} risk scenario(s) omitted due to insufficient numeric market data.")
+            _add_warning_idempotent(self.validation_warnings, str(WarningMessage(GRACEFUL_DROP_RISK_SCENARIOS, {"count": str(dropped_risk_scenarios)})))
 
         for a in self.asset_allocation:
             if not a.source_refs and self.source_files:
-                a.source_refs = list(self.source_files)
                 has_valid_obs = _refs_supported_by_source_files(
                     a.observable_refs,
                     self.observable_registry,
-                    a.source_refs,
+                    list(self.source_files),
                 )
                 if not has_valid_obs:
                     if a.confidence == "high":
                         a.confidence = "medium"
-                    msg = "Source Reference Penalty: Downgraded confidence to MEDIUM due to inferred/backfilled source references without valid observable_registry backing."
+                    msg = str(WarningMessage(SOURCE_REF_PENALTY))
                     _add_warning_idempotent(a.validation_warnings, msg)
                     _add_warning_idempotent(self.validation_warnings, msg)
+                a.source_refs = sorted(list(self.source_files))
 
-        for a in self.asset_allocation:
-            if a.stance == AssetStance.OVERWEIGHT and any(k in a.asset_class.lower() for k in ["gold", "precious metal", "ทองคำ", "โลหะมีค่า"]):
-                text_lower = (a.rationale + " " + " ".join(a.supporting_data)).lower()
-                has_macro_anchor = any(k in text_lower for k in ["yield", "fed", "rate", "inflation", "cpi", "monetary", "real interest", "ดอกเบี้ย", "เงินเฟ้อ"])
-                has_geopolitics = any(k in text_lower for k in ["geopolit", "war", "conflict", "tension", "สงคราม", "ภูมิรัฐศาสตร์"])
-                if has_geopolitics and not has_macro_anchor:
-                    if a.confidence == "high":
-                        a.confidence = "medium"
-                    if self.conviction_level == "high":
-                        self.conviction_level = "medium"
-                    _add_warning_idempotent(a.validation_warnings, "Contradiction Degradation: Gold Overweight rationale lacks yield/inflation macro anchoring.")
-                    _add_warning_idempotent(self.validation_warnings, "Gold Rationale Warning: Overweight Gold view downgraded to MEDIUM confidence because rationale relies on geopolitical tensions without anchoring to real yields, inflation, or monetary policy.")
+        from validators.contradiction_rules import validate_all_contradictions
+        validate_all_contradictions(self)
 
-        for a in self.asset_allocation:
-            if a.stance == AssetStance.OVERWEIGHT and any(k in a.asset_class.lower() for k in ["equit", "stock", "growth", "หุ้น"]):
-                text_lower = (a.rationale + " " + " ".join(a.supporting_data)).lower()
-                conflicting = any(k in text_lower for k in ["yields rising", "housing starts weak", "consumer sentiment low", "housing starts ลดลง", "sentiment ต่ำ", "cpi > 3.0%"])
-                if conflicting:
-                    if a.confidence == "high":
-                        a.confidence = "medium"
-                    if self.conviction_level == "high":
-                        self.conviction_level = "medium"
-                    _add_warning_idempotent(a.validation_warnings, "Contradiction Degradation: Overweight US Equities contains conflicting rising yields/weak housing/low sentiment signals.")
-
-        if self.overall_regime in [EconomicState.GOLDILOCKS, EconomicState.REFLATION]:
-            all_text = (self.conviction_rationale + " " + " ".join([a.rationale + " " + " ".join(a.supporting_data) for a in self.asset_allocation])).lower()
-            if any(k in all_text for k in ["cpi > 3", "sticky inflation", "high inflation", "เงินเฟ้อสูง"]):
-                if self.conviction_level == "high":
-                    self.conviction_level = "medium"
-                _add_warning_idempotent(self.validation_warnings, "Regime Contradiction Warning: Reflation/Goldilocks regime conflicts with high inflation (CPI > 3%) signals.")
-
-        eq_overweight = []
-        bond_overweight = []
-        for a in self.asset_allocation:
-            if a.stance == AssetStance.OVERWEIGHT:
-                ac = a.asset_class.lower()
-                if any(k in ac for k in ["equit", "stock", "growth", "หุ้น"]):
-                    eq_overweight.append(a)
-                if any(k in ac for k in ["bond", "duration", "treasur", "fixed income", "พันธบัตร"]):
-                    bond_overweight.append(a)
-        if eq_overweight and bond_overweight:
-            reconcile_keywords = ["barbell", "reconcil", "protection", "duration hedge", "hedged", "hedging", "with hedge", "ป้องกันความเสี่ยง"]
-            combined_text = f"{self.conviction_rationale} {self.divergence_note} " + " ".join(a.rationale for a in eq_overweight + bond_overweight)
-            text_lower = combined_text.lower()
-            has_reconcile = any(k in text_lower for k in reconcile_keywords)
-            if ("without hedge" in text_lower or "no hedge" in text_lower) and not any(k in text_lower for k in ["barbell", "reconcil", "protection"]):
-                has_reconcile = False
-            if not has_reconcile:
-                warn_msg = "Contradiction Warning: Portfolio recommends Overweight on both Equities Growth and Long Treasuries without explicit hedging or barbell rationale in narrative."
-                if self.conviction_level == "high":
-                    self.conviction_level = "medium"
-                for a in eq_overweight + bond_overweight:
-                    if a.confidence == "high":
-                        a.confidence = "medium"
-                    _add_warning_idempotent(a.validation_warnings, warn_msg)
-                _add_warning_idempotent(self.validation_warnings, warn_msg)
-
-        old_len = len(self.asset_allocation)
         if self.asset_allocation is not None:
-            core_categories = [
-                ("Global Equities", ["equit", "stock", "หุ้น", "spx", "nasdaq"]),
-                ("Global Bonds", ["bond", "duration", "treasur", "fixed income", "พันธบัตร", "yield", "rate"]),
-                ("Commodities", ["commodit", "gold", "oil", "metal", "brent", "wti", "ทองคำ", "น้ำมัน"]),
-                ("FX / Currencies", ["fx", "currenc", "dxy", "usd", "eur", "jpy", "thb", "ค่าเงิน", "สกุลเงิน"]),
-                ("Cash / T-Bills", ["cash", "t-bill", "money market", "liquidity", "เงินสด"]),
-            ]
-            for cat_name, keywords in core_categories:
-                if not any(any(k in a.asset_class.lower() for k in keywords) for a in self.asset_allocation):
-                    self.asset_allocation.append(AssetAllocationView(
-                        asset_class=cat_name,
-                        stance=AssetStance.NEUTRAL,
-                        rationale=f"Backfilled core asset class ({cat_name}) due to input data constraints",
-                        confidence="low",
-                        supporting_data=[]
-                    ))
-            while len(self.asset_allocation) < 5:
-                idx = len(self.asset_allocation) + 1
-                self.asset_allocation.append(AssetAllocationView(
-                    asset_class=f"Core Asset Class {idx}",
-                    stance=AssetStance.NEUTRAL,
-                    rationale="Backfilled core asset class due to input data constraints",
-                    confidence="low",
-                    supporting_data=[]
-                ))
-            if len(self.asset_allocation) > old_len:
-                _add_warning_idempotent(self.validation_warnings, f"Coverage Backfill: Asset allocation expanded from {old_len} to {len(self.asset_allocation)} core classes. Missing classes added as NEUTRAL/LOW confidence due to input data constraints.")
-                _add_warning_idempotent(self.validation_warnings, f"Coverage Warning: Asset allocation covers {old_len} asset classes (target is 5+ core classes: Equities, Bonds/Duration, Commodities, FX, Cash). Missing classes omitted or low-confidence due to input data constraints.")
+            core_buckets = {"equities", "fixed_income", "commodities", "fx", "cash"}
+            present_buckets = {
+                str(getattr(a, "asset_bucket", "")).lower().strip()
+                for a in self.asset_allocation
+                if getattr(a, "asset_bucket", None) is not None
+            }
+            missing_buckets = core_buckets - present_buckets
+            if len(self.asset_allocation) < 5 or missing_buckets:
+                _add_warning_idempotent(self.validation_warnings, str(WarningMessage(COVERAGE_WARNING_INCOMPLETE, {"count": str(len(self.asset_allocation)), "missing": sorted(list(missing_buckets))})))
+            else:
+                self.validation_warnings = [
+                    w for w in self.validation_warnings
+                    if "COVERAGE_WARNING_INCOMPLETE" not in str(w) and "Coverage Warning" not in str(w)
+                ]
 
         for a in self.asset_allocation:
-            bucket = _asset_bucket_from_name(a.asset_class)
-            if self.observable_registry and bucket and not a.observable_refs:
-                refs = [
-                    obs_id for obs_id, obs in self.observable_registry.items()
-                    if obs.is_valid and _is_allowed_cross_bucket(bucket, obs)
-                ][:3]
-                if refs:
-                    a.observable_refs = refs
-            if self.observable_registry and a.observable_refs and not a.supporting_data:
-                a.supporting_data = _supporting_data_from_observables(a.observable_refs, self.observable_registry)
-                if a.supporting_data and a.confidence == "low":
-                    a.confidence = "medium"
-                    a.data_confidence = "medium"
-                    a.signal_confidence = "medium"
-                    a.implementation_confidence = "medium"
-            if self.observable_registry and a.observable_refs and not a.source_refs:
-                a.source_refs = list(self.source_files) if self.source_files else _source_files_from_observable_refs(a.observable_refs, self.observable_registry)
-            if _asset_has_downgrade_warning(a) or (a.confidence != "high" and _why_not_high_is_weak(a)):
+            if a.confidence == "high":
+                a.why_not_high = "-"
+            elif _asset_has_downgrade_warning(a) or _why_not_high_is_weak(a):
                 _normalize_why_not_high(a)
 
         if not self.asset_allocation:
@@ -903,14 +878,22 @@ class MacroStrategyDirection(BaseModel):
         low_conf_count = sum(1 for a in self.asset_allocation if a.confidence == "low" or not _has_hard_data_numbers(a.supporting_data))
         if (low_conf_count / len(self.asset_allocation)) >= 0.5:
             self.conviction_level = "low"
-            _add_warning_idempotent(self.validation_warnings, f"Defensive Degradation: Portfolio conviction downgraded to LOW because >=50% ({low_conf_count}/{len(self.asset_allocation)}) of asset views lack numeric hard data or have LOW confidence.")
+            _add_warning_idempotent(self.validation_warnings, str(WarningMessage(PORTFOLIO_DEFENSIVE_LOW, {"ratio": f"{low_conf_count}/{len(self.asset_allocation)}"})))
         else:
             defensive_prefix = "Defensive Degradation: Portfolio conviction downgraded to LOW because >=50%"
-            had_defensive = any(w.startswith(defensive_prefix) for w in self.validation_warnings)
+            defensive_id = f"[{PORTFOLIO_DEFENSIVE_LOW}]"
+            had_defensive = any(w.startswith(defensive_prefix) or w.startswith(defensive_id) for w in self.validation_warnings)
             if had_defensive:
                 self.validation_warnings = [
-                    w for w in self.validation_warnings if not w.startswith(defensive_prefix)
+                    w for w in self.validation_warnings if not w.startswith(defensive_prefix) and not w.startswith(defensive_id)
                 ]
                 if self.conviction_level == "low":
                     self.conviction_level = "medium"
+
+        clevel = str(self.conviction_level or "medium").upper()
+        if clevel in {"MEDIUM", "LOW"}:
+            for high_term in ["ความเชื่อมั่นระดับสูง", "ความมั่นใจระดับสูง", "high conviction"]:
+                if high_term in self.conviction_rationale.lower() or high_term in self.conviction_rationale:
+                    _add_warning_idempotent(self.validation_warnings, str(WarningMessage(CONVICTION_CONTRADICTION)))
+
         return self

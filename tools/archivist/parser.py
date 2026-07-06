@@ -6,6 +6,7 @@ import tempfile
 from datetime import datetime
 from functools import lru_cache
 from pathlib import Path
+from typing import Optional, Any
 
 import frontmatter as fm
 from filelock import FileLock
@@ -31,6 +32,22 @@ _SOURCE_URL_FRONTMATTER_RE = re.compile(r"^source_url:\s*[\"']?(https?://[^\s\"'
 VAULT_PATH = Path(os.getenv("OBSIDIAN_VAULT_PATH", "./memories"))
 INDEX_PATH = VAULT_PATH / ".system" / "master_index.json"
 INDEX_LOCK = str(INDEX_PATH) + ".lock"
+
+
+def extract_yaml_frontmatter_value(content: str, key: str) -> Optional[str]:
+    """สกัด YAML frontmatter จากระหว่างกรอบ --- เท่านั้น พร้อมดึงค่า key โดย strip quotes (" และ ') ออก"""
+    if not content.strip().startswith("---"):
+        return None
+    parts = content.split("---", 2)
+    if len(parts) < 3:
+        return None
+    fm_block = parts[1]
+    pattern = rf"^\s*{re.escape(key)}\s*:\s*(?:[\"'](?P<qval>[^\"']+)[\"']|(?P<uval>[^\r\n#]+))"
+    match = re.search(pattern, fm_block, re.MULTILINE)
+    if match:
+        val = match.group("qval") or match.group("uval")
+        return val.strip() if val else None
+    return None
 
 
 def _strip_frontmatter(content: str) -> str:

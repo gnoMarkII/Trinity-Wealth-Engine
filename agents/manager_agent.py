@@ -7,6 +7,7 @@ from functools import lru_cache
 from typing import Literal, TypedDict, Optional
 
 from langchain_core.messages import AIMessage, HumanMessage, ToolMessage
+from langchain_core.runnables.config import RunnableConfig
 from langgraph.graph import END, START, MessagesState, StateGraph
 from langgraph.types import Command
 from pydantic import BaseModel, Field
@@ -22,6 +23,7 @@ from tools.macro.report_formatter import format_macro_strategy_report
 from core.agent_log import log_turn_start, log_manager_plan, log_worker_result, log_system_action, log_routing
 from core.llm_factory import FALLBACK_MODEL, detect_provider, get_llm
 from core.logger import get_logger
+from core.prompt_harness import get_harness
 from core.utils import normalize_content
 
 log = get_logger(__name__)
@@ -62,56 +64,7 @@ class AgentState(MessagesState):
     narrative_context: Optional[dict]
 
 
-# ROUTER_PROMPT: กฎการแตกคำขอเป็น tasks + เลือก worker ของแต่ละ task + กฎเหล็ก
-ROUTER_PROMPT = """คุณคือ The Manager ผู้จัดการกองทุนส่วนตัว หน้าที่: แตกคำขอของผู้ใช้ออกเป็น "รายการงาน" (tasks) แล้วส่งให้ worker ที่เหมาะสมตามลำดับ
-
-[แตกงาน — สำคัญที่สุด]
-- ผู้ใช้พิมพ์หลายคำสั่งใน turn เดียวได้ → แตกเป็นหลาย task เรียงตามลำดับที่ควรทำ (1 task = 1 worker call)
-- สำหรับงานดึงข้อมูล (researcher) หากดึงข้อมูลคนละประเภทหรือคนละตลาด/พื้นที่ร่วมกัน (เช่น ทั้งดึงข้อมูลเศรษฐกิจมหภาคของไทย ของสหรัฐฯ และของภูมิภาค) → ให้แตกเป็นหลาย task แยกกันส่งให้ researcher (1 task ต่อ 1 ชิ้นงาน เช่น ดึงข้อมูลไทย, ดึงข้อมูลสหรัฐฯ, ดึงข้อมูลภูมิภาค) เพื่อให้ Researcher เรียกใช้เครื่องมือได้ครบถ้วน (ห้ามรวบเป็น task เดียว)
-- คำสั่งเดียว → tasks มี 1 ชิ้น
-- ตอบเองได้จากบริบทเดิม หรือคำถามทั่วไปที่ไม่ต้องดึง/แก้ข้อมูล → tasks = [] (ว่าง) แล้วใส่คำตอบใน response_text
-- กฎ XOR: ถ้ามี task อย่างน้อย 1 ชิ้น → response_text ต้องว่าง (ปล่อยให้ worker เป็นคนตอบ) ห้ามใส่พร้อมกัน
-  หากผู้ใช้คุยเล่น/ถามทั่วไปพ่วงท้ายคำสั่งจริง ให้รวบเข้าไปใน instruction ของ task ที่เกี่ยวข้อง หรือมองข้ามส่วนนั้น
-
-[ลำดับงาน]
-- โดยทั่วไปเรียงตามที่ผู้ใช้พิมพ์
-- ถ้า turn เดียวมีทั้งงานพอร์ต (bookkeeper) และงานบันทึก/ความรู้ (archivist) → เรียง bookkeeper ก่อน archivist เสมอ
-- [Proactive Data Fetching]: หากมีงาน "macro_intel" ต้องอาศัยข้อมูล Snapshot 3 ระดับ (Global, Regional, Country) ดังนั้นหากผู้ใช้สั่ง "วิเคราะห์เศรษฐกิจ" หรือ "จัดพอร์ต" โดยไม่ได้ให้ข้อมูลมา ให้คุณ **สร้าง task ให้ researcher ไปดึงข้อมูล Global, Regional และ Country (แยกเป็น 3 tasks)** วางไว้ก่อนหน้า task ของ macro_intel เสมอ โดยห้ามใช้คำว่า "บันทึก" ใน instruction ของ researcher (ระบบจะบันทึกให้อัตโนมัติ) และต้องตามด้วย task "macro_intel" ปิดท้ายเสมอ
-- [Proactive Freshness Check]: หากผู้ใช้ถามถึง "ข่าว (News)" หรือ "เนื้อหา YouTube" (ที่มีในระบบ) ให้สร้าง task ให้ Archivist ช่วยตรวจสอบและอ่านข้อมูลดูก่อนว่าเก่าเกินไปหรือไม่ หากพบว่าไม่มีข้อมูลหรือเก่าเกินไป Manager ควรเว้นให้ระบบมีการอัปเดตข้อมูลเหล่านั้นก่อนนำมาใช้วิเคราะห์
-
-[เลือก target ของแต่ละ task ตามประเภทคำขอ]
-- "researcher" → ดึงข้อมูลภายนอก: macro/sector/regional/FRED economic data, TH/US stocks (fundamentals, financials, momentum, consensus, news — Researcher จะเลือก market='TH'|'US' ตาม ticker), ไฟล์ PDF (รายงาน/งบการเงิน/บทวิเคราะห์)
-  (Researcher จะส่งผลให้ Archivist บันทึกอัตโนมัติ — ไม่ต้องส่ง archivist ซ้ำ)
-- "archivist" → อ่าน/ค้นหาข้อมูลใน Vault (ข้อมูลความรู้/Entity ที่บันทึกไว้, สุขภาพ Vault, semantic search), บันทึก book note หรือ knowledge ที่ผู้ใช้พิมพ์/วางมาเองโดยตรง (entity_type: book_note)
-- "macro_intel" → วิเคราะห์สภาวะเศรษฐกิจมหภาคและการจัดสรรสินทรัพย์: คำนวณคะแนนสภาวะเศรษฐกิจ ประเมินเชิงคุณภาพ และออกรายงานทิศทางกลยุทธ์
-- "bookkeeper" → พอร์ตการลงทุนจริง:
-  - ธุรกรรม: ซื้อ/ขาย/ฝาก/ถอน (THB/USD แยก pot), dividend/interest/rental, FX update, แก้ไข holding ที่ผิด
-  - สถานะ/รายงาน: NAV, P/L, holdings, เงินสด, allocation % (asset_type/currency), performance trend ย้อนหลัง
-  - Watchlist: เพิ่ม/ลบ/ดู สินทรัพย์ที่จับตา (ยังไม่ซื้อ)
-  - Journal: ทบทวนบันทึก mistakes / เหตุผลซื้อขายย้อนหลัง
-  - เป้าหมายทางการเงิน (Goals): ตั้ง/ลบ/ดู progress เป้าหมาย เช่น NAV เป้าหมาย, เงินสดสำรอง, passive income ต่อปี
-    คีย์เวิร์ด: "ตั้งเป้าหมาย", "เป้าหมายพอร์ต", "อยากมี NAV", "เงินฉุกเฉิน [ตัวเลข]", "passive income เป้า", "ดูเป้าหมาย", "progress เป้าหมาย"
-
-[แยกให้ชัด]
-- Archivist = ความรู้/Entity (เช่น "เล่าเรื่องบริษัท PTT")
-- Bookkeeper = ตัวเลขพอร์ตจริง (เช่น "ซื้อ AAPL 10 หุ้น", "เงินสดเหลือเท่าไหร่")
-
-[วิธีกรอกแต่ละ task]
-- target = worker ที่รับงาน (archivist/researcher/bookkeeper/macro_intel)
-- instruction = คำสั่งของ task นั้น กระชับ ชัดเจน
-- save_to_vault = ใช้กับ researcher เท่านั้น: True (ค่าเริ่มต้น) = Archivist เซฟอัตโนมัติ,
-  False = ผู้ใช้บอกชัดเจนไม่ต้องเซฟ ('ดูเฉยๆ', 'ไม่ต้องเซฟ', 'แค่อยากรู้', 'เช็คเฉยๆ')
-
-[กฎเหล็ก]
-- ห้ามนำข้อมูลดิบที่ Researcher ดึงมาสรุป/วิเคราะห์ซ้ำในคำตอบ
-- ห้ามมั่วข้อมูล — ต้องดึงจากแหล่งที่เชื่อถือได้
-- ห้ามตอบตัวเลขพอร์ตจากความจำเก่า — ต้องให้ Bookkeeper อ่านสถานะปัจจุบันก่อนเสมอ
-
-[กฎ Re-plan — เมื่อเห็น [REPLAN]]
-- ข้อความที่ขึ้นต้นด้วย [REPLAN] แสดงว่างานก่อนหน้าล้มเหลว
-- ให้วิเคราะห์ว่า Error เกิดจากอะไร แล้ววางแผนงานใหม่ที่แก้ต้นเหตุ
-- ตัวอย่าง: ถ้า macro_intel บอก "ไม่พบไฟล์ Global_Macro_Snapshot" → สั่ง Researcher ดึงข้อมูล Global Macro ก่อน แล้วค่อยส่ง macro_intel อีกครั้ง
-- ห้ามทำซ้ำแผนเดิมที่ล้มเหลว — ต้องเปลี่ยนแนวทาง"""
+# ROUTER_PROMPT ถูกย้ายไปที่ prompts/skills/manager/SKILL.md ผ่านระบบ PromptHarness
 
 
 class WorkerTask(BaseModel):
@@ -253,7 +206,7 @@ def build_graph(checkpointer=None) -> StateGraph:
             log_turn_start(turn_id, messages[-1].content)
 
             router_messages = [
-                {"role": "system", "content": ROUTER_PROMPT},
+                {"role": "system", "content": get_harness("manager").get_system_prompt()},
                 *[{"role": _msg_role(m), "content": normalize_content(m.content)}
                   for m in messages[-_ROUTER_HISTORY_LIMIT:] if not isinstance(m, ToolMessage)],
             ]
@@ -295,7 +248,7 @@ def build_graph(checkpointer=None) -> StateGraph:
                 )
 
                 router_messages = [
-                    {"role": "system", "content": ROUTER_PROMPT},
+                    {"role": "system", "content": get_harness("manager").get_system_prompt()},
                     *[{"role": _msg_role(m), "content": normalize_content(m.content)}
                       for m in messages[-_ROUTER_HISTORY_LIMIT:]
                       if not isinstance(m, ToolMessage)],
@@ -374,7 +327,7 @@ def build_graph(checkpointer=None) -> StateGraph:
 
         if meta.get("source") in ["researcher", "macro_intel"]:
             last_msg = extract_worker_reply(state["messages"])
-            task = f"บันทึกข้อมูลดิบต่อไปนี้ลง Vault ทันที\n\n[ข้อมูลดิบ]\n{last_msg}"
+            task = f"คุณต้องเรียกใช้เครื่องมือ write_raw_markdown เพื่อบันทึกข้อมูลดิบต่อไปนี้ลง Vault ทันที ห้ามตอบกลับเป็นข้อความโดยไม่เรียกใช้เครื่องมือ\n\n[ข้อมูลดิบ]\n{last_msg}"
         else:
             last_msg = normalize_content(state["messages"][-1].content)
             msgs = state["messages"]
@@ -576,8 +529,7 @@ def build_graph(checkpointer=None) -> StateGraph:
             quant_json = json.dumps(allocator_quant_data, ensure_ascii=False)
             narrative_json = json.dumps(state.get("narrative_context", {}), ensure_ascii=False)
 
-            direction = invoke_strategic_allocator(model, quant_json, narrative_json)
-            direction = direction.revalidate_with_registry(observable_registry)
+            direction = invoke_strategic_allocator(model, quant_json, narrative_json, observable_registry=observable_registry)
             for source_file in sorted(evaluated_source_files):
                 if source_file not in direction.source_files:
                     direction.source_files.append(source_file)
@@ -621,18 +573,33 @@ def build_graph(checkpointer=None) -> StateGraph:
     builder = StateGraph(AgentState)
     builder.add_node("supervisor", supervisor_node)
     builder.add_node("prepare_archivist", prepare_archivist_node)
-    builder.add_node("archivist", archivist_graph)
-    builder.add_node("researcher", researcher_graph)
-    builder.add_node("bookkeeper", bookkeeper_graph)
+    def archivist_wrapper(state: AgentState, config: RunnableConfig):
+        result = archivist_graph.invoke(state, config=config)
+        reply = extract_worker_reply(result["messages"])
+        return {"messages": [AIMessage(content=reply, name="archivist")]}
+
+    def researcher_wrapper(state: AgentState, config: RunnableConfig):
+        result = researcher_graph.invoke(state, config=config)
+        reply = extract_worker_reply(result["messages"])
+        return {"messages": [AIMessage(content=reply, name="researcher")]}
+
+    def bookkeeper_wrapper(state: AgentState, config: RunnableConfig):
+        result = bookkeeper_graph.invoke(state, config=config)
+        reply = extract_worker_reply(result["messages"])
+        return {"messages": [AIMessage(content=reply, name="bookkeeper")]}
+
+    builder.add_node("archivist", archivist_wrapper)
+    builder.add_node("researcher", researcher_wrapper)
+    builder.add_node("bookkeeper", bookkeeper_wrapper)
 
     # Macro Intel Pipeline
-    def macro_quant_wrapper(state: AgentState):
-        result = macro_quant_graph.invoke({"messages": [state["messages"][-1]]})
+    def macro_quant_wrapper(state: AgentState, config: RunnableConfig):
+        result = macro_quant_graph.invoke(state, config=config)
         reply = extract_worker_reply(result["messages"])
         return {"messages": [AIMessage(content=reply, name="macro_quant")]}
 
-    def macro_economist_wrapper(state: AgentState):
-        result = macro_economist_graph.invoke({"messages": [state["messages"][-1]]})
+    def macro_economist_wrapper(state: AgentState, config: RunnableConfig):
+        result = macro_economist_graph.invoke(state, config=config)
         reply = extract_worker_reply(result["messages"])
         return {"messages": [AIMessage(content=reply, name="macro_economist")]}
 

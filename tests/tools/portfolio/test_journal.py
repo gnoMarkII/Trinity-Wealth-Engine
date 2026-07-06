@@ -60,13 +60,15 @@ class TestReadTradingJournal:
         assert data["n_returned"] == 2
 
     def test_days_filter_excludes_old(self, isolated_portfolio, tmp_vault):
+        from datetime import datetime, timedelta
         pt = isolated_portfolio
         # เขียน journal entries ผสม — ใหม่และเก่า (เก่าเขียน timestamp ด้วยมือเลย)
         journal_path = tmp_vault / "20_Portfolio_Management" / "Journals_and_Reports" / "Trading_Journal.md"
         journal_path.parent.mkdir(parents=True, exist_ok=True)
+        recent_date = (datetime.now() - timedelta(days=5)).strftime("%Y-%m-%d %H:%M:%S")
         journal_path.write_text(
-            "\n## [2020-01-01 10:00:00]\n\nold entry far in past\n"
-            "\n## [2026-05-22 14:00:00]\n\nentry today\n",
+            f"\n## [2020-01-01 10:00:00]\n\nold entry far in past\n"
+            f"\n## [{recent_date}]\n\nentry today\n",
             encoding="utf-8",
         )
         # days=30 → 2020 entry ตกขอบ, 2026 อยู่ใน window (assuming current date >= 2026-04-22)

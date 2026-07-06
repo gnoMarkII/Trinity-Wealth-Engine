@@ -102,17 +102,22 @@
 * หากต้องเพิ่มชนิด PII ใหม่ ให้เพิ่มที่ middleware layer เดิม ไม่ใช่สร้างทางลัดใหม่
 * การแก้ไข PII Gateway ต้องถูก *ขออนุญาตผู้ใช้อย่างชัดเจนเป็นลายลักษณ์อักษร* ก่อนเสมอ
 
-### 4.5 Macro Economist Agent — ผู้วิเคราะห์กระแสระดับมหภาค (Narrative & Macro)
-* ทำหน้าที่สกัดธีมการลงทุนหลัก (Dominant Themes), Tail Risks, Market Sentiment และ Policy Signals จากแหล่งข้อมูลข่าวสาร (News, YouTube, Articles) 
+### 4.5 Macro Quant Agent — ผู้เชี่ยวชาญด้านข้อมูลเชิงปริมาณและตัวชี้วัดมหภาค (Quantitative Macro)
+* ทำหน้าที่รวบรวมและคำนวณข้อมูลตัวเลข Hard Data, Market Observables, Quant Matrix Score ตลอดจนตัวชี้วัดเชิงลึก (Equity Risk Premium, Credit Spread, Derived Pair Ratios, Rolling 60-Day Correlation)
+* **กฎเหล็กข้อ 1:** ต้องบันทึกตัวชี้วัดและอัตราส่วนที่ดัดแปลง (Derived Observables) ลงในฟิลด์ `metadata` แบบ Dict/JSON เสมอเพื่อให้เป็นมาตรฐาน Machine-Readable
+* **กฎเหล็กข้อ 2:** ต้องบังคับใช้เกณฑ์คุณภาพข้อมูล (Data Quality Guard) เช่น การหาความสัมพันธ์ต้องมีวันทำการตรงกันอย่างน้อย 45 วัน ($\text{overlapping\_days} \ge 45$) หากต่ำกว่าเกณฑ์ต้องตั้งสถานะ `is_valid = False` ทันที
+
+### 4.6 Macro Economist Agent — ผู้วิเคราะห์กระแสระดับมหภาค (Narrative & Macro)
+* ทำหน้าที่สกัดธีมการลงทุนหลัก (Dominant Themes), Tail Risks, Market Sentiment และ Policy Signals จากแหล่งข้อมูลข่าวสาร (News, YouTube, Articles) ในชั้น Economic Layer
 * **กฎเหล็กข้อ 1:** ต้องอิงจากข้อมูลล่าสุดผ่านเครื่องมือ (Tools) อย่าง `generate_news_radar_daily`, `get_macro_baselines` เสมอ และคัดลอกตัวเลขอย่าง `sources_count` หรือ `age_hours` จากต้นฉบับมาอย่างซื่อสัตย์ ห้าม Hallucinate ขึ้นมาเอง
 * **กฎเหล็กข้อ 2:** ห้ามคำนวณคะแนน (Score) ความมั่นใจใดๆ เอง — หน้าที่คำนวณและประเมินน้ำหนัก (เช่น Conviction/Freshness/Event Confidence) ถูกบังคับจัดการผ่าน Python Schema (`@computed_field` / `@model_validator`) แล้ว Agent ห้ามแทรกแซง 
 
-### 4.6 Strategic Allocator Agent — ผู้สังเคราะห์ข้อมูลเพื่อการจัดพอร์ต (Quant + Narrative)
-* ทำหน้าที่ตัดสินใจทิศทางและน้ำหนักการลงทุน (MacroStrategyDirection) โดยชั่งน้ำหนักระหว่างข้อมูลเชิงตัวเลข (QuantScore) กับบริบทสภาวะตลาด (NarrativeContext) 
-* **กฎเหล็กข้อ 1:** การตัดสินใจต้องอิงกับค่า `investment_conviction_contribution` ที่ประมวลผลเสร็จแล้วจาก NarrativeContext ห้ามคิดคำนวณค่า impact หรือความมั่นใจใหม่เอง
-* **กฎเหล็กข้อ 2:** ต้องพิจารณาความขัดแย้งของข้อมูล (Cross-Validation) และละเว้นการให้น้ำหนักกับเสียงสะท้อน (Echo Chamber) ที่ถูกลดน้ำหนักมาแล้วโดยระบบ NLP อย่างรอบคอบ
+### 4.7 Strategic Allocator Agent — ผู้สังเคราะห์ข้อมูลเพื่อการจัดพอร์ต (4-Layer Institutional Grade)
+* ทำหน้าที่ตัดสินใจทิศทางและน้ำหนักการลงทุน (`MacroStrategyDirection`) ครอบคลุม 5 กลุ่มสินทรัพย์หลัก พร้อมระบุความน่าจะเป็นของ Regime, แผนเทรดคู่ (Pair Trades) และแผนป้องกันความเสี่ยง (Hedging Plan) ตามรูปแบบ 7-Section Dashboard Formatting
+* **กฎเหล็กข้อ 1:** ต้องอ้างอิง Hard Data และตัวชี้วัดจริงผ่านรหัส `observable_refs` เสมอ เพื่อไม่ให้ตกเกณฑ์ Single Source Penalty และห้ามข้ามขั้นตอนของ Guardrails
+* **กฎเหล็กข้อ 2:** ต้องปฏิบัติตามกฎของ Validator Separation โดยตรรกะการตรวจสอบ (เช่น Valuation Guardrail, Stale Exemption, Correlation Breakdown) ถูกแยกจัดการใน `validators/` และส่งผลต่อระดับความมั่นใจรวม (Conviction Level) อย่างเคร่งครัด
 
-### 4.7 Graph Composition & State Management
+### 4.8 Graph Composition & State Management
 * **Native Subgraph Composition:** ห้ามใช้ `.invoke()` หรือเรียก Execute Graph ซ้อน Graph ภายใน Node ให้ใช้การนำ Graph ลูกมาเป็น Node ของ Graph แม่โดยตรงผ่าน `builder.add_node("name", sub_graph)`
 * **State Schema:** สถานะ (State) ของ Agent และ Graph ต้องประกาศชนิดด้วย `TypedDict` หรือสืบทอดจาก `MessagesState` (ซึ่งเป็น TypedDict) เสมอ **ห้ามใช้ Pydantic `BaseModel` ในการกำหนด State Schema** เด็ดขาด
 
@@ -170,6 +175,16 @@
 **กฎเหล็ก:** ห้าม Hardcode API Keys (เช่น `OPENAI_API_KEY`, `FRED_API_KEY`, `GOOGLE_API_KEY`) ลงในไฟล์โค้ดเด็ดขาด
 * ต้องเรียกใช้งานผ่าน `os.getenv()` และโหลดผ่านไฟล์ `.env` เท่านั้น
 * หากต้องเขียนโค้ดทดสอบหรือทำ Test Mock ให้ใช้ตัวแปรจำลองที่เป็น Dummy Value เสมอ เช่น `sk-test-123` หรือ `mock-api-key`
+
+### 5.6 Institutional Grade Macro Guardrails & Validator Separation
+> **เหตุผล:** เพื่อป้องกันการเกิด Hallucination ในกลยุทธ์การลงทุน และให้ระบบมีความน่าเชื่อถือเทียบเท่ามาตรฐานสถาบันการเงินจริง
+
+**กฎเหล็ก:** ระบบวิเคราะห์และจัดสรรพอร์ตมหภาคต้องยึดมั่นใน 4 เสาหลัก (Institutional Grade Pillars) ดังนี้:
+1. **Explicit Observable References (`observable_refs`):** ทุกหลักฐานการประเมิน (Regime Evidence) และมุมมองรายสินทรัพย์ (Asset Allocation Stance) ต้องอ้างอิงรหัส ID ของ Observables (`obs_*`) จาก Registry เสมอ ห้ามเขียนลอย ๆ โดยไม่มีรหัสอ้างอิง
+2. **Validator Separation:** ตรรกะการตรวจสอบกฎเกณฑ์ (Guardrails / Contradiction Rules) ต้องแยกออกจาก Pydantic Schema ไปไว้ในโมดูลชั้น `validators/` (เช่น `valuation_guardrails.py`, `contradiction_rules.py`) เพื่อให้ตรวจสอบได้อิสระและไม่เกิด Circular Validation
+3. **Valuation & Credit Guardrails (Pillar 1):** ห้ามกำหนดระดับความมั่นใจเป็น HIGH และต้องแจ้งเตือนระบบ หาก Equity Risk Premium (ERP) < 1.5% (`VALUATION_RICH_WARNING`) หรือ High Yield Credit Spread กว้างกว่าเกณฑ์ 5.0% (`CREDIT_SPREAD_WARNING`)
+4. **Active Stale Exemption (Pillar 2):** หากพบคำเตือนข้อมูลล่าช้า (Stale Data Warning) แต่มีการอ้างอิง Leading Indicators ครบอย่างน้อย 2 รหัสที่ถูกต้องใน `observable_refs` ระบบจะได้รับสิทธิ์ยกเว้นการลดระดับความมั่นใจ (Exemption)
+5. **Derived Metadata & Correlation Quality (Pillar 3 & 4):** ข้อมูลดัดแปลง (Pair Ratios) ต้องเก็บบันทึกสถิติในฟิลด์ `metadata` แบบ Dict/JSON (Machine-Readable) เสมอ และการคำนวณ Rolling Correlation ต้องมีวันทำการตรงกัน $\ge 45$ วัน มิฉะนั้นต้องตั้งสถานะ `is_valid = False` ทันที
 
 ---
 
@@ -266,7 +281,24 @@
 
 ---
 
-## 11. หลักปฏิบัติสุดท้าย (Final Doctrine)
+## 11. มาตรฐานการเขียนและการจัดการ Prompt Harness สำหรับ Agents (Agent Prompt Harness Standards)
+ระบบนี้ใช้สถาปัตยกรรมตัวโหลดและจัดการ Prompt แบบไดนามิกผ่านโมดูล `core/prompt_harness.py` (`PromptHarness`) เพื่อให้การพัฒนาระบบ Multi-Agent มีความยืดหยุ่น ปราศจาก Hardcoding และรองรับ Hot-Reloading
+
+**กฎเหล็กสำหรับการเขียนและจัดการ Prompt ของ Agents:**
+1. **Modular Skill Files (ห้าม Hardcode Prompt):** ห้ามเขียนข้อความ System Prompt ยาว ๆ ฝังตายตัวในไฟล์ Python (`agents/*.py`) บังคับให้แยกจัดเก็บไฟล์ Markdown ไว้ภายใต้โฟลเดอร์ `prompts/skills/<agent_name>/` โดยควรแบ่งโมดูลย่อยเป็น:
+   - `SKILL.md` (หรือ `<AGENT_NAME>_SKILL.md`): อธิบายภารกิจ บทบาท และบทบัญญัติหลักของ Agent
+   - `pillars.md` (ทางเลือก): กำหนดเสาหลัก กฎเกณฑ์เชิงโครงสร้าง หรือแนวทางการประเมิน
+   - `guardrails.md` (ทางเลือก): ระบุข้อจำกัด ความปลอดภัย และกฎห้ามละเมิด
+   - `few_shots.md` (ทางเลือก): ตัวอย่างผลลัพธ์ โครงสร้าง JSON Schema หรือตารางที่ถูกต้องสำหรับส่งให้ Retry Layer
+2. **Hot-Reloading & In-Memory Caching (`get_harness`):** การเรียกใช้งาน Prompt ในโค้ดของ Agent ต้องเรียกผ่าน `get_harness("agent_name")` และ `harness.get_system_prompt()` หรือ `harness.get_skill_text()` เสมอ ระบบจะทำการเช็คเวลาแก้ไขไฟล์ (`mtime`) และ Cache ไว้ในหน่วยความจำ ช่วยให้ Developer สามารถแก้ไข Prompt ใน Markdown แล้วมีผลทันทีในรอบรันถัดไป (Hot-Reloading) โดยไม่ต้องรีสตาร์ทแอปพลิเคชัน
+3. **Mustache Template (`{{variable}}`) ป้องกัน JSON Collision:** การแทรกตัวแปรไดนามิกลงใน Prompt บังคับใช้รูปแบบ Mustache syntax (`{{variable_name}}`) ผ่านฟังก์ชัน `format_mustache()` หรือพารามิเตอร์ของ `get_system_prompt(**kwargs)` **ห้าม** ใช้ Python f-strings หรือ `.format()` (`{}`) เด็ดขาด เพื่อป้องกันปัญหาข้อผิดพลาดจากปีกกาของ JSON Schema หรือ Markdown Table ชนกับรหัสจัดรูปแบบของ Python (และควรเปิด `strict=True` เพื่อดักจับตัวแปรที่ตกหล่นก่อนส่งหา LLM)
+4. **Dynamic Few-Shot Injection สำหรับ Retry Loop:** เมื่อเชื่อมต่อ Agent เข้ากับระบบ `invoke_with_retry` หรือ `structured_output_retry` ต้องส่งต่อข้อความซ่อมแซมผ่าน `harness.get_few_shots_feedback()` เพื่อฉีดตัวอย่างจากไฟล์ `few_shots.md` เข้าไปใน Prompt Feedback ช่วยชี้นำให้ LLM สามารถแก้ไขโครงสร้าง JSON หรือตารางที่ผิดพลาดด้วยตัวเอง (Self-Correction) ได้อย่างแม่นยำ
+5. **Mojibake Repair & Encoding Safety:** ไฟล์ Skill ทุกไฟล์ต้องถูกโหลดผ่านระบบที่จัดการภาษาและตัวอักษรอย่างปลอดภัย โดย `PromptHarness` จะครอบการซ่อมแซมตัวอักษรขยะด้วย `repair_mojibake` โดยอัตโนมัติ เพื่อป้องกันปัญหาไฟล์อักษรไทย TIS-620/Latin-1 แสดงผลผิดเพี้ยน
+6. **หลักการเขียน Test Harness สำหรับ Agents (Agent Test Harness Principles):** การทดสอบระบบ Agents ต้องแบ่งออกเป็น 2 ชั้นอย่างชัดเจน คือ (1) **Mock Harness (Unit Testing):** สำหรับทดสอบตรรกะ Guardrails, State Transitions, และ Fallback mechanisms โดยใช้ Mock Data / Fallback Calculators เพื่อให้ชุดทดสอบรันได้อย่างรวดเร็ว ไม่พึ่งพาพาหะภายนอก และ (2) **Integration Harness (Production Verification):** สำหรับทดสอบในระบบจริง ต้องบังคับปิดโหมด Mock Fallback (`use_mock_fallback=False`) และเชื่อมต่อกับ Real Data Calculators (เช่น ดึงราคาจริงผ่าน `yfinance` หรือ Vault) เสมอ เพื่อให้มั่นใจว่าในแวดล้อม Production จะไม่มีการปล่อยตัวเลขจำลองหลุดออกไปในรายงานการลงทุน
+
+---
+
+## 12. หลักปฏิบัติสุดท้าย (Final Doctrine)
 
 1. **เมื่อได้รับคำสั่งเขียนโค้ด** — เสนอแผนงานและรออนุมัติ (Plan-First Workflow) ห้ามแก้ไขไฟล์ทันที
 2. **เมื่อสงสัย** — ถาม ไม่ใช่เดา
@@ -281,5 +313,11 @@
 11. **เมื่อสร้าง Tools ใหม่** — คืนค่า `"Error: ..."` เสมอแทนที่จะปล่อย Exception ทะลุ (Self-Correction)
 12. **เมื่อเขียนฟังก์ชัน/เครื่องมือใหม่ให้ Agent** — ต้องครอบ `@traceable(run_type="...")` ให้ถูกหมวดหมู่เสมอ
 13. **เมื่อกำหนดวิธีใช้ Tool** — เขียนเงื่อนไขและวิธีใช้งานลงใน Docstring (Google Style) ของ `@tool` เท่านั้น ห้ามใส่ใน System Prompt
+14. **เมื่อวิเคราะห์ข้อมูลมหภาคและจัดสรรพอร์ต (Macro & Allocation)** — ต้องอ้างอิง Hard Data ผ่าน `observable_refs` เสมอ และห้ามข้ามขั้นตอนการตรวจสอบของ Institutional Guardrails (ERP < 1.5%, Stale Exemption, Correlation $\ge 45$ days)
+15. **เมื่อสร้างข้อมูลตัวชี้วัดดัดแปลง (Derived Observables)** — ต้องบันทึกสถิติเชิงลึกในรูปแบบ Dict/JSON ลงใน `metadata` เสมอ เพื่อให้เป็นมาตรฐาน Machine-Readable
+16. **เมื่อเขียนหรือแก้ไข Prompt ของ Agent** — ต้องจัดการผ่าน `PromptHarness` (`get_harness`) และไฟล์ `SKILL.md` ใน `prompts/skills/` เสมอ ห้าม Hardcode ในไฟล์ Python
+17. **เมื่อออกแบบและเรียกใช้ฟังก์ชันตรวจสอบระบบ (Validation & Guardrails):** ต้องรับประกันคุณสมบัติ **Idempotent** เสมอ ห้ามสร้างคำเตือนซ้ำซ้อนหรือลดระดับความมั่นใจซ้ำสองเมื่อประมวลผลบนข้อมูลชุดเดิม
+18. **เมื่อสร้างข้อมูลตัวชี้วัดในโหมด Production:** ห้ามใช้ตัวเลขจำลอง (Mock Data) เป็น Fallback เด็ดขาด หากไม่มีข้อมูลจริงต้องแจ้งสถานะ `is_valid=False` และระบุเหตุผลใน `stale_reason` ทันที
+19. **เมื่อตรวจสอบความครบถ้วนของพอร์ต (Institutional Coverage Guardrails):** ต้องตรวจสอบการครอบคลุมสินทรัพย์หลักทั้ง 5 กลุ่ม (`equities`, `fixed_income`, `commodities`, `fx`, `cash`) เสมอ และห้ามข้ามการตรวจสอบทิศทางค่าเงินทั้งสองมุมมอง (`USD vs THB` และ `THB vs USD`)
 
 > *"Code is read far more often than it is written. Optimize for the reader — and the reader of a financial system is auditing for correctness, not admiring cleverness."*

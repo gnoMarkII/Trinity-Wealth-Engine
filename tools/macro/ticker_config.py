@@ -15,12 +15,16 @@ from core.logger import get_logger
 from core.retry import with_retry as _with_retry
 
 
-from core.logger import get_logger
-log = get_logger(__name__)
-
 log = get_logger(__name__)
 
 _FETCH_TIMEOUT = 10  # seconds per symbol
+
+# --- Macro Strategy Threshold Constants ---
+VALUATION_RICH_ERP_THRESHOLD: float = 0.015  # 1.5% ERP threshold for equity richness
+CREDIT_SPREAD_DANGER_THRESHOLD: float = 5.00  # 5.0% HY Spread danger threshold
+CREDIT_SPREAD_WIDENING_3M_BPS: float = 100.0  # 100 bps widening over 3 months
+STOCK_BOND_CORRELATION_WARNING_THRESHOLD: float = 0.30  # Correlation > 0.30 triggers warning
+MIN_CORRELATION_OBSERVATIONS: int = 45  # Must have >= 45 overlapping trading days
 
 _PRICE_FORMAT: dict[str, tuple[str, str]] = {
     "^IRX": (".4f", "%"), "^FVX": (".4f", "%"), "^TNX": (".4f", "%"), "^TYX": (".4f", "%"),
@@ -464,6 +468,14 @@ _FRED_SERIES: dict[str, tuple[str, str]] = {
         "Initial Jobless Claims (K/week)",
         "ยื่นขอสวัสดิการว่างงานครั้งแรกต่อสัปดาห์ (พันคน) — Leading Indicator ตลาดแรงงาน",
     ),
+    "CCSA": (
+        "Continued Jobless Claims (K/week)",
+        "ผู้รับสวัสดิการว่างงานต่อเนื่อง (พันคน) — ชี้วัดความยากในการหางานใหม่ของตลาดแรงงาน",
+    ),
+    "NFCI": (
+        "Chicago Fed National Financial Conditions Index",
+        "ดัชนีสภาวะทางการเงินโลก (Chicago Fed) — ค่าติดลบ = สภาพคล่องผ่อนคลาย เป็น Leading Indicator",
+    ),
     # --- Growth & Consumption ---
     "GDPC1": (
         "Real GDP (YoY %)",
@@ -535,6 +547,8 @@ _FRED_UNIT_DISPLAY: dict[str, str] = {
     "BAMLH0A0HYM2": "% pts",
     "UNRATE": "%",
     "ICSA": "K",
+    "CCSA": "K",
+    "NFCI": "Index",
     "GDPC1": "% YoY",
     "INDPRO": "% YoY",
     "RSAFS": "% YoY",
@@ -549,8 +563,8 @@ _FRED_UNIT_DISPLAY: dict[str, str] = {
 }
 
 _US_GROUPS: list[tuple[str, list[str]]] = [
-    ("🏦 Monetary Policy & Liquidity", ["FEDFUNDS", "DGS2", "T10Y2Y", "DFII10", "DTWEXBGS", "M2SL", "BAA10Y", "BAMLH0A0HYM2"]),
-    ("📈 Economic Growth", ["GDPC1", "INDPRO", "RSAFS", "HOUST", "UNRATE", "ICSA"]),
+    ("🏦 Monetary Policy & Liquidity", ["FEDFUNDS", "DGS2", "T10Y2Y", "DFII10", "DTWEXBGS", "M2SL", "BAA10Y", "BAMLH0A0HYM2", "NFCI"]),
+    ("📈 Economic Growth", ["ICSA", "CCSA", "GDPC1", "INDPRO", "RSAFS", "HOUST", "UNRATE"]),
     ("💰 Inflation", ["CPIAUCSL", "PCEPI", "PCEPILFE", "PPIACO", "T5YIE", "T10YIE"]),
     ("🛡️ Geopolitics & Risk Sentiment", ["UMCSENT"]),
 ]

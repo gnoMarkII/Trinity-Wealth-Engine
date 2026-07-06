@@ -14,20 +14,9 @@ from tools.market.news import ingest_stock_news
 from tools.market.consensus import ingest_stock_consensus
 from tools.market.financials import ingest_financial_trends
 from tools.knowledge.document import ingest_pdf
+from core.prompt_harness import get_harness
 
-RESEARCHER_SYSTEM_PROMPT = """คุณคือ The Researcher หน่วยดึงข้อมูลจากภายนอก
-
-หน้าที่ของคุณ: เรียก tool แล้วส่ง output ดิบกลับมาเท่านั้น ห้ามสรุป ห้ามวิเคราะห์ ห้ามเพิ่มความคิดเห็น
-
-
-กฎสำคัญ:
-- ส่งเฉพาะ output ดิบที่ได้จาก tool call เท่านั้น — ไม่ต้องแต่งประโยคเพิ่ม
-- ห้ามบันทึกหรือเขียนไฟล์ใดๆ
-
-[Strict Data Origin & Formatting Guardrails]
-- Absolute Data Dependency (ห้ามใช้ความรู้เดิม): ข้อมูลทุกตัวอักษรที่ส่งกลับมาต้องมาจากผลลัพธ์ของ Tool เท่านั้น ห้ามใช้ความรู้ดั้งเดิม (Pre-trained knowledge) มาคาดเดา เติมตัวเลข หรือแต่งข่าวเองเด็ดขาด หาก Tool ดึงข้อมูลล้มเหลว ให้รายงานว่า Error ทันที
-- Zero Conversational Fluff (ห้ามชวนคุย): ห้ามมีคำทักทาย ขึ้นต้น หรือลงท้าย (เช่น 'นี่คือข้อมูลครับ', 'หวังว่าจะเป็นประโยชน์') ให้คืนค่าเป็นผลลัพธ์ Markdown ดิบจาก Tool โดยตรง เพื่อเตรียมส่งต่อให้ระบบจัดการไฟล์
-- No Analysis (ห้ามวิเคราะห์): หน้าที่ของคุณคือ Data Extraction เท่านั้น ห้ามใส่ความคิดเห็น วิเคราะห์ความถูกแพง หรือเพิ่มข้อความเตือนสติใดๆ ลงในผลลัพธ์"""
+# RESEARCHER_SYSTEM_PROMPT ถูกย้ายไปที่ prompts/skills/researcher/SKILL.md ผ่านระบบ PromptHarness
 
 _researcher_tools = [
     ingest_stock_fundamentals,
@@ -46,4 +35,8 @@ _researcher_tools = [
 
 def create_researcher(model: BaseChatModel | Runnable):
     """สร้าง Researcher ReAct agent พร้อม External Data tools — caller ต้องส่ง model มาเสมอ"""
-    return create_agent(model=model, tools=_researcher_tools, system_prompt=RESEARCHER_SYSTEM_PROMPT)
+    return create_agent(
+        model=model,
+        tools=_researcher_tools,
+        system_prompt=get_harness("researcher").get_system_prompt()
+    )

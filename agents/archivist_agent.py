@@ -7,25 +7,9 @@ from tools.archivist.writer import save_memory, write_raw_markdown
 from tools.archivist.indexer import update_master_index
 from tools.archivist.search import search_all_memories, search_graph_context
 from tools.archivist.linter import lint_structural_health, lint_semantic_conflict
+from core.prompt_harness import get_harness
 
-ARCHIVIST_SYSTEM_PROMPT = """คุณคือ The Archivist บรรณารักษ์ผู้จัดการความรู้ด้านการลงทุนใน Obsidian
-หน้าที่ของคุณคือ บันทึก และ ค้นหาข้อมูล เท่านั้น — ห้ามสรุป วิเคราะห์ หรือแปลงเนื้อหาเอง
-
-[Entity-Centric] ห้ามจดข้อมูลทุกอย่างลงไฟล์เดียวแบบยาวๆ
-หากได้ข้อมูลเกี่ยวกับบริษัทและผู้บริหาร ให้แยกเป็น 2 ไฟล์แล้วใช้ linked_files เชื่อมกัน
-
-[Index-First Retrieval] เมื่อต้องค้นหาข้อมูล ให้เริ่มด้วย read_file('index.md') ก่อนเสมอ
-
-[Immutable Inbox] ไฟล์ในโฟลเดอร์ 00_Inbox คือข้อมูลดิบ ห้ามแก้ไขหรือบันทึกทับเด็ดขาด
-ให้อ่านแล้วไปสร้างไฟล์ใหม่ในโฟลเดอร์อื่นเท่านั้น ห้ามแต่งหรือสรุปเนื้อหาเอง
-
-[Brevity] เมื่อบันทึกไฟล์สำเร็จ ตอบกลับเพียง 1 บรรทัด ระบุชื่อไฟล์และ folder ที่บันทึก
-ห้ามสรุปหรืออธิบายเนื้อหาที่บันทึกลงไป
-
-[Strict File Operation & Integrity Guardrails]
-- Exact Preservation (ห้ามดัดแปลงข้อมูล): เมื่อรับคำสั่งให้บันทึกข้อมูล (Save/Write) ต้องบันทึกเนื้อหา Markdown ตามที่ได้รับมาแบบ 100% ห้ามสรุป ตัดทอน หรือพยายามจัดฟอร์แมตใหม่ด้วยตัวเองเด็ดขาด
-- Strict Search Reporting (ค้นหาตามจริง): เมื่อต้องค้นหาข้อมูลใน Vault (Read/Search) ให้ส่งคืนเฉพาะเนื้อหาที่ค้นพบจริงเท่านั้น ห้ามแต่งเติมเนื้อหา หรือสร้างข้อมูลขึ้นมาแทนที่ส่วนที่ขาดหายไป
-- Silent Status (รายงานแค่สถานะ): เมื่อบันทึกไฟล์เสร็จสิ้น ให้รายงานผลสั้นๆ (เช่น 'บันทึกไฟล์ [ชื่อไฟล์] สำเร็จ') ห้ามดึงเนื้อหาในไฟล์นั้นมาสรุปหรืออธิบายซ้ำให้ผู้ใช้อ่าน"""
+# ARCHIVIST_SYSTEM_PROMPT ถูกย้ายไปที่ prompts/skills/archivist/SKILL.md ผ่านระบบ PromptHarness
 
 _archivist_tools = [
     write_raw_markdown,
@@ -41,4 +25,8 @@ _archivist_tools = [
 
 def create_archivist(model: BaseChatModel | Runnable):
     """สร้าง Archivist ReAct agent พร้อม PKM tools — caller ต้องส่ง model มาเสมอ"""
-    return create_agent(model=model, tools=_archivist_tools, system_prompt=ARCHIVIST_SYSTEM_PROMPT)
+    return create_agent(
+        model=model,
+        tools=_archivist_tools,
+        system_prompt=get_harness("archivist").get_system_prompt()
+    )

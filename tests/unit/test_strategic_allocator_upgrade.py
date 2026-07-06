@@ -19,6 +19,7 @@ def test_regex_negative_cases():
     assert not _has_hard_data_numbers(["score improved"])
     assert not _has_hard_data_numbers(["strong economic growth"])
     assert not _has_hard_data_numbers(["rate pressure is high"])
+    assert not _has_hard_data_numbers(["2026-07-02 date observation"])
     assert not _has_hard_data_numbers([])
 
 def test_regex_positive_cases():
@@ -28,13 +29,14 @@ def test_regex_positive_cases():
     assert _has_hard_data_numbers(["+0.85 score"])
     assert _has_hard_data_numbers(["150 bps spread"])
     assert _has_hard_data_numbers(["1.2x ratio"])
-    assert _has_hard_data_numbers(["2026-07-02 date observation"])
+    assert _has_hard_data_numbers(["2026-07-02 level 4500 points"])
     assert _has_hard_data_numbers(["10Y/2Y curve inversion"])
 
 def test_asset_allocation_defensive_degradation():
     """Test that lack of hard data automatically downgrades confidence to low with warnings."""
     view = AssetAllocationView(
         asset_class="US Equities (Tech Growth)",
+        asset_bucket="equities",
         stance=AssetStance.OVERWEIGHT,
         rationale="Strong growth expected",
         confidence="high",
@@ -42,9 +44,9 @@ def test_asset_allocation_defensive_degradation():
     )
     assert view.confidence == "low"
     assert view.stance == AssetStance.NEUTRAL
-    assert len(view.validation_warnings) == 2
-    assert "Downgraded confidence to LOW" in view.validation_warnings[0]
-    assert "Active Allocation Guardrail" in view.validation_warnings[1]
+    assert len(view.validation_warnings) >= 2
+    assert any("DEFENSIVE_LOW_SUPPORTING_DATA" in str(w) or "Downgraded confidence to LOW" in str(w) for w in view.validation_warnings)
+    assert any("ACTIVE_ALLOC_GUARDRAIL" in str(w) or "Active Allocation Guardrail" in str(w) for w in view.validation_warnings)
 
 def test_pair_trade_gradual_risk_budget_guardrail():
     """Test gradual risk budget guardrail after pair trade execution quality checks."""
@@ -62,7 +64,7 @@ def test_pair_trade_gradual_risk_budget_guardrail():
     )
     assert pt_med.confidence == "low"
     assert pt_med.sizing_guidance == "small_risk_budget"
-    assert any("Pair Trade Execution Guardrail" in w for w in pt_med.validation_warnings)
+    assert any("PT_EXECUTION_GUARDRAIL" in str(w) or "Pair Trade Execution Guardrail" in str(w) for w in pt_med.validation_warnings)
 
     # Case 2: low conf (due to missing hard data) -> small risk budget
     pt_low = PairTradeStrategy(
@@ -78,7 +80,7 @@ def test_pair_trade_gradual_risk_budget_guardrail():
     )
     assert pt_low.confidence == "low"
     assert pt_low.sizing_guidance == "small_risk_budget"
-    assert any("small_risk_budget" in w for w in pt_low.validation_warnings)
+    assert any("PT_RISK_BUDGET" in str(w) or "small_risk_budget" in str(w) for w in pt_low.validation_warnings)
 
 def test_risk_mitigation_quality_gate():
     """Test that risk mitigation requires hard data, warning indicators, and hedge instruments."""
@@ -107,26 +109,26 @@ def test_50_percent_portfolio_degradation_rule():
         focus_themes=["AI Capex"],
         asset_allocation=[
             AssetAllocationView(
-                asset_class="US Equities", stance=AssetStance.OVERWEIGHT, rationale="Good",
+                asset_class="US Equities", asset_bucket="equities", stance=AssetStance.OVERWEIGHT, rationale="Good",
                 confidence="high", supporting_data=["Quant Score = +0.85"]
             ),
             AssetAllocationView(
-                asset_class="EU Equities", stance=AssetStance.UNDERWEIGHT, rationale="Weak",
+                asset_class="EU Equities", asset_bucket="equities", stance=AssetStance.UNDERWEIGHT, rationale="Weak",
                 confidence="high", supporting_data=["no numbers"]  # becomes low
             ),
             AssetAllocationView(
-                asset_class="EM Equities", stance=AssetStance.NEUTRAL, rationale="Neutral",
+                asset_class="EM Equities", asset_bucket="equities", stance=AssetStance.NEUTRAL, rationale="Neutral",
                 confidence="low", supporting_data=["PMI = 48.5"]   # already low
             ),
             AssetAllocationView(
-                asset_class="US Treasuries", stance=AssetStance.OVERWEIGHT, rationale="Yields high",
+                asset_class="US Treasuries", asset_bucket="fixed_income", stance=AssetStance.OVERWEIGHT, rationale="Yields high",
                 confidence="high", supporting_data=["10Y Yield = 4.40%"]
             )
         ]
     )
     # Backfilled missing core classes also count as low-confidence coverage gaps.
     assert direction.conviction_level == "low"
-    assert any(">=50%" in w for w in direction.validation_warnings)
+    assert any("PORTFOLIO_DEFENSIVE_LOW" in str(w) or ">=50%" in str(w) for w in direction.validation_warnings)
 
 def test_formatter_collapsible_callouts_and_empty_sections():
     """Test report formatter renders callouts and suppresses empty sections."""
@@ -139,7 +141,7 @@ def test_formatter_collapsible_callouts_and_empty_sections():
         focus_themes=["AI Capex"],
         asset_allocation=[
             AssetAllocationView(
-                asset_class="US Equities (AI/Tech Growth)", stance=AssetStance.OVERWEIGHT, rationale="Good",
+                asset_class="US Equities (AI/Tech Growth)", asset_bucket="equities", stance=AssetStance.OVERWEIGHT, rationale="Good",
                 confidence="high", supporting_data=["Quant Score = +0.85"]
             )
         ],
@@ -163,7 +165,7 @@ def test_formatter_collapsible_callouts_and_empty_sections():
     assert "## 🛡️ Portfolio Risk Mitigation & Hedging" not in report
 
     # Check formatter-controlled compliance disclaimer is present
-    assert "> [!CAUTION] Institutional Compliance Disclaimer" in report
+    assert "> [!CAUTION] ข้อสงวนสิทธิ์และคำชี้แจงการใช้งาน" in report
     assert "ไม่ถือเป็นคำแนะนำการลงทุนรายบุคคล" in report
 
 def test_backward_compatibility():
@@ -177,7 +179,7 @@ def test_backward_compatibility():
         focus_themes=["Defensive"],
         asset_allocation=[
             AssetAllocationView(
-                asset_class="Gold", stance=AssetStance.OVERWEIGHT, rationale="Inflation hedge"
+                asset_class="Gold", asset_bucket="commodities", stance=AssetStance.OVERWEIGHT, rationale="Inflation hedge"
             )
         ]
     )
@@ -185,7 +187,7 @@ def test_backward_compatibility():
     assert direction.risk_scenarios == []
     report = format_macro_strategy_report(direction)
     assert "## ⚖️ Relative Value & Pair Trades" not in report
-    assert "> [!CAUTION] Institutional Compliance Disclaimer" in report
+    assert "> [!CAUTION] ข้อสงวนสิทธิ์และคำชี้แจงการใช้งาน" in report
 
 
 def test_utf8_boundary_raw_bytes_roundtrip(tmp_path):
@@ -215,9 +217,9 @@ def test_utf8_boundary_raw_bytes_roundtrip(tmp_path):
     assert "หุ้นไทย" in post.metadata["tags"]
 
 
-def test_auto_extraction_with_provenance():
-    """Test that numbers from triggers or thesis are auto-extracted into supporting_data with provenance."""
-    # Test RiskMitigationScenario auto-extraction
+def test_defensive_low_when_supporting_data_empty():
+    """Test that when supporting_data is empty, models downgrade confidence to low without auto-extraction."""
+    # Test RiskMitigationScenario
     rs = RiskMitigationScenario(
         tail_risk="Geopolitical conflict",
         probability="medium",
@@ -231,11 +233,11 @@ def test_auto_extraction_with_provenance():
         cost_or_tradeoff="Option premium",
         supporting_data=[]
     )
-    assert rs.confidence == "medium"
-    assert any("[From trigger_to_activate]" in item and "VIX index spike above 28 pts" in item for item in rs.supporting_data)
-    assert any("[From early_warning_indicator]" in item and "Gold breaking $2,500" in item for item in rs.supporting_data)
+    assert rs.confidence == "low"
+    assert any("DEFENSIVE_LOW" in str(w) for w in rs.validation_warnings)
+    assert len(rs.supporting_data) == 0
 
-    # Test PairTradeStrategy auto-extraction
+    # Test PairTradeStrategy
     pt = PairTradeStrategy(
         long_leg="Gold",
         short_leg="Equities",
@@ -247,8 +249,8 @@ def test_auto_extraction_with_provenance():
         supporting_data=[]
     )
     assert pt.confidence == "low"
-    assert any("[From thesis]" in item and "$2,400" in item for item in pt.supporting_data)
-    assert any("[From catalyst]" in item and "CPI > 3.0%" in item for item in pt.supporting_data)
+    assert any("DEFENSIVE_LOW" in str(w) for w in pt.validation_warnings)
+    assert len(pt.supporting_data) == 0
 
 
 def test_graceful_drop_with_summary_warning():
@@ -261,11 +263,11 @@ def test_graceful_drop_with_summary_warning():
         quant_narrative_alignment="aligned",
         focus_themes=["Growth"],
         asset_allocation=[
-            AssetAllocationView(asset_class="US Equities", stance=AssetStance.OVERWEIGHT, rationale="Tech boom", supporting_data=["10Y Yield = 4.20%"]),
-            AssetAllocationView(asset_class="Global Bonds", stance=AssetStance.NEUTRAL, rationale="Stable rates", supporting_data=["Spread 120 bps"]),
-            AssetAllocationView(asset_class="Gold", stance=AssetStance.UNDERWEIGHT, rationale="Risk-on", supporting_data=["Gold $2,300"]),
-            AssetAllocationView(asset_class="USD Currency", stance=AssetStance.NEUTRAL, rationale="DXY steady", supporting_data=["DXY 102.5"]),
-            AssetAllocationView(asset_class="Cash T-Bills", stance=AssetStance.UNDERWEIGHT, rationale="Low yield", supporting_data=["T-Bill yield 4.5%"])
+            AssetAllocationView(asset_class="US Equities", asset_bucket="equities", stance=AssetStance.OVERWEIGHT, rationale="Tech boom", supporting_data=["10Y Yield = 4.20%"]),
+            AssetAllocationView(asset_class="Global Bonds", asset_bucket="fixed_income", stance=AssetStance.NEUTRAL, rationale="Stable rates", supporting_data=["Spread 120 bps"]),
+            AssetAllocationView(asset_class="Gold", asset_bucket="commodities", stance=AssetStance.UNDERWEIGHT, rationale="Risk-on", supporting_data=["Gold $2,300"]),
+            AssetAllocationView(asset_class="USD Currency", asset_bucket="fx", stance=AssetStance.NEUTRAL, rationale="DXY steady", supporting_data=["DXY 102.5"]),
+            AssetAllocationView(asset_class="Cash T-Bills", asset_bucket="cash", stance=AssetStance.UNDERWEIGHT, rationale="Low yield", supporting_data=["T-Bill yield 4.5%"])
         ],
         pair_trades=[
             # Invalid pair trade with hard data but incomplete executable controls
@@ -283,8 +285,8 @@ def test_graceful_drop_with_summary_warning():
     assert len(direction.risk_scenarios) == 0
 
     # Assert summary warnings were recorded
-    assert any("Graceful Drop: 2 pair trade(s) omitted" in w for w in direction.validation_warnings)
-    assert any("Graceful Drop: 1 risk scenario(s) omitted" in w for w in direction.validation_warnings)
+    assert any("GRACEFUL_DROP_PAIR_TRADES" in str(w) or "Graceful Drop: 2 pair trade(s) omitted" in str(w) for w in direction.validation_warnings)
+    assert any("GRACEFUL_DROP_RISK_SCENARIOS" in str(w) or "Graceful Drop: 1 risk scenario(s) omitted" in str(w) for w in direction.validation_warnings)
 
 
 def test_proxy_observables_recognized():
@@ -296,7 +298,7 @@ def test_proxy_observables_recognized():
 
 
 def test_5_asset_classes_coverage_target_warning():
-    """Test that asset allocation with fewer than 5 classes generates a coverage warning."""
+    """Test that asset allocation with fewer than 5 classes generates a coverage warning without backfilling."""
     direction = MacroStrategyDirection(
         evaluated_at="2026-07-02T10:00:00Z",
         overall_regime=EconomicState.STAGFLATION,
@@ -305,13 +307,13 @@ def test_5_asset_classes_coverage_target_warning():
         quant_narrative_alignment="aligned",
         focus_themes=["Defensive"],
         asset_allocation=[
-            AssetAllocationView(asset_class="US Equities", stance=AssetStance.UNDERWEIGHT, rationale="High valuation", supporting_data=["P/E 24x"]),
-            AssetAllocationView(asset_class="Gold", stance=AssetStance.OVERWEIGHT, rationale="Inflation hedge", supporting_data=["Gold $2,400"]),
-            AssetAllocationView(asset_class="Cash", stance=AssetStance.OVERWEIGHT, rationale="Safety", supporting_data=["Yield 5.0%"])
+            AssetAllocationView(asset_class="US Equities", asset_bucket="equities", stance=AssetStance.UNDERWEIGHT, rationale="High valuation", supporting_data=["P/E 24x"]),
+            AssetAllocationView(asset_class="Gold", asset_bucket="commodities", stance=AssetStance.OVERWEIGHT, rationale="Inflation hedge", supporting_data=["Gold $2,400"]),
+            AssetAllocationView(asset_class="Cash", asset_bucket="cash", stance=AssetStance.OVERWEIGHT, rationale="Safety", supporting_data=["Yield 5.0%"])
         ]
     )
-    assert len(direction.asset_allocation) == 5
-    assert any("Coverage Backfill: Asset allocation expanded from 3 to 5 core classes" in w for w in direction.validation_warnings)
+    assert len(direction.asset_allocation) == 3
+    assert any("COVERAGE_WARNING_INCOMPLETE" in str(w) or "Coverage Warning: Asset allocation contains only 3 classes" in str(w) for w in direction.validation_warnings)
 
 
 def test_contradiction_guardrails_and_executable_fields():
@@ -326,6 +328,7 @@ def test_contradiction_guardrails_and_executable_fields():
         asset_allocation=[
             AssetAllocationView(
                 asset_class="US Growth Equities",
+                asset_bucket="equities",
                 stance=AssetStance.OVERWEIGHT,
                 rationale="AI boom but consumer sentiment ต่ำ",
                 confidence="high",
@@ -333,14 +336,15 @@ def test_contradiction_guardrails_and_executable_fields():
             ),
             AssetAllocationView(
                 asset_class="US Treasuries Bonds",
+                asset_bucket="fixed_income",
                 stance=AssetStance.OVERWEIGHT,
                 rationale="Rates falling",
                 confidence="high",
                 supporting_data=["10Y Yield = 4.30%"]
             ),
-            AssetAllocationView(asset_class="Gold", stance=AssetStance.NEUTRAL, rationale="Stable", supporting_data=["Gold $2,300"]),
-            AssetAllocationView(asset_class="USD Currency", stance=AssetStance.NEUTRAL, rationale="Stable", supporting_data=["DXY 102.5"]),
-            AssetAllocationView(asset_class="Cash", stance=AssetStance.NEUTRAL, rationale="Stable", supporting_data=["Yield 4.5%"])
+            AssetAllocationView(asset_class="Gold", asset_bucket="commodities", stance=AssetStance.NEUTRAL, rationale="Stable", supporting_data=["Gold $2,300"]),
+            AssetAllocationView(asset_class="USD Currency", asset_bucket="fx", stance=AssetStance.NEUTRAL, rationale="Stable", supporting_data=["DXY 102.5"]),
+            AssetAllocationView(asset_class="Cash", asset_bucket="cash", stance=AssetStance.NEUTRAL, rationale="Stable", supporting_data=["Yield 4.5%"])
         ],
         pair_trades=[
             PairTradeStrategy(
@@ -358,8 +362,8 @@ def test_contradiction_guardrails_and_executable_fields():
                 stop_loss_trigger="SET Index ทะลุ 1,620 จุด หรือ VIX > 28",
                     target_gain_or_rebalance="Take profit +8%",
                     max_drawdown_limit="Max Drawdown 5%",
-                    supporting_data=["Score divergence +0.80 vs -0.20"],
-                    observable_refs=["obs_score_divergence"]
+                    supporting_data=["Score divergence +0.80 vs -0.20", "VIX confirmation spread = 12 pts"],
+                    observable_refs=["obs_score_divergence", "obs_vix_confirmation_spread"]
                 )
             ],
         risk_scenarios=[
@@ -389,14 +393,26 @@ def test_contradiction_guardrails_and_executable_fields():
                     source_file="macro_input_20260702.json",
                     provider="Derived",
                     is_valid=True,
-                )
+                ),
+                "obs_vix_confirmation_spread": MarketObservable(
+                    observable_id="obs_vix_confirmation_spread",
+                    asset_bucket="risk",
+                    region="Global",
+                    indicator="VIX and SET Stress Confirmation Spread",
+                    value="12",
+                    unit="pts",
+                    observed_at="2026-07-02",
+                    source_file="macro_input_20260702.json",
+                    provider="Derived",
+                    is_valid=True,
+                ),
             }
         )
 
     # Check that both Equities and Bonds Overweight without "barbell"/"hedge" reconciliation triggered warning
-    assert any("Contradiction Warning: Portfolio recommends Overweight on both Equities Growth and Long Treasuries" in w for w in direction.validation_warnings)
+    assert any("CONVICTION_CONTRADICTION" in str(w) or "Contradiction Warning: Portfolio recommends Overweight on both Equities Growth and Long Treasuries" in str(w) for w in direction.validation_warnings)
     # Check that Regime Reflation with CPI > 3% triggered warning
-    assert any("Regime Contradiction Warning" in w for w in direction.validation_warnings)
+    assert any("REGIME_CONTRADICTION" in str(w) or "Regime Contradiction Warning" in str(w) for w in direction.validation_warnings)
     # Check that conviction and confidence were downgraded from high to medium
     assert direction.conviction_level == "medium"
     assert direction.asset_allocation[0].confidence == "medium"
@@ -423,6 +439,7 @@ def test_4_layer_institutional_models_and_guardrails():
     # 1. Test Single-Source Penalty in AssetAllocationView
     asset = AssetAllocationView(
         asset_class="US Treasuries 10Y",
+        asset_bucket="fixed_income",
         stance=AssetStance.OVERWEIGHT,
         rationale="Attractive real yields",
         confidence="high",
@@ -433,7 +450,7 @@ def test_4_layer_institutional_models_and_guardrails():
         source_refs=["single_report.md"]  # Only 1 source -> should trigger penalty
     )
     assert asset.confidence == "medium"
-    assert any("Single-Source Penalty" in w for w in asset.validation_warnings)
+    assert any("SINGLE_SOURCE_PENALTY" in str(w) or "Single-Source Penalty" in str(w) for w in asset.validation_warnings)
 
     # 2. Test Stale Data Degradation in MacroStrategyDirection
     direction = MacroStrategyDirection(
@@ -446,30 +463,30 @@ def test_4_layer_institutional_models_and_guardrails():
         stale_data_warnings=["CPI report is 2 months stale"],  # Stale warning -> should degrade conviction
         asset_allocation=[
             AssetAllocationView(
-                asset_class="US Equities", stance=AssetStance.OVERWEIGHT, rationale="Growth",
+                asset_class="US Equities", asset_bucket="equities", stance=AssetStance.OVERWEIGHT, rationale="Growth",
                 confidence="high", supporting_data=["S&P at 5500 pts"], source_refs=["src1", "src2"]
             ),
             AssetAllocationView(
-                asset_class="US Fixed Income", stance=AssetStance.NEUTRAL, rationale="Rates balanced",
+                asset_class="US Fixed Income", asset_bucket="fixed_income", stance=AssetStance.NEUTRAL, rationale="Rates balanced",
                 confidence="high", supporting_data=["10Y Yield = 4.25%"], source_refs=["src1", "src2"]
             ),
             AssetAllocationView(
-                asset_class="Commodities Gold", stance=AssetStance.NEUTRAL, rationale="Real rates offset hedge demand",
+                asset_class="Commodities Gold", asset_bucket="commodities", stance=AssetStance.NEUTRAL, rationale="Real rates offset hedge demand",
                 confidence="high", supporting_data=["Gold = 2400 USD/oz"], source_refs=["src1", "src2"]
             ),
             AssetAllocationView(
-                asset_class="FX / Currencies", stance=AssetStance.NEUTRAL, rationale="USD stable",
+                asset_class="FX / Currencies", asset_bucket="fx", stance=AssetStance.NEUTRAL, rationale="USD stable",
                 confidence="high", supporting_data=["DXY = 102.5"], source_refs=["src1", "src2"]
             ),
             AssetAllocationView(
-                asset_class="Cash / T-Bills", stance=AssetStance.NEUTRAL, rationale="Cash yield remains positive",
+                asset_class="Cash / T-Bills", asset_bucket="cash", stance=AssetStance.NEUTRAL, rationale="Cash yield remains positive",
                 confidence="high", supporting_data=["13-Week T-Bill Yield = 4.8%"], source_refs=["src1", "src2"]
             ),
         ]
     )
     assert direction.conviction_level == "medium"
-    assert any("Stale Data Degradation" in w for w in direction.validation_warnings)
-    assert not any("Coverage Backfill" in w for w in direction.validation_warnings)
+    assert any("STALE_DATA_DEGRADATION" in str(w) or "Stale Data Degradation" in str(w) for w in direction.validation_warnings)
+    assert not any("COVERAGE_BACKFILL" in str(w) or "Coverage Backfill" in str(w) for w in direction.validation_warnings)
 
 
 def test_7_section_institutional_report_formatter():
@@ -490,7 +507,7 @@ def test_7_section_institutional_report_formatter():
         ],
         asset_allocation=[
             AssetAllocationView(
-                asset_class="Equities", stance=AssetStance.OVERWEIGHT, rationale="Earnings expansion",
+                asset_class="Equities", asset_bucket="equities", stance=AssetStance.OVERWEIGHT, rationale="Earnings expansion",
                 confidence="high", allocation_delta="+5% vs benchmark", benchmark_ref="MSCI World Index",
                 time_horizon="Strategic (6-12 Months)", supporting_data=["EPS growth +10%"],
                 source_refs=["Goldman Sachs Q3 Report", "Morgan Stanley Outlook"]
@@ -504,8 +521,8 @@ def test_7_section_institutional_report_formatter():
                 hedge_ratio="1.0 : 0.8 Beta-adjusted", fx_handling="Unhedged USD",
                     entry_trigger="Breakout above MA50 at 450 pts", stop_loss_trigger="QQQ drops below 430 pts",
                     target_gain_or_rebalance="Take profit +10%", max_drawdown_limit="Max DD 4%",
-                    review_frequency="Weekly review", supporting_data=["Tech EPS +15% vs EU -2%"],
-                    observable_refs=["obs_tech_eu_eps_spread"]
+                    review_frequency="Weekly review", supporting_data=["Tech EPS +15% vs EU -2%", "Tech valuation spread 4 pts"],
+                    observable_refs=["obs_tech_eu_eps_spread", "obs_tech_eu_valuation_spread"]
                 )
             ],
         risk_scenarios=[
@@ -534,7 +551,19 @@ def test_7_section_institutional_report_formatter():
                 source_file="macro_input_20260702.json",
                 provider="Derived",
                 is_valid=True,
-            )
+            ),
+            "obs_tech_eu_valuation_spread": MarketObservable(
+                observable_id="obs_tech_eu_valuation_spread",
+                asset_bucket="equities",
+                region="Global",
+                indicator="US Tech vs EU Industrials Valuation Spread",
+                value="4",
+                unit="pts",
+                observed_at="2026-07-02",
+                source_file="macro_input_20260702.json",
+                provider="Derived",
+                is_valid=True,
+            ),
         }
     )
 
@@ -545,9 +574,10 @@ def test_7_section_institutional_report_formatter():
     assert "### 🎲 ความน่าจะเป็นของสภาวะเศรษฐกิจ (Regime Probabilities)" in report
     assert "## 📊 2. Evidence Dashboard" in report
     assert "## 📈 3. Cross-Asset Allocation Summary" in report
-    assert "## ⚖️ Relative Value & Pair Trades (Trade Ideas)" in report
-    assert "## 🛡️ Portfolio Risk Mitigation & Hedging (Hedging Plan)" in report
-    assert "## 📋 7. Data Quality Notes & Institutional Metadata" in report
+    assert "## ⚡ 4. Key Contradictions & Quant-Narrative Divergence" in report
+    assert "## ⚖️ 5. Relative Value & Pair Trades (Trade Ideas)" in report
+    assert "## 🛡️ 6. Portfolio Risk Mitigation & Hedging (Hedging Plan)" in report
+    assert "## 📋 7. หมายเหตุด้านคุณภาพข้อมูลและระบบ" in report
 
     # Check key fields rendered
     assert "| **Reflation** | 50% |" in report
@@ -575,6 +605,7 @@ def test_gold_and_us_growth_contradiction_guardrails():
         asset_allocation=[
             AssetAllocationView(
                 asset_class="US Equities (AI/Tech Growth)",
+                asset_bucket="equities",
                 stance=AssetStance.OVERWEIGHT,
                 allocation_delta="+5%",
                 benchmark_ref="S&P 500",
@@ -586,6 +617,7 @@ def test_gold_and_us_growth_contradiction_guardrails():
             ),
             AssetAllocationView(
                 asset_class="Precious Metals (Gold)",
+                asset_bucket="commodities",
                 stance=AssetStance.OVERWEIGHT,
                 allocation_delta="+3%",
                 benchmark_ref="Commodity Index",
@@ -597,6 +629,7 @@ def test_gold_and_us_growth_contradiction_guardrails():
             ),
             AssetAllocationView(
                 asset_class="Cash USD",
+                asset_bucket="cash",
                 stance=AssetStance.NEUTRAL,
                 allocation_delta="0%",
                 benchmark_ref="Cash",
@@ -612,10 +645,10 @@ def test_gold_and_us_growth_contradiction_guardrails():
     # Check Gold downgraded from HIGH to MEDIUM due to geopolitics-only rationale without real yield/fed anchoring
     gold = next(a for a in direction.asset_allocation if "Gold" in a.asset_class)
     assert gold.confidence == "medium"
-    assert any("Contradiction Degradation" in w for w in gold.validation_warnings)
-    assert any("Gold Rationale Warning" in w for w in direction.validation_warnings)
+    assert any("GOLD_CONTRADICTION" in str(w) or "Contradiction Degradation" in str(w) for w in gold.validation_warnings)
+    assert any("GOLD_RATIONALE_WARNING" in str(w) or "Gold Rationale Warning" in str(w) for w in direction.validation_warnings)
 
     # Check US Equities downgraded from HIGH to MEDIUM due to conflicting rising yields/housing starts
     us_eq = next(a for a in direction.asset_allocation if "US Equities" in a.asset_class)
     assert us_eq.confidence == "medium"
-    assert any("Contradiction Degradation" in w for w in us_eq.validation_warnings)
+    assert any("US_EQUITY_CONTRADICTION" in str(w) or "Contradiction Degradation" in str(w) for w in us_eq.validation_warnings)

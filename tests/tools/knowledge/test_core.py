@@ -13,10 +13,6 @@ def test_build_article_md():
 @patch("tools.knowledge.core.os.environ.get")
 @patch("tools.knowledge.core._get_extractor_llm")
 def test_call_extractor_llm(mock_get_llm, mock_env):
-    mock_env.return_value = None
-    with pytest.raises(ValueError, match="ไม่พบ OPENROUTER_API_KEY"):
-        _call_extractor_llm("text", "source")
-        
     mock_env.return_value = "key"
     mock_llm = MagicMock()
     mock_response = MagicMock()

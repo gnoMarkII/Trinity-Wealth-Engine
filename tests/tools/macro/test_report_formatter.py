@@ -2,14 +2,26 @@ import pytest
 from datetime import datetime
 from schemas.macro_schemas import MacroStrategyDirection, AssetAllocationView, AssetStance, EconomicState
 from tools.macro.report_formatter import _translate_warning, format_macro_strategy_report
+from schemas.warning_registry import (
+    WarningMessage,
+    GRACEFUL_DROP_PAIR_TRADES,
+    PT_GRACEFUL_DOWNGRADE,
+    SINGLE_SOURCE_PENALTY,
+    STALE_DATA_DEGRADATION,
+    PORTFOLIO_DEFENSIVE_LOW,
+    ACTIVE_ALLOC_GUARDRAIL,
+    DEFENSIVE_LOW_SUPPORTING_DATA,
+    PT_RISK_BUDGET_MED_TO_SMALL,
+    COVERAGE_BACKFILL_EXPANDED,
+)
 
 def test_format_macro_strategy_report():
     direction = MacroStrategyDirection(
         evaluated_at=datetime.now().isoformat(),
         overall_regime=EconomicState.GOLDILOCKS,
         asset_allocation=[
-            AssetAllocationView(asset_class="หุ้น", stance=AssetStance.OVERWEIGHT, rationale="เศรษฐกิจเติบโต"),
-            AssetAllocationView(asset_class="พันธบัตร", stance=AssetStance.NEUTRAL, rationale="Yield curve ปกติ")
+            AssetAllocationView(asset_class="หุ้น", asset_bucket="equities", stance=AssetStance.OVERWEIGHT, rationale="เศรษฐกิจเติบโต"),
+            AssetAllocationView(asset_class="พันธบัตร", asset_bucket="fixed_income", stance=AssetStance.NEUTRAL, rationale="Yield curve ปกติ")
         ],
         focus_themes=["เทคโนโลยี", "Growth"],
         conviction_level="high",
@@ -45,31 +57,33 @@ def test_format_macro_strategy_report_divergent():
 
 
 def test_translate_warning_dynamic_graceful_drop_to_thai():
-    translated = _translate_warning(
-        "Graceful Drop: 2 pair trade(s) omitted due to insufficient numeric market data or missing executable controls."
-    )
+    translated = _translate_warning(str(WarningMessage(GRACEFUL_DROP_PAIR_TRADES, {"count": "2"})))
     assert "ตัด Pair Trade ออกอย่างปลอดภัยจำนวน 2 รายการ" in translated
     assert "omitted" not in translated
 
-    downgrade = _translate_warning(
-        "Pair Trade Graceful Downgrade: Used single-point relative spread/ratio evidence instead of historical beta/correlation time series."
-    )
+    downgrade = _translate_warning(str(WarningMessage(PT_GRACEFUL_DOWNGRADE)))
     assert "ลดความมั่นใจของ Pair Trade" in downgrade
     assert "single-point" not in downgrade
 
 
 def test_translate_warning_single_source_and_stale_to_thai():
-    single_source = _translate_warning(
-        "Single-Source Penalty: Downgraded confidence to MEDIUM because view relies on only 1 source reference."
-    )
+    single_source = _translate_warning(str(WarningMessage(SINGLE_SOURCE_PENALTY)))
     assert "ลดความมั่นใจเป็น MEDIUM" in single_source
     assert "Downgraded" not in single_source
 
-    stale = _translate_warning(
-        "Stale Data Degradation: Portfolio conviction downgraded to LOW due to presence of stale data warnings."
-    )
-    assert "ลดระดับ conviction รวมลงเป็น MEDIUM" in stale
+    stale = _translate_warning(str(WarningMessage(STALE_DATA_DEGRADATION)))
+    assert "ลดระดับ conviction รวมจาก HIGH เป็น MEDIUM" in stale
     assert "downgraded" not in stale.lower()
+
+
+def test_translate_warning_structured_ids_to_thai():
+    # Test simple ID
+    single_source = _translate_warning("[SINGLE_SOURCE_PENALTY]")
+    assert "ลดความมั่นใจเป็น MEDIUM" in single_source
+
+    # Test ID with JSON payload
+    drop_pt = _translate_warning('[GRACEFUL_DROP_PAIR_TRADES] {"count": "3"}')
+    assert "ตัด Pair Trade ออกอย่างปลอดภัยจำนวน 3 รายการ" in drop_pt
 
 
 def test_formatter_sanitizes_stale_low_and_weak_why_not_high():
@@ -79,6 +93,7 @@ def test_formatter_sanitizes_stale_low_and_weak_why_not_high():
         asset_allocation=[
             AssetAllocationView(
                 asset_class="Precious Metals (Gold)",
+                asset_bucket="commodities",
                 stance=AssetStance.OVERWEIGHT,
                 rationale="Gold hedge",
                 confidence="medium",
@@ -86,12 +101,13 @@ def test_formatter_sanitizes_stale_low_and_weak_why_not_high():
                 source_refs=["Global_Macro_Snapshot_2026-07-03.md"],
                 why_not_high="ไม่มีเหตุผลที่ความมั่นใจไม่ถึงระดับสูง",
                 validation_warnings=[
-                    "Single-Source Penalty: Downgraded confidence to MEDIUM because view relies on only 1 source reference."
+                    str(WarningMessage(SINGLE_SOURCE_PENALTY))
                 ],
             )
             ,
             AssetAllocationView(
                 asset_class="US Equities",
+                asset_bucket="equities",
                 stance=AssetStance.OVERWEIGHT,
                 rationale="Growth",
                 confidence="medium",
@@ -100,6 +116,7 @@ def test_formatter_sanitizes_stale_low_and_weak_why_not_high():
             ),
             AssetAllocationView(
                 asset_class="Fixed Income",
+                asset_bucket="fixed_income",
                 stance=AssetStance.NEUTRAL,
                 rationale="Rates balanced",
                 confidence="medium",
@@ -108,6 +125,7 @@ def test_formatter_sanitizes_stale_low_and_weak_why_not_high():
             ),
             AssetAllocationView(
                 asset_class="Currencies",
+                asset_bucket="fx",
                 stance=AssetStance.UNDERWEIGHT,
                 rationale="USD/THB pressure",
                 confidence="medium",
@@ -116,6 +134,7 @@ def test_formatter_sanitizes_stale_low_and_weak_why_not_high():
             ),
             AssetAllocationView(
                 asset_class="Cash",
+                asset_bucket="cash",
                 stance=AssetStance.NEUTRAL,
                 rationale="Cash yield",
                 confidence="medium",
@@ -134,7 +153,7 @@ def test_formatter_sanitizes_stale_low_and_weak_why_not_high():
         ],
         stale_data_warnings=["Real GDP - ข้อมูลล่าช้าเกิน 180 วัน"],
         validation_warnings=[
-            "Stale Data Degradation: Portfolio conviction downgraded to LOW due to presence of stale data warnings."
+            str(WarningMessage(STALE_DATA_DEGRADATION))
         ],
     )
 
@@ -150,23 +169,67 @@ def test_formatter_sanitizes_stale_low_and_weak_why_not_high():
     assert "Macro_Baseline_" in report
 
 
-def test_catch_all_sanitization_negative_assertions():
-    from tools.macro.report_formatter import _sanitize_english_prefixes_catch_all
-    sample_text = (
-        "> - ⚠️ **คำเตือน (Warning):** Defensive Degradation: Portfolio conviction downgraded to LOW because >=50% of asset views lack numeric hard data.\n"
-        "> - ⚠️ **คำเตือน (Warning):** Single-Source Penalty: Downgraded confidence to MEDIUM.\n"
-        "> - ⚠️ **คำเตือน (Warning):** Stale Data Degradation: Downgraded overall conviction level from HIGH to MEDIUM.\n"
-        "> - ⚠️ **คำเตือน (Warning):** Active Allocation Guardrail: Changed stance from Overweight to Neutral.\n"
-        "> - ⚠️ **คำเตือน (Warning):** Unknown Future Guardrail: Some fallback message.\n"
+
+
+
+def test_formatter_sanitizes_cash_fallback_and_english_labels():
+    direction = MacroStrategyDirection(
+        evaluated_at="2026-07-04T10:05:12",
+        overall_regime=EconomicState.REFLATION,
+        asset_allocation=[
+            AssetAllocationView(
+                asset_class="Cash / T-Bills",
+                asset_bucket="cash",
+                stance=AssetStance.NEUTRAL,
+                rationale="Backfilled core asset class (Cash / T-Bills) due to input data constraints",
+                confidence="medium",
+                data_confidence="medium",
+                signal_confidence="medium",
+                implementation_confidence="medium",
+                supporting_data=["Fed Funds Rate = 3.63%", "Core PCE = 3.41%"],
+            )
+        ],
+        focus_themes=["Cash"],
+        conviction_level="medium",
+        conviction_rationale="Cash observables are sufficient",
+        quant_narrative_alignment="aligned",
+        validation_warnings=[
+            str(WarningMessage(COVERAGE_BACKFILL_EXPANDED, {"old": "4", "new": "5"}))
+        ],
     )
-    sanitized = _sanitize_english_prefixes_catch_all(sample_text)
-    assert "Defensive Degradation:" not in sanitized
-    assert "Single-Source Penalty:" not in sanitized
-    assert "Stale Data Degradation:" not in sanitized
-    assert "Active Allocation Guardrail:" not in sanitized
-    assert "Unknown Future Guardrail:" not in sanitized
-    assert "ลดระดับความมั่นใจ (Defensive):" in sanitized
-    assert "ลดความมั่นใจ (Single-Source):" in sanitized
-    assert "ลดระดับความมั่นใจ (Stale Data):" in sanitized
-    assert "กรอบควบคุมมุมมองเชิงรุก:" in sanitized
-    assert "คำเตือนระบบ (Unknown Future Guardrail):" in sanitized
+
+    report = format_macro_strategy_report(direction)
+
+    assert "Cash / T-Bills" in report
+    assert "3-6 Months" in report
+    assert "Backfilled core asset class (Cash / T-Bills)" in report
+
+
+def test_formatter_normalizes_delta_horizon_and_gold_real_yield_rationale():
+    direction = MacroStrategyDirection(
+        evaluated_at="2026-07-04T14:29:03",
+        overall_regime=EconomicState.RECESSION,
+        asset_allocation=[
+            AssetAllocationView(
+                asset_class="Precious Metals (Gold)",
+                asset_bucket="commodities",
+                stance=AssetStance.OVERWEIGHT,
+                allocation_delta="Overweight",
+                time_horizon="6-12 Months",
+                rationale="ทองคำและสินทรัพย์ปลอดภัย",
+                confidence="medium",
+                supporting_data=["Gold Futures = 4,187.30 USD/oz", "10-Year Real Yield (TIPS) = 2.25%"],
+                source_refs=["Global_Macro_Snapshot_2026-07-04.md", "Country_Macro_Snapshot_2026-07-04.md"],
+            )
+        ],
+        focus_themes=["Gold"],
+        conviction_level="medium",
+        conviction_rationale="Gold risk hedge",
+        quant_narrative_alignment="aligned",
+    )
+
+    report = format_macro_strategy_report(direction)
+
+    assert "+3% ถึง +5% vs benchmark" in report
+    assert "6-12 Months" in report
+

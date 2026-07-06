@@ -2,183 +2,45 @@ import re
 from datetime import datetime
 
 from schemas.macro_schemas import AssetStance, MacroStrategyDirection
-
-
-_MOJIBAKE_MARKERS = ("à¸", "à¹", "ðŸ", "â€", "â€”", "âš", "Ã", "Â")
-
-
-def _repair_mojibake_chunk(text: str) -> str:
-    repaired = text
-    for _ in range(3):
-        if not any(marker in repaired for marker in _MOJIBAKE_MARKERS):
-            break
-        changed = False
-        for encoding in ("cp1252", "latin1"):
-            try:
-                candidate = repaired.encode(encoding).decode("utf-8")
-            except UnicodeError:
-                continue
-            if candidate != repaired:
-                repaired = candidate
-                changed = True
-                break
-        if not changed:
-            break
-    return repaired
-
-
-def repair_mojibake(text: str) -> str:
-    """Repair common UTF-8 decoded-as-Windows mojibake without touching real Thai text."""
-    if not any(marker in text for marker in _MOJIBAKE_MARKERS):
-        return text
-    # If model output already contains valid Thai, split on Thai spans and only
-    # repair the non-Thai spans that can still contain formatter/prompt mojibake.
-    parts = re.split(r"([\u0e00-\u0e7f]+)", text)
-    return "".join(
-        part if re.fullmatch(r"[\u0e00-\u0e7f]+", part) else _repair_mojibake_chunk(part)
-        for part in parts
-    )
+from schemas.report_labels import (
+    ALLOCATION_DELTA_DEFAULTS,
+    CONVICTION_LOW_DISPLAY,
+    WHY_NOT_HIGH_MESSAGES,
+)
+from schemas.warning_registry import (
+    PORTFOLIO_DEFENSIVE_LOW,
+    SINGLE_SOURCE_PENALTY,
+    SOURCE_REF_PENALTY,
+    STALE_DATA_DEGRADATION,
+    translate_warning,
+)
+from core.text_utils import repair_mojibake, _MOJIBAKE_MARKERS, _repair_mojibake_chunk
 
 
 def _join_or_dash(items: list[str]) -> str:
     return ", ".join(items) if items else "-"
 
 
-def _translate_warning(message: str) -> str:
-    translations = {
-        "Defensive Degradation: Downgraded confidence to LOW due to lack of numeric hard data in supporting_data.": "ลดระดับความมั่นใจเป็น LOW เพราะไม่มีตัวเลข hard data ใน supporting_data",
-        "Source Reference Backfill: source_refs populated from MacroStrategyDirection.source_files because the asset view omitted explicit refs.": "เติมแหล่งอ้างอิงจาก source_files ของรายงาน เพราะมุมมองสินทรัพย์ไม่ได้ระบุ source_refs โดยตรง",
-        "Source Reference Warning: source_refs is empty, so data confidence cannot be treated as high.": "source_refs ว่าง จึงไม่ควรถือว่าความมั่นใจด้านข้อมูลเป็นระดับสูง",
-        "Source Reference Warning: asset view omitted source_refs.": "มุมมองสินทรัพย์ไม่ได้ระบุ source_refs",
-        "Coverage Backfill: Added low-confidence neutral view because Strategic Allocator omitted this core asset class.": "เติมมุมมอง Neutral ระดับความมั่นใจต่ำ เพราะ Strategic Allocator ไม่ได้วิเคราะห์สินทรัพย์หลักกลุ่มนี้",
-        "Regime Probability Coverage Warning: fewer than 4 regime probabilities were provided; distribution is incomplete for institutional review.": "การกระจายความน่าจะเป็นของ regime ยังไม่ครบอย่างน้อย 4 สภาวะ จึงยังไม่พอสำหรับการทบทวนระดับสถาบัน",
-        "Contradiction Warning: Portfolio recommends Overweight on both Equities Growth and Long Treasuries/Bonds without explicit reconciliation (e.g., Barbell strategy or Duration hedge).": "พบความขัดแย้ง: พอร์ตแนะนำ Overweight ทั้งหุ้นเติบโตและพันธบัตร/Duration โดยยังไม่อธิบายให้ชัดว่าเป็น Barbell strategy หรือ Duration hedge",
-        "Stale Data Degradation: Downgraded overall conviction level from HIGH to MEDIUM due to presence of stale data warnings.": "ลดระดับ conviction รวมจาก HIGH เป็น MEDIUM เพราะมีคำเตือนเรื่องข้อมูลล่าช้า",
-    }
-    if message in translations:
-        return translations[message]
-    if message.startswith("Single-Source Penalty:"):
-        return "ลดความมั่นใจเป็น MEDIUM เพราะมุมมองนี้อ้างอิงแหล่งข้อมูลโดยตรงเพียงแหล่งเดียว"
-    if message.startswith("Stale Data Degradation:"):
-        return "ลดระดับ conviction รวมลงเป็น MEDIUM เพราะมีคำเตือนเรื่องข้อมูลล่าช้า แต่ยังไม่ลดเป็น LOW หากไม่ได้มีหลักฐานเสียหายระดับวิกฤต"
-    if message.startswith("Source Reference Penalty:"):
-        return "ลดระดับความมั่นใจจาก HIGH เป็น MEDIUM เพราะ source_refs ถูกอนุมานจาก source_files ระดับรายงาน"
-    if message.startswith("Gold Rationale Warning:"):
-        return "ลดความมั่นใจของมุมมอง Overweight ทองคำเป็น MEDIUM เพราะเหตุผลยังพึ่งพาความเสี่ยงภูมิรัฐศาสตร์มากเกินไป และยังไม่ผูกกับ real yields เงินเฟ้อ หรือนโยบายการเงินอย่างชัดเจน"
-    if message.startswith("Contradiction Degradation: Gold Overweight rationale lacks yield/inflation macro anchoring."):
-        return "ลดความมั่นใจของทองคำเพราะเหตุผล Overweight ยังไม่มีหลักยึดจาก yield เงินเฟ้อ หรือกรอบนโยบายการเงินเพียงพอ"
-    if message.startswith("Coverage Warning: Missing required core asset classes"):
-        return "เติมสินทรัพย์หลักที่ขาดเพื่อให้ครบกรอบ Equities, Bonds/Duration, Commodities, FX และ Cash"
-    if message.startswith("Coverage Warning: Asset allocation covers"):
-        return "ความครอบคลุมสินทรัพย์ยังไม่ครบกรอบหลัก 5 กลุ่ม จึงเติมรายการที่ขาดเป็นมุมมอง Neutral ตามข้อจำกัดของข้อมูล"
-    if message.startswith("Portfolio Conviction Cap:"):
-        return "ลดระดับความมั่นใจของสินทรัพย์จาก HIGH เป็น MEDIUM เพราะ conviction รวมของพอร์ตเป็น LOW"
-    if message.startswith("Implementation Confidence Cap:"):
-        return "ลดระดับความมั่นใจด้านการนำไปปฏิบัติจาก HIGH เป็น MEDIUM เพราะ source refs หรือ conviction รวมยังไม่แข็งพอ"
-    if message.startswith("Pair Trade Execution Guardrail:"):
-        return "ลดความมั่นใจของ pair trade เป็น LOW เพราะข้อมูล hedge ratio, จุดตัดขาดทุน, เป้าหมาย, drawdown หรือเครื่องมือที่ใช้จริงยังไม่ครบ"
-    if message.startswith("Regime Probability Backfill:"):
-        return "เติม scenario สำรองให้ regime probabilities ครบอย่างน้อย 4 สภาวะตามเกณฑ์ institutional"
-    if message == "Defensive Degradation: Downgraded confidence to LOW due to incomplete indicators/hedges or missing numeric hard data.":
-        return "ลดระดับความมั่นใจเป็น LOW เพราะตัวชี้วัดล่วงหน้า เครื่องมือ hedge หรือ hard data เชิงตัวเลขยังไม่ครบ"
-    if message.startswith("Active Allocation Guardrail: Changed stance from "):
-        match = re.search(r"from (.+?) to Neutral because (.+?)\.", message)
-        if match:
-            return f"ปรับมุมมองจาก {match.group(1)} เป็น Neutral เพราะ {_translate_report_text(match.group(2))}"
-    if message.startswith("Coverage Backfill: Asset allocation expanded from "):
-        match = re.search(r"expanded from (\d+) to (\d+)", message)
-        if match:
-            return f"เติมสินทรัพย์หลักให้ครบจาก {match.group(1)} เป็น {match.group(2)} กลุ่ม โดยใช้มุมมอง Neutral ความมั่นใจต่ำในส่วนที่ข้อมูลไม่พอ"
-    if message.startswith("Defensive Degradation: Portfolio conviction downgraded to LOW because"):
-        return "ความมั่นใจรวมอยู่ในระดับต่ำ: ลด conviction รวมเป็น LOW เพราะมุมมองสินทรัพย์ตั้งแต่ครึ่งหนึ่งขึ้นไปขาดตัวเลข hard data หรือมีความมั่นใจ LOW"
-    match = re.match(r"Graceful Drop: (\d+) pair trade\(s\) omitted due to insufficient numeric market data or missing executable controls\.", message)
-    if match:
-        return f"ตัด Pair Trade ออกอย่างปลอดภัยจำนวน {match.group(1)} รายการ เนื่องจากหลักฐานตัวเลขราคาตลาดหรือรายละเอียดการปฏิบัติการยังไม่ครบถ้วน"
-    match = re.match(r"Graceful Drop: (\d+) pair trade\(s\) omitted due to insufficient numeric market data\.", message)
-    if match:
-        return f"ตัด Pair Trade ออกอย่างปลอดภัยจำนวน {match.group(1)} รายการ เนื่องจากหลักฐานตัวเลขราคาตลาดหรือสถิติเชิงสัมพัทธ์ไม่เพียงพอ"
-    match = re.match(r"Graceful Drop: (\d+) risk scenario\(s\) omitted due to insufficient numeric market data\.", message)
-    if match:
-        return f"ตัดแผนป้องกันความเสี่ยงออกอย่างปลอดภัยจำนวน {match.group(1)} รายการ เนื่องจากตัวเลข Hard Data ไม่เพียงพอ"
-    if message.startswith("Pair Trade Graceful Downgrade:"):
-        return "ลดความมั่นใจของ Pair Trade เป็น MEDIUM เนื่องจากใช้หลักฐานเชิงสัมพัทธ์จากจุดเดียวแทนการคำนวณ beta/correlation จากอนุกรมเวลาย้อนหลัง"
-    if message.startswith("Graceful Drop:"):
-        return message.replace("Graceful Drop:", "ตัดรายการที่ข้อมูลไม่พอออกอย่างปลอดภัย:")
-    if message.startswith("Regime Probability Sum Warning:"):
-        return message.replace("Regime Probability Sum Warning:", "คำเตือนผลรวมความน่าจะเป็น regime:")
-    if message.startswith("Regime Consistency Adjustment:"):
-        return message.replace("Regime Consistency Adjustment:", "ปรับ regime ให้สอดคล้อง:")
-    if message.startswith("Risk Budget Guardrail:"):
-        return "คำเตือนกรอบความเสี่ยง: " + _translate_report_text(message.split(":", 1)[1].strip())
-    if message.startswith("Mandatory Field Missing:"):
-        return "ข้อมูลสำคัญขาดหาย: " + _translate_report_text(message.split(":", 1)[1].strip())
-    return message
+_translate_warning = translate_warning
 
 
 def _translate_warnings(messages: list[str]) -> list[str]:
-    return [_translate_warning(repair_mojibake(message)) for message in messages]
+    return [translate_warning(repair_mojibake(message)) for message in messages]
 
 
 def _translate_report_text(value: str) -> str:
-    text = repair_mojibake(str(value)) if value is not None else ""
-    replacements = {
-        "No hard data": "ไม่มี hard data",
-        "Confidence is LOW due to macro uncertainty or data constraints.": "ความมั่นใจเป็น LOW เพราะยังมีความไม่แน่นอนเชิงมหภาคหรือข้อจำกัดด้านข้อมูล",
-        "Backfilled low-confidence neutral view due to insufficient source evidence.": "เติมมุมมอง Neutral ระดับความมั่นใจต่ำ เพราะหลักฐานจากแหล่งข้อมูลยังไม่เพียงพอ",
-        "Data Insufficient: input evidence is not strong enough to form an active allocation view for this core asset class.": "ข้อมูลไม่เพียงพอที่จะสร้างมุมมองเชิงรุกสำหรับสินทรัพย์หลักกลุ่มนี้",
-        "asset view lacks sufficient numeric hard data for an active allocation": "มุมมองสินทรัพย์ยังขาดตัวเลข hard data ที่เพียงพอสำหรับการจัดสรรเชิงรุก",
-        "confidence is LOW or numeric hard data is insufficient": "ความมั่นใจเป็น LOW หรือข้อมูลตัวเลข hard data ยังไม่เพียงพอ",
-        "overall portfolio conviction is LOW and the asset view is not HIGH confidence": "conviction รวมของพอร์ตเป็น LOW และมุมมองสินทรัพย์ไม่ได้มีความมั่นใจระดับ HIGH",
-    }
-    for old, new in replacements.items():
-        text = text.replace(old, new)
-    return text
+    return repair_mojibake(str(value)) if value is not None else ""
 
 
-def _sanitize_english_prefixes_catch_all(text: str) -> str:
-    """Sanitize any remaining English warning/guardrail prefixes in the final report."""
-    prefix_map = {
-        "Defensive Degradation:": "ลดระดับความมั่นใจ (Defensive):",
-        "Single-Source Penalty:": "ลดความมั่นใจ (Single-Source):",
-        "Stale Data Degradation:": "ลดระดับความมั่นใจ (Stale Data):",
-        "Active Allocation Guardrail:": "กรอบควบคุมมุมมองเชิงรุก:",
-        "Risk Budget Guardrail:": "กรอบควบคุมงบความเสี่ยง:",
-        "Mandatory Field Missing:": "ข้อมูลสำคัญขาดหาย:",
-        "Contradiction Degradation:": "ลดความมั่นใจเนื่องจากความขัดแย้ง:",
-        "Contradiction Warning:": "คำเตือนความขัดแย้ง:",
-        "Coverage Warning:": "คำเตือนความครอบคลุม:",
-        "Coverage Backfill:": "เติมเต็มความครอบคลุม:",
-        "Source Reference Warning:": "คำเตือนแหล่งอ้างอิง:",
-        "Source Reference Penalty:": "ลดระดับจากแหล่งอ้างอิง:",
-        "Source Reference Backfill:": "เติมเต็มแหล่งอ้างอิง:",
-        "Pair Trade Execution Guardrail:": "กรอบควบคุมการปฏิบัติการ Pair Trade:",
-        "Pair Trade Graceful Downgrade:": "ปรับลดความมั่นใจ Pair Trade:",
-        "Regime Probability Coverage Warning:": "คำเตือนความครอบคลุมสภาวะเศรษฐกิจ:",
-        "Regime Probability Sum Warning:": "คำเตือนผลรวมความน่าจะเป็นสภาวะเศรษฐกิจ:",
-        "Regime Consistency Adjustment:": "ปรับสภาวะเศรษฐกิจให้สอดคล้อง:",
-        "Portfolio Conviction Cap:": "เพดานความมั่นใจพอร์ตรวม:",
-        "Implementation Confidence Cap:": "เพดานความมั่นใจการปฏิบัติการ:",
-        "Gold Rationale Warning:": "คำเตือนเหตุผลทองคำ:",
-    }
-    for eng_prefix, thai_replacement in prefix_map.items():
-        text = text.replace(eng_prefix, thai_replacement)
 
-    def _fallback_sub(match: re.Match) -> str:
-        label = match.group(1)
-        if any(w in label for w in ["Guardrail", "Penalty", "Degradation", "Warning", "Backfill", "Cap", "Graceful", "Drop", "Missing", "Note", "Notice"]):
-            return f"คำเตือนระบบ ({label}):"
-        return match.group(0)
-
-    text = re.sub(r"\b([A-Z][a-zA-Z\s\-]+):\s", _fallback_sub, text)
-    return text
 
 
 def _display_conviction_level(direction: MacroStrategyDirection) -> str:
     level = str(getattr(direction, "conviction_level", "medium")).lower()
     warnings = [str(w) for w in getattr(direction, "validation_warnings", [])]
-    has_defensive_low = any("Defensive Degradation: Portfolio conviction downgraded to LOW" in w for w in warnings)
-    has_legacy_stale_low = any("Stale Data Degradation:" in w and "LOW" in w for w in warnings)
-    if level == "low" and getattr(direction, "stale_data_warnings", []) and has_legacy_stale_low and not has_defensive_low:
+    has_defensive_low = any(f"[{PORTFOLIO_DEFENSIVE_LOW}]" in w for w in warnings)
+    has_stale_low = any(f"[{STALE_DATA_DEGRADATION}]" in w for w in warnings)
+    if level == "low" and getattr(direction, "stale_data_warnings", []) and has_stale_low and not has_defensive_low:
         return "medium"
     return level
 
@@ -191,17 +53,21 @@ def _display_why_not_high(asset) -> str:
         or lowered in {"-", "none", "n/a"}
         or "ไม่มีเหตุผล" in lowered
         or "no reason" in lowered
+        or lowered == WHY_NOT_HIGH_MESSAGES["default"].lower()
+        or lowered == WHY_NOT_HIGH_MESSAGES["low_confidence"].lower()
     )
     if getattr(asset, "confidence", "medium") == "high" or not weak:
         return text or "-"
     warnings = [str(w) for w in getattr(asset, "validation_warnings", [])]
-    if any("Single-Source Penalty" in w for w in warnings):
-        return "ความมั่นใจถูกจำกัดไว้ที่ MEDIUM เพราะมุมมองนี้อ้างอิงแหล่งข้อมูลโดยตรงเพียงแหล่งเดียว"
+    if any(f"[{SINGLE_SOURCE_PENALTY}]" in w for w in warnings):
+        return WHY_NOT_HIGH_MESSAGES["single_source"]
+    if any(f"[{SOURCE_REF_PENALTY}]" in w or "SOURCE_REF_PENALTY" in w or "source_refs ถูกอนุมาน" in w for w in warnings):
+        return WHY_NOT_HIGH_MESSAGES["source_ref_inferred"]
     if "gold" in str(getattr(asset, "asset_class", "")).lower():
-        return "ความมั่นใจถูกจำกัดไว้ที่ MEDIUM เพราะมุมมองทองคำยังต้องอ้างอิง real yields เงินเฟ้อ หรือนโยบายการเงินให้ชัดกว่านี้"
+        return WHY_NOT_HIGH_MESSAGES["gold_real_yield"]
     if getattr(asset, "confidence", "medium") == "low":
-        return "ข้อมูลตัวเลขและหลักฐานอ้างอิงยังไม่เพียงพอสำหรับความมั่นใจระดับ HIGH"
-    return "ยังมีข้อจำกัดด้านข้อมูลหรือการนำไปปฏิบัติ จึงยังไม่เหมาะกับความมั่นใจระดับ HIGH"
+        return WHY_NOT_HIGH_MESSAGES["low_confidence"]
+    return WHY_NOT_HIGH_MESSAGES["default"]
 
 
 def _display_source_files(direction: MacroStrategyDirection, today: str) -> list[str]:
@@ -210,6 +76,20 @@ def _display_source_files(direction: MacroStrategyDirection, today: str) -> list
     if baseline not in source_files:
         source_files.append(baseline)
     return source_files
+
+
+def _display_allocation_delta(asset) -> str:
+    raw = str(getattr(asset, "allocation_delta", "") or "").strip()
+    stance = getattr(getattr(asset, "stance", ""), "value", str(getattr(asset, "stance", ""))).lower()
+    if not raw:
+        return "-"
+    if raw.lower() in {"overweight", "underweight", "neutral"} or raw.lower() == stance:
+        return ALLOCATION_DELTA_DEFAULTS.get(stance, "0% vs benchmark")
+    return raw
+
+
+def _display_time_horizon(value: str) -> str:
+    return str(value or "3-6 Months")
 
 
 def format_macro_strategy_report(direction: MacroStrategyDirection) -> str:
@@ -230,7 +110,7 @@ def format_macro_strategy_report(direction: MacroStrategyDirection) -> str:
         f"# 🧭 1. Executive View — ทิศทางกลยุทธ์การลงทุนเชิงมหภาค ({today})\n",
         f"> **สภาวะเศรษฐกิจ (Overall Regime):** {direction.overall_regime.value}",
         f"> **กรอบระยะเวลาลงทุน (Time Horizon):** {getattr(direction, 'time_horizon', '3-6 Months')}",
-        f"> **ระดับความมั่นใจ (Conviction):** {'ความมั่นใจรวมอยู่ในระดับต่ำ (LOW)' if display_conviction == 'low' else display_conviction.upper()}",
+        f"> **ระดับความมั่นใจ (Conviction):** {CONVICTION_LOW_DISPLAY if display_conviction == 'low' else display_conviction.upper()}",
         f"> **ความสอดคล้อง Quant-Narrative:** {direction.quant_narrative_alignment}",
         f"> **ประเมินเมื่อ (Evaluated At):** {direction.evaluated_at}\n",
     ]
@@ -270,8 +150,8 @@ def format_macro_strategy_report(direction: MacroStrategyDirection) -> str:
         stance_fmt = f"**{a.stance.value}**" if a.stance != AssetStance.NEUTRAL else a.stance.value
         data_str = ", ".join(_translate_report_text(item) for item in getattr(a, "supporting_data", [])) if getattr(a, "supporting_data", []) else "ไม่มี hard data"
         lines.append(
-            f"| **{a.asset_class}** | {stance_fmt} | {getattr(a, 'allocation_delta', '') or '-'} | "
-            f"{getattr(a, 'benchmark_ref', '') or '-'} | {getattr(a, 'time_horizon', 'Macro (3-6 Months)')} | "
+            f"| **{a.asset_class}** | {stance_fmt} | {_display_allocation_delta(a)} | "
+            f"{getattr(a, 'benchmark_ref', '') or '-'} | {_display_time_horizon(getattr(a, 'time_horizon', 'Macro (3-6 Months)'))} | "
             f"{getattr(a, 'confidence', 'medium').upper()} | {_display_why_not_high(a)} | {data_str} |"
         )
 
@@ -307,8 +187,8 @@ def format_macro_strategy_report(direction: MacroStrategyDirection) -> str:
         or direction.divergence_note
         or any("Contradiction" in w or "Divergent" in w for w in getattr(direction, "validation_warnings", []))
     )
+    lines.append("## ⚡ 4. Key Contradictions & Quant-Narrative Divergence (จุดขัดแย้งเชิงตรรกะ)\n")
     if has_contradictions:
-        lines.append("## ⚡ 4. Key Contradictions & Quant-Narrative Divergence (จุดขัดแย้งเชิงตรรกะ)\n")
         if direction.quant_narrative_alignment == "divergent":
             lines.append(f"> [!WARNING] Quant-Narrative Divergence — ความไม่สอดคล้องระหว่าง Quant และ Narrative\n> {direction.divergence_note}\n")
         elif direction.divergence_note:
@@ -316,10 +196,12 @@ def format_macro_strategy_report(direction: MacroStrategyDirection) -> str:
         for w in _translate_warnings(getattr(direction, "validation_warnings", [])):
             if "Contradiction" in w or "Divergent" in w:
                 lines.append(f"> [!WARNING] ข้อความเตือนความขัดแย้งจากระบบ (Auto-Detected Guardrail Contradiction)\n> {w}\n")
+    else:
+        lines.append("> [!NOTE] ไม่พบจุดขัดแย้งสำคัญระหว่างข้อมูลเชิงปริมาณและสภาวะตลาด (Aligned)\n")
 
     pair_trades = getattr(direction, "pair_trades", [])
+    lines.append("## ⚖️ 5. Relative Value & Pair Trades (Trade Ideas) — กลยุทธ์จับคู่เทรดเชิงมูลค่าสัมพัทธ์\n")
     if pair_trades:
-        lines.append("## ⚖️ Relative Value & Pair Trades (Trade Ideas) — กลยุทธ์จับคู่เทรดเชิงมูลค่าสัมพัทธ์\n")
         for pt in pair_trades:
             sizing = pt.sizing_guidance.upper().replace("_", " ")
             lines.append(f"> [!tip]- **Pair Trade:** Long {pt.long_leg} / Short {pt.short_leg} (Confidence: {pt.confidence.upper()} | Risk Budget: {sizing})")
@@ -348,10 +230,12 @@ def format_macro_strategy_report(direction: MacroStrategyDirection) -> str:
             for w in _translate_warnings(pt.validation_warnings):
                 lines.append(f"> - ⚠️ **คำเตือน (Warning):** {w}")
             lines.append("")
+    else:
+        lines.append("> [!NOTE] ไม่พบโอกาสจับคู่เทรดที่เข้าเกณฑ์ความมั่นใจเชิงสถิติในรอบการประเมินนี้\n")
 
     risk_scenarios = getattr(direction, "risk_scenarios", [])
+    lines.append("## 🛡️ 6. Portfolio Risk Mitigation & Hedging (Hedging Plan) — แผนการบริหารความเสี่ยงและป้องกันพอร์ต\n")
     if risk_scenarios:
-        lines.append("## 🛡️ Portfolio Risk Mitigation & Hedging (Hedging Plan) — แผนการบริหารความเสี่ยงและป้องกันพอร์ต\n")
         for rs in risk_scenarios:
             purpose = getattr(rs, "hedge_purpose", "portfolio_hedge")
             lines.append(
@@ -375,8 +259,10 @@ def format_macro_strategy_report(direction: MacroStrategyDirection) -> str:
             for w in _translate_warnings(rs.validation_warnings):
                 lines.append(f"> - ⚠️ **คำเตือน (Warning):** {w}")
             lines.append("")
+    else:
+        lines.append("> [!NOTE] ไม่พบแผนป้องกันความเสี่ยงที่เข้าเกณฑ์เงื่อนไขเชิงปริมาณในรอบการประเมินนี้\n")
 
-    lines.append("## 📋 7. Data Quality Notes & Institutional Metadata (หมายเหตุด้านคุณภาพข้อมูลและระบบ)\n")
+    lines.append("## 📋 7. หมายเหตุด้านคุณภาพข้อมูลและระบบ\n")
     source_files = _display_source_files(direction, today)
     if source_files:
         lines.append(f"- **ไฟล์ต้นทางที่ประเมิน (Source Files Evaluated):** {', '.join(source_files)}")
@@ -387,7 +273,7 @@ def format_macro_strategy_report(direction: MacroStrategyDirection) -> str:
 
     val_warnings = getattr(direction, "validation_warnings", [])
     if val_warnings:
-        lines.append("\n> [!WARNING] ประกาศด้านคุณภาพและความครอบคลุมตามมาตรฐานสถาบัน (Institutional Quality & Coverage Notices)")
+        lines.append("\n> [!WARNING] ประกาศด้านคุณภาพและความครอบคลุมตามมาตรฐานสถาบัน")
         for w in _translate_warnings(val_warnings):
             lines.append(f"> - {w}")
         lines.append("")
@@ -398,11 +284,10 @@ def format_macro_strategy_report(direction: MacroStrategyDirection) -> str:
 
     lines.append(f"\n### 💡 เหตุผลรองรับระดับความมั่นใจรวม (Conviction Rationale)\n{direction.conviction_rationale}\n")
     lines.append(
-        "> [!CAUTION] Institutional Compliance Disclaimer\n"
+        "> [!CAUTION] ข้อสงวนสิทธิ์และคำชี้แจงการใช้งาน\n"
         "> รายงานฉบับนี้จัดทำขึ้นเพื่อใช้เป็นกรอบกลยุทธ์การลงทุนเชิงมหภาคและสนับสนุนการตัดสินใจเท่านั้น "
         "ไม่ถือเป็นคำแนะนำการลงทุนรายบุคคล คำสั่งซื้อขาย หรือการชี้ชวนให้ซื้อขายหลักทรัพย์ใดๆ ผู้ใช้งานควรประเมินข้อจำกัดและความเสี่ยงของพอร์ตการลงทุนก่อนดำเนินการเสมอ"
     )
 
     raw_markdown = "\n".join(lines)
-    repaired_markdown = repair_mojibake(raw_markdown)
-    return _sanitize_english_prefixes_catch_all(repaired_markdown)
+    return repair_mojibake(raw_markdown)

@@ -311,6 +311,46 @@ def evaluate_macro_matrix() -> str:
         recession_prob = _calculate_recession_probability(matrices, geo_score)
         market_observables = _extract_market_observables(contents, resolved_files, today_str)
 
+        # Build & merge Valuation Observables (Pillar 1)
+        try:
+            from .valuation import build_valuation_observables, build_credit_spread_observable
+            val_obs = build_valuation_observables(existing_observables=market_observables)
+            market_observables.extend(val_obs)
+            hy_obs = build_credit_spread_observable(existing_observables=market_observables)
+            if hy_obs and not any(o.observable_id == hy_obs.observable_id for o in market_observables):
+                market_observables.append(hy_obs)
+        except Exception as e:
+            log.warning(f"Could not build valuation observables: {e}")
+
+        # Build & merge Derived Pair Trade Ratios (Pillar 3)
+        try:
+            from .derived_ratios import build_derived_pair_observables, _default_price_getter
+            pair_obs = build_derived_pair_observables(
+                existing_observables=market_observables,
+                price_getter=_default_price_getter,
+                today_str=today_str,
+                use_mock_fallback=False
+            )
+            for po in pair_obs:
+                if not any(o.observable_id == po.observable_id for o in market_observables):
+                    market_observables.append(po)
+        except Exception as e:
+            log.warning(f"Could not build derived pair observables: {e}")
+
+        # Build & merge Risk Correlation Analytics (Pillar 4)
+        try:
+            from .risk_analytics import build_risk_correlation_observables, _default_correlation_calculator
+            corr_obs = build_risk_correlation_observables(
+                correlation_calculator=_default_correlation_calculator,
+                today_str=today_str,
+                use_mock_fallback=False
+            )
+            for co in corr_obs:
+                if not any(o.observable_id == co.observable_id for o in market_observables):
+                    market_observables.append(co)
+        except Exception as e:
+            log.warning(f"Could not build risk correlation observables: {e}")
+
         regions_dict = {}
         for region, m in matrices.items():
             regions_dict[region] = RegionQuantMetrics(

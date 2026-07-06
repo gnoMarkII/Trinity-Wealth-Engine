@@ -22,7 +22,7 @@ log = get_logger(__name__)
 
 
 from .core import _atomic_write_text, read_file, VAULT_PATH, INDEX_PATH, INDEX_LOCK, _VAULT_SYSTEM_FILES, _INDEX_EXCLUDE
-from .parser import _extract_asset_tickers, _strip_frontmatter
+from .parser import _extract_asset_tickers, _strip_frontmatter, extract_yaml_frontmatter_value
 
 
 
@@ -46,8 +46,8 @@ def _read_entity_type(file_path: Path) -> str:
         content = file_path.read_text(encoding="utf-8")
     except OSError:
         return "—"
-    m = re.search(r'^entity_type:\s*(.+)$', content, re.MULTILINE)
-    return m.group(1).strip() if m else "—"
+    val = extract_yaml_frontmatter_value(content, "entity_type")
+    return val if val else "—"
 
 
 def _file_folder_label(file_path: Path) -> str:
