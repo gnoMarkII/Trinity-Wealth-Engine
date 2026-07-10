@@ -1,13 +1,15 @@
-# Design: ปรับปรุง Web UI (แก้บั๊ก + Refactor + Animation + Accessibility)
+# Design: ปรับปรุง Web UI + Backend API (แก้บั๊ก + Refactor + Animation + Accessibility)
 
 วันที่: 2026-07-10
-สถานะ: อนุมัติแล้ว (แนวทาง "ครบทุกด้านแบบพอดี", animation แบบ CSS/Tailwind เท่านั้น — ไม่เพิ่ม dependency)
+สถานะ: อนุมัติแล้ว (แนวทาง "ครบทุกด้านแบบพอดี", animation แบบ CSS/Tailwind เท่านั้น — ไม่เพิ่ม dependency;
+ขยายขอบเขตรวม backend `api/` ทั้ง 6 ข้อ ตามการอนุมัติรอบสอง)
 
 ## เป้าหมาย
 
 รีวิวและปรับปรุงโค้ด `web/src` ทั้งหมด (React 19 + Vite + Tailwind 3.4) ให้ถูกต้องตามหลักการ
 ลดโค้ดซ้ำ เพิ่ม animation ที่ทำให้ใช้งานลื่นขึ้น และแก้ accessibility พื้นฐาน
 โดยไม่เพิ่ม dependency ใหม่และไม่รื้อสถาปัตยกรรม
+พร้อมปรับปรุง backend `api/` (FastAPI) ในจุด correctness/robustness ที่พบจากการรีวิว
 
 ## ส่วนที่ 1 — แก้บั๊ก (correctness)
 
@@ -25,6 +27,8 @@
    → เพิ่ม guard ก่อน move: ถ้า `card.column_name` ตรงกับคอลัมน์เป้าหมายแล้ว ไม่ยิง API
    → ยังคงให้ drawer เป็นตัว move สำรอง (จำเป็นสำหรับกรณี reload หน้ากลาง job ที่
    background driver ใน state หายไป)
+   → การย้ายเข้า `executing` ตอน dispatch ไม่ต้องทำจาก frontend อีกต่อไป —
+   backend จัดการให้ใน dispatch endpoint (ดูส่วนที่ 5 ข้อ 5)
 4. **Timer รั่ว** — `flashNotice` ใน Kanban.tsx ตั้ง `setTimeout` ใหม่โดยไม่เคลียร์ตัวเก่า
    (แจ้งเตือน 2 ครั้งติดกัน ตัวแรกจะลบข้อความที่สองก่อนเวลา) และไม่ cleanup ตอน unmount;
    `deleteCard` ก็มี setTimeout ที่ไม่ถูก track
@@ -81,6 +85,35 @@
 - **MacroReferenceDrawer**: `role="dialog"` + `aria-modal="true"` + โฟกัสปุ่มปิดตอนเปิด
 - **แท็บกรอง** (KanbanHeader, Macro stance filter): `aria-pressed` บนปุ่มที่ active
 
+## ส่วนที่ 5 — Backend (api/)
+
+1. **`init_schema` รันซ้ำทุก connection** — `state_db.get_connection()` เรียก `init_schema(conn)`
+   ทุกครั้งที่เปิด connection ทำให้ทุก API request (รวม SSE poll ทุก 1 วินาที) รัน
+   `CREATE TABLE` + PRAGMA migration + backfill ใหม่หมด ทั้งที่ lifespan init ไว้แล้ว
+   → init ครั้งเดียวต่อ db path (module-level set ของ path ที่ init แล้ว) —
+   ระวังเคส tests ที่ใช้ db path ชั่วคราวต่างกัน ต้องยัง init ให้ path ใหม่เสมอ
+2. **Worker loop ไม่ทนต่อ exception** — `JobQueue._worker_loop` ไม่มี try/except ครอบ
+   `_run_job` ถ้าโยน exception ที่ไม่คาดคิด task ตายเงียบ คิวหยุดรับงานถาวรจน restart
+   → ครอบ try/except (log แล้ววนต่อ) และปรับ `stop()` ให้ await task จนจบ
+   (suppress CancelledError)
+3. **Idempotency key ไม่รวม flow** — `JobQueue.dispatch` ใช้ key `card:instruction:scope`
+   งานชื่อเดียวกัน scope เดียวกันแต่คนละ flow จะ dedup ผิดตัว → เพิ่ม flow เข้า key
+4. **คอลัมน์ผี `dispatcher`** — `_VALID_COLUMNS` ใน routes_kanban.py มี `"dispatcher"`
+   ที่ UI ไม่มีแล้ว การ์ดที่อยู่คอลัมน์นี้มองไม่เห็นจากหน้าเว็บ
+   → ตัดออกจาก valid set + migration ย้ายการ์ดที่ค้างใน `dispatcher` กลับ `backlog`
+   (ใน `_migrate` ตอน init_schema)
+5. **Dispatch ไม่ atomic กับการย้ายการ์ด** — frontend ต้องยิง `POST dispatch` แล้ว
+   `PUT move` ต่อ ถ้า call ที่สองล้มเหลว การ์ดค้าง Backlog ทั้งที่ job รันอยู่
+   → `POST /api/agents/dispatch` ย้ายการ์ดเป็น `executing` + ผูก `job_id` ให้เอง
+   เมื่อ payload มี `card_id` (ฝั่ง web: `dispatchCard` ตัด `moveKanbanCard` call ออก
+   เหลือ dispatch → refresh)
+6. **SSE ใช้ sync SQLite ใน async loop** — `stream_job` เรียก DB blocking ภายใน
+   async generator → ครอบส่วนอ่าน DB ด้วย `asyncio.to_thread`
+
+สิ่งที่รีวิวแล้วตั้งใจไม่แตะ: ระบบ auth รหัสเดียว, logout ไม่ revoke token ฝั่ง server,
+การอ่าน sidecar JSON ทุก request โดยไม่ cache — เป็น tradeoff ที่เหมาะกับเครื่องมือ
+ส่วนตัว single-user อยู่แล้ว
+
 ## สิ่งที่ตั้งใจไม่ทำ (out of scope)
 
 - ไม่เพิ่ม dependency ใหม่ (ไม่มี Framer Motion, react-query, ฯลฯ)
@@ -91,7 +124,7 @@
 
 ## การตรวจรับ (verification)
 
-โปรเจกต์ web ไม่มี test framework — เกณฑ์ผ่านคือ:
+**ฝั่ง web** — ไม่มี test framework ใน web/ เกณฑ์ผ่านคือ:
 
 1. `npm run build` ผ่าน (tsc strict + vite build)
 2. `npm run lint` (oxlint) ไม่มี error ใหม่
@@ -100,3 +133,11 @@
    → สลับ filter ทุกแท็บ → ทดสอบคีย์บอร์ดล้วน (Tab/Enter/Escape) กับการ์ดและ modal
 4. ตรวจว่าเปิด drawer ของการ์ดที่ done แล้ว **ไม่** ยิง PUT /api/kanban/move ซ้ำ
    (ดูจาก network tab)
+
+**ฝั่ง backend** — มี pytest อยู่แล้ว:
+
+5. `uv run pytest tests/api/` ผ่านทั้งหมด (ปรับ test เดิมที่ผูกกับพฤติกรรมเก่า เช่น
+   dispatch ที่ตอนนี้ย้ายการ์ดเอง)
+6. เพิ่ม test ใหม่ครอบ: init_schema ครั้งเดียวต่อ path, idempotency key รวม flow,
+   atomic dispatch (การ์ดถูกย้ายเป็น executing + ผูก job_id), migration การ์ด
+   `dispatcher` → `backlog`, worker loop รอดจาก exception ใน _run_job
