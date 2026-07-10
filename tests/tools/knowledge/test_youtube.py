@@ -63,48 +63,51 @@ def test_get_raw_transcript(mock_api):
     with pytest.raises(TranscriptUnavailable):
         _get_raw_transcript("vid")
 
+@patch("tools.knowledge.youtube._extract_via_gemini_url_direct")
+@patch("tools.knowledge.youtube._get_ytdlp_subtitles")
 @patch("tools.knowledge.youtube._call_extractor_llm")
 @patch("tools.knowledge.youtube._get_raw_transcript")
 @patch("tools.knowledge.youtube._find_existing_insight")
-def test_ingest_youtube_transcript(mock_find, mock_get_raw, mock_call_llm):
-    # Invalid ID
+def test_ingest_youtube_transcript_tiers(mock_find, mock_get_raw, mock_call_llm, mock_ytdlp, mock_gemini):
+    # 1. Invalid ID
     assert "ERROR" in ingest_youtube_transcript.func("invalid")
-    
-    # Duplicate
+
+    # 2. Duplicate
     mock_find.return_value = Path("test.md")
     assert "DUPLICATE" in ingest_youtube_transcript.func("dQw4w9WgXcQ")
-    
-    # Transcript Disabled
-    from youtube_transcript_api import TranscriptsDisabled, VideoUnavailable
+
+    # 3. Video Unavailable (Live event)
+    from youtube_transcript_api import VideoUnavailable
     mock_find.return_value = None
-    mock_get_raw.side_effect = TranscriptsDisabled("disabled")
-    assert "ERROR:" in ingest_youtube_transcript.func("dQw4w9WgXcQ")
-    
-    # Video Unavailable
-    mock_get_raw.side_effect = VideoUnavailable("video ID")
-    assert "ไม่พบวิดีโอ" in ingest_youtube_transcript.func("dQw4w9WgXcQ")
-    
-    # Generic exception in get_raw
-    mock_get_raw.side_effect = Exception("generic")
-    assert "ดึง Transcript ล้มเหลว" in ingest_youtube_transcript.func("dQw4w9WgXcQ")
-    
-    # Empty transcript
+    mock_get_raw.side_effect = VideoUnavailable("live event")
+    assert "ข้าม: วิดีโอนี้ยังไม่ถึงเวลา Live" in ingest_youtube_transcript.func("dQw4w9WgXcQ")
+
+    # 4. Tier 1 Success
     mock_get_raw.side_effect = None
-    mock_get_raw.return_value = "   "
-    assert "ว่างเปล่า" in ingest_youtube_transcript.func("dQw4w9WgXcQ")
-    
-    # Success with cutoff
-    mock_get_raw.return_value = "a" * 21000
-    mock_call_llm.return_value = "Insight result"
-    res = ingest_youtube_transcript.func("dQw4w9WgXcQ")
-    assert "Insight result" in res
-    assert "youtube_insight" in res
-    assert mock_call_llm.call_args[0][0].endswith("[ตัดทอน — Transcript เกิน 20,000 ตัวอักษร]")
-    
-    # LLM ValueError
-    mock_call_llm.side_effect = ValueError("LLM Error")
-    assert "ERROR: LLM Error" in ingest_youtube_transcript.func("dQw4w9WgXcQ")
-    
-    # LLM Generic Exception
-    mock_call_llm.side_effect = Exception("Other Error")
-    assert "LLM Extraction ล้มเหลว" in ingest_youtube_transcript.func("dQw4w9WgXcQ")
+    mock_get_raw.return_value = "Hello from Tier 1"
+    mock_call_llm.return_value = "Insight Tier 1"
+    res1 = ingest_youtube_transcript.func("dQw4w9WgXcQ")
+    assert "Insight Tier 1" in res1
+    assert "Tier 1: YouTube Transcript API" in res1
+
+    # 5. Tier 1 Fails -> Tier 2 Success
+    mock_get_raw.side_effect = Exception("IP Blocked")
+    mock_ytdlp.return_value = "Subtitle from yt-dlp"
+    mock_call_llm.return_value = "Insight Tier 2"
+    res2 = ingest_youtube_transcript.func("dQw4w9WgXcQ")
+    assert "Insight Tier 2" in res2
+    assert "Tier 2: yt-dlp Subtitle Scraper" in res2
+
+    # 6. Tier 1 & Tier 2 Fail -> Tier 3 Success (Zero-Download Gemini Direct URL)
+    mock_get_raw.side_effect = Exception("No transcript")
+    mock_ytdlp.return_value = None
+    mock_gemini.return_value = "Insight Tier 3 via Gemini"
+    res3 = ingest_youtube_transcript.func("dQw4w9WgXcQ")
+    assert "Insight Tier 3 via Gemini" in res3
+    assert "Tier 3: Gemini Direct YouTube Multimodal (Zero-Download)" in res3
+
+    # 7. All 3 Tiers Fail
+    mock_gemini.side_effect = Exception("Gemini Error")
+    res4 = ingest_youtube_transcript.func("dQw4w9WgXcQ")
+    assert "ERROR: ดึงข้อมูลและสรุปเนื้อหาจาก YouTube ล้มเหลวทั้ง 3 ขั้นตอน" in res4
+

@@ -1,7 +1,9 @@
+import json
 import pytest
 from datetime import datetime
 from schemas.macro_schemas import MacroStrategyDirection, AssetAllocationView, AssetStance, EconomicState
-from tools.macro.report_formatter import _translate_warning, format_macro_strategy_report
+from tools.macro.report_formatter import _translate_warning, format_macro_strategy_report, write_strategy_json_sidecar
+import tools.macro.report_formatter as report_formatter_module
 from schemas.warning_registry import (
     WarningMessage,
     GRACEFUL_DROP_PAIR_TRADES,
@@ -54,6 +56,34 @@ def test_format_macro_strategy_report_divergent():
 
     assert "[!WARNING] Quant-Narrative Divergence" in report
     assert "ข่าวดีแต่ตัวเลขแย่" in report
+
+
+def test_write_strategy_json_sidecar(tmp_path, monkeypatch):
+    monkeypatch.setattr(report_formatter_module, "VAULT_PATH", tmp_path)
+
+    direction = MacroStrategyDirection(
+        evaluated_at=datetime.now().isoformat(),
+        overall_regime=EconomicState.GOLDILOCKS,
+        asset_allocation=[
+            AssetAllocationView(asset_class="หุ้น", asset_bucket="equities", stance=AssetStance.OVERWEIGHT, rationale="เศรษฐกิจเติบโต"),
+        ],
+        focus_themes=["เทคโนโลยี"],
+        conviction_level="high",
+        conviction_rationale="ตัวเลขสนับสนุนชัดเจน",
+        quant_narrative_alignment="aligned",
+        divergence_note=""
+    )
+
+    json_path = write_strategy_json_sidecar(direction, "2026-07-06")
+
+    assert json_path == tmp_path / "30_Knowledge_Base" / "Strategies" / "Macro_Strategy_Direction_2026-07-06.json"
+    assert json_path.exists()
+    # ต้องไม่เหลือ temp file ค้างจากการเขียนแบบ atomic
+    assert list(json_path.parent.glob("*.tmp")) == []
+
+    saved = json.loads(json_path.read_text(encoding="utf-8"))
+    assert saved["overall_regime"] == "Goldilocks"
+    assert saved["asset_allocation"][0]["asset_class"] == "หุ้น"
 
 
 def test_translate_warning_dynamic_graceful_drop_to_thai():

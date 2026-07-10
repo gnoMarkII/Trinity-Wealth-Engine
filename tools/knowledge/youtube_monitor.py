@@ -27,6 +27,85 @@ TARGET_CHANNELS = {
 
 _SAVE_DIR = Path(__file__).resolve().parents[2] / "memories" / "30_Knowledge_Base" / "YouTube_Summaries" / "Inbox"
 
+_YT_NS = {
+    'ns0': 'http://www.w3.org/2005/Atom',
+    'media': 'http://search.yahoo.com/mrss/',
+    'yt': 'http://www.youtube.com/xml/schemas/2015',
+}
+
+
+def get_youtube_candidates(lookback_days: int = 30) -> list[dict]:
+    """ดึงรายการคลิปใหม่จากทุกช่องที่ติดตาม คืนเป็น list of dict ล้วนๆ ไม่มี side effect (ไม่เขียนไฟล์)
+
+    ใช้เป็น candidate list สำหรับ human-in-the-loop approval แยกออกมาจาก
+    generate_weekly_youtube_digest เพื่อให้เรียกซ้ำได้อย่างปลอดภัย (idempotent) —
+    LangGraph interrupt() รัน node ซ้ำจากต้นทุกครั้งที่ resume
+    """
+    today = datetime.now(timezone.utc)
+    cutoff = today - timedelta(days=lookback_days)
+
+    candidates: list[dict] = []
+    for handle, channel_id in TARGET_CHANNELS.items():
+        url = f"https://www.youtube.com/feeds/videos.xml?channel_id={channel_id}"
+        try:
+            xml_data = _fetch_rss_with_retry(url)
+            root = ET.fromstring(xml_data)
+
+            channel_title_element = root.find('ns0:title', _YT_NS)
+            channel_title = channel_title_element.text if channel_title_element is not None else handle
+
+            for entry in root.findall('ns0:entry', _YT_NS):
+                published_str = entry.find('ns0:published', _YT_NS).text
+                if not published_str:
+                    continue
+                try:
+                    published_date = datetime.fromisoformat(published_str.replace('Z', '+00:00'))
+                except ValueError:
+                    continue
+                if published_date < cutoff:
+                    continue
+
+                video_title = entry.find('ns0:title', _YT_NS).text
+                video_link_element = entry.find('ns0:link', _YT_NS)
+                video_link = video_link_element.attrib.get('href', '') if video_link_element is not None else ''
+
+                if "shorts" in video_link.lower() or "#shorts" in video_title.lower():
+                    continue
+
+                video_title = video_title.replace("|", "｜")
+
+                thumbnail_url = ""
+                media_group = entry.find('media:group', _YT_NS)
+                if media_group is not None:
+                    media_thumb = media_group.find('media:thumbnail', _YT_NS)
+                    if media_thumb is not None:
+                        thumbnail_url = media_thumb.attrib.get('url', '')
+
+                video_id_element = entry.find('yt:videoId', _YT_NS)
+                video_id = video_id_element.text if video_id_element is not None else None
+                is_fetched = False
+                if video_id:
+                    summaries_dir = _SAVE_DIR.parent
+                    if list(summaries_dir.rglob(f"YouTube_Insight_{video_id}_*.md")):
+                        is_fetched = True
+
+                candidates.append({
+                    "channel": channel_title,
+                    "title": video_title,
+                    "link": video_link,
+                    "video_id": video_id,
+                    "published": published_date.strftime("%Y-%m-%d"),
+                    "thumbnail": thumbnail_url,
+                    "is_fetched": is_fetched,
+                })
+        except Exception as e:
+            from core.logger import get_logger
+            get_logger(__name__).error(f"Error parsing channel {handle}: {e}")
+            continue
+
+    return candidates
+
+
 @tool
 def generate_weekly_youtube_digest() -> str:
     """สร้างรายงานสรุปวิดีโอใหม่ในรอบ 30 วันล่าสุด (Monthly Digest) จากช่อง YouTube ที่ติดตามไว้ผ่าน RSS
@@ -48,8 +127,7 @@ def generate_weekly_youtube_digest() -> str:
     """
     try:
         today = datetime.now(timezone.utc)
-        thirty_days_ago = today - timedelta(days=30)
-        
+
         md_lines = [
             "---",
             f"title: YouTube Weekly Digest {today.strftime('%Y-%m-%d')}",
@@ -63,90 +141,29 @@ def generate_weekly_youtube_digest() -> str:
             "ติ๊ก `[x]` ช่องที่สนใจ จากนั้นคัดลอก Link ไปให้ Agent ดึง Transcript ได้เลย",
             ""
         ]
-    
-        ns = {
-            'ns0': 'http://www.w3.org/2005/Atom',
-            'media': 'http://search.yahoo.com/mrss/',
-            'yt': 'http://www.youtube.com/xml/schemas/2015'
-        }
-    
-        found_any = False
-    
-        for handle, channel_id in TARGET_CHANNELS.items():
-            url = f"https://www.youtube.com/feeds/videos.xml?channel_id={channel_id}"
-            try:
-                xml_data = _fetch_rss_with_retry(url)
-                root = ET.fromstring(xml_data)
-                
-                channel_title_element = root.find('ns0:title', ns)
-                channel_title = channel_title_element.text if channel_title_element is not None else handle
-                
-                channel_videos = []
-                
-                for entry in root.findall('ns0:entry', ns):
-                    published_str = entry.find('ns0:published', ns).text
-                    if not published_str:
-                        continue
-                        
-                    try:
-                        published_date = datetime.fromisoformat(published_str.replace('Z', '+00:00'))
-                    except ValueError:
-                        continue
-                        
-                    if published_date >= thirty_days_ago:
-                        video_title = entry.find('ns0:title', ns).text
-                        video_link_element = entry.find('ns0:link', ns)
-                        video_link = video_link_element.attrib.get('href', '') if video_link_element is not None else ''
-                        
-                        if "shorts" in video_link.lower() or "#shorts" in video_title.lower():
-                            continue
-                            
-                        video_title = video_title.replace("|", "｜") # ใช้ Full-width pipe เพื่อไม่ให้ตาราง Markdown พัง
-                        
-                        thumbnail_url = ""
-                        media_group = entry.find('media:group', ns)
-                        if media_group is not None:
-                            media_thumb = media_group.find('media:thumbnail', ns)
-                            if media_thumb is not None:
-                                thumbnail_url = media_thumb.attrib.get('url', '')
-    
-                        video_id_element = entry.find('yt:videoId', ns)
-                        video_id = video_id_element.text if video_id_element is not None else None
-                        is_fetched = False
-                        if video_id:
-                            summaries_dir = _SAVE_DIR.parent
-                            if list(summaries_dir.rglob(f"YouTube_Insight_{video_id}_*.md")):
-                                is_fetched = True
-    
-                        channel_videos.append({
-                            "title": video_title,
-                            "link": video_link,
-                            "published": published_date.strftime("%Y-%m-%d"),
-                            "thumbnail": thumbnail_url,
-                            "is_fetched": is_fetched
-                        })
-                        
-                if channel_videos:
-                    md_lines.append(f"## 📈 {channel_title}")
-                    md_lines.append("| เลือก | ภาพปก | ชื่อคลิป | วันที่เผยแพร่ |")
-                    md_lines.append("|:---:|:---:|---|:---:|")
-                    for v in channel_videos:
-                        thumb_html = f'<img src="{v["thumbnail"]}" width="160" />' if v['thumbnail'] else ""
-                        checkbox = "[x]" if v.get("is_fetched") else "[ ]"
-                        title_display = f"~~{v['title']}~~" if v.get("is_fetched") else v['title']
-                        md_lines.append(f"| {checkbox} | {thumb_html} | [{title_display}]({v['link']}) | {v['published']} |")
-                    md_lines.append("")
-                    found_any = True
-                    
-            except Exception as e:
-                md_lines.append(f"## 📈 {handle}")
-                md_lines.append(f"> [!WARNING]\n> ดึงข้อมูลล้มเหลว: {e}\n")
-    
-        if not found_any:
+
+        candidates = get_youtube_candidates(lookback_days=30)
+
+        by_channel: dict[str, list[dict]] = {}
+        for v in candidates:
+            by_channel.setdefault(v["channel"], []).append(v)
+
+        for channel_title, videos in by_channel.items():
+            md_lines.append(f"## 📈 {channel_title}")
+            md_lines.append("| เลือก | ภาพปก | ชื่อคลิป | วันที่เผยแพร่ |")
+            md_lines.append("|:---:|:---:|---|:---:|")
+            for v in videos:
+                thumb_html = f'<img src="{v["thumbnail"]}" width="160" />' if v['thumbnail'] else ""
+                checkbox = "[x]" if v.get("is_fetched") else "[ ]"
+                title_display = f"~~{v['title']}~~" if v.get("is_fetched") else v['title']
+                md_lines.append(f"| {checkbox} | {thumb_html} | [{title_display}]({v['link']}) | {v['published']} |")
+            md_lines.append("")
+
+        if not candidates:
             md_lines.append("> ไม่มีคลิปใหม่ในช่วง 30 วันที่ผ่านมา")
 
         content = "\n".join(md_lines)
-        
+
         return content
     except Exception as e:
         return f"Error: ไม่สามารถสร้าง YouTube Digest ได้ ({str(e)})"

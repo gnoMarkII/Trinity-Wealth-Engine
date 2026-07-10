@@ -67,7 +67,11 @@ def datetime_to_date_str():
 @patch("agents.manager_agent._get_archivist_graph")
 @patch("agents.manager_agent._get_router_model")
 @patch("agents.manager_agent.get_llm")
-def test_macro_analysis_flow_mocked_router(mock_llm, mock_router, mock_archivist, mock_eco, mock_quant, mock_res):
+def test_macro_analysis_flow_mocked_router(mock_llm, mock_router, mock_archivist, mock_eco, mock_quant, mock_res, tmp_path, monkeypatch):
+    # กัน strategic_allocator_node เขียน JSON sidecar จริงลง Obsidian Vault ของผู้ใช้ —
+    # test นี้ build_graph() จริงและรัน strategic_allocator_node จริง (แค่ mock LLM เท่านั้น)
+    import tools.macro.report_formatter as report_formatter_module
+    monkeypatch.setattr(report_formatter_module, "VAULT_PATH", tmp_path)
     class MockRouterModel:
         def invoke(self, *args, **kwargs):
             return RouterDecision(

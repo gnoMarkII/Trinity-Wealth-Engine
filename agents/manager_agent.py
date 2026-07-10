@@ -20,7 +20,7 @@ from agents.macro_quant_agent import create_macro_quant
 from agents.macro_economist_agent import create_macro_economist
 from agents.strategic_allocator import invoke_strategic_allocator
 from schemas.macro_schemas import MarketObservable
-from tools.macro.report_formatter import format_macro_strategy_report
+from tools.macro.report_formatter import format_macro_strategy_report, write_strategy_json_sidecar
 from core.agent_log import log_turn_start, log_manager_plan, log_worker_result, log_system_action, log_routing
 from core.llm_factory import FALLBACK_MODEL, detect_provider, get_llm
 from core.logger import get_logger
@@ -202,6 +202,33 @@ def _get_elapsed(meta: dict) -> float | None:
     return elapsed if elapsed >= 0 else None
 
 
+def _ensure_macro_intel_after_snapshots(tasks: list[WorkerTask]) -> list[WorkerTask]:
+    """Safety-net เชิงโค้ด — เดิมพึ่ง prompt (SKILL.md) บอก LLM router ว่าต้องตามด้วย
+    macro_intel เสมอหลังดึง Global/Regional/Country Snapshot แต่ตรวจ Vault จริงพบว่า
+    ทำไม่ครบ 5/8 ครั้งที่ผ่านมา (ดึง snapshot ครบแต่ไม่เคยได้ Macro_Strategy_Direction)
+    เลยบังคับด้วยโค้ดแทนไว้ทับอีกชั้น ไม่พึ่ง LLM ทำถูกทุกครั้งอย่างเดียว
+    """
+    researcher_text = " ".join(
+        t.instruction.lower() for t in tasks if t.target == "researcher"
+    )
+    mentions_all_snapshots = (
+        "macro" in researcher_text
+        and "global" in researcher_text
+        and "regional" in researcher_text
+        and "country" in researcher_text
+    )
+    has_macro_intel = any(t.target == "macro_intel" for t in tasks)
+
+    if mentions_all_snapshots and not has_macro_intel:
+        log.warning("router plan missing macro_intel after macro snapshots — auto-appending")
+        tasks.append(WorkerTask(
+            target="macro_intel",
+            instruction="วิเคราะห์สภาวะเศรษฐกิจมหภาคและจัดสรรสินทรัพย์ตามข้อมูล Snapshot ล่าสุด",
+            save_to_vault=True,
+        ))
+    return tasks
+
+
 def build_graph(checkpointer=None) -> StateGraph:
     archivist_graph = _get_archivist_graph()
     researcher_graph = _get_researcher_graph()
@@ -239,6 +266,7 @@ def build_graph(checkpointer=None) -> StateGraph:
                         "turn_id": turn_id,
                     },
                 )
+            decision.tasks = _ensure_macro_intel_after_snapshots(decision.tasks)
             log_manager_plan(turn_id, [t.model_dump() for t in decision.tasks])
             queue = [t.model_dump() for t in decision.tasks]
             messages_update = []
@@ -282,6 +310,7 @@ def build_graph(checkpointer=None) -> StateGraph:
                             "turn_id": turn_id,
                         },
                     )
+                decision.tasks = _ensure_macro_intel_after_snapshots(decision.tasks)
                 log_manager_plan(turn_id, [t.model_dump() for t in decision.tasks])
                 queue = [t.model_dump() for t in decision.tasks]
                 messages_update = [replan_hint]
@@ -567,6 +596,12 @@ def build_graph(checkpointer=None) -> StateGraph:
             for source_file in sorted(evaluated_source_files):
                 if source_file not in direction.source_files:
                     direction.source_files.append(source_file)
+
+            try:
+                write_strategy_json_sidecar(direction, evaluated_date)
+            except Exception as sidecar_err:
+                log.warning(f"[strategic_allocator] เขียน JSON sidecar ไม่สำเร็จ (ไม่กระทบรายงาน .md): {sidecar_err}")
+
             report = format_macro_strategy_report(direction)
 
             return Command(
@@ -607,18 +642,30 @@ def build_graph(checkpointer=None) -> StateGraph:
     builder = StateGraph(AgentState)
     builder.add_node("supervisor", supervisor_node)
     builder.add_node("prepare_archivist", prepare_archivist_node)
+
+    # แต่ละ wrapper invoke sub-graph ด้วยแค่ข้อความล่าสุด (task instruction ของตัวเองที่ผู้ส่ง
+    # ต้นทาง — supervisor_node/prepare_archivist_node/post_quant_node — ออกแบบให้ self-contained
+    # อยู่แล้ว) แทนที่จะส่ง state ทั้งก้อนที่สะสมมาทั้งเทิร์น เดิมส่ง state เต็มทำให้ instruction
+    # ของ worker ตัวก่อนหน้า (เช่น "ต้องเรียก write_raw_markdown ทันที" ที่ตั้งใจส่งให้ Archivist)
+    # รั่วเข้าไปในบริบทของ worker ตัวถัดไปในเทิร์นเดียวกัน (เจอจริงจาก live test: Researcher
+    # หลุดไปเรียก write_raw_markdown ที่ตัวเองไม่มีสิทธิ์ตาม instruction ของ Archivist ที่ยังค้าง
+    # อยู่ในประวัติสนทนา) — extract_worker_reply ไม่ต้องแก้ เพราะหา HumanMessage(name="manager")
+    # ตัวล่าสุดแล้วอ่านจากตรงนั้นอยู่แล้ว พอ input มีข้อความเดียวตั้งแต่ต้นก็ยังถูกต้อง
     def archivist_wrapper(state: AgentState, config: RunnableConfig):
-        result = archivist_graph.invoke(state, config=config)
+        task_message = state["messages"][-1]
+        result = archivist_graph.invoke({"messages": [task_message]}, config=config)
         reply = extract_worker_reply(result["messages"])
         return {"messages": [AIMessage(content=reply, name="archivist")]}
 
     def researcher_wrapper(state: AgentState, config: RunnableConfig):
-        result = researcher_graph.invoke(state, config=config)
+        task_message = state["messages"][-1]
+        result = researcher_graph.invoke({"messages": [task_message]}, config=config)
         reply = extract_worker_reply(result["messages"])
         return {"messages": [AIMessage(content=reply, name="researcher")]}
 
     def bookkeeper_wrapper(state: AgentState, config: RunnableConfig):
-        result = bookkeeper_graph.invoke(state, config=config)
+        task_message = state["messages"][-1]
+        result = bookkeeper_graph.invoke({"messages": [task_message]}, config=config)
         reply = extract_worker_reply(result["messages"])
         return {"messages": [AIMessage(content=reply, name="bookkeeper")]}
 
@@ -628,12 +675,14 @@ def build_graph(checkpointer=None) -> StateGraph:
 
     # Macro Intel Pipeline
     def macro_quant_wrapper(state: AgentState, config: RunnableConfig):
-        result = macro_quant_graph.invoke(state, config=config)
+        task_message = state["messages"][-1]
+        result = macro_quant_graph.invoke({"messages": [task_message]}, config=config)
         reply = extract_worker_reply(result["messages"])
         return {"messages": [AIMessage(content=reply, name="macro_quant")]}
 
     def macro_economist_wrapper(state: AgentState, config: RunnableConfig):
-        result = macro_economist_graph.invoke(state, config=config)
+        task_message = state["messages"][-1]
+        result = macro_economist_graph.invoke({"messages": [task_message]}, config=config)
         reply = extract_worker_reply(result["messages"])
         return {"messages": [AIMessage(content=reply, name="macro_economist")]}
 

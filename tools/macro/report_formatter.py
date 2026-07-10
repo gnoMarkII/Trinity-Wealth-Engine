@@ -1,6 +1,8 @@
 import re
 from datetime import datetime
+from pathlib import Path
 
+from tools.archivist.core import VAULT_PATH, _atomic_write_text
 from schemas.macro_schemas import AssetStance, MacroStrategyDirection
 from schemas.report_labels import (
     ALLOCATION_DELTA_DEFAULTS,
@@ -291,3 +293,18 @@ def format_macro_strategy_report(direction: MacroStrategyDirection) -> str:
 
     raw_markdown = "\n".join(lines)
     return repair_mojibake(raw_markdown)
+
+
+_STRATEGY_SUBDIR = "30_Knowledge_Base/Strategies"
+
+
+def write_strategy_json_sidecar(direction: MacroStrategyDirection, evaluated_date: str) -> Path:
+    """เขียน direction เป็น JSON sidecar คู่กับรายงาน .md ที่ Archivist จะบันทึกทีหลัง
+
+    เขียนตรงจาก Python (atomic, ไม่ผ่าน Archivist LLM tool-call) เพราะเนื้อหา JSON
+    มีขนาดใหญ่และการฝังไปในข้อความที่ไหลผ่าน LLM context เสี่ยง mangle/truncate —
+    ไฟล์นี้คือ source of truth สำหรับ Web API, ไม่ใช่สำหรับแสดงใน Obsidian
+    """
+    json_path = VAULT_PATH / _STRATEGY_SUBDIR / f"Macro_Strategy_Direction_{evaluated_date}.json"
+    _atomic_write_text(json_path, direction.model_dump_json(indent=2))
+    return json_path

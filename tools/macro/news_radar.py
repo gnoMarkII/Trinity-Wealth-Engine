@@ -52,6 +52,86 @@ def _is_url_fetched(url: str) -> bool:
             continue
     return False
 
+def get_news_candidates(max_items: int = 15) -> list[dict]:
+    """ดึงและ dedup ข่าวจากทุก RSS feed คืนเป็น list of dict ล้วนๆ ไม่มี side effect (ไม่เขียนไฟล์)
+
+    ใช้เป็น candidate list สำหรับ human-in-the-loop approval (ก่อนสั่ง deep-dive จริง)
+    แยกออกมาจาก generate_news_radar_daily เพื่อให้เรียกซ้ำได้อย่างปลอดภัย — สำคัญเพราะ
+    LangGraph interrupt() รัน node ซ้ำจากต้นทุกครั้งที่ resume ฟังก์ชันนี้ต้อง idempotent
+    """
+    all_news_items: list[dict] = []
+    now_utc = datetime.now(timezone.utc)
+
+    for feed in FEEDS:
+        try:
+            feed_data = _fetch_rss_with_retry(feed['url'])
+            if not feed_data.entries:
+                continue
+
+            for entry in feed_data.entries[:20]:  # Fetch more initially for dedup
+                title = entry.title.replace("|", "｜").replace("\n", " ")
+                link = entry.link
+
+                pub_date_str = getattr(entry, "published", "")
+                published_at = None
+                parsed_time = getattr(entry, "published_parsed", None)
+                if parsed_time:
+                    import calendar
+                    published_at = datetime.fromtimestamp(calendar.timegm(parsed_time), tz=timezone.utc)
+                else:
+                    if pub_date_str:
+                        try:
+                            parsed_tuple = email.utils.parsedate_tz(pub_date_str)
+                            if parsed_tuple:
+                                published_at = email.utils.to_datetime(parsed_tuple)
+                                if published_at.tzinfo is None:
+                                    published_at = published_at.replace(tzinfo=timezone.utc)
+                        except Exception:
+                            pass
+
+                if published_at:
+                    age_hours = int((now_utc - published_at).total_seconds() / 3600)
+                    freshness_score, freshness_reason = calculate_freshness(age_hours, ThemeCategory.POLICY)
+                else:
+                    age_hours = 9999
+                    freshness_reason = "Unknown age (parse failed)"
+
+                all_news_items.append({
+                    "title": title,
+                    "source": feed['name'],
+                    "link": link,
+                    "published_at": published_at,
+                    "pub_date_str": pub_date_str,
+                    "age_hours": age_hours,
+                    "freshness_reason": freshness_reason,
+                    "is_stale": age_hours > 48
+                })
+        except Exception as e:
+            log.error(f"Error parsing feed {feed['name']}: {e}")
+            continue
+
+    if not all_news_items:
+        return []
+
+    clusters = group_similar_news(all_news_items, threshold=0.75)
+    representatives = [select_representative_news(cluster) for cluster in clusters]
+    representatives.sort(key=lambda x: (x.get('sources_count', 1), -x.get('age_hours', 9999)), reverse=True)
+
+    candidates = []
+    for item in representatives[:max_items]:
+        candidates.append({
+            "title": item['title'],
+            "link": item['link'],
+            "source": item['source'],
+            "sources_count": item.get('sources_count', 1),
+            "age_hours": item.get('age_hours', 0),
+            "freshness_reason": item.get('freshness_reason', 'N/A'),
+            "is_stale": item.get('is_stale', False),
+            "is_fetched": _is_url_fetched(item['link']),
+        })
+    return candidates
+
+
 @tool
 def generate_news_radar_daily() -> str:
     """สร้างเรดาร์ข่าวเศรษฐกิจมหภาครายวัน (News Radar) จาก RSS Feeds
@@ -88,96 +168,32 @@ def generate_news_radar_daily() -> str:
             ""
         ]
         
-        all_news_items = []
-        now_utc = datetime.now(timezone.utc)
-        
-        for feed in FEEDS:
-            try:
-                feed_data = _fetch_rss_with_retry(feed['url'])
-                if not feed_data.entries:
-                    continue
-                
-                for entry in feed_data.entries[:20]: # Fetch more initially for dedup
-                    title = entry.title.replace("|", "｜").replace("\n", " ")
-                    link = entry.link
-                    
-                    # Parse date
-                    pub_date_str = getattr(entry, "published", "")
-                    published_at = None
-                    parsed_time = getattr(entry, "published_parsed", None)
-                    if parsed_time:
-                        import calendar
-                        published_at = datetime.fromtimestamp(calendar.timegm(parsed_time), tz=timezone.utc)
-                    else:
-                        if pub_date_str:
-                            try:
-                                parsed_tuple = email.utils.parsedate_tz(pub_date_str)
-                                if parsed_tuple:
-                                    published_at = email.utils.to_datetime(parsed_tuple)
-                                    if published_at.tzinfo is None:
-                                        published_at = published_at.replace(tzinfo=timezone.utc)
-                            except Exception:
-                                pass
-                    
-                    if published_at:
-                        age_hours = int((now_utc - published_at).total_seconds() / 3600)
-                        freshness_score, freshness_reason = calculate_freshness(age_hours, ThemeCategory.POLICY)
-                        is_stale = age_hours > 48
-                    else:
-                        age_hours = 9999
-                        freshness_score = 0.0
-                        freshness_reason = "Unknown age (parse failed)"
-                        is_stale = True
-                    
-                    all_news_items.append({
-                        "title": title,
-                        "source": feed['name'],
-                        "link": link,
-                        "published_at": published_at,
-                        "pub_date_str": pub_date_str,
-                        "age_hours": age_hours,
-                        "freshness_reason": freshness_reason,
-                        "is_stale": age_hours > 48
-                    })
-            except Exception as e:
-                log.error(f"Error parsing feed {feed['name']}: {e}")
-                continue
+        candidates = get_news_candidates(max_items=15)
 
-        if not all_news_items:
+        if not candidates:
             md_lines.append("> 📭 ไม่มีข่าวใหม่ในวันนี้")
         else:
-            # Deduplicate across all feeds
-            clusters = group_similar_news(all_news_items, threshold=0.75)
-            representatives = []
-            for cluster in clusters:
-                rep = select_representative_news(cluster)
-                representatives.append(rep)
-                
-            # Sort by confidence then recency
-            representatives.sort(key=lambda x: (x.get('sources_count', 1), -x.get('age_hours', 9999)), reverse=True)
-            
             md_lines.append("## 📰 Top Macro News (Deduplicated)")
             md_lines.append("| เลือก | หัวข้อข่าว | ความใหม่ | แหล่งข่าว |")
             md_lines.append("|:---:|---|---|---|")
-            
-            for item in representatives[:15]: # Show top 15
+
+            for item in candidates:
                 title = item['title']
                 link = item['link']
-                is_fetched = _is_url_fetched(link)
-                checkbox = "[x]" if is_fetched else "[ ]"
-                title_display = f"~~{title}~~" if is_fetched else title
-                
+                checkbox = "[x]" if item['is_fetched'] else "[ ]"
+                title_display = f"~~{title}~~" if item['is_fetched'] else title
+
                 sources_count = item.get('sources_count', 1)
                 source_display = f"{item['source']}" + (f" (+{sources_count-1})" if sources_count > 1 else "")
-                
+
                 stale_flag = " ⚠️" if item.get('is_stale') else ""
                 age_h = item.get('age_hours', 0)
                 freshness = f"Age: {age_h}h | {item.get('freshness_reason', 'N/A')}{stale_flag}"
-                
+
                 md_lines.append(f"| {checkbox} | [{title_display}]({link}) | {freshness} | {source_display} (Sources: {sources_count}) |")
-            
+
             md_lines.append("")
-            
+
         content = "\n".join(md_lines)
         
         return content

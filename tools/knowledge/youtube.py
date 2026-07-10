@@ -1,6 +1,8 @@
 from langsmith import traceable
 import os
 import re
+import subprocess
+import tempfile
 from datetime import datetime
 from pathlib import Path
 
@@ -92,6 +94,78 @@ def _get_raw_transcript(video_id: str) -> str:
     raise TranscriptUnavailable(f"ไม่พบ Transcript ในคลิปนี้ (ID: {video_id})")
 
 
+def _get_ytdlp_subtitles(video_id: str) -> str | None:
+    """Tier 2: ดึงข้อความซับไตเติลผ่าน yt-dlp โดยไม่ดาวน์โหลดไฟล์วิดีโอ (--skip-download)"""
+    url = f"https://www.youtube.com/watch?v={video_id}"
+    with tempfile.TemporaryDirectory() as tmp_dir:
+        cmd = [
+            "yt-dlp",
+            "--skip-download",
+            "--write-sub",
+            "--write-auto-sub",
+            "--sub-langs",
+            "th,en,.*",
+            "--sub-format",
+            "vtt/srt/best",
+            "-o",
+            f"{tmp_dir}/%(id)s",
+            url,
+        ]
+        try:
+            res = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
+            if res.returncode != 0:
+                log.warning("yt-dlp subtitle fetch failed | video_id=%s: %s", video_id, res.stderr)
+                return None
+            sub_files = list(Path(tmp_dir).glob(f"{video_id}*.*"))
+            if not sub_files:
+                return None
+            sub_files.sort(key=lambda p: 0 if ".th." in p.name else (1 if ".en." in p.name else 2))
+            content = sub_files[0].read_text(encoding="utf-8", errors="ignore")
+            lines = []
+            for line in content.splitlines():
+                line = line.strip()
+                if not line or "-->" in line or line.startswith("WEBVTT") or re.match(r"^\d+$", line):
+                    continue
+                clean_line = re.sub(r"<[^>]+>", "", line).strip()
+                if clean_line and (not lines or lines[-1] != clean_line):
+                    lines.append(clean_line)
+            text = " ".join(lines)
+            return text if text.strip() else None
+        except Exception as e:
+            log.warning("yt-dlp subtitle execution error | video_id=%s: %s", video_id, e)
+            return None
+
+
+def _extract_via_gemini_url_direct(url: str, video_id: str) -> str:
+    """Tier 3: ส่ง YouTube URL ให้ Google Gemini ดู/ฟังโดยตรง (Zero-Download Multimodal)"""
+    from google import genai
+    from google.genai.types import Part
+    from .core import _EXTRACTOR_SYSTEM_PROMPT
+
+    api_key = os.getenv("GOOGLE_API_KEY") or os.getenv("GEMINI_API_KEY")
+    if not api_key:
+        raise ValueError("ไม่พบ GOOGLE_API_KEY หรือ GEMINI_API_KEY สำหรับใช้งาน Gemini Multimodal")
+
+    extractor_model = os.getenv("EXTRACTOR_MODEL", "gemini-2.0-flash")
+    model_name = extractor_model if "gemini" in extractor_model.lower() else "gemini-2.0-flash"
+
+    client = genai.Client(api_key=api_key)
+    prompt = f"Source: YouTube: {video_id}\n\nกรุณาดู/ฟังวิดีโอ YouTube นี้ และสกัดข้อมูลการลงทุนตามคำสั่งใน System Prompt"
+
+    response = client.models.generate_content(
+        model=model_name,
+        contents=[
+            Part.from_uri(file_uri=url, mime_type="video/mp4"),
+            prompt,
+        ],
+        config={
+            "system_instruction": _EXTRACTOR_SYSTEM_PROMPT,
+            "temperature": 0.0,
+        },
+    )
+    return str(response.text).strip()
+
+
 @tool
 def ingest_youtube_transcript(url: str) -> str:
     """ดึงซับไตเติ้ล (Transcript) จากวิดีโอ YouTube และแปลงเป็น Markdown
@@ -123,50 +197,56 @@ def ingest_youtube_transcript(url: str) -> str:
     if existing:
         return f"[DUPLICATE] | video_id={video_id} | ไฟล์ {existing.name} มีอยู่แล้วใน Vault — ข้ามการประมวลผล"
 
-    # 3. ดึง Transcript
+    # 3. ดึงเนื้อหาและสกัดข้อมูล (3-Tier Zero-Download Pipeline)
+    extracted = ""
+    extraction_method = ""
+
+    # Tier 1: youtube-transcript-api
     try:
         raw = _get_raw_transcript(video_id)
-    except TranscriptsDisabled:
-        log.warning("YouTube transcript disabled | video_id=%s", video_id)
-        return (
-            f"ERROR: คลิปนี้ปิดใช้งาน Transcript/Subtitle (ID: {video_id}) — "
-            "ผู้อัปโหลดได้ปิดฟีเจอร์นี้ไว้"
-        )
-    except (NoTranscriptFound, TranscriptUnavailable):
-        log.warning("YouTube transcript not found | video_id=%s", video_id)
-        return (
-            f"ERROR: ไม่พบ Transcript ในคลิปนี้ (ID: {video_id}) — "
-            "ลองคลิปอื่นที่มีซับไตเติลอัตโนมัติหรือที่ผู้สร้างเพิ่มไว้"
-        )
+        if raw and raw.strip():
+            if len(raw) > _TRANSCRIPT_CHAR_LIMIT:
+                raw = raw[:_TRANSCRIPT_CHAR_LIMIT] + "\n...[ตัดทอน — Transcript เกิน 20,000 ตัวอักษร]"
+            extracted = _call_extractor_llm(raw, f"YouTube: {video_id}")
+            extraction_method = "Tier 1: YouTube Transcript API"
     except VideoUnavailable as e:
         if "live event" in str(e).lower() or "premieres" in str(e).lower():
             log.warning("YouTube video is upcoming live | video_id=%s", video_id)
             return f"ข้าม: วิดีโอนี้ยังไม่ถึงเวลา Live หรือกำลังรอ Premiere (ID: {video_id})"
         log.warning("YouTube video unavailable | video_id=%s", video_id)
         return f"ERROR: ไม่พบวิดีโอ (ID: {video_id}) — อาจถูกลบ, เป็น Private, หรือ Region-locked"
+    except (NoTranscriptFound, TranscriptsDisabled, TranscriptUnavailable):
+        log.info("Tier 1 transcript not found/disabled, trying Tier 2 yt-dlp subtitle scraper")
     except Exception as e:
-        if "live event" in str(e).lower() or "premieres" in str(e).lower():
+        msg = str(e)
+        if "live event" in msg.lower() or "premieres" in msg.lower():
             log.warning("YouTube video is upcoming live | video_id=%s", video_id)
             return f"ข้าม: วิดีโอนี้ยังไม่ถึงเวลา Live หรือกำลังรอ Premiere (ID: {video_id})"
-        log.warning("YouTube transcript fetch failed | video_id=%s: %s", video_id, e)
-        return f"ERROR: ดึง Transcript ล้มเหลว (ID: {video_id}): {e}"
+        log.warning("Tier 1 transcript fetch failed (%s), trying Tier 2 yt-dlp subtitle scraper", e)
 
-    if not raw.strip():
-        log.warning("YouTube transcript empty | video_id=%s", video_id)
-        return f"ERROR: Transcript ว่างเปล่า ไม่มีเนื้อหาที่สกัดได้ (ID: {video_id})"
+    # Tier 2: yt-dlp Subtitle Scraper
+    if not extracted:
+        try:
+            ytdlp_text = _get_ytdlp_subtitles(video_id)
+            if ytdlp_text and ytdlp_text.strip():
+                if len(ytdlp_text) > _TRANSCRIPT_CHAR_LIMIT:
+                    ytdlp_text = ytdlp_text[:_TRANSCRIPT_CHAR_LIMIT] + "\n...[ตัดทอน — Transcript เกิน 20,000 ตัวอักษร]"
+                extracted = _call_extractor_llm(ytdlp_text, f"YouTube: {video_id}")
+                extraction_method = "Tier 2: yt-dlp Subtitle Scraper"
+        except Exception as e:
+            log.warning("Tier 2 yt-dlp subtitle fetch failed (%s), trying Tier 3 Gemini Multimodal", e)
 
-    # 4. ตัดทอน Transcript ถ้ายาวเกิน token limit
-    if len(raw) > _TRANSCRIPT_CHAR_LIMIT:
-        raw = raw[:_TRANSCRIPT_CHAR_LIMIT] + "\n...[ตัดทอน — Transcript เกิน 20,000 ตัวอักษร]"
+    # Tier 3: Zero-Download Gemini Direct YouTube URL Understanding
+    if not extracted:
+        try:
+            extracted = _extract_via_gemini_url_direct(url, video_id)
+            extraction_method = "Tier 3: Gemini Direct YouTube Multimodal (Zero-Download)"
+        except Exception as e:
+            log.warning("YouTube 3-Tier extraction all failed | video_id=%s: %s", video_id, e)
+            return f"ERROR: ดึงข้อมูลและสรุปเนื้อหาจาก YouTube ล้มเหลวทั้ง 3 ขั้นตอน (ID: {video_id}): {e}"
 
-    # 5. เรียก LLM ผ่าน OpenRouter สกัดข้อมูล
-    try:
-        extracted = _call_extractor_llm(raw, f"YouTube: {video_id}")
-    except ValueError as e:
-        return f"ERROR: {e}"
-    except Exception as e:
-        log.warning("YouTube LLM extraction failed | video_id=%s: %s", video_id, e)
-        return f"ERROR: LLM Extraction ล้มเหลว (OpenRouter): {e}"
+    if not extracted or not extracted.strip():
+        return f"ERROR: ไม่สามารถสกัดข้อมูลจากวิดีโอนี้ได้ (ID: {video_id})"
 
     channel_name = _get_channel_name(video_id)
 
@@ -186,7 +266,7 @@ def ingest_youtube_transcript(url: str) -> str:
         "---",
         "",
         f"# YouTube Investment Insight — `{video_id}`",
-        f"> แหล่งที่มา: {url} | ช่อง: {channel_name}",
+        f"> แหล่งที่มา: {url} | ช่อง: {channel_name} | วิธีสกัดข้อมูล: {extraction_method}",
         "",
         f'<iframe width="560" height="315" src="https://www.youtube.com/embed/{video_id}" frameborder="0" allowfullscreen></iframe>',
         "",
