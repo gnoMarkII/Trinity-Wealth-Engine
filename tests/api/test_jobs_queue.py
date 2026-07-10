@@ -208,3 +208,68 @@ def test_migrate_columns_moves_dispatcher_cards_to_backlog(tmp_path):
     conn2.close()
 
     assert card["column_name"] == "backlog"
+
+
+def test_dispatch_same_card_and_instruction_different_flow_creates_separate_job():
+    """งานชื่อเดียวกัน + scope เดียวกัน แต่คนละ flow ต้องไม่ dedup กัน — เดิม idempotency_key
+    ไม่รวม flow ทำให้ 'manager' กับ 'news_youtube' สลับ job กันได้ถ้า instruction/scope ตรงกัน
+    """
+    import tempfile
+    with tempfile.TemporaryDirectory() as tmp:
+        db_path = f"{tmp}/state.sqlite"
+        queue = JobQueue(run_fn=_noop_run_fn, db_path=db_path)
+
+        job_id_1 = queue.dispatch("งานเดียวกัน", card_id="card-1", flow="manager")
+        job_id_2 = queue.dispatch("งานเดียวกัน", card_id="card-1", flow="news_youtube")
+
+        assert job_id_1 != job_id_2
+
+
+def test_worker_loop_survives_run_job_raising_unexpected_exception(tmp_path):
+    """ถ้า _run_job โยน exception ที่ไม่ได้ถูกจับไว้แล้ว (เช่น DB error กลาง commit) worker loop
+    ต้องไม่ตายเงียบ — งานถัดไปในคิวต้องยังถูกประมวลผลได้ปกติ
+    """
+    import asyncio
+
+    db_path = str(tmp_path / "state.sqlite")
+    processed = []
+
+    def _run_fn(job_id, **kwargs):
+        if job_id == "job-boom":
+            raise RuntimeError("boom")
+        processed.append(job_id)
+
+    queue = JobQueue(run_fn=_run_fn, db_path=db_path)
+
+    # จำลอง _run_job พังกลางทางแบบไม่คาดคิด (ไม่ใช่ exception จาก run_fn ที่ _run_job ดักไว้แล้ว)
+    original_run_job = queue._run_job
+    call_count = {"n": 0}
+
+    async def _flaky_run_job(job_id):
+        call_count["n"] += 1
+        if call_count["n"] == 1:
+            raise RuntimeError("unexpected failure inside _run_job itself")
+        await original_run_job(job_id)
+
+    queue._run_job = _flaky_run_job
+
+    # queue.start() ใช้ asyncio.create_task() ต้องมี running loop อยู่แล้ว และ stop() (หลัง
+    # แก้ไข) ต้อง await self._worker_task ตัวเดิม — start/dispatch/wait/stop จึงต้องอยู่ใน
+    # asyncio.run() ครั้งเดียวกันทั้งหมด (สอง asyncio.run() แยกกันจะคนละ event loop กัน)
+    async def _run():
+        queue.start()
+
+        job_id_bad = queue.dispatch("งานที่พัง", card_id="card-bad")
+        job_id_good = queue.dispatch("งานที่ดี", card_id="card-good")
+
+        for _ in range(50):
+            if job_id_good in processed:
+                break
+            await asyncio.sleep(0.05)
+
+        await queue.stop()
+        return job_id_bad, job_id_good
+
+    job_id_bad, job_id_good = asyncio.run(_run())
+
+    assert job_id_good in processed
