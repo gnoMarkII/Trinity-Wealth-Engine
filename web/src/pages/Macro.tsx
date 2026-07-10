@@ -222,6 +222,7 @@ export default function Macro() {
                   <button
                     key={t.key}
                     onClick={() => handleStanceFilterChange(t.key)}
+                    aria-pressed={stanceFilter === t.key}
                     className={`rounded-md px-2.5 py-1 text-xs font-medium transition-colors ${
                       stanceFilter === t.key
                         ? 'bg-zinc-900 text-white shadow-sm'
