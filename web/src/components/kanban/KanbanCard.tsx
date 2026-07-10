@@ -1,4 +1,4 @@
-import type { CSSProperties } from 'react'
+import type { CSSProperties, KeyboardEvent } from 'react'
 import type { KanbanCardDTO } from '../../api/types'
 import { nodeDisplayName } from '../../lib/nodeDisplayNames'
 import { FLOW_TAG } from '../../lib/flowTags'
@@ -23,6 +23,14 @@ function formatElapsed(seconds: number): string {
   return `${Math.round(seconds / 60)}m`
 }
 
+function handleCardKeyDown(e: KeyboardEvent<HTMLDivElement>, onClick?: () => void) {
+  if (!onClick) return
+  if (e.key === 'Enter' || e.key === ' ') {
+    e.preventDefault()
+    onClick()
+  }
+}
+
 export default function KanbanCard({
   card,
   faded,
@@ -39,8 +47,11 @@ export default function KanbanCard({
   return (
     <div
       onClick={onClick}
+      onKeyDown={(e) => handleCardKeyDown(e, onClick)}
+      role={onClick ? 'button' : undefined}
+      tabIndex={onClick ? 0 : undefined}
       style={style}
-      className={`group relative rounded-lg border bg-white p-3 pr-8 text-xs text-zinc-800 shadow-[0_1px_2px_rgba(0,0,0,0.03)] transition-all duration-150 hover:-translate-y-0.5 hover:shadow-md ${
+      className={`group relative rounded-lg border bg-white p-3 pr-8 text-xs text-zinc-800 shadow-[0_1px_2px_rgba(0,0,0,0.03)] transition-all duration-150 hover:-translate-y-0.5 hover:shadow-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-terra ${
         selected || workspacePreview ? 'border-2 border-terra-light' : 'border-zinc-200 hover:border-zinc-300'
       } ${onClick ? 'cursor-pointer' : 'cursor-default'} ${
         removing ? 'animate-card-out' : 'animate-card-in'
