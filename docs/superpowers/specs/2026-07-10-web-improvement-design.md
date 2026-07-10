@@ -119,7 +119,8 @@
 - ไม่เพิ่ม dependency ใหม่ (ไม่มี Framer Motion, react-query, ฯลฯ)
 - ไม่รื้อ state ของ Kanban.tsx เป็น reducer (17 useState ทำงานถูกต้องอยู่ — ความเสี่ยง
   regression สูงกว่าประโยชน์ในรอบนี้)
-- ไม่แตะ backend / API contract ใดๆ
+- backend แตะเฉพาะ `api/` ตามส่วนที่ 5 เท่านั้น — ไม่แตะ agents/, tools/, schemas/, main.py
+- API contract เปลี่ยนจุดเดียวคือ dispatch ที่ย้ายการ์ดให้เอง (ส่วนที่ 5 ข้อ 5)
 - ไม่ทำ drag-and-drop ให้ Kanban board
 
 ## การตรวจรับ (verification)
