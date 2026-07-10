@@ -63,6 +63,7 @@ export default function KanbanCard({
             e.stopPropagation()
             onEdit()
           }}
+          onKeyDown={(e) => e.stopPropagation()}
           title="แก้ไขการ์ด"
           aria-label="แก้ไขการ์ด"
           className="absolute right-6 top-1 rounded p-0.5 text-zinc-400 opacity-0 transition-opacity hover:bg-zinc-100 hover:text-terra focus:opacity-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-terra group-hover:opacity-100"
@@ -75,6 +76,7 @@ export default function KanbanCard({
           e.stopPropagation()
           onDelete()
         }}
+        onKeyDown={(e) => e.stopPropagation()}
         title="ลบการ์ด"
         aria-label="ลบการ์ด"
         className="absolute right-1 top-1 rounded p-0.5 text-zinc-400 opacity-0 transition-opacity hover:bg-zinc-100 hover:text-red-600 focus:opacity-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-red-500 group-hover:opacity-100"
@@ -89,6 +91,7 @@ export default function KanbanCard({
                 e.stopPropagation()
                 onDispatch()
               }}
+              onKeyDown={(e) => e.stopPropagation()}
               title="ส่งงานให้ Manager"
               aria-label="ส่งงานให้ Manager"
               className="rounded p-0.5 text-zinc-400 transition-colors hover:bg-zinc-100 hover:text-terra focus-visible:outline focus-visible:outline-2 focus-visible:outline-terra"
