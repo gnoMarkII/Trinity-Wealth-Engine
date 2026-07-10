@@ -60,7 +60,22 @@ export default function Macro() {
   }, [])
 
   if (error) return <p className="text-sm text-red-600">{error}</p>
-  if (!data) return <p className="text-sm text-zinc-500">กำลังโหลดรายงาน Macro Strategy...</p>
+  if (!data) {
+    return (
+      <div className="animate-page-in space-y-6 pb-10">
+        <div className="animate-shimmer h-40 rounded-2xl border border-zinc-200/80" />
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
+          <div className="space-y-6 lg:col-span-5">
+            <div className="animate-shimmer h-64 rounded-xl border border-zinc-200/80" />
+            <div className="animate-shimmer h-40 rounded-xl border border-zinc-200/80" />
+          </div>
+          <div className="space-y-6 lg:col-span-7">
+            <div className="animate-shimmer h-96 rounded-xl border border-zinc-200/80" />
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   const assetAllocations = data.asset_allocation ?? []
   const pairTrades = data.pair_trades ?? []
