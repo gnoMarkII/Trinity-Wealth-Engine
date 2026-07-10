@@ -35,13 +35,9 @@ export default function KanbanDetailDrawer({ card, onClose, onCardTransition }: 
   const [approving, setApproving] = useState(false)
   const [terminalKey, setTerminalKey] = useState(0)
   const [error, setError] = useState<string | null>(null)
-  const [width, setWidth] = useState(DEFAULT_WIDTH)
+  const [width, setWidth] = useState(loadStoredWidth)
   const [resizing, setResizing] = useState(false)
   const widthRef = useRef(width)
-
-  useEffect(() => {
-    setWidth(loadStoredWidth())
-  }, [])
 
   useEffect(() => {
     setApprovalPayload(null)
