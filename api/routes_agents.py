@@ -118,15 +118,26 @@ def resume_job(job_id: str, payload: ResumeRequest, request: Request) -> JobStat
 
 @router.get("/api/agents/stream/{job_id}")
 async def stream_job(job_id: str) -> StreamingResponse:
+    def _read_next_batch(after_seq: int):
+        with closing(state_db.get_connection()) as conn:
+            job = state_db.get_job(conn, job_id)
+            if job is None:
+                return None, []
+            logs = state_db.get_job_logs_since(conn, job_id, after_seq)
+            return job, logs
+
+    def _read_final_dto():
+        with closing(state_db.get_connection()) as conn:
+            job = state_db.get_job(conn, job_id)
+            return _job_to_dto(conn, job)
+
     async def event_generator():
         after_seq = 0
         while True:
-            with closing(state_db.get_connection()) as conn:
-                job = state_db.get_job(conn, job_id)
-                if job is None:
-                    yield f"event: error\ndata: {json.dumps({'detail': 'job not found'})}\n\n"
-                    return
-                logs = state_db.get_job_logs_since(conn, job_id, after_seq)
+            job, logs = await asyncio.to_thread(_read_next_batch, after_seq)
+            if job is None:
+                yield f"event: error\ndata: {json.dumps({'detail': 'job not found'})}\n\n"
+                return
 
             for row in logs:
                 after_seq = row["seq"]
@@ -139,8 +150,7 @@ async def stream_job(job_id: str) -> StreamingResponse:
                 yield f"data: {json.dumps(payload, ensure_ascii=False)}\n\n"
 
             if job["status"] in _TERMINAL_STATUSES:
-                with closing(state_db.get_connection()) as conn:
-                    dto = _job_to_dto(conn, job)
+                dto = await asyncio.to_thread(_read_final_dto)
                 yield f"event: {job['status']}\ndata: {dto.model_dump_json()}\n\n"
                 return
 

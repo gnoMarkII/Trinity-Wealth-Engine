@@ -115,3 +115,23 @@ def test_dispatch_without_card_id_does_not_touch_kanban(authed_client):
     r = authed_client.post("/api/agents/dispatch", json={"instruction": "งานไม่มีการ์ด"})
     assert r.status_code == 200
     # ไม่ raise, ไม่มีการ์ดให้ move — แค่ยืนยันว่าไม่พังตอนไม่มี card_id
+
+
+def test_stream_endpoint_completes_for_already_done_job(authed_client):
+    """SSE endpoint ต้องทำงานได้ปกติ (ไม่ hang, ไม่ throw) หลังเปลี่ยนมาอ่าน DB ผ่าน
+    asyncio.to_thread — ใช้ job ที่ done ไปแล้วเพื่อให้ stream จบทันทีโดยไม่ต้อง sleep รอ
+    """
+    r = authed_client.post("/api/agents/dispatch", json={"instruction": "งานทดสอบ stream"})
+    job_id = r.json()["job_id"]
+
+    import time
+    for _ in range(50):
+        status = authed_client.get(f"/api/agents/jobs/{job_id}").json()["status"]
+        if status in ("done", "error"):
+            break
+        time.sleep(0.05)
+
+    with authed_client.stream("GET", f"/api/agents/stream/{job_id}") as resp:
+        assert resp.status_code == 200
+        body = b"".join(resp.iter_bytes())
+    assert b"event: done" in body or b"event: error" in body
