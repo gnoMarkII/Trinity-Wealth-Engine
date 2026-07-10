@@ -1,0 +1,226 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --bg-page: #ffffff;
+  --bg-surface-subtle: #f4f4f5;
+  --border-crisp: #e4e4e7;
+  --accent-terracotta: #924a2e;
+  --accent-terracotta-hover: #7d3e25;
+  --card-selected-border: #d97746;
+  --text-primary: #18181b;
+  --text-secondary: #71717a;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  @apply bg-white text-zinc-900 antialiased;
+  margin: 0;
+}
+
+/* ---------- Entrance animations ----------
+   ทุกตัวใช้ fill-mode backwards เพื่อให้ element ที่มี animation-delay (stagger)
+   เริ่มจากสถานะ "from" แทนที่จะกระพริบโผล่มาก่อนแล้วค่อยเล่น animation */
+@keyframes card-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+.animate-card-in {
+  animation: card-in 0.2s ease-out backwards;
+}
+
+@keyframes card-out {
+  from {
+    opacity: 1;
+    transform: scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+}
+.animate-card-out {
+  animation: card-out 0.15s ease-in forwards;
+}
+
+@keyframes notice-in {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.animate-notice-in {
+  animation: notice-in 0.18s ease-out;
+}
+
+@keyframes notice-out {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+}
+.animate-notice-out {
+  animation: notice-out 0.15s ease-in forwards;
+}
+
+@keyframes page-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.animate-page-in {
+  animation: page-in 0.25s ease-out;
+}
+
+@keyframes drawer-in {
+  from {
+    opacity: 0.6;
+    transform: translateX(100%);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+.animate-drawer-in {
+  animation: drawer-in 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+.animate-fade-in {
+  animation: fade-in 0.2s ease-out;
+}
+
+/* สำหรับ modal dialog — เด้งขึ้นเบาๆ พร้อม fade */
+@keyframes modal-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+.animate-modal-in {
+  animation: modal-in 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* สำหรับ dropdown menu — กางลงจากมุมปุ่ม */
+@keyframes dropdown-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+.animate-dropdown-in {
+  animation: dropdown-in 0.15s ease-out;
+  transform-origin: top right;
+}
+
+/* แท่งกราฟ (RegimeProbabilityChart / PortfolioStanceBar) โตจากซ้ายไปขวา
+   ใช้ scaleX แทน width เพื่อให้ animate ได้ไม่ว่าความกว้างจริงเป็นเท่าไร */
+@keyframes bar-grow {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+.animate-bar-grow {
+  animation: bar-grow 0.6s cubic-bezier(0.16, 1, 0.3, 1) backwards;
+  transform-origin: left;
+}
+
+/* skeleton loading placeholder */
+@keyframes shimmer {
+  from {
+    background-position: 200% 0;
+  }
+  to {
+    background-position: -200% 0;
+  }
+}
+.animate-shimmer {
+  background: linear-gradient(90deg, #f4f4f5 25%, #e9e9eb 50%, #f4f4f5 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.4s ease-in-out infinite;
+}
+
+/* Modern Web Guidance Utilities (Google Chrome Standards) */
+.text-balance {
+  text-wrap: balance;
+}
+
+.text-pretty {
+  text-wrap: pretty;
+}
+
+.content-auto {
+  content-visibility: auto;
+  contain-intrinsic-size: 1px 400px;
+}
+
+.overscroll-contain {
+  overscroll-behavior: contain;
+}
+
+.custom-scrollbar {
+  scrollbar-color: #d4d4d8 #f4f4f5;
+  scrollbar-width: thin;
+}
+
+/* ข้อความแนวตั้งบนแท็บ References ขอบขวาจอ (Macro.tsx) */
+.writing-vertical {
+  writing-mode: vertical-rl;
+}
+
+/* เคารพผู้ใช้ที่ปิด motion ในระบบ — ตัด animation/transition ทั้งหมดให้จบทันที
+   (สถานะยังมองเห็นครบ เพราะทุก animation จบที่สถานะ "to" ที่อ่านได้ปกติ) */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  ::before,
+  ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

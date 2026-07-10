@@ -31,6 +31,7 @@ const STATUS_COLUMN_MAP: Record<StatusFilter, string[]> = {
 
 const DONE_FADE_AFTER_DAYS = 7
 const NOTICE_DISMISS_MS = 2500
+const NOTICE_LEAVE_MS = 150
 const DELETE_ANIM_MS = 150
 
 type ModalState = { mode: 'create' } | { mode: 'edit'; card: KanbanCardDTO } | null
@@ -61,12 +62,16 @@ export default function Kanban() {
   const [dispatching, setDispatching] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
+  const [noticeLeaving, setNoticeLeaving] = useState(false)
   const [removingIds, setRemovingIds] = useState<Set<string>>(new Set())
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
   const [flowFilter, setFlowFilter] = useState<FlowFilter>('all')
   const [search, setSearch] = useState('')
   const [selectedCardId, setSelectedCardId] = useState<string | null>(null)
   const tickTimer = useRef<number | null>(null)
+  const noticeDismissTimer = useRef<number | null>(null)
+  const noticeLeaveTimer = useRef<number | null>(null)
+  const deleteTimers = useRef<Set<number>>(new Set())
   const activeCount = Object.keys(activeDispatches).length
 
   function removeActiveDispatch(cardId: string) {
@@ -108,9 +113,26 @@ export default function Kanban() {
     }
   }, [activeCount])
 
+  useEffect(() => {
+    return () => {
+      if (noticeDismissTimer.current) window.clearTimeout(noticeDismissTimer.current)
+      if (noticeLeaveTimer.current) window.clearTimeout(noticeLeaveTimer.current)
+      deleteTimers.current.forEach((id) => window.clearTimeout(id))
+    }
+  }, [])
+
   function flashNotice(message: string) {
+    if (noticeDismissTimer.current) window.clearTimeout(noticeDismissTimer.current)
+    if (noticeLeaveTimer.current) window.clearTimeout(noticeLeaveTimer.current)
     setNotice(message)
-    window.setTimeout(() => setNotice(null), NOTICE_DISMISS_MS)
+    setNoticeLeaving(false)
+    noticeDismissTimer.current = window.setTimeout(() => {
+      setNoticeLeaving(true)
+      noticeLeaveTimer.current = window.setTimeout(() => {
+        setNotice(null)
+        setNoticeLeaving(false)
+      }, NOTICE_LEAVE_MS)
+    }, NOTICE_DISMISS_MS)
   }
 
   async function createCard(title: string, flow: string = 'manager', prompt?: string, scope: string = 'both') {
@@ -178,7 +200,8 @@ export default function Kanban() {
 
   async function deleteCard(cardId: string) {
     setRemovingIds((prev) => new Set(prev).add(cardId))
-    window.setTimeout(async () => {
+    const timerId = window.setTimeout(async () => {
+      deleteTimers.current.delete(timerId)
       try {
         await api.deleteKanbanCard(cardId)
         removeActiveDispatch(cardId)
@@ -196,6 +219,7 @@ export default function Kanban() {
         })
       }
     }, DELETE_ANIM_MS)
+    deleteTimers.current.add(timerId)
   }
 
   async function dispatchCard(card: KanbanCardDTO, flow: string) {
@@ -287,7 +311,11 @@ export default function Kanban() {
         />
 
         {notice && (
-          <p className="animate-notice-in rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+          <p
+            className={`rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800 ${
+              noticeLeaving ? 'animate-notice-out' : 'animate-notice-in'
+            }`}
+          >
             {notice}
           </p>
         )}
