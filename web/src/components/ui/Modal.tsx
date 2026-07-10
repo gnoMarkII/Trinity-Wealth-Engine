@@ -12,6 +12,8 @@ const FOCUSABLE_SELECTOR =
 export default function Modal({ titleId, onClose, children }: Props) {
   const dialogRef = useRef<HTMLDivElement>(null)
   const previouslyFocused = useRef<HTMLElement | null>(null)
+  const onCloseRef = useRef(onClose)
+  onCloseRef.current = onClose
 
   useEffect(() => {
     previouslyFocused.current = document.activeElement as HTMLElement | null
@@ -21,7 +23,7 @@ export default function Modal({ titleId, onClose, children }: Props) {
 
     function onKeyDown(e: KeyboardEvent) {
       if (e.key === 'Escape') {
-        onClose()
+        onCloseRef.current()
         return
       }
       if (e.key !== 'Tab' || !container) return
@@ -43,7 +45,7 @@ export default function Modal({ titleId, onClose, children }: Props) {
       window.removeEventListener('keydown', onKeyDown)
       previouslyFocused.current?.focus()
     }
-  }, [onClose])
+  }, [])
 
   return (
     <div onClick={onClose} className="animate-fade-in fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
