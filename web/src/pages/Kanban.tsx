@@ -72,6 +72,7 @@ export default function Kanban() {
   const noticeDismissTimer = useRef<number | null>(null)
   const noticeLeaveTimer = useRef<number | null>(null)
   const deleteTimers = useRef<Set<number>>(new Set())
+  const hasLoadedOnceRef = useRef(false)
   const activeCount = Object.keys(activeDispatches).length
 
   function removeActiveDispatch(cardId: string) {
@@ -100,6 +101,13 @@ export default function Kanban() {
   useEffect(() => {
     refresh().catch((e) => setError(e instanceof ApiError ? e.message : 'โหลดการ์ดไม่สำเร็จ'))
   }, [])
+
+  useEffect(() => {
+    // ref (ไม่ใช่ state) เพราะต้องอ่านค่า "ก่อนแฟล็กถูกตั้ง" ในรอบ render เดียวกับที่การ์ดจริง
+    // ปรากฏครั้งแรก ถ้าใช้ state ทั้งคู่จะถูก batch เข้า render เดียวกันแล้วธงจะกลายเป็น true
+    // ไปแล้วตั้งแต่ก่อนการ์ดจะ render จริง ทำให้ stagger ไม่ทำงานเลย
+    if (cards.length > 0) hasLoadedOnceRef.current = true
+  }, [cards])
 
   // เดินนาฬิกาทุก 1s เฉพาะตอนมีงานกำลังรันอยู่อย่างน้อย 1 ตัว — ให้ elapsed time ใน
   // workspace preview ขยับจริง (ใช้ activeCount ไม่ใช่ตัว object เอง กัน interval
@@ -335,6 +343,7 @@ export default function Kanban() {
               removingIds={removingIds}
               selectedCardId={selectedCardId}
               workspacePreviewFor={workspacePreviewFor}
+              staggerCards={!hasLoadedOnceRef.current}
               onDeleteCard={deleteCard}
               onCardClick={(c) => setSelectedCardId(c.card_id)}
               onEditCard={openEditModal}
