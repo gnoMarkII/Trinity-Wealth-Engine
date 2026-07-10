@@ -166,6 +166,39 @@ uv run python main.py
 
 ---
 
+## Web UI
+
+นอกจาก CLI แล้ว ระบบมี Web UI แบบ single-user สำหรับสั่งงาน agent และดูรายงานผ่านเบราว์เซอร์ — FastAPI backend (`api/`) + React frontend (`web/`)
+
+**ฟีเจอร์หลัก:**
+- **Agent Kanban Board** — สร้าง/แก้ไข/สั่งงานการ์ด, ดู log การทำงานของ agent แบบ real-time (SSE), รองรับ human-in-the-loop approval สำหรับ flow News/YouTube (เลือกข่าว/คลิปที่จะเจาะลึกก่อน agent ประมวลผลต่อ)
+- **Macro Strategy Report** — แดชบอร์ด Regime Probabilities, Cross-Asset Allocation, Pair Trades, Hedging Scenarios พร้อมแหล่งอ้างอิงข้อมูล
+- **Auth แบบเบา** — รหัสผ่านเดียวจาก `.env` (ไม่มีระบบ user/role เพราะเป็นเครื่องมือส่วนตัวคนเดียว)
+
+**การรัน (ต้องรันคู่กัน 2 process):**
+
+ตั้งค่าเพิ่มใน `.env` ก่อน (ดู `.env.example` หัวข้อ "Web UI"):
+```bash
+WEBUI_PASSWORD=รหัสผ่านที่ตั้งเอง
+SESSION_SECRET_KEY=สตริงยาวๆ แบบสุ่ม ห้ามเปลี่ยนบ่อย (ไม่งั้น session จะหลุดทุกครั้งที่ restart)
+```
+
+Terminal 1 — Backend:
+```bash
+uv run uvicorn api.main:app --reload
+```
+
+Terminal 2 — Frontend (dev server, proxy `/api` ไปที่ backend อัตโนมัติ):
+```bash
+cd web
+npm install
+npm run dev
+```
+
+เปิด `http://localhost:5173` แล้ว login ด้วย `WEBUI_PASSWORD` — รายละเอียดเพิ่มเติมดูที่ [`web/README.md`](web/README.md)
+
+---
+
 ## ตัวอย่างการใช้งาน
 
 ```
@@ -210,6 +243,16 @@ uv run python main.py
 ```
 invest-agents/
 ├── main.py                      # Entry point + CLI loop + retry logic
+├── api/                         # FastAPI backend สำหรับ Web UI
+│   ├── main.py                  # App entrypoint (uvicorn api.main:app)
+│   ├── auth.py                  # รหัสผ่านเดียว + session cookie
+│   ├── jobs.py                  # Single-worker job queue (dispatch/resume LangGraph)
+│   ├── routes_agents.py         # Dispatch / SSE stream / resume endpoints
+│   ├── routes_kanban.py         # Kanban card CRUD + move
+│   ├── routes_portfolio.py      # Macro Strategy dashboard endpoints
+│   ├── schemas.py                # API response DTOs (แยกจาก schemas/macro_schemas.py)
+│   └── state_db.py               # SQLite store: jobs, job_logs, kanban_cards
+├── web/                          # React + TypeScript + Vite frontend (ดู web/README.md)
 ├── agents/
 │   ├── manager_agent.py         # Supervisor + LangGraph graph builder
 │   ├── researcher_agent.py      # Data fetching ReAct agent
@@ -251,6 +294,7 @@ invest-agents/
 │   ├── tools/                   # Modular tools tests
 │   ├── unit/                    # Schema/validator/guardrail unit tests
 │   ├── integration/             # End-to-end flow tests
+│   ├── api/                     # FastAPI backend tests (pytest + TestClient)
 │   └── conftest.py              # Shared fixtures
 ├── memories/                    # Obsidian Vault (gitignored)
 │   ├── 01_Daily_Logs/
@@ -298,7 +342,7 @@ invest-agents/
 uv run python -m pytest tests/ -q
 ```
 
-ปัจจุบันมี **560 tests** ครอบคลุม: PII, Portfolio lifecycle, Market tools (TH/US), Retry logic, Atomic writes, Agent logging, Knowledge tools, Strategic Allocator guardrails/retry loop และ Integration test แบบ E2E
+ปัจจุบันมี **633 tests** ครอบคลุม: PII, Portfolio lifecycle, Market tools (TH/US), Retry logic, Atomic writes, Agent logging, Knowledge tools, Strategic Allocator guardrails/retry loop, Integration test แบบ E2E และ Web UI backend (`tests/api/`)
 
 ---
 
@@ -323,8 +367,8 @@ uv run python -m pytest tests/ -q
 - [x] Atomic file writes + Exponential backoff retry
 - [x] Daily agent activity logs
 - [x] 560 automated tests
+- [x] Web UI — FastAPI backend + React frontend (Kanban board, Macro dashboard, HITL approval flow)
 - [ ] Alert / Notification system
-- [ ] Web UI
 
 ---
 
