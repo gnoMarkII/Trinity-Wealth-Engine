@@ -14,8 +14,11 @@ export default function MacroReferenceDrawer({ data, isOpen, onClose }: Props) {
   const closeButtonRef = useRef<HTMLButtonElement>(null)
 
   useEffect(() => {
+    if (isOpen) closeButtonRef.current?.focus()
+  }, [isOpen])
+
+  useEffect(() => {
     if (!isOpen) return
-    closeButtonRef.current?.focus()
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose()
     }
