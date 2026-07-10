@@ -89,3 +89,29 @@ def test_dispatch_empty_instruction_rejected(authed_client):
 def test_dispatch_requires_auth(client):
     r = client.post("/api/agents/dispatch", json={"instruction": "x"})
     assert r.status_code == 401
+
+
+def test_dispatch_with_card_id_moves_card_to_executing_atomically(authed_client):
+    """dispatch ต้องย้ายการ์ดเป็น executing + ผูก job_id ให้เองในคำขอเดียว — ไม่ต้องให้ frontend
+    ยิง PUT /api/kanban/move ตามหลัง (ถ้า call ที่สองล้มเหลว การ์ดจะค้าง backlog ทั้งที่ job รันอยู่)
+    """
+    r = authed_client.post("/api/kanban/cards", json={"title": "งานที่จะ dispatch"})
+    card_id = r.json()["card"]["card_id"]
+
+    r = authed_client.post(
+        "/api/agents/dispatch",
+        json={"instruction": "วิเคราะห์ตลาดวันนี้", "card_id": card_id},
+    )
+    assert r.status_code == 200
+    job = r.json()
+
+    cards = authed_client.get("/api/kanban/cards").json()
+    dispatched_card = next(c for c in cards if c["card_id"] == card_id)
+    assert dispatched_card["column_name"] == "executing"
+    assert dispatched_card["job_id"] == job["job_id"]
+
+
+def test_dispatch_without_card_id_does_not_touch_kanban(authed_client):
+    r = authed_client.post("/api/agents/dispatch", json={"instruction": "งานไม่มีการ์ด"})
+    assert r.status_code == 200
+    # ไม่ raise, ไม่มีการ์ดให้ move — แค่ยืนยันว่าไม่พังตอนไม่มี card_id
