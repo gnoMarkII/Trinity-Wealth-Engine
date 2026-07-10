@@ -1,0 +1,23 @@
+import { Navigate, Outlet } from 'react-router-dom'
+import { useAuth } from '../auth/AuthContext'
+import Sidebar from './Sidebar'
+
+export default function Layout() {
+  const { status } = useAuth()
+
+  if (status === 'loading') {
+    return <div className="flex min-h-full items-center justify-center text-zinc-500">กำลังโหลด...</div>
+  }
+  if (status === 'unauthenticated') {
+    return <Navigate to="/login" replace />
+  }
+
+  return (
+    <div className="flex h-full bg-white">
+      <Sidebar />
+      <main className="min-w-0 flex-1 overflow-y-auto p-8">
+        <Outlet />
+      </main>
+    </div>
+  )
+}
