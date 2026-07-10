@@ -64,3 +64,8 @@ Thumbs.db
 # 8. Claude Code
 # =========================================
 .claude/settings.local.json
+
+# =========================================
+# 9. Superpowers scratch (subagent-driven-development ledger/workspace)
+# =========================================
+.superpowers/
