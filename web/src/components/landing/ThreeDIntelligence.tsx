@@ -1,18 +1,19 @@
 import { m, useReducedMotion } from 'motion/react'
 import { usePageVisibility } from './usePageVisibility'
 
-const SATELLITES = [
-  { mark: 'R', x: -154, y: -76, z: 70, color: '#f59e0b', delay: 0.1 },
-  { mark: 'Q', x: 138, y: -104, z: 38, color: '#60a5fa', delay: 0.4 },
-  { mark: 'S', x: 166, y: 82, z: 54, color: '#fb7185', delay: 0.7 },
-  { mark: 'G', x: -126, y: 122, z: 24, color: '#34d399', delay: 1.0 },
+const ORBIT_AGENTS = [
+  { x: -170, y: -96, z: -96, color: '#fbbf24', delay: 0.1, tilt: -7 },
+  { x: 160, y: -118, z: -74, color: '#7dd3fc', delay: 0.6, tilt: 8 },
+  { x: 184, y: 86, z: -104, color: '#f9a8d4', delay: 1.1, tilt: -5 },
+  { x: -146, y: 136, z: -82, color: '#6ee7b7', delay: 1.6, tilt: 6 },
 ]
 
-const COIN_STREAM = Array.from({ length: 11 }, (_, index) => ({
-  x: -110 + ((index * 47) % 225),
-  y: 92 - ((index * 31) % 138),
-  delay: index * 0.42,
-  size: 6 + (index % 3) * 3,
+const COMPOUND_CANDLES = Array.from({ length: 12 }, (_, index) => ({
+  x: -132 + ((index * 46) % 252),
+  y: 104 - ((index * 32) % 164),
+  delay: index * 0.38,
+  height: 20 + (index % 4) * 8,
+  width: 8 + (index % 2) * 2,
 }))
 
 export default function ThreeDIntelligence() {
@@ -46,19 +47,32 @@ export default function ThreeDIntelligence() {
             </m.div>
           </div>
 
-          {SATELLITES.map((satellite) => (
+          {ORBIT_AGENTS.map((agent) => (
             <div
-              key={satellite.mark}
+              key={`${agent.x}-${agent.y}`}
               className="absolute left-1/2 top-1/2"
-              style={{ transform: `translate3d(${satellite.x}px, ${satellite.y}px, ${satellite.z}px)` }}
+              style={{ transform: `translate3d(${agent.x}px, ${agent.y}px, ${agent.z}px)` }}
             >
               <m.div
-                className="flex h-14 w-14 items-center justify-center rounded-2xl border border-white/35 bg-zinc-950/75 text-sm font-bold text-white shadow-2xl backdrop-blur sm:h-16 sm:w-16"
-                style={{ boxShadow: `0 14px 36px ${satellite.color}38` }}
-                animate={!shouldAnimate ? { opacity: 1 } : { y: [0, -12, 0], rotateZ: [-4, 5, -4] }}
-                transition={{ duration: 3.2, delay: satellite.delay, repeat: Infinity, ease: 'easeInOut' }}
+                className="relative h-16 w-16 [transform-style:preserve-3d] sm:h-[4.5rem] sm:w-[4.5rem]"
+                style={{ filter: `drop-shadow(0 16px 20px ${agent.color}40)` }}
+                animate={!shouldAnimate ? { opacity: 1 } : { y: [0, -16, 0], rotateZ: [agent.tilt, -agent.tilt, agent.tilt], rotateY: [-16, 18, -16] }}
+                transition={{ duration: 3.6, delay: agent.delay, repeat: Infinity, ease: 'easeInOut' }}
               >
-                <span className="rounded-lg px-2 py-1" style={{ color: satellite.color, backgroundColor: `${satellite.color}1f` }}>{satellite.mark}</span>
+                <span className="absolute bottom-0 left-1/2 h-3 w-11 -translate-x-1/2 rounded-full bg-zinc-950/70 blur-md" />
+                <span className="absolute left-[-4px] top-8 h-4 w-5 rotate-[-18deg] rounded-md border border-white/35 bg-zinc-300/85 shadow-md" style={{ transform: 'translateZ(2px)' }} />
+                <span className="absolute right-[-4px] top-8 h-4 w-5 rotate-[18deg] rounded-md border border-white/35 bg-zinc-300/85 shadow-md" style={{ transform: 'translateZ(2px)' }} />
+                <div className="absolute inset-x-2 bottom-1 h-8 rounded-[1.2rem] border border-white/55 bg-[linear-gradient(135deg,#e4e4e7,#52525b_52%,#18181b)] shadow-lg" style={{ transform: 'translateZ(8px)' }}>
+                  <span className="absolute left-1/2 top-2 h-3.5 w-5 -translate-x-1/2 rounded-full border border-white/30" style={{ backgroundColor: agent.color }} />
+                  <span className="absolute bottom-[-4px] left-1/2 h-2 w-6 -translate-x-1/2 rounded-full bg-sky-200/90 blur-[1px]" />
+                </div>
+                <div className="absolute inset-x-2 top-0 h-10 rounded-[48%] border border-white/80 bg-[radial-gradient(circle_at_32%_22%,#ffffff,transparent_18%),linear-gradient(145deg,#fafafa,#a1a1aa_54%,#3f3f46)] shadow-xl" style={{ transform: 'translateZ(14px)' }}>
+                  <div className="absolute inset-x-2 top-4 h-3.5 rounded-full border border-cyan-100/50 bg-zinc-900 shadow-inner">
+                    <span className="absolute left-2 top-1 h-1.5 w-1.5 rounded-full bg-cyan-200 shadow-[0_0_8px_rgba(165,243,252,1)]" />
+                    <span className="absolute right-2 top-1 h-1.5 w-1.5 rounded-full bg-cyan-200 shadow-[0_0_8px_rgba(165,243,252,1)]" />
+                  </div>
+                  <span className="absolute left-1/2 top-[-6px] h-2.5 w-2.5 -translate-x-1/2 rounded-full border-2 border-zinc-100 bg-zinc-700" />
+                </div>
               </m.div>
             </div>
           ))}
@@ -66,14 +80,17 @@ export default function ThreeDIntelligence() {
       </div>
 
       <div className="absolute inset-0" aria-hidden="true">
-        {COIN_STREAM.map((coin) => (
-          <m.span
-            key={`${coin.x}-${coin.y}`}
-            className="absolute left-1/2 top-1/2 rounded-full bg-amber-300 shadow-[0_0_18px_rgba(251,191,36,0.9)]"
-            style={{ width: coin.size, height: coin.size, marginLeft: coin.x, marginTop: coin.y }}
-            animate={!shouldAnimate ? { opacity: 0.65 } : { opacity: [0, 1, 0], y: [26, -46, -100], x: [0, 12, -10], scale: [0.55, 1.15, 0.4] }}
-            transition={{ duration: 3.8, delay: coin.delay, repeat: Infinity, ease: 'easeOut' }}
-          />
+        {COMPOUND_CANDLES.map((candle) => (
+          <m.div
+            key={`${candle.x}-${candle.y}`}
+            className="absolute left-1/2 top-1/2 [transform-style:preserve-3d]"
+            style={{ width: candle.width, height: candle.height + 16, marginLeft: candle.x, marginTop: candle.y }}
+            animate={!shouldAnimate ? { opacity: 0.72 } : { opacity: [0, 1, 0], y: [48, -70, -150], x: [0, 18, -12], scale: [0.5, 1.16, 0.34], rotateY: [-18, 18, 34] }}
+            transition={{ duration: 4.7, delay: candle.delay, repeat: Infinity, ease: 'easeOut' }}
+          >
+            <span className="absolute left-1/2 top-0 h-full w-px -translate-x-1/2 bg-emerald-100/90" />
+            <span className="absolute bottom-2 left-0 right-0 rounded-sm border border-emerald-100/75 bg-[linear-gradient(90deg,#047857,#34d399_48%,#a7f3d0)] shadow-[0_0_15px_rgba(52,211,153,0.85)]" style={{ height: candle.height, transform: 'translateZ(8px)' }} />
+          </m.div>
         ))}
       </div>
 
