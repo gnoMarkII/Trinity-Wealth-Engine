@@ -357,6 +357,24 @@ class JobLogEntryDTO(BaseModel):
     label: Optional[str] = None
 
 
+class SpecialistOutputDTO(BaseModel):
+    node_name: str
+    label: str
+    content: str
+    seq: int
+    created_at: float
+
+
+class JobOutputsDTO(BaseModel):
+    job_id: str
+    status: str
+    executive_summary: Optional[str] = None
+    executive_summary_created_at: Optional[float] = None
+    specialists: list[SpecialistOutputDTO] = []
+    last_seq: int = 0
+    error_message: Optional[str] = None
+
+
 class KanbanCardDTO(BaseModel):
     card_id: str
     title: str

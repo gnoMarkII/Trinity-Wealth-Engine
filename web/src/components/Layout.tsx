@@ -13,9 +13,9 @@ export default function Layout() {
   }
 
   return (
-    <div className="flex h-full bg-white">
+    <div className="flow-theme flex h-full">
       <Sidebar />
-      <main className="min-w-0 flex-1 overflow-y-auto p-8">
+      <main className="flow-main min-w-0 flex-1 overflow-y-auto p-5 sm:p-8">
         <Outlet />
       </main>
     </div>

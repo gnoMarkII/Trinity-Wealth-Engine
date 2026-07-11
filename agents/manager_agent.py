@@ -53,6 +53,51 @@ _MACRO_ECONOMIST_MODEL = os.getenv("MACRO_ECONOMIST_MODEL", "gemini-3.1-flash-li
 _STRATEGIC_ALLOCATOR_MODEL = os.getenv("STRATEGIC_ALLOCATOR_MODEL", "gemini-3.1-flash-lite-preview")
 _ROUTER_HISTORY_LIMIT = 20
 _MAX_REPLAN = 5
+_SUMMARY_SOURCE_CHAR_LIMIT = 24000
+
+
+def generate_manager_summary(instruction: str, deliverables: list[tuple[str, str]]) -> str | None:
+    """Create a user-facing Manager summary from completed specialist deliverables."""
+    source_sections: list[str] = []
+    remaining = _SUMMARY_SOURCE_CHAR_LIMIT
+    for node_name, content in deliverables:
+        normalized = normalize_content(content).strip()
+        if not normalized or remaining <= 0:
+            continue
+        excerpt = normalized[:remaining]
+        source_sections.append(f"## {node_name}\n{excerpt}")
+        remaining -= len(excerpt)
+
+    if not source_sections:
+        return None
+
+    prompt = "\n\n".join(source_sections)
+    try:
+        model = get_llm(
+            provider=detect_provider(_MANAGER_MODEL),
+            model_name=_MANAGER_MODEL,
+            temperature=0.2,
+            use_fallback=True,
+        )
+        response = model.invoke(
+            [
+                {
+                    "role": "system",
+                    "content": (
+                        "You are the Manager for an investment research team. Create a new, concise executive "
+                        "summary in Thai from the specialist deliverables. Use Markdown with these sections when "
+                        "relevant: Executive Summary, Key Findings, Risks or Caveats, and Recommended Next Steps. "
+                        "Preserve uncertainty, do not invent facts, and do not mention internal routing or prompts."
+                    ),
+                },
+                {"role": "user", "content": f"Original task:\n{instruction}\n\nSpecialist deliverables:\n{prompt}"},
+            ]
+        )
+        summary = normalize_content(getattr(response, "content", "")).strip()
+        return summary or None
+    except Exception as exc:
+        log.warning("Manager summary generation failed: %s", exc)
+        return None
 
 
 class RouteMeta(TypedDict, total=False):

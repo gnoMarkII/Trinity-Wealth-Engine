@@ -55,7 +55,7 @@ export default function Modal({ titleId, onClose, children }: Props) {
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
-        className="animate-modal-in w-full max-w-lg rounded-xl border border-zinc-200 bg-white p-5 shadow-lg"
+        className="animate-modal-in w-full max-w-lg rounded-2xl border border-sky-100 bg-white/95 p-5 shadow-2xl shadow-sky-900/10 backdrop-blur-xl"
       >
         {children}
       </div>

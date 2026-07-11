@@ -42,12 +42,12 @@ export default function KanbanColumn({
   onDispatchCard,
 }: Props) {
   return (
-    <div className="flex h-full flex-col rounded-xl border border-zinc-200/80 bg-white p-2.5 transition-colors duration-150">
-      <h3 className="mb-2 flex shrink-0 items-center gap-1.5 px-1 text-xs font-semibold text-zinc-600">
+    <div className="flex h-full flex-col rounded-2xl border border-sky-100 bg-white/70 p-2.5 shadow-[0_10px_35px_rgba(14,165,233,0.06)] backdrop-blur-md transition-colors duration-150">
+      <h3 className="mb-3 flex shrink-0 items-center gap-1.5 px-1 text-xs font-semibold text-sky-950">
         <span className={`h-1.5 w-1.5 rounded-full ${STATUS_DOT[column.key] ?? 'bg-zinc-400'}`} />
         {column.label} <span className="text-zinc-400">({cards.length})</span>
       </h3>
-      <div className="min-h-0 flex-1 space-y-2 overflow-y-auto pr-0.5">
+      <div className="min-h-0 flex-1 space-y-2.5 overflow-y-auto pt-2.5 px-0.5 pb-2">
         {cards.map((c, i) => (
           <KanbanCard
             key={c.card_id}

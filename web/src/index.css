@@ -24,6 +24,103 @@ body {
   margin: 0;
 }
 
+.flow-theme {
+  --flow-cyan: 14 165 233;
+  --flow-sky: 56 189 248;
+  --flow-coral: 251 140 0;
+  --flow-border: 186 230 253;
+  --flow-text: 24 55 76;
+  min-height: 100%;
+  background:
+    radial-gradient(circle at 94% 2%, rgb(var(--flow-sky) / 0.2), transparent 26rem),
+    radial-gradient(circle at 8% 100%, rgb(var(--flow-coral) / 0.1), transparent 30rem),
+    linear-gradient(145deg, #ebf5fa 0%, #f8fbfe 52%, #ffffff 100%);
+  color: rgb(var(--flow-text));
+}
+
+.flow-main {
+  background:
+    radial-gradient(ellipse at 78% 12%, rgb(var(--flow-sky) / 0.1), transparent 25rem),
+    radial-gradient(ellipse at 12% 92%, rgb(var(--flow-coral) / 0.07), transparent 30rem);
+}
+
+.flow-panel {
+  border: 1px solid rgb(var(--flow-border) / 0.8);
+  background: rgb(255 255 255 / 0.76);
+  box-shadow: 0 10px 35px rgb(var(--flow-cyan) / 0.06);
+  backdrop-filter: blur(14px);
+}
+
+.flow-theme .bg-white,
+.flow-theme .bg-white\/60,
+.flow-theme .bg-white\/75,
+.flow-theme .bg-white\/80 {
+  background-color: rgb(255 255 255 / 0.76) !important;
+}
+
+.flow-theme .bg-surface,
+.flow-theme .bg-zinc-50,
+.flow-theme .bg-zinc-50\/50,
+.flow-theme .bg-zinc-50\/80 {
+  background-color: rgb(248 251 254 / 0.86) !important;
+}
+
+.flow-theme .bg-zinc-100,
+.flow-theme .bg-zinc-100\/80 {
+  background-color: rgb(240 249 255 / 0.9) !important;
+}
+
+.flow-theme .border-zinc-100,
+.flow-theme .border-zinc-200,
+.flow-theme .border-zinc-200\/80,
+.flow-theme .border-zinc-300 {
+  border-color: rgb(var(--flow-border) / 0.9) !important;
+}
+
+.flow-theme .bg-terra {
+  background-color: rgb(var(--flow-cyan)) !important;
+}
+
+.flow-theme .bg-terra\/10 {
+  background-color: rgb(var(--flow-cyan) / 0.1) !important;
+}
+
+.flow-theme .text-terra {
+  color: #0369a1 !important;
+}
+
+.flow-theme .border-terra-light {
+  border-color: rgb(var(--flow-sky)) !important;
+}
+
+.flow-theme .hover\:bg-terra-dark:hover {
+  background-color: #0284c7 !important;
+}
+
+.flow-theme .hover\:bg-terra\/10:hover {
+  background-color: rgb(var(--flow-cyan) / 0.1) !important;
+}
+
+.flow-theme .hover\:bg-zinc-50:hover,
+.flow-theme .hover\:bg-zinc-100:hover,
+.flow-theme .hover\:bg-white\/60:hover {
+  background-color: rgb(240 249 255 / 0.92) !important;
+}
+
+.flow-theme .hover\:text-terra:hover {
+  color: #075985 !important;
+}
+
+.flow-theme .focus\:border-terra:focus,
+.flow-theme .focus-visible\:outline-terra:focus-visible {
+  border-color: rgb(var(--flow-cyan)) !important;
+  outline-color: rgb(var(--flow-cyan)) !important;
+}
+
+.flow-theme .focus\:ring-terra\/30:focus {
+  --tw-ring-color: rgb(var(--flow-cyan) / 0.3) !important;
+}
+
 /* ---------- Entrance animations ----------
    ทุกตัวใช้ fill-mode backwards เพื่อให้ element ที่มี animation-delay (stagger)
    เริ่มจากสถานะ "from" แทนที่จะกระพริบโผล่มาก่อนแล้วค่อยเล่น animation */

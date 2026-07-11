@@ -19,7 +19,7 @@ export default function PortfolioStanceBar({ allocations }: Props) {
 
   return (
     <div className="space-y-2">
-      <div className="flex h-3 overflow-hidden rounded-full bg-zinc-100">
+      <div className="flex h-3 overflow-hidden rounded-full bg-sky-50">
         {LEGEND.map((item, i) => (
           <div
             key={item.key}

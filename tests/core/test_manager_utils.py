@@ -1,7 +1,9 @@
 """Tests for manager_agent pure helpers — no LLM calls"""
+from unittest.mock import MagicMock
+
 import pytest
 
-from agents.manager_agent import _has_researcher_frontmatter, _msg_role
+from agents.manager_agent import _has_researcher_frontmatter, _msg_role, generate_manager_summary
 from langchain_core.messages import HumanMessage, AIMessage
 
 
@@ -56,3 +58,14 @@ class TestMsgRole:
         class FakeMsg:
             content = "data"
         assert _msg_role(FakeMsg()) == "assistant"
+
+
+def test_generate_manager_summary_uses_manager_model(monkeypatch):
+    model = MagicMock()
+    model.invoke.return_value = AIMessage(content="# สรุปจากผู้จัดการ")
+    monkeypatch.setattr("agents.manager_agent.get_llm", lambda **kwargs: model)
+
+    summary = generate_manager_summary("วิเคราะห์พอร์ต", [("researcher", "พบความเสี่ยง"), ("bookkeeper", "cash flow ปกติ")])
+
+    assert summary == "# สรุปจากผู้จัดการ"
+    model.invoke.assert_called_once()

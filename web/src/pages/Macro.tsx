@@ -29,7 +29,7 @@ function confidenceBadgeClass(confidence: string): string {
 }
 
 const cardClass =
-  'space-y-3 rounded-xl border border-zinc-200/80 bg-white p-4 shadow-sm shadow-black/5 transition-all duration-150 hover:border-zinc-300 hover:shadow-md'
+  'space-y-3 rounded-xl border border-sky-100 bg-white/80 p-4 shadow-[0_8px_26px_rgba(14,165,233,0.05)] backdrop-blur-sm transition-all duration-150 hover:border-sky-200 hover:shadow-md'
 
 type StanceFilter = 'all' | 'overweight' | 'underweight' | 'neutral'
 
@@ -90,7 +90,7 @@ export default function Macro() {
   return (
     <div className="animate-page-in space-y-6 pb-10">
       {/* Executive Summary Banner */}
-      <div className="rounded-2xl border border-zinc-200/80 bg-gradient-to-br from-white via-zinc-50/50 to-amber-50/20 p-6 shadow-sm shadow-black/5">
+      <div className="rounded-2xl border border-sky-100 bg-gradient-to-br from-white/90 via-sky-50/60 to-orange-50/55 p-6 shadow-[0_10px_35px_rgba(14,165,233,0.06)] backdrop-blur-sm">
         <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
           <div className="space-y-2">
             <div className="flex flex-wrap items-center gap-2">

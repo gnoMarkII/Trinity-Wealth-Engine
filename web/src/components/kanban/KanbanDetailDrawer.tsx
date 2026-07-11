@@ -1,10 +1,11 @@
-import { useEffect, useRef, useState } from 'react'
+import { lazy, Suspense, useEffect, useRef, useState } from 'react'
 import { api, ApiError } from '../../api/client'
 import type { KanbanCardDTO, NewsYoutubeApprovalPayload } from '../../api/types'
 import LiveTerminal from '../LiveTerminal'
 import ApprovalPanel from '../ApprovalPanel'
 import { FLOW_TAG } from '../../lib/flowTags'
 import { columnForStatus, type TerminalStatus } from '../../lib/agentStatus'
+import type { JobOutputsDTO } from '../../api/types'
 
 interface Props {
   card: KanbanCardDTO | null
@@ -16,6 +17,11 @@ const WIDTH_STORAGE_KEY = 'kanban-drawer-width'
 const DEFAULT_WIDTH = 384
 const MIN_WIDTH = 300
 const MAX_WIDTH = 720
+const KanbanCardOutputs = lazy(() => import('./KanbanCardOutputs'))
+
+function OutputsFallback() {
+  return <div className="animate-shimmer h-36 rounded-xl border border-zinc-200/80" />
+}
 
 function loadStoredWidth(): number {
   const raw = window.localStorage.getItem(WIDTH_STORAGE_KEY)
@@ -34,6 +40,8 @@ export default function KanbanDetailDrawer({ card, onClose, onCardTransition }: 
   const [approvalPayload, setApprovalPayload] = useState<NewsYoutubeApprovalPayload | null>(null)
   const [approving, setApproving] = useState(false)
   const [terminalKey, setTerminalKey] = useState(0)
+  const [terminalCollapsed, setTerminalCollapsed] = useState(false)
+  const [outputsRefreshVersion, setOutputsRefreshVersion] = useState(0)
   const [error, setError] = useState<string | null>(null)
   const [width, setWidth] = useState(loadStoredWidth)
   const [resizing, setResizing] = useState(false)
@@ -42,6 +50,8 @@ export default function KanbanDetailDrawer({ card, onClose, onCardTransition }: 
   useEffect(() => {
     setApprovalPayload(null)
     setTerminalKey((k) => k + 1)
+    setTerminalCollapsed(false)
+    setOutputsRefreshVersion(0)
     setError(null)
   }, [card?.card_id])
 
@@ -80,6 +90,17 @@ export default function KanbanDetailDrawer({ card, onClose, onCardTransition }: 
       .catch((e) => setError(e instanceof ApiError ? e.message : 'อัปเดตสถานะการ์ดไม่สำเร็จ'))
   }
 
+  function handleTerminalStatusChange(status: TerminalStatus) {
+    if (status === 'done') setTerminalCollapsed(true)
+    if (status === 'error' || status === 'awaiting_approval') setTerminalCollapsed(false)
+    handleStatusChange(status)
+  }
+
+  function handleOutputsStatusChange(status: JobOutputsDTO['status']) {
+    if (status === 'done') setTerminalCollapsed(true)
+    if (status === 'error' || status === 'awaiting_approval') setTerminalCollapsed(false)
+  }
+
   async function handleApprove(approvedNewsLinks: string[], approvedYoutubeLinks: string[]) {
     if (!card?.job_id) return
     setApproving(true)
@@ -90,6 +111,8 @@ export default function KanbanDetailDrawer({ card, onClose, onCardTransition }: 
       await api.moveKanbanCard(card.card_id, 'executing')
       onCardTransition()
       setTerminalKey((k) => k + 1)
+      setTerminalCollapsed(false)
+      setOutputsRefreshVersion((version) => version + 1)
     } catch (e) {
       setError(e instanceof ApiError ? e.message : 'อนุมัติไม่สำเร็จ')
     } finally {
@@ -100,7 +123,7 @@ export default function KanbanDetailDrawer({ card, onClose, onCardTransition }: 
   return (
     <aside
       style={{ width }}
-      className="sticky top-0 -mr-8 -my-8 flex h-screen shrink-0 border border-r-0 border-zinc-200 bg-white shadow-sm shadow-black/5"
+      className="flow-panel sticky top-0 -mr-8 -my-8 flex h-screen shrink-0 border-r-0"
     >
       {/* resize handle — ลากซ้าย/ขวาเพื่อปรับความกว้าง Drawer */}
       <div
@@ -164,14 +187,48 @@ export default function KanbanDetailDrawer({ card, onClose, onCardTransition }: 
 
               {card.job_id ? (
                 <div className="space-y-3">
-                  <LiveTerminal
-                    key={terminalKey}
-                    jobId={card.job_id}
-                    onStatusChange={handleStatusChange}
-                    onAwaitingApproval={setApprovalPayload}
-                  />
-                  {approvalPayload && (
-                    <ApprovalPanel payload={approvalPayload} onApprove={handleApprove} submitting={approving} />
+                  {terminalCollapsed ? (
+                    <>
+                      <Suspense fallback={<OutputsFallback />}>
+                        <KanbanCardOutputs
+                          jobId={card.job_id}
+                          refreshVersion={outputsRefreshVersion}
+                          onStatusChange={handleOutputsStatusChange}
+                        />
+                      </Suspense>
+                      <details className="rounded-xl border border-zinc-200 bg-surface p-3">
+                        <summary className="cursor-pointer text-xs font-medium text-zinc-600">Execution trace</summary>
+                        <div className="mt-3">
+                          <LiveTerminal
+                            key={terminalKey}
+                            jobId={card.job_id}
+                            onStatusChange={handleTerminalStatusChange}
+                            onAwaitingApproval={setApprovalPayload}
+                            onLogEntry={() => setOutputsRefreshVersion((version) => version + 1)}
+                          />
+                        </div>
+                      </details>
+                    </>
+                  ) : (
+                    <>
+                      <LiveTerminal
+                        key={terminalKey}
+                        jobId={card.job_id}
+                        onStatusChange={handleTerminalStatusChange}
+                        onAwaitingApproval={setApprovalPayload}
+                        onLogEntry={() => setOutputsRefreshVersion((version) => version + 1)}
+                      />
+                      {approvalPayload && (
+                        <ApprovalPanel payload={approvalPayload} onApprove={handleApprove} submitting={approving} />
+                      )}
+                      <Suspense fallback={<OutputsFallback />}>
+                        <KanbanCardOutputs
+                          jobId={card.job_id}
+                          refreshVersion={outputsRefreshVersion}
+                          onStatusChange={handleOutputsStatusChange}
+                        />
+                      </Suspense>
+                    </>
                   )}
                 </div>
               ) : (

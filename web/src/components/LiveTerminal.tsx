@@ -46,13 +46,14 @@ interface Props {
   onNodeUpdate?: (node: string | null) => void
   onAwaitingApproval?: (payload: NewsYoutubeApprovalPayload) => void
   onLineCountChange?: (count: number) => void
+  onLogEntry?: () => void
   /** true = รัน SSE/side-effects ตามปกติแต่ไม่ render กล่อง UI — ใช้เป็น "background driver"
    * ของ job ที่ active อยู่ เพื่อขับ auto column-transition + workspace preview บนการ์ด
    * โดยไม่ต้องมีกล่อง terminal ใหญ่ค้างอยู่ท้ายหน้า (ย้ายไปโชว์ใน KanbanDetailDrawer แทน) */
   hideUi?: boolean
 }
 
-export default function LiveTerminal({ jobId, onStatusChange, onNodeUpdate, onAwaitingApproval, onLineCountChange, hideUi }: Props) {
+export default function LiveTerminal({ jobId, onStatusChange, onNodeUpdate, onAwaitingApproval, onLineCountChange, onLogEntry, hideUi }: Props) {
   const [lines, setLines] = useState<LogLine[]>([])
   const [status, setStatus] = useState<TerminalStatus>('idle')
   const containerRef = useRef<HTMLDivElement>(null)
@@ -77,6 +78,7 @@ export default function LiveTerminal({ jobId, onStatusChange, onNodeUpdate, onAw
       }
       setLines((prev) => [...prev, payload])
       onNodeUpdate?.(payload.node)
+      onLogEntry?.()
     }
     source.addEventListener('done', () => {
       setStatus('done')

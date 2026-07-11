@@ -51,8 +51,8 @@ export default function KanbanCard({
       role={onClick ? 'button' : undefined}
       tabIndex={onClick ? 0 : undefined}
       style={style}
-      className={`group relative rounded-lg border bg-white p-3 pr-8 text-xs text-zinc-800 shadow-[0_1px_2px_rgba(0,0,0,0.03)] transition-all duration-150 hover:-translate-y-0.5 hover:shadow-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-terra ${
-        selected || workspacePreview ? 'border-2 border-terra-light' : 'border-zinc-200 hover:border-zinc-300'
+      className={`group relative rounded-xl border bg-white/90 p-3 pr-8 text-xs text-zinc-800 shadow-[0_5px_18px_rgba(14,165,233,0.05)] transition-all duration-150 hover:-translate-y-0.5 hover:border-cyan-300 hover:shadow-[0_8px_24px_rgba(14,165,233,0.12)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-flow-cyan ${
+        selected || workspacePreview ? 'border-2 border-flow-sky' : 'border-sky-100'
       } ${onClick ? 'cursor-pointer' : 'cursor-default'} ${
         removing ? 'animate-card-out' : 'animate-card-in'
       } ${faded ? 'opacity-40' : ''}`}
@@ -92,11 +92,18 @@ export default function KanbanCard({
                 onDispatch()
               }}
               onKeyDown={(e) => e.stopPropagation()}
-              title="ส่งงานให้ Manager"
+              title="ส่งงานให้ Manager (Run Job)"
               aria-label="ส่งงานให้ Manager"
-              className="rounded p-0.5 text-zinc-400 transition-colors hover:bg-zinc-100 hover:text-terra focus-visible:outline focus-visible:outline-2 focus-visible:outline-terra"
+              className="group/play inline-flex items-center justify-center gap-1 rounded-md border border-emerald-300 bg-emerald-100/90 px-2 py-0.5 text-[11px] font-bold text-emerald-700 shadow-sm transition-all duration-150 hover:border-emerald-600 hover:bg-emerald-600 hover:text-white hover:shadow focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-emerald-500"
             >
-              ▶
+              <svg
+                viewBox="0 0 24 24"
+                fill="currentColor"
+                className="h-3 w-3 text-emerald-600 transition-colors group-hover/play:text-white"
+              >
+                <path d="M5.25 5.653c0-.856.917-1.398 1.667-.986l11.54 6.347a1.125 1.125 0 0 1 0 1.972l-11.54 6.347a1.125 1.125 0 0 1-1.667-.986V5.653Z" />
+              </svg>
+              <span>Play</span>
             </button>
           )}
           {card.display_seq != null && (

@@ -11,7 +11,7 @@ interface Props {
 
 export default function SegmentedControl({ options, value, onChange }: Props) {
   return (
-    <div className="flex w-fit gap-1 rounded-lg border border-zinc-200 bg-white p-1">
+    <div className="flex w-fit gap-1 rounded-xl border border-sky-200 bg-white/75 p-1 shadow-sm shadow-sky-100/60">
       {options.map((opt) => (
         <button
           key={opt.key}
@@ -19,7 +19,7 @@ export default function SegmentedControl({ options, value, onChange }: Props) {
           onClick={() => onChange(opt.key)}
           aria-pressed={value === opt.key}
           className={`rounded-md px-3 py-1 text-xs font-medium transition-colors ${
-            value === opt.key ? 'bg-terra/10 text-terra' : 'text-zinc-500 hover:text-zinc-800'
+            value === opt.key ? 'bg-flow-cyan/10 text-sky-700' : 'text-zinc-500 hover:bg-sky-50 hover:text-zinc-800'
           }`}
         >
           {opt.label}

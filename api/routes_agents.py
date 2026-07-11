@@ -15,12 +15,48 @@ from pydantic import BaseModel
 
 from api import state_db
 from api.auth import require_session
-from api.schemas import ActiveAgentStatusDTO, JobStatusDTO
+from api.schemas import ActiveAgentStatusDTO, JobOutputsDTO, JobStatusDTO, SpecialistOutputDTO
 
 router = APIRouter(dependencies=[Depends(require_session)])
 
 _POLL_INTERVAL_SECONDS = 1.0
 _TERMINAL_STATUSES = ("done", "error", "awaiting_approval")
+_SUMMARY_NODES = ("manager_summary", "supervisor")
+
+
+def _job_outputs_to_dto(conn, job) -> JobOutputsDTO:
+    reply_logs = state_db.get_job_reply_logs(conn, job["job_id"])
+    summary_row = next((row for row in reversed(reply_logs) if row["node_name"] == "manager_summary"), None)
+    if summary_row is None:
+        summary_row = next((row for row in reversed(reply_logs) if row["node_name"] == "supervisor"), None)
+
+    latest_by_node = {}
+    for row in reply_logs:
+        node_name = row["node_name"] or ""
+        if node_name in _SUMMARY_NODES or node_name.startswith(("post_", "prepare_")):
+            continue
+        latest_by_node[node_name] = row
+
+    specialists = [
+        SpecialistOutputDTO(
+            node_name=row["node_name"] or "Specialist",
+            label=row["label"] or row["node_name"] or "Specialist",
+            content=row["content"] or "",
+            seq=row["seq"],
+            created_at=row["created_at"],
+        )
+        for row in sorted(latest_by_node.values(), key=lambda row: row["seq"])
+    ]
+
+    return JobOutputsDTO(
+        job_id=job["job_id"],
+        status=job["status"],
+        executive_summary=summary_row["content"] if summary_row else None,
+        executive_summary_created_at=summary_row["created_at"] if summary_row else None,
+        specialists=specialists,
+        last_seq=reply_logs[-1]["seq"] if reply_logs else 0,
+        error_message=job["error_message"],
+    )
 
 
 class DispatchRequest(BaseModel):
@@ -77,6 +113,15 @@ def get_job_status(job_id: str) -> JobStatusDTO:
         if job is None:
             raise HTTPException(status_code=404, detail="ไม่พบ job นี้")
         return _job_to_dto(conn, job)
+
+
+@router.get("/api/agents/jobs/{job_id}/outputs", response_model=JobOutputsDTO)
+def get_job_outputs(job_id: str) -> JobOutputsDTO:
+    with closing(state_db.get_connection()) as conn:
+        job = state_db.get_job(conn, job_id)
+        if job is None:
+            raise HTTPException(status_code=404, detail="ไม่พบ job นี้")
+        return _job_outputs_to_dto(conn, job)
 
 
 @router.get("/api/agents/active", response_model=ActiveAgentStatusDTO)

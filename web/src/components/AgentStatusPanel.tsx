@@ -50,10 +50,10 @@ export default function AgentStatusPanel() {
   const isOtherFlow = running && status?.flow !== 'manager'
 
   return (
-    <div className="space-y-1.5 border-t border-zinc-200 pt-3">
-      <h3 className="px-1 text-[11px] font-semibold uppercase tracking-wide text-zinc-400">Agents</h3>
+    <div className="space-y-1.5 border-t border-sky-100 pt-3">
+      <h3 className="px-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-sky-700">Agents</h3>
 
-      <div className="rounded-lg border border-zinc-200 bg-white p-2 shadow-sm shadow-black/5">
+      <div className="rounded-xl border border-sky-100 bg-white/75 p-2 shadow-[0_8px_22px_rgba(14,165,233,0.05)]">
         {isOtherFlow && (
           <div className="mb-1.5 flex items-center gap-1.5 rounded-md border border-amber-200 bg-amber-50 px-2 py-1 text-[11px] text-amber-800">
             <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-amber-500" />

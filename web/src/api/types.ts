@@ -184,6 +184,24 @@ export interface JobStatusDTO {
   updated_at: number
 }
 
+export interface SpecialistOutputDTO {
+  node_name: string
+  label: string
+  content: string
+  seq: number
+  created_at: number
+}
+
+export interface JobOutputsDTO {
+  job_id: string
+  status: JobStatusDTO['status']
+  executive_summary: string | null
+  executive_summary_created_at: number | null
+  specialists: SpecialistOutputDTO[]
+  last_seq: number
+  error_message: string | null
+}
+
 export interface ActiveAgentStatusDTO {
   running: boolean
   flow: string | null

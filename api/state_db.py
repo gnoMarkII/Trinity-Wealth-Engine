@@ -222,6 +222,15 @@ def get_job_logs_since(conn: sqlite3.Connection, job_id: str, after_seq: int = 0
     return cur.fetchall()
 
 
+def get_job_reply_logs(conn: sqlite3.Connection, job_id: str) -> list[sqlite3.Row]:
+    cur = conn.execute(
+        "SELECT seq, node_name, content, label, created_at FROM job_logs "
+        "WHERE job_id = ? AND role = 'reply' ORDER BY seq ASC",
+        (job_id,),
+    )
+    return cur.fetchall()
+
+
 def get_latest_job_log_node(conn: sqlite3.Connection, job_id: str) -> str | None:
     cur = conn.execute(
         "SELECT node_name FROM job_logs WHERE job_id = ? ORDER BY seq DESC LIMIT 1",

@@ -24,14 +24,14 @@ export default function RegimeProbabilityChart({ probabilities }: Props) {
   )
 
   return (
-    <div className="space-y-3 rounded-xl border border-zinc-200 bg-white p-4 shadow-sm shadow-black/5">
+    <div className="space-y-3 rounded-xl border border-sky-100 bg-white/80 p-4 shadow-[0_8px_26px_rgba(14,165,233,0.05)] backdrop-blur-sm">
       {names.map((name, i) => {
         const value = probabilities[name] ?? 0
         const pct = Math.round(value * 100)
         return (
           <div key={name} className="flex items-center gap-3">
             <span className="w-28 shrink-0 text-sm text-zinc-700">{name}</span>
-            <div className="h-4 flex-1 bg-zinc-100">
+            <div className="h-4 flex-1 bg-sky-50">
               {/* square ที่ baseline (0%), โค้งแค่ data-end (ปลายขวา) ตาม mark spec */}
               <div
                 className="animate-bar-grow h-4 rounded-r-full"

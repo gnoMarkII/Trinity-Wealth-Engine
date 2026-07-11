@@ -175,6 +175,31 @@ def _log_manager_messages(log_conn, job_id: str, event: dict) -> None:
             state_db.append_job_log(log_conn, job_id, node_name, content, role=role, label=label)
 
 
+def _append_manager_summary(log_conn, job_id: str, instruction: str) -> None:
+    from agents.manager_agent import generate_manager_summary
+
+    reply_logs = state_db.get_job_reply_logs(log_conn, job_id)
+    if any(row["node_name"] == "manager_summary" for row in reply_logs):
+        return
+
+    excluded_nodes = {"supervisor", "manager_summary"}
+    deliverables = [
+        (row["node_name"] or "Specialist", row["content"] or "")
+        for row in reply_logs
+        if row["node_name"] not in excluded_nodes
+        and not (row["node_name"] or "").startswith(("post_", "prepare_"))
+    ]
+    if not deliverables:
+        deliverables = [
+            (row["node_name"] or "Manager", row["content"] or "")
+            for row in reply_logs
+            if row["node_name"] == "supervisor"
+        ]
+    summary = generate_manager_summary(instruction, deliverables)
+    if summary:
+        state_db.append_job_log(log_conn, job_id, "manager_summary", summary, role="reply", label="Manager Summary")
+
+
 def default_run_fn(
     job_id: str,
     thread_id: str,
@@ -227,5 +252,6 @@ def default_run_fn(
                         )
                         return
                     _log_manager_messages(log_conn, job_id, event)
+                _append_manager_summary(log_conn, job_id, instruction)
 
         with_retry(_stream_and_log)

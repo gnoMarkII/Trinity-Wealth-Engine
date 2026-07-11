@@ -1,5 +1,6 @@
 import type {
   ActiveAgentStatusDTO,
+  JobOutputsDTO,
   JobStatusDTO,
   KanbanCardDTO,
   MacroDashboardDTO,
@@ -96,6 +97,8 @@ export const api = {
     }),
 
   getJobStatus: (jobId: string) => request<JobStatusDTO>(`/api/agents/jobs/${jobId}`),
+
+  getJobOutputs: (jobId: string) => request<JobOutputsDTO>(`/api/agents/jobs/${jobId}/outputs`),
 
   getActiveAgentStatus: () => request<ActiveAgentStatusDTO>('/api/agents/active'),
 

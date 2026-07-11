@@ -4,7 +4,7 @@ export default function Portfolio() {
   return (
     <div className="animate-page-in space-y-6 pb-12">
       {/* Banner แนะนำไปยังหน้า Macro Strategy Report */}
-      <div className="rounded-2xl border border-amber-200/80 bg-gradient-to-r from-amber-50/80 via-white to-amber-50/40 p-6 shadow-sm">
+      <div className="rounded-2xl border border-sky-100 bg-gradient-to-r from-sky-50/90 via-white/85 to-orange-50/65 p-6 shadow-[0_10px_35px_rgba(14,165,233,0.06)] backdrop-blur-sm">
         <div className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
           <div className="space-y-1">
             <h2 className="text-base font-semibold text-zinc-900">
@@ -17,7 +17,7 @@ export default function Portfolio() {
           </div>
           <Link
             to="/macro"
-            className="shrink-0 rounded-xl bg-zinc-900 px-4 py-2.5 text-xs font-semibold text-white shadow-sm transition-all hover:bg-zinc-800 hover:shadow"
+            className="shrink-0 rounded-xl bg-flow-blue px-4 py-2.5 text-xs font-semibold text-white shadow-[0_8px_22px_rgba(14,165,233,0.18)] transition-all hover:bg-sky-600 hover:shadow"
           >
             ไปที่รายงาน Macro Strategy →
           </Link>
@@ -25,9 +25,9 @@ export default function Portfolio() {
       </div>
 
       {/* Actual Portfolio Holdings & Bookkeeper Tracker Placeholder */}
-      <div className="rounded-2xl border border-zinc-200/80 bg-white p-8 text-center shadow-sm shadow-black/5">
+      <div className="flow-panel rounded-2xl p-8 text-center">
         <div className="mx-auto max-w-md space-y-4">
-          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-zinc-100 text-zinc-600">
+          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-sky-50 text-sky-700">
             <svg
               className="h-6 w-6"
               fill="none"
@@ -48,7 +48,7 @@ export default function Portfolio() {
             กำลังอยู่ระหว่างเตรียมความพร้อมสำหรับการเชื่อมต่อในเฟสถัดไป
           </p>
           <div className="pt-2">
-            <span className="inline-block rounded-full border border-zinc-200 bg-zinc-50 px-3 py-1 text-xs font-medium text-zinc-500">
+            <span className="inline-block rounded-full border border-sky-100 bg-white/75 px-3 py-1 text-xs font-medium text-zinc-500">
               สถานะ: รอเชื่อมต่อข้อมูล Holdings จาก Obsidian Vault
             </span>
           </div>

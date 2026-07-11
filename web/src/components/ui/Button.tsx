@@ -6,8 +6,8 @@ interface Props extends ButtonHTMLAttributes<HTMLButtonElement> {
 }
 
 const VARIANT_CLASS: Record<string, string> = {
-  primary: 'bg-terra text-white shadow-sm hover:bg-terra-dark',
-  secondary: 'border border-zinc-200 text-zinc-600 hover:bg-zinc-50',
+  primary: 'bg-flow-blue text-white shadow-[0_10px_24px_rgba(14,165,233,0.2)] hover:bg-sky-600',
+  secondary: 'border border-sky-200 bg-white/70 text-sky-900 shadow-sm shadow-sky-100/60 hover:bg-sky-50',
 }
 
 const SIZE_CLASS: Record<string, string> = {
@@ -19,7 +19,7 @@ export default function Button({ variant = 'primary', size = 'md', className = '
   return (
     <button
       {...rest}
-      className={`rounded-lg font-medium transition-all duration-150 active:scale-95 disabled:cursor-not-allowed disabled:opacity-50 ${VARIANT_CLASS[variant]} ${SIZE_CLASS[size]} ${className}`}
+      className={`rounded-xl font-medium transition-all duration-150 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-flow-cyan active:scale-95 disabled:cursor-not-allowed disabled:opacity-50 ${VARIANT_CLASS[variant]} ${SIZE_CLASS[size]} ${className}`}
     />
   )
 }

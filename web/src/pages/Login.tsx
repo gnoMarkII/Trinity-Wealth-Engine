@@ -27,12 +27,13 @@ export default function Login() {
   }
 
   return (
-    <div className="flex min-h-full items-center justify-center bg-white">
+    <div className="flow-theme flex min-h-screen items-center justify-center px-6">
       <form
         onSubmit={handleSubmit}
-        className="animate-page-in w-full max-w-sm space-y-4 rounded-2xl border border-zinc-200 bg-white p-8 shadow-xl shadow-black/5"
+        className="flow-panel animate-page-in w-full max-w-sm space-y-4 rounded-3xl p-8"
       >
-        <h1 className="text-lg font-semibold text-zinc-900">Money ReRoute</h1>
+        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-sky-600">Investment intelligence</p>
+        <h1 className="text-xl font-semibold text-sky-950">Money ReRoute</h1>
         <p className="text-sm text-zinc-500">กรอกรหัสผ่านเพื่อเข้าใช้งาน</p>
         <label htmlFor="login-password" className="sr-only">
           รหัสผ่าน
