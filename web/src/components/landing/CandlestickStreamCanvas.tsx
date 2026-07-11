@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react'
 import { useReducedMotion } from 'motion/react'
-import { usePageVisibility } from './usePageVisibility'
+import { usePageVisibility } from '../../hooks/usePageVisibility'
 
 type StreamCandle = {
   height: number

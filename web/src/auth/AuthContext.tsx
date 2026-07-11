@@ -1,13 +1,6 @@
-import { createContext, useContext, useEffect, useState, type ReactNode } from 'react'
-import { api, ApiError, setUnauthorizedHandler } from '../api/client'
-
-interface AuthContextValue {
-  status: 'loading' | 'authenticated' | 'unauthenticated'
-  login: (password: string) => Promise<void>
-  logout: () => Promise<void>
-}
-
-const AuthContext = createContext<AuthContextValue | null>(null)
+import { useEffect, useState, type ReactNode } from 'react'
+import { api, setUnauthorizedHandler } from '../api/client'
+import { AuthContext, type AuthContextValue } from './useAuth'
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [status, setStatus] = useState<AuthContextValue['status']>('loading')
@@ -36,11 +29,3 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   return <AuthContext.Provider value={{ status, login, logout }}>{children}</AuthContext.Provider>
 }
-
-export function useAuth(): AuthContextValue {
-  const ctx = useContext(AuthContext)
-  if (!ctx) throw new Error('useAuth ต้องถูกเรียกภายใน <AuthProvider>')
-  return ctx
-}
-
-export { ApiError }

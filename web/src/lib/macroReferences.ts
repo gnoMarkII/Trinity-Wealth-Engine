@@ -65,6 +65,14 @@ const KNOWN_INDICATORS: Record<string, Omit<IndicatorMetadata, 'id' | 'extracted
 export function enrichIndicator(id: string, data?: MacroDashboardDTO): IndicatorMetadata {
   const normalizedId = id.trim()
 
+  // 0. ข้อมูลจริงจาก dashboard_indicators (DTO ที่ backend validate แล้ว) สำคัญกว่า
+  // ตาราง hardcode/regex ทั้งหมดด้านล่าง — ใช้ label/ค่า/ที่มาจากตรงนั้นก่อนเสมอ
+  // (ตาราง KNOWN_INDICATORS กับ pattern match เหลือไว้เป็น fallback สำหรับ id ที่
+  // อ้างถึงใน observable_refs แต่ไม่ได้อยู่ในชุด indicator ของ dashboard)
+  const dashboardIndicator = data?.dashboard_indicators?.find(
+    (indicator) => indicator.indicator_id === normalizedId
+  )
+
   // 1. Check known list or pattern match
   let meta = KNOWN_INDICATORS[normalizedId]
 
@@ -108,14 +116,15 @@ export function enrichIndicator(id: string, data?: MacroDashboardDTO): Indicator
     }
   }
 
-  const extractedValue = data ? extractIndicatorValue(normalizedId, data) : null
+  const extractedValue =
+    dashboardIndicator?.display_value || (data ? extractIndicatorValue(normalizedId, data) : null)
 
   return {
     id: normalizedId,
-    name: meta.name,
+    name: dashboardIndicator?.label || meta.name,
     category: meta.category,
     description: meta.description,
-    sourceProvider: meta.sourceProvider,
+    sourceProvider: dashboardIndicator?.provider || meta.sourceProvider,
     extractedValue,
   }
 }
@@ -143,13 +152,13 @@ export function extractIndicatorValue(id: string, data: MacroDashboardDTO): stri
     }
     if (lower.includes('hyg') || lower.includes('lqd')) {
       const match = text.match(/HYG\/LQD Ratio\s*=\s*([\d.]+)/i) || text.match(/HYG\/LQD\s*=\s*([\d.]+)/i)
-      if (match) return match[1]
+      if (match?.[1]) return match[1]
     }
     if (lower.includes('cl_f') || lower.includes('oil') || lower.includes('crude')) {
       const match =
         text.match(/ราคาน้ำมันดิบ\s*=\s*([\d.]+\s*USD\/bbl)/i) ||
         text.match(/Oil\s*=\s*(\$?[\d.]+)/i)
-      if (match) return match[1]
+      if (match?.[1]) return match[1]
     }
   }
 

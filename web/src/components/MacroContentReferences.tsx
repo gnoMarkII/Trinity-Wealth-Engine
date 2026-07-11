@@ -1,16 +1,7 @@
 import { useState } from 'react'
 import type { MacroReferenceDTO } from '../api/types'
-
-function youtubeVideoId(url: string): string | null {
-  try {
-    const parsed = new URL(url)
-    if (!/(^|\.)youtube\.com$|(^|\.)youtu\.be$/i.test(parsed.hostname)) return null
-    const candidate = parsed.hostname.endsWith('youtu.be') ? parsed.pathname.slice(1) : parsed.searchParams.get('v')
-    return candidate && /^[\w-]{11}$/.test(candidate) ? candidate : null
-  } catch {
-    return null
-  }
-}
+import { youtubeVideoId } from '../lib/youtube'
+import Modal from './ui/Modal'
 
 function referenceTime(reference: MacroReferenceDTO): string {
   if (reference.published_at) return reference.published_at
@@ -63,26 +54,35 @@ export default function MacroContentReferences({ references }: Props) {
       </div>
 
       {activeYoutube && activeVideoId && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 p-4" role="dialog" aria-modal="true" aria-label="YouTube preview">
-          <div className="w-full max-w-3xl overflow-hidden rounded-xl bg-white shadow-2xl">
-            <div className="flex items-center justify-between gap-4 border-b border-zinc-200 p-4">
-              <h3 className="text-sm font-semibold text-zinc-900">{activeYoutube.title}</h3>
-              <button onClick={() => setActiveYoutube(null)} className="rounded-md px-2 py-1 text-sm text-zinc-600 hover:bg-zinc-100">ปิด</button>
-            </div>
-            <div className="aspect-video bg-black">
-              <iframe
-                className="h-full w-full"
-                src={`https://www.youtube-nocookie.com/embed/${activeVideoId}?rel=0`}
-                title={activeYoutube.title}
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                allowFullScreen
-              />
-            </div>
-            <div className="p-4 text-right">
-              <a href={activeYoutube.url} target="_blank" rel="noopener noreferrer" className="text-xs font-semibold text-zinc-700 underline underline-offset-2">เปิดใน YouTube</a>
-            </div>
+        // ใช้ Modal ร่วม (focus trap + Escape + คืน focus) แทน dialog เขียนเองที่เคย
+        // ปล่อยให้ Tab หลุดออกไป background ได้
+        <Modal
+          titleId="youtube-preview-title"
+          onClose={() => setActiveYoutube(null)}
+          panelClassName="max-w-3xl overflow-hidden rounded-xl bg-white shadow-2xl"
+        >
+          <div className="flex items-center justify-between gap-4 border-b border-zinc-200 p-4">
+            <h3 id="youtube-preview-title" className="text-sm font-semibold text-zinc-900">{activeYoutube.title}</h3>
+            <button onClick={() => setActiveYoutube(null)} className="rounded-md px-2 py-1 text-sm text-zinc-600 hover:bg-zinc-100">ปิด</button>
           </div>
-        </div>
+          <div className="aspect-video bg-black">
+            {/* YouTube player ต้องการทั้ง allow-scripts + allow-same-origin ถึงจะเล่นได้
+                (same-origin ที่ว่าคือ origin ของ youtube-nocookie.com เอง ไม่ใช่ของเรา)
+                sandbox ยังบล็อก top-navigation / forms / downloads อยู่ ดีกว่าไม่มีเลย */}
+            <iframe
+              className="h-full w-full"
+              src={`https://www.youtube-nocookie.com/embed/${activeVideoId}?rel=0`}
+              title={activeYoutube.title}
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+              // eslint-disable-next-line react/iframe-missing-sandbox
+              sandbox="allow-scripts allow-same-origin allow-presentation allow-popups"
+              allowFullScreen
+            />
+          </div>
+          <div className="p-4 text-right">
+            <a href={activeYoutube.url} target="_blank" rel="noopener noreferrer" className="text-xs font-semibold text-zinc-700 underline underline-offset-2">เปิดใน YouTube</a>
+          </div>
+        </Modal>
       )}
     </section>
   )

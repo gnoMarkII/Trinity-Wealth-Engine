@@ -3,7 +3,7 @@ import { api, ApiError } from '../../api/client'
 import type { KanbanCardDTO, NewsYoutubeApprovalPayload } from '../../api/types'
 import LiveTerminal from '../LiveTerminal'
 import ApprovalPanel from '../ApprovalPanel'
-import { FLOW_TAG } from '../../lib/flowTags'
+import { FLOW_TAG } from '../../lib/flows'
 import { columnForStatus, type TerminalStatus } from '../../lib/agentStatus'
 import type { JobOutputsDTO } from '../../api/types'
 
@@ -58,23 +58,24 @@ export default function KanbanDetailDrawer({ card, onClose, onCardTransition }: 
   useEffect(() => {
     if (!resizing) return
 
-    function onMouseMove(e: MouseEvent) {
+    // pointer events แทน mouse events — ครอบคลุมทั้ง mouse, pen, touch ในชุดเดียว
+    function onPointerMove(e: PointerEvent) {
       const next = Math.min(Math.max(window.innerWidth - e.clientX, MIN_WIDTH), MAX_WIDTH)
       widthRef.current = next
       setWidth(next)
     }
-    function onMouseUp() {
+    function onPointerUp() {
       setResizing(false)
       window.localStorage.setItem(WIDTH_STORAGE_KEY, String(widthRef.current))
     }
 
-    window.addEventListener('mousemove', onMouseMove)
-    window.addEventListener('mouseup', onMouseUp)
+    window.addEventListener('pointermove', onPointerMove)
+    window.addEventListener('pointerup', onPointerUp)
     document.body.style.cursor = 'col-resize'
     document.body.style.userSelect = 'none'
     return () => {
-      window.removeEventListener('mousemove', onMouseMove)
-      window.removeEventListener('mouseup', onMouseUp)
+      window.removeEventListener('pointermove', onPointerMove)
+      window.removeEventListener('pointerup', onPointerUp)
       document.body.style.cursor = ''
       document.body.style.userSelect = ''
     }
@@ -123,15 +124,18 @@ export default function KanbanDetailDrawer({ card, onClose, onCardTransition }: 
   return (
     <aside
       style={{ width }}
-      className="flow-panel sticky top-0 -mr-8 -my-8 flex h-screen shrink-0 border-r-0"
+      // negative margin ต้อง match padding ของ Layout main (p-5 sm:p-8) ทั้งสอง breakpoint
+      // ไม่งั้น drawer เหลื่อมขอบจอ 12px บนจอเล็ก
+      className="flow-panel sticky top-0 -mr-5 -my-5 flex h-screen shrink-0 border-r-0 sm:-mr-8 sm:-my-8"
     >
-      {/* resize handle — ลากซ้าย/ขวาเพื่อปรับความกว้าง Drawer */}
+      {/* resize handle — ลากซ้าย/ขวาเพื่อปรับความกว้าง Drawer (touch-none กัน browser
+          แย่ง gesture ไป scroll ระหว่างลากด้วยนิ้ว) */}
       <div
-        onMouseDown={(e) => {
+        onPointerDown={(e) => {
           e.preventDefault()
           setResizing(true)
         }}
-        className={`group -ml-1.5 w-3 shrink-0 cursor-col-resize ${resizing ? 'bg-terra-light/20' : ''}`}
+        className={`group -ml-1.5 w-3 shrink-0 cursor-col-resize touch-none ${resizing ? 'bg-terra-light/20' : ''}`}
       >
         <div className="mx-auto h-full w-px bg-zinc-200 transition-colors group-hover:bg-terra-light/60" />
       </div>

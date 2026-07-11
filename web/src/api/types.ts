@@ -67,21 +67,6 @@ export interface RegimeEvidenceDTO {
   observable_refs?: string[]
 }
 
-export interface PortfolioDTO {
-  evaluated_at: string
-  overall_regime: string
-  time_horizon: string
-  conviction_level: string
-  conviction_rationale: string
-  quant_narrative_alignment: string
-  divergence_note: string
-  focus_themes: string[]
-  asset_allocation: AssetAllocationDTO[]
-  pair_trades: PairTradeDTO[]
-  risk_scenarios: RiskScenarioDTO[]
-  warnings: WarningDTO[]
-}
-
 export interface MacroIndicatorDTO {
   indicator_id: string
   series_key: string

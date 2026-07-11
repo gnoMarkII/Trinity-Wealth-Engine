@@ -2,17 +2,6 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  --bg-page: #ffffff;
-  --bg-surface-subtle: #f4f4f5;
-  --border-crisp: #e4e4e7;
-  --accent-terracotta: #924a2e;
-  --accent-terracotta-hover: #7d3e25;
-  --card-selected-border: #d97746;
-  --text-primary: #18181b;
-  --text-secondary: #71717a;
-}
-
 html,
 body,
 #root {
@@ -54,7 +43,8 @@ body {
 .flow-theme .bg-white,
 .flow-theme .bg-white\/60,
 .flow-theme .bg-white\/75,
-.flow-theme .bg-white\/80 {
+.flow-theme .bg-white\/80,
+.flow-theme .bg-white\/90 {
   background-color: rgb(255 255 255 / 0.76) !important;
 }
 

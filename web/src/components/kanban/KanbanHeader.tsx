@@ -1,4 +1,5 @@
 import type { FlowFilter, StatusFilter } from './types'
+import { FLOW_LABEL } from '../../lib/flows'
 
 interface Props {
   statusFilter: StatusFilter
@@ -16,8 +17,8 @@ const STATUS_TABS: { key: StatusFilter; label: string }[] = [
 
 const FLOW_TABS: { key: FlowFilter; label: string }[] = [
   { key: 'all', label: 'All Flows' },
-  { key: 'manager', label: 'Macro' },
-  { key: 'news_youtube', label: 'News/YouTube' },
+  { key: 'manager', label: FLOW_LABEL.manager },
+  { key: 'news_youtube', label: FLOW_LABEL.news_youtube },
 ]
 
 export default function KanbanHeader({

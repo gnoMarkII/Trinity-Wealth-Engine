@@ -1,7 +1,7 @@
 import type { CSSProperties, KeyboardEvent } from 'react'
 import type { KanbanCardDTO } from '../../api/types'
 import { nodeDisplayName } from '../../lib/nodeDisplayNames'
-import { FLOW_TAG } from '../../lib/flowTags'
+import { FLOW_TAG } from '../../lib/flows'
 import type { WorkspacePreview } from './types'
 
 interface Props {
@@ -11,7 +11,7 @@ interface Props {
   selected?: boolean
   workspacePreview?: WorkspacePreview
   onDelete: () => void
-  onClick?: () => void
+  onClick: () => void
   editable?: boolean
   onEdit?: () => void
   onDispatch?: () => void
@@ -23,8 +23,7 @@ function formatElapsed(seconds: number): string {
   return `${Math.round(seconds / 60)}m`
 }
 
-function handleCardKeyDown(e: KeyboardEvent<HTMLDivElement>, onClick?: () => void) {
-  if (!onClick) return
+function handleCardKeyDown(e: KeyboardEvent<HTMLDivElement>, onClick: () => void) {
   if (e.key === 'Enter' || e.key === ' ') {
     e.preventDefault()
     onClick()
@@ -48,14 +47,12 @@ export default function KanbanCard({
     <div
       onClick={onClick}
       onKeyDown={(e) => handleCardKeyDown(e, onClick)}
-      role={onClick ? 'button' : undefined}
-      tabIndex={onClick ? 0 : undefined}
+      role="button"
+      tabIndex={0}
       style={style}
-      className={`group relative rounded-xl border bg-white/90 p-3 pr-8 text-xs text-zinc-800 shadow-[0_5px_18px_rgba(14,165,233,0.05)] transition-all duration-150 hover:-translate-y-0.5 hover:border-cyan-300 hover:shadow-[0_8px_24px_rgba(14,165,233,0.12)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-flow-cyan ${
+      className={`group relative cursor-pointer rounded-xl border bg-white/90 p-3 pr-8 text-xs text-zinc-800 shadow-[0_5px_18px_rgba(14,165,233,0.05)] transition-all duration-150 hover:-translate-y-0.5 hover:border-cyan-300 hover:shadow-[0_8px_24px_rgba(14,165,233,0.12)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-flow-cyan ${
         selected || workspacePreview ? 'border-2 border-flow-sky' : 'border-sky-100'
-      } ${onClick ? 'cursor-pointer' : 'cursor-default'} ${
-        removing ? 'animate-card-out' : 'animate-card-in'
-      } ${faded ? 'opacity-40' : ''}`}
+      } ${removing ? 'animate-card-out' : 'animate-card-in'} ${faded ? 'opacity-40' : ''}`}
     >
       {editable && onEdit && (
         <button

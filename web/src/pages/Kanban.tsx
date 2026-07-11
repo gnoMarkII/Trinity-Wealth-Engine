@@ -122,10 +122,13 @@ export default function Kanban() {
   }, [activeCount])
 
   useEffect(() => {
+    // จับ Set instance ไว้ในตัวแปร local — ref.current ตอน cleanup อาจเป็นคนละค่ากับตอน
+    // effect รัน (react-hooks/exhaustive-deps) แม้ในเคสนี้ Set ไม่เคยถูกแทนที่ก็ตาม
+    const timers = deleteTimers.current
     return () => {
       if (noticeDismissTimer.current) window.clearTimeout(noticeDismissTimer.current)
       if (noticeLeaveTimer.current) window.clearTimeout(noticeLeaveTimer.current)
-      deleteTimers.current.forEach((id) => window.clearTimeout(id))
+      timers.forEach((id) => window.clearTimeout(id))
     }
   }, [])
 
@@ -281,6 +284,7 @@ export default function Kanban() {
 
   const visibleColumns = COLUMNS.filter((col) => STATUS_COLUMN_MAP[statusFilter].includes(col.key))
   const searchLower = search.trim().toLowerCase()
+  const editingTemplate = editingTemplateIndex !== null ? quickTemplates[editingTemplateIndex] : undefined
 
   function cardsForColumn(colKey: string): KanbanCardDTO[] {
     return cards.filter((c) => {
@@ -392,9 +396,9 @@ export default function Kanban() {
         />
       )}
 
-      {editingTemplateIndex !== null && (
+      {editingTemplateIndex !== null && editingTemplate && (
         <EditTemplateModal
-          template={quickTemplates[editingTemplateIndex]}
+          template={editingTemplate}
           onClose={() => setEditingTemplateIndex(null)}
           onSave={(next) => saveEditedTemplate(editingTemplateIndex, next)}
         />

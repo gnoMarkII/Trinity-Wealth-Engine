@@ -4,23 +4,13 @@ import SegmentedControl from '../ui/SegmentedControl'
 import Button from '../ui/Button'
 import TextInput from '../ui/TextInput'
 import type { QuickTemplate } from '../../lib/quickTemplateStorage'
+import { FLOW_OPTIONS, SCOPE_OPTIONS } from '../../lib/flows'
 
 interface Props {
   template: QuickTemplate
   onClose: () => void
   onSave: (template: QuickTemplate) => void
 }
-
-const FLOW_OPTIONS: { key: string; label: string }[] = [
-  { key: 'manager', label: 'Macro' },
-  { key: 'news_youtube', label: 'News/YouTube' },
-]
-
-const SCOPE_OPTIONS: { key: string; label: string }[] = [
-  { key: 'news', label: 'ข่าวเท่านั้น' },
-  { key: 'youtube', label: 'YouTube เท่านั้น' },
-  { key: 'both', label: 'ทั้งคู่' },
-]
 
 export default function EditTemplateModal({ template, onClose, onSave }: Props) {
   const [label, setLabel] = useState(template.label)
@@ -59,14 +49,15 @@ export default function EditTemplateModal({ template, onClose, onSave }: Props) 
         </div>
 
         <div>
-          <label className="mb-1 block text-xs font-medium text-zinc-600">ประเภทงาน</label>
-          <SegmentedControl options={FLOW_OPTIONS} value={flow} onChange={setFlow} />
+          {/* span + role="group" แทน <label> — SegmentedControl เป็นกลุ่มปุ่ม ไม่ใช่ form control */}
+          <span id="edit-template-flow-label" className="mb-1 block text-xs font-medium text-zinc-600">ประเภทงาน</span>
+          <SegmentedControl options={FLOW_OPTIONS} value={flow} onChange={setFlow} ariaLabelledby="edit-template-flow-label" />
         </div>
 
         {flow === 'news_youtube' && (
           <div>
-            <label className="mb-1 block text-xs font-medium text-zinc-600">ขอบเขต</label>
-            <SegmentedControl options={SCOPE_OPTIONS} value={scope} onChange={setScope} />
+            <span id="edit-template-scope-label" className="mb-1 block text-xs font-medium text-zinc-600">ขอบเขต</span>
+            <SegmentedControl options={SCOPE_OPTIONS} value={scope} onChange={setScope} ariaLabelledby="edit-template-scope-label" />
           </div>
         )}
 

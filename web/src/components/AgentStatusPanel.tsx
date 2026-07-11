@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react'
 import { api } from '../api/client'
 import type { ActiveAgentStatusDTO } from '../api/types'
+import { flowLabel } from '../lib/flows'
+import { usePageVisibility } from '../hooks/usePageVisibility'
 
 const POLL_INTERVAL_MS = 4000
 
@@ -17,14 +19,15 @@ const AGENT_ROSTER: { label: string; nodeKeys: string[] }[] = [
   { label: 'Bookkeeper', nodeKeys: ['bookkeeper'] },
 ]
 
-const FLOW_LABEL: Record<string, string> = {
-  news_youtube: 'News/YouTube',
-}
 
 export default function AgentStatusPanel() {
   const [status, setStatus] = useState<ActiveAgentStatusDTO | null>(null)
+  const isPageVisible = usePageVisibility()
 
   useEffect(() => {
+    // หยุด poll ตอน tab ถูกซ่อน — ไม่มีใครเห็น sidebar อยู่แล้ว ประหยัด request ฝั่ง backend
+    // พอกลับมา visible effect รันใหม่และยิง poll ทันที (ไม่ต้องรอ interval รอบแรก)
+    if (!isPageVisible) return
     let cancelled = false
 
     function poll() {
@@ -44,7 +47,7 @@ export default function AgentStatusPanel() {
       cancelled = true
       window.clearInterval(timer)
     }
-  }, [])
+  }, [isPageVisible])
 
   const running = status?.running ?? false
   const isOtherFlow = running && status?.flow !== 'manager'
@@ -57,7 +60,7 @@ export default function AgentStatusPanel() {
         {isOtherFlow && (
           <div className="mb-1.5 flex items-center gap-1.5 rounded-md border border-amber-200 bg-amber-50 px-2 py-1 text-[11px] text-amber-800">
             <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-amber-500" />
-            Running: {FLOW_LABEL[status?.flow ?? ''] ?? status?.flow}
+            Running: {flowLabel(status?.flow ?? '')}
           </div>
         )}
 

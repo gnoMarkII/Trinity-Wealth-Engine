@@ -7,11 +7,17 @@ interface Props {
   options: Option[]
   value: string
   onChange: (value: string) => void
+  /** id ของ element ที่เป็นชื่อกลุ่ม (แทน <label> ซึ่งใช้ไม่ได้เพราะปุ่มไม่ใช่ form control) */
+  ariaLabelledby?: string
 }
 
-export default function SegmentedControl({ options, value, onChange }: Props) {
+export default function SegmentedControl({ options, value, onChange, ariaLabelledby }: Props) {
   return (
-    <div className="flex w-fit gap-1 rounded-xl border border-sky-200 bg-white/75 p-1 shadow-sm shadow-sky-100/60">
+    <div
+      role="group"
+      aria-labelledby={ariaLabelledby}
+      className="flex w-fit gap-1 rounded-xl border border-sky-200 bg-white/75 p-1 shadow-sm shadow-sky-100/60"
+    >
       {options.map((opt) => (
         <button
           key={opt.key}

@@ -4,7 +4,6 @@ import type {
   JobStatusDTO,
   KanbanCardDTO,
   MacroDashboardDTO,
-  PortfolioDTO,
 } from './types'
 
 export class ApiError extends Error {
@@ -57,8 +56,6 @@ export const api = {
     }),
 
   logout: () => request<{ ok: boolean }>('/api/auth/logout', { method: 'POST' }),
-
-  getPortfolio: () => request<PortfolioDTO>('/api/portfolio/latest'),
 
   getMacroDashboard: () => request<MacroDashboardDTO>('/api/macro/dashboard'),
 

@@ -19,9 +19,10 @@ function pointPosition(points: MacroSeriesPointDTO[], index: number): { x: numbe
   const min = Math.min(...values)
   const max = Math.max(...values)
   const span = max - min || Math.max(Math.abs(max) * 0.1, 1)
+  const value = points[index]?.value ?? min
   return {
     x: marginX + (index / Math.max(points.length - 1, 1)) * (width - marginX * 2),
-    y: height - marginY - ((points[index].value - min) / span) * (height - marginY * 2),
+    y: height - marginY - ((value - min) / span) * (height - marginY * 2),
   }
 }
 
@@ -165,28 +166,6 @@ export default function MacroIndicatorPanel({ indicators }: Props) {
       </div>
 
       <div className="space-y-4">
-        <div className="hidden">
-          {indicators.map((indicator) => {
-            const isSelected = indicator.indicator_id === selected.indicator_id
-            return (
-              <button
-                key={indicator.indicator_id}
-                onClick={() => setSelectedId(indicator.indicator_id)}
-                aria-pressed={isSelected}
-                className={`rounded-xl border p-3 text-left transition-colors ${
-                  isSelected ? 'border-zinc-900 bg-zinc-900 text-white shadow-sm' : 'border-zinc-200 bg-white hover:border-zinc-400'
-                }`}
-              >
-                <div className={`text-xs font-semibold ${isSelected ? 'text-zinc-200' : 'text-zinc-900'}`}>{indicator.label}</div>
-                <div className="mt-1 flex items-end justify-between gap-2">
-                  <span className={`font-mono text-sm font-bold ${isSelected ? 'text-white' : 'text-zinc-700'}`}>{indicator.display_value || '—'}</span>
-                  {!indicator.is_valid && <span className="text-[10px] font-semibold text-amber-600">STALE</span>}
-                </div>
-              </button>
-            )
-          })}
-        </div>
-
         <div className="rounded-xl border border-zinc-200 bg-zinc-50/70 p-4">
           <div className="flex flex-wrap items-start justify-between gap-2">
             <div>
@@ -243,8 +222,8 @@ export default function MacroIndicatorPanel({ indicators }: Props) {
                   })}
                 </svg>
                 <div className="flex justify-between text-[11px] text-zinc-400">
-                  <span>{dateLabel(chartPoints[0].observed_at)}</span>
-                  <span>{dateLabel(chartPoints[chartPoints.length - 1].observed_at)}</span>
+                  <span>{dateLabel(chartPoints[0]?.observed_at ?? '')}</span>
+                  <span>{dateLabel(chartPoints[chartPoints.length - 1]?.observed_at ?? '')}</span>
                 </div>
               </div>
             )}

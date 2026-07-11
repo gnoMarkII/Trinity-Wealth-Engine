@@ -1,19 +1,13 @@
 import { useEffect, useRef, useState } from 'react'
 import type { QuickTemplate } from '../../lib/quickTemplateStorage'
 import Button from '../ui/Button'
+import { flowLabel } from '../../lib/flows'
 
 interface Props {
   quickTemplates: QuickTemplate[]
   onQuickCreate: (label: string, instruction: string, flow: string, scope: string) => void
   onOpenCustomModal: () => void
   onEditTemplate: (index: number) => void
-}
-
-// label หมวดต่อ flow — เพิ่ม flow ใหม่ในอนาคตแค่เพิ่ม entry ที่นี่ที่เดียว ถ้าไม่เจอ key
-// จะ fallback ไปโชว์ flow ดิบแทน (ไม่มีทาง "หาย" ไปจาก dropdown)
-const CATEGORY_LABEL: Record<string, string> = {
-  manager: 'Macro',
-  news_youtube: 'News/YouTube',
 }
 
 interface IndexedTemplate extends QuickTemplate {
@@ -25,7 +19,7 @@ function groupByFlow(templates: QuickTemplate[]): { flow: string; label: string;
   templates.forEach((t, index) => {
     let group = groups.find((g) => g.flow === t.flow)
     if (!group) {
-      group = { flow: t.flow, label: CATEGORY_LABEL[t.flow] ?? t.flow, items: [] }
+      group = { flow: t.flow, label: flowLabel(t.flow), items: [] }
       groups.push(group)
     }
     group.items.push({ ...t, index })

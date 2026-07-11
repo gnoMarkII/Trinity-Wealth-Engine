@@ -1,10 +1,11 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState } from 'react'
 import type { MacroDashboardDTO } from '../api/types'
 import {
   enrichIndicator,
   enrichSourceFile,
   type IndicatorCategory,
 } from '../lib/macroReferences'
+import { useFocusTrap } from '../hooks/useFocusTrap'
 
 interface Props {
   data: MacroDashboardDTO
@@ -44,20 +45,9 @@ const CATEGORY_STYLES: Record<IndicatorCategory, { bg: string; text: string; bor
 
 export default function MacroReferenceDrawer({ data, isOpen, onClose }: Props) {
   const [activeTab, setActiveTab] = useState<TabKey>('observables')
-  const closeButtonRef = useRef<HTMLButtonElement>(null)
-
-  useEffect(() => {
-    if (isOpen) closeButtonRef.current?.focus()
-  }, [isOpen])
-
-  useEffect(() => {
-    if (!isOpen) return
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose()
-    }
-    window.addEventListener('keydown', handleKeyDown)
-    return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [isOpen, onClose])
+  // focus trap ร่วมกับ Modal — เดิม drawer มีแค่ Escape + โฟกัสปุ่มปิด แต่ Tab ยังหลุด
+  // ออกไปหน้า background ที่ถูก backdrop บังอยู่ได้
+  const panelRef = useFocusTrap<HTMLDivElement>(isOpen, onClose)
 
   if (!isOpen) return null
 
@@ -86,8 +76,9 @@ export default function MacroReferenceDrawer({ data, isOpen, onClose }: Props) {
 
   return (
     <div className="fixed inset-0 z-50 overflow-hidden">
-      {/* Backdrop */}
+      {/* Backdrop — ฉากหลังตกแต่ง ปิดด้วยคลิกสำหรับ mouse user (คีย์บอร์ดใช้ Escape) */}
       <div
+        aria-hidden="true"
         className="animate-fade-in fixed inset-0 bg-black/40 backdrop-blur-sm transition-opacity"
         onClick={onClose}
       />
@@ -95,6 +86,7 @@ export default function MacroReferenceDrawer({ data, isOpen, onClose }: Props) {
       {/* Slide-over Panel */}
       <div className="fixed inset-y-0 right-0 flex max-w-full pl-10">
         <div
+          ref={panelRef}
           role="dialog"
           aria-modal="true"
           aria-labelledby="macro-reference-drawer-title"
@@ -114,7 +106,6 @@ export default function MacroReferenceDrawer({ data, isOpen, onClose }: Props) {
               </div>
             </div>
             <button
-              ref={closeButtonRef}
               onClick={onClose}
               className="rounded-lg bg-zinc-800 px-3 py-1.5 text-xs font-medium text-zinc-300 transition-colors hover:bg-zinc-700 hover:text-white"
             >

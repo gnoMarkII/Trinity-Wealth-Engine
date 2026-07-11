@@ -4,8 +4,8 @@ export default {
   theme: {
     extend: {
       colors: {
-        // Terracotta accent palette — single source of truth แทน arbitrary value
-        // bg-[#924A2E] ที่เคยกระจายอยู่ทั่ว component (sync กับ CSS vars ใน index.css)
+        // Accent palette (sky blue ตามธีม Flow ปัจจุบัน) — ชื่อ "terra" เป็นมรดกจากธีม
+        // terracotta เดิม คงชื่อไว้เพราะ class กระจายทั่ว component; ค่าสีจริงคือ sky/cyan
         terra: {
           DEFAULT: '#0EA5E9',
           dark: '#0284C7',
