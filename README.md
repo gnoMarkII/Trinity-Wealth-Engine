@@ -197,6 +197,15 @@ npm run dev
 
 เปิด `http://localhost:5173` แล้ว login ด้วย `WEBUI_PASSWORD` — รายละเอียดเพิ่มเติมดูที่ [`web/README.md`](web/README.md)
 
+**การรันแบบ production (process เดียว):** build frontend แล้วให้ FastAPI เสิร์ฟเอง
+
+```bash
+cd web && npm run build && cd ..
+uv run uvicorn api.main:app
+```
+
+เปิด `http://localhost:8000` ได้เลย — backend เสิร์ฟ `web/dist/` พร้อม SPA fallback ให้ deep link เช่น `/kanban` ทำงานได้ (mount อัตโนมัติเฉพาะเมื่อ `web/dist/` มีอยู่)
+
 ---
 
 ## ตัวอย่างการใช้งาน
@@ -342,7 +351,7 @@ invest-agents/
 uv run python -m pytest tests/ -q
 ```
 
-ปัจจุบันมี **633 tests** ครอบคลุม: PII, Portfolio lifecycle, Market tools (TH/US), Retry logic, Atomic writes, Agent logging, Knowledge tools, Strategic Allocator guardrails/retry loop, Integration test แบบ E2E และ Web UI backend (`tests/api/`)
+ปัจจุบันมี **633 tests** ฝั่ง Python ครอบคลุม: PII, Portfolio lifecycle, Market tools (TH/US), Retry logic, Atomic writes, Agent logging, Knowledge tools, Strategic Allocator guardrails/retry loop, Integration test แบบ E2E และ Web UI backend (`tests/api/`) — ฝั่ง frontend มี **Vitest + Testing Library** อีกชุด (รัน `npm test` ใน `web/`; ดู [`web/README.md`](web/README.md))
 
 ---
 
