@@ -1,3 +1,4 @@
+// @vitest-environment node — test ล้วนๆ ไม่แตะ DOM ข้าม jsdom ให้รันเร็วขึ้น
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { api, ApiError, setUnauthorizedHandler } from './client'
 

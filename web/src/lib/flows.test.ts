@@ -1,3 +1,4 @@
+// @vitest-environment node — test ล้วนๆ ไม่แตะ DOM ข้าม jsdom ให้รันเร็วขึ้น
 import { describe, expect, it } from 'vitest'
 import { FLOW_LABEL, FLOW_OPTIONS, FLOW_TAG, SCOPE_OPTIONS, flowLabel } from './flows'
 

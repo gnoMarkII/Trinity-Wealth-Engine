@@ -43,6 +43,11 @@ def test_default_run_fn_news_youtube_flow_resumes_and_completes(tmp_path, monkey
     monkeypatch.setattr("tools.macro.news_radar.get_news_candidates", lambda max_items=15: _fake_news_candidates())
     monkeypatch.setattr("tools.knowledge.youtube_monitor.get_youtube_candidates", lambda lookback_days=30: _fake_youtube_candidates())
     monkeypatch.setattr("agents.news_youtube_flow._save_ingested_content", lambda content: "saved OK")
+    # กัน jobs.py เรียก LLM จริงตอน job จบ (_append_manager_summary) — เดิม test นี้
+    # order-dependent: รันเดี่ยวผ่านเพราะ .env ยังไม่ถูกโหลด (LLM fail → None) แต่รันทั้ง
+    # suite แล้ว test อื่น import api.main → load_dotenv() → มี API key จริง → ยิง LLM จริง
+    # ทุกครั้ง (เปลืองเงิน) แล้ว summary มาต่อท้าย log ทำให้ logs[-1] ไม่ใช่บรรทัด ingest
+    monkeypatch.setattr("agents.manager_agent.generate_manager_summary", lambda instruction, deliverables: None)
 
     class _FakeIngestTool:
         def invoke(self, args):
