@@ -24,7 +24,7 @@ export default function RegimeProbabilityChart({ probabilities }: Props) {
   )
 
   return (
-    <div className="space-y-3 rounded-xl border border-sky-100 bg-white/80 p-4 shadow-[0_8px_26px_rgba(14,165,233,0.05)] backdrop-blur-sm">
+    <div className="space-y-3 rounded-xl border border-sky-100 bg-panel p-4 shadow-[0_8px_26px_rgba(14,165,233,0.05)] backdrop-blur-sm">
       {names.map((name, i) => {
         const value = probabilities[name] ?? 0
         const pct = Math.round(value * 100)

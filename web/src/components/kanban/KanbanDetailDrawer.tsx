@@ -20,7 +20,7 @@ const MAX_WIDTH = 720
 const KanbanCardOutputs = lazy(() => import('./KanbanCardOutputs'))
 
 function OutputsFallback() {
-  return <div className="animate-shimmer h-36 rounded-xl border border-zinc-200/80" />
+  return <div className="animate-shimmer h-36 rounded-xl border border-edge" />
 }
 
 function loadStoredWidth(): number {
@@ -135,13 +135,13 @@ export default function KanbanDetailDrawer({ card, onClose, onCardTransition }: 
           e.preventDefault()
           setResizing(true)
         }}
-        className={`group -ml-1.5 w-3 shrink-0 cursor-col-resize touch-none ${resizing ? 'bg-terra-light/20' : ''}`}
+        className={`group -ml-1.5 w-3 shrink-0 cursor-col-resize touch-none ${resizing ? 'bg-sky-400/20' : ''}`}
       >
-        <div className="mx-auto h-full w-px bg-zinc-200 transition-colors group-hover:bg-terra-light/60" />
+        <div className="mx-auto h-full w-px bg-zinc-200 transition-colors group-hover:bg-sky-400/60" />
       </div>
 
       <div className="flex min-w-0 flex-1 flex-col">
-        <div className="flex shrink-0 items-center justify-between border-b border-zinc-200 px-4 py-3">
+        <div className="flex shrink-0 items-center justify-between border-b border-edge px-4 py-3">
           {card ? (
             <div className="flex items-center gap-2">
               {card.display_seq != null && (
@@ -157,7 +157,7 @@ export default function KanbanDetailDrawer({ card, onClose, onCardTransition }: 
           {card && (
             <button
               onClick={onClose}
-              className="rounded p-1 text-zinc-400 transition-colors hover:bg-zinc-100 hover:text-zinc-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-terra"
+              className="rounded p-1 text-zinc-400 transition-colors hover:bg-surface-strong hover:text-zinc-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-sky-500"
               title="ยกเลิกการเลือก"
               aria-label="ยกเลิกการเลือก"
             >
@@ -183,7 +183,7 @@ export default function KanbanDetailDrawer({ card, onClose, onCardTransition }: 
                   สร้างเมื่อ {new Date(card.created_at * 1000).toLocaleString('th-TH')}
                 </p>
                 {card.prompt && (
-                  <p className="mt-2 whitespace-pre-wrap rounded-lg border border-zinc-200 bg-surface p-2 text-xs text-zinc-600">
+                  <p className="mt-2 whitespace-pre-wrap rounded-lg border border-edge bg-surface p-2 text-xs text-zinc-600">
                     {card.prompt}
                   </p>
                 )}
@@ -200,7 +200,7 @@ export default function KanbanDetailDrawer({ card, onClose, onCardTransition }: 
                           onStatusChange={handleOutputsStatusChange}
                         />
                       </Suspense>
-                      <details className="rounded-xl border border-zinc-200 bg-surface p-3">
+                      <details className="rounded-xl border border-edge bg-surface p-3">
                         <summary className="cursor-pointer text-xs font-medium text-zinc-600">Execution trace</summary>
                         <div className="mt-3">
                           <LiveTerminal
@@ -236,7 +236,7 @@ export default function KanbanDetailDrawer({ card, onClose, onCardTransition }: 
                   )}
                 </div>
               ) : (
-                <p className="rounded-lg border border-zinc-200 bg-surface p-3 text-xs text-zinc-500">
+                <p className="rounded-lg border border-edge bg-surface p-3 text-xs text-zinc-500">
                   การ์ดนี้ยังไม่ได้ถูก dispatch — กดปุ่ม ▶ บนการ์ดใน Backlog เพื่อเริ่มทำงาน
                 </p>
               )}

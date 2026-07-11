@@ -13,7 +13,7 @@ import { stanceCategory, type StanceCategory } from '../lib/stance'
 const STANCE_CLASS: Record<StanceCategory, string> = {
   overweight: 'bg-emerald-50 text-emerald-700 border-emerald-200',
   underweight: 'bg-red-50 text-red-700 border-red-200',
-  neutral: 'bg-zinc-100 text-zinc-700 border-zinc-200',
+  neutral: 'bg-surface-strong text-zinc-700 border-edge',
 }
 
 function stanceClass(stance: string): string {
@@ -25,11 +25,11 @@ function confidenceBadgeClass(confidence: string): string {
   if (c === 'high') return 'border-emerald-200 bg-emerald-50 text-emerald-700'
   if (c === 'medium') return 'border-amber-200 bg-amber-50 text-amber-700'
   if (c === 'low') return 'border-red-200 bg-red-50 text-red-700'
-  return 'border-zinc-200 bg-surface text-zinc-600'
+  return 'border-edge bg-surface text-zinc-600'
 }
 
 const cardClass =
-  'space-y-3 rounded-xl border border-sky-100 bg-white/80 p-4 shadow-[0_8px_26px_rgba(14,165,233,0.05)] backdrop-blur-sm transition-all duration-150 hover:border-sky-200 hover:shadow-md'
+  'space-y-3 rounded-xl border border-sky-100 bg-panel p-4 shadow-[0_8px_26px_rgba(14,165,233,0.05)] backdrop-blur-sm transition-all duration-150 hover:border-sky-200 hover:shadow-md'
 
 type StanceFilter = 'all' | 'overweight' | 'underweight' | 'neutral'
 
@@ -65,14 +65,14 @@ export default function Macro() {
   if (!data) {
     return (
       <div className="animate-page-in space-y-6 pb-10">
-        <div className="animate-shimmer h-40 rounded-2xl border border-zinc-200/80" />
+        <div className="animate-shimmer h-40 rounded-2xl border border-edge" />
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
           <div className="space-y-6 lg:col-span-5">
-            <div className="animate-shimmer h-64 rounded-xl border border-zinc-200/80" />
-            <div className="animate-shimmer h-40 rounded-xl border border-zinc-200/80" />
+            <div className="animate-shimmer h-64 rounded-xl border border-edge" />
+            <div className="animate-shimmer h-40 rounded-xl border border-edge" />
           </div>
           <div className="space-y-6 lg:col-span-7">
-            <div className="animate-shimmer h-96 rounded-xl border border-zinc-200/80" />
+            <div className="animate-shimmer h-96 rounded-xl border border-edge" />
           </div>
         </div>
       </div>
@@ -103,11 +103,11 @@ export default function Macro() {
                 </span>
               )}
               {data.quant_narrative_alignment && (
-                <span className="rounded-lg border border-zinc-200 bg-white px-2.5 py-1 text-xs font-medium text-zinc-700">
+                <span className="rounded-lg border border-edge bg-panel px-2.5 py-1 text-xs font-medium text-zinc-700">
                   Alignment: {data.quant_narrative_alignment}
                 </span>
               )}
-              <span className="rounded-lg border border-zinc-200 bg-white px-2.5 py-1 text-xs font-medium text-zinc-600">
+              <span className="rounded-lg border border-edge bg-panel px-2.5 py-1 text-xs font-medium text-zinc-600">
                 Horizon: {data.time_horizon}
               </span>
             </div>
@@ -122,7 +122,7 @@ export default function Macro() {
                 {data.focus_themes.map((theme, i) => (
                   <span
                     key={i}
-                    className="rounded-full border border-zinc-200 bg-zinc-100/80 px-2.5 py-0.5 text-xs font-medium text-zinc-700"
+                    className="rounded-full border border-edge bg-surface-strong px-2.5 py-0.5 text-xs font-medium text-zinc-700"
                   >
                     {theme}
                   </span>
@@ -134,7 +134,7 @@ export default function Macro() {
           <div className="flex flex-col items-end justify-between gap-2">
             <button
               onClick={() => setIsRefDrawerOpen(true)}
-              className="flex items-center gap-1.5 rounded-xl border border-zinc-200 bg-white px-3.5 py-2 text-xs font-semibold text-zinc-800 shadow-sm transition-all hover:bg-zinc-50 hover:shadow"
+              className="flex items-center gap-1.5 rounded-xl border border-edge bg-panel px-3.5 py-2 text-xs font-semibold text-zinc-800 shadow-sm transition-all hover:bg-surface-strong hover:shadow"
             >
               <span>📚</span>
               <span>แหล่งอ้างอิงข้อมูล (References)</span>
@@ -162,13 +162,13 @@ export default function Macro() {
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
         {/* Left Column: Macro & Regime Analysis */}
         <div className="space-y-6 lg:col-span-5">
-          <div className="rounded-xl border border-zinc-200/80 bg-white p-5 shadow-sm shadow-black/5">
+          <div className="rounded-xl border border-edge bg-panel p-5 shadow-sm shadow-black/5">
             <h2 className="mb-4 text-base font-semibold text-zinc-900">Regime Probabilities</h2>
             <RegimeProbabilityChart probabilities={data.regime_probabilities} />
           </div>
 
           {data.key_assumptions && data.key_assumptions.length > 0 && (
-            <div className="rounded-xl border border-zinc-200/80 bg-white p-5 shadow-sm shadow-black/5">
+            <div className="rounded-xl border border-edge bg-panel p-5 shadow-sm shadow-black/5">
               <h2 className="mb-3 text-base font-semibold text-zinc-900">Key Macro Assumptions</h2>
               <ul className="space-y-2 text-sm text-zinc-600">
                 {data.key_assumptions.map((assumption, idx) => (
@@ -182,11 +182,11 @@ export default function Macro() {
           )}
 
           {data.regime_evidence.length > 0 && (
-            <div className="rounded-xl border border-zinc-200/80 bg-white p-5 shadow-sm shadow-black/5">
+            <div className="rounded-xl border border-edge bg-panel p-5 shadow-sm shadow-black/5">
               <h2 className="mb-3 text-base font-semibold text-zinc-900">5-Dimension Evidence</h2>
               <div className="space-y-3">
                 {data.regime_evidence.map((re, idx) => (
-                  <div key={idx} className="rounded-lg border border-zinc-100 bg-zinc-50/60 p-3">
+                  <div key={idx} className="rounded-lg border border-edge bg-zinc-50/60 p-3">
                     <div className="flex items-center justify-between gap-2">
                       <span className="text-xs font-semibold uppercase tracking-wide text-zinc-800">
                         {re.dimension}
@@ -212,14 +212,14 @@ export default function Macro() {
             </div>
           )}
 
-          <div className="rounded-xl border border-zinc-200/80 bg-white p-5 shadow-sm shadow-black/5">
+          <div className="rounded-xl border border-edge bg-panel p-5 shadow-sm shadow-black/5">
             <h2 className="mb-3 text-base font-semibold text-zinc-900">Liquidity & Structural Rate</h2>
             <TradingViewMiniWidget symbol="TVC:US10Y" title="US 10-Year Treasury Yield" />
           </div>
 
           {/* Hedging / Tail Risk Scenarios Section */}
           {riskScenarios.length > 0 && (
-            <div className="content-auto rounded-xl border border-zinc-200/80 bg-white p-5 shadow-sm shadow-black/5">
+            <div className="content-auto rounded-xl border border-edge bg-panel p-5 shadow-sm shadow-black/5">
               <h2 className="text-balance mb-1 text-base font-semibold text-zinc-900">Hedging & Tail Risk Scenarios</h2>
               <p className="text-pretty mb-4 text-xs text-zinc-500">แผนป้องกันความเสี่ยงและเงื่อนไขการเปิด/ปิดสถานะป้องกัน</p>
               <div className="grid grid-cols-1 gap-4">
@@ -245,7 +245,7 @@ export default function Macro() {
                     </div>
 
                     {rs.early_warning_indicators && rs.early_warning_indicators.length > 0 && (
-                      <div className="space-y-1 rounded-lg bg-zinc-50 p-2 text-xs text-zinc-600">
+                      <div className="space-y-1 rounded-lg bg-surface p-2 text-xs text-zinc-600">
                         <span className="font-semibold text-zinc-700">Early Warning Indicators:</span>
                         <ul className="list-inside list-disc">
                           {rs.early_warning_indicators.map((ewi, k) => (
@@ -276,13 +276,13 @@ export default function Macro() {
         {/* Right Column: Strategic Allocation & Action Plan */}
         <div className="space-y-6 lg:col-span-7">
           {/* Cross-Asset Allocation Section */}
-          <div className="rounded-xl border border-zinc-200/80 bg-white p-5 shadow-sm shadow-black/5">
+          <div className="rounded-xl border border-edge bg-panel p-5 shadow-sm shadow-black/5">
             <div className="mb-4 flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
               <div>
                 <h2 className="text-balance text-base font-semibold text-zinc-900">Cross-Asset Allocation Strategy</h2>
                 <p className="text-pretty text-xs text-zinc-500">คำแนะนำจัดสรรสัดส่วนสินทรัพย์ตามภาพรวมสภาวะเศรษฐกิจ</p>
               </div>
-              <div className="flex w-fit gap-1 rounded-lg border border-zinc-200 bg-zinc-50 p-1">
+              <div className="flex w-fit gap-1 rounded-lg border border-edge bg-surface p-1">
                 {STANCE_FILTER_TABS.map((t) => (
                   <button
                     key={t.key}
@@ -301,7 +301,7 @@ export default function Macro() {
             </div>
 
             {assetAllocations.length > 0 && (
-              <div className="mb-5 rounded-xl border border-zinc-200/80 bg-zinc-50/50 p-4">
+              <div className="mb-5 rounded-xl border border-edge bg-surface p-4">
                 <PortfolioStanceBar allocations={assetAllocations} />
               </div>
             )}
@@ -335,7 +335,7 @@ export default function Macro() {
                   </div>
 
                   {a.supporting_data.length > 0 && (
-                    <ul className="space-y-1 rounded-lg bg-zinc-50 p-2.5 text-xs text-zinc-600">
+                    <ul className="space-y-1 rounded-lg bg-surface p-2.5 text-xs text-zinc-600">
                       {a.supporting_data.map((sd, j) => (
                         <li key={j} className="flex items-center gap-1.5">
                           <span className="h-1 w-1 rounded-full bg-zinc-400" />
@@ -359,7 +359,7 @@ export default function Macro() {
 
           {/* Tactical Pair Trades Section */}
           {pairTrades.length > 0 && (
-            <div className="content-auto rounded-xl border border-zinc-200/80 bg-white p-5 shadow-sm shadow-black/5">
+            <div className="content-auto rounded-xl border border-edge bg-panel p-5 shadow-sm shadow-black/5">
               <h2 className="text-balance mb-1 text-base font-semibold text-zinc-900">Tactical Pair Trades</h2>
               <p className="text-pretty mb-4 text-xs text-zinc-500">กลยุทธ์จับคู่ Long/Short เพื่อสร้างผลตอบแทนสัมพันธ์กับสภาวะตลาด</p>
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -371,7 +371,7 @@ export default function Macro() {
                         <span className="text-red-600">{pt.short_leg}</span>
                       </h3>
                       {pt.confidence && (
-                        <span className="rounded-md bg-zinc-100 px-2 py-0.5 text-[10px] font-semibold text-zinc-700">
+                        <span className="rounded-md bg-surface-strong px-2 py-0.5 text-[10px] font-semibold text-zinc-700">
                           {pt.confidence}
                         </span>
                       )}
@@ -384,7 +384,7 @@ export default function Macro() {
                       </div>
                     )}
 
-                    <div className="space-y-1 rounded-lg bg-zinc-50 p-2.5 text-xs text-zinc-600">
+                    <div className="space-y-1 rounded-lg bg-surface p-2.5 text-xs text-zinc-600">
                       {pt.catalyst && <div><span className="font-semibold text-zinc-800">Catalyst:</span> {pt.catalyst}</div>}
                       {pt.risk && <div><span className="font-semibold text-zinc-800">Key Risk:</span> {pt.risk}</div>}
                       {pt.entry_trigger && <div><span className="font-semibold text-zinc-800">Entry Trigger:</span> {pt.entry_trigger}</div>}
@@ -398,7 +398,7 @@ export default function Macro() {
                     </div>
 
                     {pt.supporting_data.length > 0 && (
-                      <ul className="space-y-1 rounded-lg bg-zinc-50/80 p-2 text-xs text-zinc-500">
+                      <ul className="space-y-1 rounded-lg bg-surface p-2 text-xs text-zinc-500">
                         {pt.supporting_data.map((sd, j) => (
                           <li key={j} className="flex items-center gap-1.5">
                             <span className="h-1 w-1 rounded-full bg-zinc-400" />
@@ -420,7 +420,7 @@ export default function Macro() {
       {/* Floating Right Side Tab Button */}
       <button
         onClick={() => setIsRefDrawerOpen(true)}
-        className="fixed right-0 top-1/3 z-40 flex items-center gap-2 rounded-l-xl border-y border-l border-zinc-300 bg-zinc-900 px-3 py-3.5 text-xs font-semibold text-white shadow-xl transition-all hover:bg-zinc-800 hover:pl-4"
+        className="fixed right-0 top-1/3 z-40 flex items-center gap-2 rounded-l-xl border-y border-l border-edge bg-zinc-900 px-3 py-3.5 text-xs font-semibold text-white shadow-xl transition-all hover:bg-zinc-800 hover:pl-4"
         title="เปิดแท็บแหล่งอ้างอิงและตัวชี้วัด (Reference Drawer)"
       >
         <span className="text-sm">📚</span>

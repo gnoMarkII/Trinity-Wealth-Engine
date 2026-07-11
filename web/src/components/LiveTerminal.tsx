@@ -113,8 +113,8 @@ export default function LiveTerminal({ jobId, onStatusChange, onNodeUpdate, onAw
   const steps = groupIntoSteps(lines)
 
   return (
-    <div className="rounded-xl border border-zinc-200 bg-surface shadow-sm shadow-black/5">
-      <div className="flex items-center justify-between border-b border-zinc-200 px-3 py-2">
+    <div className="rounded-xl border border-edge bg-surface shadow-sm shadow-black/5">
+      <div className="flex items-center justify-between border-b border-edge px-3 py-2">
         <span className="font-mono text-xs text-zinc-500">Live Execution Terminal</span>
         <span className={`flex items-center gap-1.5 font-mono text-xs ${statusColor}`}>
           {status === 'streaming' && (

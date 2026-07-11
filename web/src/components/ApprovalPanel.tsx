@@ -62,7 +62,7 @@ export default function ApprovalPanel({ payload, onApprove, submitting }: Props)
             <button
               type="button"
               onClick={() => toggleAll(visibleNews, selectedNews, setSelectedNews)}
-              className="text-xs font-medium text-terra hover:underline"
+              className="text-xs font-medium text-sky-700 hover:underline"
             >
               {visibleNews.every((n) => selectedNews.has(n.link)) ? 'ยกเลิกทั้งหมด' : 'เลือกทั้งหมด'}
             </button>
@@ -70,17 +70,17 @@ export default function ApprovalPanel({ payload, onApprove, submitting }: Props)
           <ul className="space-y-1.5">
             {visibleNews.map((n) => (
               <li key={n.link}>
-                <label className="flex cursor-pointer items-start gap-2 rounded-lg border border-zinc-200 bg-white p-2 text-xs text-zinc-700 hover:border-zinc-300">
+                <label className="flex cursor-pointer items-start gap-2 rounded-lg border border-edge bg-panel p-2 text-xs text-zinc-700 hover:border-zinc-300">
                   <input
                     type="checkbox"
                     checked={selectedNews.has(n.link)}
                     onChange={() => toggle(selectedNews, setSelectedNews, n.link)}
-                    className="mt-0.5 accent-terra"
+                    className="mt-0.5 accent-sky-500"
                   />
                   <span>
                     <span className={n.is_fetched ? 'text-zinc-400 line-through' : 'text-zinc-800'}>{n.title}</span>{' '}
                     {n.is_fetched && (
-                      <span className="rounded border border-zinc-200 bg-surface px-1 py-0.5 text-[10px] text-zinc-500">
+                      <span className="rounded border border-edge bg-surface px-1 py-0.5 text-[10px] text-zinc-500">
                         อ่านแล้ว
                       </span>
                     )}{' '}
@@ -104,7 +104,7 @@ export default function ApprovalPanel({ payload, onApprove, submitting }: Props)
             <button
               type="button"
               onClick={() => toggleAll(visibleYoutube, selectedYoutube, setSelectedYoutube)}
-              className="text-xs font-medium text-terra hover:underline"
+              className="text-xs font-medium text-sky-700 hover:underline"
             >
               {visibleYoutube.every((v) => selectedYoutube.has(v.link)) ? 'ยกเลิกทั้งหมด' : 'เลือกทั้งหมด'}
             </button>
@@ -112,17 +112,17 @@ export default function ApprovalPanel({ payload, onApprove, submitting }: Props)
           <ul className="space-y-1.5">
             {visibleYoutube.map((v) => (
               <li key={v.link}>
-                <label className="flex cursor-pointer items-start gap-2 rounded-lg border border-zinc-200 bg-white p-2 text-xs text-zinc-700 hover:border-zinc-300">
+                <label className="flex cursor-pointer items-start gap-2 rounded-lg border border-edge bg-panel p-2 text-xs text-zinc-700 hover:border-zinc-300">
                   <input
                     type="checkbox"
                     checked={selectedYoutube.has(v.link)}
                     onChange={() => toggle(selectedYoutube, setSelectedYoutube, v.link)}
-                    className="mt-0.5 accent-terra"
+                    className="mt-0.5 accent-sky-500"
                   />
                   <span>
                     <span className={v.is_fetched ? 'text-zinc-400 line-through' : 'text-zinc-800'}>{v.title}</span>{' '}
                     {v.is_fetched && (
-                      <span className="rounded border border-zinc-200 bg-surface px-1 py-0.5 text-[10px] text-zinc-500">
+                      <span className="rounded border border-edge bg-surface px-1 py-0.5 text-[10px] text-zinc-500">
                         อ่านแล้ว
                       </span>
                     )}{' '}
@@ -148,7 +148,7 @@ export default function ApprovalPanel({ payload, onApprove, submitting }: Props)
       <button
         onClick={() => onApprove(Array.from(selectedNews), Array.from(selectedYoutube))}
         disabled={submitting}
-        className="rounded-lg bg-terra px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-terra-dark disabled:opacity-50"
+        className="rounded-lg bg-sky-500 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-sky-600 disabled:opacity-50"
       >
         {submitting ? 'กำลังส่ง...' : `อนุมัติและดำเนินการต่อ (${totalSelected} รายการ)`}
       </button>

@@ -45,7 +45,7 @@ export default function TradingViewMiniWidget({ symbol, title }: Props) {
   }, [symbol])
 
   return (
-    <div className="rounded-xl border border-zinc-200 bg-white p-2 shadow-sm shadow-black/5">
+    <div className="rounded-xl border border-edge bg-panel p-2 shadow-sm shadow-black/5">
       {title && <p className="mb-1 px-1 text-xs text-zinc-500">{title}</p>}
       <div ref={containerRef} style={{ height: 150 }} />
     </div>

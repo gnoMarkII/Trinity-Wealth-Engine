@@ -21,7 +21,7 @@ export default function MacroContentReferences({ references }: Props) {
   if (visibleReferences.length === 0) return null
 
   return (
-    <section className="rounded-2xl border border-zinc-200/80 bg-white p-5 shadow-sm shadow-black/5">
+    <section className="rounded-2xl border border-edge bg-panel p-5 shadow-sm shadow-black/5">
       <div className="mb-4">
         <p className="text-xs font-bold uppercase tracking-wider text-zinc-500">Related Content</p>
         <h2 className="mt-1 text-lg font-semibold text-zinc-900">ข่าวและวิดีโอที่ใช้ประกอบรายงาน</h2>
@@ -30,7 +30,7 @@ export default function MacroContentReferences({ references }: Props) {
         {visibleReferences.map((reference) => {
           const isYoutube = reference.kind === 'youtube'
           return (
-            <article key={reference.reference_id} className="overflow-hidden rounded-xl border border-zinc-200 bg-zinc-50/50">
+            <article key={reference.reference_id} className="overflow-hidden rounded-xl border border-edge bg-surface">
               {isYoutube && reference.thumbnail_url && (
                 <img src={reference.thumbnail_url} alt="" className="h-28 w-full object-cover" loading="lazy" />
               )}
@@ -59,11 +59,11 @@ export default function MacroContentReferences({ references }: Props) {
         <Modal
           titleId="youtube-preview-title"
           onClose={() => setActiveYoutube(null)}
-          panelClassName="max-w-3xl overflow-hidden rounded-xl bg-white shadow-2xl"
+          panelClassName="max-w-3xl overflow-hidden rounded-xl bg-panel shadow-2xl"
         >
-          <div className="flex items-center justify-between gap-4 border-b border-zinc-200 p-4">
+          <div className="flex items-center justify-between gap-4 border-b border-edge p-4">
             <h3 id="youtube-preview-title" className="text-sm font-semibold text-zinc-900">{activeYoutube.title}</h3>
-            <button onClick={() => setActiveYoutube(null)} className="rounded-md px-2 py-1 text-sm text-zinc-600 hover:bg-zinc-100">ปิด</button>
+            <button onClick={() => setActiveYoutube(null)} className="rounded-md px-2 py-1 text-sm text-zinc-600 hover:bg-surface-strong">ปิด</button>
           </div>
           <div className="aspect-video bg-black">
             {/* YouTube player ต้องการทั้ง allow-scripts + allow-same-origin ถึงจะเล่นได้

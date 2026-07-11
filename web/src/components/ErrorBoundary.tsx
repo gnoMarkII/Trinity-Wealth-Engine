@@ -33,7 +33,7 @@ export default class ErrorBoundary extends Component<Props, State> {
           </p>
           <button
             onClick={() => window.location.reload()}
-            className="rounded-lg bg-terra px-4 py-2 text-sm font-medium text-white transition-all duration-150 hover:bg-terra-dark active:scale-95"
+            className="rounded-lg bg-sky-500 px-4 py-2 text-sm font-medium text-white transition-all duration-150 hover:bg-sky-600 active:scale-95"
           >
             โหลดหน้าใหม่
           </button>

@@ -123,14 +123,14 @@ export default function MacroIndicatorPanel({ indicators }: Props) {
   const externalChart = externalChartUrl(selected)
 
   return (
-    <section className="rounded-2xl border border-zinc-200/80 bg-white p-5 shadow-sm shadow-black/5">
+    <section className="rounded-2xl border border-edge bg-panel p-5 shadow-sm shadow-black/5">
       <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
         <div>
           <p className="text-xs font-bold uppercase tracking-wider text-zinc-500">Key Macro Indicators</p>
           <h2 className="mt-1 text-lg font-semibold text-zinc-900">ตัวชี้วัดที่ใช้ประกอบการตัดสินใจ</h2>
           <p className="mt-1 text-xs text-zinc-500">เลือกตัวชี้วัดเพื่อดูประวัติจาก snapshot ของรายงานที่ตรวจสอบแล้ว</p>
         </div>
-        <div className="flex items-center gap-1 rounded-lg border border-zinc-200 bg-zinc-50 p-1" aria-label="ช่วงเวลาของกราฟ">
+        <div className="flex items-center gap-1 rounded-lg border border-edge bg-surface p-1" aria-label="ช่วงเวลาของกราฟ">
           {(Object.keys(RANGE_LABELS) as RangeKey[]).map((rangeKey) => (
             <button
               key={rangeKey}
@@ -146,14 +146,14 @@ export default function MacroIndicatorPanel({ indicators }: Props) {
         </div>
       </div>
 
-      <div className="mb-4 flex flex-wrap items-end justify-between gap-3 rounded-xl border border-zinc-200 bg-zinc-50/70 p-3">
+      <div className="mb-4 flex flex-wrap items-end justify-between gap-3 rounded-xl border border-edge bg-zinc-50/70 p-3">
         <label className="grid gap-1 text-xs font-semibold text-zinc-600" htmlFor="macro-indicator-select">
           เลือกตัวชี้วัด
           <select
             id="macro-indicator-select"
             value={selected.indicator_id}
             onChange={(event) => setSelectedId(event.target.value)}
-            className="min-w-60 rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm font-medium text-zinc-900 shadow-sm outline-none transition-colors focus:border-zinc-900"
+            className="min-w-60 rounded-lg border border-edge bg-panel px-3 py-2 text-sm font-medium text-zinc-900 shadow-sm outline-none transition-colors focus:border-zinc-900"
           >
             {indicators.map((indicator) => (
               <option key={indicator.indicator_id} value={indicator.indicator_id}>
@@ -166,7 +166,7 @@ export default function MacroIndicatorPanel({ indicators }: Props) {
       </div>
 
       <div className="space-y-4">
-        <div className="rounded-xl border border-zinc-200 bg-zinc-50/70 p-4">
+        <div className="rounded-xl border border-edge bg-zinc-50/70 p-4">
           <div className="flex flex-wrap items-start justify-between gap-2">
             <div>
               <h3 className="font-semibold text-zinc-900">{selected.label}</h3>
@@ -183,13 +183,13 @@ export default function MacroIndicatorPanel({ indicators }: Props) {
           )}
 
           <div className="mt-3 min-h-52">
-            {isLoading && <div className="animate-shimmer h-52 rounded-lg border border-zinc-200" />}
+            {isLoading && <div className="animate-shimmer h-52 rounded-lg border border-edge" />}
             {!isLoading && error && <p className="rounded-lg bg-red-50 p-3 text-xs text-red-700">{error}</p>}
             {!isLoading && !error && !selected.chart_available && (
-              <p className="rounded-lg border border-zinc-200 bg-white p-3 text-sm text-zinc-500">ตัวชี้วัดนี้ยังไม่มีข้อมูลเชิงตัวเลขสำหรับสร้างกราฟ</p>
+              <p className="rounded-lg border border-edge bg-panel p-3 text-sm text-zinc-500">ตัวชี้วัดนี้ยังไม่มีข้อมูลเชิงตัวเลขสำหรับสร้างกราฟ</p>
             )}
             {!isLoading && !error && selected.chart_available && chartPoints.length < 2 && (
-              <p className="rounded-lg border border-zinc-200 bg-white p-3 text-sm text-zinc-500">เริ่มเก็บข้อมูลแล้ว จะสร้างกราฟได้เมื่อมี snapshot รายงานอย่างน้อย 2 จุด</p>
+              <p className="rounded-lg border border-edge bg-panel p-3 text-sm text-zinc-500">เริ่มเก็บข้อมูลแล้ว จะสร้างกราฟได้เมื่อมี snapshot รายงานอย่างน้อย 2 จุด</p>
             )}
             {!isLoading && !error && chartPoints.length >= 2 && (
               <div>

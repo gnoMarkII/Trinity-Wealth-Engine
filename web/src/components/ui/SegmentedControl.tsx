@@ -16,7 +16,7 @@ export default function SegmentedControl({ options, value, onChange, ariaLabelle
     <div
       role="group"
       aria-labelledby={ariaLabelledby}
-      className="flex w-fit gap-1 rounded-xl border border-sky-200 bg-white/75 p-1 shadow-sm shadow-sky-100/60"
+      className="flex w-fit gap-1 rounded-xl border border-sky-200 bg-panel p-1 shadow-sm shadow-sky-100/60"
     >
       {options.map((opt) => (
         <button

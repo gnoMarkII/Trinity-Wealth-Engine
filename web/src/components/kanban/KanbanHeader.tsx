@@ -29,7 +29,7 @@ export default function KanbanHeader({
 }: Props) {
   return (
     <div className="flex flex-wrap items-center gap-3">
-      <div className="flex gap-1 rounded-xl border border-sky-200 bg-white/75 p-1 shadow-sm shadow-sky-100/60">
+      <div className="flex gap-1 rounded-xl border border-sky-200 bg-panel p-1 shadow-sm shadow-sky-100/60">
         {STATUS_TABS.map((t) => (
           <button
             key={t.key}
@@ -43,7 +43,7 @@ export default function KanbanHeader({
           </button>
         ))}
       </div>
-      <div className="flex gap-1 rounded-xl border border-sky-200 bg-white/75 p-1 shadow-sm shadow-sky-100/60">
+      <div className="flex gap-1 rounded-xl border border-sky-200 bg-panel p-1 shadow-sm shadow-sky-100/60">
         {FLOW_TABS.map((t) => (
           <button
             key={t.key}

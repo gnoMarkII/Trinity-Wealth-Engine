@@ -18,14 +18,14 @@ function severityClass(code: string | null): string {
   if (c.includes('STALE') || c.includes('DEFENSIVE') || c.includes('PENALTY') || c.includes('DOWNGRADE')) {
     return 'border-amber-200 bg-amber-50 text-amber-700'
   }
-  return 'border-zinc-200 bg-surface text-zinc-600'
+  return 'border-edge bg-surface text-zinc-600'
 }
 
 export default function WarningPanel({ warnings, compact }: Props) {
   if (warnings.length === 0) return null
 
   return (
-    <div className={compact ? 'space-y-1' : 'space-y-2 rounded-xl border border-zinc-200 bg-white p-4 shadow-sm shadow-black/5'}>
+    <div className={compact ? 'space-y-1' : 'space-y-2 rounded-xl border border-edge bg-panel p-4 shadow-sm shadow-black/5'}>
       {!compact && (
         <h3 className="text-sm font-semibold text-zinc-500">
           ⚠️ Guardrail Warnings ({warnings.length})

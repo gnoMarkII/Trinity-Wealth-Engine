@@ -68,7 +68,7 @@ export default function AddCardDropdown({
       {open && (
         <div
           role="menu"
-          className="animate-dropdown-in absolute right-0 top-full z-40 mt-1 w-64 rounded-lg border border-zinc-200 bg-white p-1.5 shadow-lg shadow-black/5"
+          className="animate-dropdown-in absolute right-0 top-full z-40 mt-1 w-64 rounded-lg border border-edge bg-panel p-1.5 shadow-lg shadow-black/5"
         >
           {groups.map((group) => (
             <div key={group.flow} className="mb-1 last:mb-0">
@@ -76,14 +76,14 @@ export default function AddCardDropdown({
                 {group.label}
               </p>
               {group.items.map((t) => (
-                <div key={t.label} className="group/item flex items-center rounded-md hover:bg-terra/10">
+                <div key={t.label} className="group/item flex items-center rounded-md hover:bg-sky-500/10">
                   <button
                     role="menuitem"
                     onClick={() => {
                       onQuickCreate(t.label, t.instruction, t.flow, t.scope)
                       setOpen(false)
                     }}
-                    className="block flex-1 truncate px-2 py-1.5 text-left text-xs text-zinc-700 group-hover/item:text-terra"
+                    className="block flex-1 truncate px-2 py-1.5 text-left text-xs text-zinc-700 group-hover/item:text-sky-500"
                   >
                     {t.label}
                   </button>
@@ -95,7 +95,7 @@ export default function AddCardDropdown({
                       onEditTemplate(t.index)
                       setOpen(false)
                     }}
-                    className="shrink-0 rounded px-1.5 py-1.5 text-zinc-400 opacity-0 transition-opacity hover:text-terra focus:opacity-100 focus-visible:opacity-100 group-hover/item:opacity-100"
+                    className="shrink-0 rounded px-1.5 py-1.5 text-zinc-400 opacity-0 transition-opacity hover:text-sky-800 focus:opacity-100 focus-visible:opacity-100 group-hover/item:opacity-100"
                   >
                     ✎
                   </button>
@@ -104,14 +104,14 @@ export default function AddCardDropdown({
             </div>
           ))}
 
-          <div className="mt-1 border-t border-zinc-200 pt-1">
+          <div className="mt-1 border-t border-edge pt-1">
             <button
               role="menuitem"
               onClick={() => {
                 onOpenCustomModal()
                 setOpen(false)
               }}
-              className="block w-full rounded-md px-2 py-1.5 text-left text-xs font-medium text-terra transition-colors hover:bg-terra/10"
+              className="block w-full rounded-md px-2 py-1.5 text-left text-xs font-medium text-sky-700 transition-colors hover:bg-sky-500/10"
             >
               + กำหนดเอง...
             </button>

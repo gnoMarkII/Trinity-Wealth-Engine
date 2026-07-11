@@ -50,7 +50,7 @@ export default function KanbanCard({
       role="button"
       tabIndex={0}
       style={style}
-      className={`group relative cursor-pointer rounded-xl border bg-white/90 p-3 pr-8 text-xs text-zinc-800 shadow-[0_5px_18px_rgba(14,165,233,0.05)] transition-all duration-150 hover:-translate-y-0.5 hover:border-cyan-300 hover:shadow-[0_8px_24px_rgba(14,165,233,0.12)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-flow-cyan ${
+      className={`group relative cursor-pointer rounded-xl border bg-panel p-3 pr-8 text-xs text-zinc-800 shadow-[0_5px_18px_rgba(14,165,233,0.05)] transition-all duration-150 hover:-translate-y-0.5 hover:border-cyan-300 hover:shadow-[0_8px_24px_rgba(14,165,233,0.12)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-flow-cyan ${
         selected || workspacePreview ? 'border-2 border-flow-sky' : 'border-sky-100'
       } ${removing ? 'animate-card-out' : 'animate-card-in'} ${faded ? 'opacity-40' : ''}`}
     >
@@ -63,7 +63,7 @@ export default function KanbanCard({
           onKeyDown={(e) => e.stopPropagation()}
           title="แก้ไขการ์ด"
           aria-label="แก้ไขการ์ด"
-          className="absolute right-6 top-1 rounded p-0.5 text-zinc-400 opacity-0 transition-opacity hover:bg-zinc-100 hover:text-terra focus:opacity-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-terra group-hover:opacity-100"
+          className="absolute right-6 top-1 rounded p-0.5 text-zinc-400 opacity-0 transition-opacity hover:bg-surface-strong hover:text-sky-800 focus:opacity-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-sky-500 group-hover:opacity-100"
         >
           ✎
         </button>
@@ -76,7 +76,7 @@ export default function KanbanCard({
         onKeyDown={(e) => e.stopPropagation()}
         title="ลบการ์ด"
         aria-label="ลบการ์ด"
-        className="absolute right-1 top-1 rounded p-0.5 text-zinc-400 opacity-0 transition-opacity hover:bg-zinc-100 hover:text-red-600 focus:opacity-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-red-500 group-hover:opacity-100"
+        className="absolute right-1 top-1 rounded p-0.5 text-zinc-400 opacity-0 transition-opacity hover:bg-surface-strong hover:text-red-600 focus:opacity-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-red-500 group-hover:opacity-100"
       >
         ✕
       </button>
@@ -113,7 +113,7 @@ export default function KanbanCard({
       </div>
       <p className="break-words text-sm font-semibold leading-snug text-zinc-800">{card.title}</p>
       {workspacePreview && (
-        <div className="mt-2 flex items-center gap-1.5 rounded-md border border-zinc-200/80 bg-surface px-1.5 py-1 text-[10px] font-medium text-zinc-700">
+        <div className="mt-2 flex items-center gap-1.5 rounded-md border border-edge bg-surface px-1.5 py-1 text-[10px] font-medium text-zinc-700">
           <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-500" />
           <span>
             {nodeDisplayName(workspacePreview.node)} • {workspacePreview.logCount} log lines •{' '}

@@ -13,7 +13,7 @@ export default function TextInput({ uiSize = 'md', className = '', ...rest }: Pr
   return (
     <input
       {...rest}
-      className={`rounded-xl border border-sky-200 bg-white/80 text-zinc-900 outline-none shadow-sm shadow-sky-100/40 transition-colors placeholder-zinc-400 focus:border-flow-cyan focus:ring-2 focus:ring-flow-cyan/20 ${SIZE_CLASS[uiSize]} ${className}`}
+      className={`rounded-xl border border-sky-200 bg-panel text-zinc-900 outline-none shadow-sm shadow-sky-100/40 transition-colors placeholder-zinc-400 focus:border-flow-cyan focus:ring-2 focus:ring-flow-cyan/20 ${SIZE_CLASS[uiSize]} ${className}`}
     />
   )
 }

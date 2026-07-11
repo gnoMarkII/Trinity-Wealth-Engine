@@ -19,7 +19,7 @@ function OutputMarkdown({ content }: { content: string }) {
             {children}
           </a>
         ),
-        code: ({ children }) => <code className="rounded bg-zinc-100 px-1 py-0.5 font-mono text-[0.84em] text-zinc-700">{children}</code>,
+        code: ({ children }) => <code className="rounded bg-surface-strong px-1 py-0.5 font-mono text-[0.84em] text-zinc-700">{children}</code>,
         h1: ({ children }) => <h4 className="mt-4 text-sm font-semibold text-zinc-900 first:mt-0">{children}</h4>,
         h2: ({ children }) => <h4 className="mt-4 text-sm font-semibold text-zinc-900 first:mt-0">{children}</h4>,
         h3: ({ children }) => <h5 className="mt-3 text-xs font-semibold text-zinc-800 first:mt-0">{children}</h5>,
@@ -73,7 +73,7 @@ export default function KanbanCardOutputs({ jobId, refreshVersion, onStatusChang
   }, [jobId, refreshVersion])
 
   if (loading && !outputs) {
-    return <div className="animate-shimmer h-36 rounded-xl border border-zinc-200/80" />
+    return <div className="animate-shimmer h-36 rounded-xl border border-edge" />
   }
   if (error && !outputs) {
     return <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">{error}</p>
@@ -101,13 +101,13 @@ export default function KanbanCardOutputs({ jobId, refreshVersion, onStatusChang
           {outputs.error_message || 'งานหยุดก่อนที่ Manager Summary จะถูกสร้าง'}
         </p>
       ) : (
-        <p className="rounded-lg border border-zinc-200 bg-surface p-3 text-xs text-zinc-500">
+        <p className="rounded-lg border border-edge bg-surface p-3 text-xs text-zinc-500">
           Manager Summary จะปรากฏเมื่อการทำงานเสร็จสมบูรณ์
         </p>
       )}
 
       {outputs.specialists.length > 0 && activeOutput && (
-        <section className="rounded-xl border border-sky-100 bg-white/80 p-3 shadow-[0_8px_24px_rgba(14,165,233,0.05)] backdrop-blur-sm">
+        <section className="rounded-xl border border-sky-100 bg-panel p-3 shadow-[0_8px_24px_rgba(14,165,233,0.05)] backdrop-blur-sm">
           <p className="text-[10px] font-semibold uppercase tracking-wide text-sky-800">Specialist Breakdown</p>
           <div className="mt-2 flex gap-1 overflow-x-auto pb-1">
             {outputs.specialists.map((item) => (
@@ -125,7 +125,7 @@ export default function KanbanCardOutputs({ jobId, refreshVersion, onStatusChang
               </button>
             ))}
           </div>
-          <div className="mt-2 border-t border-zinc-100 pt-2 text-xs leading-relaxed text-zinc-600">
+          <div className="mt-2 border-t border-edge pt-2 text-xs leading-relaxed text-zinc-600">
             <p className="mb-2 text-[10px] font-medium uppercase tracking-wide text-zinc-400">{activeOutput.label}</p>
             <OutputMarkdown content={activeOutput.content} />
           </div>

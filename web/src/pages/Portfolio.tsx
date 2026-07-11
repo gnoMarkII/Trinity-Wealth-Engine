@@ -48,7 +48,7 @@ export default function Portfolio() {
             กำลังอยู่ระหว่างเตรียมความพร้อมสำหรับการเชื่อมต่อในเฟสถัดไป
           </p>
           <div className="pt-2">
-            <span className="inline-block rounded-full border border-sky-100 bg-white/75 px-3 py-1 text-xs font-medium text-zinc-500">
+            <span className="inline-block rounded-full border border-sky-100 bg-panel px-3 py-1 text-xs font-medium text-zinc-500">
               สถานะ: รอเชื่อมต่อข้อมูล Holdings จาก Obsidian Vault
             </span>
           </div>

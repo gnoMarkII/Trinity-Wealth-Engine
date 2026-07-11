@@ -4,20 +4,17 @@ export default {
   theme: {
     extend: {
       colors: {
-        // Accent palette (sky blue ตามธีม Flow ปัจจุบัน) — ชื่อ "terra" เป็นมรดกจากธีม
-        // terracotta เดิม คงชื่อไว้เพราะ class กระจายทั่ว component; ค่าสีจริงคือ sky/cyan
-        terra: {
-          DEFAULT: '#0EA5E9',
-          dark: '#0284C7',
-          light: '#38BDF8',
-        },
-        surface: '#F4F4F5',
+        // Semantic tokens ของธีม Flow — ค่าจริงประกาศเป็น CSS vars ใน index.css (:root)
+        // ใช้แทนชั้น `.flow-theme .bg-white { !important }` เดิมที่ override รายคลาส
+        // (สี accent ตระกูล terra เดิมถูกแทนด้วย sky-400/500/600 มาตรฐานซึ่งค่าตรงกันเป๊ะ)
+        panel: 'var(--panel)',
+        surface: 'var(--surface)',
+        'surface-strong': 'var(--surface-strong)',
+        edge: 'var(--edge)',
         flow: {
           cyan: '#06B6D4',
           sky: '#38BDF8',
           blue: '#0EA5E9',
-          coral: '#FB8C00',
-          peach: '#FF8A65',
         },
       },
     },

@@ -74,7 +74,7 @@ export default function EditTemplateModal({ template, onClose, onSave }: Props) 
             }}
             rows={5}
             placeholder="คำสั่งที่จะถูกส่งให้ agent ทันทีเมื่อกดปุ่มลัดนี้"
-            className="w-full resize-none rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900 outline-none transition-colors placeholder-zinc-400 focus:border-terra focus:ring-1 focus:ring-terra/30"
+            className="w-full resize-none rounded-lg border border-edge bg-panel px-3 py-2 text-sm text-zinc-900 outline-none transition-colors placeholder-zinc-400 focus:border-sky-500 focus:ring-1 focus:ring-sky-500/30"
           />
         </div>
       </div>

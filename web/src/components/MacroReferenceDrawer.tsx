@@ -37,9 +37,9 @@ const CATEGORY_STYLES: Record<IndicatorCategory, { bg: string; text: string; bor
     border: 'border-amber-200',
   },
   'Macro & Equities': {
-    bg: 'bg-zinc-100',
+    bg: 'bg-surface-strong',
     text: 'text-zinc-700',
-    border: 'border-zinc-200',
+    border: 'border-edge',
   },
 }
 
@@ -90,10 +90,10 @@ export default function MacroReferenceDrawer({ data, isOpen, onClose }: Props) {
           role="dialog"
           aria-modal="true"
           aria-labelledby="macro-reference-drawer-title"
-          className="animate-drawer-in flex w-screen max-w-xl flex-col bg-white shadow-2xl"
+          className="animate-drawer-in flex w-screen max-w-xl flex-col bg-panel shadow-2xl"
         >
           {/* Drawer Header */}
-          <div className="flex items-center justify-between border-b border-zinc-200 bg-zinc-900 px-6 py-4 text-white">
+          <div className="flex items-center justify-between border-b border-edge bg-zinc-900 px-6 py-4 text-white">
             <div className="flex items-center gap-3">
               <span className="text-2xl">📚</span>
               <div>
@@ -114,7 +114,7 @@ export default function MacroReferenceDrawer({ data, isOpen, onClose }: Props) {
           </div>
 
           {/* Sub-Tabs Selector */}
-          <div className="flex border-b border-zinc-200 bg-zinc-50/80 px-6 pt-3">
+          <div className="flex border-b border-edge bg-surface px-6 pt-3">
             <button
               onClick={() => setActiveTab('observables')}
               aria-pressed={activeTab === 'observables'}
@@ -169,7 +169,7 @@ export default function MacroReferenceDrawer({ data, isOpen, onClose }: Props) {
                       return (
                         <div
                           key={idx}
-                          className="rounded-xl border border-zinc-200/80 bg-white p-4 shadow-sm transition-all hover:border-zinc-300"
+                          className="rounded-xl border border-edge bg-panel p-4 shadow-sm transition-all hover:border-zinc-300"
                         >
                           <div className="flex flex-wrap items-start justify-between gap-2">
                             <div className="space-y-1">
@@ -212,7 +212,7 @@ export default function MacroReferenceDrawer({ data, isOpen, onClose }: Props) {
             {/* TAB 2: Reports & Quant Models */}
             {activeTab === 'source_files' && (
               <div className="space-y-6">
-                <div className="rounded-xl bg-zinc-100 p-3.5 text-xs text-zinc-600">
+                <div className="rounded-xl bg-surface-strong p-3.5 text-xs text-zinc-600">
                   <span className="font-semibold text-zinc-800">ระบบประเมินผลหลัก:</span>{' '}
                   {data.generated_by || 'Strategic Allocator / Macro Core Engine'}{' '}
                   <span className="text-zinc-400">({data.evaluated_at})</span>
@@ -231,7 +231,7 @@ export default function MacroReferenceDrawer({ data, isOpen, onClose }: Props) {
                       {reportSources.map((file, idx) => (
                         <div
                           key={idx}
-                          className="rounded-xl border border-zinc-200 bg-white p-3.5 shadow-sm transition-colors hover:border-zinc-300"
+                          className="rounded-xl border border-edge bg-panel p-3.5 shadow-sm transition-colors hover:border-zinc-300"
                         >
                           <div className="flex items-start justify-between gap-2">
                             <div>
@@ -264,7 +264,7 @@ export default function MacroReferenceDrawer({ data, isOpen, onClose }: Props) {
                       {quantEngines.map((file, idx) => (
                         <div
                           key={idx}
-                          className="rounded-xl border border-zinc-200 bg-zinc-50/60 p-3.5 shadow-sm transition-colors hover:border-zinc-300"
+                          className="rounded-xl border border-edge bg-zinc-50/60 p-3.5 shadow-sm transition-colors hover:border-zinc-300"
                         >
                           <div className="flex items-start justify-between gap-2">
                             <div>
@@ -307,11 +307,11 @@ export default function MacroReferenceDrawer({ data, isOpen, onClose }: Props) {
                       return (
                         <div
                           key={idx}
-                          className="rounded-xl border border-zinc-200/80 bg-white p-4 shadow-sm"
+                          className="rounded-xl border border-edge bg-panel p-4 shadow-sm"
                         >
                           <div className="flex items-center justify-between">
                             <span className="font-semibold text-zinc-900">{a.asset_class}</span>
-                            <span className="rounded-md bg-zinc-100 px-2.5 py-0.5 text-xs font-bold text-zinc-800">
+                            <span className="rounded-md bg-surface-strong px-2.5 py-0.5 text-xs font-bold text-zinc-800">
                               {a.stance}
                             </span>
                           </div>
@@ -325,7 +325,7 @@ export default function MacroReferenceDrawer({ data, isOpen, onClose }: Props) {
                                 {indList.map((ind, k) => (
                                   <span
                                     key={k}
-                                    className="inline-flex items-center gap-1.5 rounded-lg border border-zinc-200 bg-zinc-50 px-2.5 py-1 text-xs text-zinc-700"
+                                    className="inline-flex items-center gap-1.5 rounded-lg border border-edge bg-surface px-2.5 py-1 text-xs text-zinc-700"
                                   >
                                     <span className="font-medium">{ind.name}</span>
                                     {ind.extractedValue && (
@@ -374,7 +374,7 @@ export default function MacroReferenceDrawer({ data, isOpen, onClose }: Props) {
                         return (
                           <div
                             key={idx}
-                            className="rounded-xl border border-zinc-200/80 bg-white p-4 shadow-sm"
+                            className="rounded-xl border border-edge bg-panel p-4 shadow-sm"
                           >
                             <div className="font-semibold text-zinc-900">
                               Long <span className="text-emerald-600">{pt.long_leg}</span> / Short{' '}
@@ -390,7 +390,7 @@ export default function MacroReferenceDrawer({ data, isOpen, onClose }: Props) {
                                   {indList.map((ind, k) => (
                                     <span
                                       key={k}
-                                      className="inline-flex items-center gap-1.5 rounded-lg border border-zinc-200 bg-zinc-50 px-2.5 py-1 text-xs text-zinc-700"
+                                      className="inline-flex items-center gap-1.5 rounded-lg border border-edge bg-surface px-2.5 py-1 text-xs text-zinc-700"
                                     >
                                       <span className="font-medium">{ind.name}</span>
                                       {ind.extractedValue && (
@@ -421,7 +421,7 @@ export default function MacroReferenceDrawer({ data, isOpen, onClose }: Props) {
           </div>
 
           {/* Drawer Footer */}
-          <div className="border-t border-zinc-200 bg-zinc-50 px-6 py-3 text-right">
+          <div className="border-t border-edge bg-surface px-6 py-3 text-right">
             <button
               onClick={onClose}
               className="rounded-lg bg-zinc-900 px-4 py-2 text-xs font-semibold text-white transition-colors hover:bg-zinc-800"
