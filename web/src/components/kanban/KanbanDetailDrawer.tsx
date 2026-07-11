@@ -46,6 +46,7 @@ export default function KanbanDetailDrawer({ card, onClose, onCardTransition }: 
   const [width, setWidth] = useState(loadStoredWidth)
   const [resizing, setResizing] = useState(false)
   const widthRef = useRef(width)
+  const outputsRefreshTimer = useRef<number | null>(null)
 
   useEffect(() => {
     setApprovalPayload(null)
@@ -54,6 +55,24 @@ export default function KanbanDetailDrawer({ card, onClose, onCardTransition }: 
     setOutputsRefreshVersion(0)
     setError(null)
   }, [card?.card_id])
+
+  useEffect(() => {
+    return () => {
+      if (outputsRefreshTimer.current) window.clearTimeout(outputsRefreshTimer.current)
+    }
+  }, [])
+
+  // เดิม bump refreshVersion ทุกบรรทัด log จาก SSE → GET /outputs ถี่ตามความเร็ว log
+  // (หลายครั้ง/วินาทีตอน job คุยเยอะ) — throttle แบบ trailing: นัดล่วงหน้าครั้งเดียว
+  // แล้วให้บรรทัดที่ตามมาในหน้าต่างเดียวกัน coalesce เข้า refetch เดียว ยังคงได้ผลลัพธ์
+  // ล่าสุดภายใน ~1.5s หลังบรรทัดสุดท้ายเสมอ
+  function scheduleOutputsRefresh() {
+    if (outputsRefreshTimer.current !== null) return
+    outputsRefreshTimer.current = window.setTimeout(() => {
+      outputsRefreshTimer.current = null
+      setOutputsRefreshVersion((version) => version + 1)
+    }, 1500)
+  }
 
   useEffect(() => {
     if (!resizing) return
@@ -208,7 +227,7 @@ export default function KanbanDetailDrawer({ card, onClose, onCardTransition }: 
                             jobId={card.job_id}
                             onStatusChange={handleTerminalStatusChange}
                             onAwaitingApproval={setApprovalPayload}
-                            onLogEntry={() => setOutputsRefreshVersion((version) => version + 1)}
+                            onLogEntry={scheduleOutputsRefresh}
                           />
                         </div>
                       </details>
@@ -220,7 +239,7 @@ export default function KanbanDetailDrawer({ card, onClose, onCardTransition }: 
                         jobId={card.job_id}
                         onStatusChange={handleTerminalStatusChange}
                         onAwaitingApproval={setApprovalPayload}
-                        onLogEntry={() => setOutputsRefreshVersion((version) => version + 1)}
+                        onLogEntry={scheduleOutputsRefresh}
                       />
                       {approvalPayload && (
                         <ApprovalPanel payload={approvalPayload} onApprove={handleApprove} submitting={approving} />

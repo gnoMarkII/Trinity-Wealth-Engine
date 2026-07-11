@@ -13,6 +13,7 @@ interface Props {
   onDelete: () => void
   onClick: () => void
   editable?: boolean
+  dispatchDisabled?: boolean
   onEdit?: () => void
   onDispatch?: () => void
   style?: CSSProperties
@@ -39,6 +40,7 @@ export default function KanbanCard({
   onDelete,
   onClick,
   editable,
+  dispatchDisabled,
   onEdit,
   onDispatch,
   style,
@@ -89,9 +91,10 @@ export default function KanbanCard({
                 onDispatch()
               }}
               onKeyDown={(e) => e.stopPropagation()}
-              title="ส่งงานให้ Manager (Run Job)"
+              disabled={dispatchDisabled}
+              title={dispatchDisabled ? 'กำลังส่งงานอื่นอยู่ — รอสักครู่' : 'ส่งงานให้ Manager (Run Job)'}
               aria-label="ส่งงานให้ Manager"
-              className="group/play inline-flex items-center justify-center gap-1 rounded-md border border-emerald-300 bg-emerald-100/90 px-2 py-0.5 text-[11px] font-bold text-emerald-700 shadow-sm transition-all duration-150 hover:border-emerald-600 hover:bg-emerald-600 hover:text-white hover:shadow focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-emerald-500"
+              className="group/play inline-flex items-center justify-center gap-1 rounded-md border border-emerald-300 bg-emerald-100/90 px-2 py-0.5 text-[11px] font-bold text-emerald-700 shadow-sm transition-all duration-150 hover:border-emerald-600 hover:bg-emerald-600 hover:text-white hover:shadow focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-emerald-500 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:border-emerald-300 disabled:hover:bg-emerald-100/90 disabled:hover:text-emerald-700"
             >
               <svg
                 viewBox="0 0 24 24"

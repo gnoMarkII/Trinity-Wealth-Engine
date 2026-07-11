@@ -73,7 +73,15 @@ export default function Kanban() {
   const noticeLeaveTimer = useRef<number | null>(null)
   const deleteTimers = useRef<Set<number>>(new Set())
   const hasLoadedOnceRef = useRef(false)
+  // mirror ของ cards สำหรับ callback ที่ถูกเรียกจาก SSE event (LiveTerminal) —
+  // callback พวกนั้นถือ closure ของ render เก่า ถ้าอ่าน state ตรงๆ จะเห็นการ์ดชุดเก่า
+  const cardsRef = useRef<KanbanCardDTO[]>([])
+  const dispatchingRef = useRef(false)
   const activeCount = Object.keys(activeDispatches).length
+
+  useEffect(() => {
+    cardsRef.current = cards
+  }, [cards])
 
   function removeActiveDispatch(cardId: string) {
     setActiveDispatches((prev) => {
@@ -234,6 +242,9 @@ export default function Kanban() {
   }
 
   async function dispatchCard(card: KanbanCardDTO, flow: string) {
+    // ref guard กัน double-click ก่อนที่ re-render จะ disable ปุ่มทัน (state อัปเดต async)
+    if (dispatchingRef.current) return
+    dispatchingRef.current = true
     setDispatching(true)
     try {
       const instruction = card.prompt?.trim() || card.title
@@ -246,6 +257,7 @@ export default function Kanban() {
     } catch (e) {
       setError(e instanceof ApiError ? e.message : 'สั่งงานไม่สำเร็จ')
     } finally {
+      dispatchingRef.current = false
       setDispatching(false)
     }
   }
@@ -261,7 +273,8 @@ export default function Kanban() {
     if (targetColumn) {
       // guard: ถ้าการ์ดอยู่คอลัมน์เป้าหมายอยู่แล้ว ไม่ยิง API ซ้ำ — กัน race กับ
       // KanbanDetailDrawer ที่ผูกกับ card_id เดียวกันตอนเปิด drawer ดูงานที่กำลังรันอยู่
-      const card = cards.find((c) => c.card_id === cardId)
+      // (อ่านจาก cardsRef ไม่ใช่ cards — callback นี้ถูกเรียกจาก SSE event ใน closure เก่า)
+      const card = cardsRef.current.find((c) => c.card_id === cardId)
       if (card && card.column_name !== targetColumn) {
         api
           .moveKanbanCard(cardId, targetColumn)
@@ -348,14 +361,13 @@ export default function Kanban() {
               selectedCardId={selectedCardId}
               workspacePreviewFor={workspacePreviewFor}
               staggerCards={!hasLoadedOnceRef.current}
+              dispatchDisabled={dispatching}
               onDeleteCard={deleteCard}
               onCardClick={(c) => setSelectedCardId(c.card_id)}
               onEditCard={openEditModal}
               onDispatchCard={(c) => {
-                if (!dispatching) {
-                  setError(null)
-                  dispatchCard(c, c.flow ?? 'manager')
-                }
+                setError(null)
+                dispatchCard(c, c.flow ?? 'manager')
               }}
             />
           ))}

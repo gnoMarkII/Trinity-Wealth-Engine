@@ -21,6 +21,7 @@ interface Props {
   selectedCardId?: string | null
   workspacePreviewFor: (card: KanbanCardDTO) => WorkspacePreview | undefined
   staggerCards?: boolean
+  dispatchDisabled?: boolean
   onDeleteCard: (cardId: string) => void
   onCardClick: (card: KanbanCardDTO) => void
   onEditCard?: (card: KanbanCardDTO) => void
@@ -36,6 +37,7 @@ export default function KanbanColumn({
   selectedCardId,
   workspacePreviewFor,
   staggerCards,
+  dispatchDisabled,
   onDeleteCard,
   onCardClick,
   onEditCard,
@@ -59,6 +61,7 @@ export default function KanbanColumn({
             onDelete={() => onDeleteCard(c.card_id)}
             onClick={() => onCardClick(c)}
             editable={isBacklogColumn}
+            dispatchDisabled={dispatchDisabled}
             onEdit={onEditCard ? () => onEditCard(c) : undefined}
             onDispatch={onDispatchCard ? () => onDispatchCard(c) : undefined}
             style={staggerCards ? { animationDelay: `${Math.min(i * STAGGER_STEP_MS, STAGGER_CAP_MS)}ms` } : undefined}

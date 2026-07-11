@@ -30,6 +30,20 @@ export default function LiveTerminal({ jobId, onStatusChange, onNodeUpdate, onAw
   const [status, setStatus] = useState<TerminalStatus>('idle')
   const containerRef = useRef<HTMLDivElement>(null)
 
+  // callback ทุกตัวอ่านผ่าน ref — parent ส่ง arrow function ใหม่ทุก render ถ้าใส่เป็น
+  // dependency ตรงๆ SSE connection จะถูกรื้อ/ต่อใหม่ทุกครั้งที่ parent re-render
+  // (pattern เดียวกับ onCloseRef ใน hooks/useFocusTrap.ts)
+  const onStatusChangeRef = useRef(onStatusChange)
+  onStatusChangeRef.current = onStatusChange
+  const onNodeUpdateRef = useRef(onNodeUpdate)
+  onNodeUpdateRef.current = onNodeUpdate
+  const onAwaitingApprovalRef = useRef(onAwaitingApproval)
+  onAwaitingApprovalRef.current = onAwaitingApproval
+  const onLineCountChangeRef = useRef(onLineCountChange)
+  onLineCountChangeRef.current = onLineCountChange
+  const onLogEntryRef = useRef(onLogEntry)
+  onLogEntryRef.current = onLogEntry
+
   useEffect(() => {
     if (!jobId) {
       setLines([])
@@ -49,12 +63,12 @@ export default function LiveTerminal({ jobId, onStatusChange, onNodeUpdate, onAw
         return // payload ผิดรูปแบบ — ข้ามบรรทัดนี้ไป ไม่ให้ทั้ง stream พัง
       }
       setLines((prev) => [...prev, payload])
-      onNodeUpdate?.(payload.node)
-      onLogEntry?.()
+      onNodeUpdateRef.current?.(payload.node)
+      onLogEntryRef.current?.()
     }
     source.addEventListener('done', () => {
       setStatus('done')
-      onNodeUpdate?.(null)
+      onNodeUpdateRef.current?.(null)
       source.close()
     })
     source.addEventListener('awaiting_approval', (e: MessageEvent) => {
@@ -65,8 +79,8 @@ export default function LiveTerminal({ jobId, onStatusChange, onNodeUpdate, onAw
         return
       }
       setStatus('awaiting_approval')
-      onNodeUpdate?.(null)
-      if (dto.interrupt_payload) onAwaitingApproval?.(dto.interrupt_payload)
+      onNodeUpdateRef.current?.(null)
+      if (dto.interrupt_payload) onAwaitingApprovalRef.current?.(dto.interrupt_payload)
       source.close()
     })
     source.addEventListener('error', (e: Event) => {
@@ -77,24 +91,21 @@ export default function LiveTerminal({ jobId, onStatusChange, onNodeUpdate, onAw
       // (จะทำให้ log ซ้ำ) — ปิด connection เงียบๆ แล้วให้ผู้ใช้เปิด drawer ใหม่เพื่อดูสถานะจริง
       if (e instanceof MessageEvent && typeof e.data === 'string') {
         setStatus('error')
-        onNodeUpdate?.(null)
+        onNodeUpdateRef.current?.(null)
       }
       source.close()
     })
 
     return () => source.close()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [jobId])
 
   useEffect(() => {
     containerRef.current?.scrollTo({ top: containerRef.current.scrollHeight })
-    onLineCountChange?.(lines.length)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    onLineCountChangeRef.current?.(lines.length)
   }, [lines])
 
   useEffect(() => {
-    onStatusChange?.(status)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    onStatusChangeRef.current?.(status)
   }, [status])
 
   const statusColor =

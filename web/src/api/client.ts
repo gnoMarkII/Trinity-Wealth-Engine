@@ -57,6 +57,9 @@ export const api = {
 
   logout: () => request<{ ok: boolean }>('/api/auth/logout', { method: 'POST' }),
 
+  // endpoint นี้ตอบ 200 เสมอ (authenticated: true/false) — ไม่มีทางชน 401 handler
+  me: () => request<{ authenticated: boolean }>('/api/auth/me'),
+
   getMacroDashboard: () => request<MacroDashboardDTO>('/api/macro/dashboard'),
 
   getMacroIndicatorSeries: (indicatorId: string, range: '1m' | '3m' | '1y') =>

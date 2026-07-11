@@ -6,8 +6,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [status, setStatus] = useState<AuthContextValue['status']>('loading')
 
   useEffect(() => {
-    fetch('/api/auth/me', { credentials: 'include' })
-      .then((res) => res.json())
+    api
+      .me()
       .then((body) => setStatus(body.authenticated ? 'authenticated' : 'unauthenticated'))
       .catch(() => setStatus('unauthenticated'))
   }, [])

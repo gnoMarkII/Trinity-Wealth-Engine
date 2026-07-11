@@ -55,10 +55,18 @@ export default function Macro() {
   }
 
   useEffect(() => {
+    let cancelled = false
     api
       .getMacroDashboard()
-      .then(setData)
-      .catch((e) => setError(e instanceof ApiError ? e.message : 'โหลดข้อมูลเศรษฐกิจมหภาคไม่สำเร็จ'))
+      .then((next) => {
+        if (!cancelled) setData(next)
+      })
+      .catch((e) => {
+        if (!cancelled) setError(e instanceof ApiError ? e.message : 'โหลดข้อมูลเศรษฐกิจมหภาคไม่สำเร็จ')
+      })
+    return () => {
+      cancelled = true
+    }
   }, [])
 
   if (error) return <p className="text-sm text-red-600">{error}</p>
