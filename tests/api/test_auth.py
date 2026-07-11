@@ -43,3 +43,16 @@ def test_login_requires_configured_password(client, monkeypatch):
     monkeypatch.setenv("WEBUI_PASSWORD", "")
     r = client.post("/api/auth/login", json={"password": "anything"})
     assert r.status_code == 500
+
+
+def test_login_rate_limited_after_repeated_attempts(client):
+    # 10 ครั้งแรกใน 1 นาที ยังตอบปกติ (401 รหัสผิด) — ครั้งที่ 11 ต้องโดน 429
+    for _ in range(10):
+        r = client.post("/api/auth/login", json={"password": "wrong"})
+        assert r.status_code == 401
+    r = client.post("/api/auth/login", json={"password": "wrong"})
+    assert r.status_code == 429
+
+    # แม้รหัสถูกก็ยังโดนบล็อกจนกว่าหน้าต่างเวลาจะผ่านไป — กัน timing oracle
+    r = client.post("/api/auth/login", json={"password": "test-password"})
+    assert r.status_code == 429

@@ -15,6 +15,13 @@ def get_session_secret() -> str:
     return os.getenv("SESSION_SECRET_KEY", "")
 
 
+def get_cookie_secure() -> bool:
+    """ตั้ง SESSION_COOKIE_SECURE=1 เมื่อ deploy หลัง HTTPS (reverse proxy/tunnel) —
+    default ปิดเพราะ localhost ใช้ http และ browser จะไม่เก็บ Secure cookie บน http
+    """
+    return os.getenv("SESSION_COOKIE_SECURE", "").strip().lower() in ("1", "true", "yes")
+
+
 def get_state_db_path() -> str:
     return os.getenv("WEBUI_STATE_DB_PATH", "data/webui_state.sqlite")
 

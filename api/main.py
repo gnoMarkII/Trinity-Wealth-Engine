@@ -32,6 +32,21 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="Invest Agents Web UI", lifespan=lifespan)
 
+
+@app.middleware("http")
+async def security_and_cache_headers(request, call_next):
+    response = await call_next(request)
+    # security headers พื้นฐาน — ไม่ใส่ CSP เพราะหน้า Macro ฝัง TradingView widget
+    # (โหลด script จาก s3.tradingview.com) กับ YouTube embed ซึ่งต้อง allowlist ละเอียด
+    # และพังเงียบง่ายถ้าตั้งพลาด (ดู docs ของ widget ก่อนถ้าจะเพิ่มภายหลัง)
+    response.headers.setdefault("X-Content-Type-Options", "nosniff")
+    response.headers.setdefault("X-Frame-Options", "DENY")
+    response.headers.setdefault("Referrer-Policy", "same-origin")
+    # ไฟล์ใน /assets มี content hash ในชื่อ (vite) — cache ยาวได้แบบ immutable
+    if request.url.path.startswith("/assets/"):
+        response.headers["Cache-Control"] = "public, max-age=31536000, immutable"
+    return response
+
 app.include_router(auth.router)
 app.include_router(routes_portfolio.router)
 app.include_router(routes_agents.router)
@@ -56,4 +71,5 @@ if WEB_DIST.is_dir():
         # กัน path traversal — เสิร์ฟเฉพาะไฟล์ที่อยู่ใต้ dist จริงเท่านั้น
         if full_path and candidate.is_file() and candidate.is_relative_to(WEB_DIST):
             return FileResponse(candidate)
-        return FileResponse(WEB_DIST / "index.html")
+        # index.html ห้าม cache — ไม่งั้น deploy ใหม่แล้ว browser ยังชี้ asset hash เก่า
+        return FileResponse(WEB_DIST / "index.html", headers={"Cache-Control": "no-cache"})

@@ -8,6 +8,12 @@ def api_env(tmp_path, monkeypatch):
     monkeypatch.setenv("SESSION_SECRET_KEY", "test-secret-key")
     monkeypatch.setenv("WEBUI_STATE_DB_PATH", str(tmp_path / "webui_state.sqlite"))
     monkeypatch.setenv("CHECKPOINT_DB_PATH", str(tmp_path / "checkpoints.sqlite"))
+
+    # login rate limit เป็น module-level state — เคลียร์ต่อ test ไม่งั้น authed_client
+    # ที่ login ทุก test จะสะสมจนชน limit (10 ครั้ง/นาที ต่อ IP) กลาง suite
+    from api import auth
+
+    auth._login_attempts.clear()
     yield tmp_path
 
 
