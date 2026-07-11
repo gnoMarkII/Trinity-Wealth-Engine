@@ -18,7 +18,7 @@ export default function Login() {
     setSubmitting(true)
     try {
       await login(password)
-      navigate('/kanban', { replace: true })
+      navigate('/', { replace: true })
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'เข้าสู่ระบบไม่สำเร็จ')
     } finally {

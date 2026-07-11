@@ -231,6 +231,12 @@ class NarrativeContext(BaseModel):
     key_narratives_by_region: dict[str, str] = Field(description="สรุป narrative ของแต่ละภูมิภาค")
     sources_summary: str = Field(description="สรุปแหล่งที่มาของข้อมูล")
 
+    report_references: list[dict[str, Any]] = Field(
+        default_factory=list,
+        description="System-populated news and YouTube references used as macro context",
+    )
+
+
 def _has_hard_data_numbers(data_list: list[str]) -> bool:
     """Minimal numeric evidence heuristic.
 

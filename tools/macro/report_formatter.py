@@ -1,3 +1,4 @@
+import json
 import re
 from datetime import datetime
 from pathlib import Path
@@ -298,13 +299,27 @@ def format_macro_strategy_report(direction: MacroStrategyDirection) -> str:
 _STRATEGY_SUBDIR = "30_Knowledge_Base/Strategies"
 
 
-def write_strategy_json_sidecar(direction: MacroStrategyDirection, evaluated_date: str) -> Path:
+def write_strategy_json_sidecar(
+    direction: MacroStrategyDirection,
+    evaluated_date: str,
+    *,
+    observable_registry: dict | None = None,
+    report_references: list[dict] | None = None,
+) -> Path:
     """เขียน direction เป็น JSON sidecar คู่กับรายงาน .md ที่ Archivist จะบันทึกทีหลัง
 
     เขียนตรงจาก Python (atomic, ไม่ผ่าน Archivist LLM tool-call) เพราะเนื้อหา JSON
     มีขนาดใหญ่และการฝังไปในข้อความที่ไหลผ่าน LLM context เสี่ยง mangle/truncate —
     ไฟล์นี้คือ source of truth สำหรับ Web API, ไม่ใช่สำหรับแสดงใน Obsidian
     """
+    from tools.macro.dashboard import build_dashboard_indicators, persist_indicator_series
+
+    dashboard_indicators = build_dashboard_indicators(direction, observable_registry)
+    persist_indicator_series(VAULT_PATH, dashboard_indicators)
+
+    payload = direction.model_dump(mode="json")
+    payload["dashboard_indicators"] = dashboard_indicators
+    payload["report_references"] = report_references or []
     json_path = VAULT_PATH / _STRATEGY_SUBDIR / f"Macro_Strategy_Direction_{evaluated_date}.json"
-    _atomic_write_text(json_path, direction.model_dump_json(indent=2))
+    _atomic_write_text(json_path, json.dumps(payload, ensure_ascii=False, indent=2))
     return json_path

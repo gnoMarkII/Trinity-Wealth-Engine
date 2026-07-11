@@ -61,6 +61,11 @@ export const api = {
 
   getMacroDashboard: () => request<MacroDashboardDTO>('/api/macro/dashboard'),
 
+  getMacroIndicatorSeries: (indicatorId: string, range: '1m' | '3m' | '1y') =>
+    request<import('./types').MacroIndicatorSeriesDTO>(
+      `/api/macro/indicators/${encodeURIComponent(indicatorId)}/series?range=${range}`
+    ),
+
   listKanbanCards: () => request<KanbanCardDTO[]>('/api/kanban/cards'),
 
   createKanbanCard: (title: string, flow: string = 'manager', prompt?: string, scope: string = 'both') =>

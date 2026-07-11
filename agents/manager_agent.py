@@ -598,7 +598,12 @@ def build_graph(checkpointer=None) -> StateGraph:
                     direction.source_files.append(source_file)
 
             try:
-                write_strategy_json_sidecar(direction, evaluated_date)
+                write_strategy_json_sidecar(
+                    direction,
+                    evaluated_date,
+                    observable_registry=observable_registry,
+                    report_references=(state.get("narrative_context", {}) or {}).get("report_references", []),
+                )
             except Exception as sidecar_err:
                 log.warning(f"[strategic_allocator] เขียน JSON sidecar ไม่สำเร็จ (ไม่กระทบรายงาน .md): {sidecar_err}")
 

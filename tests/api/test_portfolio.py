@@ -89,6 +89,75 @@ def test_macro_dashboard_maps_regime_evidence(authed_client, tmp_path, monkeypat
     assert body["regime_evidence"][0]["dimension"] == "Growth"
 
 
+def test_macro_dashboard_returns_chart_and_content_metadata(authed_client, tmp_path, monkeypatch):
+    import api.routes_portfolio as routes_portfolio_module
+
+    payload = json.loads(json.dumps(_SAMPLE_DIRECTION))
+    payload["dashboard_indicators"] = [
+        {
+            "indicator_id": "obs_us10y_20260710",
+            "series_key": "obs_us10y",
+            "label": "US 10Y Yield",
+            "value": 4.25,
+            "display_value": "4.25%",
+            "unit": "%",
+            "observed_at": "2026-07-10",
+            "provider": "FRED",
+            "source_file": "Global_Macro_Snapshot.md",
+            "is_valid": True,
+            "stale_reason": "",
+            "chart_available": True,
+        }
+    ]
+    payload["report_references"] = [
+        {
+            "reference_id": "youtube_abc",
+            "kind": "youtube",
+            "title": "Macro outlook",
+            "url": "https://www.youtube.com/watch?v=abcdefghijk",
+            "publisher": "Macro Channel",
+            "published_at": "2026-07-10",
+            "thumbnail_url": "https://i.ytimg.com/vi/abcdefghijk/hqdefault.jpg",
+        },
+        {"reference_id": "ignored", "kind": "news", "title": "Bad", "url": "javascript:alert(1)"},
+    ]
+    _write_sidecar(tmp_path, monkeypatch, routes_portfolio_module, payload)
+
+    r = authed_client.get("/api/macro/dashboard")
+
+    assert r.status_code == 200
+    body = r.json()
+    assert body["dashboard_indicators"][0]["series_key"] == "obs_us10y"
+    assert [item["reference_id"] for item in body["report_references"]] == ["youtube_abc"]
+
+
+def test_macro_indicator_series_uses_registered_latest_indicator(authed_client, tmp_path, monkeypatch):
+    import api.routes_portfolio as routes_portfolio_module
+
+    payload = json.loads(json.dumps(_SAMPLE_DIRECTION))
+    payload["dashboard_indicators"] = [
+        {
+            "indicator_id": "obs_us10y_20260710",
+            "series_key": "obs_us10y",
+            "label": "US 10Y Yield",
+            "unit": "%",
+        }
+    ]
+    _write_sidecar(tmp_path, monkeypatch, routes_portfolio_module, payload)
+    series_dir = tmp_path / "vault" / "30_Knowledge_Base" / "Strategies" / "Macro_Indicator_Series"
+    series_dir.mkdir(parents=True)
+    (series_dir / "obs_us10y.json").write_text(
+        json.dumps({"points": [{"observed_at": "2026-07-09", "value": 4.2}, {"observed_at": "2026-07-10", "value": 4.25}]}),
+        encoding="utf-8",
+    )
+
+    r = authed_client.get("/api/macro/indicators/obs_us10y_20260710/series?range=1m")
+
+    assert r.status_code == 200
+    assert r.json()["points"][-1]["value"] == 4.25
+    assert authed_client.get("/api/macro/indicators/obs_us10y_20260710/series?range=10y").status_code == 422
+
+
 def test_portfolio_latest_404_when_no_report_exists(authed_client, tmp_path, monkeypatch):
     import api.routes_portfolio as routes_portfolio_module
 

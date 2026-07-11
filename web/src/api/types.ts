@@ -82,6 +82,49 @@ export interface PortfolioDTO {
   warnings: WarningDTO[]
 }
 
+export interface MacroIndicatorDTO {
+  indicator_id: string
+  series_key: string
+  label: string
+  value: number | null
+  display_value: string
+  unit: string
+  observed_at: string
+  provider: string
+  source_file: string
+  is_valid: boolean
+  stale_reason: string
+  chart_available: boolean
+}
+
+export interface MacroReferenceDTO {
+  reference_id: string
+  kind: 'news' | 'youtube'
+  title: string
+  url: string
+  publisher: string
+  published_at: string
+  age_hours: number | null
+  summary: string
+  thumbnail_url: string
+  is_stale: boolean
+  related_observable_ids: string[]
+}
+
+export interface MacroSeriesPointDTO {
+  observed_at: string
+  value: number
+}
+
+export interface MacroIndicatorSeriesDTO {
+  indicator_id: string
+  series_key: string
+  label: string
+  unit: string
+  range: '1m' | '3m' | '1y'
+  points: MacroSeriesPointDTO[]
+}
+
 export interface MacroDashboardDTO {
   evaluated_at: string
   overall_regime: string
@@ -99,6 +142,8 @@ export interface MacroDashboardDTO {
   risk_scenarios?: RiskScenarioDTO[]
   source_files?: string[]
   generated_by?: string
+  dashboard_indicators?: MacroIndicatorDTO[]
+  report_references?: MacroReferenceDTO[]
   warnings: WarningDTO[]
 }
 

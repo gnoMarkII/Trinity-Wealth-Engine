@@ -3,6 +3,7 @@ import { useAuth } from '../auth/AuthContext'
 import AgentStatusPanel from './AgentStatusPanel'
 
 const links = [
+  { to: '/', label: 'Home' },
   { to: '/kanban', label: 'Agent Kanban Board' },
   { to: '/portfolio', label: 'All-Asset Portfolio' },
   { to: '/macro', label: 'Macroeconomic Analysis' },

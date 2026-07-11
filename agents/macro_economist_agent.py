@@ -5,6 +5,7 @@ from tools.knowledge.youtube_monitor import generate_weekly_youtube_digest
 from tools.knowledge.article import ingest_article_url
 from tools.knowledge.youtube import ingest_youtube_transcript
 from tools.macro.baselines import get_macro_baselines
+from tools.macro.content_references import news_references_from_radar, recent_youtube_references
 from core.prompt_harness import get_harness
 
 # MACRO_ECONOMIST_SYSTEM_PROMPT ถูกย้ายไปที่ prompts/skills/economist/SKILL.md ผ่านระบบ PromptHarness
@@ -31,8 +32,10 @@ def create_macro_economist(model: BaseChatModel):
             
         try:
             news_text = generate_news_radar_daily.invoke({})
+            news_references = news_references_from_radar(news_text)
         except Exception as e:
             news_text = f"Error fetching news: {e}"
+            news_references = []
             
         try:
             from tools.knowledge.youtube_monitor import load_recent_youtube_insights
@@ -42,10 +45,12 @@ def create_macro_economist(model: BaseChatModel):
                 n_clips = youtube_text.count("[") if "[" in youtube_text else 1
                 get_logger(__name__).info(f"Loaded youtube clips ({n_clips} blocks, {len(youtube_text)} chars)")
             youtube_section = f"\n\n=== YouTube Analyst Insights ===\n{youtube_text}" if youtube_text else ""
+            youtube_references = recent_youtube_references(lookback_days=14)
         except Exception as e:
             from core.logger import get_logger
             get_logger(__name__).warning("Error loading youtube insights: %s", e)
             youtube_section = f"\n\n=== YouTube Analyst Insights ===\nError fetching YouTube insights: {e}"
+            youtube_references = []
             
         context = f"=== Baseline ===\n{baseline_text}\n\n=== News ===\n{news_text}{youtube_section}"
         
@@ -57,6 +62,7 @@ def create_macro_economist(model: BaseChatModel):
             {"role": "system", "content": harness.get_system_prompt()},
             {"role": "user", "content": harness.get_skill_text("HUMAN.md", context=context)}
         ])
+        res.report_references = news_references + youtube_references
         
         return {"messages": [AIMessage(content=res.model_dump_json(), name="macro_economist")]}
 

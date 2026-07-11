@@ -6,6 +6,7 @@ import Login from './pages/Login'
 import Kanban from './pages/Kanban'
 import Portfolio from './pages/Portfolio'
 import Macro from './pages/Macro'
+import Landing from './pages/Landing'
 
 function App() {
   return (
@@ -14,12 +15,13 @@ function App() {
         <AuthProvider>
           <Routes>
             <Route path="/login" element={<Login />} />
+            <Route path="/" element={<Landing />} />
             <Route element={<Layout />}>
               <Route path="/kanban" element={<Kanban />} />
               <Route path="/portfolio" element={<Portfolio />} />
               <Route path="/macro" element={<Macro />} />
-              <Route path="/" element={<Navigate to="/kanban" replace />} />
             </Route>
+            <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </AuthProvider>
       </BrowserRouter>

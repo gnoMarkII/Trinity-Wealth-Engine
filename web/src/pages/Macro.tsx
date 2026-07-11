@@ -6,6 +6,8 @@ import RegimeProbabilityChart from '../components/RegimeProbabilityChart'
 import TradingViewMiniWidget from '../components/TradingViewMiniWidget'
 import PortfolioStanceBar from '../components/PortfolioStanceBar'
 import MacroReferenceDrawer from '../components/MacroReferenceDrawer'
+import MacroContentReferences from '../components/MacroContentReferences'
+import MacroIndicatorPanel from '../components/MacroIndicatorPanel'
 import { stanceCategory, type StanceCategory } from '../lib/stance'
 
 const STANCE_CLASS: Record<StanceCategory, string> = {
@@ -148,6 +150,14 @@ export default function Macro() {
 
       <WarningPanel warnings={data.warnings} />
 
+      {data.dashboard_indicators && data.dashboard_indicators.length > 0 && (
+        <MacroIndicatorPanel indicators={data.dashboard_indicators} />
+      )}
+
+      {data.report_references && data.report_references.length > 0 && (
+        <MacroContentReferences references={data.report_references} />
+      )}
+
       {/* 2-Column Responsive Layout: Left (5/12) Macro & Regime | Right (7/12) Strategic Allocation */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
         {/* Left Column: Macro & Regime Analysis */}
@@ -206,6 +216,61 @@ export default function Macro() {
             <h2 className="mb-3 text-base font-semibold text-zinc-900">Liquidity & Structural Rate</h2>
             <TradingViewMiniWidget symbol="TVC:US10Y" title="US 10-Year Treasury Yield" />
           </div>
+
+          {/* Hedging / Tail Risk Scenarios Section */}
+          {riskScenarios.length > 0 && (
+            <div className="content-auto rounded-xl border border-zinc-200/80 bg-white p-5 shadow-sm shadow-black/5">
+              <h2 className="text-balance mb-1 text-base font-semibold text-zinc-900">Hedging & Tail Risk Scenarios</h2>
+              <p className="text-pretty mb-4 text-xs text-zinc-500">แผนป้องกันความเสี่ยงและเงื่อนไขการเปิด/ปิดสถานะป้องกัน</p>
+              <div className="grid grid-cols-1 gap-4">
+                {riskScenarios.map((rs, idx) => (
+                  <div key={idx} className={cardClass}>
+                    <h3 className="font-semibold text-zinc-900">{rs.tail_risk}</h3>
+
+                    {rs.mitigation_strategy && (
+                      <p className="text-sm text-zinc-600">{rs.mitigation_strategy}</p>
+                    )}
+
+                    <div className="rounded-lg bg-amber-50/70 p-2.5 text-xs text-amber-900">
+                      <div><span className="font-semibold">Trigger:</span> {rs.trigger_to_activate}</div>
+                      {rs.unwind_or_cover_condition && (
+                        <div className="mt-1"><span className="font-semibold">Unwind:</span> {rs.unwind_or_cover_condition}</div>
+                      )}
+                    </div>
+
+                    <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-zinc-500">
+                      <span>Prob: {rs.probability}</span>
+                      <span>Impact: {rs.impact}</span>
+                      {rs.hedge_size && <span>Size: {rs.hedge_size}</span>}
+                    </div>
+
+                    {rs.early_warning_indicators && rs.early_warning_indicators.length > 0 && (
+                      <div className="space-y-1 rounded-lg bg-zinc-50 p-2 text-xs text-zinc-600">
+                        <span className="font-semibold text-zinc-700">Early Warning Indicators:</span>
+                        <ul className="list-inside list-disc">
+                          {rs.early_warning_indicators.map((ewi, k) => (
+                            <li key={k}>{ewi}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+
+                    {rs.hedge_instruments.length > 0 && (
+                      <p className="text-xs font-medium text-zinc-700">
+                        Hedge Instruments: <span className="text-zinc-600">{rs.hedge_instruments.join(', ')}</span>
+                      </p>
+                    )}
+
+                    {rs.cost_or_tradeoff && (
+                      <p className="text-xs text-zinc-500">Cost/Tradeoff: {rs.cost_or_tradeoff}</p>
+                    )}
+
+                    <WarningPanel warnings={rs.warnings} compact />
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Right Column: Strategic Allocation & Action Plan */}
@@ -349,61 +414,6 @@ export default function Macro() {
               </div>
             </div>
           )}
-
-          {/* Hedging / Tail Risk Scenarios Section */}
-          {riskScenarios.length > 0 && (
-            <div className="content-auto rounded-xl border border-zinc-200/80 bg-white p-5 shadow-sm shadow-black/5">
-              <h2 className="text-balance mb-1 text-base font-semibold text-zinc-900">Hedging & Tail Risk Scenarios</h2>
-              <p className="text-pretty mb-4 text-xs text-zinc-500">แผนป้องกันความเสี่ยงและเงื่อนไขการเปิด/ปิดสถานะป้องกัน</p>
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                {riskScenarios.map((rs, idx) => (
-                  <div key={idx} className={cardClass}>
-                    <h3 className="font-semibold text-zinc-900">{rs.tail_risk}</h3>
-
-                    {rs.mitigation_strategy && (
-                      <p className="text-sm text-zinc-600">{rs.mitigation_strategy}</p>
-                    )}
-
-                    <div className="rounded-lg bg-amber-50/70 p-2.5 text-xs text-amber-900">
-                      <div><span className="font-semibold">Trigger:</span> {rs.trigger_to_activate}</div>
-                      {rs.unwind_or_cover_condition && (
-                        <div className="mt-1"><span className="font-semibold">Unwind:</span> {rs.unwind_or_cover_condition}</div>
-                      )}
-                    </div>
-
-                    <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-zinc-500">
-                      <span>Prob: {rs.probability}</span>
-                      <span>Impact: {rs.impact}</span>
-                      {rs.hedge_size && <span>Size: {rs.hedge_size}</span>}
-                    </div>
-
-                    {rs.early_warning_indicators && rs.early_warning_indicators.length > 0 && (
-                      <div className="space-y-1 rounded-lg bg-zinc-50 p-2 text-xs text-zinc-600">
-                        <span className="font-semibold text-zinc-700">Early Warning Indicators:</span>
-                        <ul className="list-inside list-disc">
-                          {rs.early_warning_indicators.map((ewi, k) => (
-                            <li key={k}>{ewi}</li>
-                          ))}
-                        </ul>
-                      </div>
-                    )}
-
-                    {rs.hedge_instruments.length > 0 && (
-                      <p className="text-xs font-medium text-zinc-700">
-                        Hedge Instruments: <span className="text-zinc-600">{rs.hedge_instruments.join(', ')}</span>
-                      </p>
-                    )}
-
-                    {rs.cost_or_tradeoff && (
-                      <p className="text-xs text-zinc-500">Cost/Tradeoff: {rs.cost_or_tradeoff}</p>
-                    )}
-
-                    <WarningPanel warnings={rs.warnings} compact />
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
         </div>
       </div>
 
@@ -426,4 +436,3 @@ export default function Macro() {
     </div>
   )
 }
-
