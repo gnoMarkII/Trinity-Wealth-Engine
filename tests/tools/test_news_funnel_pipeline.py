@@ -284,3 +284,35 @@ def test_store_retention_prune(tmp_path):
     assert loaded["processed_urls"][0] == "url-500"
     assert loaded["processed_urls"][-1] == "url-2499"
 
+
+def test_clean_and_truncate_summary_html():
+    from tools.macro.news_funnel import _clean_and_truncate_summary
+    html_text = "<p>The Federal Reserve decided to hold interest rates steady today amid ongoing concerns about sticky inflation in the services sector and robust employment data that exceeded market expectations.</p><div class='ad'>Ad text here</div>"
+    cleaned = _clean_and_truncate_summary(html_text, max_len=60)
+    assert "<p>" not in cleaned
+    assert "</div>" not in cleaned
+    assert len(cleaned) <= 65
+    assert cleaned.endswith("...")
+
+
+def test_theme_canonicalization_with_brackets():
+    from tools.macro.news_funnel import _deterministic_synthesize_themes
+    events = [
+        {
+            "event_id": "ev-1",
+            "canonical_title": "Fed rate meeting",
+            "comprehensive_summary": "Summary",
+            "extracted_tickers": ["[[NVDA]]"],
+            "extracted_themes": ["[[policy]]", "[[geopolitics|Geopolitics]]"],
+            "macro_impact_score": 8,
+            "asset_impact_score": 5,
+        }
+    ]
+    themes = _deterministic_synthesize_themes(events)
+    assert len(themes) > 0
+    theme_links = themes[0].linked_themes
+    assert "[[Monetary Policy]]" in theme_links
+    assert "[[Geopolitics & Commodities]]" in theme_links
+    assert "[[[[Monetary Policy]]]]" not in theme_links
+    assert "[[[[policy]]]]" not in theme_links
+

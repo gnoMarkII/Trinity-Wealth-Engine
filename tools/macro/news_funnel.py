@@ -43,6 +43,7 @@ from schemas.news_funnel_schemas import (
     MacroThemeDigest,
     ThemeSynthesisBatchResult,
     TriageBatchResult,
+    strip_wikilink,
 )
 from tools._atomic_io import _atomic_write_to
 from tools.archivist.core import _sanitize_filename
@@ -80,13 +81,20 @@ TICKER_ALIAS_MAP: Dict[str, str] = {
 }
 
 
-def strip_wikilink(text: str) -> str:
-    """ลบเครื่องหมาย [[ ... ]] และ Alias [[File|Alias]] ออกจากข้อความ"""
-    clean = text.strip()
-    while clean.startswith("[[") and clean.endswith("]]"):
-        clean = clean[2:-2].strip()
-    if "|" in clean:
-        clean = clean.split("|")[-1].strip()
+def _clean_and_truncate_summary(text: str, max_len: int = 500) -> str:
+    """ทำความสะอาด HTML tags จาก summary ด้วย BeautifulSoup ก่อนทำการตัดคำ (truncate) เพื่อไม่ให้ tag ว่างหรือ HTML ขาดกลางเมื่อเจอ tag ยาว"""
+    if not text:
+        return ""
+    try:
+        from bs4 import BeautifulSoup
+        soup = BeautifulSoup(text, "html.parser")
+        clean = soup.get_text(separator=" ", strip=True)
+    except Exception:
+        clean = re.sub(r"<[^>]+>", " ", text).strip()
+        clean = re.sub(r"\s+", " ", clean)
+
+    if len(clean) > max_len:
+        return clean[:max_len].rsplit(" ", 1)[0] + "..." if " " in clean[:max_len] else clean[:max_len] + "..."
     return clean
 
 
@@ -144,7 +152,7 @@ def ensure_concept_stubs_exist(
 def _mock_or_llm_triage(candidate: Dict[str, Any]) -> MacroImpactTriageResult:
     """ประเมิน Impact Score (fallback heuristic สำหรับ deterministic unit tests)"""
     title = candidate.get("title", "")
-    summary = candidate.get("summary", "")
+    summary = _clean_and_truncate_summary(candidate.get("summary", ""))
     text = f"{title} {summary}".lower()
 
     macro_score = 5
@@ -282,7 +290,7 @@ def run_news_funnel_ingest(
         ev = {
             "event_id": event_id,
             "canonical_title": title,
-            "comprehensive_summary": rep.get("summary", rep.get("freshness_reason", "")),
+            "comprehensive_summary": _clean_and_truncate_summary(rep.get("summary", rep.get("freshness_reason", ""))),
             "source_count": rep.get("sources_count", 1),
             "sources": rep.get("sources", [rep.get("source", "RSS")]),
             "links": rep.get("links", [link] if link else []),
@@ -318,7 +326,7 @@ def _deterministic_synthesize_themes(events: List[Dict[str, Any]]) -> List[Macro
     bucket_order: List[str] = []
     for ev in events:
         raw_themes = ev.get("extracted_themes") or []
-        primary_theme = raw_themes[0] if raw_themes else "General Macro"
+        primary_theme = strip_wikilink(raw_themes[0]) if raw_themes else "General Macro"
         display_theme = THEME_DISPLAY_NAME_MAP.get(primary_theme, primary_theme)
         if display_theme not in buckets:
             if len(bucket_order) < 3:
@@ -344,7 +352,8 @@ def _deterministic_synthesize_themes(events: List[Dict[str, Any]]) -> List[Macro
             all_themes.extend(ev.get("extracted_themes", []))
 
         asset_links = [f"[[{t}]]" for t in canonicalize_ticker_names(all_tickers)]
-        theme_links = [f"[[{THEME_DISPLAY_NAME_MAP.get(rt, rt)}]]" for rt in list(set(all_themes)) if rt]
+        clean_themes = [strip_wikilink(rt) for rt in list(set(all_themes)) if rt and strip_wikilink(rt)]
+        theme_links = [f"[[{THEME_DISPLAY_NAME_MAP.get(ct, ct)}]]" for ct in clean_themes]
         if f"[[{b_name}]]" not in theme_links:
             theme_links.append(f"[[{b_name}]]")
 
@@ -387,7 +396,8 @@ def _llm_synthesize_themes(
             for thm in res.themes[:3]:
                 clean_assets = canonicalize_ticker_names(thm.linked_assets)
                 thm.linked_assets = [f"[[{t}]]" for t in clean_assets]
-                thm.linked_themes = [f"[[{THEME_DISPLAY_NAME_MAP.get(strip_wikilink(t), strip_wikilink(t))}]]" for t in thm.linked_themes]
+                clean_themes = [strip_wikilink(t) for t in thm.linked_themes if t and strip_wikilink(t)]
+                thm.linked_themes = [f"[[{THEME_DISPLAY_NAME_MAP.get(ct, ct)}]]" for ct in clean_themes]
             return res.themes[:3]
     except Exception as e:
         logger.error("LLM Synthesis failed or unavailable: %s", e)
