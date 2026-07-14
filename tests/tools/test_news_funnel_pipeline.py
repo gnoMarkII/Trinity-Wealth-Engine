@@ -136,8 +136,8 @@ def test_synthesize_with_events_and_hitl_filter(test_paths, monkeypatch):
 
     # Check state store that ev-100 is synthesized and ev-200 is still pending
     state = load_store(store_path=store_file)
-    assert "ev-100" in state["synthesized_event_ids"]
-    assert "ev-200" not in state["synthesized_event_ids"]
+    assert any(ev["event_id"] == "ev-100" and ev["status"] == "synthesized" for ev in state["pending_events"])
+    assert any(ev["event_id"] == "ev-200" and ev["status"] == "pending_synthesis" for ev in state["pending_events"])
 
 
 def test_overwrite_guard(tmp_path, monkeypatch):
@@ -270,12 +270,17 @@ def test_store_retention_prune(tmp_path):
             {"event_id": "new-synth", "status": "synthesized", "ingested_at": new_iso},
             {"event_id": "old-pending", "status": "pending_synthesis", "ingested_at": old_iso},
         ],
-        "processed_urls": [],
+        "processed_urls": [f"url-{i}" for i in range(2500)],
         "processed_titles": [],
     }
     save_store(state, store_path=store_file)
     loaded = load_store(store_path=store_file)
     ids = [ev["event_id"] for ev in loaded["pending_events"]]
     assert "old-synth" not in ids
+    assert "old-pending" not in ids
     assert "new-synth" in ids
-    assert "old-pending" in ids
+
+    assert len(loaded["processed_urls"]) == 2000
+    assert loaded["processed_urls"][0] == "url-500"
+    assert loaded["processed_urls"][-1] == "url-2499"
+
