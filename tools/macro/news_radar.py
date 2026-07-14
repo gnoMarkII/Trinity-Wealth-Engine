@@ -31,7 +31,7 @@ _NEWS_DIR = Path(__file__).resolve().parents[2] / "memories" / "30_Knowledge_Bas
 
 FEEDS = [
     {"name": "Investing.com (Economic News)", "url": "https://www.investing.com/rss/news_285.rss"},
-    {"name": "Yahoo Finance (Business/Macro - Reuters Backup)", "url": "https://finance.yahoo.com/news/rssindex"},
+    {"name": "Yahoo Finance (Business/Macro - Reuters Backup)", "url": "https://feeds.finance.yahoo.com/rss/2.0/headline?s=^GSPC,^DJI,^IXIC,^TNX,CL=F,GC=F"},
     {"name": "Prachachat (Finance & Macro Thailand)", "url": "https://www.prachachat.net/category/finance/feed"}
 ]
 
@@ -96,8 +96,10 @@ def get_news_candidates(max_items: int = 15) -> list[dict]:
                     age_hours = 9999
                     freshness_reason = "Unknown age (parse failed)"
 
+                summary_text = getattr(entry, "summary", getattr(entry, "description", ""))
                 all_news_items.append({
                     "title": title,
+                    "summary": summary_text,
                     "source": feed['name'],
                     "link": link,
                     "published_at": published_at,
@@ -121,6 +123,7 @@ def get_news_candidates(max_items: int = 15) -> list[dict]:
     for item in representatives[:max_items]:
         candidates.append({
             "title": item['title'],
+            "summary": item.get('summary', ''),
             "link": item['link'],
             "source": item['source'],
             "sources_count": item.get('sources_count', 1),
