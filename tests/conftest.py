@@ -122,3 +122,10 @@ def isolated_archivist(tmp_vault, monkeypatch):
     monkeypatch.setattr(search, "get_embeddings", unittest.mock.MagicMock())
     
     return at
+
+
+@pytest.fixture(autouse=True)
+def _no_real_llm_keys(monkeypatch):
+    """ป้องกันการเรียก network / API จริงระหว่างรัน unit tests ทั้ง suite"""
+    for k in ("GOOGLE_API_KEY", "GEMINI_API_KEY", "ANTHROPIC_API_KEY", "OPENROUTER_API_KEY"):
+        monkeypatch.delenv(k, raising=False)
