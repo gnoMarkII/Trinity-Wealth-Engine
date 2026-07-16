@@ -19,12 +19,11 @@ logger = get_logger(__name__)
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_STORE_PATH = str(PROJECT_ROOT / "data" / "news_funnel_state.json")
-DEFAULT_LOCK_PATH = str(PROJECT_ROOT / "data" / "news_funnel_state.json.lock")
 
 
-def _get_paths(store_path: Optional[str] = None, lock_path: Optional[str] = None):
+def _get_paths(store_path: Optional[str] = None):
     s_path = store_path or DEFAULT_STORE_PATH
-    l_path = lock_path or (s_path + ".lock")
+    l_path = s_path + ".lock"
     return s_path, l_path
 
 
@@ -80,9 +79,11 @@ def prune_old_events(state: Dict[str, Any], retention_days: int = 7) -> None:
         if ingested_str:
             try:
                 ingested_dt = datetime.fromisoformat(ingested_str)
+                if ingested_dt.tzinfo is not None:
+                    ingested_dt = ingested_dt.replace(tzinfo=None)
                 if ingested_dt < cutoff:
                     continue
-            except ValueError:
+            except (ValueError, TypeError):
                 pass
         kept_events.append(ev)
     state["pending_events"] = kept_events
@@ -100,9 +101,9 @@ def _save_unlocked(state: Dict[str, Any], s_path: str) -> None:
     _atomic_write_to(Path(s_path), json.dumps(state, ensure_ascii=False, indent=2) + "\n")
 
 
-def load_store(store_path: Optional[str] = None, lock_path: Optional[str] = None) -> Dict[str, Any]:
+def load_store(store_path: Optional[str] = None) -> Dict[str, Any]:
     """โหลดข้อมูล Persistent State ภายใต้ FileLock ป้องกัน Race Condition"""
-    s_path, l_path = _get_paths(store_path, lock_path)
+    s_path, l_path = _get_paths(store_path)
     os.makedirs(os.path.dirname(s_path) if os.path.dirname(s_path) else ".", exist_ok=True)
 
     lock = FileLock(l_path, timeout=10, is_singleton=True)
@@ -110,9 +111,9 @@ def load_store(store_path: Optional[str] = None, lock_path: Optional[str] = None
         return _load_unlocked(s_path)
 
 
-def save_store(state: Dict[str, Any], store_path: Optional[str] = None, lock_path: Optional[str] = None) -> None:
+def save_store(state: Dict[str, Any], store_path: Optional[str] = None) -> None:
     """บันทึกข้อมูล Persistent State ลงไฟล์ภายใต้ FileLock"""
-    s_path, l_path = _get_paths(store_path, lock_path)
+    s_path, l_path = _get_paths(store_path)
     os.makedirs(os.path.dirname(s_path) if os.path.dirname(s_path) else ".", exist_ok=True)
 
     lock = FileLock(l_path, timeout=10, is_singleton=True)
@@ -146,7 +147,7 @@ def is_title_or_url_processed(
 
 def save_triage_events(events: List[Dict[str, Any]], store_path: Optional[str] = None) -> None:
     """บันทึกรายการข่าวใหม่ที่ผ่านการคัดกรอง (Triage) ลง store และเพิ่ม URL/title ลงรายการที่ประมวลผลแล้ว"""
-    s_path, l_path = _get_paths(store_path, None)
+    s_path, l_path = _get_paths(store_path)
     lock = FileLock(l_path, timeout=10, is_singleton=True)
     with lock:
         state = _load_unlocked(s_path)
@@ -167,9 +168,10 @@ def save_triage_events(events: List[Dict[str, Any]], store_path: Optional[str] =
                 if link not in seen_urls:
                     urls.append(link)
                     seen_urls.add(link)
-            title = event.get("canonical_title") or event.get("title")
-            if title and title not in processed_titles:
-                processed_titles.append(title)
+            for t_key in ("original_title", "canonical_title", "title"):
+                t_val = event.get(t_key)
+                if t_val and t_val not in processed_titles:
+                    processed_titles.append(t_val)
 
         state["processed_urls"] = urls
         state["processed_titles"] = processed_titles
@@ -192,18 +194,31 @@ def get_pending_high_impact_events(store_path: Optional[str] = None) -> List[Dic
     return pending
 
 
-def mark_events_synthesized(event_ids: List[str], store_path: Optional[str] = None) -> None:
-    """เปลี่ยนสถานะรายการเหตุการณ์เป็น synthesized"""
-    if not event_ids:
+def update_events_status(
+    rejected_ids: Optional[List[str]] = None,
+    synthesized_ids: Optional[List[str]] = None,
+    store_path: Optional[str] = None,
+) -> None:
+    """เปลี่ยนสถานะรายการเหตุการณ์เป็น synthesized และ/หรือ rejected ใน Transaction เดียวภายใต้ FileLock"""
+    if not rejected_ids and not synthesized_ids:
         return
-    s_path, l_path = _get_paths(store_path, None)
+    s_path, l_path = _get_paths(store_path)
     lock = FileLock(l_path, timeout=10, is_singleton=True)
     with lock:
         state = _load_unlocked(s_path)
-        target_ids = set(event_ids)
+        rej_set = set(rejected_ids or [])
+        syn_set = set(synthesized_ids or [])
+        now_iso = datetime.now().isoformat()
 
         for ev in state.get("pending_events", []):
-            if isinstance(ev, dict) and ev.get("event_id") in target_ids:
+            if not isinstance(ev, dict):
+                continue
+            ev_id = ev.get("event_id")
+            if ev_id in syn_set:
                 ev["status"] = "synthesized"
+            elif ev_id in rej_set:
+                ev["status"] = "rejected"
+                ev["rejected_at"] = now_iso
 
         _save_unlocked(state, s_path)
+

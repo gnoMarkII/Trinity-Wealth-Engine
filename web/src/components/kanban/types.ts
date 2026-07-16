@@ -1,6 +1,6 @@
 // Local UI filter/view-state definitions สำหรับ Kanban board — ไม่ใช่ DTO ที่มาจาก backend
 export type StatusFilter = 'active' | 'all' | 'backlog' | 'done'
-export type FlowFilter = 'all' | 'manager' | 'news_youtube'
+export type FlowFilter = 'all' | 'manager' | 'news_youtube' | 'news_funnel'
 
 export interface ColumnDef {
   key: string

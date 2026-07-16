@@ -1,6 +1,6 @@
 """Deprecated entrypoint สำหรับระบบ News Funnel Architecture
 
-โปรดใช้ scripts/run_news_funnel.py แทน
+โปรดใช้ cli/run_news_funnel.py แทน
 """
 import sys
 import os
@@ -10,18 +10,18 @@ import warnings
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 from core.logger import get_logger
-from scripts.run_news_funnel import main as unified_main
+from cli.run_news_funnel import main as unified_main
 
 logger = get_logger("run_news_funnel_auto")
 
 
 def main():
     warnings.warn(
-        "scripts/run_news_funnel_auto.py is deprecated and will be removed in a future release. Use scripts/run_news_funnel.py instead.",
+        "scripts/run_news_funnel_auto.py is deprecated and will be removed in a future release. Use cli/run_news_funnel.py instead.",
         DeprecationWarning,
         stacklevel=2,
     )
-    logger.warning("run_news_funnel_auto.py is deprecated. Please switch to scripts/run_news_funnel.py")
+    logger.warning("run_news_funnel_auto.py is deprecated. Please switch to cli/run_news_funnel.py")
     unified_main()
 
 

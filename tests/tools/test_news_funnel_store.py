@@ -9,7 +9,7 @@ from tools.macro.news_funnel_store import (
     is_title_or_url_processed,
     save_triage_events,
     get_pending_high_impact_events,
-    mark_events_synthesized,
+    update_events_status,
 )
 
 
@@ -83,7 +83,7 @@ def test_triage_events_and_pending_high_impact(temp_store):
     assert is_title_or_url_processed("High Impact Macro Event", "https://example.com/e1", store_path=temp_store) is True
 
 
-def test_mark_events_synthesized(temp_store):
+def test_update_events_status_synthesized(temp_store):
     events = [
         {
             "event_id": "e1",
@@ -95,10 +95,32 @@ def test_mark_events_synthesized(temp_store):
     ]
     save_triage_events(events, store_path=temp_store)
 
-    mark_events_synthesized(["e1"], store_path=temp_store)
+    update_events_status(synthesized_ids=["e1"], store_path=temp_store)
 
     pending = get_pending_high_impact_events(store_path=temp_store)
     assert len(pending) == 0
 
     state = load_store(store_path=temp_store)
     assert any(ev["event_id"] == "e1" and ev["status"] == "synthesized" for ev in state["pending_events"])
+
+
+def test_update_events_status_rejected(temp_store):
+    events = [
+        {
+            "event_id": "e2",
+            "canonical_title": "Event 2",
+            "macro_impact_score": 8,
+            "asset_impact_score": 7,
+            "is_high_impact": True,
+        }
+    ]
+    save_triage_events(events, store_path=temp_store)
+
+    update_events_status(rejected_ids=["e2"], store_path=temp_store)
+
+    pending = get_pending_high_impact_events(store_path=temp_store)
+    assert len(pending) == 0
+
+    state = load_store(store_path=temp_store)
+    assert any(ev["event_id"] == "e2" and ev["status"] == "rejected" and "rejected_at" in ev for ev in state["pending_events"])
+

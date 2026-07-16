@@ -157,13 +157,34 @@ export interface NewsYoutubeApprovalPayload {
   youtube_candidates: YoutubeCandidate[]
 }
 
+export interface NewsFunnelCandidate {
+  event_id: string
+  canonical_title: string
+  comprehensive_summary: string
+  macro_impact_score: number
+  asset_impact_score: number
+  extracted_tickers: string[]
+  extracted_themes: string[]
+  primary_tags: string[]
+  sources: string[]
+  /** "llm" | "mock" | "heuristic_fallback" — เมื่อเป็น heuristic_fallback คะแนนไม่ได้มาจาก LLM จริง */
+  triage_source?: string
+}
+
+export interface NewsFunnelApprovalPayload {
+  type: 'news_funnel_approval'
+  candidates: NewsFunnelCandidate[]
+}
+
+export type ApprovalPayload = NewsYoutubeApprovalPayload | NewsFunnelApprovalPayload
+
 export interface JobStatusDTO {
   job_id: string
   status: 'queued' | 'running' | 'done' | 'error' | 'awaiting_approval'
   card_id: string | null
   error_message: string | null
   current_node: string | null
-  interrupt_payload: NewsYoutubeApprovalPayload | null
+  interrupt_payload: ApprovalPayload | null
   log_count: number
   created_at: number
   updated_at: number

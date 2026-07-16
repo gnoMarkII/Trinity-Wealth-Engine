@@ -1,7 +1,7 @@
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
-import type { NewsYoutubeApprovalPayload } from '../api/types'
+import type { NewsFunnelApprovalPayload, NewsYoutubeApprovalPayload } from '../api/types'
 import ApprovalPanel from './ApprovalPanel'
 
 function makePayload(overrides: Partial<NewsYoutubeApprovalPayload> = {}): NewsYoutubeApprovalPayload {
@@ -62,5 +62,33 @@ describe('ApprovalPanel', () => {
   it('ระหว่าง submitting ปุ่มอนุมัติถูก disable', () => {
     render(<ApprovalPanel payload={makePayload()} onApprove={() => {}} submitting />)
     expect(screen.getByRole('button', { name: /กำลังส่ง/ })).toBeDisabled()
+  })
+
+  it('แสดงรายการ News Funnel High-Impact และส่ง approvedEventIds เมื่ออนุมัติ', async () => {
+    const funnelPayload: NewsFunnelApprovalPayload = {
+      type: 'news_funnel_approval',
+      candidates: [
+        {
+          event_id: 'ev-1',
+          canonical_title: 'Fed Rate Decision',
+          comprehensive_summary: 'Summary text',
+          macro_impact_score: 8,
+          asset_impact_score: 5,
+          extracted_tickers: ['NVDA'],
+          extracted_themes: ['policy'],
+          primary_tags: ['macro'],
+          sources: ['Reuters'],
+        },
+      ],
+    }
+    const onApprove = vi.fn()
+    render(<ApprovalPanel payload={funnelPayload} onApprove={onApprove} />)
+
+    expect(screen.getByText('Fed Rate Decision')).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('checkbox'))
+    const approveBtn = screen.getByRole('button', { name: /อนุมัติและดำเนินการต่อ \(1 รายการ\)/ })
+    await userEvent.click(approveBtn)
+
+    expect(onApprove).toHaveBeenCalledWith([], [], ['ev-1'])
   })
 })

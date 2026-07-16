@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import type { JobStatusDTO, NewsYoutubeApprovalPayload } from '../api/types'
+import type { ApprovalPayload, JobStatusDTO } from '../api/types'
 import type { TerminalStatus } from '../lib/agentStatus'
 import { nodeDisplayName } from '../lib/nodeDisplayNames'
 import { groupIntoSteps, type LogLine } from '../lib/terminalSteps'
@@ -16,7 +16,7 @@ interface Props {
   jobId: string | null
   onStatusChange?: (status: TerminalStatus) => void
   onNodeUpdate?: (node: string | null) => void
-  onAwaitingApproval?: (payload: NewsYoutubeApprovalPayload) => void
+  onAwaitingApproval?: (payload: ApprovalPayload) => void
   onLineCountChange?: (count: number) => void
   onLogEntry?: () => void
   /** true = รัน SSE/side-effects ตามปกติแต่ไม่ render กล่อง UI — ใช้เป็น "background driver"

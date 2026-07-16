@@ -13,17 +13,20 @@ export interface FlowOption {
 export const FLOW_LABEL = {
   manager: 'Macro',
   news_youtube: 'News/YouTube',
+  news_funnel: 'News Funnel',
 } as const
 
 /** #macro / #news มาจาก flow จริงที่เก็บไว้ตอนสร้างการ์ด (ไม่ใช่การเดา) — ดู Rev.2 Phase 0 */
 export const FLOW_TAG: Record<string, string> = {
   manager: '#macro',
   news_youtube: '#news',
+  news_funnel: '#news_funnel',
 }
 
 export const FLOW_OPTIONS: FlowOption[] = [
   { key: 'manager', label: FLOW_LABEL.manager },
   { key: 'news_youtube', label: FLOW_LABEL.news_youtube },
+  { key: 'news_funnel', label: FLOW_LABEL.news_funnel },
 ]
 
 export const SCOPE_OPTIONS: FlowOption[] = [

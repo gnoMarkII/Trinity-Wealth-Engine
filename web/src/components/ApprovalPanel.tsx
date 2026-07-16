@@ -1,13 +1,150 @@
 import { useState } from 'react'
-import type { NewsYoutubeApprovalPayload } from '../api/types'
+import type { ApprovalPayload, NewsFunnelApprovalPayload, NewsYoutubeApprovalPayload } from '../api/types'
 
 interface Props {
-  payload: NewsYoutubeApprovalPayload
-  onApprove: (approvedNewsLinks: string[], approvedYoutubeLinks: string[]) => void
+  payload: ApprovalPayload
+  onApprove: (approvedNewsLinks: string[], approvedYoutubeLinks: string[], approvedEventIds?: string[]) => void
   submitting?: boolean
 }
 
 export default function ApprovalPanel({ payload, onApprove, submitting }: Props) {
+  if (payload.type === 'news_funnel_approval') {
+    return <NewsFunnelApprovalView payload={payload} onApprove={onApprove} submitting={submitting} />
+  }
+  return <NewsYoutubeApprovalView payload={payload} onApprove={onApprove} submitting={submitting} />
+}
+
+function NewsFunnelApprovalView({
+  payload,
+  onApprove,
+  submitting,
+}: {
+  payload: NewsFunnelApprovalPayload
+  onApprove: Props['onApprove']
+  submitting?: boolean
+}) {
+  const [selectedEventIds, setSelectedEventIds] = useState<Set<string>>(new Set())
+
+  function toggle(id: string) {
+    const next = new Set(selectedEventIds)
+    if (next.has(id)) next.delete(id)
+    else next.add(id)
+    setSelectedEventIds(next)
+  }
+
+  function toggleAll() {
+    if (selectedEventIds.size === payload.candidates.length && payload.candidates.length > 0) {
+      setSelectedEventIds(new Set())
+    } else {
+      setSelectedEventIds(new Set(payload.candidates.map((c) => c.event_id)))
+    }
+  }
+
+  const allSelected = payload.candidates.length > 0 && selectedEventIds.size === payload.candidates.length
+
+  return (
+    <div className="space-y-4 rounded-xl border border-amber-200 bg-amber-50 p-4 shadow-sm shadow-black/5">
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2">
+          <span className="h-2 w-2 rounded-full bg-amber-500" />
+          <h3 className="text-sm font-semibold text-amber-800">รอการอนุมัติ — เลือกรายการข่าว High-Impact ที่ต้องการสังเคราะห์</h3>
+        </div>
+        {payload.candidates.length > 0 && (
+          <button
+            type="button"
+            onClick={toggleAll}
+            className="text-xs font-medium text-sky-700 hover:underline"
+          >
+            {allSelected ? 'ยกเลิกทั้งหมด' : 'เลือกทั้งหมด'}
+          </button>
+        )}
+      </div>
+
+      {payload.candidates.length > 0 ? (
+        <ul className="space-y-2">
+          {payload.candidates.map((c) => {
+            const maxScore = Math.max(c.macro_impact_score || 0, c.asset_impact_score || 0)
+            return (
+              <li key={c.event_id}>
+                <label className="flex cursor-pointer items-start gap-2.5 rounded-lg border border-edge bg-panel p-3 text-xs text-zinc-700 transition-colors hover:border-zinc-300">
+                  <input
+                    type="checkbox"
+                    checked={selectedEventIds.has(c.event_id)}
+                    onChange={() => toggle(c.event_id)}
+                    className="mt-1 accent-sky-500"
+                  />
+                  <div className="flex-1 space-y-1.5">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="rounded bg-amber-100 px-1.5 py-0.5 text-[11px] font-semibold text-amber-800">
+                        Score: {maxScore}/10
+                      </span>
+                      {c.triage_source === 'heuristic_fallback' && (
+                        <span
+                          title="คะแนนจาก heuristic fallback (LLM triage ล้มเหลวรอบ ingest) — โปรดตรวจสอบเนื้อหาก่อนอนุมัติ"
+                          className="rounded border border-red-200 bg-red-50 px-1.5 py-0.5 text-[10px] font-semibold text-red-700"
+                        >
+                          ⚠️ Heuristic
+                        </span>
+                      )}
+                      <span className="font-semibold text-zinc-900">{c.canonical_title}</span>
+                    </div>
+                    {c.comprehensive_summary && (
+                      <p className="text-zinc-600">{c.comprehensive_summary}</p>
+                    )}
+                    <div className="flex flex-wrap gap-1.5 pt-0.5">
+                      {c.extracted_tickers?.map((ticker) => (
+                        <span
+                          key={ticker}
+                          className="rounded border border-sky-200 bg-sky-50 px-1.5 py-0.5 text-[10px] font-medium text-sky-800"
+                        >
+                          [[{ticker}]]
+                        </span>
+                      ))}
+                      {c.extracted_themes?.map((theme) => (
+                        <span
+                          key={theme}
+                          className="rounded border border-purple-200 bg-purple-50 px-1.5 py-0.5 text-[10px] font-medium text-purple-800"
+                        >
+                          [[{theme}]]
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                </label>
+              </li>
+            )
+          })}
+        </ul>
+      ) : (
+        <p className="text-xs text-zinc-500">ไม่มีรายการข่าว High-Impact รออนุมัติ</p>
+      )}
+
+      <button
+        onClick={() => onApprove([], [], Array.from(selectedEventIds))}
+        disabled={submitting}
+        className={`rounded-lg px-4 py-2 text-sm font-medium text-white transition-colors disabled:opacity-50 ${
+          selectedEventIds.size === 0 ? 'bg-zinc-600 hover:bg-zinc-700' : 'bg-sky-500 hover:bg-sky-600'
+        }`}
+      >
+        {submitting
+          ? 'กำลังส่ง...'
+          : selectedEventIds.size === 0
+            ? 'ข้ามรอบนี้ (0 รายการ) — ไม่สังเคราะห์และไม่ปฏิเสธข่าว'
+            : `อนุมัติและดำเนินการต่อ (${selectedEventIds.size} รายการ)`}
+      </button>
+    </div>
+  )
+}
+
+function NewsYoutubeApprovalView({
+  payload,
+  onApprove,
+  submitting,
+}: {
+  payload: NewsYoutubeApprovalPayload
+  onApprove: Props['onApprove']
+  submitting?: boolean
+}) {
   const [selectedNews, setSelectedNews] = useState<Set<string>>(new Set())
   const [selectedYoutube, setSelectedYoutube] = useState<Set<string>>(new Set())
   const [showFetched, setShowFetched] = useState(false)
@@ -148,9 +285,15 @@ export default function ApprovalPanel({ payload, onApprove, submitting }: Props)
       <button
         onClick={() => onApprove(Array.from(selectedNews), Array.from(selectedYoutube))}
         disabled={submitting}
-        className="rounded-lg bg-sky-500 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-sky-600 disabled:opacity-50"
+        className={`rounded-lg px-4 py-2 text-sm font-medium text-white transition-colors disabled:opacity-50 ${
+          totalSelected === 0 ? 'bg-zinc-600 hover:bg-zinc-700' : 'bg-sky-500 hover:bg-sky-600'
+        }`}
       >
-        {submitting ? 'กำลังส่ง...' : `อนุมัติและดำเนินการต่อ (${totalSelected} รายการ)`}
+        {submitting
+          ? 'กำลังส่ง...'
+          : totalSelected === 0
+            ? 'ข้ามรอบนี้ (0 รายการ) — ไม่บันทึก'
+            : `อนุมัติและดำเนินการต่อ (${totalSelected} รายการ)`}
       </button>
     </div>
   )

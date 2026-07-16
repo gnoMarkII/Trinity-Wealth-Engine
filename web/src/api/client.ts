@@ -102,12 +102,18 @@ export const api = {
 
   getActiveAgentStatus: () => request<ActiveAgentStatusDTO>('/api/agents/active'),
 
-  resumeJob: (jobId: string, approvedNewsLinks: string[], approvedYoutubeLinks: string[]) =>
+  resumeJob: (
+    jobId: string,
+    approvedNewsLinks: string[] = [],
+    approvedYoutubeLinks: string[] = [],
+    approvedEventIds?: string[]
+  ) =>
     request<JobStatusDTO>(`/api/agents/jobs/${jobId}/resume`, {
       method: 'POST',
       body: JSON.stringify({
         approved_news_links: approvedNewsLinks,
         approved_youtube_links: approvedYoutubeLinks,
+        approved_event_ids: approvedEventIds,
       }),
     }),
 }

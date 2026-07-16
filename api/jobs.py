@@ -224,6 +224,10 @@ def default_run_fn(
             from agents.news_youtube_flow import build_news_youtube_graph
             graph = build_news_youtube_graph(checkpointer=checkpointer)
             fresh_inputs: dict = {"scope": scope}
+        elif flow == "news_funnel":
+            from agents.news_funnel_flow import build_news_funnel_graph
+            graph = build_news_funnel_graph(checkpointer=checkpointer)
+            fresh_inputs = {}
         else:
             from agents.manager_agent import build_graph
             graph = build_graph(checkpointer=checkpointer)

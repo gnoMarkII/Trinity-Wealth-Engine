@@ -19,6 +19,7 @@ const FLOW_TABS: { key: FlowFilter; label: string }[] = [
   { key: 'all', label: 'All Flows' },
   { key: 'manager', label: FLOW_LABEL.manager },
   { key: 'news_youtube', label: FLOW_LABEL.news_youtube },
+  { key: 'news_funnel', label: FLOW_LABEL.news_funnel },
 ]
 
 export default function KanbanHeader({

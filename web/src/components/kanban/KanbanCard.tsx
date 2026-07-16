@@ -52,7 +52,7 @@ export default function KanbanCard({
       role="button"
       tabIndex={0}
       style={style}
-      className={`group relative cursor-pointer rounded-xl border bg-panel p-3 pr-8 text-xs text-zinc-800 shadow-[0_5px_18px_rgba(14,165,233,0.05)] transition-all duration-150 hover:-translate-y-0.5 hover:border-cyan-300 hover:shadow-[0_8px_24px_rgba(14,165,233,0.12)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-flow-cyan ${
+      className={`group relative cursor-pointer rounded-xl border bg-panel p-2.5 text-xs text-zinc-800 shadow-[0_5px_18px_rgba(14,165,233,0.05)] transition-all duration-150 hover:-translate-y-0.5 hover:border-cyan-300 hover:shadow-[0_8px_24px_rgba(14,165,233,0.12)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-flow-cyan ${
         selected || workspacePreview ? 'border-2 border-flow-sky' : 'border-sky-100'
       } ${removing ? 'animate-card-out' : 'animate-card-in'} ${faded ? 'opacity-40' : ''}`}
     >
@@ -82,8 +82,8 @@ export default function KanbanCard({
       >
         ✕
       </button>
-      <div className="mb-1 flex items-center justify-between gap-2 pr-4">
-        <div className="flex items-center gap-1.5">
+      <div className="mb-1.5 flex flex-wrap items-center justify-between gap-1 pr-5">
+        <div className="flex flex-wrap items-center gap-1 min-w-0">
           {editable && onDispatch && (
             <button
               onClick={(e) => {
@@ -107,14 +107,14 @@ export default function KanbanCard({
             </button>
           )}
           {card.display_seq != null && (
-            <span className="font-mono text-[11px] font-medium text-zinc-400">#AG-{card.display_seq}</span>
+            <span className="shrink-0 font-mono text-[11px] font-medium text-zinc-400">#AG-{card.display_seq}</span>
           )}
         </div>
-        <span className="rounded border border-purple-200/60 bg-purple-50 px-1.5 py-0.5 text-[10px] text-purple-700">
+        <span className="max-w-[100%] truncate rounded border border-purple-200/60 bg-purple-50 px-1.5 py-0.5 text-[10px] font-medium text-purple-700">
           {FLOW_TAG[card.flow] ?? `#${card.flow}`}
         </span>
       </div>
-      <p className="break-words text-sm font-semibold leading-snug text-zinc-800">{card.title}</p>
+      <p className="text-sm font-semibold leading-snug text-zinc-800 break-words">{card.title}</p>
       {workspacePreview && (
         <div className="mt-2 flex items-center gap-1.5 rounded-md border border-edge bg-surface px-1.5 py-1 text-[10px] font-medium text-zinc-700">
           <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-500" />

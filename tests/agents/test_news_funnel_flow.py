@@ -54,7 +54,7 @@ def test_synthesize_node(tmp_path, monkeypatch):
         "vault_root": vault_dir,
     }
     out = synthesize_node(state)
-    assert "✓ สังเคราะห์ธีมเศรษฐกิจสำเร็จ" in out["result_summary"]
+    assert "✓ เผยแพร่ข่าวเดี่ยวสำเร็จ" in out["result_summary"]
 
 
 def test_build_news_funnel_graph():

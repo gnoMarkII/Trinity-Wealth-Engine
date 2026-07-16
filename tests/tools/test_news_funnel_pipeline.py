@@ -3,14 +3,13 @@ import os
 import pytest
 
 from tools.macro.news_funnel import (
-    THEME_DISPLAY_NAME_MAP,
     canonicalize_ticker_names,
     ensure_concept_stubs_exist,
     run_news_funnel_ingest,
     run_news_funnel_synthesize,
 )
 from unittest.mock import patch
-from schemas.news_funnel_schemas import MacroImpactTriageResult, MacroThemeDigest, TriageBatchResult, ThemeSynthesisBatchResult
+from schemas.news_funnel_schemas import MacroImpactTriageResult, TriageBatchResult
 from tools.macro.news_funnel_store import load_store, prune_old_events, save_store, save_triage_events
 
 
@@ -21,10 +20,7 @@ def test_paths(tmp_path):
     return str(store_file), str(vault_dir)
 
 
-def test_theme_display_name_map_and_tickers():
-    assert THEME_DISPLAY_NAME_MAP["policy"] == "Monetary Policy"
-    assert THEME_DISPLAY_NAME_MAP["risk_sentiment"] == "Market Risk Sentiment"
-
+def test_canonicalize_ticker_names():
     tickers = ["NVIDIA", "[[APPLE]]", "PTT", "[[Gold]]"]
     canon = canonicalize_ticker_names(tickers)
     assert canon == ["NVDA", "AAPL", "PTT", "Gold"]
@@ -32,6 +28,13 @@ def test_theme_display_name_map_and_tickers():
 
 def test_ensure_concept_stubs(test_paths):
     _, vault_dir = test_paths
+    # Create old News/Concepts folder and a stub inside it to verify migration
+    old_dir = os.path.join(vault_dir, "30_Knowledge_Base", "News", "Concepts")
+    os.makedirs(old_dir, exist_ok=True)
+    old_stub_path = os.path.join(old_dir, "OldStub.md")
+    with open(old_stub_path, "w", encoding="utf-8") as f:
+        f.write("---\ntitle: \"OldStub\"\n---\n# OldStub")
+
     created = ensure_concept_stubs_exist(["Gold", "[[US Treasury]]"], vault_root=vault_dir)
     assert len(created) == 2
     for path in created:
@@ -39,6 +42,12 @@ def test_ensure_concept_stubs(test_paths):
         with open(path, "r", encoding="utf-8") as f:
             content = f.read()
             assert "entity_type: concept_stub" in content
+
+    # Verify old stub migrated to new Concepts folder
+    new_stub_path = os.path.join(vault_dir, "30_Knowledge_Base", "Concepts", "OldStub.md")
+    assert os.path.exists(new_stub_path)
+    # Verify old folder News/Concepts is deleted
+    assert not os.path.exists(old_dir)
 
 
 def test_ingest_pipeline(test_paths, monkeypatch):
@@ -71,6 +80,10 @@ def test_ingest_pipeline(test_paths, monkeypatch):
 
 def test_synthesize_zero_pending_protection(test_paths):
     store_file, vault_dir = test_paths
+    # Create old News/Themes dir to test legacy cleanup
+    old_themes_dir = os.path.join(vault_dir, "30_Knowledge_Base", "News", "Themes")
+    os.makedirs(old_themes_dir, exist_ok=True)
+
     # Do not ingest anything -> pending = 0
     res = run_news_funnel_synthesize(
         period="morning",
@@ -80,15 +93,17 @@ def test_synthesize_zero_pending_protection(test_paths):
     )
 
     assert res["status"] == "no_pending_events"
-    assert res["synthesized"] == 0
-    # Must NOT create any markdown digest file
-    themes_dir = os.path.join(vault_dir, "30_Knowledge_Base", "News", "Themes")
-    assert not os.path.exists(themes_dir) or os.listdir(themes_dir) == []
+    assert res["published_count"] == 0
+    assert not os.path.exists(old_themes_dir)
 
 
 def test_synthesize_with_events_and_hitl_filter(test_paths, monkeypatch):
     monkeypatch.setenv("MOCK_NEWS_FUNNEL_LLM", "true")
     store_file, vault_dir = test_paths
+    # Create legacy News/Themes dir to test cleanup during synthesis
+    old_themes_dir = os.path.join(vault_dir, "30_Knowledge_Base", "News", "Themes")
+    os.makedirs(old_themes_dir, exist_ok=True)
+
     events = [
         {
             "event_id": "ev-100",
@@ -123,21 +138,25 @@ def test_synthesize_with_events_and_hitl_filter(test_paths, monkeypatch):
     )
 
     assert res["status"] == "success"
-    assert res["synthesized"] == 1
-    file_path = res["file_path"]
+    assert res["published_count"] == 1
+    assert len(res["created_files"]) == 1
+    file_path = res["created_files"][0]
     assert os.path.exists(file_path)
+    assert not os.path.exists(old_themes_dir)
 
     with open(file_path, "r", encoding="utf-8") as f:
         content = f.read()
-        assert "Macro Themes Digest - 2026-07-13 Morning" in content
-        assert "[[NVDA]]" in content
-        assert "[[Monetary Policy]]" in content
-        assert "[[Inflation]]" in content
+        assert "entity_type: article_note" in content
+        assert "Fed rate decision and Inflation risk" in content
+        assert "> **Macro Impact:** 8/10 | **Asset Impact:** 6/10" in content
+        assert "## ใจความสำคัญ\nService inflation sticky" in content
+        assert "## หุ้นและสินทรัพย์ที่เกี่ยวข้อง\n- NVDA, Gold" in content
+        assert "## ธีมเศรษฐกิจที่เกี่ยวข้อง\n- policy, inflation" in content
 
-    # Check state store that ev-100 is synthesized and ev-200 is still pending
+    # Check state store that ev-100 is synthesized and ev-200 is rejected per HITL selection
     state = load_store(store_path=store_file)
     assert any(ev["event_id"] == "ev-100" and ev["status"] == "synthesized" for ev in state["pending_events"])
-    assert any(ev["event_id"] == "ev-200" and ev["status"] == "pending_synthesis" for ev in state["pending_events"])
+    assert any(ev["event_id"] == "ev-200" and ev["status"] == "rejected" for ev in state["pending_events"])
 
 
 def test_overwrite_guard(tmp_path, monkeypatch):
@@ -147,7 +166,7 @@ def test_overwrite_guard(tmp_path, monkeypatch):
     events = [
         {
             "event_id": "ev-A1",
-            "canonical_title": "Title A1",
+            "canonical_title": "Same Title",
             "comprehensive_summary": "Sum 1",
             "macro_impact_score": 8,
             "asset_impact_score": 5,
@@ -157,7 +176,7 @@ def test_overwrite_guard(tmp_path, monkeypatch):
         },
         {
             "event_id": "ev-A2",
-            "canonical_title": "Title A2",
+            "canonical_title": "Same Title",
             "comprehensive_summary": "Sum 2",
             "macro_impact_score": 8,
             "asset_impact_score": 5,
@@ -168,27 +187,19 @@ def test_overwrite_guard(tmp_path, monkeypatch):
     ]
     save_triage_events(events, store_path=store_file)
 
-    res1 = run_news_funnel_synthesize(
+    res = run_news_funnel_synthesize(
         period="morning",
-        approved_event_ids=["ev-A1"],
         store_path=store_file,
         vault_root=vault_dir,
         custom_date="2026-07-13",
+        allow_autonomous=True,
     )
-    assert res1["status"] == "success"
-    file1 = res1["file_path"]
-    assert file1.endswith("2026-07-13_Morning_MacroThemes.md")
-
-    res2 = run_news_funnel_synthesize(
-        period="morning",
-        approved_event_ids=["ev-A2"],
-        store_path=store_file,
-        vault_root=vault_dir,
-        custom_date="2026-07-13",
-    )
-    assert res2["status"] == "success"
-    file2 = res2["file_path"]
-    assert file2.endswith("2026-07-13_Morning_MacroThemes_2.md")
+    assert res["status"] == "success"
+    assert len(res["created_files"]) == 2
+    file1 = res["created_files"][0]
+    file2 = res["created_files"][1]
+    assert "2026-07-13_Same Title.md" in file1 or "2026-07-13_Same Title_2.md" in file1
+    assert "2026-07-13_Same Title.md" in file2 or "2026-07-13_Same Title_2.md" in file2
     assert file1 != file2
 
 
@@ -232,29 +243,128 @@ def test_llm_triage_and_synthesis_mocked(tmp_path, monkeypatch):
         assert res["status"] == "success"
         assert res["high_impact_count"] == 1
 
-    mock_synth_res = ThemeSynthesisBatchResult(themes=[
-        MacroThemeDigest(
-            theme_title="Synthesized Policy Theme",
-            key_takeaways=["Key takeaway 1"],
-            linked_assets=["NVIDIA", "PTT"],
-            linked_themes=["policy"],
-            policy_implications="Watch rates closely",
-        )
-    ])
+    s_res = run_news_funnel_synthesize(
+        period="morning",
+        store_path=store_file,
+        vault_root=vault_dir,
+        custom_date="2026-07-13",
+        allow_autonomous=True,
+    )
+    assert s_res["status"] == "success"
+    assert s_res["published_count"] == 1
+    assert len(s_res["created_files"]) == 1
 
-    with patch("core.llm_factory.get_llm") as mock_get_llm:
-        mock_llm = mock_get_llm.return_value
-        mock_llm.with_structured_output.return_value.invoke.return_value = mock_synth_res
-        s_res = run_news_funnel_synthesize(
-            period="morning",
+
+def test_synthesize_requires_kanban_approval_and_creates_card(tmp_path, monkeypatch):
+    store_file = str(tmp_path / "test_state.json")
+    vault_dir = str(tmp_path / "vault")
+    monkeypatch.setenv("MOCK_NEWS_FUNNEL_LLM", "true")
+    monkeypatch.setenv("WEBUI_STATE_DB_PATH", str(tmp_path / "webui_state.sqlite"))
+
+    events = [
+        {
+            "event_id": "ev-kanban-1",
+            "canonical_title": "Kanban Test Event",
+            "macro_impact_score": 8,
+            "asset_impact_score": 7,
+            "is_high_impact": True,
+        }
+    ]
+    save_triage_events(events, store_path=store_file)
+
+    res = run_news_funnel_synthesize(
+        period="morning",
+        store_path=store_file,
+        vault_root=vault_dir,
+    )
+    assert res["status"] == "require_kanban_approval"
+    assert res["published_count"] == 0
+    assert len(res["created_files"]) == 0
+    assert "Strict HITL Enforced" in res["message"]
+    # ชั้น tools ไม่แตะ state_db แล้ว — คืน pending_events + period ให้ caller เป็นคน upsert การ์ด
+    assert res["period"] == "morning"
+    assert len(res["pending_events"]) == 1
+
+    from api.news_funnel_cards import upsert_news_funnel_card
+    upsert_news_funnel_card(res["period"], res["pending_events"])
+
+    from contextlib import closing
+    from api import state_db
+    with closing(state_db.get_connection()) as conn:
+        cards = state_db.list_kanban_cards(conn)
+        news_card = next((c for c in cards if c["flow"] == "news_funnel"), None)
+        assert news_card is not None
+        assert "### 📰 รายการข่าว High-Impact ที่รอการสังเคราะห์" in news_card["prompt"]
+        assert "Kanban Test Event" in news_card["prompt"]
+
+    # upsert ซ้ำด้วย period เดิมต้องอัปเดตการ์ดเดิม ไม่สร้างการ์ดใหม่
+    upsert_news_funnel_card(res["period"], res["pending_events"])
+    with closing(state_db.get_connection()) as conn:
+        cards = state_db.list_kanban_cards(conn)
+        assert sum(1 for c in cards if c["flow"] == "news_funnel") == 1
+
+
+def test_ingest_llm_failure_falls_back_to_tagged_heuristic(tmp_path, monkeypatch):
+    """LLM triage ล้มเหลวทั้ง batch และรายตัว → ต้อง ingest ด้วย heuristic ที่ถูก tag ไม่ใช่ starve หรือปนกับคะแนน LLM"""
+    store_file = str(tmp_path / "test_state.json")
+    monkeypatch.setenv("MOCK_NEWS_FUNNEL_LLM", "false")
+
+    with patch("core.llm_factory.get_llm", side_effect=RuntimeError("LLM outage")):
+        res = run_news_funnel_ingest(
+            candidates=[{"title": "Fed rate decision surprise", "link": "https://test.ex/outage", "summary": "Rates"}],
             store_path=store_file,
-            vault_root=vault_dir,
-            custom_date="2026-07-13",
         )
-        assert s_res["status"] == "success"
-        assert len(s_res["report"]["themes"]) == 1
-        # ตรวจสอบ canonicalization
-        assert set(s_res["report"]["themes"][0]["linked_assets"]) == {"[[NVDA]]", "[[PTT]]"}
+
+    assert res["status"] == "success"
+    assert res["ingested_count"] == 1
+
+    state = load_store(store_path=store_file)
+    ev = state["pending_events"][0]
+    assert ev["triage_source"] == "heuristic_fallback"
+
+    # การ์ด Kanban ต้องมีคำเตือน heuristic ให้ผู้รีวิวเห็น
+    from tools.macro.news_funnel import format_news_funnel_card_prompt
+    prompt = format_news_funnel_card_prompt("morning", [ev])
+    assert "heuristic fallback" in prompt
+
+
+def test_synthesize_with_approval_rejects_unselected(tmp_path, monkeypatch):
+    store_file = str(tmp_path / "test_state.json")
+    vault_dir = str(tmp_path / "vault")
+    monkeypatch.setenv("MOCK_NEWS_FUNNEL_LLM", "true")
+
+    events = [
+        {
+            "event_id": "ev-sel-1",
+            "canonical_title": "Selected Event",
+            "macro_impact_score": 8,
+            "asset_impact_score": 7,
+            "is_high_impact": True,
+        },
+        {
+            "event_id": "ev-rej-1",
+            "canonical_title": "Rejected Event",
+            "macro_impact_score": 8,
+            "asset_impact_score": 7,
+            "is_high_impact": True,
+        },
+    ]
+    save_triage_events(events, store_path=store_file)
+
+    res = run_news_funnel_synthesize(
+        period="morning",
+        approved_event_ids=["ev-sel-1"],
+        store_path=store_file,
+        vault_root=vault_dir,
+    )
+    assert res["status"] == "success"
+    assert res["published_count"] == 1
+    assert res["rejected_count"] == 1
+
+    state = load_store(store_path=store_file)
+    assert any(ev["event_id"] == "ev-sel-1" and ev["status"] == "synthesized" for ev in state["pending_events"])
+    assert any(ev["event_id"] == "ev-rej-1" and ev["status"] == "rejected" for ev in state["pending_events"])
+
 
 
 def test_store_retention_prune(tmp_path):
@@ -295,30 +405,9 @@ def test_clean_and_truncate_summary_html():
     assert cleaned.endswith("...")
 
 
-def test_theme_canonicalization_with_brackets():
-    from tools.macro.news_funnel import _deterministic_synthesize_themes
-    events = [
-        {
-            "event_id": "ev-1",
-            "canonical_title": "Fed rate meeting",
-            "comprehensive_summary": "Summary",
-            "extracted_tickers": ["[[NVDA]]"],
-            "extracted_themes": ["[[policy]]", "[[geopolitics|Geopolitics]]"],
-            "macro_impact_score": 8,
-            "asset_impact_score": 5,
-        }
-    ]
-    themes = _deterministic_synthesize_themes(events)
-    assert len(themes) > 0
-    theme_links = themes[0].linked_themes
-    assert "[[Monetary Policy]]" in theme_links
-    assert "[[Geopolitics & Commodities]]" in theme_links
-    assert "[[[[Monetary Policy]]]]" not in theme_links
-    assert "[[[[policy]]]]" not in theme_links
-
-
 def test_unified_cli_runner(monkeypatch, tmp_path):
-    from scripts import run_news_funnel, run_news_funnel_auto
+    from cli import run_news_funnel
+    from scripts import run_news_funnel_auto
     store_file = str(tmp_path / "cli_test_state.json")
     
     # Test running via unified runner with --mode ingest
@@ -332,4 +421,66 @@ def test_unified_cli_runner(monkeypatch, tmp_path):
     monkeypatch.setattr("sys.argv", ["run_news_funnel_auto.py", "--mode", "ingest", "--store-path", store_file])
     with pytest.deprecated_call():
         run_news_funnel_auto.main()
+
+
+def test_synthesize_empty_approval_graceful_skip(tmp_path):
+    store_file = str(tmp_path / "test_state.json")
+    vault_dir = str(tmp_path / "vault")
+    events = [
+        {
+            "event_id": "ev1",
+            "canonical_title": "Title 1",
+            "comprehensive_summary": "Sum 1",
+            "macro_impact_score": 8,
+            "asset_impact_score": 5,
+            "is_high_impact": True,
+            "status": "pending_synthesis",
+        }
+    ]
+    save_triage_events(events, store_path=store_file)
+
+    res = run_news_funnel_synthesize(
+        period="morning",
+        approved_event_ids=[],
+        store_path=store_file,
+        vault_root=vault_dir,
+    )
+    assert res["status"] == "no_approved_events"
+    assert res["rejected_count"] == 0
+    assert len(res["created_files"]) == 0
+
+    state = load_store(store_file)
+    assert len(state["pending_events"]) == 1
+    assert state["pending_events"][0]["status"] == "pending_synthesis"
+
+
+def test_synthesize_toctou_rejection_protection(tmp_path):
+    store_file = str(tmp_path / "test_state.json")
+    vault_dir = str(tmp_path / "vault")
+    events = [
+        {"event_id": "ev-old-1", "canonical_title": "Old 1", "comprehensive_summary": "Sum 1", "macro_impact_score": 8, "is_high_impact": True, "status": "pending_synthesis"},
+        {"event_id": "ev-old-2", "canonical_title": "Old 2", "comprehensive_summary": "Sum 2", "macro_impact_score": 8, "is_high_impact": True, "status": "pending_synthesis"},
+        {"event_id": "ev-new-toctou", "canonical_title": "New TOCTOU", "comprehensive_summary": "Sum 3", "macro_impact_score": 9, "is_high_impact": True, "status": "pending_synthesis"},
+    ]
+    save_triage_events(events, store_path=store_file)
+
+    # สมมติว่าตอนผู้ใช้เปิดหน้าจอ มีแค่ ev-old-1 และ ev-old-2 (candidate_event_ids) และผู้ใช้อนุมัติแค่ ev-old-1
+    # ข่าวที่เพิ่งเข้ามาใหม่ ev-new-toctou จะต้องไม่ถูกปฏิเสธ (rejected) เพราะไม่อยู่ใน candidate_event_ids ของรอบนั้น
+    res = run_news_funnel_synthesize(
+        period="morning",
+        approved_event_ids=["ev-old-1"],
+        candidate_event_ids=["ev-old-1", "ev-old-2"],
+        store_path=store_file,
+        vault_root=vault_dir,
+    )
+    assert res["status"] == "success"
+    assert res["published_count"] == 1
+    assert res["rejected_count"] == 1  # เฉพาะ ev-old-2
+
+    state = load_store(store_file)
+    statuses = {e["event_id"]: e["status"] for e in state["pending_events"]}
+    assert statuses["ev-old-1"] == "synthesized"
+    assert statuses["ev-old-2"] == "rejected"
+    assert statuses["ev-new-toctou"] == "pending_synthesis"
+
 

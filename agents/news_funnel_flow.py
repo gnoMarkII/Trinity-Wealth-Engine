@@ -3,7 +3,6 @@
 ไม่กระทบ manager_agent.py เดิม ครอบคลุม 3 Node:
 load_pending_node -> gate_node -> synthesize_node
 """
-from datetime import datetime
 from typing import Any, Dict, List, Literal, Optional, TypedDict
 
 from langchain_core.messages import AIMessage
@@ -63,29 +62,38 @@ def gate_node(state: NewsFunnelState) -> Command[Literal["synthesize"]]:
 
 
 def synthesize_node(state: NewsFunnelState) -> Dict[str, Any]:
-    """สังเคราะห์ธีมเศรษฐกิจตามรายการ approved_event_ids ที่ผู้ใช้อนุมัติ"""
+    """สร้างโน้ตข่าวเดี่ยวตามรายการ approved_event_ids ที่ผู้ใช้อนุมัติ"""
+    # period ไม่ต้อง derive ที่นี่ — run_news_funnel_synthesize resolve เองเมื่อได้ None/"auto"
     period = state.get("period")
-    if not period:
-        period = "morning" if datetime.now().hour < 12 else "evening"
     approved_ids = state.get("approved_event_ids")
+    candidates = state.get("candidates", [])
+    candidate_ids = [c.get("event_id") for c in candidates if isinstance(c, dict) and c.get("event_id")] if candidates else None
     store_path = state.get("store_path")
     vault_root = state.get("vault_root")
 
     result = run_news_funnel_synthesize(
         period=period,
         approved_event_ids=approved_ids,
+        candidate_event_ids=candidate_ids,
         store_path=store_path,
         vault_root=vault_root,
     )
 
-    if result.get("status") == "no_pending_events":
-        msg_text = "ไม่มีรายการข่าวที่รอสังเคราะห์ (Zero Pending) — ไม่เขียนไฟล์ทับลง Obsidian Vault"
-    elif result.get("status") == "synthesis_llm_failure":
-        msg_text = "❌ การสังเคราะห์ธีมเศรษฐกิจผ่าน LLM ล้มเหลว — ไม่เขียนไฟล์และยังเก็บรายการข่าวเป็น Pending เพื่อลองใหม่ในรอบถัดไป"
+    # หมายเหตุ: node นี้ได้ approved_ids เป็น list เสมอ (gate fail-closed) ดังนั้น status
+    # ที่เป็นไปได้มีแค่ no_approved_events กับ success — ไม่มี branch no_pending_events
+    if result.get("status") == "no_approved_events":
+        rejected_cnt = result.get("rejected_count", 0)
+        if rejected_cnt > 0:
+            msg_text = f"🚫 ไม่มีรายการที่ได้รับการอนุมัติ (เปลี่ยนสถานะไม่คัดเลือกเป็น Rejected {rejected_cnt} รายการ) — ไม่เขียนไฟล์ทับลง Obsidian Vault"
+        else:
+            msg_text = "🚫 ข้ามรอบนี้ตามคำสั่ง (0 รายการ) — ไม่สร้างโน้ตข่าวและไม่ปฏิเสธข่าวในคิว (จบ Graceful)"
     else:
-        file_path = result.get("file_path", "")
-        count = result.get("synthesized", 0)
-        msg_text = f"✓ สังเคราะห์ธีมเศรษฐกิจสำเร็จจาก {count} รายการ -> บันทึกลง {file_path}"
+        count = result.get("published_count", 0)
+        rejected_cnt = result.get("rejected_count", 0)
+        files = result.get("created_files", [])
+        files_str = ", ".join([f.split("/")[-1].split("\\")[-1] for f in files[:3]]) + ("..." if len(files) > 3 else "")
+        reject_msg = f" (และเปลี่ยนสถานะรายการที่ไม่เลือกเป็น Rejected {rejected_cnt} รายการ)" if rejected_cnt > 0 else ""
+        msg_text = f"✓ เผยแพร่ข่าวเดี่ยวสำเร็จจำนวน {count} รายการ{reject_msg} -> บันทึกลง {files_str if files_str else 'Obsidian Vault'}"
 
     return {
         "result_summary": msg_text,
