@@ -33,24 +33,26 @@ export default function PortfolioOverviewTab({ targets, summaries, warning, onSe
   const [hoveredBucket, setHoveredBucket] = useState<string | null>(null)
   const [targetModalOpen, setTargetModalOpen] = useState(false)
 
-  // คำนวณเส้นรอบวงสำหรับ SVG Donut Chart
-  // Inner Ring: Target (radius 60)
-  // Outer Ring: Actual (radius 95)
-  const innerRadius = 60
-  const outerRadius = 95
+  // คำนวณเส้นรอบวงสำหรับ SVG Donut Chart (Modern High-Impact Geometry)
+  // Inner Ring: Target (radius 96)
+  // Outer Ring: Actual (radius 132)
+  const innerRadius = 96
+  const outerRadius = 132
   const strokeWidthInner = 18
-  const strokeWidthOuter = 22
+  const strokeWidthOuter = 24
 
   const innerCircumference = 2 * Math.PI * innerRadius
   const outerCircumference = 2 * Math.PI * outerRadius
 
-  // คำนวณ segments สำหรับ Inner (Targets)
+  // คำนวณ segments สำหรับ Inner (Targets) พร้อม Gap และ Rounded Caps
   let innerOffset = 0
   const innerSegments = targets.map((t, idx) => {
     const pct = Math.max(0, Math.min(100, t.target_percent))
-    const strokeDasharray = `${(pct / 100) * innerCircumference} ${innerCircumference}`
-    const strokeDashoffset = -innerOffset
-    innerOffset += (pct / 100) * innerCircumference
+    const rawDash = (pct / 100) * innerCircumference
+    const gap = targets.length > 1 && rawDash > 16 ? 10 : 0
+    const strokeDasharray = `${Math.max(0.1, rawDash - gap)} ${innerCircumference - rawDash + gap}`
+    const strokeDashoffset = -innerOffset - gap / 2
+    innerOffset += rawDash
     return {
       bucketId: t.bucket_id,
       name: t.name,
@@ -61,13 +63,15 @@ export default function PortfolioOverviewTab({ targets, summaries, warning, onSe
     }
   })
 
-  // คำนวณ segments สำหรับ Outer (Actuals)
+  // คำนวณ segments สำหรับ Outer (Actuals) พร้อม Gap และ Rounded Caps
   let outerOffset = 0
   const outerSegments = summaries.map((s, idx) => {
     const pct = Math.max(0, Math.min(100, s.actual_percent))
-    const strokeDasharray = `${(pct / 100) * outerCircumference} ${outerCircumference}`
-    const strokeDashoffset = -outerOffset
-    outerOffset += (pct / 100) * outerCircumference
+    const rawDash = (pct / 100) * outerCircumference
+    const gap = summaries.length > 1 && rawDash > 16 ? 12 : 0
+    const strokeDasharray = `${Math.max(0.1, rawDash - gap)} ${outerCircumference - rawDash + gap}`
+    const strokeDashoffset = -outerOffset - gap / 2
+    outerOffset += rawDash
     const targetIdx = targets.findIndex((t) => t.bucket_id === s.bucket_id)
     return {
       bucketId: s.bucket_id,
@@ -117,11 +121,18 @@ export default function PortfolioOverviewTab({ targets, summaries, warning, onSe
             </p>
           </div>
 
-          <div className="relative my-6 flex items-center justify-center">
-            <svg className="h-64 w-64 -rotate-90 transform" viewBox="0 0 240 240">
+          <div className="relative my-4 flex-1 flex items-center justify-center min-h-[300px] w-full max-w-[380px] mx-auto">
+            <svg className="w-full h-auto aspect-square -rotate-90 transform drop-shadow-sm transition-all duration-300" viewBox="0 0 320 320">
+              <defs>
+                <filter id="ring-hover-glow" x="-20%" y="-20%" width="140%" height="140%">
+                  <feGaussianBlur stdDeviation="5" result="blur" />
+                  <feComposite in="SourceGraphic" in2="blur" operator="over" />
+                </filter>
+              </defs>
+
               {/* Background Tracks */}
-              <circle cx="120" cy="120" r={innerRadius} fill="transparent" stroke="#f1f5f9" strokeWidth={strokeWidthInner} />
-              <circle cx="120" cy="120" r={outerRadius} fill="transparent" stroke="#f1f5f9" strokeWidth={strokeWidthOuter} />
+              <circle cx="160" cy="160" r={innerRadius} fill="transparent" stroke="#e2e8f0" strokeWidth={strokeWidthInner} opacity={0.45} />
+              <circle cx="160" cy="160" r={outerRadius} fill="transparent" stroke="#cbd5e1" strokeWidth={strokeWidthOuter} opacity={0.35} />
 
               {/* Inner Ring (Target) */}
               {innerSegments.map((seg) => {
@@ -130,14 +141,16 @@ export default function PortfolioOverviewTab({ targets, summaries, warning, onSe
                 return (
                   <circle
                     key={`inner-${seg.bucketId}`}
-                    cx="120"
-                    cy="120"
+                    cx="160"
+                    cy="160"
                     r={innerRadius}
                     fill="transparent"
                     stroke={seg.color}
-                    strokeWidth={isHovered ? strokeWidthInner + 3 : strokeWidthInner}
+                    strokeWidth={isHovered ? strokeWidthInner + 4 : strokeWidthInner}
                     strokeDasharray={seg.strokeDasharray}
                     strokeDashoffset={seg.strokeDashoffset}
+                    strokeLinecap={seg.pct < 100 && targets.length > 1 ? 'round' : 'butt'}
+                    filter={isHovered ? 'url(#ring-hover-glow)' : undefined}
                     opacity={isDimmed ? 0.35 : 1}
                     className="transition-all duration-300 cursor-pointer"
                     onMouseEnter={() => setHoveredBucket(seg.bucketId)}
@@ -156,14 +169,16 @@ export default function PortfolioOverviewTab({ targets, summaries, warning, onSe
                 return (
                   <circle
                     key={`outer-${seg.bucketId}`}
-                    cx="120"
-                    cy="120"
+                    cx="160"
+                    cy="160"
                     r={outerRadius}
                     fill="transparent"
                     stroke={seg.color}
-                    strokeWidth={isHovered ? strokeWidthOuter + 4 : strokeWidthOuter}
+                    strokeWidth={isHovered ? strokeWidthOuter + 6 : strokeWidthOuter}
                     strokeDasharray={seg.strokeDasharray}
                     strokeDashoffset={seg.strokeDashoffset}
+                    strokeLinecap={seg.pct < 100 && summaries.length > 1 ? 'round' : 'butt'}
+                    filter={isHovered ? 'url(#ring-hover-glow)' : undefined}
                     opacity={isDimmed ? 0.35 : 1}
                     className="transition-all duration-300 cursor-pointer"
                     onMouseEnter={() => setHoveredBucket(seg.bucketId)}
@@ -176,32 +191,39 @@ export default function PortfolioOverviewTab({ targets, summaries, warning, onSe
               })}
             </svg>
 
-            {/* Center Label (Interactive Hover / Total Variance Summary) */}
-            <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none text-center p-4">
-              {activeSummary ? (
-                <div className="space-y-0.5 animate-fade-in">
-                  <span className="text-xs font-bold text-zinc-500 uppercase tracking-wider">
-                    {activeSummary.name}
-                  </span>
-                  <div className="text-xl font-extrabold font-mono tabular-nums text-zinc-900">
-                    {activeSummary.actual_percent.toFixed(1)}%
+            {/* Center Label (Interactive Hover Card / Total Variance Summary) */}
+            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+              <div className="w-44 h-44 rounded-full bg-gradient-to-br from-white/95 via-white/85 to-sky-50/70 backdrop-blur-md border border-sky-200/80 shadow-inner flex flex-col items-center justify-center p-3 text-center transition-all duration-300 animate-fade-in">
+                {activeSummary ? (
+                  <div className="space-y-1 animate-fade-in flex flex-col items-center">
+                    <span
+                      className="inline-block rounded-full px-2.5 py-0.5 text-[10px] font-extrabold uppercase tracking-wider text-white shadow-2xs truncate max-w-[140px]"
+                      style={{ backgroundColor: activeSummary.color || '#0ea5e9' }}
+                    >
+                      {activeSummary.name}
+                    </span>
+                    <div className="text-2xl font-black font-mono tabular-nums text-zinc-900 tracking-tight leading-none pt-0.5">
+                      {activeSummary.actual_percent.toFixed(1)}%
+                    </div>
+                    <div className="text-[11px] font-mono tabular-nums text-zinc-500">
+                      Target: {activeTarget ? `${activeTarget.target_percent.toFixed(1)}%` : 'N/A'}
+                    </div>
+                    <div className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-mono tabular-nums font-bold ${activeSummary.variance > 0 ? 'bg-amber-50 text-amber-700 border border-amber-200' : activeSummary.variance < 0 ? 'bg-rose-50 text-rose-700 border border-rose-200' : 'bg-emerald-50 text-emerald-700 border border-emerald-200'}`}>
+                      <span>Diff: {activeSummary.variance > 0 ? '+' : ''}{activeSummary.variance.toFixed(1)}%</span>
+                    </div>
                   </div>
-                  <div className="text-[11px] font-mono tabular-nums text-zinc-500">
-                    Target: {activeTarget ? `${activeTarget.target_percent.toFixed(1)}%` : 'N/A'}
+                ) : (
+                  <div className="space-y-1 animate-fade-in flex flex-col items-center justify-center">
+                    <span className="text-[11px] font-extrabold text-zinc-400 uppercase tracking-wider">Total Variance</span>
+                    <div className={`text-3xl font-black font-mono tabular-nums tracking-tight leading-none my-1 ${totalVariance <= 10 ? 'text-emerald-600' : 'text-amber-600'}`}>
+                      {totalVariance.toFixed(1)}%
+                    </div>
+                    <div className="text-[10px] font-medium text-zinc-400 max-w-[130px] leading-tight">
+                      {summaries.length} Buckets <br /> (ชี้เพื่อดูรายละเอียด)
+                    </div>
                   </div>
-                  <div className={`text-[11px] font-mono tabular-nums font-bold ${activeSummary.variance > 0 ? 'text-amber-600' : activeSummary.variance < 0 ? 'text-rose-600' : 'text-emerald-600'}`}>
-                    Diff: {activeSummary.variance > 0 ? '+' : ''}{activeSummary.variance.toFixed(1)}%
-                  </div>
-                </div>
-              ) : (
-                <div className="space-y-0.5 animate-fade-in">
-                  <span className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Total Variance</span>
-                  <div className={`text-2xl font-extrabold font-mono tabular-nums ${totalVariance <= 10 ? 'text-emerald-600' : 'text-amber-600'}`}>
-                    {totalVariance.toFixed(1)}%
-                  </div>
-                  <span className="text-[11px] text-zinc-400">{summaries.length} Buckets (ชี้เพื่อดูรายละเอียด)</span>
-                </div>
-              )}
+                )}
+              </div>
             </div>
           </div>
 

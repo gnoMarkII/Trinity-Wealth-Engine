@@ -37,6 +37,8 @@ from api.schemas import (
     UpsertWatchlistItemRequestDTO,
     UpsertGoalRequestDTO,
     AppendJournalRequestDTO,
+    NewsFunnelPendingItemDTO,
+    NewsFunnelFilteredItemDTO,
 )
 from tools.archivist.core import VAULT_PATH
 from tools.macro.dashboard import load_indicator_series
@@ -98,6 +100,33 @@ def get_macro_indicator_series(indicator_id: str, range: str = "3m") -> MacroInd
         range=range,
         points=points,
     )
+
+
+@router.get("/api/macro/news_funnel/pending", response_model=list[NewsFunnelPendingItemDTO])
+def get_news_funnel_pending() -> list[NewsFunnelPendingItemDTO]:
+    from tools.macro import news_funnel_store
+    events = news_funnel_store.get_pending_high_impact_events()
+    return [NewsFunnelPendingItemDTO.model_validate(e) for e in events]
+
+
+@router.get("/api/macro/news_funnel/filtered", response_model=list[NewsFunnelFilteredItemDTO])
+def get_news_funnel_filtered() -> list[NewsFunnelFilteredItemDTO]:
+    from tools.macro import news_funnel_store
+    events = news_funnel_store.get_filtered_or_rejected_events()
+    return [NewsFunnelFilteredItemDTO.model_validate(e) for e in events]
+
+
+@router.delete("/api/macro/news_funnel/pending/{event_id}")
+def delete_news_funnel_pending(event_id: str) -> dict:
+    from tools.macro import news_funnel_store
+    from tools.macro.news_funnel import get_synthesis_period
+    from api.news_funnel_cards import upsert_news_funnel_card
+
+    news_funnel_store.update_events_status(rejected_ids=[event_id])
+    remaining = news_funnel_store.get_pending_high_impact_events()
+    upsert_news_funnel_card(get_synthesis_period(), remaining)
+    return {"ok": True, "remaining_count": len(remaining)}
+
 
 from tools.portfolio.models import _now_iso
 from tools.portfolio import (

@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import Modal from '../../ui/Modal'
 import { api } from '../../../api/client'
-import type { ActualPortfolioStateDTO } from '../../../api/types'
+import { DEFAULT_ALLOCATION_TARGETS, type ActualPortfolioStateDTO } from '../../../api/types'
 
 interface Props {
   onClose: () => void
@@ -12,6 +12,9 @@ export default function ResetConfirmModal({ onClose, onSuccess }: Props) {
   const [confirmText, setConfirmText] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  const defaultRatioStr = DEFAULT_ALLOCATION_TARGETS.map((t) => t.target_percent).join('/')
+  const defaultBucketsCount = DEFAULT_ALLOCATION_TARGETS.length
 
   const handleReset = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -56,7 +59,7 @@ export default function ResetConfirmModal({ onClose, onSuccess }: Props) {
           </p>
           <ul className="list-disc pl-4 space-y-1 text-zinc-600">
             <li>ลบรายการ Holding ในพอร์ตทั้งหมดให้เหลือเพียง CASH_THB (0 บาท) และ CASH_USD ($0)</li>
-            <li>รีเซ็ตสัดส่วนเป้าหมาย (Allocation Targets) กลับเป็น 3 กลยุทธ์มาตรฐาน (60/20/20)</li>
+            <li>รีเซ็ตสัดส่วนเป้าหมาย (Allocation Targets) กลับเป็น {defaultBucketsCount} กลยุทธ์มาตรฐาน ({defaultRatioStr})</li>
             <li>ลบไฟล์ Obsidian Sidecars ของสินทรัพย์ที่เคยมีออกจากสารบบเพื่อความสะอาด</li>
           </ul>
           <p className="font-semibold text-zinc-800 pt-1">

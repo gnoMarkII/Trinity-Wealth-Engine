@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import Modal from '../../ui/Modal'
 import { api } from '../../../api/client'
-import type { AllocationTargetDTO, ActualPortfolioStateDTO } from '../../../api/types'
+import { DEFAULT_ALLOCATION_TARGETS, type AllocationTargetDTO, type ActualPortfolioStateDTO } from '../../../api/types'
 
 interface Props {
   initialTargets: AllocationTargetDTO[]
@@ -13,11 +13,7 @@ export default function BucketTargetModal({ initialTargets, onClose, onSuccess }
   const [targets, setTargets] = useState<AllocationTargetDTO[]>(() =>
     initialTargets.length > 0
       ? initialTargets.map((t) => ({ ...t }))
-      : [
-          { bucket_id: 'core_equities', name: 'Core Equities', target_percent: 60, color: '#10B981' },
-          { bucket_id: 'defensive', name: 'Defensive Assets', target_percent: 25, color: '#F59E0B' },
-          { bucket_id: 'cash', name: 'Cash Reserves', target_percent: 15, color: '#6B7280' },
-        ]
+      : DEFAULT_ALLOCATION_TARGETS.map((t) => ({ ...t }))
   )
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
