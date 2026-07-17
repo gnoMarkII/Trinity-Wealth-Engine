@@ -44,7 +44,7 @@ CASH_SYMBOL = CASH_THB_SYMBOL
 
 _FLOAT_EPS = 1e-6
 _MONEY_DP = 2
-_COST_DP = 4
+_COST_DP = 6
 _PCT_DP = 2
 
 _LOCK_TIMEOUT = 15  # seconds — wait up to 15s for another process to release
@@ -53,6 +53,23 @@ _PRICE_FETCH_TIMEOUT = 6  # seconds per symbol when refreshing
 _PORTFOLIO_LOCK_PATH = str(PORTFOLIO_PATH) + ".lock"
 _portfolio_lock = FileLock(_PORTFOLIO_LOCK_PATH, timeout=_LOCK_TIMEOUT)
 
+
+
+class AllocationTarget(BaseModel):
+    model_config = ConfigDict(extra="allow")
+
+    bucket_id: str
+    name: str
+    target_percent: float
+    color: str | None = None
+
+
+def default_allocation_targets() -> list[AllocationTarget]:
+    return [
+        AllocationTarget(bucket_id="core_equities", name="Core Equities", target_percent=60.0, color="#3B82F6"),
+        AllocationTarget(bucket_id="defensive", name="Defensive Assets", target_percent=20.0, color="#A855F7"),
+        AllocationTarget(bucket_id="cash", name="💰 Cash & Equivalents", target_percent=20.0, color="#06B6D4"),
+    ]
 
 
 class Holding(BaseModel):
@@ -71,12 +88,15 @@ class Holding(BaseModel):
     market_value_thb: float = 0.0
     unrealized_pnl_percent: float | None = None
     accumulated_dividend_thb: float | None = None
+    bucket_id: str | None = None
+    fundamentals_updated_at: float | None = None
 
 
 class Summary(BaseModel):
     model_config = ConfigDict(extra="allow")
 
     total_value_thb: float = 0.0
+    total_cost_basis_thb: float = 0.0
     total_unrealized_profit: float = 0.0
     total_realized_profit_ytd: float = 0.0
     passive_income_ytd: float = 0.0
@@ -91,12 +111,15 @@ class PortfolioState(BaseModel):
     base_currency: str = "THB"
     summary: Summary = Field(default_factory=Summary)
     fx_rates: dict[str, float] = Field(default_factory=lambda: {"USDTHB": 36.5})
+    allocation_targets: list[AllocationTarget] = Field(default_factory=default_allocation_targets)
     holdings: list[Holding] = Field(default_factory=list)
+    price_refresh_info: dict[str, str] | None = None
 
     @field_validator("last_updated", mode="before")
     @classmethod
     def _validate_last_updated(cls, v):
         return _coerce_iso_string(v)
+
 
 
 class WatchlistItem(BaseModel):

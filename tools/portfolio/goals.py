@@ -38,7 +38,7 @@ CASH_SYMBOL = CASH_THB_SYMBOL
 
 _FLOAT_EPS = 1e-6
 _MONEY_DP = 2
-_COST_DP = 4
+_COST_DP = 6
 _PCT_DP = 2
 
 _LOCK_TIMEOUT = 15  # seconds — wait up to 15s for another process to release
@@ -254,40 +254,24 @@ def remove_goal(name: str) -> str:
     return f"[GOAL DEL] {nm} | remaining: {remaining}"
 
 
-@tool
-def get_goals_progress() -> str:
-    """เรียกดูความคืบหน้าของเป้าหมายทั้งหมด
-
-    [Usage/When to use]
-    ใช้เมื่อต้องการคำนวณ Progress (%) เทียบยอดเงินใน Portfolio กับเป้าหมายที่บันทึกไว้
-
-    Returns:
-        str: JSON string ประกอบด้วยสถานะของแต่ละเป้าหมาย
-    """
-    try:
-        # portfolio lock ก่อนเสมอ — consistent ordering ป้องกัน deadlock
-        with _portfolio_lock:
-            _, port_state = _load_or_init()
-            _recalc_all(port_state)
-            current_fx = port_state.fx_rates.get("USDTHB", 0.0) or 0.0
-            cash_thb = next(
-                (h.units for h in port_state.holdings if h.symbol == CASH_THB_SYMBOL), 0.0
-            )
-            cash_usd = next(
-                (h.units for h in port_state.holdings if h.symbol == CASH_USD_SYMBOL), 0.0
-            )
-            total_cash_thb = round(cash_thb + cash_usd * current_fx, _MONEY_DP)
-            nav = port_state.summary.total_value_thb
-            passive_ytd = port_state.summary.passive_income_ytd
-
-            with _goals_lock:
-                _, goals_state = _load_or_init_goals()
-
-    except Timeout:
-        return json.dumps(
-            {"error": f"lock timeout ({_LOCK_TIMEOUT}s) — มี operation อื่นทำงาน"},
-            ensure_ascii=False,
+def get_structured_goals() -> list[dict]:
+    """Structured read accessor คืนค่าความคืบหน้าของเป้าหมายทั้งหมดเป็น list of dicts"""
+    with _portfolio_lock:
+        _, port_state = _load_or_init()
+        _recalc_all(port_state)
+        current_fx = port_state.fx_rates.get("USDTHB", 0.0) or 0.0
+        cash_thb = next(
+            (h.units for h in port_state.holdings if h.symbol == CASH_THB_SYMBOL), 0.0
         )
+        cash_usd = next(
+            (h.units for h in port_state.holdings if h.symbol == CASH_USD_SYMBOL), 0.0
+        )
+        total_cash_thb = round(cash_thb + cash_usd * current_fx, _MONEY_DP)
+        nav = port_state.summary.total_value_thb
+        passive_ytd = port_state.summary.passive_income_ytd
+
+        with _goals_lock:
+            _, goals_state = _load_or_init_goals()
 
     now = datetime.now()
     results = []
@@ -321,6 +305,26 @@ def get_goals_progress() -> str:
         if g.notes:
             entry["notes"] = g.notes
         results.append(entry)
+    return results
+
+
+@tool
+def get_goals_progress() -> str:
+    """เรียกดูความคืบหน้าของเป้าหมายทั้งหมด
+
+    [Usage/When to use]
+    ใช้เมื่อต้องการคำนวณ Progress (%) เทียบยอดเงินใน Portfolio กับเป้าหมายที่บันทึกไว้
+
+    Returns:
+        str: JSON string ประกอบด้วยสถานะของแต่ละเป้าหมาย
+    """
+    try:
+        results = get_structured_goals()
+    except Timeout:
+        return json.dumps(
+            {"error": f"lock timeout ({_LOCK_TIMEOUT}s) — มี operation อื่นทำงาน"},
+            ensure_ascii=False,
+        )
 
     return json.dumps(
         {
@@ -333,7 +337,72 @@ def get_goals_progress() -> str:
     )
 
 
+def structured_upsert_goal(
+    name: str,
+    goal_type: Literal["nav_target", "cash_target", "passive_income_ytd"],
+    target_amount_thb: float,
+    deadline: str | None = None,
+    years_from_now: int | None = None,
+    notes: str | None = None,
+) -> list[dict]:
+    """Structured mutation accessor สำหรับเพิ่มหรืออัปเดตเป้าหมาย"""
+    nm = name.strip()
+    if not nm:
+        raise ValueError("name ต้องไม่ว่าง")
+    if target_amount_thb <= 0:
+        raise ValueError("target_amount_thb ต้องมากกว่า 0")
+    if years_from_now is not None:
+        if years_from_now <= 0:
+            raise ValueError("years_from_now ต้องมากกว่า 0")
+        if deadline is not None:
+            raise ValueError("ห้ามระบุทั้ง deadline และ years_from_now พร้อมกัน")
+        target_year = datetime.now().year + years_from_now
+        deadline = f"{target_year}-12-31"
+    if deadline is not None:
+        try:
+            datetime.strptime(deadline, "%Y-%m-%d")
+        except ValueError:
+            raise ValueError(f"deadline ต้องอยู่ในรูปแบบ 'YYYY-MM-DD' (got '{deadline}')")
 
+    with _goals_lock:
+        post, state = _load_or_init_goals()
+        today = datetime.now().strftime("%Y-%m-%d")
+        existing_idx = next(
+            (i for i, g in enumerate(state.goals) if g.name == nm), None
+        )
+        preserved_date = (
+            state.goals[existing_idx].created_date if existing_idx is not None else today
+        )
+        new_goal = GoalItem(
+            name=nm,
+            goal_type=goal_type,
+            target_amount_thb=target_amount_thb,
+            deadline=deadline,
+            notes=notes,
+            created_date=preserved_date,
+        )
+        if existing_idx is not None:
+            state.goals[existing_idx] = new_goal
+        else:
+            state.goals.append(new_goal)
+        _save_goals(post, state)
+
+    return get_structured_goals()
+
+
+def structured_remove_goal(name: str) -> list[dict]:
+    """Structured mutation accessor สำหรับลบเป้าหมาย"""
+    nm = name.strip()
+    if not nm:
+        raise ValueError("name ต้องไม่ว่าง")
+    with _goals_lock:
+        post, state = _load_or_init_goals()
+        existing = next((g for g in state.goals if g.name == nm), None)
+        if existing is None:
+            raise ValueError(f"ไม่พบเป้าหมาย '{nm}'")
+        state.goals.remove(existing)
+        _save_goals(post, state)
+    return get_structured_goals()
 
 
 GOALS_ITEMS_DIR = VAULT_PATH / "20_Portfolio_Management/Goals/Items"

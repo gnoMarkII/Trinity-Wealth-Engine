@@ -1,6 +1,7 @@
 from langsmith import traceable
 import concurrent.futures
 import csv
+from io import StringIO
 import json
 import os
 import re
@@ -19,25 +20,11 @@ from core.logger import get_logger
 
 log = get_logger(__name__)
 
-def _compute_total_cost(state, current_fx: float) -> float:
-    total = 0.0
-    for h in state.holdings:
-        if h.asset_type == "Cash":
-            if h.symbol == "CASH_USD":
-                total += h.units * current_fx
-            else:
-                total += h.units
-            continue
-        if h.avg_cost_usd is not None and h.current_price_usd is not None:
-            total += h.units * h.avg_cost_usd * current_fx
-        elif h.avg_cost_thb is not None and h.current_price_thb is not None:
-            total += h.units * h.avg_cost_thb
-    return round(total, 2)
 
 from tools._atomic_io import _atomic_write_to
 from tools.tool_errors import LOCK_TIMEOUT, validation_error
 from .models import _now_iso, _coerce_iso_string, Holding, Summary, PortfolioState, WatchlistItem, WatchlistState, GoalItem, GoalsState
-from .core import _load_or_init, _save, _recalc_all, _recalc_holding, _recalc_summary, _find_holding, _require_cash, _require_fx, get_portfolio_state, _holding_currency, compute_allocation_breakdown
+from .core import _load_or_init, _save, _recalc_all, _recalc_holding, _recalc_summary, _compute_total_cost, _find_holding, _require_cash, _require_fx, get_portfolio_state, _holding_currency, compute_allocation_breakdown
 from .prices import fetch_latest_price, _fetch_last_price, _fetch_fx_rate, _refresh_prices, sync_market_prices
 from .journal import append_trading_journal, _inject_journal_wikilinks, _write_journal_entry
 
@@ -53,7 +40,7 @@ CASH_SYMBOL = CASH_THB_SYMBOL
 
 _FLOAT_EPS = 1e-6
 _MONEY_DP = 2
-_COST_DP = 4
+_COST_DP = 6
 _PCT_DP = 2
 
 _LOCK_TIMEOUT = 15  # seconds — wait up to 15s for another process to release
@@ -71,9 +58,7 @@ def record_performance_snapshot(refresh_prices: bool = True) -> str:
     [Usage/When to use]
     ใช้บันทึกประวัติการเติบโตของพอร์ตประจำวัน (Time-series) ลงใน CSV
     - บันทึก Date, Total_NAV, Total_Cost, Unrealized_PnL, Cash_Balance
-
-    [Caution]
-    - ควรเรียกใช้งานแค่วันละครั้งเพื่อป้องกันข้อมูลซ้ำซ้อนเกินไป
+    - ทำงานภายใต้ portfolio lock และแทนที่บรรทัดเดิมทันทีหากเป็นวันเดียวกัน (Atomic Upsert)
 
     Args:
         refresh_prices (bool): True (อัปเดตราคาล่าสุดก่อนบันทึก, default)
@@ -92,41 +77,84 @@ def record_performance_snapshot(refresh_prices: bool = True) -> str:
             unrealized = state.summary.total_unrealized_profit
             total_cost = _compute_total_cost(state, current_fx)
 
-            # Cash_Balance ต้องรวมทั้ง CASH_THB และ CASH_USD ใน THB equivalent
-            # ไม่งั้น Cash_Balance + non_cash_assets ≠ Total_NAV (drift)
             cash_balance = round(
                 sum(h.market_value_thb for h in state.holdings if h.asset_type == "Cash"),
                 _MONEY_DP,
             )
+
+            today = datetime.now().strftime("%Y-%m-%d")
+            row = [
+                today,
+                f"{total_nav:.2f}",
+                f"{total_cost:.2f}",
+                f"{unrealized:.2f}",
+                f"{cash_balance:.2f}",
+            ]
+
+            PERFORMANCE_LOG_PATH.parent.mkdir(parents=True, exist_ok=True)
+            existing_rows: list[list[str]] = []
+            if PERFORMANCE_LOG_PATH.exists() and PERFORMANCE_LOG_PATH.stat().st_size > 0:
+                with PERFORMANCE_LOG_PATH.open("r", encoding="utf-8", newline="") as f:
+                    reader = csv.reader(f)
+                    header_read = False
+                    for r in reader:
+                        if not header_read and (not r or r == _PERFORMANCE_LOG_HEADER):
+                            header_read = True
+                            continue
+                        if r and len(r) >= 5:
+                            existing_rows.append(r)
+
+            replaced = False
+            for idx, r in enumerate(existing_rows):
+                if r[0] == today:
+                    existing_rows[idx] = row
+                    replaced = True
+                    break
+            if not replaced:
+                existing_rows.append(row)
+
+            output = StringIO()
+            writer = csv.writer(output, lineterminator="\n")
+            writer.writerow(_PERFORMANCE_LOG_HEADER)
+            writer.writerows(existing_rows)
+            _atomic_write_to(PERFORMANCE_LOG_PATH, output.getvalue())
+
     except Timeout:
         return LOCK_TIMEOUT.format(detail=f"portfolio lock {_LOCK_TIMEOUT}s")
     except ValueError as e:
         return f"Error: {e}"
 
-    today = datetime.now().strftime("%Y-%m-%d")
-    row = [
-        today,
-        f"{total_nav:.2f}",
-        f"{total_cost:.2f}",
-        f"{unrealized:.2f}",
-        f"{cash_balance:.2f}",
-    ]
-
-    PERFORMANCE_LOG_PATH.parent.mkdir(parents=True, exist_ok=True)
-    needs_header = (
-        not PERFORMANCE_LOG_PATH.exists() or PERFORMANCE_LOG_PATH.stat().st_size == 0
-    )
-    with PERFORMANCE_LOG_PATH.open("a", encoding="utf-8", newline="") as f:
-        writer = csv.writer(f)
-        if needs_header:
-            writer.writerow(_PERFORMANCE_LOG_HEADER)
-        writer.writerow(row)
-
+    action_label = "updated" if replaced else "recorded"
     return (
-        f"[PERF] {today} | NAV: {total_nav:,.2f} | "
+        f"[PERF] {today} | {action_label} | NAV: {total_nav:,.2f} | "
         f"Cost: {total_cost:,.2f} | PnL: {unrealized:+,.2f} | "
         f"Cash: {cash_balance:,.2f}"
     )
+
+
+def get_structured_performance_history(days: int | None = None) -> list[dict]:
+    """Structured read accessor คืนค่าประวัติ Performance เป็น list of dicts"""
+    if not PERFORMANCE_LOG_PATH.exists():
+        return []
+    with PERFORMANCE_LOG_PATH.open("r", encoding="utf-8", newline="") as f:
+        reader = csv.DictReader(f)
+        rows = list(reader)
+    if days is not None and days > 0:
+        rows = rows[-days:]
+    result = []
+    for r in rows:
+        try:
+            result.append({
+                "Date": r["Date"],
+                "Total_NAV": float(r["Total_NAV"]),
+                "Total_Cost": float(r["Total_Cost"]),
+                "Unrealized_PnL": float(r["Unrealized_PnL"]),
+                "Cash_Balance": float(r["Cash_Balance"]),
+            })
+        except (KeyError, ValueError):
+            continue
+    return result
+
 
 
 @tool

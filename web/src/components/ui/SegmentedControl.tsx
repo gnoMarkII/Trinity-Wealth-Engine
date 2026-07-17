@@ -1,6 +1,8 @@
+import type { ReactNode } from 'react'
+
 interface Option {
   key: string
-  label: string
+  label: ReactNode
 }
 
 interface Props {

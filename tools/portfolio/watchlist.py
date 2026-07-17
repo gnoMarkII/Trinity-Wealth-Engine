@@ -38,7 +38,7 @@ CASH_SYMBOL = CASH_THB_SYMBOL
 
 _FLOAT_EPS = 1e-6
 _MONEY_DP = 2
-_COST_DP = 4
+_COST_DP = 6
 _PCT_DP = 2
 
 _LOCK_TIMEOUT = 15  # seconds — wait up to 15s for another process to release
@@ -262,6 +262,62 @@ def read_watchlist() -> str:
     )
 
 
+def get_structured_watchlist() -> WatchlistState:
+    """Structured read accessor สำหรับ Watchlist คืนค่า Pydantic WatchlistState"""
+    with _watchlist_lock:
+        _, state = _load_or_init_watchlist()
+        return state
+
+
+def structured_upsert_watchlist_item(
+    symbol: str, asset_type: str, target_price: float | None = None, notes: str = ""
+) -> WatchlistState:
+    """Structured mutation accessor สำหรับเพิ่มหรืออัปเดต Watchlist item"""
+    sym = symbol.strip().upper()
+    if not sym:
+        raise ValueError("symbol ต้องไม่ว่าง")
+    if target_price is not None and target_price <= 0:
+        raise ValueError("target_price ต้องมากกว่า 0")
+
+    with _watchlist_lock:
+        post, state = _load_or_init_watchlist()
+        today = datetime.now().strftime("%Y-%m-%d")
+        existing_idx = next(
+            (i for i, it in enumerate(state.items) if it.symbol == sym),
+            None,
+        )
+        preserved_date = (
+            state.items[existing_idx].added_date if existing_idx is not None else today
+        )
+        new_item = WatchlistItem(
+            symbol=sym,
+            asset_type=asset_type,
+            target_price=target_price,
+            notes=notes or None,
+            added_date=preserved_date,
+        )
+        if existing_idx is not None:
+            state.items[existing_idx] = new_item
+        else:
+            state.items.append(new_item)
+        _save_watchlist(post, state)
+        return state
+
+
+def structured_remove_watchlist_item(symbol: str) -> WatchlistState:
+    """Structured mutation accessor สำหรับลบ Watchlist item"""
+    sym = symbol.strip().upper()
+    if not sym:
+        raise ValueError("symbol ต้องไม่ว่าง")
+
+    with _watchlist_lock:
+        post, state = _load_or_init_watchlist()
+        existing = next((it for it in state.items if it.symbol == sym), None)
+        if existing is None:
+            raise ValueError(f"ไม่พบ {sym} ใน Watchlist")
+        state.items.remove(existing)
+        _save_watchlist(post, state)
+        return state
 
 
 _WATCHLIST_LOCK_PATH = str(WATCHLIST_PATH) + ".lock"

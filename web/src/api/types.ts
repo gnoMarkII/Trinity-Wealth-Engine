@@ -239,3 +239,192 @@ export interface KanbanCardDTO {
 }
 
 // ---------------------------------------------------------
+// Actual Portfolio Hub DTOs (Phase 1 & Phase 2)
+// ---------------------------------------------------------
+
+export interface ActualHoldingDTO {
+  symbol: string
+  asset_type: string
+  units: number
+  bucket_id: string | null
+  avg_cost_usd: number | null
+  avg_cost_thb: number | null
+  current_price_usd: number | null
+  current_price_thb: number | null
+  market_value_thb: number
+  unrealized_pnl_percent: number | null
+  unrealized_pnl_value: number | null
+  market_cap_tier: string | null
+  yield_on_cost: number | null
+  company_name: string | null
+  pe_ratio: number | null
+  eps: number | null
+  payout_ratio: number | null
+  market_cap_value: number | null
+  dividend_per_share: number | null
+  dividend_yield: number | null
+  accumulated_dividend_thb: number | null
+  fundamentals_updated_at: number | null
+}
+
+export interface ActualSummaryDTO {
+  total_value_thb: number
+  total_cost_basis_thb: number
+  total_unrealized_profit: number
+  passive_income_ytd: number
+}
+
+export interface AllocationTargetDTO {
+  bucket_id: string
+  name: string
+  target_percent: number
+  color: string | null
+}
+
+export const DEFAULT_ALLOCATION_TARGETS: AllocationTargetDTO[] = [
+  { bucket_id: 'core_equities', name: 'Core Equities', target_percent: 60, color: '#3B82F6' },
+  { bucket_id: 'defensive', name: 'Defensive Assets', target_percent: 20, color: '#A855F7' },
+  { bucket_id: 'cash', name: '💰 Cash & Equivalents', target_percent: 20, color: '#06B6D4' },
+]
+
+export interface ActualPortfolioStateDTO {
+  last_updated: string | null
+  fx_rates: Record<string, number>
+  summary: ActualSummaryDTO
+  allocation_targets: AllocationTargetDTO[]
+  holdings: ActualHoldingDTO[]
+  price_refresh_info: Record<string, string> | null
+}
+
+export interface BucketAllocationSummaryDTO {
+  bucket_id: string
+  name: string
+  target_percent: number
+  actual_value_thb: number
+  actual_percent: number
+  variance: number
+  color: string | null
+}
+
+export interface BucketAllocationResponseDTO {
+  warning: string | null
+  summaries: BucketAllocationSummaryDTO[]
+}
+
+export interface ActualWatchlistItemDTO {
+  symbol: string
+  asset_type: string
+  target_price: number | null
+  added_date: string
+  notes: string | null
+}
+
+export interface ActualWatchlistStateDTO {
+  last_updated: string | null
+  items: ActualWatchlistItemDTO[]
+}
+
+export interface ActualGoalItemDTO {
+  name: string
+  target_amount_thb: number
+  goal_type: string
+  current_amount_thb: number
+  progress_pct: number
+  deadline: string | null
+  deadline_days_left: number | null
+  notes: string | null
+}
+
+export interface ActualGoalsResponseDTO {
+  n_goals: number
+  goals: ActualGoalItemDTO[]
+  generated_at: string | null
+}
+
+export interface PerformanceSnapshotDTO {
+  Date: string
+  Total_NAV: number
+  Total_Cost: number
+  Unrealized_PnL: number
+  Cash_Balance: number
+}
+
+export interface JournalEntryDTO {
+  timestamp: string
+  content: string
+}
+
+export interface UpsertAllocationTargetsPayload {
+  targets: AllocationTargetDTO[]
+}
+
+export interface AssignBucketPayload {
+  bucket_id?: string | null
+}
+
+export interface BatchAssignBucketPayload {
+  symbols: string[]
+  bucket_id?: string | null
+}
+
+export interface BatchRemoveHoldingsPayload {
+  symbols: string[]
+}
+
+export interface TradePayload {
+  symbol: string
+  asset_type: string
+  action: 'buy' | 'sell'
+  units: number
+  price: number
+  currency?: 'THB' | 'USD'
+  exchange_rate?: number | null
+  date?: string | null
+  notes?: string
+  bucket_id?: string | null
+}
+
+export interface CashFlowPayload {
+  amount: number
+  action: 'deposit' | 'withdraw'
+  currency?: 'THB' | 'USD'
+  exchange_rate?: number | null
+  date?: string | null
+  notes?: string
+}
+
+export interface IncomePayload {
+  income_type: 'Dividend' | 'Interest' | 'Rental' | 'Other'
+  amount_thb: number
+  source_symbol?: string | null
+  date?: string | null
+  notes?: string
+}
+
+export interface EditHoldingPayload {
+  units?: number | null
+  avg_cost?: number | null
+  accumulated_dividend_thb?: number | null
+  asset_type?: string | null
+  reason?: string
+  bucket_id?: string | null
+}
+
+export interface UpsertWatchlistItemPayload {
+  asset_type: string
+  target_price?: number | null
+  notes?: string
+}
+
+export interface UpsertGoalPayload {
+  goal_type: 'nav_target' | 'cash_target' | 'passive_income_ytd'
+  target_amount_thb: number
+  deadline?: string | null
+  years_from_now?: number | null
+  notes?: string | null
+}
+
+export interface AppendJournalPayload {
+  entry: string
+}
+

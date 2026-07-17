@@ -5,6 +5,7 @@ import json
 import os
 import re
 import tempfile
+import time
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Literal
@@ -38,7 +39,7 @@ CASH_SYMBOL = CASH_THB_SYMBOL
 
 _FLOAT_EPS = 1e-6
 _MONEY_DP = 2
-_COST_DP = 4
+_COST_DP = 6
 _PCT_DP = 2
 
 _LOCK_TIMEOUT = 15  # seconds — wait up to 15s for another process to release
@@ -141,6 +142,86 @@ def _refresh_prices(state: PortfolioState) -> dict[str, str]:
             for f, (h, sym, cur) in future_map.items():
                 if not f.done():
                     results.setdefault(sym, "timeout")
+    return results
+
+
+def _fetch_fundamentals(state: PortfolioState, force: bool = False) -> dict[str, str]:
+    """ดึงข้อมูล Fundamentals (PE, EPS, Payout, MarketCap, Dividend, LongName) จาก yfinance.info
+
+    มี TTL Cache (FUNDAMENTALS_TTL_SECONDS) เก็บ timestamp ใน h.fundamentals_updated_at
+    แยกจาก _refresh_prices เพื่อไม่ให้กระทบ hot path / timeout
+    """
+    targets: list[tuple[Holding, str, str]] = []
+    now = time.time()
+    for h in state.holdings:
+        if h.asset_type == "Cash":
+            continue
+        if not force and h.fundamentals_updated_at is not None:
+            if now - h.fundamentals_updated_at < FUNDAMENTALS_TTL_SECONDS:
+                continue
+        if h.avg_cost_usd is not None or h.current_price_usd is not None:
+            targets.append((h, _yf_symbol(h.symbol, "USD"), "USD"))
+        else:
+            targets.append((h, _yf_symbol(h.symbol, "THB"), "THB"))
+
+    if not targets:
+        return {}
+
+    results: dict[str, str] = {}
+    with concurrent.futures.ThreadPoolExecutor(max_workers=min(4, len(targets))) as ex:
+        def _get_info(sym: str) -> dict | None:
+            try:
+                tk = yf.Ticker(sym)
+                info = getattr(tk, "info", None)
+                return info if isinstance(info, dict) else None
+            except Exception as e:
+                log.warning("fetch fundamentals failed for %s: %s", sym, e)
+                return None
+
+        future_map = {ex.submit(_get_info, yf_sym): (h, yf_sym) for h, yf_sym, _ in targets}
+        try:
+            for future in concurrent.futures.as_completed(future_map, timeout=_PRICE_FETCH_TIMEOUT * 4):
+                h, yf_sym = future_map[future]
+                try:
+                    info = future.result()
+                except Exception as e:
+                    results[h.symbol] = f"error: {e}"
+                    continue
+
+                if not info:
+                    results[h.symbol] = "no_data"
+                    h.fundamentals_updated_at = time.time()
+                    continue
+
+                pe = info.get("trailingPE") or info.get("peRatio")
+                eps = info.get("trailingEps") or info.get("epsTrailingTwelveMonths")
+                payout = info.get("payoutRatio")
+                mcap = info.get("marketCap")
+                div_rate = info.get("dividendRate") or info.get("trailingAnnualDividendRate")
+                div_yield = info.get("dividendYield") or info.get("trailingAnnualDividendYield")
+                long_name = info.get("longName") or info.get("shortName")
+
+                if pe is not None and pe > 0:
+                    setattr(h, "pe_ratio", float(pe))
+                if eps is not None:
+                    setattr(h, "eps", float(eps))
+                if payout is not None and payout > 0:
+                    setattr(h, "payout_ratio", float(payout * 100))
+                if mcap is not None and mcap > 0:
+                    setattr(h, "market_cap_value", float(mcap))
+                if div_rate is not None and div_rate >= 0:
+                    setattr(h, "dividend_per_share", float(div_rate))
+                if div_yield is not None and div_yield >= 0:
+                    setattr(h, "dividend_yield", float(div_yield * 100))
+                if long_name and isinstance(long_name, str):
+                    setattr(h, "company_name", long_name)
+
+                h.fundamentals_updated_at = time.time()
+                results[h.symbol] = "ok"
+        except concurrent.futures.TimeoutError:
+            for f, (h, _) in future_map.items():
+                if not f.done():
+                    results.setdefault(h.symbol, "timeout")
     return results
 
 

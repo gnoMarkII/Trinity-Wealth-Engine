@@ -4,6 +4,23 @@ import type {
   JobStatusDTO,
   KanbanCardDTO,
   MacroDashboardDTO,
+  ActualPortfolioStateDTO,
+  BucketAllocationResponseDTO,
+  ActualWatchlistStateDTO,
+  ActualGoalsResponseDTO,
+  PerformanceSnapshotDTO,
+  JournalEntryDTO,
+  UpsertAllocationTargetsPayload,
+  AssignBucketPayload,
+  BatchAssignBucketPayload,
+  BatchRemoveHoldingsPayload,
+  TradePayload,
+  CashFlowPayload,
+  IncomePayload,
+  EditHoldingPayload,
+  UpsertWatchlistItemPayload,
+  UpsertGoalPayload,
+  AppendJournalPayload,
 } from './types'
 
 export class ApiError extends Error {
@@ -37,8 +54,6 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     } catch {
       // ignore — ไม่มี JSON body
     }
-    // เจอ 401 กลางคัน (session หมดอายุ/ถูกลบ) — ไม่ใช่ตอน login เอง (401 = รหัสผ่านผิด เป็น
-    // เรื่องปกติที่ฟอร์ม login จัดการเอง ไม่ใช่สัญญาณว่า session หลุด) → บังคับ logout ไปหน้า login
     if (res.status === 401 && path !== '/api/auth/login') {
       unauthorizedHandler?.()
     }
@@ -57,7 +72,6 @@ export const api = {
 
   logout: () => request<{ ok: boolean }>('/api/auth/logout', { method: 'POST' }),
 
-  // endpoint นี้ตอบ 200 เสมอ (authenticated: true/false) — ไม่มีทางชน 401 handler
   me: () => request<{ authenticated: boolean }>('/api/auth/me'),
 
   getMacroDashboard: () => request<MacroDashboardDTO>('/api/macro/dashboard'),
@@ -66,6 +80,15 @@ export const api = {
     request<import('./types').MacroIndicatorSeriesDTO>(
       `/api/macro/indicators/${encodeURIComponent(indicatorId)}/series?range=${range}`
     ),
+
+  getNewsFunnelPending: () => request<import('./types').NewsFunnelPendingItem[]>('/api/macro/news_funnel/pending'),
+
+  getNewsFunnelFiltered: () => request<import('./types').NewsFunnelFilteredItem[]>('/api/macro/news_funnel/filtered'),
+
+  deleteNewsFunnelPending: (eventId: string) =>
+    request<{ ok: boolean; remaining_count: number }>(`/api/macro/news_funnel/pending/${encodeURIComponent(eventId)}`, {
+      method: 'DELETE',
+    }),
 
   listKanbanCards: () => request<KanbanCardDTO[]>('/api/kanban/cards'),
 
@@ -116,4 +139,125 @@ export const api = {
         approved_event_ids: approvedEventIds,
       }),
     }),
+
+  // ---------------------------------------------------------
+  // Actual Portfolio Hub Endpoints (Phase 1)
+  // ---------------------------------------------------------
+  getActualPortfolioState: (refreshPrices: boolean = false, fetchFundamentals: boolean = false) =>
+    request<ActualPortfolioStateDTO>(
+      `/api/portfolio/actual/state?refresh_prices=${refreshPrices}&fetch_fundamentals=${fetchFundamentals}`
+    ),
+
+  getActualBucketAllocations: () =>
+    request<BucketAllocationResponseDTO>('/api/portfolio/actual/allocations'),
+
+  getActualWatchlist: () => request<ActualWatchlistStateDTO>('/api/portfolio/actual/watchlist'),
+
+  getActualGoals: () => request<ActualGoalsResponseDTO>('/api/portfolio/actual/goals'),
+
+  getActualPerformance: (days?: number) => {
+    const params = days !== undefined ? `?days=${days}` : ''
+    return request<PerformanceSnapshotDTO[]>(`/api/portfolio/actual/performance${params}`)
+  },
+
+  triggerPerformanceSnapshot: (refreshPrices: boolean = false) =>
+    request<PerformanceSnapshotDTO[]>(`/api/portfolio/actual/performance/snapshot?refresh_prices=${refreshPrices}`, {
+      method: 'POST',
+    }),
+
+  getActualJournal: (days: number = 365, keyword?: string, limit: number = 100) => {
+    const params = new URLSearchParams({ days: days.toString(), limit: limit.toString() })
+    if (keyword) params.append('keyword', keyword)
+    return request<JournalEntryDTO[]>(`/api/portfolio/actual/journal?${params.toString()}`)
+  },
+
+  // ---------------------------------------------------------
+  // Actual Portfolio Hub Mutation Endpoints (Phase 2.1 & 2.2)
+  // ---------------------------------------------------------
+  upsertAllocationTargets: (payload: UpsertAllocationTargetsPayload) =>
+    request<ActualPortfolioStateDTO>('/api/portfolio/actual/allocations/targets', {
+      method: 'PUT',
+      body: JSON.stringify(payload),
+    }),
+
+  assignHoldingBucket: (symbol: string, payload: AssignBucketPayload) =>
+    request<ActualPortfolioStateDTO>(`/api/portfolio/actual/holdings/${encodeURIComponent(symbol)}/bucket`, {
+      method: 'PUT',
+      body: JSON.stringify(payload),
+    }),
+
+  batchAssignHoldingBuckets: (payload: BatchAssignBucketPayload) =>
+    request<ActualPortfolioStateDTO>('/api/portfolio/actual/holdings/batch-bucket', {
+      method: 'PUT',
+      body: JSON.stringify(payload),
+    }),
+
+  batchRemoveHoldings: (payload: BatchRemoveHoldingsPayload) =>
+    request<ActualPortfolioStateDTO>('/api/portfolio/actual/holdings/batch-delete', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+
+  resetPortfolioCleanSlate: () =>
+    request<ActualPortfolioStateDTO>('/api/portfolio/actual/reset', {
+      method: 'POST',
+    }),
+
+  executeTrade: (payload: TradePayload) =>
+    request<ActualPortfolioStateDTO>('/api/portfolio/actual/trade', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+
+  manageCashFlow: (payload: CashFlowPayload) =>
+    request<ActualPortfolioStateDTO>('/api/portfolio/actual/cashflow', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+
+  recordIncome: (payload: IncomePayload) =>
+    request<ActualPortfolioStateDTO>('/api/portfolio/actual/income', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+
+  editHolding: (symbol: string, payload: EditHoldingPayload) =>
+    request<ActualPortfolioStateDTO>(`/api/portfolio/actual/holdings/${encodeURIComponent(symbol)}/edit`, {
+      method: 'PUT',
+      body: JSON.stringify(payload),
+    }),
+
+  removeHolding: (symbol: string) =>
+    request<ActualPortfolioStateDTO>(`/api/portfolio/actual/holdings/${encodeURIComponent(symbol)}`, {
+      method: 'DELETE',
+    }),
+
+  upsertWatchlistItem: (symbol: string, payload: UpsertWatchlistItemPayload) =>
+    request<ActualWatchlistStateDTO>(`/api/portfolio/actual/watchlist/${encodeURIComponent(symbol)}`, {
+      method: 'PUT',
+      body: JSON.stringify(payload),
+    }),
+
+  removeWatchlistItem: (symbol: string) =>
+    request<ActualWatchlistStateDTO>(`/api/portfolio/actual/watchlist/${encodeURIComponent(symbol)}`, {
+      method: 'DELETE',
+    }),
+
+  upsertGoal: (name: string, payload: UpsertGoalPayload) =>
+    request<ActualGoalsResponseDTO>(`/api/portfolio/actual/goals/${encodeURIComponent(name)}`, {
+      method: 'PUT',
+      body: JSON.stringify(payload),
+    }),
+
+  removeGoal: (name: string) =>
+    request<ActualGoalsResponseDTO>(`/api/portfolio/actual/goals/${encodeURIComponent(name)}`, {
+      method: 'DELETE',
+    }),
+
+  appendJournal: (payload: AppendJournalPayload) =>
+    request<JournalEntryDTO[]>('/api/portfolio/actual/journal', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
 }
+

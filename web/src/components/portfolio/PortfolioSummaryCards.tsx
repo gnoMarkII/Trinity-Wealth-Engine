@@ -50,7 +50,7 @@ export default function PortfolioSummaryCards({
           <span>Total Portfolio NAV</span>
           <span className="rounded-full bg-flow-cyan/10 px-2 py-0.5 text-[10px] text-flow-blue">THB</span>
         </div>
-        <div className="mt-2 text-2xl font-bold tracking-tight text-zinc-900 sm:text-3xl">
+        <div className="mt-2 text-2xl font-bold font-mono tabular-nums tracking-tight text-zinc-900 sm:text-3xl">
           {formatTHB(nav)}
         </div>
         <div className="mt-2 flex items-center text-xs text-zinc-400">
@@ -63,7 +63,7 @@ export default function PortfolioSummaryCards({
         <div className="flex items-center justify-between text-xs font-semibold uppercase tracking-wider text-zinc-500">
           <span>Unrealized Profit/Loss</span>
           <span
-            className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${
+            className={`rounded-full px-2 py-0.5 text-[10px] font-bold font-mono tabular-nums ${
               pnlPct === null
                 ? 'bg-zinc-100 text-zinc-500'
                 : isPositive
@@ -75,7 +75,7 @@ export default function PortfolioSummaryCards({
           </span>
         </div>
         <div
-          className={`mt-2 text-2xl font-bold tracking-tight sm:text-3xl ${
+          className={`mt-2 text-2xl font-bold font-mono tabular-nums tracking-tight sm:text-3xl ${
             isPositive ? 'text-emerald-600' : 'text-rose-600'
           }`}
         >
@@ -95,7 +95,7 @@ export default function PortfolioSummaryCards({
             เงินปันผลสะสม
           </span>
         </div>
-        <div className="mt-2 text-2xl font-bold tracking-tight text-zinc-900 sm:text-3xl">
+        <div className="mt-2 text-2xl font-bold font-mono tabular-nums tracking-tight text-zinc-900 sm:text-3xl">
           {formatTHB(summary.passive_income_ytd)}
         </div>
         <div className="mt-2 flex items-center text-xs text-zinc-400">
@@ -114,7 +114,7 @@ export default function PortfolioSummaryCards({
           )}
         </div>
         <div className="mt-1 flex flex-col justify-center">
-          <span className="text-sm font-semibold text-zinc-800">
+          <span className="text-sm font-semibold font-mono tabular-nums text-zinc-800">
             {lastUpdated ? new Date(lastUpdated).toLocaleString('th-TH') : 'N/A'}
           </span>
           <span className="mt-0.5 text-xs text-zinc-400">อัปเดตราคาล่าสุดจาก yfinance</span>
@@ -145,7 +145,7 @@ export default function PortfolioSummaryCards({
         {priceRefreshInfo && Object.keys(priceRefreshInfo).length > 0 && (
           <div className="mt-2 max-h-16 overflow-y-auto rounded-lg bg-zinc-50 p-1.5 text-[10px] space-y-0.5 border border-zinc-200">
             {Object.entries(priceRefreshInfo).map(([sym, status]) => (
-              <div key={sym} className="flex justify-between items-center font-mono">
+              <div key={sym} className="flex justify-between items-center font-mono tabular-nums">
                 <span className="font-bold text-zinc-700">{sym}:</span>
                 <span
                   className={

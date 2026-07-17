@@ -83,6 +83,17 @@ def isolated_portfolio(tmp_vault, monkeypatch):
     pt.GOALS_PATH = goals.GOALS_PATH
     pt.GOALS_ITEMS_DIR = goals.GOALS_ITEMS_DIR
 
+    from tools.portfolio.models import AllocationTarget
+    pt.AllocationTarget = AllocationTarget
+    pt.get_structured_portfolio_state = core.get_structured_portfolio_state
+    pt.get_structured_bucket_allocation = core.get_structured_bucket_allocation
+    pt._recalc_fundamentals_derived = core._recalc_fundamentals_derived
+    pt._fetch_fundamentals = prices._fetch_fundamentals
+    pt.get_structured_watchlist = watchlist.get_structured_watchlist
+    pt.get_structured_performance_history = perf.get_structured_performance_history
+    pt.get_structured_journal = journal.get_structured_journal
+    pt.get_structured_goals = goals.get_structured_goals
+
     return pt
 
 

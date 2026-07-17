@@ -138,7 +138,7 @@ export default function PortfolioHoldingsTab({
         <div className="flex items-center justify-between rounded-xl border border-sky-200 bg-sky-50/80 px-4 py-3 text-sm text-sky-900 shadow-sm animate-fade-in">
           <div className="flex items-center gap-2">
             <span className="font-bold">🔍 กำลังกรองเฉพาะ Strategy Bucket:</span>
-            <span className="rounded-lg bg-flow-blue px-2.5 py-0.5 font-mono text-xs font-semibold text-white">
+            <span className="rounded-lg bg-flow-blue px-2.5 py-0.5 font-mono tabular-nums text-xs font-semibold text-white">
               {selectedBucket}
             </span>
             <span className="text-xs text-sky-700">({filteredHoldings.length} รายการ)</span>
@@ -292,13 +292,13 @@ export default function PortfolioHoldingsTab({
                       <span className="inline-block rounded-md bg-sky-50 px-2 py-0.5 text-xs font-semibold text-sky-800">
                         {h.asset_type}
                       </span>
-                      <div className="mt-1 font-mono text-[11px] text-zinc-400">
+                      <div className="mt-1 font-mono tabular-nums text-[11px] text-zinc-400">
                         {h.bucket_id || 'unassigned'}
                       </div>
                     </td>
 
                     {/* Col 3: Shares/Units (Line 1) + Avg Cost (Line 2) */}
-                    <td className="px-4 py-4 text-right align-top font-mono">
+                    <td className="px-4 py-4 text-right align-top font-mono tabular-nums">
                       <div className="font-bold text-zinc-900">
                         {h.units.toLocaleString('en-US', { maximumFractionDigits: 4 })}
                       </div>
@@ -308,7 +308,7 @@ export default function PortfolioHoldingsTab({
                     </td>
 
                     {/* Col 4: Current Price (Line 1) + Currency tag (Line 2) */}
-                    <td className="px-4 py-4 text-right align-top font-mono">
+                    <td className="px-4 py-4 text-right align-top font-mono tabular-nums">
                       <div className="font-bold text-zinc-900">
                         {formatPrice(h.current_price_usd, h.current_price_thb)}
                       </div>
@@ -318,7 +318,7 @@ export default function PortfolioHoldingsTab({
                     </td>
 
                     {/* Col 5: Market Value THB (Line 1) + % of NAV placeholder (Line 2) */}
-                    <td className="px-4 py-4 text-right align-top font-mono">
+                    <td className="px-4 py-4 text-right align-top font-mono tabular-nums">
                       <div className="font-extrabold text-zinc-900 text-sm">
                         {formatTHB(h.market_value_thb)}
                       </div>
@@ -333,7 +333,7 @@ export default function PortfolioHoldingsTab({
                     </td>
 
                     {/* Col 6: Unrealized PnL % (Line 1) + Unrealized PnL Value (Line 2) */}
-                    <td className="px-4 py-4 text-right align-top font-mono">
+                    <td className="px-4 py-4 text-right align-top font-mono tabular-nums">
                       {h.unrealized_pnl_percent !== null ? (
                         <>
                           <div className={`font-bold ${isPos ? 'text-emerald-600' : 'text-rose-600'}`}>
@@ -351,7 +351,7 @@ export default function PortfolioHoldingsTab({
                     </td>
 
                     {/* Col 7: P/E Ratio (Line 1) + EPS & Payout Ratio (Line 2) */}
-                    <td className="px-4 py-4 text-right align-top font-mono">
+                    <td className="px-4 py-4 text-right align-top font-mono tabular-nums">
                       <div className="font-semibold text-zinc-800">
                         PE: {h.pe_ratio ? `${h.pe_ratio.toFixed(1)}x` : 'N/A'}
                       </div>
@@ -361,7 +361,7 @@ export default function PortfolioHoldingsTab({
                     </td>
 
                     {/* Col 8: Yield on Cost (Line 1) + Div Yield & DPS (Line 2) */}
-                    <td className="px-4 py-4 text-right align-top font-mono">
+                    <td className="px-4 py-4 text-right align-top font-mono tabular-nums">
                       <div className="font-bold text-amber-700">
                         YoC: {h.yield_on_cost ? `${h.yield_on_cost.toFixed(2)}%` : 'N/A'}
                       </div>
@@ -450,7 +450,7 @@ export default function PortfolioHoldingsTab({
                                 key={`${entry.timestamp}-${idx}`}
                                 className="rounded-xl border border-sky-100 bg-sky-50/40 p-3.5 font-sans text-xs text-zinc-800"
                               >
-                                <div className="flex items-center justify-between text-[11px] text-zinc-400 font-mono mb-1.5">
+                                <div className="flex items-center justify-between text-[11px] text-zinc-400 font-mono tabular-nums mb-1.5">
                                   <span>🕒 {entry.timestamp}</span>
                                   <span className="rounded bg-white px-1.5 py-0.5 border border-sky-200 text-sky-700">Wikilink Obsidian</span>
                                 </div>
@@ -564,7 +564,7 @@ export default function PortfolioHoldingsTab({
                 key={`${entry.timestamp}-${idx}`}
                 className="rounded-xl border border-sky-100 bg-panel p-4 shadow-2xs hover:shadow-sm transition-shadow text-left"
               >
-                <div className="flex items-center justify-between text-xs text-zinc-400 font-mono mb-2">
+                <div className="flex items-center justify-between text-xs text-zinc-400 font-mono tabular-nums mb-2">
                   <span>🕒 {entry.timestamp}</span>
                   <span className="rounded-md bg-sky-50 px-2 py-0.5 text-[10px] text-sky-700 font-semibold">Obsidian Journal</span>
                 </div>

@@ -25,7 +25,7 @@ _EDITABLE_HOLDING_FIELDS = ("units", "avg_cost", "accumulated_dividend_thb", "as
 from tools._atomic_io import _atomic_write_to
 from tools.tool_errors import CASH_VIA_MANAGE, LOCK_TIMEOUT, validation_error
 from .models import _now_iso, _coerce_iso_string, Holding, Summary, PortfolioState, WatchlistItem, WatchlistState, GoalItem, GoalsState
-from .core import _load_or_init, _save, _recalc_all, _recalc_holding, _recalc_summary, _find_holding, _require_cash, _require_fx, get_portfolio_state, _holding_currency, compute_allocation_breakdown
+from .core import _load_or_init, _save, _recalc_all, _recalc_holding, _recalc_summary, _compute_total_cost, _find_holding, _require_cash, _require_fx, get_portfolio_state, _holding_currency, compute_allocation_breakdown
 from .prices import fetch_latest_price, _fetch_last_price, _fetch_fx_rate, _refresh_prices, sync_market_prices, _USDTHB_TICKER
 from .journal import append_trading_journal, _inject_journal_wikilinks, _write_journal_entry
 
@@ -40,7 +40,7 @@ CASH_SYMBOL = CASH_THB_SYMBOL
 
 _FLOAT_EPS = 1e-6
 _MONEY_DP = 2
-_COST_DP = 4
+_COST_DP = 6
 _PCT_DP = 2
 
 _LOCK_TIMEOUT = 15  # seconds — wait up to 15s for another process to release
@@ -693,25 +693,162 @@ def _edit_holding_locked(
     )
 
 
-def _compute_total_cost(state: PortfolioState, current_fx: float) -> float:
-    """รวมต้นทุนทุก holding ใน THB — ใช้ current_fx แปลง USD cost ให้สอดคล้องกับ market_value
-    (Anti-Drift: NAV - Cost = Unrealized P/L แบบเป๊ะตามที่ _recalc_summary คำนวณ)
 
-    *Pair-required guard*: นับ holding เฉพาะตอนมี cost+price ครบคู่
-    (สอดคล้องกับ _recalc_summary ที่ skip holding incomplete เช่นกัน)
-    """
-    total = 0.0
-    for h in state.holdings:
-        if h.asset_type == "Cash":
-            if h.symbol == CASH_USD_SYMBOL:
-                total += h.units * current_fx
-            else:
-                total += h.units
-            continue
-        if h.avg_cost_usd is not None and h.current_price_usd is not None:
-            total += h.units * h.avg_cost_usd * current_fx
-        elif h.avg_cost_thb is not None and h.current_price_thb is not None:
-            total += h.units * h.avg_cost_thb
-    return round(total, _MONEY_DP)
+
+def structured_execute_trade(
+    symbol: str,
+    asset_type: str,
+    action: Literal["buy", "sell"],
+    units: float,
+    price: float,
+    currency: Literal["THB", "USD"] = "THB",
+    exchange_rate: float | None = None,
+    date: str | None = None,
+    notes: str = "",
+    bucket_id: str | None = None,
+) -> PortfolioState:
+    """Structured mutation accessor สำหรับ execute trade โดย raise exceptions เพื่อให้ REST mapping ทำงาน"""
+    sym = symbol.strip().upper()
+    if sym in _CASH_SYMBOLS:
+        raise ValueError(f"ไม่สามารถเทรด cash sentinel โดยตรง ({sym})")
+    if units <= 0:
+        raise ValueError("units ต้องมากกว่า 0")
+    if price <= 0:
+        raise ValueError("price ต้องมากกว่า 0")
+    if action not in ("buy", "sell"):
+        raise ValueError("action ต้องเป็น 'buy' หรือ 'sell'")
+
+    with _portfolio_lock:
+        if exchange_rate is not None and exchange_rate > 0 and currency == "USD":
+            post, state = _load_or_init()
+            state.fx_rates["USDTHB"] = exchange_rate
+            _save(post, state)
+
+        _execute_trade_locked(sym, asset_type, action, units, price, currency)
+
+        post, state = _load_or_init()
+        target = _find_holding(state, sym)
+        modified = False
+        if target is not None and bucket_id is not None:
+            target.bucket_id = bucket_id
+            modified = True
+        if notes.strip() or (date and date.strip()):
+            content = f"**[TRADE NOTE - {sym}]** {action.upper()} {units:g} @ {price:,.4f} {currency}"
+            if notes.strip():
+                content += f" — {notes.strip()}"
+            _write_journal_entry(content, date_str=date)
+        if modified:
+            _save(post, state)
+        return state
+
+
+def structured_manage_cash_flow(
+    amount: float,
+    action: Literal["deposit", "withdraw"],
+    currency: Literal["THB", "USD"] = "THB",
+    exchange_rate: float | None = None,
+    date: str | None = None,
+    notes: str = "",
+) -> PortfolioState:
+    """Structured mutation accessor สำหรับฝาก/ถอนเงินสด"""
+    if amount <= 0:
+        raise ValueError("amount ต้องมากกว่า 0")
+    if action not in ("deposit", "withdraw"):
+        raise ValueError("action ต้องเป็น 'deposit' หรือ 'withdraw'")
+    if currency not in ("THB", "USD"):
+        raise ValueError(f"currency ต้องเป็น 'THB' หรือ 'USD' (got '{currency}')")
+
+    with _portfolio_lock:
+        if exchange_rate is not None and exchange_rate > 0 and currency == "USD":
+            post, state = _load_or_init()
+            state.fx_rates["USDTHB"] = exchange_rate
+            _save(post, state)
+
+        _manage_cash_flow_locked(amount, action, currency)
+        post, state = _load_or_init()
+        if notes.strip() or (date and date.strip()):
+            content = f"**[CASH FLOW NOTE]** {action.upper()} {amount:,.2f} {currency}"
+            if notes.strip():
+                content += f" — {notes.strip()}"
+            _write_journal_entry(content, date_str=date)
+        return state
+
+
+def structured_record_income(
+    income_type: Literal["Dividend", "Interest", "Rental", "Other"],
+    amount_thb: float,
+    source_symbol: str | None = None,
+    date: str | None = None,
+    notes: str = "",
+) -> PortfolioState:
+    """Structured mutation accessor สำหรับบันทึกรายได้"""
+    if amount_thb <= 0:
+        raise ValueError("amount_thb ต้องมากกว่า 0")
+
+    with _portfolio_lock:
+        _record_income_locked(income_type, amount_thb, source_symbol)
+        post, state = _load_or_init()
+        if notes.strip() or (date and date.strip()):
+            src_note = f" ({source_symbol})" if source_symbol else ""
+            content = f"**[INCOME NOTE - {income_type}{src_note}]** +{amount_thb:,.2f} THB"
+            if notes.strip():
+                content += f" — {notes.strip()}"
+            _write_journal_entry(content, date_str=date)
+        return state
+
+
+def structured_edit_holding(
+    symbol: str,
+    units: float | None = None,
+    avg_cost: float | None = None,
+    accumulated_dividend_thb: float | None = None,
+    asset_type: str | None = None,
+    reason: str = "",
+    bucket_id: str | None = None,
+) -> PortfolioState:
+    """Structured mutation accessor สำหรับแก้ไข Holding"""
+    sym = symbol.strip().upper()
+    if sym in _CASH_SYMBOLS:
+        raise ValueError(f"ไม่สามารถแก้ไขรายการเงินสดโดยตรง ({sym}) ใช้ manage_cash_flow")
+    if all(v is None for v in (units, avg_cost, accumulated_dividend_thb, asset_type, bucket_id)):
+        raise ValueError("ต้องระบุข้อมูลที่จะแก้ไขอย่างน้อย 1 รายการ")
+    if units is not None and units <= 0:
+        raise ValueError("units ต้องมากกว่า 0")
+    if avg_cost is not None and avg_cost <= 0:
+        raise ValueError("avg_cost ต้องมากกว่า 0")
+    if accumulated_dividend_thb is not None and accumulated_dividend_thb < 0:
+        raise ValueError("accumulated_dividend_thb ต้อง >= 0")
+
+    with _portfolio_lock:
+        post, state = _load_or_init()
+        target = _find_holding(state, sym)
+        if target is None:
+            raise ValueError(f"ไม่พบ {sym} ใน portfolio")
+
+        if any(v is not None for v in (units, avg_cost, accumulated_dividend_thb, asset_type)):
+            _edit_holding_locked(sym, units, avg_cost, accumulated_dividend_thb, asset_type, reason or "Structured API Edit")
+
+        post, state = _load_or_init()
+        target = _find_holding(state, sym)
+        if target is not None and bucket_id is not None and target.bucket_id != bucket_id:
+            target.bucket_id = bucket_id
+            _save(post, state)
+        return state
+
+
+def structured_remove_holding(symbol: str) -> PortfolioState:
+    """Structured mutation accessor สำหรับลบ Holding ออกจากพอร์ตโดยตรง"""
+    sym = symbol.strip().upper()
+    if sym in _CASH_SYMBOLS:
+        raise ValueError("ไม่สามารถลบรายการเงินสด (Cash) ผ่าน remove_holding ได้")
+    with _portfolio_lock:
+        post, state = _load_or_init()
+        target = _find_holding(state, sym)
+        if target is None:
+            raise ValueError(f"ไม่พบสินทรัพย์ {sym} ในพอร์ต")
+        state.holdings.remove(target)
+        _save(post, state)
+        _write_journal_entry(f"**[REMOVE {sym}]** ลบสินทรัพย์ออกจากพอร์ตโดยตรง")
+        return state
 
 
