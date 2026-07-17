@@ -28,6 +28,7 @@ import {
   ChartBarIcon,
   BriefcaseIcon,
   WatchlistIcon,
+  GoalIcon,
 } from '../components/portfolio/icons/PortfolioIcons'
 
 const TABS = [
@@ -253,14 +254,15 @@ export default function Portfolio() {
         refreshingPrices={refreshingPrices}
         priceRefreshInfo={portfolioState?.price_refresh_info ?? null}
         onRefreshPrices={() => void fetchAllData(true)}
+        performanceRows={performanceRows}
       />
 
       {/* Top-Level Executive Section: Goals & Performance */}
       <div className="rounded-2xl border border-sky-100 bg-gradient-to-b from-sky-50/40 via-white to-panel p-5 shadow-sm transition-all">
         <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center border-b border-sky-100 pb-4">
           <div className="flex items-center gap-3">
-            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-flow-blue/10 text-xl font-bold text-flow-blue">
-              🌟
+            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-flow-blue/10 text-flow-blue">
+              <ChartBarIcon className="h-5 w-5" />
             </span>
             <div>
               <h2 className="text-base font-extrabold tracking-tight text-zinc-900 flex items-center gap-2">
@@ -287,7 +289,7 @@ export default function Portfolio() {
                   : 'bg-white text-zinc-600 hover:bg-sky-50 border border-sky-200'
               }`}
             >
-              <span>🎯</span>
+              <GoalIcon className="h-4 w-4 shrink-0" />
               <span>Portfolio Goals ({goalsResponse?.goals?.length ?? 0})</span>
             </button>
             <button
@@ -302,7 +304,7 @@ export default function Portfolio() {
                   : 'bg-white text-zinc-600 hover:bg-sky-50 border border-sky-200'
               }`}
             >
-              <span>📈</span>
+              <ChartBarIcon className="h-4 w-4 shrink-0" />
               <span>Performance History ({performanceRows.length} points)</span>
             </button>
             <button

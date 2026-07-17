@@ -1,4 +1,4 @@
-import type { ActualSummaryDTO } from '../../api/types'
+import type { ActualSummaryDTO, PerformanceSnapshotDTO } from '../../api/types'
 
 interface Props {
   summary: ActualSummaryDTO | null
@@ -7,6 +7,7 @@ interface Props {
   refreshingPrices?: boolean
   priceRefreshInfo?: Record<string, string> | null
   onRefreshPrices?: () => void
+  performanceRows?: PerformanceSnapshotDTO[]
 }
 
 export function formatTHB(val: number): string {
@@ -25,6 +26,7 @@ export default function PortfolioSummaryCards({
   refreshingPrices = false,
   priceRefreshInfo = null,
   onRefreshPrices,
+  performanceRows = [],
 }: Props) {
   if (loading || !summary) {
     return (
@@ -42,19 +44,78 @@ export default function PortfolioSummaryCards({
   const pnlPct = costBasis > 0 ? (unrealizedPnL / costBasis) * 100 : null
   const isPositive = unrealizedPnL >= 0
 
+  // เตรียม Sparkline สำหรับ Total NAV
+  const sortedSpark = [...performanceRows]
+    .sort((a, b) => a.Date.localeCompare(b.Date))
+    .slice(-15) // เอา 15 จุดล่าสุดมาทำ Sparkline
+
+  let sparkPath = ''
+  let sparkArea = ''
+  let isSparkPositive = true
+
+  if (sortedSpark.length >= 2) {
+    const navs = sortedSpark.map((r) => r.Total_NAV)
+    const minNav = Math.min(...navs)
+    const maxNav = Math.max(...navs)
+    const range = maxNav - minNav || 1
+    const width = 110
+    const height = 26
+    const padTop = 3
+    const padBottom = 3
+
+    const points = navs.map((val, idx) => {
+      const x = (idx / (navs.length - 1)) * width
+      const y = height - padBottom - ((val - minNav) / range) * (height - padTop - padBottom)
+      return { x, y }
+    })
+
+    sparkPath = points.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x.toFixed(1)} ${p.y.toFixed(1)}`).join(' ')
+    sparkArea = `${sparkPath} L ${points[points.length - 1]!.x.toFixed(1)} ${height} L 0 ${height} Z`
+    isSparkPositive = navs[navs.length - 1]! >= navs[0]!
+  }
+
   return (
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
       {/* Card 1: Total NAV */}
-      <div className="flex flex-col justify-between rounded-2xl border border-sky-100 bg-gradient-to-br from-panel via-panel to-sky-50/40 p-5 shadow-sm transition-all hover:shadow-md">
+      <div className="flex flex-col justify-between rounded-2xl border border-sky-100 bg-gradient-to-br from-panel via-panel to-sky-50/40 p-5 shadow-sm transition-all hover:shadow-md relative overflow-hidden">
         <div className="flex items-center justify-between text-xs font-semibold uppercase tracking-wider text-zinc-500">
           <span>Total Portfolio NAV</span>
           <span className="rounded-full bg-flow-cyan/10 px-2 py-0.5 text-[10px] text-flow-blue">THB</span>
         </div>
-        <div className="mt-2 text-2xl font-bold font-mono tabular-nums tracking-tight text-zinc-900 sm:text-3xl">
-          {formatTHB(nav)}
+        <div className="mt-2 flex items-baseline justify-between gap-2">
+          <div className="text-2xl font-bold font-mono tabular-nums tracking-tight text-zinc-900 sm:text-3xl">
+            {formatTHB(nav)}
+          </div>
+          {/* Sparkline SVG */}
+          {sortedSpark.length >= 2 && (
+            <div className="h-7 w-28 shrink-0">
+              <svg viewBox="0 0 110 26" className="h-full w-full overflow-visible">
+                <defs>
+                  <linearGradient id="navSparkGrad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor={isSparkPositive ? '#059669' : '#e11d48'} stopOpacity={0.25} />
+                    <stop offset="100%" stopColor={isSparkPositive ? '#059669' : '#e11d48'} stopOpacity={0.0} />
+                  </linearGradient>
+                </defs>
+                <path d={sparkArea} fill="url(#navSparkGrad)" />
+                <path
+                  d={sparkPath}
+                  stroke={isSparkPositive ? '#059669' : '#e11d48'}
+                  strokeWidth={2}
+                  fill="none"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            </div>
+          )}
         </div>
-        <div className="mt-2 flex items-center text-xs text-zinc-400">
+        <div className="mt-2 flex items-center justify-between text-xs text-zinc-400">
           <span>มูลค่าสุทธิปัจจุบัน (รวมเงินสด)</span>
+          {sortedSpark.length >= 2 && (
+            <span className={`font-mono tabular-nums text-[10px] font-semibold ${isSparkPositive ? 'text-emerald-600' : 'text-rose-600'}`}>
+              {isSparkPositive ? '▲' : '▼'} 15D Trend
+            </span>
+          )}
         </div>
       </div>
 

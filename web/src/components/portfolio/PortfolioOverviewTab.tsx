@@ -12,19 +12,19 @@ interface Props {
 }
 
 const DEFAULT_COLORS = [
-  '#0ea5e9', // sky-500
-  '#6366f1', // indigo-500
-  '#10b981', // emerald-500
-  '#f59e0b', // amber-500
-  '#ec4899', // pink-500
-  '#8b5cf6', // violet-500
-  '#14b8a6', // teal-500
-  '#64748b', // slate-500
+  '#0284c7', // sky-600
+  '#4f46e5', // indigo-600
+  '#059669', // emerald-600
+  '#d97706', // amber-600
+  '#db2777', // pink-600
+  '#7c3aed', // violet-600
+  '#0d9488', // teal-600
+  '#475569', // slate-600
 ]
 
 function getBucketColor(index: number, explicitColor?: string | null): string {
   if (explicitColor) return explicitColor
-  return DEFAULT_COLORS[index % DEFAULT_COLORS.length] ?? '#0ea5e9'
+  return DEFAULT_COLORS[index % DEFAULT_COLORS.length] ?? '#0284c7'
 }
 
 export default function PortfolioOverviewTab({ targets, summaries, warning, onSelectBucket, onSuccess }: Props) {
@@ -82,6 +82,9 @@ export default function PortfolioOverviewTab({ targets, summaries, warning, onSe
   const activeSummary = hoveredBucket ? summaries.find((s) => s.bucket_id === hoveredBucket) : null
   const activeTarget = hoveredBucket ? targets.find((t) => t.bucket_id === hoveredBucket) : null
 
+  // คำนวณ Total Absolute Variance ของพอร์ต
+  const totalVariance = summaries.reduce((acc, s) => acc + Math.abs(s.variance), 0)
+
   return (
     <div className="space-y-6">
       {/* Target Sum Warning Badge */}
@@ -119,70 +122,82 @@ export default function PortfolioOverviewTab({ targets, summaries, warning, onSe
               <circle cx="120" cy="120" r={outerRadius} fill="transparent" stroke="#f1f5f9" strokeWidth={strokeWidthOuter} />
 
               {/* Inner Ring (Target) */}
-              {innerSegments.map((seg) => (
-                <circle
-                  key={`inner-${seg.bucketId}`}
-                  cx="120"
-                  cy="120"
-                  r={innerRadius}
-                  fill="transparent"
-                  stroke={seg.color}
-                  strokeWidth={strokeWidthInner}
-                  strokeDasharray={seg.strokeDasharray}
-                  strokeDashoffset={seg.strokeDashoffset}
-                  className="transition-all duration-300 cursor-pointer hover:opacity-80"
-                  onMouseEnter={() => setHoveredBucket(seg.bucketId)}
-                  onMouseLeave={() => setHoveredBucket(null)}
-                  onClick={() => onSelectBucket(seg.bucketId)}
-                >
-                  <title>{`${seg.name} Target: ${seg.pct.toFixed(1)}%`}</title>
-                </circle>
-              ))}
+              {innerSegments.map((seg) => {
+                const isHovered = hoveredBucket === seg.bucketId
+                const isDimmed = hoveredBucket !== null && hoveredBucket !== seg.bucketId
+                return (
+                  <circle
+                    key={`inner-${seg.bucketId}`}
+                    cx="120"
+                    cy="120"
+                    r={innerRadius}
+                    fill="transparent"
+                    stroke={seg.color}
+                    strokeWidth={isHovered ? strokeWidthInner + 3 : strokeWidthInner}
+                    strokeDasharray={seg.strokeDasharray}
+                    strokeDashoffset={seg.strokeDashoffset}
+                    opacity={isDimmed ? 0.35 : 1}
+                    className="transition-all duration-300 cursor-pointer"
+                    onMouseEnter={() => setHoveredBucket(seg.bucketId)}
+                    onMouseLeave={() => setHoveredBucket(null)}
+                    onClick={() => onSelectBucket(seg.bucketId)}
+                  >
+                    <title>{`${seg.name} Target: ${seg.pct.toFixed(1)}%`}</title>
+                  </circle>
+                )
+              })}
 
               {/* Outer Ring (Actual) */}
-              {outerSegments.map((seg) => (
-                <circle
-                  key={`outer-${seg.bucketId}`}
-                  cx="120"
-                  cy="120"
-                  r={outerRadius}
-                  fill="transparent"
-                  stroke={seg.color}
-                  strokeWidth={strokeWidthOuter}
-                  strokeDasharray={seg.strokeDasharray}
-                  strokeDashoffset={seg.strokeDashoffset}
-                  className="transition-all duration-300 cursor-pointer hover:opacity-80"
-                  onMouseEnter={() => setHoveredBucket(seg.bucketId)}
-                  onMouseLeave={() => setHoveredBucket(null)}
-                  onClick={() => onSelectBucket(seg.bucketId)}
-                >
-                  <title>{`${seg.name} Actual: ${seg.pct.toFixed(1)}% (${formatTHB(seg.value)})`}</title>
-                </circle>
-              ))}
+              {outerSegments.map((seg) => {
+                const isHovered = hoveredBucket === seg.bucketId
+                const isDimmed = hoveredBucket !== null && hoveredBucket !== seg.bucketId
+                return (
+                  <circle
+                    key={`outer-${seg.bucketId}`}
+                    cx="120"
+                    cy="120"
+                    r={outerRadius}
+                    fill="transparent"
+                    stroke={seg.color}
+                    strokeWidth={isHovered ? strokeWidthOuter + 4 : strokeWidthOuter}
+                    strokeDasharray={seg.strokeDasharray}
+                    strokeDashoffset={seg.strokeDashoffset}
+                    opacity={isDimmed ? 0.35 : 1}
+                    className="transition-all duration-300 cursor-pointer"
+                    onMouseEnter={() => setHoveredBucket(seg.bucketId)}
+                    onMouseLeave={() => setHoveredBucket(null)}
+                    onClick={() => onSelectBucket(seg.bucketId)}
+                  >
+                    <title>{`${seg.name} Actual: ${seg.pct.toFixed(1)}% (${formatTHB(seg.value)})`}</title>
+                  </circle>
+                )
+              })}
             </svg>
 
-            {/* Center Label (Interactive Hover / Summary) */}
+            {/* Center Label (Interactive Hover / Total Variance Summary) */}
             <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none text-center p-4">
               {activeSummary ? (
                 <div className="space-y-0.5 animate-fade-in">
                   <span className="text-xs font-bold text-zinc-500 uppercase tracking-wider">
                     {activeSummary.name}
                   </span>
-                  <div className="text-xl font-extrabold text-zinc-900">
+                  <div className="text-xl font-extrabold font-mono tabular-nums text-zinc-900">
                     {activeSummary.actual_percent.toFixed(1)}%
                   </div>
-                  <div className="text-[11px] text-zinc-500">
+                  <div className="text-[11px] font-mono tabular-nums text-zinc-500">
                     Target: {activeTarget ? `${activeTarget.target_percent.toFixed(1)}%` : 'N/A'}
                   </div>
-                  <div className={`text-[10px] font-semibold ${activeSummary.variance > 0 ? 'text-amber-600' : activeSummary.variance < 0 ? 'text-rose-600' : 'text-emerald-600'}`}>
+                  <div className={`text-[11px] font-mono tabular-nums font-bold ${activeSummary.variance > 0 ? 'text-amber-600' : activeSummary.variance < 0 ? 'text-rose-600' : 'text-emerald-600'}`}>
                     Diff: {activeSummary.variance > 0 ? '+' : ''}{activeSummary.variance.toFixed(1)}%
                   </div>
                 </div>
               ) : (
-                <div className="space-y-0.5">
-                  <span className="text-xs font-semibold text-zinc-400 uppercase">Bucket Count</span>
-                  <div className="text-2xl font-extrabold text-zinc-900">{summaries.length}</div>
-                  <span className="text-[11px] text-zinc-400">ชี้เพื่อดูรายละเอียด</span>
+                <div className="space-y-0.5 animate-fade-in">
+                  <span className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Total Variance</span>
+                  <div className={`text-2xl font-extrabold font-mono tabular-nums ${totalVariance <= 10 ? 'text-emerald-600' : 'text-amber-600'}`}>
+                    {totalVariance.toFixed(1)}%
+                  </div>
+                  <span className="text-[11px] text-zinc-400">{summaries.length} Buckets (ชี้เพื่อดูรายละเอียด)</span>
                 </div>
               )}
             </div>
@@ -237,10 +252,13 @@ export default function PortfolioOverviewTab({ targets, summaries, warning, onSe
                   const isHovered = hoveredBucket === s.bucket_id
                   const varColorClass =
                     Math.abs(s.variance) <= 2.0
-                      ? 'text-emerald-700 bg-emerald-50'
+                      ? 'text-emerald-700 bg-emerald-50 border-emerald-200'
                       : s.variance > 0
-                        ? 'text-amber-700 bg-amber-50'
-                        : 'text-rose-700 bg-rose-50'
+                        ? 'text-amber-700 bg-amber-50 border-amber-200'
+                        : 'text-rose-700 bg-rose-50 border-rose-200'
+
+                  // คำนวณความยาว mini variance bar (สูงสุด 50%)
+                  const barPercent = Math.min(50, (Math.abs(s.variance) / 20) * 50)
 
                   return (
                     <tr
@@ -259,25 +277,42 @@ export default function PortfolioOverviewTab({ targets, summaries, warning, onSe
                         />
                         <div>
                           <div className="font-bold text-zinc-800 group-hover:text-flow-blue">{s.name}</div>
-                          <div className="text-[11px] font-mono text-zinc-400">{s.bucket_id}</div>
+                          <div className="text-[11px] font-mono tabular-nums text-zinc-400">{s.bucket_id}</div>
                         </div>
                       </td>
-                      <td className="px-4 py-3.5 text-right font-mono text-zinc-700">
+                      <td className="px-4 py-3.5 text-right font-mono tabular-nums text-zinc-700">
                         {s.target_percent.toFixed(1)}%
                       </td>
-                      <td className="px-4 py-3.5 text-right font-mono font-semibold text-zinc-900">
+                      <td className="px-4 py-3.5 text-right font-mono tabular-nums font-semibold text-zinc-900">
                         {formatTHB(s.actual_value_thb)}
                       </td>
-                      <td className="px-4 py-3.5 text-right font-mono font-bold text-zinc-900">
+                      <td className="px-4 py-3.5 text-right font-mono tabular-nums font-bold text-zinc-900">
                         {s.actual_percent.toFixed(1)}%
                       </td>
-                      <td className="px-4 py-3.5 text-right">
-                        <span
-                          className={`inline-block rounded-lg px-2 py-1 text-xs font-mono font-bold ${varColorClass}`}
-                        >
-                          {s.variance > 0 ? '+' : ''}
-                          {s.variance.toFixed(1)}%
-                        </span>
+                      <td className="px-4 py-3.5 text-right align-middle">
+                        <div className="flex flex-col items-end gap-1">
+                          <span
+                            className={`inline-block rounded-lg border px-2 py-0.5 text-xs font-mono tabular-nums font-bold ${varColorClass}`}
+                          >
+                            {s.variance > 0 ? '+' : ''}
+                            {s.variance.toFixed(1)}%
+                          </span>
+                          {/* Mini Variance Divergence Bar */}
+                          <div className="w-24 h-1.5 bg-zinc-100 rounded-full overflow-hidden relative flex items-center">
+                            <div className="absolute left-1/2 top-0 bottom-0 w-[1px] bg-zinc-300 z-10" />
+                            {s.variance > 0 ? (
+                              <div
+                                className="h-full bg-amber-500 rounded-r-full transition-all duration-300 absolute left-1/2"
+                                style={{ width: `${barPercent}%` }}
+                              />
+                            ) : s.variance < 0 ? (
+                              <div
+                                className="h-full bg-rose-500 rounded-l-full transition-all duration-300 absolute right-1/2"
+                                style={{ width: `${barPercent}%` }}
+                              />
+                            ) : null}
+                          </div>
+                        </div>
                       </td>
                     </tr>
                   )
