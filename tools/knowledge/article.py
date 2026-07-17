@@ -29,36 +29,25 @@ def _is_url_already_processed(url: str) -> bool:
             pass
     return False
 
-@tool
-def ingest_article_url(url: str) -> str:
-    """ดึงเนื้อหาจาก URL ของบทความ/บล็อก/ข่าวการลงทุน และแปลงเป็น Markdown
 
-    [Usage/When to use]
-    ใช้เมื่อต้องการสรุปเนื้อหาจาก URL หรือเมื่อผู้ใช้ส่งลิงก์บทความมาให้สรุป
-    - ดึงเนื้อหาโดยใช้ 3-Tier Fallback (Firecrawl → Trafilatura → BeautifulSoup)
-    - สามารถดึง Title มาใช้ตั้งชื่อไฟล์ได้อัตโนมัติ
-
-    [Caution]
-    - เครื่องมือนี้แค่ส่งคืนข้อความ Markdown (ไม่บันทึกไฟล์เอง)
+def extract_article_content(url: str, check_processed: bool = True) -> tuple[str | None, str | None, str | None, str | None]:
+    """ดึงและสกัดเนื้อหาบทความ 6 หัวข้อจาก URL โดยคืนค่าดิบก่อนห่อหน้า/หลังด้วย _build_article_md
 
     Args:
-        url (str): ลิงก์ URL ของบทความที่ต้องการสกัดข้อมูล
+        url (str): ลิงก์ URL ของบทความ
+        check_processed (bool): ตรวจสอบว่าเคยเซฟในไฟล์หรือยัง (ใช้ True สำหรับ CLI/tool เดิม, False สำหรับ News Funnel)
 
     Returns:
-        str: เนื้อหาในรูปแบบ Markdown พร้อม YAML Frontmatter (หรือข้อความ Error)
+        tuple[extracted_body, og_image, title, error_or_skip_msg]
     """
-    if _is_url_already_processed(url):
-        return f"ข้าม: ข่าวนี้เคยถูกดึงและบันทึกไปแล้ว ({url})"
-
-    today = datetime.now().strftime("%Y-%m-%d")
-    now_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    if check_processed and _is_url_already_processed(url):
+        return None, None, None, f"ข้าม: ข่าวนี้เคยถูกดึงและบันทึกไปแล้ว ({url})"
 
     try:
         import trafilatura
     except ImportError:
-        return "ERROR: ไม่พบ library 'trafilatura' — กรุณา install ด้วย: uv add trafilatura"
+        return None, None, None, "ERROR: ไม่พบ library 'trafilatura' — กรุณา install ด้วย: uv add trafilatura"
 
-    # พยายามดึง metadata (เร็วที่สุดด้วย trafilatura)
     downloaded = None
     try:
         downloaded = trafilatura.fetch_url(url)
@@ -81,7 +70,8 @@ def ingest_article_url(url: str) -> str:
 
     def fetch_tier1(u: str) -> tuple[str | None, str | None]:
         d = trafilatura.fetch_url(u)
-        if not d: return None, None
+        if not d:
+            return None, None
         return trafilatura.extract(d, include_comments=False, include_tables=True, no_fallback=False), None
 
     def fetch_tier2(u: str) -> tuple[str | None, str | None]:
@@ -91,7 +81,7 @@ def ingest_article_url(url: str) -> str:
         res.raise_for_status()
         soup = BeautifulSoup(res.text, 'html.parser')
         page_title = soup.title.string if soup.title else None
-        for script in soup(["script", "style"]): 
+        for script in soup(["script", "style"]):
             script.extract()
         return soup.get_text(separator=' ', strip=True), page_title
 
@@ -101,7 +91,7 @@ def ingest_article_url(url: str) -> str:
         import time
         from bs4 import BeautifulSoup
         with sync_playwright() as p:
-            browser = p.chromium.launch(headless=False)
+            browser = p.chromium.launch(headless=os.getenv("PLAYWRIGHT_HEADLESS", "true").lower() == "true")
             page = browser.new_page()
             Stealth().apply_stealth_sync(page)
             page.goto(u, wait_until="domcontentloaded", timeout=20000)
@@ -110,26 +100,25 @@ def ingest_article_url(url: str) -> str:
             page_title = page.title()
             browser.close()
         soup = BeautifulSoup(content, 'html.parser')
-        for script in soup(["script", "style"]): 
+        for script in soup(["script", "style"]):
             script.extract()
         return soup.get_text(separator=' ', strip=True), page_title
 
     raw_text = None
     fetched_title = None
-    
-    # 3-Tier Fallback Strategy
+
     try:
         raw_text, fetched_title = with_retry(fetch_tier1, url)
     except Exception as e:
         log.warning(f"Tier1 (trafilatura) failed for {url}: {e}")
-        
+
     if not _is_valid_length(raw_text):
         log.info(f"Tier 1 insufficient or failed, falling back to Tier 2 for {url}")
         try:
             raw_text, fetched_title = with_retry(fetch_tier2, url)
         except Exception as e:
             log.warning(f"Tier2 (bs4) failed for {url}: {e}")
-            
+
     if not _is_valid_length(raw_text):
         log.info(f"Tier 2 insufficient or failed, falling back to Tier 3 for {url}")
         try:
@@ -137,23 +126,48 @@ def ingest_article_url(url: str) -> str:
         except Exception as e:
             log.error(f"Tier3 (playwright) failed for {url}: {e}")
 
-    # Update title if tier 2/3 found a better one
     if fetched_title and title == url:
         title, _ = anonymize_pii(fetched_title.strip())
 
-    # Sanity Check
     if not _is_valid_length(raw_text):
         log.error(f"Failed to fetch sufficient content for {url} (Length check failed). Possibly Paywalled/Bot Protection.")
-        return f"ดึงข้อมูลไม่สำเร็จ: เนื้อหาที่ดึงได้สั้นเกินไป (อาจติด Paywall หรือระบบป้องกัน Bot) สำหรับ URL {url}"
+        return None, None, None, f"ดึงข้อมูลไม่สำเร็จ: เนื้อหาที่ดึงได้สั้นเกินไป (อาจติด Paywall หรือระบบป้องกัน Bot) สำหรับ URL {url}"
 
-    # เรียก LLM สกัดข้อมูล
     try:
         extracted = _call_extractor_llm(raw_text, f"Article: {title}")
     except ValueError as e:
-        return f"ERROR: {e}"
+        return None, None, None, f"ERROR: {e}"
     except Exception as e:
         log.warning("Article LLM extraction failed | url=%s: %s", url, e)
-        return f"ERROR: LLM Extraction ล้มเหลว: {e}"
+        return None, None, None, f"ERROR: LLM Extraction ล้มเหลว: {e}"
 
-    return _build_article_md(extracted, url, title, today, now_time, image=og_image)
+    return extracted, og_image, title, None
+
+
+@tool
+def ingest_article_url(url: str) -> str:
+    """ดึงเนื้อหาจาก URL ของบทความ/บล็อก/ข่าวการลงทุน และแปลงเป็น Markdown
+
+    [Usage/When to use]
+    ใช้เมื่อต้องการสรุปเนื้อหาจาก URL หรือเมื่อผู้ใช้ส่งลิงก์บทความมาให้สรุป
+    - ดึงเนื้อหาโดยใช้ 3-Tier Fallback (Firecrawl → Trafilatura → BeautifulSoup)
+    - สามารถดึง Title มาใช้ตั้งชื่อไฟล์ได้อัตโนมัติ
+
+    [Caution]
+    - เครื่องมือนี้แค่ส่งคืนข้อความ Markdown (ไม่บันทึกไฟล์เอง)
+
+    Args:
+        url (str): ลิงก์ URL ของบทความที่ต้องการสกัดข้อมูล
+
+    Returns:
+        str: เนื้อหาในรูปแบบ Markdown พร้อม YAML Frontmatter (หรือข้อความ Error)
+    """
+    today = datetime.now().strftime("%Y-%m-%d")
+    now_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+    extracted, og_image, title, err = extract_article_content(url, check_processed=True)
+    if err:
+        return err
+    return _build_article_md(extracted or "", url, title or url, today, now_time, image=og_image)
+
 

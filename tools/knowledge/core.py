@@ -79,6 +79,8 @@ def _call_extractor_llm(raw_content: str, source_label: str) -> str:
     if len(raw_content) > _CONTENT_CHAR_LIMIT:
         raw_content = raw_content[:_CONTENT_CHAR_LIMIT] + f"\n...[ตัดทอน — เนื้อหาเกิน {_CONTENT_CHAR_LIMIT:,} ตัวอักษร]"
 
+    log.info("LLM Call | purpose=article_extraction | model=%s", _EXTRACTOR_MODEL)
+
     response = _get_extractor_llm().invoke([
         {"role": "system", "content": _EXTRACTOR_SYSTEM_PROMPT},
         {"role": "user", "content": f"Source: {source_label}\n\nContent:\n\n{raw_content}"},

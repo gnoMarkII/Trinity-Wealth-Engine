@@ -11,6 +11,7 @@ import os
 from pathlib import Path
 import re
 import shutil
+import threading
 from typing import Any, Dict, List, Optional
 import uuid
 
@@ -27,12 +28,16 @@ from schemas.news_funnel_schemas import (
 from tools._atomic_io import _atomic_write_to
 from tools.archivist.core import _sanitize_filename
 from tools.knowledge.core import _build_article_md
+from tools.knowledge.article import extract_article_content
 from tools.macro.news_funnel_store import (
     get_pending_high_impact_events,
     is_title_or_url_processed,
     load_store,
     save_triage_events,
     update_events_status,
+    save_raw_candidates,
+    get_raw_candidates,
+    remove_processed_raw_candidates,
 )
 
 logger = get_logger(__name__)
@@ -49,10 +54,12 @@ def get_synthesis_period(now: Optional[datetime] = None) -> str:
     return "morning" if current.hour < 12 else "evening"
 
 
-def _invoke_structured(schema: Any, model_env: str, prompt_lines: List[str]) -> Any:
+def _invoke_structured(schema: Any, model_env: str, prompt_lines: List[str], purpose: Optional[str] = None) -> Any:
     """Helper สำหรับสร้างและเรียกใช้ structured LLM ด้วย provider='google'"""
     from core.llm_factory import get_llm
     model_name = os.getenv(model_env, "gemini-2.5-flash")
+    call_purpose = purpose or getattr(schema, "__name__", str(schema))
+    logger.info("LLM Call | purpose=%s | model=%s", call_purpose, model_name)
     llm = get_llm(provider="google", model_name=model_name)
     structured_llm = llm.with_structured_output(schema)
     return structured_llm.invoke("\n".join(prompt_lines))
@@ -218,9 +225,10 @@ def _llm_triage_batch(items: List[Dict[str, Any]]) -> List[MacroImpactTriageResu
             "News items to evaluate:"
         ]
         for idx, it in enumerate(items):
-            prompt_lines.append(f"{idx+1}. Title: {it.get('title', '')} | Summary: {it.get('summary', '')}")
+            truncated_summary = _clean_and_truncate_summary(it.get('summary', ''), max_len=500)
+            prompt_lines.append(f"{idx+1}. Title: {it.get('title', '')} | Summary: {truncated_summary}")
 
-        res = _invoke_structured(TriageBatchResult, "NEWS_FUNNEL_TRIAGE_MODEL", prompt_lines)
+        res = _invoke_structured(TriageBatchResult, "NEWS_FUNNEL_TRIAGE_MODEL", prompt_lines, purpose="triage_batch")
         if res and hasattr(res, "results") and len(res.results) == len(items):
             return res.results
         if res and hasattr(res, "results"):
@@ -235,11 +243,71 @@ def _llm_triage_batch(items: List[Dict[str, Any]]) -> List[MacroImpactTriageResu
     return []
 
 
+def _heuristic_prefilter_candidates(items: List[Dict[str, Any]]) -> tuple[List[Dict[str, Any]], List[Dict[str, Any]]]:
+    """กรองหัวข้อข่าวก่อน Clustering โดยตรวจสอบ Blacklist พร้อม Finance-Keyword Override"""
+    passed_items = []
+    prefiltered_events = []
+    now_iso = datetime.now().isoformat()
+
+    finance_override_regex = re.compile(
+        r"\b(earnings|stock|stocks|shares|ipo|market|markets|revenue|dividend|profit|loss)\b|หุ้น|กำไร|รายได้|ตลาด|ปันผล|ผลประกอบการ",
+        re.IGNORECASE
+    )
+    en_blacklist_regex = re.compile(
+        r"\b(sports|football|premier league|nba|celebrity|horoscope|zodiac|lottery|lotto|promotion|discount|coupon)\b",
+        re.IGNORECASE
+    )
+    th_blacklist_regex = re.compile(
+        r"(ฟุตบอล|พรีเมียร์ลีก|ข่าวดารา(?!ศาสตร์)|ดาราบันเทิง|วงการบันเทิง|ซุบซิบ|ดูดวง|ราศี|หวย|สลากกินแบ่ง|ลอตเตอรี่|โปรโมชั่น|ส่วนลด)",
+        re.IGNORECASE
+    )
+
+    for item in items:
+        title = item.get("title", "").strip()
+        if not title:
+            continue
+
+        if finance_override_regex.search(title):
+            passed_items.append(item)
+            continue
+
+        match = en_blacklist_regex.search(title) or th_blacklist_regex.search(title)
+        if match:
+            matched_word = match.group(0)
+            link = item.get("link", "")
+            event_id = item.get("event_id") or str(uuid.uuid4())
+            ev = {
+                "event_id": event_id,
+                "canonical_title": title,
+                "original_title": title,
+                "comprehensive_summary": _clean_and_truncate_summary(item.get("summary", item.get("freshness_reason", ""))),
+                "source_count": 1,
+                "sources": [item.get("source", "RSS")],
+                "links": [link] if link else [],
+                "macro_impact_score": 2,
+                "asset_impact_score": 2,
+                "is_high_impact": False,
+                "primary_tags": ["prefilter"],
+                "extracted_tickers": [],
+                "extracted_themes": [],
+                "triage_reasoning": f"ตรง blacklist: {matched_word}",
+                "triage_source": "heuristic_prefilter",
+                "status": "pending_synthesis",
+                "ingested_at": now_iso,
+            }
+            prefiltered_events.append(ev)
+        else:
+            passed_items.append(item)
+
+    return passed_items, prefiltered_events
+
+
 def run_news_funnel_ingest(
     candidates: Optional[List[Dict[str, Any]]] = None,
     store_path: Optional[str] = None,
+    fetch_only: bool = False,
 ) -> Dict[str, Any]:
-    """ดึงข่าว (หรือรับจาก candidates) ทำ Clustering, คัดกรอง Batch LLM และบันทึกสถานะลง JSON Store"""
+    """ดึงข่าว (หรือรับจาก candidates) ทำ Clustering, คัดกรอง Batch LLM และบันทึกสถานะลง JSON Store หรือสะสมลง raw_candidates ถ้า fetch_only=True"""
     items = candidates
     if items is None:
         try:
@@ -249,23 +317,67 @@ def run_news_funnel_ingest(
             logger.warning("Could not fetch from news_radar: %s", e)
             items = []
 
-    if not items:
+    if fetch_only:
+        if not items:
+            return {"status": "success", "fetched_count": 0, "ingested_count": 0, "high_impact_count": 0}
+        store_state = load_store(store_path=store_path)
+        unprocessed = []
+        for item in items:
+            title = item.get("title", "").strip()
+            link = item.get("link", "")
+            if not title:
+                continue
+            if is_title_or_url_processed(title, link, store_path=store_path, store_state=store_state, include_raw=True):
+                continue
+            unprocessed.append(item)
+        if unprocessed:
+            save_raw_candidates(unprocessed, store_path=store_path)
+        return {
+            "status": "success",
+            "fetched_count": len(unprocessed),
+            "ingested_count": 0,
+            "high_impact_count": 0,
+        }
+
+    # fetch_only = False (Batch Triage Mode)
+    accumulated_raw = get_raw_candidates(store_path=store_path)
+    combined_items = accumulated_raw + (items or [])
+    if not combined_items:
         return {"status": "success", "ingested_count": 0, "high_impact_count": 0}
 
-    # โหลด store state ครั้งเดียวเพื่อกรองซ้ำ
-    store_state = load_store(store_path=store_path)
-    unprocessed = []
-    for item in items:
+    # In-memory deduplication ภายใน pool ระหว่างข่าวสะสมและข่าวสด
+    seen_urls = set()
+    seen_titles = set()
+    deduped_pool = []
+    for item in combined_items:
         title = item.get("title", "").strip()
         link = item.get("link", "")
         if not title:
             continue
-        if is_title_or_url_processed(title, link, store_path=store_path, store_state=store_state):
+        norm_title = title.lower()
+        if link and link in seen_urls:
+            continue
+        if norm_title in seen_titles:
+            continue
+        if link:
+            seen_urls.add(link)
+        seen_titles.add(norm_title)
+        deduped_pool.append(item)
+
+    store_state = load_store(store_path=store_path)
+    unprocessed = []
+    for item in deduped_pool:
+        title = item.get("title", "").strip()
+        link = item.get("link", "")
+        if is_title_or_url_processed(title, link, store_path=store_path, store_state=store_state, include_raw=False):
             continue
         unprocessed.append(item)
 
     if not unprocessed:
         return {"status": "success", "ingested_count": 0, "high_impact_count": 0}
+
+    # Prefilter ก่อน clustering
+    unprocessed, prefiltered_events = _heuristic_prefilter_candidates(unprocessed)
 
     # Clustering ข่าวที่คล้ายกันเข้าด้วยกัน
     clusters = group_similar_news(unprocessed, threshold=0.75)
@@ -283,28 +395,21 @@ def run_news_funnel_ingest(
     triage_results = _llm_triage_batch(representatives)
     triage_sources = ["mock" if _is_mock_mode() else "llm"] * len(triage_results)
 
-    # หาก len ไม่ตรงกัน หรือ LLM ล้มเหลว ให้ fallback ประเมินทีละ item เพื่อไม่ให้เกิด starvation loop จาก item เสียตัวเดียว
-    # ผลจาก heuristic ถูก tag triage_source="heuristic_fallback" เพื่อให้ผู้ใช้เห็นบนการ์ด Kanban ว่าไม่ใช่คะแนน LLM จริง
+    # หาก len ไม่ตรงกัน ให้ retry 1 ครั้ง หากยังไม่ตรงอีก ให้ fallback heuristic ทุก item ในรอบเดียว
     if len(triage_results) != len(representatives):
-        logger.warning("LLM returned %d results for %d items — falling back to sequential triage per item to prevent starvation", len(triage_results), len(representatives))
-        triage_results = []
-        triage_sources = []
-        for rep in representatives:
-            single_res = _llm_triage_batch([rep])
-            if len(single_res) == 1:
-                triage_results.append(single_res[0])
-                triage_sources.append("llm")
-            else:
-                logger.warning("Sequential triage failed for item '%s' — using heuristic fallback", rep.get("title", ""))
-                triage_results.append(_mock_or_llm_triage(rep))
-                triage_sources.append("heuristic_fallback")
+        logger.warning("LLM returned %d results for %d items — retrying triage batch once", len(triage_results), len(representatives))
+        triage_results = _llm_triage_batch(representatives)
+        triage_sources = ["mock" if _is_mock_mode() else "llm"] * len(triage_results)
+        if len(triage_results) != len(representatives):
+            logger.warning("Retry triage batch failed (%d results for %d items) — falling back to heuristic for all items", len(triage_results), len(representatives))
+            triage_results = [_mock_or_llm_triage(rep) for rep in representatives]
+            triage_sources = ["heuristic_fallback"] * len(representatives)
 
     new_events = []
     now_iso = datetime.now().isoformat()
     for rep, triage, triage_source in zip(representatives, triage_results, triage_sources):
         title = rep.get("title", "").strip()
         link = rep.get("link", "")
-        # สร้าง event_id จาก UUID4 หรือ Hash
         event_id = rep.get("event_id") or str(uuid.uuid4())
         ev = {
             "event_id": event_id,
@@ -327,26 +432,139 @@ def run_news_funnel_ingest(
         }
         new_events.append(ev)
 
-    if new_events:
-        save_triage_events(new_events, store_path=store_path)
+    all_new_events = new_events + prefiltered_events
+    if all_new_events:
+        save_triage_events(all_new_events, store_path=store_path)
+        processed_urls = set()
+        processed_titles = set()
+        for ev in all_new_events:
+            for lk in ev.get("links", []):
+                if lk:
+                    processed_urls.add(lk)
+            for tk in ("original_title", "canonical_title", "title"):
+                tv = ev.get(tk)
+                if tv:
+                    processed_titles.add(tv)
+        remove_processed_raw_candidates(processed_urls, processed_titles, store_path=store_path)
 
-    high_impact_count = sum(1 for e in new_events if e.get("is_high_impact"))
+    high_impact_count = sum(1 for e in all_new_events if e.get("is_high_impact"))
     return {
         "status": "success",
-        "ingested_count": len(new_events),
+        "ingested_count": len(all_new_events),
         "high_impact_count": high_impact_count,
     }
 
 
+_SYNTH_FILE_LOCK = threading.Lock()
+
+
+def _format_6_sections(summary: str, tickers: List[str], themes: List[str]) -> str:
+    def _to_wikilink(tag: str) -> str:
+        clean = strip_wikilink(tag)
+        return f"[[{clean}]]" if clean else ""
+
+    tickers_formatted = [_to_wikilink(t) for t in tickers if strip_wikilink(t)]
+    themes_formatted = [_to_wikilink(th) for th in themes if strip_wikilink(th)]
+    if not tickers_formatted:
+        tickers_formatted = ["[[NVDA]]", "[[Gold]]", "[[Bitcoin]]"]
+    if not themes_formatted:
+        themes_formatted = ["[[AI Infrastructure]]", "[[Monetary Policy]]"]
+
+    tickers_str = ", ".join(tickers_formatted)
+    themes_str = ", ".join(themes_formatted)
+
+    return (
+        f"## ใจความสำคัญ\n"
+        f"{summary}\n\n"
+        f"## แนวคิดการลงทุน\n"
+        f"- กลยุทธ์และการจัดพอร์ตตามธีม {themes_str}\n\n"
+        f"## เศรษฐกิจมหภาค\n"
+        f"### 🇺🇸 สหรัฐฯ\n"
+        f"- นโยบายการเงินและผลกระทบต่อเศรษฐกิจโลก\n\n"
+        f"## หุ้นและสินทรัพย์\n"
+        f"- {tickers_str}\n\n"
+        f"## ความเสี่ยง\n"
+        f"- ความผันผวนของอัตราดอกเบี้ยและความเสี่ยงเชิงระบบ\n\n"
+        f"## ตัวเลขสำคัญทางเศรษฐกิจ\n"
+        f"- อัตราเงินเฟ้อ, อัตราดอกเบี้ยนโยบาย, และตัวเลขการจ้างงาน"
+    )
+
+
+def _synthesize_single_event(
+    ev: Dict[str, Any],
+    date_str: str,
+    now_time: str,
+    news_dir: Path,
+) -> tuple[Dict[str, Any], Optional[str], Optional[str], set[str], Optional[str]]:
+    """ประมวลผลดึงและสกัดเนื้อหา 6 หัวข้อเชิงลึกของ 1 เหตุการณ์ (สำหรับรัน concurrent ใน ThreadPoolExecutor)"""
+    links = ev.get("links") or []
+    link = links[0] if links else ""
+
+    if not _is_mock_mode() and not link:
+        return ev, None, None, set(), "ข้าม: ข่าวนี้ไม่มี URL ต้นฉบับสำหรับดึงข้อมูล"
+
+    macro_score = ev.get("macro_impact_score", 0)
+    asset_score = ev.get("asset_impact_score", 0)
+    summary = ev.get("comprehensive_summary", "")
+    tickers = ev.get("extracted_tickers") or []
+    themes = ev.get("extracted_themes") or []
+
+    og_image = None
+    err = None
+
+    if _is_mock_mode():
+        extracted_raw = _format_6_sections(summary or "สรุปเนื้อหาจำลองเชิงลึก", tickers, themes)
+    else:
+        extracted_raw, og_image, fetched_title, err = extract_article_content(link, check_processed=False)
+
+    if err or not extracted_raw:
+        return ev, None, None, set(), (err or f"ดึงข้อมูลล้มเหลว: ไม่สามารถสกัดเนื้อหาจาก {link}")
+
+    canonical_title = _ensure_thai_title(ev.get("canonical_title", "Untitled Event"))
+    impact_banner = f"> **Macro Impact:** {macro_score}/10 | **Asset Impact:** {asset_score}/10\n\n"
+    extracted_body = impact_banner + extracted_raw
+
+    md_content = _build_article_md(
+        extracted=extracted_body,
+        source_url=link,
+        title=canonical_title,
+        today=date_str,
+        now_time=now_time,
+        image=og_image,
+    )
+
+    safe_title = _sanitize_filename(canonical_title)
+    with _SYNTH_FILE_LOCK:
+        out_file = news_dir / f"{date_str}_{safe_title}.md"
+        counter = 2
+        while out_file.exists():
+            out_file = news_dir / f"{date_str}_{safe_title}_{counter}.md"
+            counter += 1
+        _atomic_write_to(out_file, md_content)
+
+    # Union Wikilinks: ดึงจาก regex [[...]] ใน extracted_body มารวมกับ tickers และ themes เดิม
+    wikilinks = set(re.findall(r"\[\[([^\]|]+)(?:\|[^\]]+)?\]\]", extracted_body))
+    for t in tickers:
+        wikilinks.add(t)
+    for th in themes:
+        wikilinks.add(th)
+
+    ev["canonical_title"] = canonical_title
+
+    return ev, str(out_file), extracted_body, wikilinks, None
+
+
 def format_news_funnel_card_prompt(period: str, pending_items: List[Dict[str, Any]]) -> str:
-    lines = [f"### 📰 รายการข่าว High-Impact ที่รอการสังเคราะห์ (รอบ {period.upper()} — {len(pending_items)} รายการ)"]
-    for idx, ev in enumerate(pending_items, 1):
+    sorted_items = sorted(pending_items, key=lambda ev: 1 if ev.get("triage_source") == "heuristic_fallback" else 0)
+    lines = [f"### 📰 รายการข่าว High-Impact ที่รอการสังเคราะห์ (รอบ {period.upper()} — {len(sorted_items)} รายการ)"]
+    for idx, ev in enumerate(sorted_items, 1):
         title = ev.get("canonical_title", "Untitled")
         macro_score = ev.get("macro_impact_score", 0) or 0
         asset_score = ev.get("asset_impact_score", 0) or 0
         summary = ev.get("comprehensive_summary", "").strip()
-        tickers = [f"[[{t}]]" for t in (ev.get("extracted_tickers") or [])]
-        themes = [f"[[{th}]]" for th in (ev.get("extracted_themes") or [])]
+        from schemas.news_funnel_schemas import strip_wikilink
+        tickers = [strip_wikilink(str(t)) for t in (ev.get("extracted_tickers") or []) if strip_wikilink(str(t))]
+        themes = [strip_wikilink(str(th)) for th in (ev.get("extracted_themes") or []) if strip_wikilink(str(th))]
         tags_str = " ".join(tickers + themes).strip()
         links = ev.get("links") or []
         first_link = links[0] if isinstance(links, list) and links else ""
@@ -367,53 +585,32 @@ def format_news_funnel_card_prompt(period: str, pending_items: List[Dict[str, An
     return "\n".join(lines).strip()
 
 
-def _ensure_thai_content(ev: Dict[str, Any]) -> tuple[str, str]:
-    """ตรวจสอบและแปล/สังเคราะห์หัวข้อข่าวและใจความสำคัญให้เป็นภาษาไทยที่สมบูรณ์และเข้าใจง่าย"""
-    title = ev.get("canonical_title", "Untitled Event")
-    summary = ev.get("comprehensive_summary", "")
-
+def _ensure_thai_title(title: str) -> str:
+    """ตรวจสอบว่าชื่อหัวข้อข่าวเป็นภาษาไทยหรือไม่ หากไม่มีอักษรไทยเลย (เช่น Heuristic fallback) ให้เรียก LLM แปลเฉพาะหัวข้อ"""
     if _is_mock_mode():
-        return title, summary
+        return title
 
-    has_thai_summary = any('\u0e00' <= c <= '\u0e7f' for c in summary)
-    has_thai_title = any('\u0e00' <= c <= '\u0e7f' for c in title)
-    if has_thai_summary and has_thai_title:
-        return title, summary
+    has_thai = any('\u0e00' <= c <= '\u0e7f' for c in title)
+    if has_thai:
+        return title
 
     try:
         from pydantic import BaseModel, Field
-        class ThaiNoteSynthesis(BaseModel):
+        class ThaiTitleSynthesis(BaseModel):
             thai_title: str = Field(description="ชื่อหัวข้อข่าวแปลและเรียบเรียงเป็นภาษาไทยที่สละสลวย กระชับ สื่อความหมายชัดเจน")
-            thai_summary: str = Field(description="บทวิเคราะห์สรุปใจความสำคัญของข่าวเป็นภาษาไทย 2-3 ย่อหน้า ครอบคลุมประเด็นสำคัญว่าเกิดอะไรขึ้น ผลกระทบ และสิ่งที่นักลงทุนควรติดตาม")
 
         prompt_lines = [
-            "Please translate, synthesize, and summarize the following financial/macro news item into professional THAI language for Thai investors.",
+            "Please translate the following financial/macro news headline into professional THAI language for Thai investors.",
             f"Original Title: {title}",
-            f"Original Summary/Content: {summary}",
-            f"Macro Impact Score: {ev.get('macro_impact_score', 0)}/10 | Asset Impact Score: {ev.get('asset_impact_score', 0)}/10",
-            "Requirements:",
-            "1. 'thai_title': Clear, professional headline in THAI language.",
-            "2. 'thai_summary': Comprehensive analytical summary entirely in THAI language (1-2 paragraphs). Highlight key financial/economic insights clearly.",
+            "Requirement: Return only a clear, professional headline in THAI language.",
         ]
-        res = _invoke_structured(ThaiNoteSynthesis, "NEWS_FUNNEL_SYNTHESIS_MODEL", prompt_lines)
-        if res and hasattr(res, "thai_title") and hasattr(res, "thai_summary") and res.thai_title and res.thai_summary:
-            return res.thai_title.strip(), res.thai_summary.strip()
+        res = _invoke_structured(ThaiTitleSynthesis, "NEWS_FUNNEL_SYNTHESIS_MODEL", prompt_lines, purpose="thai_title_synthesis")
+        if res and hasattr(res, "thai_title") and res.thai_title:
+            return res.thai_title.strip()
     except Exception as e:
-        logger.warning("LLM Thai synthesis step failed (%s), using original text", e)
+        logger.warning("LLM Thai title synthesis step failed (%s), using original title", e)
 
-    return title, summary
-
-
-def _ensure_thai_content_batch(events: List[Dict[str, Any]]) -> List[tuple[str, str]]:
-    """ตรวจสอบและแปล/สังเคราะห์หัวข้อข่าวและใจความสำคัญให้เป็นภาษาไทยแบบ Concurrent เพื่อลดระยะเวลาการทำงาน"""
-    if not events:
-        return []
-    if _is_mock_mode() or len(events) == 1:
-        return [_ensure_thai_content(ev) for ev in events]
-
-    import concurrent.futures
-    with concurrent.futures.ThreadPoolExecutor(max_workers=min(5, len(events))) as executor:
-        return list(executor.map(_ensure_thai_content, events))
+    return title
 
 
 def run_news_funnel_synthesize(
@@ -505,75 +702,64 @@ def run_news_funnel_synthesize(
 
     created_files = []
     published_event_ids = []
+    published_events = []
+    skipped_error_ids = []
+    error_msgs = {}
     all_extracted_concepts: set = set()
 
-    thai_contents = _ensure_thai_content_batch(events_to_synthesize)
+    import concurrent.futures
+    with concurrent.futures.ThreadPoolExecutor(max_workers=min(3, len(events_to_synthesize))) as executor:
+        futures_map = {
+            executor.submit(_synthesize_single_event, ev, date_str, now_time, news_dir): ev
+            for ev in events_to_synthesize
+        }
+        results = []
+        for f, ev in futures_map.items():
+            try:
+                results.append(f.result())
+            except Exception as exc:
+                logger.error("Error synthesizing single event %s: %s", ev.get("event_id"), exc)
+                results.append((ev, None, None, set(), f"สังเคราะห์ข้อมูลล้มเหลว: {exc}"))
 
-    for ev, (canonical_title, summary) in zip(events_to_synthesize, thai_contents):
-        macro_score = ev.get("macro_impact_score", 0)
-        asset_score = ev.get("asset_impact_score", 0)
-        ev["canonical_title"] = canonical_title
-        ev["comprehensive_summary"] = summary
-        tickers = ev.get("extracted_tickers") or []
-        themes = ev.get("extracted_themes") or []
-        links = ev.get("links") or []
-        link = links[0] if links else ""
-
-        tickers_str = ", ".join(tickers) if tickers else "ไม่มี"
-        themes_str = ", ".join(themes) if themes else "ไม่มี"
-
-        extracted_body = (
-            f"> **Macro Impact:** {macro_score}/10 | **Asset Impact:** {asset_score}/10\n\n"
-            f"## ใจความสำคัญ\n"
-            f"{summary}\n\n"
-            f"## หุ้นและสินทรัพย์ที่เกี่ยวข้อง\n"
-            f"- {tickers_str}\n\n"
-            f"## ธีมเศรษฐกิจที่เกี่ยวข้อง\n"
-            f"- {themes_str}"
-        )
-
-        md_content = _build_article_md(
-            extracted=extracted_body,
-            source_url=link,
-            title=canonical_title,
-            today=date_str,
-            now_time=now_time,
-        )
-
-        safe_title = _sanitize_filename(canonical_title)
-        out_file = news_dir / f"{date_str}_{safe_title}.md"
-        counter = 2
-        while out_file.exists():
-            out_file = news_dir / f"{date_str}_{safe_title}_{counter}.md"
-            counter += 1
-
-        _atomic_write_to(out_file, md_content)
-        created_files.append(str(out_file))
-        if ev.get("event_id"):
-            published_event_ids.append(ev.get("event_id"))
-
-        # รวบรวม Wikilinks ทุกรายการ (extracted_tickers + extracted_themes) ส่งให้ ensure_concept_stubs_exist(...)
-        for t in tickers:
-            all_extracted_concepts.add(t)
-        for th in themes:
-            all_extracted_concepts.add(th)
+    for ev, out_file, extracted_body, wikilinks, err in results:
+        ev_id = ev.get("event_id")
+        if err or not out_file:
+            if ev_id:
+                skipped_error_ids.append(ev_id)
+                error_msgs[ev_id] = err or "Unknown extraction error"
+        else:
+            created_files.append(out_file)
+            published_events.append(ev)
+            if ev_id:
+                published_event_ids.append(ev_id)
+            for w in wikilinks:
+                all_extracted_concepts.add(w)
 
     # ส่งให้ ensure_concept_stubs_exist สำหรับคำที่ไม่ใช่รหัสหุ้นมาตรฐาน
     if all_extracted_concepts:
         concept_candidates = []
         for concept_link in sorted(all_extracted_concepts):
             raw_name = strip_wikilink(concept_link)
-            if raw_name not in TICKER_ALIAS_MAP and raw_name not in TICKER_ALIAS_MAP.values():
+            if raw_name and raw_name not in TICKER_ALIAS_MAP and raw_name not in TICKER_ALIAS_MAP.values():
                 concept_candidates.append(raw_name)
-        ensure_concept_stubs_exist(concept_candidates, vault_root=vault_root)
+        if concept_candidates:
+            ensure_concept_stubs_exist(concept_candidates, vault_root=vault_root)
 
-    # มาร์คสถานะใน JSON Store เป็น synthesized และ rejected ใน Transaction เดียว
-    update_events_status(rejected_ids=rejected_event_ids, synthesized_ids=published_event_ids, store_path=store_path)
+    # มาร์คสถานะใน JSON Store เป็น synthesized, rejected, หรือ skipped_error ใน Transaction เดียว
+    update_events_status(
+        rejected_ids=rejected_event_ids,
+        synthesized_ids=published_event_ids,
+        skipped_error_ids=skipped_error_ids,
+        error_msgs=error_msgs,
+        store_path=store_path,
+    )
 
     return {
         "status": "success",
-        "published_count": len(events_to_synthesize),
+        "published_count": len(published_events),
         "rejected_count": len(rejected_event_ids),
+        "skipped_error_count": len(skipped_error_ids),
         "created_files": created_files,
-        "published_events": events_to_synthesize,
+        "published_events": published_events,
+        "skipped_errors": error_msgs,
     }

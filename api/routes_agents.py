@@ -29,6 +29,8 @@ def _job_outputs_to_dto(conn, job) -> JobOutputsDTO:
     summary_row = next((row for row in reversed(reply_logs) if row["node_name"] == "manager_summary"), None)
     if summary_row is None:
         summary_row = next((row for row in reversed(reply_logs) if row["node_name"] == "supervisor"), None)
+    if summary_row is None:
+        summary_row = next((row for row in reversed(reply_logs) if row["node_name"] == "synthesize"), None)
 
     latest_by_node = {}
     for row in reply_logs:

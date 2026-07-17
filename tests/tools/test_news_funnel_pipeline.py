@@ -8,9 +8,16 @@ from tools.macro.news_funnel import (
     run_news_funnel_ingest,
     run_news_funnel_synthesize,
 )
-from unittest.mock import patch
+from unittest.mock import patch, MagicMock
 from schemas.news_funnel_schemas import MacroImpactTriageResult, TriageBatchResult
-from tools.macro.news_funnel_store import load_store, prune_old_events, save_store, save_triage_events
+from tools.macro.news_funnel_store import (
+    load_store,
+    prune_old_events,
+    save_store,
+    save_triage_events,
+    get_raw_candidates,
+    save_raw_candidates,
+)
 
 
 @pytest.fixture
@@ -78,7 +85,8 @@ def test_ingest_pipeline(test_paths, monkeypatch):
     assert res2["ingested_count"] == 0
 
 
-def test_synthesize_zero_pending_protection(test_paths):
+def test_synthesize_zero_pending_protection(test_paths, monkeypatch):
+    monkeypatch.setenv("MOCK_NEWS_FUNNEL_LLM", "true")
     store_file, vault_dir = test_paths
     # Create old News/Themes dir to test legacy cleanup
     old_themes_dir = os.path.join(vault_dir, "30_Knowledge_Base", "News", "Themes")
@@ -150,8 +158,8 @@ def test_synthesize_with_events_and_hitl_filter(test_paths, monkeypatch):
         assert "Fed rate decision and Inflation risk" in content
         assert "> **Macro Impact:** 8/10 | **Asset Impact:** 6/10" in content
         assert "## ใจความสำคัญ\nService inflation sticky" in content
-        assert "## หุ้นและสินทรัพย์ที่เกี่ยวข้อง\n- NVDA, Gold" in content
-        assert "## ธีมเศรษฐกิจที่เกี่ยวข้อง\n- policy, inflation" in content
+        assert "## หุ้นและสินทรัพย์\n- [[NVDA]], [[Gold]]" in content
+        assert "## แนวคิดการลงทุน\n- กลยุทธ์และการจัดพอร์ตตามธีม [[policy]], [[inflation]]" in content
 
     # Check state store that ev-100 is synthesized and ev-200 is rejected per HITL selection
     state = load_store(store_path=store_file)
@@ -243,16 +251,64 @@ def test_llm_triage_and_synthesis_mocked(tmp_path, monkeypatch):
         assert res["status"] == "success"
         assert res["high_impact_count"] == 1
 
-    s_res = run_news_funnel_synthesize(
-        period="morning",
-        store_path=store_file,
-        vault_root=vault_dir,
-        custom_date="2026-07-13",
-        allow_autonomous=True,
-    )
+    with patch("tools.macro.news_funnel.extract_article_content", return_value=(
+        "## ใจความสำคัญ\n- สรุปดอกเบี้ย\n\n## แนวคิดการลงทุน\n- กลยุทธ์\n\n## เศรษฐกิจมหภาค\n### 🇺🇸 สหรัฐฯ\n- อัตราดอกเบี้ย\n\n## หุ้นและสินทรัพย์\n- [[NVIDIA]]\n\n## ความเสี่ยง\n- เงินเฟ้อ\n\n## ตัวเลขสำคัญทางเศรษฐกิจ\n- ดอกเบี้ย 4.5%",
+        None,
+        "Central Bank Policy",
+        None
+    )), patch("tools.macro.news_funnel._invoke_structured") as mock_inv:
+        mock_inv.return_value = MagicMock(thai_title="นโยบายธนาคารกลาง")
+        s_res = run_news_funnel_synthesize(
+            period="morning",
+            store_path=store_file,
+            vault_root=vault_dir,
+            custom_date="2026-07-13",
+            allow_autonomous=True,
+        )
     assert s_res["status"] == "success"
     assert s_res["published_count"] == 1
     assert len(s_res["created_files"]) == 1
+
+
+def test_synthesize_skipped_error_integration(tmp_path, monkeypatch):
+    """ทดสอบ integration path เมื่อ extract_article_content คืนค่า error_msg ในโหมดจริงต้องไม่เขียนไฟล์ และบันทึกสถานะ skipped_error ลง store"""
+    store_file = str(tmp_path / "test_state.json")
+    vault_dir = str(tmp_path / "vault")
+    monkeypatch.setenv("MOCK_NEWS_FUNNEL_LLM", "false")
+
+    events = [
+        {
+            "event_id": "ev-skip-err-1",
+            "canonical_title": "Paywalled Article Title",
+            "comprehensive_summary": "Summary text",
+            "macro_impact_score": 8,
+            "asset_impact_score": 7,
+            "is_high_impact": True,
+            "links": ["https://real-domain.com/paywalled"],
+            "status": "pending_synthesis",
+        }
+    ]
+    save_triage_events(events, store_path=store_file)
+
+    with patch("tools.macro.news_funnel.extract_article_content", return_value=(None, None, None, "ดึงข้อมูลไม่สำเร็จ: เนื้อหาที่ดึงได้สั้นเกินไป (ติด Paywall)")), \
+         patch("tools.macro.news_funnel._invoke_structured"):
+        res = run_news_funnel_synthesize(
+            period="morning",
+            store_path=store_file,
+            vault_root=vault_dir,
+            custom_date="2026-07-13",
+            allow_autonomous=True,
+        )
+
+    assert res["status"] == "success"
+    assert res["published_count"] == 0
+    assert res["skipped_error_count"] == 1
+    assert len(res["created_files"]) == 0
+    assert "ev-skip-err-1" in res["skipped_errors"]
+    assert "ติด Paywall" in res["skipped_errors"]["ev-skip-err-1"]
+
+    state = load_store(store_path=store_file)
+    assert any(ev["event_id"] == "ev-skip-err-1" and ev["status"] == "skipped_error" and "ติด Paywall" in ev["error_msg"] for ev in state["pending_events"])
 
 
 def test_synthesize_requires_kanban_approval_and_creates_card(tmp_path, monkeypatch):
@@ -406,6 +462,7 @@ def test_clean_and_truncate_summary_html():
 
 
 def test_unified_cli_runner(monkeypatch, tmp_path):
+    monkeypatch.setenv("MOCK_NEWS_FUNNEL_LLM", "true")
     from cli import run_news_funnel
     from scripts import run_news_funnel_auto
     store_file = str(tmp_path / "cli_test_state.json")
@@ -423,7 +480,8 @@ def test_unified_cli_runner(monkeypatch, tmp_path):
         run_news_funnel_auto.main()
 
 
-def test_synthesize_empty_approval_graceful_skip(tmp_path):
+def test_synthesize_empty_approval_graceful_skip(tmp_path, monkeypatch):
+    monkeypatch.setenv("MOCK_NEWS_FUNNEL_LLM", "true")
     store_file = str(tmp_path / "test_state.json")
     vault_dir = str(tmp_path / "vault")
     events = [
@@ -454,7 +512,8 @@ def test_synthesize_empty_approval_graceful_skip(tmp_path):
     assert state["pending_events"][0]["status"] == "pending_synthesis"
 
 
-def test_synthesize_toctou_rejection_protection(tmp_path):
+def test_synthesize_toctou_rejection_protection(tmp_path, monkeypatch):
+    monkeypatch.setenv("MOCK_NEWS_FUNNEL_LLM", "true")
     store_file = str(tmp_path / "test_state.json")
     vault_dir = str(tmp_path / "vault")
     events = [
@@ -482,5 +541,192 @@ def test_synthesize_toctou_rejection_protection(tmp_path):
     assert statuses["ev-old-1"] == "synthesized"
     assert statuses["ev-old-2"] == "rejected"
     assert statuses["ev-new-toctou"] == "pending_synthesis"
+
+
+def test_prefilter_with_finance_override(test_paths, monkeypatch):
+    from tools.macro.news_funnel import _heuristic_prefilter_candidates
+    from tools.macro.news_funnel_store import get_filtered_or_rejected_events
+    store_file, _ = test_paths
+
+    candidates = [
+        {"title": "Manchester United wins football match against Liverpool", "summary": "Sports update", "link": "https://example.com/sports1"},
+        {"title": "ดูดวง 12 ราศีประจำสัปดาห์โชคลาภ", "summary": "Horoscope update", "link": "https://example.com/dooduang1"},
+        {"title": "Nike earnings surge due to sports footwear demand", "summary": "Finance update", "link": "https://example.com/nike1"},
+        {"title": "Manchester United stock jumps after revenue beat", "summary": "Stock update", "link": "https://example.com/manu1"},
+        {"title": "ข่าวดาราศาสตร์และการสำรวจอวกาศลึก", "summary": "Science update", "link": "https://example.com/astro1"},
+    ]
+
+    passed, prefiltered = _heuristic_prefilter_candidates(candidates)
+    # Passed should contain the override items and science item that doesn't trigger 'ดารา'
+    passed_titles = [item["title"] for item in passed]
+    assert "Nike earnings surge due to sports footwear demand" in passed_titles
+    assert "Manchester United stock jumps after revenue beat" in passed_titles
+    assert "ข่าวดาราศาสตร์และการสำรวจอวกาศลึก" in passed_titles
+
+    # Prefiltered should contain pure sports and horoscope
+    prefiltered_titles = [ev["canonical_title"] for ev in prefiltered]
+    assert "Manchester United wins football match against Liverpool" in prefiltered_titles
+    assert "ดูดวง 12 ราศีประจำสัปดาห์โชคลาภ" in prefiltered_titles
+
+    # Verify expected behavior: canonical_title == original_title and appears in get_filtered_or_rejected_events when saved
+    save_triage_events(prefiltered, store_path=store_file)
+    filtered_store = get_filtered_or_rejected_events(store_path=store_file)
+    assert any(ev["canonical_title"] == "Manchester United wins football match against Liverpool" and ev["triage_source"] == "heuristic_prefilter" for ev in filtered_store)
+
+
+def test_fallback_cap_retry(test_paths, monkeypatch):
+    store_file, _ = test_paths
+    candidates = [
+        {"title": "Item 1", "summary": "Sum 1", "link": "https://example.com/1"},
+        {"title": "Item 2", "summary": "Sum 2", "link": "https://example.com/2"},
+    ]
+
+    monkeypatch.setattr("tools.macro.news_funnel._is_mock_mode", lambda: False)
+    mock_invoke = MagicMock(return_value=[])  # Return empty list -> length mismatch
+
+    with patch("tools.macro.news_funnel._invoke_structured", mock_invoke):
+        res = run_news_funnel_ingest(candidates=candidates, store_path=store_file)
+        assert res["status"] == "success"
+        # 1 initial batch call + 1 retry batch call = 2 calls total (0 sequential calls)
+        assert mock_invoke.call_count == 2
+        # Verify all items fall back to heuristic
+        state = load_store(store_path=store_file)
+        for ev in state["pending_events"]:
+            assert ev["triage_source"] == "heuristic_fallback"
+
+
+def test_title_ordering_zero_calls_when_no_link(tmp_path, monkeypatch):
+    from tools.macro.news_funnel import _synthesize_single_event
+    monkeypatch.setattr("tools.macro.news_funnel._is_mock_mode", lambda: False)
+    mock_invoke = MagicMock()
+
+    ev = {
+        "event_id": "ev-no-link",
+        "canonical_title": "Pure English Headline Without Link",
+        "links": [],
+        "macro_impact_score": 8,
+        "asset_impact_score": 5,
+    }
+
+    with patch("tools.macro.news_funnel._invoke_structured", mock_invoke):
+        result_ev, out_file, extracted_body, wikilinks, err_msg = _synthesize_single_event(
+            ev, "2026-07-17", "10:00", tmp_path
+        )
+        assert out_file is None
+        assert err_msg == "ข้าม: ข่าวนี้ไม่มี URL ต้นฉบับสำหรับดึงข้อมูล"
+        # Must NOT call LLM to translate title
+        assert mock_invoke.call_count == 0
+
+
+def test_summary_truncation(monkeypatch):
+    from tools.macro.news_funnel import _llm_triage_batch
+    monkeypatch.setattr("tools.macro.news_funnel._is_mock_mode", lambda: False)
+
+    long_summary = "A" * 5000
+    candidate = {"title": "Test Title", "summary": long_summary}
+
+    captured_prompts = []
+    def mock_invoke(schema, model_env, prompt_lines, purpose=None):
+        captured_prompts.extend(prompt_lines)
+        return []
+
+    with patch("tools.macro.news_funnel._invoke_structured", mock_invoke):
+        _llm_triage_batch([candidate])
+
+    assert len(captured_prompts) > 0
+    # Find the line containing our summary
+    summary_line = next(line for line in captured_prompts if "1. Title:" in line)
+    # Extract the summary portion after "Summary: "
+    summary_part = summary_line.split("Summary: ")[1]
+    # Verify summary portion <= 503 chars (500 chars + "...")
+    assert len(summary_part) <= 503
+    assert summary_part.endswith("...")
+
+
+def test_staged_ingest_pipeline(test_paths, monkeypatch):
+    store_file, _ = test_paths
+    monkeypatch.setattr("tools.macro.news_funnel._is_mock_mode", lambda: False)
+
+    batch1 = [
+        {"title": "Candidate A", "link": "https://example.com/a", "summary": "Sum A"},
+        {"title": "Candidate B", "link": "https://example.com/b", "summary": "Sum B"},
+    ]
+    batch2 = [
+        {"title": "Candidate A", "link": "https://example.com/a", "summary": "Sum A"},  # Duplicate of A
+        {"title": "Candidate C", "link": "https://example.com/c", "summary": "Sum C"},  # New candidate C
+    ]
+
+    mock_invoke = MagicMock(return_value=[])
+    with patch("tools.macro.news_funnel._invoke_structured", mock_invoke):
+        # 1. Hourly fetch batch 1
+        res1 = run_news_funnel_ingest(candidates=batch1, store_path=store_file, fetch_only=True)
+        assert res1["fetched_count"] == 2
+        assert mock_invoke.call_count == 0
+        assert len(get_raw_candidates(store_path=store_file)) == 2
+
+        # 2. Hourly fetch batch 2 (should dedup against raw_candidates)
+        res2 = run_news_funnel_ingest(candidates=batch2, store_path=store_file, fetch_only=True)
+        assert res2["fetched_count"] == 1  # only C is new
+        assert mock_invoke.call_count == 0
+        raw_now = get_raw_candidates(store_path=store_file)
+        assert len(raw_now) == 3
+        assert {item["link"] for item in raw_now} == {"https://example.com/a", "https://example.com/b", "https://example.com/c"}
+
+    # 3. Batch Triage (fetch_only=False)
+    batch3 = [{"title": "Candidate D", "link": "https://example.com/d", "summary": "Sum D"}]
+    # Total accumulated: A, B, C + fresh D = 4 items
+
+    import re
+    def mock_triage_invoke(schema, model_env, prompt_lines, purpose=None):
+        count = sum(1 for line in prompt_lines if re.match(r"^\d+\. Title:", line))
+        results = [
+            MacroImpactTriageResult(
+                thai_title=f"ไทย {i}",
+                thai_summary="สรุป",
+                macro_impact_score=8,
+                asset_impact_score=7,
+                is_high_impact=True,
+                primary_tags=["macro"],
+                extracted_tickers=["NVDA"],
+                extracted_themes=["AI"],
+                triage_reasoning="เหตุผล",
+            )
+            for i in range(count)
+        ]
+        return TriageBatchResult(results=results)
+
+    mock_triage_mock = MagicMock(side_effect=mock_triage_invoke)
+    with patch("tools.macro.news_funnel._invoke_structured", mock_triage_mock):
+        res3 = run_news_funnel_ingest(candidates=batch3, store_path=store_file, fetch_only=False)
+        assert mock_triage_mock.call_count == 1  # exactly 1 batch call for all items
+        assert res3["ingested_count"] == 4
+        # verify raw_candidates cleared/removed by identity
+        assert len(get_raw_candidates(store_path=store_file)) == 0
+
+
+def test_staged_ingest_crash_safety(test_paths, monkeypatch):
+    store_file, _ = test_paths
+    monkeypatch.setattr("tools.macro.news_funnel._is_mock_mode", lambda: False)
+
+    items = [
+        {"title": "Crash Item 1", "link": "https://example.com/crash1"},
+        {"title": "Crash Item 2", "link": "https://example.com/crash2"},
+    ]
+    save_raw_candidates(items, store_path=store_file)
+    assert len(get_raw_candidates(store_path=store_file)) == 2
+
+    def mock_save_crash(*args, **kwargs):
+        raise RuntimeError("Simulated Save Crash!")
+
+    with patch("tools.macro.news_funnel._invoke_structured", MagicMock(return_value=[])):
+        with patch("tools.macro.news_funnel.save_triage_events", side_effect=mock_save_crash):
+            with pytest.raises(RuntimeError, match="Simulated Save Crash!"):
+                run_news_funnel_ingest(candidates=[], store_path=store_file, fetch_only=False)
+
+    # Verify that raw_candidates are still present after failure (crash safety: Zero-Pending Protection)
+    raw_after = get_raw_candidates(store_path=store_file)
+    assert len(raw_after) == 2
+    assert {item["link"] for item in raw_after} == {"https://example.com/crash1", "https://example.com/crash2"}
+
 
 

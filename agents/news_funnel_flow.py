@@ -3,6 +3,7 @@
 ไม่กระทบ manager_agent.py เดิม ครอบคลุม 3 Node:
 load_pending_node -> gate_node -> synthesize_node
 """
+from pathlib import Path
 from typing import Any, Dict, List, Literal, Optional, TypedDict
 
 from langchain_core.messages import AIMessage
@@ -83,17 +84,39 @@ def synthesize_node(state: NewsFunnelState) -> Dict[str, Any]:
     # ที่เป็นไปได้มีแค่ no_approved_events กับ success — ไม่มี branch no_pending_events
     if result.get("status") == "no_approved_events":
         rejected_cnt = result.get("rejected_count", 0)
-        if rejected_cnt > 0:
-            msg_text = f"🚫 ไม่มีรายการที่ได้รับการอนุมัติ (เปลี่ยนสถานะไม่คัดเลือกเป็น Rejected {rejected_cnt} รายการ) — ไม่เขียนไฟล์ทับลง Obsidian Vault"
+        skipped_err_cnt = result.get("skipped_error_count", 0)
+        if rejected_cnt > 0 or skipped_err_cnt > 0:
+            msg_text = f"🚫 ไม่มีรายการที่ได้รับการอนุมัติ (Rejected: {rejected_cnt}, Skipped Error: {skipped_err_cnt}) — ไม่เขียนไฟล์ทับลง Obsidian Vault"
         else:
             msg_text = "🚫 ข้ามรอบนี้ตามคำสั่ง (0 รายการ) — ไม่สร้างโน้ตข่าวและไม่ปฏิเสธข่าวในคิว (จบ Graceful)"
     else:
         count = result.get("published_count", 0)
         rejected_cnt = result.get("rejected_count", 0)
+        skipped_err_cnt = result.get("skipped_error_count", 0)
         files = result.get("created_files", [])
-        files_str = ", ".join([f.split("/")[-1].split("\\")[-1] for f in files[:3]]) + ("..." if len(files) > 3 else "")
+        published_events = result.get("published_events", [])
         reject_msg = f" (และเปลี่ยนสถานะรายการที่ไม่เลือกเป็น Rejected {rejected_cnt} รายการ)" if rejected_cnt > 0 else ""
-        msg_text = f"✓ เผยแพร่ข่าวเดี่ยวสำเร็จจำนวน {count} รายการ{reject_msg} -> บันทึกลง {files_str if files_str else 'Obsidian Vault'}"
+        skipped_msg = f" (และข้ามเนื่องจากดึง/สกัดข้อมูลล้มเหลว {skipped_err_cnt} รายการ)" if skipped_err_cnt > 0 else ""
+
+        if published_events and files:
+            items_list = []
+            for ev, file_path in zip(published_events, files):
+                file_name = Path(file_path).name
+                title = ev.get("canonical_title") or ev.get("title", "Untitled")
+                macro_sc = ev.get("macro_impact_score", 0)
+                asset_sc = ev.get("asset_impact_score", 0)
+                items_list.append(f"- **{title}** (Macro: {macro_sc}/10 | Asset: {asset_sc}/10) -> `{file_name}`")
+            details_str = "\n\n### รายการโน้ตที่บันทึกลง Obsidian Vault:\n" + "\n".join(items_list)
+        elif files:
+            file_names = [Path(f).name for f in files]
+            details_str = "\n\n### รายการไฟล์ที่บันทึก:\n" + "\n".join([f"- `{fn}`" for fn in file_names])
+        else:
+            details_str = ""
+
+        if count == 0:
+            msg_text = f"⚠️ ไม่สามารถเผยแพร่ข่าวเดี่ยวได้ (0 รายการ){reject_msg}{skipped_msg}{details_str}"
+        else:
+            msg_text = f"✓ เผยแพร่ข่าวเดี่ยวสำเร็จจำนวน {count} รายการ{reject_msg}{skipped_msg}{details_str}"
 
     return {
         "result_summary": msg_text,

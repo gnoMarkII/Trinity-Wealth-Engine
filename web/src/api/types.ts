@@ -167,8 +167,18 @@ export interface NewsFunnelCandidate {
   extracted_themes: string[]
   primary_tags: string[]
   sources: string[]
+  links?: string[]
   /** "llm" | "mock" | "heuristic_fallback" — เมื่อเป็น heuristic_fallback คะแนนไม่ได้มาจาก LLM จริง */
   triage_source?: string
+}
+
+export type NewsFunnelPendingItem = NewsFunnelCandidate
+
+export interface NewsFunnelFilteredItem extends NewsFunnelCandidate {
+  status: string
+  triage_reasoning?: string
+  error_msg?: string
+  ingested_at?: string
 }
 
 export interface NewsFunnelApprovalPayload {
@@ -227,3 +237,5 @@ export interface KanbanCardDTO {
   created_at: number
   updated_at: number
 }
+
+// ---------------------------------------------------------

@@ -42,15 +42,15 @@ def main():
     parser.add_argument(
         "command",
         nargs="?",
-        choices=["ingest", "synthesize", "both", "auto"],
+        choices=["ingest", "synthesize", "both", "auto", "fetch"],
         default=None,
-        help="คำสั่งหลัก: ingest, synthesize, both หรือ auto",
+        help="คำสั่งหลัก: ingest, synthesize, both, auto หรือ fetch",
     )
     parser.add_argument(
         "--mode",
-        choices=["ingest", "synthesize", "both", "auto"],
+        choices=["ingest", "synthesize", "both", "auto", "fetch"],
         default=None,
-        help="โหมดการทำงาน: ingest, synthesize, both หรือ auto",
+        help="โหมดการทำงาน: ingest, synthesize, both, auto หรือ fetch",
     )
     parser.add_argument(
         "--period",
@@ -80,9 +80,14 @@ def main():
     if period == "auto":
         period = get_synthesis_period()
 
-    if mode == "ingest":
+    if mode == "fetch":
+        logger.info("Running News Funnel Hourly Candidate Fetch...")
+        res = run_news_funnel_ingest(store_path=args.store_path, fetch_only=True)
+        logger.info("Fetch result: %s", res)
+
+    elif mode == "ingest":
         logger.info("Running News Funnel Ingestion...")
-        res = run_news_funnel_ingest(store_path=args.store_path)
+        res = run_news_funnel_ingest(store_path=args.store_path, fetch_only=False)
         logger.info("Ingest result: %s", res)
 
     elif mode == "synthesize":

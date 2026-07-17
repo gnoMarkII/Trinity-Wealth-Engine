@@ -4,6 +4,7 @@ import { api, ApiError } from '../../api/client'
 import type { ApprovalPayload, KanbanCardDTO } from '../../api/types'
 import LiveTerminal from '../LiveTerminal'
 import ApprovalPanel from '../ApprovalPanel'
+import NewsFunnelPromptViewer from './NewsFunnelPromptViewer'
 import { FLOW_TAG } from '../../lib/flows'
 import { columnForStatus, type TerminalStatus } from '../../lib/agentStatus'
 import type { JobOutputsDTO } from '../../api/types'
@@ -207,28 +208,32 @@ export default function KanbanDetailDrawer({ card, onClose, onCardTransition }: 
                   สร้างเมื่อ {new Date(card.created_at * 1000).toLocaleString('th-TH')}
                 </p>
                 {card.prompt && (
-                  <div className="mt-3.5 rounded-xl border border-edge bg-surface p-3.5 text-xs text-zinc-700 leading-relaxed shadow-sm">
-                    <ReactMarkdown
-                      components={{
-                        a: ({ children, href }) => (
-                          <a href={href} target="_blank" rel="noreferrer" className="font-medium text-sky-700 underline underline-offset-2 hover:text-sky-900">
-                            {children}
-                          </a>
-                        ),
-                        code: ({ children }) => <code className="rounded bg-surface-strong px-1 py-0.5 font-mono text-[0.84em] text-zinc-700">{children}</code>,
-                        h1: ({ children }) => <h4 className="mt-4 text-sm font-bold text-zinc-900 first:mt-0">{children}</h4>,
-                        h2: ({ children }) => <h4 className="mt-4 text-sm font-bold text-zinc-900 first:mt-0">{children}</h4>,
-                        h3: ({ children }) => <h5 className="mt-3 text-xs font-bold text-sky-900 first:mt-0">{children}</h5>,
-                        h4: ({ children }) => <h6 className="mt-3 text-xs font-bold text-zinc-800 first:mt-0">{children}</h6>,
-                        li: ({ children }) => <li className="ml-4 list-disc pl-1 mt-0.5">{children}</li>,
-                        p: ({ children }) => <p className="mt-2 first:mt-0 leading-relaxed">{children}</p>,
-                        ul: ({ children }) => <ul className="mt-1.5 space-y-1">{children}</ul>,
-                        hr: () => <hr className="my-3 border-edge" />,
-                      }}
-                    >
-                      {card.prompt}
-                    </ReactMarkdown>
-                  </div>
+                  card.flow === 'news_funnel' ? (
+                    <NewsFunnelPromptViewer prompt={card.prompt} onItemDeleted={onCardTransition} />
+                  ) : (
+                    <div className="mt-3.5 rounded-xl border border-edge bg-surface p-3.5 text-xs text-zinc-700 leading-relaxed shadow-sm">
+                      <ReactMarkdown
+                        components={{
+                          a: ({ children, href }) => (
+                            <a href={href} target="_blank" rel="noreferrer" className="font-medium text-sky-700 underline underline-offset-2 hover:text-sky-900">
+                              {children}
+                            </a>
+                          ),
+                          code: ({ children }) => <code className="rounded bg-surface-strong px-1 py-0.5 font-mono text-[0.84em] text-zinc-700">{children}</code>,
+                          h1: ({ children }) => <h4 className="mt-4 text-sm font-bold text-zinc-900 first:mt-0">{children}</h4>,
+                          h2: ({ children }) => <h4 className="mt-4 text-sm font-bold text-zinc-900 first:mt-0">{children}</h4>,
+                          h3: ({ children }) => <h5 className="mt-3 text-xs font-bold text-sky-900 first:mt-0">{children}</h5>,
+                          h4: ({ children }) => <h6 className="mt-3 text-xs font-bold text-zinc-800 first:mt-0">{children}</h6>,
+                          li: ({ children }) => <li className="ml-4 list-disc pl-1 mt-0.5">{children}</li>,
+                          p: ({ children }) => <p className="mt-2 first:mt-0 leading-relaxed">{children}</p>,
+                          ul: ({ children }) => <ul className="mt-1.5 space-y-1">{children}</ul>,
+                          hr: () => <hr className="my-3 border-edge" />,
+                        }}
+                      >
+                        {card.prompt}
+                      </ReactMarkdown>
+                    </div>
+                  )
                 )}
               </div>
 

@@ -52,3 +52,32 @@ def test_ingest_article_url(mock_retry, mock_build, mock_call, monkeypatch, tmp_
         # Check Generic Exception
         mock_call.side_effect = Exception("General Error")
         assert "LLM Extraction ล้มเหลว" in ingest_article_url.func("url")
+
+
+@patch("tools.knowledge.article._call_extractor_llm")
+@patch("tools.knowledge.article.with_retry")
+def test_extract_article_content(mock_retry, mock_call, monkeypatch, tmp_path):
+    from tools.knowledge.article import extract_article_content
+    monkeypatch.setenv("OBSIDIAN_VAULT_PATH", str(tmp_path))
+
+    # 1. URL already processed check
+    with patch("tools.knowledge.article._is_url_already_processed", return_value=True):
+        ext, img, ttl, err = extract_article_content("https://example.com/already", check_processed=True)
+        assert ext is None
+        assert "ข้าม: ข่าวนี้เคยถูกดึงและบันทึกไปแล้ว" in err
+
+    # 2. Text too short / Paywall / Bot protection
+    with patch("trafilatura.fetch_url"), patch("trafilatura.extract_metadata") as mock_meta:
+        mock_meta.return_value = MagicMock(title="Short Title", image="http://example.com/img.jpg")
+        mock_retry.return_value = ("short", "Short Title")
+        ext, img, ttl, err = extract_article_content("https://example.com/short", check_processed=False)
+        assert ext is None
+        assert "ดึงข้อมูลไม่สำเร็จ: เนื้อหาที่ดึงได้สั้นเกินไป" in err
+
+        # 3. Successful extraction
+        mock_meta.return_value = MagicMock(title="Good Title", image="http://example.com/good.jpg")
+        mock_retry.return_value = ("Valid long content text " * 100, "Good Title")
+        mock_call.return_value = "## ใจความสำคัญ\n- สรุปประเด็นสำคัญ"
+        ext, img, ttl, err = extract_article_content("https://example.com/good", check_processed=False)
+        assert ext == "## ใจความสำคัญ\n- สรุปประเด็นสำคัญ"
+        assert err is None

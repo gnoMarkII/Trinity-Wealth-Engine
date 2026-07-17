@@ -33,6 +33,7 @@ def _get_initial_store() -> Dict[str, Any]:
         "processed_urls": [],
         "processed_titles": [],
         "pending_events": [],
+        "raw_candidates": [],
     }
 
 
@@ -88,6 +89,27 @@ def prune_old_events(state: Dict[str, Any], retention_days: int = 7) -> None:
         kept_events.append(ev)
     state["pending_events"] = kept_events
 
+    # Prune raw_candidates ที่เก่าเกิน 48 ชม. และกำหนด hard cap 500 รายการล่าสุด
+    cutoff_raw = now - timedelta(hours=48)
+    kept_raw = []
+    for item in state.setdefault("raw_candidates", []):
+        if not isinstance(item, dict):
+            continue
+        fetched_str = item.get("fetched_at")
+        if fetched_str:
+            try:
+                fetched_dt = datetime.fromisoformat(fetched_str)
+                if fetched_dt.tzinfo is not None:
+                    fetched_dt = fetched_dt.replace(tzinfo=None)
+                if fetched_dt < cutoff_raw:
+                    continue
+            except (ValueError, TypeError):
+                pass
+        kept_raw.append(item)
+    if len(kept_raw) > 500:
+        kept_raw = kept_raw[-500:]
+    state["raw_candidates"] = kept_raw
+
     # จำกัดความยาวรายการ processed_urls/titles ไม่ให้เกิน 2,000 รายการล่าสุด
     if len(state.get("processed_urls", [])) > 2000:
         state["processed_urls"] = state["processed_urls"][-2000:]
@@ -127,11 +149,12 @@ def is_title_or_url_processed(
     store_state: Optional[Dict[str, Any]] = None,
     store_path: Optional[str] = None,
     threshold: float = 0.75,
+    include_raw: bool = False,
 ) -> bool:
     """ตรวจสอบว่า URL หรือหัวข้อข่าวนี้เคยถูกคัดกรองหรือประมวลผลแล้วหรือไม่"""
     state = store_state if store_state is not None else load_store(store_path=store_path)
     processed_urls = set(state.get("processed_urls", []))
-    if url in processed_urls:
+    if url and url in processed_urls:
         return True
 
     processed_titles = state.get("processed_titles", [])
@@ -141,6 +164,18 @@ def is_title_or_url_processed(
             return True
         if _jaccard_similarity(title, pt) >= threshold:
             return True
+
+    if include_raw:
+        for rc in state.setdefault("raw_candidates", []):
+            if not isinstance(rc, dict):
+                continue
+            rc_url = rc.get("link", "")
+            if url and rc_url and url == rc_url:
+                return True
+            rc_title = rc.get("title", "")
+            if rc_title:
+                if rc_title.strip().lower() == norm_title or _jaccard_similarity(title, rc_title) >= threshold:
+                    return True
 
     return False
 
@@ -191,16 +226,19 @@ def get_pending_high_impact_events(store_path: Optional[str] = None) -> List[Dic
             is_high = ev.get("is_high_impact")
             if is_high or max(macro_score, asset_score) >= HIGH_IMPACT_THRESHOLD:
                 pending.append(ev)
+    pending.sort(key=lambda ev: 1 if ev.get("triage_source") == "heuristic_fallback" else 0)
     return pending
 
 
 def update_events_status(
     rejected_ids: Optional[List[str]] = None,
     synthesized_ids: Optional[List[str]] = None,
+    skipped_error_ids: Optional[List[str]] = None,
+    error_msgs: Optional[Dict[str, str]] = None,
     store_path: Optional[str] = None,
 ) -> None:
-    """เปลี่ยนสถานะรายการเหตุการณ์เป็น synthesized และ/หรือ rejected ใน Transaction เดียวภายใต้ FileLock"""
-    if not rejected_ids and not synthesized_ids:
+    """เปลี่ยนสถานะรายการเหตุการณ์เป็น synthesized, rejected และ/หรือ skipped_error ใน Transaction เดียวภายใต้ FileLock"""
+    if not rejected_ids and not synthesized_ids and not skipped_error_ids:
         return
     s_path, l_path = _get_paths(store_path)
     lock = FileLock(l_path, timeout=10, is_singleton=True)
@@ -208,6 +246,8 @@ def update_events_status(
         state = _load_unlocked(s_path)
         rej_set = set(rejected_ids or [])
         syn_set = set(synthesized_ids or [])
+        skip_set = set(skipped_error_ids or [])
+        err_map = error_msgs or {}
         now_iso = datetime.now().isoformat()
 
         for ev in state.get("pending_events", []):
@@ -219,6 +259,93 @@ def update_events_status(
             elif ev_id in rej_set:
                 ev["status"] = "rejected"
                 ev["rejected_at"] = now_iso
+            elif ev_id in skip_set:
+                ev["status"] = "skipped_error"
+                ev["skipped_at"] = now_iso
+                if ev_id in err_map and err_map[ev_id]:
+                    ev["error_msg"] = err_map[ev_id]
 
+        _save_unlocked(state, s_path)
+
+
+def get_filtered_or_rejected_events(store_path: Optional[str] = None) -> List[Dict[str, Any]]:
+    """ดึงรายการข่าวที่ไม่ผ่านเกณฑ์ (Low-Impact / Score < 7), รายการที่ถูกปฏิเสธ (rejected) หรือดึงข้อมูลล้มเหลว (skipped_error)"""
+    state = load_store(store_path=store_path)
+    filtered = []
+    for ev in state.get("pending_events", []):
+        if not isinstance(ev, dict):
+            continue
+        status = ev.get("status")
+        if status in ("rejected", "skipped_error"):
+            filtered.append(ev)
+        elif status == "pending_synthesis":
+            macro_score = ev.get("macro_impact_score", 0) or 0
+            asset_score = ev.get("asset_impact_score", 0) or 0
+            is_high = ev.get("is_high_impact")
+            if not (is_high or max(macro_score, asset_score) >= HIGH_IMPACT_THRESHOLD):
+                filtered.append(ev)
+
+    filtered.sort(key=lambda ev: str(ev.get("ingested_at") or ""), reverse=True)
+    return filtered
+
+
+def save_raw_candidates(items: List[Dict[str, Any]], store_path: Optional[str] = None) -> None:
+    """บันทึกสะสมรายการข่าวใหม่ลงใน raw_candidates โดยประทับเวลา fetched_at ภายใต้ FileLock"""
+    if not items:
+        return
+    s_path, l_path = _get_paths(store_path)
+    lock = FileLock(l_path, timeout=10, is_singleton=True)
+    with lock:
+        state = _load_unlocked(s_path)
+        raw_list = state.setdefault("raw_candidates", [])
+        now_iso = datetime.now().isoformat()
+        for it in items:
+            it_copy = dict(it)
+            it_copy.setdefault("fetched_at", now_iso)
+            raw_list.append(it_copy)
+        _save_unlocked(state, s_path)
+
+
+def get_raw_candidates(store_path: Optional[str] = None) -> List[Dict[str, Any]]:
+    """อ่านรายการข่าวทั้งหมดจาก raw_candidates โดยไม่ลบออกจาก store (Read-only ภายใต้ FileLock)"""
+    state = load_store(store_path=store_path)
+    return list(state.setdefault("raw_candidates", []))
+
+
+def remove_processed_raw_candidates(
+    processed_urls: set[str],
+    processed_titles: set[str],
+    store_path: Optional[str] = None,
+    threshold: float = 0.75,
+) -> None:
+    """ลบรายการข่าวใน raw_candidates ที่เพิ่งประมวลผลสำเร็จออกจาก store (Remove-by-Identity) ภายใต้ FileLock"""
+    s_path, l_path = _get_paths(store_path)
+    lock = FileLock(l_path, timeout=10, is_singleton=True)
+    with lock:
+        state = _load_unlocked(s_path)
+        raw_list = state.setdefault("raw_candidates", [])
+        kept_raw = []
+        for rc in raw_list:
+            if not isinstance(rc, dict):
+                continue
+            url = rc.get("link", "")
+            title = rc.get("title", "")
+            norm_title = title.strip().lower()
+
+            if url and url in processed_urls:
+                continue
+
+            matched_title = False
+            for pt in processed_titles:
+                if not pt:
+                    continue
+                if pt.strip().lower() == norm_title or _jaccard_similarity(title, pt) >= threshold:
+                    matched_title = True
+                    break
+            if matched_title:
+                continue
+
+            kept_raw.append(rc)
+        state["raw_candidates"] = kept_raw
         _save_unlocked(state, s_path)
 

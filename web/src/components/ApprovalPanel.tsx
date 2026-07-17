@@ -25,6 +25,10 @@ function NewsFunnelApprovalView({
 }) {
   const [selectedEventIds, setSelectedEventIds] = useState<Set<string>>(new Set())
 
+  const visibleCandidates = payload.candidates
+    .slice()
+    .sort((a, b) => (a.triage_source === 'heuristic_fallback' ? 1 : 0) - (b.triage_source === 'heuristic_fallback' ? 1 : 0))
+
   function toggle(id: string) {
     const next = new Set(selectedEventIds)
     if (next.has(id)) next.delete(id)
@@ -33,14 +37,14 @@ function NewsFunnelApprovalView({
   }
 
   function toggleAll() {
-    if (selectedEventIds.size === payload.candidates.length && payload.candidates.length > 0) {
+    if (selectedEventIds.size === visibleCandidates.length && visibleCandidates.length > 0) {
       setSelectedEventIds(new Set())
     } else {
-      setSelectedEventIds(new Set(payload.candidates.map((c) => c.event_id)))
+      setSelectedEventIds(new Set(visibleCandidates.map((c) => c.event_id)))
     }
   }
 
-  const allSelected = payload.candidates.length > 0 && selectedEventIds.size === payload.candidates.length
+  const allSelected = visibleCandidates.length > 0 && selectedEventIds.size === visibleCandidates.length
 
   return (
     <div className="space-y-4 rounded-xl border border-amber-200 bg-amber-50 p-4 shadow-sm shadow-black/5">
@@ -49,7 +53,7 @@ function NewsFunnelApprovalView({
           <span className="h-2 w-2 rounded-full bg-amber-500" />
           <h3 className="text-sm font-semibold text-amber-800">รอการอนุมัติ — เลือกรายการข่าว High-Impact ที่ต้องการสังเคราะห์</h3>
         </div>
-        {payload.candidates.length > 0 && (
+        {visibleCandidates.length > 0 && (
           <button
             type="button"
             onClick={toggleAll}
@@ -60,20 +64,20 @@ function NewsFunnelApprovalView({
         )}
       </div>
 
-      {payload.candidates.length > 0 ? (
+      {visibleCandidates.length > 0 ? (
         <ul className="space-y-2">
-          {payload.candidates.map((c) => {
+          {visibleCandidates.map((c) => {
             const maxScore = Math.max(c.macro_impact_score || 0, c.asset_impact_score || 0)
             return (
               <li key={c.event_id}>
-                <label className="flex cursor-pointer items-start gap-2.5 rounded-lg border border-edge bg-panel p-3 text-xs text-zinc-700 transition-colors hover:border-zinc-300">
+                <label className="relative flex cursor-pointer items-start gap-2.5 rounded-lg border border-edge bg-panel p-3 text-xs text-zinc-700 transition-colors hover:border-zinc-300">
                   <input
                     type="checkbox"
                     checked={selectedEventIds.has(c.event_id)}
                     onChange={() => toggle(c.event_id)}
                     className="mt-1 accent-sky-500"
                   />
-                  <div className="flex-1 space-y-1.5">
+                  <div className="flex-1 space-y-1.5 pr-20">
                     <div className="flex flex-wrap items-center gap-2">
                       <span className="rounded bg-amber-100 px-1.5 py-0.5 text-[11px] font-semibold text-amber-800">
                         Score: {maxScore}/10
@@ -92,22 +96,30 @@ function NewsFunnelApprovalView({
                       <p className="text-zinc-600">{c.comprehensive_summary}</p>
                     )}
                     <div className="flex flex-wrap gap-1.5 pt-0.5">
-                      {c.extracted_tickers?.map((ticker) => (
-                        <span
-                          key={ticker}
-                          className="rounded border border-sky-200 bg-sky-50 px-1.5 py-0.5 text-[10px] font-medium text-sky-800"
-                        >
-                          [[{ticker}]]
-                        </span>
-                      ))}
-                      {c.extracted_themes?.map((theme) => (
-                        <span
-                          key={theme}
-                          className="rounded border border-purple-200 bg-purple-50 px-1.5 py-0.5 text-[10px] font-medium text-purple-800"
-                        >
-                          [[{theme}]]
-                        </span>
-                      ))}
+                      {c.extracted_tickers?.map((ticker) => {
+                        const t = ticker.replace(/^\[\[|\]\]$/g, '').split('|')[0]?.trim() || ''
+                        if (!t) return null
+                        return (
+                          <span
+                            key={ticker}
+                            className="rounded border border-sky-200 bg-sky-50 px-1.5 py-0.5 text-[10px] font-medium text-sky-800"
+                          >
+                            {t}
+                          </span>
+                        )
+                      })}
+                      {c.extracted_themes?.map((theme) => {
+                        const th = theme.replace(/^\[\[|\]\]$/g, '').split('|')[0]?.trim() || ''
+                        if (!th) return null
+                        return (
+                          <span
+                            key={theme}
+                            className="rounded border border-purple-200 bg-purple-50 px-1.5 py-0.5 text-[10px] font-medium text-purple-800"
+                          >
+                            {th}
+                          </span>
+                        )
+                      })}
                     </div>
                   </div>
                 </label>

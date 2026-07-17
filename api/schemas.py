@@ -386,3 +386,33 @@ class KanbanCardDTO(BaseModel):
     display_seq: Optional[int] = None
     created_at: float
     updated_at: float
+
+
+class NewsFunnelPendingItemDTO(BaseModel):
+    event_id: str
+    canonical_title: str
+    comprehensive_summary: str = ""
+    macro_impact_score: int = 0
+    asset_impact_score: int = 0
+    extracted_tickers: list[str] = []
+    extracted_themes: list[str] = []
+    primary_tags: list[str] = []
+    links: list[str] = []
+    triage_source: Optional[str] = None
+
+
+class NewsFunnelFilteredItemDTO(BaseModel):
+    event_id: str
+    canonical_title: str
+    comprehensive_summary: str = ""
+    macro_impact_score: int = 0
+    asset_impact_score: int = 0
+    extracted_tickers: list[str] = []
+    extracted_themes: list[str] = []
+    primary_tags: list[str] = []
+    links: list[str] = []
+    triage_source: Optional[str] = None
+    status: str
+    triage_reasoning: Optional[str] = None
+    error_msg: Optional[str] = None
+    ingested_at: Optional[str] = None

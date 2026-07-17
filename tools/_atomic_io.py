@@ -9,7 +9,7 @@ def _atomic_write_to(path: Path, content: str) -> None:
     fd, tmp_name = tempfile.mkstemp(prefix=".tmp_", suffix=".md.tmp", dir=str(parent))
     tmp_path = Path(tmp_name)
     try:
-        with os.fdopen(fd, "w", encoding="utf-8") as f:
+        with os.fdopen(fd, "w", encoding="utf-8", newline="") as f:
             f.write(content)
         os.replace(tmp_path, path)
     except Exception:
