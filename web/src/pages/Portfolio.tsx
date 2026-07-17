@@ -364,6 +364,7 @@ export default function Portfolio() {
             warning={allocationsResponse?.warning ?? null}
             onSelectBucket={handleSelectBucket}
             onSuccess={handlePortfolioStateSuccess}
+            onOpenTradeModal={() => setTradeModalOpen(true)}
           />
         )}
 
@@ -378,6 +379,7 @@ export default function Portfolio() {
             journalKeyword={journalKeyword}
             onChangeJournalKeyword={setJournalKeyword}
             onSuccessJournal={(entries) => setJournalRows(entries)}
+            onOpenTradeModal={() => setTradeModalOpen(true)}
           />
         )}
 

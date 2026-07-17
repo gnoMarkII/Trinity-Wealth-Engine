@@ -6,6 +6,7 @@ import BatchAssignBucketModal from './Modals/BatchAssignBucketModal'
 import HoldingCorrectionModal from './Modals/HoldingCorrectionModal'
 import JournalModal from './Modals/JournalModal'
 import Modal from '../ui/Modal'
+import { TradeIcon, EditIcon, DeleteIcon, FolderIcon, JournalIcon } from './icons/PortfolioIcons'
 
 interface Props {
   holdings: ActualHoldingDTO[]
@@ -17,6 +18,7 @@ interface Props {
   journalKeyword?: string
   onChangeJournalKeyword?: (kw: string) => void
   onSuccessJournal?: (entries: JournalEntryDTO[]) => void
+  onOpenTradeModal?: () => void
 }
 
 type SortField = 'symbol' | 'asset_type' | 'units' | 'market_value_thb' | 'unrealized_pnl_percent' | 'pe_ratio' | 'yield_on_cost'
@@ -31,6 +33,7 @@ export default function PortfolioHoldingsTab({
   journalKeyword = '',
   onChangeJournalKeyword,
   onSuccessJournal,
+  onOpenTradeModal,
 }: Props) {
   const [sortField, setSortField] = useState<SortField>('market_value_thb')
   const [sortAsc, setSortAsc] = useState<boolean>(false)
@@ -169,17 +172,19 @@ export default function PortfolioHoldingsTab({
             <button
               type="button"
               onClick={() => setBatchAssignModalOpen(true)}
-              className="rounded-lg bg-flow-blue px-3 py-1.5 text-xs font-bold text-white shadow-md hover:bg-sky-600 transition-colors"
+              className="rounded-lg bg-flow-blue px-3 py-1.5 text-xs font-bold text-white shadow-md hover:bg-sky-600 transition-colors flex items-center gap-1.5"
             >
-              📁 เปลี่ยน Bucket ({selectedSymbols.size})
+              <FolderIcon className="h-3.5 w-3.5" />
+              <span>เปลี่ยน Bucket ({selectedSymbols.size})</span>
             </button>
             <button
               type="button"
               onClick={handleBatchDelete}
               disabled={batchDeleteLoading || !onSuccess}
-              className="rounded-lg bg-rose-600 px-3 py-1.5 text-xs font-bold text-white shadow-md hover:bg-rose-700 disabled:opacity-50 transition-colors"
+              className="rounded-lg bg-rose-600 px-3 py-1.5 text-xs font-bold text-white shadow-md hover:bg-rose-700 disabled:opacity-50 transition-colors flex items-center gap-1.5"
             >
-              {batchDeleteLoading ? 'กำลังลบ...' : `🗑️ ลบที่เลือก (${selectedSymbols.size})`}
+              <DeleteIcon className="h-3.5 w-3.5" />
+              <span>{batchDeleteLoading ? 'กำลังลบ...' : `ลบที่เลือก (${selectedSymbols.size})`}</span>
             </button>
             <button
               type="button"
@@ -208,7 +213,7 @@ export default function PortfolioHoldingsTab({
                 onClick={() => setAllEntriesModalOpen(true)}
                 className="rounded-xl bg-flow-blue px-3.5 py-1.5 text-xs font-bold text-white shadow-sm hover:bg-sky-600 transition-colors flex items-center gap-1.5"
               >
-                <span>📓</span>
+                <JournalIcon className="h-4 w-4" />
                 <span>Trading Journal ทั่วไป ({journalRows.length})</span>
               </button>
             )}
@@ -388,31 +393,34 @@ export default function PortfolioHoldingsTab({
                         <button
                           type="button"
                           onClick={() => setExpandedSymbol(expandedSymbol === h.symbol ? null : h.symbol)}
-                          className={`w-16 rounded-lg border px-2 py-1 text-[11px] font-bold transition-colors ${
+                          className={`w-16 rounded-lg border px-2 py-1 text-[11px] font-bold transition-colors flex items-center justify-center gap-1 ${
                             expandedSymbol === h.symbol
                               ? 'border-flow-blue bg-flow-blue text-white'
-                              : 'border-sky-200 bg-white text-zinc-700 hover:bg-sky-50'
+                              : 'border-sky-200 bg-sky-50 text-sky-700 hover:bg-sky-600 hover:text-white'
                           }`}
                           title="ดู/เขียน Trading Journal สำหรับหุ้นนี้"
                         >
-                          📓 {symbolEntries.length}
+                          <JournalIcon className="h-3 w-3" />
+                          <span>{symbolEntries.length}</span>
                         </button>
                         <button
                           type="button"
                           onClick={() => setEditingHolding(h)}
-                          className="w-16 rounded-lg border border-sky-200 bg-sky-50 px-2 py-1 text-[11px] font-bold text-flow-blue hover:bg-flow-blue hover:text-white transition-colors"
+                          className="w-16 rounded-lg border border-sky-200 bg-sky-50 px-2 py-1 text-[11px] font-bold text-flow-blue hover:bg-flow-blue hover:text-white transition-colors flex items-center justify-center gap-1"
                           title="แก้ไข / ปรับปรุง"
                         >
-                          ✏️ แก้ไข
+                          <EditIcon className="h-3 w-3" />
+                          <span>แก้ไข</span>
                         </button>
                         {onSuccess && (
                           <button
                             type="button"
                             onClick={() => handleRemoveSingle(h.symbol)}
-                            className="w-16 rounded-lg border border-rose-200 bg-rose-50 px-2 py-1 text-[11px] font-bold text-rose-600 hover:bg-rose-600 hover:text-white transition-colors"
+                            className="w-16 rounded-lg border border-rose-200 bg-rose-50 px-2 py-1 text-[11px] font-bold text-rose-600 hover:bg-rose-600 hover:text-white transition-colors flex items-center justify-center gap-1"
                             title="ลบ Holding"
                           >
-                            🗑️ ลบ
+                            <DeleteIcon className="h-3 w-3" />
+                            <span>ลบ</span>
                           </button>
                         )}
                       </div>
@@ -425,7 +433,9 @@ export default function PortfolioHoldingsTab({
                         <div className="rounded-xl border border-sky-200 bg-white p-4 shadow-sm space-y-4 text-left">
                           <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-sky-100 pb-3 gap-2">
                             <div className="flex items-center gap-2">
-                              <span className="text-lg">📓</span>
+                              <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-flow-blue/10 text-flow-blue">
+                                <JournalIcon className="h-4 w-4" />
+                              </span>
                               <h4 className="font-bold text-zinc-900 text-sm">
                                 Trading Journal & Activity Log สำหรับ [{h.symbol}] ({symbolEntries.length} บันทึก)
                               </h4>
@@ -472,8 +482,49 @@ export default function PortfolioHoldingsTab({
             })}
               {sortedHoldings.length === 0 && (
                 <tr>
-                  <td colSpan={11} className="py-16 text-center text-zinc-400">
-                    ไม่พบรายการ Holding ตามเงื่อนไขที่เลือก
+                  <td colSpan={11} className="py-16 text-center">
+                    {holdings.length === 0 ? (
+                      <div className="mx-auto max-w-md flex flex-col items-center justify-center space-y-4 animate-fade-in">
+                        <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-sky-50 border border-sky-100 text-flow-blue shadow-sm">
+                          <TradeIcon className="h-8 w-8" />
+                        </div>
+                        <div className="space-y-1">
+                          <h4 className="text-base font-extrabold text-zinc-900">ยังไม่มีสินทรัพย์ในพอร์ตการลงทุน</h4>
+                          <p className="text-xs text-zinc-500 max-w-sm">
+                            เริ่มต้นสร้างพอร์ตของคุณด้วยการบันทึกรายการเทรด ซื้อหุ้น หรือกองทุนแรกของคุณเข้าสู่ระบบ
+                          </p>
+                        </div>
+                        {onOpenTradeModal && (
+                          <button
+                            type="button"
+                            onClick={onOpenTradeModal}
+                            className="inline-flex items-center gap-2 rounded-xl bg-flow-blue px-4 py-2.5 text-xs font-bold text-white shadow-md hover:bg-sky-600 transition-all hover:scale-105"
+                          >
+                            <TradeIcon className="h-4 w-4" />
+                            <span>บันทึกเทรดแรกของคุณทันที</span>
+                          </button>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="mx-auto max-w-md flex flex-col items-center justify-center space-y-3 py-4 animate-fade-in">
+                        <span className="text-3xl">🔍</span>
+                        <div className="space-y-1">
+                          <h4 className="text-sm font-bold text-zinc-800">ไม่พบรายการ Holding ตามเงื่อนไขตัวกรอง</h4>
+                          <p className="text-xs text-zinc-500">
+                            {selectedBucket ? `กำลังกรองเฉพาะ Strategy Bucket [${selectedBucket}]` : 'ไม่มีหุ้นหรือสินทรัพย์ที่ตรงกับการค้นหาปัจจุบัน'}
+                          </p>
+                        </div>
+                        {selectedBucket && (
+                          <button
+                            type="button"
+                            onClick={onClearBucketFilter}
+                            className="rounded-xl border border-sky-300 bg-sky-50 px-3 py-1.5 text-xs font-bold text-flow-blue shadow-2xs hover:bg-sky-100 transition-colors"
+                          >
+                            🧹 ล้างตัวกรอง Bucket
+                          </button>
+                        )}
+                      </div>
+                    )}
                   </td>
                 </tr>
               )}

@@ -2,6 +2,7 @@ import { useState } from 'react'
 import type { AllocationTargetDTO, BucketAllocationSummaryDTO, ActualPortfolioStateDTO } from '../../api/types'
 import { formatTHB } from './PortfolioSummaryCards'
 import BucketTargetModal from './Modals/BucketTargetModal'
+import { TradeIcon } from './icons/PortfolioIcons'
 
 interface Props {
   targets: AllocationTargetDTO[]
@@ -9,6 +10,7 @@ interface Props {
   warning: string | null
   onSelectBucket: (bucketId: string) => void
   onSuccess?: (state: ActualPortfolioStateDTO) => void
+  onOpenTradeModal?: () => void
 }
 
 const DEFAULT_COLORS = [
@@ -27,7 +29,7 @@ function getBucketColor(index: number, explicitColor?: string | null): string {
   return DEFAULT_COLORS[index % DEFAULT_COLORS.length] ?? '#0284c7'
 }
 
-export default function PortfolioOverviewTab({ targets, summaries, warning, onSelectBucket, onSuccess }: Props) {
+export default function PortfolioOverviewTab({ targets, summaries, warning, onSelectBucket, onSuccess, onOpenTradeModal }: Props) {
   const [hoveredBucket, setHoveredBucket] = useState<string | null>(null)
   const [targetModalOpen, setTargetModalOpen] = useState(false)
 
@@ -319,8 +321,28 @@ export default function PortfolioOverviewTab({ targets, summaries, warning, onSe
                 })}
                 {summaries.length === 0 && (
                   <tr>
-                    <td colSpan={5} className="py-12 text-center text-zinc-400">
-                      ยังไม่มีข้อมูล Allocation ในพอร์ต
+                    <td colSpan={5} className="py-16 text-center">
+                      <div className="mx-auto max-w-md flex flex-col items-center justify-center space-y-4 animate-fade-in">
+                        <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-sky-50 border border-sky-100 text-flow-blue shadow-sm">
+                          <TradeIcon className="h-8 w-8" />
+                        </div>
+                        <div className="space-y-1">
+                          <h4 className="text-base font-extrabold text-zinc-900">ยังไม่มีสินทรัพย์ในพอร์ตการลงทุน</h4>
+                          <p className="text-xs text-zinc-500 max-w-sm">
+                            เริ่มต้นสร้างพอร์ตของคุณด้วยการบันทึกรายการเทรด หรือซื้อหุ้น/กองทุนแรกเข้าสู่ระบบเพื่อติดตามสัดส่วนตามกลยุทธ์
+                          </p>
+                        </div>
+                        {onOpenTradeModal && (
+                          <button
+                            type="button"
+                            onClick={onOpenTradeModal}
+                            className="inline-flex items-center gap-2 rounded-xl bg-flow-blue px-4 py-2.5 text-xs font-bold text-white shadow-md hover:bg-sky-600 transition-all hover:scale-105"
+                          >
+                            <TradeIcon className="h-4 w-4" />
+                            <span>บันทึกเทรดแรกของคุณทันที</span>
+                          </button>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 )}
