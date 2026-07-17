@@ -41,7 +41,7 @@ CASH_SYMBOL = CASH_THB_SYMBOL
 
 _FLOAT_EPS = 1e-6
 _MONEY_DP = 2
-_COST_DP = 4
+_COST_DP = 6
 _PCT_DP = 2
 
 _LOCK_TIMEOUT = 15  # seconds — wait up to 15s for another process to release
@@ -64,12 +64,19 @@ def _inject_journal_wikilinks(content: str) -> str:
     return _TRADE_TITLE_RE.sub(_replace, content)
 
 
-def _write_journal_entry(content: str) -> str:
+def _write_journal_entry(content: str, date_str: str | None = None) -> str:
     """Append timestamped block ลง Trading_Journal.md — คืน timestamp ที่ใช้
     ใช้ได้ทั้งจาก @tool append_trading_journal และจากภายใน locked ops อื่น (เช่น edit_holding)
     """
     TRADING_JOURNAL_PATH.parent.mkdir(parents=True, exist_ok=True)
-    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    if date_str and date_str.strip():
+        val = date_str.strip()
+        if len(val) == 10:  # YYYY-MM-DD
+            timestamp = f"{val} 12:00:00"
+        else:
+            timestamp = val
+    else:
+        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     linked = _inject_journal_wikilinks(content)
     block = f"\n## [{timestamp}]\n\n{linked}\n"
     with TRADING_JOURNAL_PATH.open("a", encoding="utf-8") as f:
@@ -130,6 +137,28 @@ def read_trading_journal(
             ensure_ascii=False,
         )
 
+    returned = get_structured_journal(days=days, keyword=keyword, limit=limit)
+    # Count total in window before limit
+    all_in_window = get_structured_journal(days=days, keyword=keyword, limit=1000000)
+
+    return json.dumps(
+        {
+            "n_total_in_window": len(all_in_window),
+            "n_returned": len(returned),
+            "filters_used": {"days": days, "keyword": keyword, "limit": limit},
+            "entries": returned,
+        },
+        ensure_ascii=False,
+        indent=2,
+    )
+
+
+def get_structured_journal(days: int | None = 365, keyword: str | None = None, limit: int = 100) -> list[dict]:
+    """Structured read accessor คืนค่า entries จาก Trading_Journal.md เป็น list of dicts"""
+    if days is None:
+        days = 365
+    if not TRADING_JOURNAL_PATH.exists():
+        return []
     text = TRADING_JOURNAL_PATH.read_text(encoding="utf-8")
     cutoff = datetime.now() - timedelta(days=days)
     kw = keyword.strip().lower() if keyword else None
@@ -148,21 +177,17 @@ def read_trading_journal(
             continue
         entries.append({"timestamp": ts_str, "content": body})
 
-    # ใหม่สุดก่อน — ใช้ file order (append-only) ไม่ใช่ timestamp
-    # เพราะ entries ที่เขียนติดกันใน 1 วินาทีจะ tie-break ไม่ได้ด้วย sort(timestamp)
     entries.reverse()
-    n_total = len(entries)
-    returned = entries[:limit]
+    return entries[:limit]
 
-    return json.dumps(
-        {
-            "n_total_in_window": n_total,
-            "n_returned": len(returned),
-            "filters_used": {"days": days, "keyword": keyword, "limit": limit},
-            "entries": returned,
-        },
-        ensure_ascii=False,
-        indent=2,
-    )
+
+def structured_append_journal(entry: str) -> list[dict]:
+    """Structured mutation accessor สำหรับบันทึก Trading Journal คืนรายการล่าสุดเป็น list of dicts"""
+    content = (entry or "").strip()
+    if not content:
+        raise ValueError("entry ต้องไม่ว่าง")
+    _write_journal_entry(content)
+    return get_structured_journal(days=365, limit=100)
+
 
 
