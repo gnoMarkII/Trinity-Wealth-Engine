@@ -1,4 +1,5 @@
 import os
+from typing import Optional
 
 import anthropic
 import google.genai as genai
@@ -38,17 +39,18 @@ def detect_provider(model_name: str) -> str:
     return "google"
 
 
-def _build_primary(provider: str, model_name: str, temperature: float) -> BaseChatModel:
+def _build_primary(provider: str, model_name: str, temperature: float, max_output_tokens: Optional[int] = None) -> BaseChatModel:
     if provider == "google":
-        return ChatGoogleGenerativeAI(model=model_name, temperature=temperature, api_key=os.getenv("GOOGLE_API_KEY") or os.getenv("GEMINI_API_KEY"))
+        return ChatGoogleGenerativeAI(model=model_name, temperature=temperature, max_output_tokens=max_output_tokens, api_key=os.getenv("GOOGLE_API_KEY") or os.getenv("GEMINI_API_KEY"))
     if provider == "anthropic":
-        return ChatAnthropic(model=model_name, temperature=temperature)
+        return ChatAnthropic(model=model_name, temperature=temperature, max_tokens=max_output_tokens)
     if provider == "openrouter":
         return ChatOpenAI(
             api_key=os.getenv("OPENROUTER_API_KEY"),
             base_url="https://openrouter.ai/api/v1",
             model=model_name,
             temperature=temperature,
+            max_tokens=max_output_tokens,
         )
     raise ValueError(f"Unknown provider '{provider}'. Choose 'anthropic', 'google', or 'openrouter'.")
 
@@ -58,6 +60,7 @@ def get_llm(
     model_name: str,
     temperature: float = 0.0,
     use_fallback: bool = False,
+    max_output_tokens: Optional[int] = None,
 ) -> BaseChatModel | RunnableWithFallbacks:
     """สร้าง LLM instance ตาม provider — เลือก wrap ด้วย cross-provider fallback ได้
 
@@ -69,12 +72,13 @@ def get_llm(
         use_fallback: True = wrap primary ด้วย FALLBACK_MODEL (ข้าม provider ได้)
                       ใช้กับ .invoke()/.stream() ตรงๆ
                       สำหรับ with_structured_output ให้สร้าง fallback chain เองภายนอก
+        max_output_tokens: จำนวน token สูงสุดในการตอบกลับ (ใช้สำหรับควบคุม token length / ป้องกัน JSON truncate)
     """
-    primary = _build_primary(provider, model_name, temperature)
+    primary = _build_primary(provider, model_name, temperature, max_output_tokens=max_output_tokens)
 
     if use_fallback and model_name != FALLBACK_MODEL:
         fallback_provider = detect_provider(FALLBACK_MODEL)
-        fallback = _build_primary(fallback_provider, FALLBACK_MODEL, temperature)
+        fallback = _build_primary(fallback_provider, FALLBACK_MODEL, temperature, max_output_tokens=max_output_tokens)
         return primary.with_fallbacks([fallback])
 
     return primary

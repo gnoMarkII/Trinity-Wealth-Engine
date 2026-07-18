@@ -43,7 +43,7 @@ class MacroImpactTriageResult(BaseModel):
         default="", description="ชื่อหัวข้อข่าวแปลเป็นภาษาไทย"
     )
     thai_summary: str = Field(
-        default="", description="สรุปข่าวสาระสำคัญเป็นภาษาไทย 1-2 ย่อหน้า ที่กระชับ ครอบคลุม และเข้าใจง่ายสำหรับนักลงทุนไทย"
+        default="", description="สรุปข่าวกระชับ 2-3 ประโยคเป็นภาษาไทย สำหรับนักลงทุนไทย (ห้ามเขียนย่อหน้ายาว)"
     )
 
     @field_validator("extracted_tickers", "extracted_themes", mode="after")

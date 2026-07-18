@@ -626,7 +626,7 @@ def test_summary_truncation(monkeypatch):
     candidate = {"title": "Test Title", "summary": long_summary}
 
     captured_prompts = []
-    def mock_invoke(schema, model_env, prompt_lines, purpose=None):
+    def mock_invoke(schema, model_env, prompt_lines, purpose=None, max_output_tokens=None, **kwargs):
         captured_prompts.extend(prompt_lines)
         return []
 
@@ -677,7 +677,7 @@ def test_staged_ingest_pipeline(test_paths, monkeypatch):
     # Total accumulated: A, B, C + fresh D = 4 items
 
     import re
-    def mock_triage_invoke(schema, model_env, prompt_lines, purpose=None):
+    def mock_triage_invoke(schema, model_env, prompt_lines, purpose=None, max_output_tokens=None, **kwargs):
         count = sum(1 for line in prompt_lines if re.match(r"^\d+\. Title:", line))
         results = [
             MacroImpactTriageResult(
@@ -727,6 +727,57 @@ def test_staged_ingest_crash_safety(test_paths, monkeypatch):
     raw_after = get_raw_candidates(store_path=store_file)
     assert len(raw_after) == 2
     assert {item["link"] for item in raw_after} == {"https://example.com/crash1", "https://example.com/crash2"}
+
+
+def test_triage_multi_chunk_mixed_outcome(test_paths, monkeypatch):
+    """ทดสอบการแบ่ง Chunk (≤25 items): Chunk แรกสำเร็จได้ triage_source="llm", Chunk สองล้มเหลวได้ triage_source="heuristic_fallback" ในรอบ ingest เดียวกัน"""
+    store_file, _ = test_paths
+    monkeypatch.setattr("tools.macro.news_funnel._is_mock_mode", lambda: False)
+
+    candidates = [
+        {"title": f"Candidate {i}", "link": f"https://example.com/{i}", "summary": f"Summary {i}"}
+        for i in range(1, 31)
+    ]
+
+    import re
+    def mock_multi_chunk_invoke(schema, model_env, prompt_lines, purpose=None, max_output_tokens=None, **kwargs):
+        count = sum(1 for line in prompt_lines if re.match(r"^\d+\. Title:", line))
+        # ถ้า count == 25 ให้คืนผลลัพธ์สำเร็จตรงตามจำนวน
+        if count == 25:
+            results = [
+                MacroImpactTriageResult(
+                    thai_title=f"ไทย {i}",
+                    thai_summary="สรุป",
+                    macro_impact_score=8,
+                    asset_impact_score=7,
+                    is_high_impact=True,
+                    primary_tags=["macro"],
+                    extracted_tickers=["NVDA"],
+                    extracted_themes=["AI"],
+                    triage_reasoning="เหตุผล",
+                )
+                for i in range(count)
+            ]
+            return TriageBatchResult(results=results)
+        # ถ้า count != 25 (เช่น chunk ที่ 2 มี 5 items) ให้คืน empty list จำลอง LLM ล้มเหลว/ตอบไม่ตรง
+        return TriageBatchResult(results=[])
+
+    with patch("tools.macro.news_funnel._invoke_structured", side_effect=mock_multi_chunk_invoke):
+        res = run_news_funnel_ingest(candidates=candidates, store_path=store_file, fetch_only=False)
+
+    assert res["status"] == "success"
+    assert res["ingested_count"] == 30
+
+    state = load_store(store_path=store_file)
+    events = state["pending_events"]
+    assert len(events) == 30
+
+    # 25 รายการแรกได้จาก LLM Chunk 1
+    for ev in events[:25]:
+        assert ev["triage_source"] == "llm"
+    # 5 รายการหลังได้จาก Heuristic Fallback ของ Chunk 2 (หลัง retry chunk 2 ครั้งหนึ่งแล้ว)
+    for ev in events[25:]:
+        assert ev["triage_source"] == "heuristic_fallback"
 
 
 

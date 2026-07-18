@@ -54,13 +54,13 @@ def get_synthesis_period(now: Optional[datetime] = None) -> str:
     return "morning" if current.hour < 12 else "evening"
 
 
-def _invoke_structured(schema: Any, model_env: str, prompt_lines: List[str], purpose: Optional[str] = None) -> Any:
+def _invoke_structured(schema: Any, model_env: str, prompt_lines: List[str], purpose: Optional[str] = None, max_output_tokens: Optional[int] = None, **kwargs: Any) -> Any:
     """Helper สำหรับสร้างและเรียกใช้ structured LLM ด้วย provider='google'"""
     from core.llm_factory import get_llm
     model_name = os.getenv(model_env, "gemini-2.5-flash")
     call_purpose = purpose or getattr(schema, "__name__", str(schema))
-    logger.info("LLM Call | purpose=%s | model=%s", call_purpose, model_name)
-    llm = get_llm(provider="google", model_name=model_name)
+    logger.info("LLM Call | purpose=%s | model=%s | max_tokens=%s", call_purpose, model_name, max_output_tokens)
+    llm = get_llm(provider="google", model_name=model_name, max_output_tokens=max_output_tokens)
     structured_llm = llm.with_structured_output(schema)
     return structured_llm.invoke("\n".join(prompt_lines))
 
@@ -208,39 +208,73 @@ def _mock_or_llm_triage(candidate: Dict[str, Any]) -> MacroImpactTriageResult:
     )
 
 
-def _llm_triage_batch(items: List[Dict[str, Any]]) -> List[MacroImpactTriageResult]:
-    """ประเมิน Impact Score แบบ Batch ผ่าน Fast LLM (Gemini Flash) หรือ fallback mock"""
-    if not items:
-        return []
-    if _is_mock_mode():
-        return [_mock_or_llm_triage(item) for item in items]
+TRIAGE_CHUNK_SIZE = 25
 
+
+def _llm_triage_single_chunk(chunk: List[Dict[str, Any]]) -> List[MacroImpactTriageResult]:
+    """ประเมิน Impact Score สำหรับ 1 chunk (≤25 items) — คง try/except และคืน [] เมื่อ error เสมอ"""
+    if not chunk:
+        return []
     try:
         prompt_lines = [
+            f"CRITICAL REQUIREMENT: You are given EXACTLY {len(chunk)} news items numbered 1 to {len(chunk)}.",
+            f"You MUST return the 'results' array with EXACTLY {len(chunk)} elements.",
+            "Each element MUST correspond 1-to-1 to the input item at the exact same index order. Do NOT skip, merge, or reorder any items.",
             "Evaluate macro impact score (1-10) and asset impact score (1-10) for each news item below.",
-            "IMPORTANT requirement: You MUST provide 'thai_title' (accurate headline translated into THAI language) and 'thai_summary' (comprehensive, analytical summary written in THAI language 1-2 paragraphs for Thai investors). All summary content MUST be in professional THAI language.",
+            "IMPORTANT requirement: You MUST provide 'thai_title' (accurate headline translated into THAI language) and 'thai_summary' (CONCISE analytical summary written in THAI language maximum 2-3 sentences for Thai investors. Do NOT write paragraphs).",
             "Rubric:",
             "- Score >= 7 (HIGH IMPACT): Systemic macro shift, central bank rate decision, critical policy change, inflation surprise, systemic shock, or market-moving earnings/catalyst (e.g. NVDA, PTT).",
             "- Score < 7 (ROUTINE IMPACT): Minor commentary, routine update, or localized news without broad market impact.",
             "News items to evaluate:"
         ]
-        for idx, it in enumerate(items):
+        for idx, it in enumerate(chunk):
             truncated_summary = _clean_and_truncate_summary(it.get('summary', ''), max_len=500)
             prompt_lines.append(f"{idx+1}. Title: {it.get('title', '')} | Summary: {truncated_summary}")
 
-        res = _invoke_structured(TriageBatchResult, "NEWS_FUNNEL_TRIAGE_MODEL", prompt_lines, purpose="triage_batch")
-        if res and hasattr(res, "results") and len(res.results) == len(items):
+        res = _invoke_structured(
+            TriageBatchResult,
+            "NEWS_FUNNEL_TRIAGE_MODEL",
+            prompt_lines,
+            purpose="triage_batch",
+            max_output_tokens=8192,
+        )
+        if res and hasattr(res, "results") and len(res.results) == len(chunk):
             return res.results
         if res and hasattr(res, "results"):
-            logger.error("LLM returned %d results for %d items — skipping batch", len(res.results), len(items))
+            logger.error("LLM returned %d results for %d items — skipping chunk", len(res.results), len(chunk))
         else:
-            logger.error("LLM returned invalid response — skipping batch")
+            logger.error("LLM returned invalid response — skipping chunk")
     except Exception as e:
-        logger.error("LLM Triage batch failed: %s", e)
-
-    # ฟังก์ชันนี้ไม่คืนคะแนน default ปลอม — คืน [] เมื่อ LLM ล้มเหลว แล้วให้ caller
-    # ตัดสินใจ fallback เอง (ingest จะ tag triage_source="heuristic_fallback" ให้แยกออกจากคะแนน LLM จริง)
+        logger.error("LLM Triage chunk failed: %s", e)
     return []
+
+
+def _llm_triage_batch(items: List[Dict[str, Any]]) -> tuple[List[MacroImpactTriageResult], List[str]]:
+    """ประเมิน Impact Score แบบ Batch ผ่าน Fast LLM แบ่ง Chunk ≤25 พร้อม per-chunk retry และ fallback"""
+    if not items:
+        return [], []
+    if _is_mock_mode():
+        return [_mock_or_llm_triage(item) for item in items], ["mock"] * len(items)
+
+    all_results = []
+    all_sources = []
+    for i in range(0, len(items), TRIAGE_CHUNK_SIZE):
+        chunk = items[i:i + TRIAGE_CHUNK_SIZE]
+        chunk_results = _llm_triage_single_chunk(chunk)
+        if len(chunk_results) == len(chunk):
+            all_results.extend(chunk_results)
+            all_sources.extend(["llm"] * len(chunk))
+        else:
+            logger.warning("Chunk %d-%d mismatch — retrying once", i+1, i+len(chunk))
+            chunk_results = _llm_triage_single_chunk(chunk)
+            if len(chunk_results) == len(chunk):
+                all_results.extend(chunk_results)
+                all_sources.extend(["llm"] * len(chunk))
+            else:
+                logger.warning("Retry failed for chunk %d-%d — falling back to heuristic for this chunk", i+1, i+len(chunk))
+                all_results.extend([_mock_or_llm_triage(rep) for rep in chunk])
+                all_sources.extend(["heuristic_fallback"] * len(chunk))
+    return all_results, all_sources
 
 
 def _heuristic_prefilter_candidates(items: List[Dict[str, Any]]) -> tuple[List[Dict[str, Any]], List[Dict[str, Any]]]:
@@ -391,19 +425,8 @@ def run_news_funnel_ingest(
         rep["sources_count"] = len(cluster)
         representatives.append(rep)
 
-    # ประเมินผ่าน LLM Batch
-    triage_results = _llm_triage_batch(representatives)
-    triage_sources = ["mock" if _is_mock_mode() else "llm"] * len(triage_results)
-
-    # หาก len ไม่ตรงกัน ให้ retry 1 ครั้ง หากยังไม่ตรงอีก ให้ fallback heuristic ทุก item ในรอบเดียว
-    if len(triage_results) != len(representatives):
-        logger.warning("LLM returned %d results for %d items — retrying triage batch once", len(triage_results), len(representatives))
-        triage_results = _llm_triage_batch(representatives)
-        triage_sources = ["mock" if _is_mock_mode() else "llm"] * len(triage_results)
-        if len(triage_results) != len(representatives):
-            logger.warning("Retry triage batch failed (%d results for %d items) — falling back to heuristic for all items", len(triage_results), len(representatives))
-            triage_results = [_mock_or_llm_triage(rep) for rep in representatives]
-            triage_sources = ["heuristic_fallback"] * len(representatives)
+    # ประเมินผ่าน LLM Batch (แบ่ง chunk เรียบร้อยแล้วภายใน _llm_triage_batch)
+    triage_results, triage_sources = _llm_triage_batch(representatives)
 
     new_events = []
     now_iso = datetime.now().isoformat()
