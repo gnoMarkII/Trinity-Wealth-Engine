@@ -19,7 +19,7 @@ from core.logger import get_logger
 
 log = get_logger(__name__)
 
-_WATCHLIST_KEY_ORDER = ("doc_type", "last_updated", "items")
+_WATCHLIST_KEY_ORDER = ("schema_version", "doc_type", "last_updated", "items")
 
 
 from tools._atomic_io import _atomic_write_to
@@ -86,11 +86,13 @@ def _watchlist_item_to_md(item: WatchlistItem) -> str:
     """สร้าง YAML frontmatter สำหรับ sidecar file ของ WatchlistItem"""
     lines = [
         "---",
+        f"schema_version: {item.schema_version}",
         "entity_type: watchlist_item",
+        "derived: true",
         f"symbol: {item.symbol}",
         f"asset_type: {item.asset_type}",
-        f"added_date: {item.added_date}",
     ]
+    lines.append(f"added_date: {item.added_date}")
     if item.target_price is not None:
         lines.append(f"target_price: {item.target_price}")
     if item.notes is not None:

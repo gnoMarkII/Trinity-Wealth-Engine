@@ -152,3 +152,53 @@ class TestReadPerformanceHistoryAddons:
         data = json.loads(result)
         assert "error" in data
         assert "ว่างเปล่า" in data["error"]
+
+    def test_snapshot_7_columns(self, isolated_portfolio, tmp_vault):
+        pt = isolated_portfolio
+        pt._manage_cash_flow_locked(50_000.0, "deposit", "THB")
+        pt.record_income.invoke({"income_type": "Dividend", "amount_thb": 1500.0})
+
+        result = pt.record_performance_snapshot.invoke({"refresh_prices": False})
+        assert "[PERF]" in result
+
+        import csv
+        csv_path = tmp_vault / "20_Portfolio_Management" / "Journals_and_Reports" / "Performance_Log.csv"
+        with csv_path.open("r", encoding="utf-8") as f:
+            rows = list(csv.reader(f))
+
+        header = rows[0]
+        assert header == ["Date", "Total_NAV", "Total_Cost", "Unrealized_PnL", "Cash_Balance", "Realized_PnL_YTD", "Passive_Income_YTD"]
+        data_row = rows[-1]
+        assert len(data_row) == 7
+        assert float(data_row[6]) == pytest.approx(1500.0)  # Passive_Income_YTD
+
+    def test_snapshot_header_migration(self, isolated_portfolio, tmp_vault):
+        pt = isolated_portfolio
+        import csv
+        csv_path = tmp_vault / "20_Portfolio_Management" / "Journals_and_Reports" / "Performance_Log.csv"
+        csv_path.parent.mkdir(parents=True, exist_ok=True)
+        with csv_path.open("w", encoding="utf-8", newline="") as f:
+            w = csv.writer(f)
+            w.writerow(["Date", "Total_NAV", "Total_Cost", "Unrealized_PnL", "Cash_Balance"])
+            w.writerow(["2026-01-01", "100000.00", "80000.00", "20000.00", "100000.00"])
+
+        pt._manage_cash_flow_locked(60_000.0, "deposit", "THB")
+        pt.record_performance_snapshot.invoke({"refresh_prices": False})
+
+        with csv_path.open("r", encoding="utf-8") as f:
+            rows = list(csv.reader(f))
+
+        header = rows[0]
+        assert header == ["Date", "Total_NAV", "Total_Cost", "Unrealized_PnL", "Cash_Balance", "Realized_PnL_YTD", "Passive_Income_YTD"]
+        old_row = rows[1]
+        assert old_row[0] == "2026-01-01"
+        assert len(old_row) == 7
+        assert old_row[5] == "" and old_row[6] == ""
+
+        # Structured history read check
+        import tools.portfolio.performance as perf
+        history = perf.get_structured_performance_history()
+        assert len(history) == 2
+        assert history[0]["Date"] == "2026-01-01"
+        assert history[0]["Realized_PnL_YTD"] is None
+        assert history[1]["Realized_PnL_YTD"] == 0.0

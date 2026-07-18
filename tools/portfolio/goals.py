@@ -19,7 +19,7 @@ from core.logger import get_logger
 
 log = get_logger(__name__)
 
-_GOALS_KEY_ORDER = ("doc_type", "last_updated", "goals")
+_GOALS_KEY_ORDER = ("schema_version", "doc_type", "last_updated", "goals")
 
 
 from tools._atomic_io import _atomic_write_to
@@ -66,12 +66,14 @@ def _atomic_write_goals(serialized: str) -> None:
 def _goal_item_to_md(goal: GoalItem) -> str:
     lines = [
         "---",
+        f"schema_version: {goal.schema_version}",
         "entity_type: goal",
+        "derived: true",
         f"name: {goal.name}",
         f"goal_type: {goal.goal_type}",
-        f"target_amount_thb: {goal.target_amount_thb}",
-        f"created_date: {goal.created_date}",
     ]
+    lines.append(f"target_amount_thb: {goal.target_amount_thb}")
+    lines.append(f"created_date: {goal.created_date}")
     if goal.deadline is not None:
         lines.append(f"deadline: {goal.deadline}")
     if goal.notes is not None:

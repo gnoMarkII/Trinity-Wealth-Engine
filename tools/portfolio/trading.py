@@ -31,6 +31,7 @@ from .journal import append_trading_journal, _inject_journal_wikilinks, _write_j
 
 
 from .constants import *
+from .constants import _TRADES_LOG_HEADER
 
 CASH_THB_SYMBOL = "CASH_THB"
 CASH_USD_SYMBOL = "CASH_USD"
@@ -59,6 +60,7 @@ def execute_trade(
     units: float,
     price: float,
     currency: Literal["THB", "USD"] = "THB",
+    notes: str = "",
 ) -> str:
     """ดำเนินการเทรดซื้อหรือขายสินทรัพย์ พร้อมจัดการเงินสดและคำนวณต้นทุน/กำไรอัตโนมัติ
 
@@ -79,6 +81,7 @@ def execute_trade(
         units (float): จำนวนหน่วยที่ทำรายการ (>0)
         price (float): ราคาต่อหน่วย
         currency (Literal["THB", "USD"]): สกุลเงินที่ใช้เทรด (มีผลกับบัญชี Cash ที่หัก/รับ)
+        notes (str): บันทึกเพิ่มเติมสำหรับรายการเทรดนี้
     """
     if symbol.strip().upper() in _CASH_SYMBOLS:
         return CASH_VIA_MANAGE.format(symbols="/".join(_CASH_SYMBOLS))
@@ -91,11 +94,46 @@ def execute_trade(
 
     try:
         with _portfolio_lock:
-            return _execute_trade_locked(symbol, asset_type, action, units, price, currency)
+            return _execute_trade_locked(symbol, asset_type, action, units, price, currency, notes=notes)
     except Timeout:
         return LOCK_TIMEOUT.format(detail=f"portfolio lock {_LOCK_TIMEOUT}s")
     except ValueError as e:
         return f"Error: {e}"
+
+
+def _append_trade_ledger_row(
+    symbol: str,
+    action: str,
+    units: float,
+    price: float,
+    currency: str,
+    fx_rate: float | None,
+    cost_thb: float,
+    realized_pnl_thb: float | None = None,
+    notes: str = "",
+) -> None:
+    """Append 1 แถวลงใน TRADES_LOG_PATH — สร้างไฟล์และ header ถ้ายังไม่มี"""
+    try:
+        TRADES_LOG_PATH.parent.mkdir(parents=True, exist_ok=True)
+        file_exists = TRADES_LOG_PATH.exists() and TRADES_LOG_PATH.stat().st_size > 0
+        with TRADES_LOG_PATH.open("a", encoding="utf-8", newline="") as f:
+            writer = csv.writer(f, lineterminator="\n")
+            if not file_exists:
+                writer.writerow(_TRADES_LOG_HEADER)
+            writer.writerow([
+                _now_iso(),
+                symbol,
+                action.upper(),
+                f"{units:g}",
+                f"{price:.2f}",
+                currency,
+                f"{fx_rate:.4f}" if fx_rate is not None else "",
+                f"{cost_thb:.2f}",
+                f"{realized_pnl_thb:.2f}" if realized_pnl_thb is not None else "",
+                notes,
+            ])
+    except Exception as e:
+        log.warning("Failed to append trade ledger row for %s: %s", symbol, e)
 
 
 def _execute_trade_locked(
@@ -105,6 +143,7 @@ def _execute_trade_locked(
     units: float,
     price: float,
     currency: Literal["THB", "USD"],
+    notes: str = "",
 ) -> str:
     post, state = _load_or_init()
     cash = _require_cash(state, currency)
@@ -166,6 +205,7 @@ def _execute_trade_locked(
 
         cash.units = round(cash.units - amount_native, _MONEY_DP)
         realized = 0.0
+        cost_thb = amount_native * fx_rate if currency == "USD" and fx_rate is not None else amount_native
         action_tag = "[BUY]"
         cashflow_sign = "-"
 
@@ -181,12 +221,14 @@ def _execute_trade_locked(
             if target.avg_cost_usd is None:
                 raise ValueError(f"{symbol} cost เป็น THB ไม่สามารถขายด้วย USD ได้")
             realized = (price - target.avg_cost_usd) * units * fx_rate
+            cost_thb = target.avg_cost_usd * units * fx_rate
             target.current_price_usd = price
             # ไม่ update target.fx_rate — เป็น historical cost-basis ของหน่วยที่เหลือ
         else:
             if target.avg_cost_thb is None:
                 raise ValueError(f"{symbol} cost เป็น USD ไม่สามารถขายด้วย THB ได้")
             realized = (price - target.avg_cost_thb) * units
+            cost_thb = target.avg_cost_thb * units
             target.current_price_thb = price
 
         target.units = round(target.units - units, _COST_DP)
@@ -203,6 +245,17 @@ def _execute_trade_locked(
         cashflow_sign = "+"
 
     _save(post, state)
+    _append_trade_ledger_row(
+        symbol=symbol,
+        action=action,
+        units=units,
+        price=price,
+        currency=currency,
+        fx_rate=fx_rate,
+        cost_thb=cost_thb,
+        realized_pnl_thb=realized if action == "sell" else None,
+        notes=notes,
+    )
 
     cash_sym = CASH_USD_SYMBOL if currency == "USD" else CASH_THB_SYMBOL
     cash_after = _find_holding(state, cash_sym)
@@ -724,7 +777,7 @@ def structured_execute_trade(
             state.fx_rates["USDTHB"] = exchange_rate
             _save(post, state)
 
-        _execute_trade_locked(sym, asset_type, action, units, price, currency)
+        _execute_trade_locked(sym, asset_type, action, units, price, currency, notes=notes)
 
         post, state = _load_or_init()
         target = _find_holding(state, sym)

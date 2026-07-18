@@ -19,7 +19,7 @@ from core.logger import get_logger
 
 log = get_logger(__name__)
 
-_TOP_LEVEL_KEY_ORDER = ("doc_type", "last_updated", "allocation_targets", "holdings", "cash")
+_TOP_LEVEL_KEY_ORDER = ("schema_version", "doc_type", "last_updated", "base_currency", "summary", "fx_rates", "allocation_targets", "holdings", "price_refresh_info")
 
 from tools._atomic_io import _atomic_write_to
 from tools.tool_errors import LOCK_TIMEOUT, validation_error
@@ -106,12 +106,17 @@ def _holding_to_md(h: Holding) -> str:
 
     lines = [
         "---",
+        f"schema_version: {h.schema_version}",
         "entity_type: holding",
+        "derived: true",
         f"symbol: {h.symbol}",
         f"asset_type: {h.asset_type}",
-        f"currency: {currency}",
-        f"units: {h.units}",
+        f"status: {h.status}",
     ]
+    if h.archived_at is not None:
+        lines.append(f"archived_at: \"{h.archived_at}\"")
+    lines.append(f"currency: {currency}")
+    lines.append(f"units: {h.units}")
     if avg_cost is not None:
         lines.append(f"avg_cost: {avg_cost}")
     if current_price is not None:
@@ -123,12 +128,19 @@ def _holding_to_md(h: Holding) -> str:
         lines.append(f"dividend_thb: {h.accumulated_dividend_thb}")
     lines.append("---")
     lines.append("")
+    lines.append(f"# {h.symbol}")
+    lines.append("")
+    lines.append("> [!CAUTION]")
+    lines.append("> **ไฟล์นี้ถูกสร้างและอัปเดตอัตโนมัติโดยระบบ**")
+    lines.append("> กรุณาอย่าบันทึกโน้ตส่วนตัวที่นี่เพราะจะถูกเขียนทับเมื่อระบบทำการ Sync")
+    lines.append("> หากต้องการจดบันทึกเกี่ยวกับสินทรัพย์นี้ กรุณาบันทึกใน **Trading Journal** หรือสร้างโน้ตแยกและทำลิงก์มาที่นี่")
+    lines.append("")
     return "\n".join(lines)
 
 
 def _sync_holding_sidecars(state: "PortfolioState") -> None:
     """Sync derived sidecar files ใน HOLDINGS_DIR จาก master PortfolioState
-    เขียน 1 ไฟล์ต่อ holding (ข้าม Cash) — ลบ sidecar เก่าที่ holding ถูกลบแล้ว
+    เขียน 1 ไฟล์ต่อ holding (ข้าม Cash) — archive sidecar เก่าที่ holding ถูกลบ/ขายออกแล้ว
     """
     HOLDINGS_DIR.mkdir(parents=True, exist_ok=True)
     live: set[str] = set()
@@ -142,8 +154,16 @@ def _sync_holding_sidecars(state: "PortfolioState") -> None:
 
     for old in HOLDINGS_DIR.glob("*.md"):
         if old.stem not in live:
-            old.unlink(missing_ok=True)
-            log.debug("[SIDECAR DEL] | holdings/%s", old.name)
+            try:
+                with old.open("r", encoding="utf-8") as f:
+                    post = frontmatter.load(f)
+                if post.metadata.get("status") != "archived":
+                    post.metadata["status"] = "archived"
+                    post.metadata["archived_at"] = _now_iso()
+                    _atomic_write_to(old, frontmatter.dumps(post, sort_keys=False))
+                    log.debug("[SIDECAR ARCHIVED] | holdings/%s", old.name)
+            except Exception as e:
+                log.warning("Failed to archive sidecar %s: %s", old.name, e)
 
 
 def _recalc_holding(h: Holding, current_fx: float) -> None:
@@ -569,9 +589,26 @@ def structured_batch_remove_holdings(symbols: list[str]) -> PortfolioState:
 def structured_reset_clean_slate() -> PortfolioState:
     """ล้างข้อมูลพอร์ตทั้งหมด (Clean Slate) เพื่อเริ่มต้นใหม่ตาม user preference: 'ลบข้อมูลทั้งหมด เดี๋ยวใส่ใหม่เอง'
 
-    ลบไฟล์ sidecars เฉพาะ Holdings/*.md และรีเซ็ต PortfolioState (ไม่ลบ Watchlist, Goals, Trading Journal, และ Performance history)
+    แบ็คอัปไฟล์มาสเตอร์และ sidecars ใน .backups/YYYYMMDD_HHMMSS/ จากนั้นลบไฟล์ sidecars เฉพาะ Holdings/*.md และรีเซ็ต PortfolioState
     """
     with _portfolio_lock:
+        # 0. Backup current master and sidecars
+        try:
+            import shutil
+            backup_timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            backup_dir = PORTFOLIO_PATH.parent / ".backups" / backup_timestamp
+            backup_dir.mkdir(parents=True, exist_ok=True)
+            if PORTFOLIO_PATH.exists():
+                shutil.copy2(PORTFOLIO_PATH, backup_dir / PORTFOLIO_PATH.name)
+            if HOLDINGS_DIR.exists():
+                holdings_backup_dir = backup_dir / "Holdings"
+                holdings_backup_dir.mkdir(parents=True, exist_ok=True)
+                for f in HOLDINGS_DIR.glob("*.md"):
+                    shutil.copy2(f, holdings_backup_dir / f.name)
+            log.info("Backed up portfolio before clean slate to %s", backup_dir)
+        except Exception as e:
+            raise ValueError(f"สำรองข้อมูลก่อนล้างพอร์ตไม่สำเร็จ — ยกเลิกการล้าง: {e}")
+
         # 1. Reset master portfolio state
         post, _ = _load_or_init()
         new_state = PortfolioState(

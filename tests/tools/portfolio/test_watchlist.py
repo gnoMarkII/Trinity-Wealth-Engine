@@ -143,16 +143,26 @@ class TestAtomicWriteException:
             pt.add_to_watchlist.func(symbol="PTT", asset_type="Stock")
 
 class TestSyncWatchlistSidecars:
-    def test_sidecar_deletion(self, isolated_portfolio):
+    def test_sidecar_deleted_on_remove(self, isolated_portfolio):
         pt = isolated_portfolio
         pt.add_to_watchlist.func(symbol="PTT", asset_type="Stock")
         pt.add_to_watchlist.func(symbol="AAPL", asset_type="Stock")
         
         import tools.portfolio.watchlist as wl
+        import frontmatter
         sidecars = list(wl.WATCHLIST_ITEMS_DIR.glob("*.md"))
         assert len(sidecars) == 2
         
         pt.remove_from_watchlist.func(symbol="PTT")
         sidecars_after = list(wl.WATCHLIST_ITEMS_DIR.glob("*.md"))
         assert len(sidecars_after) == 1
-        assert sidecars_after[0].stem == "AAPL"
+
+        ptt_file = wl.WATCHLIST_ITEMS_DIR / "PTT.md"
+        assert not ptt_file.exists()
+
+        aapl_file = wl.WATCHLIST_ITEMS_DIR / "AAPL.md"
+        with aapl_file.open("r", encoding="utf-8") as f:
+            post_aapl = frontmatter.load(f)
+        assert post_aapl.metadata.get("status") is None
+        assert post_aapl.metadata.get("schema_version") == 1
+        assert post_aapl.metadata.get("derived") is True

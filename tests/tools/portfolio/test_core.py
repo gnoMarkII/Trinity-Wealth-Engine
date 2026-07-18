@@ -197,11 +197,14 @@ class TestHoldingSidecars:
             market_value_thb=70000.0
         )
         md = core._holding_to_md(h)
+        assert "schema_version: 1" in md
+        assert "derived: true" in md
+        assert "status: active" in md
         assert "currency: USD" in md
         assert "avg_cost: 150.0" in md
         assert "current_price: 200.0" in md
 
-    def test_sidecar_deletion(self, isolated_portfolio):
+    def test_sidecar_archive(self, isolated_portfolio):
         pt = isolated_portfolio
         pt._manage_cash_flow_locked(500_000, "deposit", "THB")
         pt._manage_cash_flow_locked(500_000, "deposit", "USD")
@@ -209,13 +212,73 @@ class TestHoldingSidecars:
         pt._execute_trade_locked("AAPL", "Stock", "buy", 10, 150.0, "USD")
         
         import tools.portfolio.core as cl
+        import frontmatter
         sidecars = list(cl.HOLDINGS_DIR.glob("*.md"))
         assert len(sidecars) == 2
         
         pt._execute_trade_locked("PTT", "Stock", "sell", 100, 35.0, "THB")
         sidecars_after = list(cl.HOLDINGS_DIR.glob("*.md"))
-        assert len(sidecars_after) == 1
-        assert sidecars_after[0].stem == "AAPL"
+        assert len(sidecars_after) == 2  # Not deleted, archived instead!
+
+        ptt_file = cl.HOLDINGS_DIR / "PTT.md"
+        assert ptt_file.exists()
+        with ptt_file.open("r", encoding="utf-8") as f:
+            ptt_post = frontmatter.load(f)
+        assert ptt_post.metadata.get("status") == "archived"
+        assert ptt_post.metadata.get("archived_at") is not None
+        assert ptt_post.metadata.get("schema_version") == 1
+        assert ptt_post.metadata.get("derived") is True
+
+        aapl_file = cl.HOLDINGS_DIR / "AAPL.md"
+        with aapl_file.open("r", encoding="utf-8") as f:
+            aapl_post = frontmatter.load(f)
+        assert aapl_post.metadata.get("status") == "active"
+        assert aapl_post.metadata.get("schema_version") == 1
+        assert aapl_post.metadata.get("derived") is True
+        assert "# AAPL" in aapl_post.content
+        assert "> [!CAUTION]" in aapl_post.content
+        assert "ถูกเขียนทับ" in aapl_post.content
+
+    def test_structured_reset_backup_and_clean(self, isolated_portfolio):
+        pt = isolated_portfolio
+        pt._manage_cash_flow_locked(100_000, "deposit", "THB")
+        pt._execute_trade_locked("PTT", "Stock", "buy", 100, 35.0, "THB")
+
+        import tools.portfolio.core as cl
+        assert (cl.HOLDINGS_DIR / "PTT.md").exists()
+        assert cl.PORTFOLIO_PATH.exists()
+
+        post, state = cl._load_or_init()
+        assert len(state.holdings) > 0
+        assert state.schema_version == 1
+
+        # Run reset clean slate
+        new_state = cl.structured_reset_clean_slate()
+        assert len(new_state.holdings) == 0
+        assert not (cl.HOLDINGS_DIR / "PTT.md").exists()
+
+        # Check .backups directory created
+        backups_dir = cl.PORTFOLIO_PATH.parent / ".backups"
+        assert backups_dir.exists()
+        backup_subdirs = list(backups_dir.glob("*"))
+        assert len(backup_subdirs) >= 1
+        latest_backup = sorted(backup_subdirs)[-1]
+        assert (latest_backup / "Portfolio_Holdings.md").exists()
+        assert (latest_backup / "Holdings" / "PTT.md").exists()
+
+    def test_structured_reset_backup_failure(self, isolated_portfolio, monkeypatch):
+        pt = isolated_portfolio
+        pt._manage_cash_flow_locked(100_000, "deposit", "THB")
+        pt._execute_trade_locked("PTT", "Stock", "buy", 100, 35.0, "THB")
+
+        import tools.portfolio.core as cl
+        import shutil
+        def mock_copy2(*args, **kwargs):
+            raise OSError("Mock disk full")
+        monkeypatch.setattr(shutil, "copy2", mock_copy2)
+
+        with pytest.raises(ValueError, match="สำรองข้อมูลก่อนล้างพอร์ตไม่สำเร็จ"):
+            cl.structured_reset_clean_slate()
 
 class TestRecalcEdgeCases:
     def test_recalc_fx_missing(self, isolated_portfolio):

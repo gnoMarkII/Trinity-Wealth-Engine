@@ -81,6 +81,8 @@ def record_performance_snapshot(refresh_prices: bool = True) -> str:
                 sum(h.market_value_thb for h in state.holdings if h.asset_type == "Cash"),
                 _MONEY_DP,
             )
+            realized_ytd = state.summary.total_realized_profit_ytd
+            passive_ytd = state.summary.passive_income_ytd
 
             today = datetime.now().strftime("%Y-%m-%d")
             row = [
@@ -89,6 +91,8 @@ def record_performance_snapshot(refresh_prices: bool = True) -> str:
                 f"{total_cost:.2f}",
                 f"{unrealized:.2f}",
                 f"{cash_balance:.2f}",
+                f"{realized_ytd:.2f}",
+                f"{passive_ytd:.2f}",
             ]
 
             PERFORMANCE_LOG_PATH.parent.mkdir(parents=True, exist_ok=True)
@@ -98,11 +102,14 @@ def record_performance_snapshot(refresh_prices: bool = True) -> str:
                     reader = csv.reader(f)
                     header_read = False
                     for r in reader:
-                        if not header_read and (not r or r == _PERFORMANCE_LOG_HEADER):
+                        if not header_read:
                             header_read = True
-                            continue
+                            if not r or (r and r[0] == "Date"):
+                                continue
                         if r and len(r) >= 5:
-                            existing_rows.append(r)
+                            if len(r) < len(_PERFORMANCE_LOG_HEADER):
+                                r.extend([""] * (len(_PERFORMANCE_LOG_HEADER) - len(r)))
+                            existing_rows.append(r[:len(_PERFORMANCE_LOG_HEADER)])
 
             replaced = False
             for idx, r in enumerate(existing_rows):
@@ -144,12 +151,20 @@ def get_structured_performance_history(days: int | None = None) -> list[dict]:
     result = []
     for r in rows:
         try:
+            val_realized = r.get("Realized_PnL_YTD")
+            val_passive = r.get("Passive_Income_YTD")
+            realized_float = float(val_realized) if val_realized not in (None, "") else None
+            passive_float = float(val_passive) if val_passive not in (None, "") else None
             result.append({
                 "Date": r["Date"],
                 "Total_NAV": float(r["Total_NAV"]),
                 "Total_Cost": float(r["Total_Cost"]),
                 "Unrealized_PnL": float(r["Unrealized_PnL"]),
                 "Cash_Balance": float(r["Cash_Balance"]),
+                "Realized_PnL_YTD": realized_float,
+                "Passive_Income_YTD": passive_float,
+                "realized_pnl_ytd": realized_float,
+                "passive_income_ytd": passive_float,
             })
         except (KeyError, ValueError):
             continue

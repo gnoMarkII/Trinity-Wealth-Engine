@@ -193,9 +193,15 @@ class TestGoals:
         sidecars = list(items_dir.glob("*.md"))
         assert len(sidecars) == 1
         assert sidecars[0].stem == "My_Goal"
+        import frontmatter
+        with sidecars[0].open("r", encoding="utf-8") as f:
+            post = frontmatter.load(f)
+        assert post.metadata.get("status") is None
+        assert post.metadata.get("schema_version") == 1
+        assert post.metadata.get("derived") is True
 
     def test_sidecar_deleted_on_remove(self, isolated_portfolio):
-        """remove_goal ต้องลบ sidecar .md ด้วย"""
+        """remove_goal ต้องลบ sidecar ออกตามแผน (ไม่ต้อง archive)"""
         pt = isolated_portfolio
         pt.set_goal.invoke({"name": "Del Goal", "goal_type": "nav_target", "target_amount_thb": 1e6})
         pt.remove_goal.invoke({"name": "Del Goal"})

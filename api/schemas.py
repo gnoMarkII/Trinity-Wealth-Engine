@@ -492,6 +492,8 @@ class PerformanceSnapshotDTO(BaseModel):
     Total_Cost: float
     Unrealized_PnL: float
     Cash_Balance: float
+    realized_pnl_ytd: Optional[float] = None
+    passive_income_ytd: Optional[float] = None
 
 
 class JournalEntryDTO(BaseModel):

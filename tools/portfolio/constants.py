@@ -9,6 +9,9 @@ PORTFOLIO_PATH = VAULT_PATH / PORTFOLIO_REL
 TRADING_JOURNAL_REL = os.getenv("TRADING_JOURNAL_FILE", "20_Portfolio_Management/Journals_and_Reports/Trading_Journal.md")
 TRADING_JOURNAL_PATH = VAULT_PATH / TRADING_JOURNAL_REL
 
+TRADES_LOG_REL = os.getenv("TRADES_LOG_FILE", "20_Portfolio_Management/Journals_and_Reports/Trades_Log.csv")
+TRADES_LOG_PATH = VAULT_PATH / TRADES_LOG_REL
+
 WATCHLIST_REL = os.getenv("WATCHLIST_FILE", "20_Portfolio_Management/Current_Holdings/Watchlist.md")
 WATCHLIST_PATH = VAULT_PATH / WATCHLIST_REL
 
@@ -22,7 +25,8 @@ GOALS_REL = os.getenv("GOALS_FILE", "20_Portfolio_Management/Goals/Goals.md")
 GOALS_PATH = VAULT_PATH / GOALS_REL
 GOALS_ITEMS_DIR = VAULT_PATH / "20_Portfolio_Management/Goals/Items"
 
-_PERFORMANCE_LOG_HEADER = ["Date", "Total_NAV", "Total_Cost", "Unrealized_PnL", "Cash_Balance"]
+_PERFORMANCE_LOG_HEADER = ["Date", "Total_NAV", "Total_Cost", "Unrealized_PnL", "Cash_Balance", "Realized_PnL_YTD", "Passive_Income_YTD"]
+_TRADES_LOG_HEADER = ["Timestamp", "Symbol", "Action", "Units", "Price", "Currency", "FX_Rate", "Cost_THB", "Realized_PnL_THB", "Notes"]
 
 FUNDAMENTALS_TTL_SECONDS = 86400  # 24 hours
 MARKET_CAP_MEGA_USD = 200_000_000_000

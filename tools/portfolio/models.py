@@ -75,9 +75,12 @@ def default_allocation_targets() -> list[AllocationTarget]:
 class Holding(BaseModel):
     model_config = ConfigDict(extra="allow")
 
+    schema_version: int = 1
     symbol: str
     asset_type: str
     units: float
+    status: Literal["active", "archived"] = "active"
+    archived_at: str | None = None
 
     avg_cost_thb: float | None = None
     avg_cost_usd: float | None = None
@@ -106,6 +109,7 @@ class Summary(BaseModel):
 class PortfolioState(BaseModel):
     model_config = ConfigDict(extra="allow")
 
+    schema_version: int = 1
     doc_type: Literal["portfolio_master"] = "portfolio_master"
     last_updated: str
     base_currency: str = "THB"
@@ -125,6 +129,7 @@ class PortfolioState(BaseModel):
 class WatchlistItem(BaseModel):
     model_config = ConfigDict(extra="allow")
 
+    schema_version: int = 1
     symbol: str
     asset_type: str
     target_price: float | None = None
@@ -135,6 +140,7 @@ class WatchlistItem(BaseModel):
 class WatchlistState(BaseModel):
     model_config = ConfigDict(extra="allow")
 
+    schema_version: int = 1
     doc_type: Literal["watchlist"] = "watchlist"
     last_updated: str
     items: list[WatchlistItem] = Field(default_factory=list)
@@ -148,6 +154,7 @@ class WatchlistState(BaseModel):
 class GoalItem(BaseModel):
     model_config = ConfigDict(extra="allow")
 
+    schema_version: int = 1
     name: str
     goal_type: Literal["nav_target", "cash_target", "passive_income_ytd"]
     target_amount_thb: float
@@ -159,6 +166,7 @@ class GoalItem(BaseModel):
 class GoalsState(BaseModel):
     model_config = ConfigDict(extra="allow")
 
+    schema_version: int = 1
     doc_type: Literal["goals"] = "goals"
     last_updated: str
     goals: list[GoalItem] = Field(default_factory=list)

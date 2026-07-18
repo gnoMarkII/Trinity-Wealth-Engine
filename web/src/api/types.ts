@@ -347,6 +347,8 @@ export interface PerformanceSnapshotDTO {
   Total_Cost: number
   Unrealized_PnL: number
   Cash_Balance: number
+  realized_pnl_ytd?: number | null
+  passive_income_ytd?: number | null
 }
 
 export interface JournalEntryDTO {
