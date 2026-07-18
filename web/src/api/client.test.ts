@@ -80,4 +80,17 @@ describe('api client', () => {
     const [url] = fetchMock.mock.calls[0] as [string]
     expect(url).toBe('/api/macro/indicators/obs%2Fweird%20id/series?range=3m')
   })
+
+  it('resumeJob ส่ง approved_pitch_ids ได้ถูกต้อง', async () => {
+    const fetchMock = mockFetchOnce({ jsonBody: { job_id: 'j1', status: 'running' } })
+    await api.resumeJob('j1', [], [], [], ['pitch-abc'])
+    const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit]
+    expect(url).toBe('/api/agents/jobs/j1/resume')
+    expect(JSON.parse(init.body as string)).toEqual({
+      approved_news_links: [],
+      approved_youtube_links: [],
+      approved_event_ids: [],
+      approved_pitch_ids: ['pitch-abc'],
+    })
+  })
 })

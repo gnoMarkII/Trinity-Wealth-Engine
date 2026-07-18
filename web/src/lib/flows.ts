@@ -14,6 +14,7 @@ export const FLOW_LABEL = {
   manager: 'Macro',
   news_youtube: 'News/YouTube',
   news_funnel: 'News Funnel',
+  youtube_pitch: 'YouTube Pitch',
 } as const
 
 /** #macro / #news มาจาก flow จริงที่เก็บไว้ตอนสร้างการ์ด (ไม่ใช่การเดา) — ดู Rev.2 Phase 0 */
@@ -21,12 +22,14 @@ export const FLOW_TAG: Record<string, string> = {
   manager: '#macro',
   news_youtube: '#news',
   news_funnel: '#news_funnel',
+  youtube_pitch: '#youtube_pitch',
 }
 
 export const FLOW_OPTIONS: FlowOption[] = [
   { key: 'manager', label: FLOW_LABEL.manager },
   { key: 'news_youtube', label: FLOW_LABEL.news_youtube },
   { key: 'news_funnel', label: FLOW_LABEL.news_funnel },
+  { key: 'youtube_pitch', label: FLOW_LABEL.youtube_pitch },
 ]
 
 export const SCOPE_OPTIONS: FlowOption[] = [

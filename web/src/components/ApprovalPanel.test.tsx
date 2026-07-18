@@ -1,7 +1,7 @@
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
-import type { NewsFunnelApprovalPayload, NewsYoutubeApprovalPayload } from '../api/types'
+import type { NewsFunnelApprovalPayload, NewsYoutubeApprovalPayload, YoutubePitchApprovalPayload } from '../api/types'
 import ApprovalPanel from './ApprovalPanel'
 
 function makePayload(overrides: Partial<NewsYoutubeApprovalPayload> = {}): NewsYoutubeApprovalPayload {
@@ -90,5 +90,36 @@ describe('ApprovalPanel', () => {
     await userEvent.click(approveBtn)
 
     expect(onApprove).toHaveBeenCalledWith([], [], ['ev-1'])
+  })
+
+  it('แสดงรายการ YouTube Pitch และส่ง approvedPitchIds เมื่ออนุมัติ', async () => {
+    const pitchPayload: YoutubePitchApprovalPayload = {
+      type: 'youtube_pitch_approval',
+      pitches: [
+        {
+          pitch_id: 'pitch-101',
+          working_titles: ['คลิปวิเคราะห์ Fed', 'ทำไมดอกเบี้ยคงที่'],
+          target_audience: 'นักลงทุนทั่วไป',
+          core_hook: 'เศรษฐกิจกำลังเปลี่ยนทิศ',
+          key_questions_to_answer: ['Fed จะลดดอกเบี้ยเมื่อไหร่?'],
+          research_hypotheses: [],
+          source_event_ids: ['ev-1'],
+          source_links: ['https://example.com/1'],
+          source_titles: ['ข่าว Fed'],
+          recommended_format: 'Deep Dive 15 นาที',
+          estimated_impact: 'High',
+        },
+      ],
+    }
+    const onApprove = vi.fn()
+    render(<ApprovalPanel payload={pitchPayload} onApprove={onApprove} />)
+
+    expect(screen.getByText('คลิปวิเคราะห์ Fed')).toBeInTheDocument()
+    expect(screen.getByText('🔥 Core Hook:')).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('checkbox'))
+    const approveBtn = screen.getByRole('button', { name: /อนุมัติและสร้าง Briefing Book \(1 รายการ\)/ })
+    await userEvent.click(approveBtn)
+
+    expect(onApprove).toHaveBeenCalledWith([], [], [], ['pitch-101'])
   })
 })

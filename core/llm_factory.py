@@ -1,5 +1,5 @@
 import os
-from typing import Optional
+from typing import Optional, Any
 
 import anthropic
 import google.genai as genai
@@ -82,6 +82,35 @@ def get_llm(
         return primary.with_fallbacks([fallback])
 
     return primary
+
+
+def invoke_structured_llm(
+    schema: Any,
+    model_env: str,
+    prompt_lines: list[str],
+    purpose: Optional[str] = None,
+    max_output_tokens: Optional[int] = None,
+    default_model: str = "gemini-2.5-flash",
+    provider: str = "google",
+    **kwargs: Any,
+) -> Any:
+    """Helper สำหรับสร้างและเรียกใช้ structured LLM ด้วย schema ที่กำหนด
+
+    Args:
+        schema: Pydantic schema class
+        model_env: ชื่อ Environment variable สำหรับดึงชื่อ model
+        prompt_lines: รายการบรรทัดของ Prompt ที่จะส่งให้ LLM
+        purpose: คำอธิบายจุดประสงค์ของ call เพื่อใช้ใน log
+        max_output_tokens: จำนวน token สูงสุดในการตอบกลับ
+        default_model: ค่าเริ่มต้นของ model หากไม่ได้ตั้งใน env var
+        provider: "google", "anthropic" หรือ "openrouter"
+    """
+    model_name = os.getenv(model_env, default_model)
+    call_purpose = purpose or getattr(schema, "__name__", str(schema))
+    log.info("LLM Call | purpose=%s | model=%s | max_tokens=%s", call_purpose, model_name, max_output_tokens)
+    llm = get_llm(provider=provider, model_name=model_name, max_output_tokens=max_output_tokens)
+    structured_llm = llm.with_structured_output(schema)
+    return structured_llm.invoke("\n".join(prompt_lines))
 
 
 def _fetch_google_models() -> list[str]:

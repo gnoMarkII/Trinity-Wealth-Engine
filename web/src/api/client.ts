@@ -129,7 +129,8 @@ export const api = {
     jobId: string,
     approvedNewsLinks: string[] = [],
     approvedYoutubeLinks: string[] = [],
-    approvedEventIds?: string[]
+    approvedEventIds?: string[],
+    approvedPitchIds?: string[]
   ) =>
     request<JobStatusDTO>(`/api/agents/jobs/${jobId}/resume`, {
       method: 'POST',
@@ -137,6 +138,7 @@ export const api = {
         approved_news_links: approvedNewsLinks,
         approved_youtube_links: approvedYoutubeLinks,
         approved_event_ids: approvedEventIds,
+        approved_pitch_ids: approvedPitchIds,
       }),
     }),
 

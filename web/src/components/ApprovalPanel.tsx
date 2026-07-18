@@ -1,15 +1,28 @@
 import { useState } from 'react'
-import type { ApprovalPayload, NewsFunnelApprovalPayload, NewsYoutubeApprovalPayload } from '../api/types'
+import type {
+  ApprovalPayload,
+  NewsFunnelApprovalPayload,
+  NewsYoutubeApprovalPayload,
+  YoutubePitchApprovalPayload,
+} from '../api/types'
 
 interface Props {
   payload: ApprovalPayload
-  onApprove: (approvedNewsLinks: string[], approvedYoutubeLinks: string[], approvedEventIds?: string[]) => void
+  onApprove: (
+    approvedNewsLinks: string[],
+    approvedYoutubeLinks: string[],
+    approvedEventIds?: string[],
+    approvedPitchIds?: string[]
+  ) => void
   submitting?: boolean
 }
 
 export default function ApprovalPanel({ payload, onApprove, submitting }: Props) {
   if (payload.type === 'news_funnel_approval') {
     return <NewsFunnelApprovalView payload={payload} onApprove={onApprove} submitting={submitting} />
+  }
+  if (payload.type === 'youtube_pitch_approval') {
+    return <YoutubePitchApprovalView payload={payload} onApprove={onApprove} submitting={submitting} />
   }
   return <NewsYoutubeApprovalView payload={payload} onApprove={onApprove} submitting={submitting} />
 }
@@ -306,6 +319,154 @@ function NewsYoutubeApprovalView({
           : totalSelected === 0
             ? 'ข้ามรอบนี้ (0 รายการ) — ไม่บันทึก'
             : `อนุมัติและดำเนินการต่อ (${totalSelected} รายการ)`}
+      </button>
+    </div>
+  )
+}
+
+function YoutubePitchApprovalView({
+  payload,
+  onApprove,
+  submitting,
+}: {
+  payload: YoutubePitchApprovalPayload
+  onApprove: Props['onApprove']
+  submitting?: boolean
+}) {
+  const [selectedPitchIds, setSelectedPitchIds] = useState<Set<string>>(new Set())
+
+  const pitches = payload.pitches || []
+
+  function toggle(id: string) {
+    const next = new Set(selectedPitchIds)
+    if (next.has(id)) next.delete(id)
+    else next.add(id)
+    setSelectedPitchIds(next)
+  }
+
+  function toggleAll() {
+    if (selectedPitchIds.size === pitches.length && pitches.length > 0) {
+      setSelectedPitchIds(new Set())
+    } else {
+      setSelectedPitchIds(new Set(pitches.map((p) => p.pitch_id)))
+    }
+  }
+
+  const allSelected = pitches.length > 0 && selectedPitchIds.size === pitches.length
+
+  return (
+    <div className="space-y-4 rounded-xl border border-sky-200 bg-sky-50/50 p-4 shadow-sm shadow-black/5">
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2">
+          <span className="h-2 w-2 rounded-full bg-flow-cyan" />
+          <h3 className="text-sm font-semibold text-sky-900">รอการอนุมัติ — เลือกไอเดียคลิป YouTube ที่ต้องการสร้าง Research-Grade Briefing Book</h3>
+        </div>
+        {pitches.length > 0 && (
+          <button
+            type="button"
+            onClick={toggleAll}
+            className="text-xs font-medium text-sky-700 hover:underline"
+          >
+            {allSelected ? 'ยกเลิกทั้งหมด' : 'เลือกทั้งหมด'}
+          </button>
+        )}
+      </div>
+
+      {pitches.length > 0 ? (
+        <ul className="space-y-3">
+          {pitches.map((p) => (
+            <li key={p.pitch_id}>
+              <label className="relative flex cursor-pointer items-start gap-3 rounded-xl border border-edge bg-panel p-3.5 text-xs text-zinc-700 transition-colors hover:border-sky-300">
+                <input
+                  type="checkbox"
+                  checked={selectedPitchIds.has(p.pitch_id)}
+                  onChange={() => toggle(p.pitch_id)}
+                  className="mt-1 accent-sky-500"
+                />
+                <div className="flex-1 space-y-2 pr-2">
+                  <div className="flex flex-wrap items-center gap-2">
+                    {p.recommended_format && (
+                      <span className="rounded bg-flow-cyan/10 px-2 py-0.5 text-[11px] font-semibold text-sky-800 border border-sky-200/60">
+                        🎬 {p.recommended_format}
+                      </span>
+                    )}
+                    {p.target_audience && (
+                      <span className="rounded bg-purple-50 px-2 py-0.5 text-[11px] font-medium text-purple-800 border border-purple-200/60">
+                        👥 {p.target_audience}
+                      </span>
+                    )}
+                    {p.estimated_impact && (
+                      <span className="rounded bg-amber-50 px-2 py-0.5 text-[11px] font-medium text-amber-800 border border-amber-200/60">
+                        ⚡ Impact: {p.estimated_impact}
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="space-y-1">
+                    <p className="text-[11px] font-semibold text-zinc-500 uppercase tracking-wide">🎯 ตัวเลือก Working Titles:</p>
+                    <ul className="list-inside list-disc space-y-0.5 font-semibold text-zinc-900">
+                      {(p.working_titles || []).map((title, idx) => (
+                        <li key={idx} className="text-sm">{title}</li>
+                      ))}
+                    </ul>
+                  </div>
+
+                  {p.core_hook && (
+                    <div className="rounded-lg bg-surface/70 p-2 border border-edge/60">
+                      <span className="font-semibold text-zinc-800">🔥 Core Hook:</span> {p.core_hook}
+                    </div>
+                  )}
+
+                  {(p.key_questions_to_answer?.length > 0 || p.research_hypotheses?.length > 0) && (
+                    <details className="mt-1 text-xs text-zinc-600">
+                      <summary className="cursor-pointer font-medium text-sky-700 hover:underline">
+                        ดู Key Questions & Research Hypotheses ({((p.key_questions_to_answer?.length || 0) + (p.research_hypotheses?.length || 0))} รายการ)
+                      </summary>
+                      <div className="mt-2 space-y-2 pl-2 border-l-2 border-sky-200">
+                        {p.key_questions_to_answer?.length > 0 && (
+                          <div>
+                            <p className="font-semibold text-zinc-700">❓ Key Questions to Answer:</p>
+                            <ul className="list-inside list-disc space-y-0.5 text-zinc-600">
+                              {p.key_questions_to_answer.map((q, idx) => (
+                                <li key={idx}>{q}</li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
+                        {p.research_hypotheses?.length > 0 && (
+                          <div>
+                            <p className="font-semibold text-zinc-700">💡 Research Hypotheses:</p>
+                            <ul className="list-inside list-disc space-y-0.5 text-zinc-600">
+                              {p.research_hypotheses.map((h, idx) => (
+                                <li key={idx}>{h}</li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
+                      </div>
+                    </details>
+                  )}
+                </div>
+              </label>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className="text-xs text-zinc-500">ไม่มีไอเดียคลิป YouTube รออนุมัติ</p>
+      )}
+
+      <button
+        onClick={() => onApprove([], [], [], Array.from(selectedPitchIds))}
+        disabled={submitting}
+        className={`rounded-lg px-4 py-2 text-sm font-medium text-white transition-colors disabled:opacity-50 ${
+          selectedPitchIds.size === 0 ? 'bg-zinc-600 hover:bg-zinc-700' : 'bg-sky-500 hover:bg-sky-600'
+        }`}
+      >
+        {submitting
+          ? 'กำลังส่ง...'
+          : selectedPitchIds.size === 0
+            ? 'ข้ามรอบนี้ (0 รายการ) — ไม่สร้าง Briefing Book'
+            : `อนุมัติและสร้าง Briefing Book (${selectedPitchIds.size} รายการ)`}
       </button>
     </div>
   )

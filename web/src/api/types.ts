@@ -186,7 +186,27 @@ export interface NewsFunnelApprovalPayload {
   candidates: NewsFunnelCandidate[]
 }
 
-export type ApprovalPayload = NewsYoutubeApprovalPayload | NewsFunnelApprovalPayload
+export interface YoutubePitchItemDTO {
+  pitch_id: string
+  working_titles: string[]
+  target_audience: string
+  core_hook: string
+  key_questions_to_answer: string[]
+  research_hypotheses: string[]
+  source_event_ids: string[]
+  source_links: string[]
+  source_titles: string[]
+  recommended_format: string
+  estimated_impact: string
+}
+
+export interface YoutubePitchApprovalPayload {
+  type: 'youtube_pitch_approval'
+  pitches: YoutubePitchItemDTO[]
+  instruction?: string
+}
+
+export type ApprovalPayload = NewsYoutubeApprovalPayload | NewsFunnelApprovalPayload | YoutubePitchApprovalPayload
 
 export interface JobStatusDTO {
   job_id: string

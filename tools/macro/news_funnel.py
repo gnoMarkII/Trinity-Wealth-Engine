@@ -56,13 +56,17 @@ def get_synthesis_period(now: Optional[datetime] = None) -> str:
 
 def _invoke_structured(schema: Any, model_env: str, prompt_lines: List[str], purpose: Optional[str] = None, max_output_tokens: Optional[int] = None, **kwargs: Any) -> Any:
     """Helper สำหรับสร้างและเรียกใช้ structured LLM ด้วย provider='google'"""
-    from core.llm_factory import get_llm
-    model_name = os.getenv(model_env, "gemini-2.5-flash")
-    call_purpose = purpose or getattr(schema, "__name__", str(schema))
-    logger.info("LLM Call | purpose=%s | model=%s | max_tokens=%s", call_purpose, model_name, max_output_tokens)
-    llm = get_llm(provider="google", model_name=model_name, max_output_tokens=max_output_tokens)
-    structured_llm = llm.with_structured_output(schema)
-    return structured_llm.invoke("\n".join(prompt_lines))
+    from core.llm_factory import invoke_structured_llm
+    return invoke_structured_llm(
+        schema=schema,
+        model_env=model_env,
+        prompt_lines=prompt_lines,
+        purpose=purpose,
+        max_output_tokens=max_output_tokens,
+        default_model="gemini-2.5-flash",
+        provider="google",
+        **kwargs,
+    )
 
 
 TICKER_ALIAS_MAP: Dict[str, str] = {

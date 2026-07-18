@@ -72,6 +72,7 @@ class ResumeRequest(BaseModel):
     approved_news_links: list[str] = []
     approved_youtube_links: list[str] = []
     approved_event_ids: Optional[list[str]] = None
+    approved_pitch_ids: Optional[list[str]] = None
 
 
 def _job_to_dto(conn, job) -> JobStatusDTO:
@@ -156,6 +157,7 @@ def resume_job(job_id: str, payload: ResumeRequest, request: Request) -> JobStat
         "approved_news_links": payload.approved_news_links,
         "approved_youtube_links": payload.approved_youtube_links,
         "approved_event_ids": payload.approved_event_ids,
+        "approved_pitch_ids": payload.approved_pitch_ids,
     }
     job_queue = request.app.state.job_queue
     job_queue.resume(job_id, resume_value)

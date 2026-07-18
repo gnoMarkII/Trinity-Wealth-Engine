@@ -6,6 +6,7 @@ describe('flowLabel', () => {
   it('คืน label ที่อ่านง่ายสำหรับ flow ที่รู้จัก', () => {
     expect(flowLabel('manager')).toBe('Macro')
     expect(flowLabel('news_youtube')).toBe('News/YouTube')
+    expect(flowLabel('youtube_pitch')).toBe('YouTube Pitch')
   })
 
   it('flow ที่ไม่รู้จัก fallback เป็นค่าดิบ — ไม่มีทาง "หาย" จาก UI', () => {

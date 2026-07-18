@@ -126,13 +126,14 @@ export default function KanbanDetailDrawer({ card, onClose, onCardTransition }: 
   async function handleApprove(
     approvedNewsLinks: string[],
     approvedYoutubeLinks: string[],
-    approvedEventIds?: string[]
+    approvedEventIds?: string[],
+    approvedPitchIds?: string[]
   ) {
     if (!card?.job_id) return
     setApproving(true)
     setError(null)
     try {
-      await api.resumeJob(card.job_id, approvedNewsLinks, approvedYoutubeLinks, approvedEventIds)
+      await api.resumeJob(card.job_id, approvedNewsLinks, approvedYoutubeLinks, approvedEventIds, approvedPitchIds)
       setApprovalPayload(null)
       await api.moveKanbanCard(card.card_id, 'executing')
       onCardTransition()

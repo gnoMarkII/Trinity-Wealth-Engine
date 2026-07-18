@@ -11,6 +11,8 @@ const DEFAULT_TEMPLATES: QuickTemplate[] = [
   { label: 'วิเคราะห์เศรษฐกิจมหภาค', instruction: 'วิเคราะห์เศรษฐกิจมหภาคและจัดสรรพอร์ตประจำวัน', flow: 'manager', scope: 'both' },
   { label: 'ดึงข่าวล่าสุด', instruction: 'ดึงข่าวเศรษฐกิจและการลงทุนล่าสุด สรุปประเด็นสำคัญ', flow: 'news_youtube', scope: 'news' },
   { label: 'ดึงสรุปคลิป YouTube', instruction: 'ดึงสรุปคลิป YouTube ช่องการลงทุนที่ติดตามไว้ล่าสุด', flow: 'news_youtube', scope: 'youtube' },
+  { label: 'หาไอเดียทำคลิป (ย้อนหลัง 3 วัน)', instruction: 'หาไอเดียทำคลิป YouTube เชิงลึก [lookback_days=3]', flow: 'youtube_pitch', scope: 'both' },
+  { label: 'หาไอเดียทำคลิป (กำหนดช่วงวัน)', instruction: 'หาไอเดียทำคลิป YouTube [from_date=2026-07-01, to_date=2026-07-15]', flow: 'youtube_pitch', scope: 'both' },
 ]
 
 export function loadQuickTemplates(): QuickTemplate[] {
