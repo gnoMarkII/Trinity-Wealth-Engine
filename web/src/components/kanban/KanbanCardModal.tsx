@@ -3,6 +3,7 @@ import Modal from '../ui/Modal'
 import SegmentedControl from '../ui/SegmentedControl'
 import Button from '../ui/Button'
 import TextInput from '../ui/TextInput'
+import YoutubePitchDateControls from './YoutubePitchDateControls'
 import { FLOW_OPTIONS, SCOPE_OPTIONS } from '../../lib/flows'
 
 interface Props {
@@ -76,6 +77,10 @@ export default function KanbanCardModal({
             <span id="kanban-card-scope-label" className="mb-1 block text-xs font-medium text-zinc-600">ขอบเขต</span>
             <SegmentedControl options={SCOPE_OPTIONS} value={scope} onChange={setScope} ariaLabelledby="kanban-card-scope-label" />
           </div>
+        )}
+
+        {flow === 'youtube_pitch' && (
+          <YoutubePitchDateControls prompt={prompt} onChange={setPrompt} />
         )}
 
         <div>

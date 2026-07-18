@@ -3,6 +3,7 @@ import Modal from '../ui/Modal'
 import SegmentedControl from '../ui/SegmentedControl'
 import Button from '../ui/Button'
 import TextInput from '../ui/TextInput'
+import YoutubePitchDateControls from './YoutubePitchDateControls'
 import type { QuickTemplate } from '../../lib/quickTemplateStorage'
 import { FLOW_OPTIONS, SCOPE_OPTIONS } from '../../lib/flows'
 
@@ -59,6 +60,10 @@ export default function EditTemplateModal({ template, onClose, onSave }: Props) 
             <span id="edit-template-scope-label" className="mb-1 block text-xs font-medium text-zinc-600">ขอบเขต</span>
             <SegmentedControl options={SCOPE_OPTIONS} value={scope} onChange={setScope} ariaLabelledby="edit-template-scope-label" />
           </div>
+        )}
+
+        {flow === 'youtube_pitch' && (
+          <YoutubePitchDateControls prompt={instruction} onChange={setInstruction} />
         )}
 
         <div>

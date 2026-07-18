@@ -5,6 +5,7 @@ import type { ApprovalPayload, KanbanCardDTO } from '../../api/types'
 import LiveTerminal from '../LiveTerminal'
 import ApprovalPanel from '../ApprovalPanel'
 import NewsFunnelPromptViewer from './NewsFunnelPromptViewer'
+import YoutubePitchDateControls from './YoutubePitchDateControls'
 import { FLOW_TAG } from '../../lib/flows'
 import { columnForStatus, type TerminalStatus } from '../../lib/agentStatus'
 import type { JobOutputsDTO } from '../../api/types'
@@ -208,6 +209,20 @@ export default function KanbanDetailDrawer({ card, onClose, onCardTransition }: 
                 <p className="mt-1 text-xs text-zinc-500">
                   สร้างเมื่อ {new Date(card.created_at * 1000).toLocaleString('th-TH')}
                 </p>
+                {card.flow === 'youtube_pitch' && (
+                  <YoutubePitchDateControls
+                    prompt={card.prompt || ''}
+                    onChange={async (newPrompt) => {
+                      try {
+                        await api.updateKanbanCard(card.card_id, card.title, newPrompt, card.flow, card.scope)
+                        onCardTransition()
+                      } catch (e) {
+                        setError(e instanceof ApiError ? e.message : 'อัปเดตเวลาไม่สำเร็จ')
+                      }
+                    }}
+                    className="mt-3.5"
+                  />
+                )}
                 {card.prompt && (
                   card.flow === 'news_funnel' ? (
                     <NewsFunnelPromptViewer prompt={card.prompt} onItemDeleted={onCardTransition} />
