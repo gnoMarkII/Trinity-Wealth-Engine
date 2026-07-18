@@ -90,7 +90,7 @@ def invoke_structured_llm(
     prompt_lines: list[str],
     purpose: Optional[str] = None,
     max_output_tokens: Optional[int] = None,
-    default_model: str = "gemini-2.5-flash",
+    default_model: str = "gemini-3.1-flash-lite-preview",
     provider: str = "google",
     **kwargs: Any,
 ) -> Any:

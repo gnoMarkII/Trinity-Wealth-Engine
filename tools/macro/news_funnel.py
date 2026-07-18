@@ -63,7 +63,7 @@ def _invoke_structured(schema: Any, model_env: str, prompt_lines: List[str], pur
         prompt_lines=prompt_lines,
         purpose=purpose,
         max_output_tokens=max_output_tokens,
-        default_model="gemini-2.5-flash",
+        default_model="gemini-3.1-flash-lite-preview",
         provider="google",
         **kwargs,
     )
