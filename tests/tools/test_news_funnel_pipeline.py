@@ -730,20 +730,20 @@ def test_staged_ingest_crash_safety(test_paths, monkeypatch):
 
 
 def test_triage_multi_chunk_mixed_outcome(test_paths, monkeypatch):
-    """ทดสอบการแบ่ง Chunk (≤25 items): Chunk แรกสำเร็จได้ triage_source="llm", Chunk สองล้มเหลวได้ triage_source="heuristic_fallback" ในรอบ ingest เดียวกัน"""
+    """ทดสอบการแบ่ง Chunk (≤15 items): Chunk แรกสำเร็จได้ triage_source="llm", Chunk สองล้มเหลวได้ triage_source="heuristic_fallback" ในรอบ ingest เดียวกัน"""
     store_file, _ = test_paths
     monkeypatch.setattr("tools.macro.news_funnel._is_mock_mode", lambda: False)
 
     candidates = [
         {"title": f"Candidate {i}", "link": f"https://example.com/{i}", "summary": f"Summary {i}"}
-        for i in range(1, 31)
+        for i in range(1, 21)
     ]
 
     import re
     def mock_multi_chunk_invoke(schema, model_env, prompt_lines, purpose=None, max_output_tokens=None, **kwargs):
         count = sum(1 for line in prompt_lines if re.match(r"^\d+\. Title:", line))
-        # ถ้า count == 25 ให้คืนผลลัพธ์สำเร็จตรงตามจำนวน
-        if count == 25:
+        # ถ้า count == 15 ให้คืนผลลัพธ์สำเร็จตรงตามจำนวน
+        if count == 15:
             results = [
                 MacroImpactTriageResult(
                     thai_title=f"ไทย {i}",
@@ -759,25 +759,64 @@ def test_triage_multi_chunk_mixed_outcome(test_paths, monkeypatch):
                 for i in range(count)
             ]
             return TriageBatchResult(results=results)
-        # ถ้า count != 25 (เช่น chunk ที่ 2 มี 5 items) ให้คืน empty list จำลอง LLM ล้มเหลว/ตอบไม่ตรง
+        # ถ้า count != 15 (เช่น chunk ที่ 2 มี 5 items) ให้คืน empty list จำลอง LLM ล้มเหลว/ตอบไม่ตรง
         return TriageBatchResult(results=[])
 
     with patch("tools.macro.news_funnel._invoke_structured", side_effect=mock_multi_chunk_invoke):
         res = run_news_funnel_ingest(candidates=candidates, store_path=store_file, fetch_only=False)
 
     assert res["status"] == "success"
-    assert res["ingested_count"] == 30
+    assert res["ingested_count"] == 20
 
     state = load_store(store_path=store_file)
     events = state["pending_events"]
-    assert len(events) == 30
+    assert len(events) == 20
 
-    # 25 รายการแรกได้จาก LLM Chunk 1
-    for ev in events[:25]:
+    # 15 รายการแรกได้จาก LLM Chunk 1
+    for ev in events[:15]:
         assert ev["triage_source"] == "llm"
+        assert ev.get("triage_fallback_reason") is None
     # 5 รายการหลังได้จาก Heuristic Fallback ของ Chunk 2 (หลัง retry chunk 2 ครั้งหนึ่งแล้ว)
-    for ev in events[25:]:
+    for ev in events[15:]:
         assert ev["triage_source"] == "heuristic_fallback"
+        assert ev.get("triage_fallback_reason") == "length_mismatch"
+
+
+def test_url_normalization_tracking_params(test_paths):
+    """ทดสอบ _normalize_url ว่าลบ tracking params ออก และทำให้ is_title_or_url_processed ไม่คิดคะแนนซ้ำเมื่อเจอ URL ติด utm/fbclid"""
+    from tools.macro.news_funnel_store import _normalize_url, is_title_or_url_processed, save_triage_events
+
+    url1 = "https://www.bloomberg.com/news/articles/123/?utm_source=twitter&utm_medium=social&id=456"
+    norm1 = _normalize_url(url1)
+    assert norm1 == "https://bloomberg.com/news/articles/123?id=456"
+
+    store_file, _ = test_paths
+    save_triage_events([{"event_id": "1", "links": ["https://bloomberg.com/news/articles/123?id=456"], "original_title": "Some Title"}], store_path=store_file)
+
+    # ทดสอบ URL ที่ใส่ utm_campaign หรือ gclid ว่าถูกมองเป็น processed แล้ว
+    assert is_title_or_url_processed("Different Title", "https://www.bloomberg.com/news/articles/123/?utm_source=fb&gclid=abc&id=456", store_path=store_file) is True
+
+
+def test_news_funnel_dto_fallback_reason():
+    """ทดสอบ NewsFunnelPendingItemDTO และ NewsFunnelFilteredItemDTO ว่ารองรับ triage_fallback_reason ครบถ้วน"""
+    from api.schemas import NewsFunnelPendingItemDTO, NewsFunnelFilteredItemDTO
+
+    pending = NewsFunnelPendingItemDTO(
+        event_id="ev-1",
+        canonical_title="Test News",
+        triage_source="heuristic_fallback",
+        triage_fallback_reason="length_mismatch"
+    )
+    assert pending.triage_fallback_reason == "length_mismatch"
+
+    filtered = NewsFunnelFilteredItemDTO(
+        event_id="ev-2",
+        canonical_title="Test News 2",
+        status="filtered",
+        triage_source="heuristic_fallback",
+        triage_fallback_reason="api_error: TimeoutError"
+    )
+    assert filtered.triage_fallback_reason == "api_error: TimeoutError"
 
 
 

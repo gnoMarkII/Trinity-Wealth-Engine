@@ -212,13 +212,13 @@ def _mock_or_llm_triage(candidate: Dict[str, Any]) -> MacroImpactTriageResult:
     )
 
 
-TRIAGE_CHUNK_SIZE = 25
+TRIAGE_CHUNK_SIZE = 15
 
 
-def _llm_triage_single_chunk(chunk: List[Dict[str, Any]]) -> List[MacroImpactTriageResult]:
-    """ประเมิน Impact Score สำหรับ 1 chunk (≤25 items) — คง try/except และคืน [] เมื่อ error เสมอ"""
+def _llm_triage_single_chunk(chunk: List[Dict[str, Any]]) -> tuple[List[MacroImpactTriageResult], Optional[str]]:
+    """ประเมิน Impact Score สำหรับ 1 chunk (≤15 items) — คง try/except และคืน ([], reason) เมื่อ error เสมอ"""
     if not chunk:
-        return []
+        return [], None
     try:
         prompt_lines = [
             f"CRITICAL REQUIREMENT: You are given EXACTLY {len(chunk)} news items numbered 1 to {len(chunk)}.",
@@ -240,45 +240,51 @@ def _llm_triage_single_chunk(chunk: List[Dict[str, Any]]) -> List[MacroImpactTri
             "NEWS_FUNNEL_TRIAGE_MODEL",
             prompt_lines,
             purpose="triage_batch",
-            max_output_tokens=8192,
+            max_output_tokens=16384,
         )
         if res and hasattr(res, "results") and len(res.results) == len(chunk):
-            return res.results
+            return res.results, None
         if res and hasattr(res, "results"):
             logger.error("LLM returned %d results for %d items — skipping chunk", len(res.results), len(chunk))
+            return [], "length_mismatch"
         else:
             logger.error("LLM returned invalid response — skipping chunk")
+            return [], "validation_error"
     except Exception as e:
         logger.error("LLM Triage chunk failed: %s", e)
-    return []
+        return [], f"api_error: {type(e).__name__}"
 
 
-def _llm_triage_batch(items: List[Dict[str, Any]]) -> tuple[List[MacroImpactTriageResult], List[str]]:
-    """ประเมิน Impact Score แบบ Batch ผ่าน Fast LLM แบ่ง Chunk ≤25 พร้อม per-chunk retry และ fallback"""
+def _llm_triage_batch(items: List[Dict[str, Any]]) -> tuple[List[MacroImpactTriageResult], List[str], List[Optional[str]]]:
+    """ประเมิน Impact Score แบบ Batch ผ่าน Fast LLM แบ่ง Chunk ≤15 พร้อม per-chunk retry และ fallback reason"""
     if not items:
-        return [], []
+        return [], [], []
     if _is_mock_mode():
-        return [_mock_or_llm_triage(item) for item in items], ["mock"] * len(items)
+        return [_mock_or_llm_triage(item) for item in items], ["mock"] * len(items), [None] * len(items)
 
     all_results = []
     all_sources = []
+    all_reasons = []
     for i in range(0, len(items), TRIAGE_CHUNK_SIZE):
         chunk = items[i:i + TRIAGE_CHUNK_SIZE]
-        chunk_results = _llm_triage_single_chunk(chunk)
+        chunk_results, err_reason = _llm_triage_single_chunk(chunk)
         if len(chunk_results) == len(chunk):
             all_results.extend(chunk_results)
             all_sources.extend(["llm"] * len(chunk))
+            all_reasons.extend([None] * len(chunk))
         else:
-            logger.warning("Chunk %d-%d mismatch — retrying once", i+1, i+len(chunk))
-            chunk_results = _llm_triage_single_chunk(chunk)
+            logger.warning("Chunk %d-%d mismatch (%s) — retrying once", i+1, i+len(chunk), err_reason)
+            chunk_results, retry_reason = _llm_triage_single_chunk(chunk)
             if len(chunk_results) == len(chunk):
                 all_results.extend(chunk_results)
                 all_sources.extend(["llm"] * len(chunk))
+                all_reasons.extend([None] * len(chunk))
             else:
-                logger.warning("Retry failed for chunk %d-%d — falling back to heuristic for this chunk", i+1, i+len(chunk))
+                logger.warning("Retry failed for chunk %d-%d (%s) — falling back to heuristic for this chunk", i+1, i+len(chunk), retry_reason)
                 all_results.extend([_mock_or_llm_triage(rep) for rep in chunk])
                 all_sources.extend(["heuristic_fallback"] * len(chunk))
-    return all_results, all_sources
+                all_reasons.extend([retry_reason or err_reason or "unknown_error"] * len(chunk))
+    return all_results, all_sources, all_reasons
 
 
 def _heuristic_prefilter_candidates(items: List[Dict[str, Any]]) -> tuple[List[Dict[str, Any]], List[Dict[str, Any]]]:
@@ -330,6 +336,7 @@ def _heuristic_prefilter_candidates(items: List[Dict[str, Any]]) -> tuple[List[D
                 "extracted_themes": [],
                 "triage_reasoning": f"ตรง blacklist: {matched_word}",
                 "triage_source": "heuristic_prefilter",
+                "triage_fallback_reason": None,
                 "status": "pending_synthesis",
                 "ingested_at": now_iso,
             }
@@ -430,11 +437,11 @@ def run_news_funnel_ingest(
         representatives.append(rep)
 
     # ประเมินผ่าน LLM Batch (แบ่ง chunk เรียบร้อยแล้วภายใน _llm_triage_batch)
-    triage_results, triage_sources = _llm_triage_batch(representatives)
+    triage_results, triage_sources, triage_reasons = _llm_triage_batch(representatives)
 
     new_events = []
     now_iso = datetime.now().isoformat()
-    for rep, triage, triage_source in zip(representatives, triage_results, triage_sources):
+    for rep, triage, triage_source, triage_reason in zip(representatives, triage_results, triage_sources, triage_reasons):
         title = rep.get("title", "").strip()
         link = rep.get("link", "")
         event_id = rep.get("event_id") or str(uuid.uuid4())
@@ -454,6 +461,7 @@ def run_news_funnel_ingest(
             "extracted_themes": triage.extracted_themes,
             "triage_reasoning": triage.triage_reasoning,
             "triage_source": triage_source,
+            "triage_fallback_reason": triage_reason,
             "status": "pending_synthesis",
             "ingested_at": now_iso,
         }
@@ -602,7 +610,9 @@ def format_news_funnel_card_prompt(period: str, pending_items: List[Dict[str, An
         lines.append(f"#### {idx}. {title}")
         lines.append(f"- **Macro Impact:** {macro_score}/10 | **Asset Impact:** {asset_score}/10")
         if ev.get("triage_source") == "heuristic_fallback":
-            lines.append("- ⚠️ **คะแนนจาก heuristic fallback (LLM triage ล้มเหลวรอบ ingest)** — โปรดตรวจสอบเนื้อหาก่อนอนุมัติ")
+            reason = ev.get("triage_fallback_reason")
+            reason_str = f" (สาเหตุ: {reason})" if reason else ""
+            lines.append(f"- ⚠️ **คะแนนจาก heuristic fallback{reason_str} (LLM triage ล้มเหลวรอบ ingest)** — โปรดตรวจสอบเนื้อหาก่อนอนุมัติ")
         if summary:
             lines.append(f"- **สรุปเนื้อหา:** {summary}")
         if tags_str:

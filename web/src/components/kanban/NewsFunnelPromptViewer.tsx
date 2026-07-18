@@ -123,10 +123,10 @@ export default function NewsFunnelPromptViewer({ prompt }: Props) {
                     </span>
                     {item.triage_source === 'heuristic_fallback' && (
                       <span
-                        title="คะแนนจาก heuristic fallback (LLM triage ล้มเหลวรอบ ingest) — โปรดตรวจสอบเนื้อหาก่อนอนุมัติ"
+                        title={`คะแนนจาก heuristic fallback (${item.triage_fallback_reason ? `สาเหตุ: ${item.triage_fallback_reason}` : 'LLM triage ล้มเหลวรอบ ingest'}) — โปรดตรวจสอบเนื้อหาก่อนอนุมัติ`}
                         className="rounded border border-red-200 bg-red-50 px-1.5 py-0.5 text-[10px] font-semibold text-red-700"
                       >
-                        ⚠️ Heuristic
+                        ⚠️ Heuristic{item.triage_fallback_reason ? ` (${item.triage_fallback_reason})` : ''}
                       </span>
                     )}
                     <span className="text-sm leading-snug">{item.canonical_title}</span>

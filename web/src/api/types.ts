@@ -170,6 +170,7 @@ export interface NewsFunnelCandidate {
   links?: string[]
   /** "llm" | "mock" | "heuristic_fallback" — เมื่อเป็น heuristic_fallback คะแนนไม่ได้มาจาก LLM จริง */
   triage_source?: string
+  triage_fallback_reason?: string
 }
 
 export type NewsFunnelPendingItem = NewsFunnelCandidate

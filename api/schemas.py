@@ -586,6 +586,7 @@ class NewsFunnelPendingItemDTO(BaseModel):
     primary_tags: list[str] = []
     links: list[str] = []
     triage_source: Optional[str] = None
+    triage_fallback_reason: Optional[str] = None
 
 
 class NewsFunnelFilteredItemDTO(BaseModel):
@@ -599,6 +600,7 @@ class NewsFunnelFilteredItemDTO(BaseModel):
     primary_tags: list[str] = []
     links: list[str] = []
     triage_source: Optional[str] = None
+    triage_fallback_reason: Optional[str] = None
     status: str
     triage_reasoning: Optional[str] = None
     error_msg: Optional[str] = None

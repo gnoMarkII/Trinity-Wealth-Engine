@@ -7,6 +7,7 @@ from datetime import datetime, timedelta
 import json
 import os
 from typing import Any, Dict, List, Optional
+from urllib.parse import urlsplit, urlunsplit, parse_qsl, urlencode
 from filelock import FileLock
 
 from pathlib import Path
@@ -143,6 +144,38 @@ def save_store(state: Dict[str, Any], store_path: Optional[str] = None) -> None:
         _save_unlocked(state, s_path)
 
 
+def _normalize_url(url: str) -> str:
+    """ทำ Normalization กับ URL ตัดเฉพาะ tracking parameters, www., trailing slash เพื่อป้องกันการประเมินซ้ำ"""
+    if not url or not isinstance(url, str):
+        return ""
+    try:
+        parsed = urlsplit(url.strip())
+        scheme = parsed.scheme.lower()
+        netloc = parsed.netloc.lower()
+        if netloc.startswith("www."):
+            netloc = netloc[4:]
+        path = parsed.path
+        if len(path) > 1 and path.endswith("/"):
+            path = path[:-1]
+
+        tracking_keys = {
+            "utm_source", "utm_medium", "utm_campaign", "utm_term", "utm_content",
+            "ref", "fbclid", "gclid", "si"
+        }
+        raw_params = parse_qsl(parsed.query, keep_blank_values=True)
+        kept_params = []
+        for k, v in raw_params:
+            lk = k.lower()
+            if lk in tracking_keys or lk.startswith("utm_"):
+                continue
+            kept_params.append((k, v))
+
+        new_query = urlencode(sorted(kept_params)) if kept_params else ""
+        return urlunsplit((scheme, netloc, path, new_query, ""))
+    except Exception:
+        return url.strip().lower()
+
+
 def is_title_or_url_processed(
     title: str,
     url: str,
@@ -157,6 +190,12 @@ def is_title_or_url_processed(
     if url and url in processed_urls:
         return True
 
+    norm_input_url = _normalize_url(url)
+    if norm_input_url:
+        norm_processed_urls = {_normalize_url(p_url) for p_url in processed_urls if p_url}
+        if norm_input_url in norm_processed_urls:
+            return True
+
     processed_titles = state.get("processed_titles", [])
     norm_title = title.strip().lower()
     for pt in processed_titles:
@@ -170,7 +209,7 @@ def is_title_or_url_processed(
             if not isinstance(rc, dict):
                 continue
             rc_url = rc.get("link", "")
-            if url and rc_url and url == rc_url:
+            if url and rc_url and (url == rc_url or (norm_input_url and _normalize_url(rc_url) == norm_input_url)):
                 return True
             rc_title = rc.get("title", "")
             if rc_title:
@@ -324,6 +363,7 @@ def remove_processed_raw_candidates(
     with lock:
         state = _load_unlocked(s_path)
         raw_list = state.setdefault("raw_candidates", [])
+        norm_processed_urls = {_normalize_url(p_url) for p_url in processed_urls if p_url}
         kept_raw = []
         for rc in raw_list:
             if not isinstance(rc, dict):
@@ -333,6 +373,9 @@ def remove_processed_raw_candidates(
             norm_title = title.strip().lower()
 
             if url and url in processed_urls:
+                continue
+            norm_rc_url = _normalize_url(url)
+            if norm_rc_url and norm_rc_url in norm_processed_urls:
                 continue
 
             matched_title = False

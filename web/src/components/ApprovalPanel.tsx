@@ -97,10 +97,10 @@ function NewsFunnelApprovalView({
                       </span>
                       {c.triage_source === 'heuristic_fallback' && (
                         <span
-                          title="คะแนนจาก heuristic fallback (LLM triage ล้มเหลวรอบ ingest) — โปรดตรวจสอบเนื้อหาก่อนอนุมัติ"
+                          title={`คะแนนจาก heuristic fallback (${c.triage_fallback_reason ? `สาเหตุ: ${c.triage_fallback_reason}` : 'LLM triage ล้มเหลวรอบ ingest'}) — โปรดตรวจสอบเนื้อหาก่อนอนุมัติ`}
                           className="rounded border border-red-200 bg-red-50 px-1.5 py-0.5 text-[10px] font-semibold text-red-700"
                         >
-                          ⚠️ Heuristic
+                          ⚠️ Heuristic{c.triage_fallback_reason ? ` (${c.triage_fallback_reason})` : ''}
                         </span>
                       )}
                       <span className="font-semibold text-zinc-900">{c.canonical_title}</span>
