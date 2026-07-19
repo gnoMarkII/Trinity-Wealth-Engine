@@ -2,8 +2,13 @@ import tempfile
 import os
 from pathlib import Path
 
-def _atomic_write_to(path: Path, content: str) -> None:
+from typing import Any
+from core.utils import normalize_content
+
+def _atomic_write_to(path: Path, content: Any) -> None:
     """Generic atomic write: temp file → os.replace() — ใช้ได้กับไฟล์ใดก็ได้"""
+    if not isinstance(content, str):
+        content = normalize_content(content) if isinstance(content, list) else str(content)
     parent = path.parent
     parent.mkdir(parents=True, exist_ok=True)
     fd, tmp_name = tempfile.mkstemp(prefix=".tmp_", suffix=".md.tmp", dir=str(parent))

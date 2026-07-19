@@ -7,6 +7,7 @@ import tempfile
 from datetime import datetime
 from functools import lru_cache
 from pathlib import Path
+from typing import Optional, Union
 
 import frontmatter as fm
 from filelock import FileLock
@@ -50,9 +51,23 @@ def _read_entity_type(file_path: Path) -> str:
     return val if val else "—"
 
 
-def _file_folder_label(file_path: Path) -> str:
-    rel = file_path.relative_to(VAULT_PATH)
-    return str(rel.parent) if rel.parent != Path(".") else "Root"
+def _file_folder_label(file_path: Path, vault_root: Optional[Path | str] = None) -> str:
+    root = Path(vault_root) if vault_root else VAULT_PATH
+    try:
+        rel = file_path.resolve().relative_to(root.resolve())
+        return str(rel.parent).replace("\\", "/") if rel.parent != Path(".") else "Root"
+    except (ValueError, RuntimeError):
+        try:
+            rel = file_path.resolve().relative_to(VAULT_PATH.resolve())
+            return str(rel.parent).replace("\\", "/") if rel.parent != Path(".") else "Root"
+        except (ValueError, RuntimeError):
+            parts = file_path.parts
+            for marker in ("30_Knowledge_Base", "10_Projects", "20_Areas", "40_Archive", "00_Inbox", "01_Daily_Logs", "50_Crypto", "60_Research"):
+                if marker in parts:
+                    idx = parts.index(marker)
+                    rel_parts = parts[idx:-1]
+                    return "/".join(rel_parts) if rel_parts else marker
+            return file_path.parent.name or "Root"
 
 
 def _is_indexable(file_path: Path) -> bool:
@@ -62,13 +77,17 @@ def _is_indexable(file_path: Path) -> bool:
     )
 
 
-def _build_cache_from_disk() -> None:
+def _build_cache_from_disk(vault_root: Optional[Path | str] = None) -> None:
     """Full scan: เรียกครั้งแรกหรือเมื่อ tool update_master_index ถูกเรียก"""
     global _index_cache_built
     _index_cache.clear()
-    all_files = [f for f in sorted(VAULT_PATH.rglob("*.md")) if _is_indexable(f)]
+    root = Path(vault_root) if vault_root else VAULT_PATH
+    if not root.exists():
+        _index_cache_built = True
+        return
+    all_files = [f for f in sorted(root.rglob("*.md")) if _is_indexable(f)]
     for fp in all_files:
-        _index_cache.setdefault(_file_folder_label(fp), []).append(
+        _index_cache.setdefault(_file_folder_label(fp, vault_root=root), []).append(
             (fp.stem, _read_entity_type(fp))
         )
     _index_cache_built = True
@@ -83,7 +102,7 @@ def _entity_category(folder: str) -> str:
     return "Other"
 
 
-def _write_index_from_cache() -> str:
+def _write_index_from_cache(vault_root: Optional[Path | str] = None) -> str:
     if not _index_cache:
         return "ไม่มีไฟล์ที่จะ index ใน Vault"
 
@@ -129,7 +148,8 @@ def _write_index_from_cache() -> str:
                 lines.append(f"| [[{stem}]] | {etype} |")
             lines.append("")
 
-    _atomic_write_text(VAULT_PATH / "index.md", "\n".join(lines))
+    target_root = Path(vault_root) if vault_root else VAULT_PATH
+    _atomic_write_text(target_root / "index.md", "\n".join(lines))
 
     entity_count = sum(len(v) for v in entities_by_category.values())
     knowledge_count = sum(len(v) for v in knowledge_by_folder.values())
@@ -140,16 +160,16 @@ def _write_index_from_cache() -> str:
     )
 
 
-def _index_upsert(file_path: Path) -> None:
+def _index_upsert(file_path: Path, vault_root: Optional[Path | str] = None) -> None:
     """Incremental update cache (lazy flush) — mark dirty แทนการเขียน index.md ทุกครั้ง"""
     global _index_dirty
     if not _is_indexable(file_path):
         return
 
     if not _index_cache_built:
-        _build_cache_from_disk()
+        _build_cache_from_disk(vault_root=vault_root)
 
-    folder = _file_folder_label(file_path)
+    folder = _file_folder_label(file_path, vault_root=vault_root)
     entity_type = _read_entity_type(file_path)
     entries = _index_cache.setdefault(folder, [])
 
@@ -163,12 +183,12 @@ def _index_upsert(file_path: Path) -> None:
     _index_dirty = True
 
 
-def flush_index_if_dirty() -> str | None:
+def flush_index_if_dirty(vault_root: Optional[Path | str] = None) -> str | None:
     """เขียน index.md ลงดิสก์เฉพาะเมื่อ cache เปลี่ยน — เรียกหลังจบ ReAct cycle"""
     global _index_dirty
     if not _index_dirty:
         return None
-    msg = _write_index_from_cache()
+    msg = _write_index_from_cache(vault_root=vault_root)
     _index_dirty = False
     return msg
 

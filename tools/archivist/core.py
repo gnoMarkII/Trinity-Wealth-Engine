@@ -46,10 +46,15 @@ INDEX_PATH = VAULT_PATH / ".master_index.json"
 INDEX_LOCK = VAULT_PATH / ".master_index.lock"
 
 
-def _atomic_write_text(path: Path, content: str) -> None:
+from typing import Any
+from core.utils import normalize_content
+
+def _atomic_write_text(path: Path, content: Any) -> None:
     """เขียนไฟล์แบบ atomic: temp file ใน folder เดียวกัน → os.replace()
     os.replace() เป็น atomic บนทั้ง Windows และ POSIX เมื่ออยู่ filesystem เดียวกัน
     """
+    if not isinstance(content, str):
+        content = normalize_content(content) if isinstance(content, list) else str(content)
     parent = path.parent
     parent.mkdir(parents=True, exist_ok=True)
     fd, tmp_name = tempfile.mkstemp(prefix=f".{path.stem}_", suffix=f"{path.suffix}.tmp", dir=str(parent))

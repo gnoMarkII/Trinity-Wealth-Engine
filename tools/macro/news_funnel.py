@@ -12,7 +12,7 @@ from pathlib import Path
 import re
 import shutil
 import threading
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Union
 import uuid
 
 from core.logger import get_logger
@@ -27,6 +27,7 @@ from schemas.news_funnel_schemas import (
 )
 from tools._atomic_io import _atomic_write_to
 from tools.archivist.core import _sanitize_filename
+from tools.archivist.indexer import _index_upsert, flush_index_if_dirty
 from tools.knowledge.core import _build_article_md
 from tools.knowledge.article import extract_article_content
 from tools.macro.news_funnel_store import (
@@ -131,6 +132,7 @@ def ensure_concept_stubs_exist(
                 try:
                     content = old_file.read_text(encoding="utf-8")
                     _atomic_write_to(new_file, content)
+                    _index_upsert(new_file, vault_root=vault_root)
                 except Exception as e:
                     logger.error("Failed to migrate concept stub %s: %s", old_file, e)
         shutil.rmtree(old_concepts_dir, ignore_errors=True)
@@ -155,11 +157,14 @@ def ensure_concept_stubs_exist(
             )
             try:
                 _atomic_write_to(file_path, md_content)
+                _index_upsert(file_path, vault_root=vault_root)
                 created.append(str(file_path))
                 logger.info("Created concept stub: %s", file_path)
             except Exception as e:
                 logger.error("Failed to create concept stub %s: %s", file_path, e)
 
+    if created:
+        flush_index_if_dirty(vault_root=vault_root)
     return created
 
 
@@ -530,6 +535,7 @@ def _synthesize_single_event(
     date_str: str,
     now_time: str,
     news_dir: Path,
+    vault_root: Optional[Union[str, Path]] = None,
 ) -> tuple[Dict[str, Any], Optional[str], Optional[str], set[str], Optional[str]]:
     """ประมวลผลดึงและสกัดเนื้อหา 6 หัวข้อเชิงลึกของ 1 เหตุการณ์ (สำหรับรัน concurrent ใน ThreadPoolExecutor)"""
     links = ev.get("links") or []
@@ -576,6 +582,7 @@ def _synthesize_single_event(
             out_file = news_dir / f"{date_str}_{safe_title}_{counter}.md"
             counter += 1
         _atomic_write_to(out_file, md_content)
+        _index_upsert(out_file, vault_root=vault_root)
 
     # Union Wikilinks: ดึงจาก regex [[...]] ใน extracted_body มารวมกับ tickers และ themes เดิม
     wikilinks = set(re.findall(r"\[\[([^\]|]+)(?:\|[^\]]+)?\]\]", extracted_body))
@@ -747,7 +754,7 @@ def run_news_funnel_synthesize(
     import concurrent.futures
     with concurrent.futures.ThreadPoolExecutor(max_workers=min(3, len(events_to_synthesize))) as executor:
         futures_map = {
-            executor.submit(_synthesize_single_event, ev, date_str, now_time, news_dir): ev
+            executor.submit(_synthesize_single_event, ev, date_str, now_time, news_dir, vault_root): ev
             for ev in events_to_synthesize
         }
         results = []
@@ -790,6 +797,8 @@ def run_news_funnel_synthesize(
         error_msgs=error_msgs,
         store_path=store_path,
     )
+
+    flush_index_if_dirty(vault_root=vault_root)
 
     return {
         "status": "success",

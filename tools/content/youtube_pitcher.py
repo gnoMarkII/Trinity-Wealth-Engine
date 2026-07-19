@@ -11,9 +11,16 @@ from core.llm_factory import get_llm, invoke_structured_llm
 from core.logger import get_logger
 from core.nlp_utils import _jaccard_similarity
 from core.retry import with_retry
+from core.utils import normalize_content
 from schemas.youtube_pitch_schemas import YouTubeContentPitchBatch, YouTubeContentPitchItem
 from tools._atomic_io import _atomic_write_to
 from tools.archivist.core import VAULT_PATH, _sanitize_filename
+from tools.archivist.parser import extract_yaml_frontmatter_value
+from tools.knowledge.search_youtube_insights import (
+    extract_first_bullet_of_key_takeaways,
+    extract_sections,
+    get_channel_with_fallback,
+)
 from tools.macro.baselines import get_macro_baselines
 from tools.macro.news_funnel_store import load_store
 
@@ -192,6 +199,63 @@ def fetch_news_for_pitching(
         except Exception as e:
             logger.warning("Failed scanning Layer 2 notes: %s", e)
 
+    # 2.5 ดึงจาก Layer 2: YouTube Summaries (Always Include)
+    try:
+        yt_summaries_dir = Path(VAULT_PATH) / "30_Knowledge_Base" / "YouTube_Summaries"
+        if yt_summaries_dir.exists():
+            for md_file in yt_summaries_dir.glob("*.md"):
+                try:
+                    content = md_file.read_text(encoding="utf-8")
+                    entity_type = extract_yaml_frontmatter_value(content, "entity_type")
+                    if entity_type and entity_type != "youtube_insight":
+                        continue
+
+                    date_str = extract_yaml_frontmatter_value(content, "date")
+                    note_date_dt = None
+                    if date_str:
+                        try:
+                            note_date_dt = datetime.strptime(date_str[:10], "%Y-%m-%d")
+                        except Exception:
+                            pass
+                    if not note_date_dt:
+                        mtime = datetime.fromtimestamp(md_file.stat().st_mtime)
+                        note_date_dt = mtime
+
+                    if from_dt <= note_date_dt <= to_dt:
+                        channel = get_channel_with_fallback(content)
+                        bullet = extract_first_bullet_of_key_takeaways(content, max_chars=90)
+                        if not bullet:
+                            frontmatter_title = extract_yaml_frontmatter_value(content, "title") or md_file.stem
+                            bullet = frontmatter_title
+                        canonical_title = f"[YouTube Guru View - {channel}] {bullet}"
+                        source_url = extract_yaml_frontmatter_value(content, "source_url") or ""
+
+                        sections = extract_sections(content, ["ใจความสำคัญ", "แนวคิดการลงทุน", "หุ้นและสินทรัพย์"])
+                        summary_parts = []
+                        if sections["ใจความสำคัญ"]:
+                            summary_parts.append(f"[ใจความสำคัญ]\n{sections['ใจความสำคัญ']}")
+                        if sections["แนวคิดการลงทุน"]:
+                            summary_parts.append(f"[แนวคิดการลงทุน]\n{sections['แนวคิดการลงทุน']}")
+                        if sections["หุ้นและสินทรัพย์"]:
+                            summary_parts.append(f"[หุ้น/สินทรัพย์]\n{sections['หุ้นและสินทรัพย์']}")
+
+                        combined_summary = "\n\n".join(summary_parts)
+                        if len(combined_summary) > 1200:
+                            combined_summary = combined_summary[:1200] + "..."
+
+                        _add_candidate({
+                            "event_id": md_file.stem,
+                            "canonical_title": canonical_title,
+                            "comprehensive_summary": combined_summary,
+                            "links": [source_url] if source_url else [],
+                            "source_layer": "layer2_youtube",
+                            "ingested_at": note_date_dt.isoformat(),
+                        })
+                except Exception as ex:
+                    continue
+    except Exception as e:
+        logger.warning("Failed scanning Layer 2 YouTube Summaries: %s", e)
+
     # 3. ดึง Macro Baselines
     macro_baselines_str = ""
     try:
@@ -209,11 +273,22 @@ def _generate_pitches_internal(
     date_summary: str,
 ) -> YouTubeContentPitchBatch:
     """ฟังก์ชันภายในสำหรับสร้าง Pitch ผ่าน structured LLM พร้อม validation"""
+    # แบ่ง Quota ต่อ Layer: ข่าวทั่วไป (Layer 1/2) สูงสุด 12 รายการ + คลิปกูรู YouTube สูงสุด 8 รายการ
+    news_cands = [c for c in candidates if c.get("source_layer") != "layer2_youtube"]
+    yt_cands = [c for c in candidates if c.get("source_layer") == "layer2_youtube"]
+    # เรียงลำดับตามวันที่ (ใหม่ไปเก่า) หากมี ingested_at
+    news_cands.sort(key=lambda x: x.get("ingested_at", ""), reverse=True)
+    yt_cands.sort(key=lambda x: x.get("ingested_at", ""), reverse=True)
+
+    selected_candidates = news_cands[:12] + yt_cands[:8]
+
     cand_summary_lines = []
-    for i, c in enumerate(candidates[:20], 1):
+    for i, c in enumerate(selected_candidates, 1):
         t = c.get("canonical_title") or c.get("title") or "Untitled"
         ev_id = c.get("event_id", f"ev-{i}")
-        s = c.get("comprehensive_summary", "")[:250]
+        # Dynamic Truncation: layer2_youtube ได้โควตา 550 ตัวอักษร, layer อื่น 250 ตัวอักษร
+        max_chars = 550 if c.get("source_layer") == "layer2_youtube" else 250
+        s = c.get("comprehensive_summary", "")[:max_chars]
         links = c.get("links") or ([c.get("link")] if c.get("link") else [])
         link_str = links[0] if links else "N/A"
         cand_summary_lines.append(f"[{ev_id}] {t}\n   สรุป: {s}\n   ลิงก์: {link_str}")
@@ -222,8 +297,8 @@ def _generate_pitches_internal(
         "คุณคือ Chief Content Architect และ Senior Macro Analyst สำหรับช่อง YouTube การเงินและเศรษฐกิจชั้นนำ",
         f"คำสั่งพิเศษจากผู้ใช้: {instruction or 'รวบรวมและนำเสนอไอเดียคลิปที่ลึกซึ้ง น่าติดตาม จากข่าวที่คัดกรอง'}",
         f"ช่วงวันที่คัดกรอง: {date_summary}",
-        f"จำนวนข่าวที่พบทั้งหมด: {len(candidates)} รายการ",
-        "\n--- รายชื่อข่าวและบทวิเคราะห์ที่คัดกรองมา (Candidates) ---",
+        f"จำนวนข้อมูลและบทวิเคราะห์ที่คัดกรองมาทั้งหมด: {len(selected_candidates)} รายการ (จากทั้งหมด {len(candidates)} รายการในคลัง)",
+        "\n--- รายชื่อข่าวและบทวิเคราะห์จากกูรูที่คัดกรองมา (Candidates) ---",
         "\n".join(cand_summary_lines),
         "\n--- คำสั่งในการสร้าง Multi-source Pitch ---",
         f"1. ให้คัดเลือกหรือรวบรวมกลุ่มข่าว (Multi-source) ที่เชื่อมโยงกันเป็นเรื่องใหญ่ เพื่อนำเสนอไอเดียทำคลิป YouTube จำนวน {max_pitches} หัวข้อ",
@@ -386,7 +461,7 @@ Estimated Impact: {pitch.estimated_impact}
 
     logger.info("Synthesizing Briefing Book with model=%s (max_output_tokens=16384)", model_name)
     response = llm.invoke(prompt)
-    content = getattr(response, "content", str(response))
+    content = normalize_content(getattr(response, "content", str(response)))
     return content
 
 
@@ -411,5 +486,8 @@ def save_notebooklm_source(
         counter += 1
 
     _atomic_write_to(file_path, content)
+    from tools.archivist.indexer import _index_upsert, flush_index_if_dirty
+    _index_upsert(file_path, vault_root=Path(VAULT_PATH))
+    flush_index_if_dirty(vault_root=Path(VAULT_PATH))
     logger.info("Successfully saved NotebookLM source briefing book to %s", file_path)
     return str(file_path.resolve())

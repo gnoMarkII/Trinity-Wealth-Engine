@@ -175,7 +175,10 @@ def _log_manager_messages(log_conn, job_id: str, event: dict) -> None:
             state_db.append_job_log(log_conn, job_id, node_name, content, role=role, label=label)
 
 
-def _append_manager_summary(log_conn, job_id: str, instruction: str) -> None:
+def _append_manager_summary(log_conn, job_id: str, instruction: str, flow: str = "manager") -> None:
+    if flow != "manager":
+        return
+
     from agents.manager_agent import generate_manager_summary
 
     reply_logs = state_db.get_job_reply_logs(log_conn, job_id)
@@ -260,6 +263,6 @@ def default_run_fn(
                         )
                         return
                     _log_manager_messages(log_conn, job_id, event)
-                _append_manager_summary(log_conn, job_id, instruction)
+                _append_manager_summary(log_conn, job_id, instruction, flow=flow)
 
         with_retry(_stream_and_log)

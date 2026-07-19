@@ -138,6 +138,9 @@ def ingest_node(state: NewsYoutubeState) -> dict:
         summary_lines.append(line)
         messages.append(AIMessage(content=line, name="ingest"))
 
+    from tools.archivist.indexer import flush_index_if_dirty
+    flush_index_if_dirty()
+
     return {
         "result_summary": "\n".join(summary_lines),
         "messages": messages,

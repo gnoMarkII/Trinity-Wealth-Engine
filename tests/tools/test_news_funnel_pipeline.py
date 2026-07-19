@@ -56,6 +56,14 @@ def test_ensure_concept_stubs(test_paths):
     # Verify old folder News/Concepts is deleted
     assert not os.path.exists(old_dir)
 
+    # Verify master index (index.md) is updated with new concept stubs
+    index_path = os.path.join(vault_dir, "index.md")
+    assert os.path.exists(index_path)
+    with open(index_path, "r", encoding="utf-8") as f:
+        idx_content = f.read()
+        assert "[[Gold]]" in idx_content
+        assert "[[US Treasury]]" in idx_content
+
 
 def test_ingest_pipeline(test_paths, monkeypatch):
     monkeypatch.setenv("MOCK_NEWS_FUNNEL_LLM", "true")
@@ -817,6 +825,38 @@ def test_news_funnel_dto_fallback_reason():
         triage_fallback_reason="api_error: TimeoutError"
     )
     assert filtered.triage_fallback_reason == "api_error: TimeoutError"
+
+
+def test_news_funnel_synthesize_updates_master_index(test_paths, monkeypatch):
+    """ตรวจสอบว่าเมื่อ run_news_funnel_synthesize ทำงานเสร็จ ระบบอัปเดต master index (index.md) อัตโนมัติ"""
+    monkeypatch.setenv("MOCK_NEWS_FUNNEL_LLM", "true")
+    store_file, vault_dir = test_paths
+    events = [
+        {
+            "event_id": "ev-idx-1",
+            "canonical_title": "Inflation Cools Down",
+            "comprehensive_summary": "Headline CPI dropped to 2.8%",
+            "macro_impact_score": 8,
+            "is_high_impact": True,
+            "status": "pending_synthesis",
+        }
+    ]
+    save_triage_events(events, store_path=store_file)
+
+    res = run_news_funnel_synthesize(
+        period="morning",
+        approved_event_ids=["ev-idx-1"],
+        store_path=store_file,
+        vault_root=vault_dir,
+    )
+    assert res["status"] == "success"
+    assert res["published_count"] == 1
+
+    index_path = os.path.join(vault_dir, "index.md")
+    assert os.path.exists(index_path)
+    with open(index_path, "r", encoding="utf-8") as f:
+        idx_content = f.read()
+        assert "Inflation Cools Down" in idx_content
 
 
 

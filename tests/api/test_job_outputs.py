@@ -52,3 +52,25 @@ def test_append_manager_summary_persists_generated_content(tmp_path, monkeypatch
     assert captured == {"instruction": "original task", "deliverables": [("researcher", "research result")]}
     assert logs[-1]["node_name"] == "manager_summary"
     assert logs[-1]["content"] == "# Fresh manager summary"
+
+
+def test_append_manager_summary_skips_specialized_flows(tmp_path, monkeypatch):
+    called = False
+
+    def fake_summary(instruction, deliverables):
+        nonlocal called
+        called = True
+        return "# Should not be generated"
+
+    monkeypatch.setattr("agents.manager_agent.generate_manager_summary", fake_summary)
+    db_path = str(tmp_path / "state.sqlite")
+    conn = state_db.get_connection(db_path)
+    state_db.create_job(conn, "job-summary-2", "thread-2", None, "key-2", "original task", flow="youtube_pitch", status="running")
+    state_db.append_job_log(conn, "job-summary-2", "generate_pitch", "pitch results", role="reply")
+
+    _append_manager_summary(conn, "job-summary-2", "original task", flow="youtube_pitch")
+
+    logs = state_db.get_job_reply_logs(conn, "job-summary-2")
+    conn.close()
+    assert not called
+    assert not any(row["node_name"] == "manager_summary" for row in logs)
