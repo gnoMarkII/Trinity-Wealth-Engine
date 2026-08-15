@@ -15,29 +15,33 @@
 PIIMiddleware ─── ตรวจและลบข้อมูลส่วนตัว (Thai ID, บัตรเครดิต, อีเมล, เบอร์โทร)
     │
     ▼
-┌────────────────────────────────────────────────────────┐
-│               The Manager (Supervisor)                 │
-│      วิเคราะห์คำถาม แล้วตัดสินใจว่าจะ Route ไปไหน       │
-└────────┬──────────────┬────────────┬───────────────────┘
-         │              │            │                   │
-  ┌──────▼─────┐  ┌─────▼─────┐  ┌───▼──────┐  ┌─────────▼────────┐
-  │ Researcher │  │ Archivist │  │Bookkeeper│  │   Macro Analyst  │
-  │ดึงข้อมูลจาก│  │จัดการความจำ│  │ติดตามพอร์ต│  │ ประเมินสภาวะศก.  │
-  │ Yahoo/FRED │  │ใน Obsidian│  │และธุรกรรม │  │ ผ่าน Macro Matrix│
-  └──────┬─────┘  └───────────┘  └──────────┘  └─────────┬────────┘
-         │ (Auto-save)                                   │
-         └───────────────────────────────────────────────► The Archivist
+┌──────────────────────────────────────────────────────────────────────┐
+│                       The Manager (Supervisor)                       │
+│              วิเคราะห์คำถาม แล้วตัดสินใจว่าจะ Route ไปไหน             │
+└──────┬───────────┬───────────┬────────────┬──────────────┬──────────┘
+       │            │           │            │              │
+ ┌─────▼────┐ ┌─────▼────┐ ┌────▼─────┐ ┌────▼──────┐ ┌─────▼──────────┐
+ │ Archivist│ │Bookkeeper│ │  Macro   │ │ Strategic │ │  Equity Intel   │
+ │จัดการความจำ│ │ติดตามพอร์ต│ │Quant/    │ │ Allocator │ │  Suite (3-Stage)│
+ │ใน Obsidian│ │และธุรกรรม │ │Economist │ │ จัดสรรสินทรัพย์│ │Quant→Narrative→ │
+ │           │ │          │ │ประเมินศก. │ │(Guardrails)│ │  Synthesizer   │
+ └───────────┘ └──────────┘ └──────────┘ └───────────┘ └────────────────┘
 ```
+
+> Kanban card flows แยกต่างหาก (dispatch จากการ์ดใน Web UI ไม่ผ่าน Manager routing โดยตรง): `news_funnel_flow.py`, `news_youtube_flow.py`, `youtube_pitch_flow.py` — ดูหัวข้อ [Web UI](#web-ui)
 
 ### ทีมงาน AI
 
 | Agent | บทบาท | เครื่องมือหลัก |
 |-------|-------|--------------|
 | **The Manager** | Supervisor — รับคำถาม วิเคราะห์ และ Route งาน | Router (Structured Output) |
-| **The Researcher** | ดึงข้อมูลตลาดและเศรษฐกิจจากภายนอก | Yahoo Finance, FRED API |
 | **The Archivist** | บันทึกและค้นหาข้อมูลใน Obsidian Vault | Vault R/W, Vector RAG, Graph RAG, YouTube, Article/PDF |
-| **The Bookkeeper** | ติดตามพอร์ต บัญชีธุรกรรม และเป้าหมายการลงทุน | Portfolio Tools (19 tools) |
-| **The Macro Analyst** | วิเคราะห์สภาวะเศรษฐกิจมหภาคและการจัดสรรสินทรัพย์ | คำนวณคะแนนสภาวะเศรษฐกิจ, จัดทำ Macro Matrix, Strategic Allocator (Institutional Guardrails) |
+| **The Bookkeeper** | ติดตามพอร์ต บัญชีธุรกรรม และเป้าหมายการลงทุน | Portfolio Tools |
+| **Macro Quant / Macro Economist** | คำนวณคะแนนสภาวะเศรษฐกิจเชิงปริมาณ (Quant Matrix) และสังเคราะห์ Narrative จากข่าว/เหตุการณ์ | Yahoo Finance, FRED API, News Radar |
+| **Strategic Allocator** | สังเคราะห์ผลจาก Macro Quant/Economist เป็นทิศทางจัดสรรสินทรัพย์ระดับสถาบัน | Institutional Guardrails (Valuation/Credit/Correlation) |
+| **Equity Intel Suite** | วิเคราะห์หุ้นรายตัวแบบ 3 ขั้น: Equity Quant (ตัวเลข) → Equity Narrative (บทวิเคราะห์/ข่าว) → Equity Synthesizer (สรุปรวมเป็นรายงานเดียว) | Fundamentals, Financial Health, Momentum, Analyst Consensus, Latest News |
+
+> โครงสร้างเดิมเคยมี "The Researcher" เป็น agent แยกสำหรับดึงข้อมูลตลาด — ปัจจุบันถูกแทนที่ด้วย **Equity Intel Suite** (3-stage pipeline เฉพาะทางสำหรับหุ้นรายตัว) และ Macro Quant/Economist (สำหรับข้อมูลมหภาค) แยกจากกันชัดเจนขึ้น
 
 ---
 
@@ -63,7 +67,7 @@ PIIMiddleware ─── ตรวจและลบข้อมูลส่ว�
 ติดตาม **7 ตลาดโลก** ผ่าน Regional Proxy ETF: ลาตินอเมริกา, ยุโรป, EM รวม, ญี่ปุ่น, อินเดีย, จีน, เอเชียแปซิฟิก
 
 ### ตัวเลขเศรษฐกิจพื้นฐาน (Hard Data)
-ดึงจาก **FRED API** 19 ดัชนีใน 6 หมวด:
+ดึงจาก **FRED API** 38 ดัชนีใน 6 หมวดหลัก:
 - นโยบายการเงิน: Fed Rate, 2Y Yield, 10Y-2Y Spread
 - เงินเฟ้อ: CPI, PCE, Core PCE, PPI, Breakeven 5Y/10Y
 - สินเชื่อ: BAA Credit Spread, High Yield Bond Spread
@@ -81,30 +85,30 @@ PIIMiddleware ─── ตรวจและลบข้อมูลส่ว�
 - **Structured-Output Retry Loop**: ตรวจพบข้อผิดพลาดเชิงโครงสร้าง (เช่น ขาด asset_bucket, ฟิลด์บังคับว่าง) จะส่ง feedback ภาษาไทยกลับให้ LLM แก้ไขอัตโนมัติก่อนตกไปใช้ System Placeholder
 - **Contradiction & Valuation Guardrails**: ตรวจจับความขัดแย้งเชิงตรรกะ (Gold ไม่มีหลักยึด Real Yield, Barbell ไม่มีคำอธิบาย Hedge, Regime ขัดแย้งกับเงินเฟ้อ) และคำเตือนความเสี่ยง (Valuation ตึงตัว, Credit Spread กว้าง)
 
-### วิเคราะห์หุ้นรายตัว
-รองรับทั้ง **US Stocks** (`AAPL`, `NVDA`) และ **Thai Stocks** (`PTT`, `AOT`) ดึงข้อมูลได้ 6 มิติ:
+### Equity Intel Suite — วิเคราะห์หุ้นรายตัวแบบ 3-Stage Pipeline
+รองรับทั้ง **US Stocks** (`AAPL`, `NVDA`) และ **Thai Stocks** (`PTT`, `AOT`) ผ่าน pipeline 3 ขั้นที่แยกหน้าที่ชัดเจน:
 
-| มิติ | ข้อมูล |
-|------|--------|
-| **Fundamentals** | P/E, EV/EBITDA, P/B, ROE, Profit Margin, Revenue Growth, Market Cap, Beta, Payout Ratio, ESG Score |
-| **Financial Trends** | รายได้รวม + กำไรสุทธิ ย้อนหลัง 4 ปีงบการเงิน |
-| **Financial Health** | Operating/Free Cash Flow, Total Cash/Debt, Debt/Equity, Current Ratio |
-| **Momentum** | MA50, MA200, 52W High/Low, % Insider/Institution Hold, Short Ratio, Short % Float |
-| **Analyst Consensus** | ราคาเป้าหมาย (Low/Mean/High), Upside %, Recommendation, จำนวนนักวิเคราะห์ |
-| **Latest News** | พาดหัวข่าวล่าสุด 5 ข่าว พร้อม Publisher และลิงก์ |
+1. **Equity Quant** — ดึงตัวเลขล้วนๆ 6 มิติ: Fundamentals (P/E, EV/EBITDA, P/B, ROE, Profit Margin, Revenue Growth, Market Cap, Beta, Payout Ratio, ESG Score), Financial Trends (รายได้/กำไรสุทธิ 4 ปีย้อนหลัง), Financial Health (Cash Flow, Debt/Equity, Current Ratio), Momentum (MA50/MA200, 52W High/Low, Short Interest), Analyst Consensus (Target Price, Upside %, Recommendation), Latest News (5 ข่าวล่าสุด)
+2. **Equity Narrative** — สังเคราะห์บทวิเคราะห์/ข่าวเป็น Sentiment และธีมสำคัญ
+3. **Equity Synthesizer** — รวมผลจาก Quant + Narrative เป็นรายงานเดียว พร้อม Composite Score
 
-### การจัดการพอร์ตโฟลิโอ (Bookkeeper)
-ติดตามพอร์ตผ่านไฟล์ Markdown + YAML ใน Obsidian Vault — **19 tools**:
+เข้าถึงผ่านหน้า `/equity` ใน Web UI — ดึงรายชื่อหุ้นจาก **Portfolio + Watchlist** มาแสดงใน Sidebar โดยตรง กดวิเคราะห์ได้ทันทีไม่ต้องพิมพ์ ticker เอง (แยก section หุ้นที่มีรายงานแล้ว/ยังไม่มีรายงานให้ชัดเจน)
+
+### การจัดการพอร์ตโฟลิโอ (Bookkeeper + Portfolio Web Hub)
+ติดตามพอร์ตผ่านไฟล์ Markdown + YAML + CSV Ledger ใน Obsidian Vault รองรับ**หลายพอร์ตพร้อมกัน** (Multi-Portfolio) ใช้งานได้ทั้งผ่าน Bookkeeper agent (แชท) และหน้า Web UI `/portfolio` (6 แท็บ: Overview, Holdings, Transactions, Incomes, Watchlist, Calendar):
 
 | กลุ่ม | ความสามารถ |
 |-------|-----------|
-| **Portfolio State** | ดูภาพรวมพอร์ต, Allocation Breakdown, Sync ราคาตลาด, FX Rate |
-| **Trading** | ซื้อ/ขาย, Batch Import, แก้ไข Holding, บันทึกรายได้ (ปันผล/ดอกเบี้ย) |
+| **Portfolio State** | ดูภาพรวมพอร์ต, Allocation Breakdown ตาม Bucket, Sync ราคาตลาด, จัดการหลายพอร์ต (สร้าง/ลบ/เปลี่ยนชื่อ) |
+| **Trading** | ซื้อ/ขาย, Batch Import, แก้ไข/ลบ Holding, บันทึกรายได้ (ปันผล/ดอกเบี้ย) |
+| **Transaction Ledger** | ดูประวัติซื้อขายทั้งหมด แก้ไข/ลบรายการย้อนหลังได้ผ่าน **Ledger Replay Engine** — คำนวณ Weighted-Average Cost และ Realized P/L ของทุกรายการที่เกิดขึ้นหลังจุดที่แก้ไขใหม่ทั้งหมดแบบ Atomic (reject ทันทีถ้าทำให้ units ติดลบ) |
+| **Dividend Sync** | ดึงประวัติเงินปันผลอัตโนมัติจาก yfinance คำนวณ Net Dividend หลังหักภาษี ณ ที่จ่าย (US 15% / TH 10%) แยกเงินปันผลที่ได้รับแล้วกับที่กำลังจะได้รับ (Received vs Upcoming) พร้อมระบบป้องกันการเขียนทับข้อมูลที่แก้ไขด้วยมือ (Manual Override Protection) |
+| **Historical FX Rate** | ดึงอัตราแลกเปลี่ยน USD/THB ย้อนหลังตามวันที่ทำธุรกรรมจริงจาก yfinance (แยก Local Trade FX ออกจาก Global Portfolio FX ป้องกันข้อมูลปนกัน) |
 | **Goals** | ตั้งเป้าหมาย, ติดตาม Progress, ลบเป้าหมาย |
-| **Journal & History** | Performance Snapshot (CSV), Trading Journal, Watchlist |
+| **Journal & History** | Performance Snapshot (CSV), Trading Journal, Watchlist, Economic/Earnings Calendar |
 
 ### สกัดความรู้จากแหล่งภายนอก (Knowledge Ingestion)
-- **YouTube Monitor & Ingestion**: สร้าง Weekly Digest ติดตามคลิปใหม่รายสัปดาห์ พร้อม Smart Checkbox ตรวจสอบการดึงข้อมูลซ้ำ ดึง Transcript สกัดเนื้อหาด้วย LLM (Researcher) และส่งต่อให้ระบบ Auto-routing จัดเก็บแยกโฟลเดอร์ตามชื่อช่อง พร้อมสร้าง Obsidian Canvas อัตโนมัติ (Archivist)
+- **YouTube Monitor & Ingestion**: สร้าง Weekly Digest ติดตามคลิปใหม่รายสัปดาห์ พร้อม Smart Checkbox ตรวจสอบการดึงข้อมูลซ้ำ ดึง Transcript สกัดเนื้อหาด้วย LLM (`extractor` model slot) และส่งต่อให้ระบบ Auto-routing จัดเก็บแยกโฟลเดอร์ตามชื่อช่อง พร้อมสร้าง Obsidian Canvas อัตโนมัติ (Archivist)
 - **Article URL**: ดึงบทความจากเว็บด้วยระบบ **3-Tier Fallback** (Trafilatura → BeautifulSoup → Playwright) เพื่อทลายข้อจำกัดเว็บที่ป้องกัน Bot → สกัดข้อมูลด้วย LLM → Markdown พร้อม frontmatter
 - **PDF**: อ่าน PDF รายงาน/งบการเงิน → สกัดข้อมูลด้วย LLM
 
@@ -168,10 +172,12 @@ uv run python main.py
 
 ## Web UI
 
-นอกจาก CLI แล้ว ระบบมี Web UI แบบ single-user สำหรับสั่งงาน agent และดูรายงานผ่านเบราว์เซอร์ — FastAPI backend (`api/`) + React frontend (`web/`)
+นอกจาก CLI แล้ว ระบบมี Web UI แบบ single-user สำหรับสั่งงาน agent, จัดการพอร์ต, และดูรายงานผ่านเบราว์เซอร์ — FastAPI backend (`api/`) + React frontend (`web/`)
 
 **ฟีเจอร์หลัก:**
-- **Agent Kanban Board** — สร้าง/แก้ไข/สั่งงานการ์ด, ดู log การทำงานของ agent แบบ real-time (SSE), รองรับ human-in-the-loop approval สำหรับ flow News/YouTube (เลือกข่าว/คลิปที่จะเจาะลึกก่อน agent ประมวลผลต่อ)
+- **Portfolio Hub** (`/portfolio`) — 6 แท็บ: Overview (Allocation), Holdings, Transactions (ดู/แก้ไข/ลบประวัติซื้อขายผ่าน Ledger Replay Engine), Incomes (Dividend Sync แบบ Received/Upcoming), Watchlist, Calendar — รองรับหลายพอร์ตพร้อมกัน
+- **Equity Analysis** (`/equity`) — วิเคราะห์หุ้นรายตัวผ่าน Equity Intel Suite (Quant → Narrative → Synthesizer) พร้อม Sidebar quick-access จาก Portfolio/Watchlist
+- **Agent Kanban Board** — สร้าง/แก้ไข/สั่งงานการ์ด, ดู log การทำงานของ agent แบบ real-time (SSE), รองรับ human-in-the-loop approval สำหรับ flow News/YouTube (เลือกข่าว/คลิปที่จะเจาะลึกก่อน agent ประมวลผลต่อ), รองรับ NotebookLM Audio Overview background worker
 - **Macro Strategy Report** — แดชบอร์ด Regime Probabilities, Cross-Asset Allocation, Pair Trades, Hedging Scenarios พร้อมแหล่งอ้างอิงข้อมูล
 - **Auth แบบเบา** — รหัสผ่านเดียวจาก `.env` (ไม่มีระบบ user/role เพราะเป็นเครื่องมือส่วนตัวคนเดียว)
 
@@ -255,27 +261,37 @@ invest-agents/
 ├── main.py                      # Entry point + CLI loop + retry logic
 ├── api/                         # FastAPI backend สำหรับ Web UI
 │   ├── main.py                  # App entrypoint (uvicorn api.main:app)
+│   ├── config.py                # App-level config/env loading
 │   ├── auth.py                  # รหัสผ่านเดียว + session cookie
 │   ├── jobs.py                  # Single-worker job queue (dispatch/resume LangGraph)
 │   ├── routes_agents.py         # Dispatch / SSE stream / resume endpoints
 │   ├── routes_debug.py          # GET /api/debug/models — model registry audit
+│   ├── routes_equity.py         # Equity Intel Suite endpoints (analyze/detail/list)
 │   ├── routes_kanban.py         # Kanban card CRUD + move
-│   ├── routes_portfolio.py      # Macro Strategy dashboard endpoints
+│   ├── routes_notebooklm.py     # NotebookLM Audio Overview job endpoints
+│   ├── routes_portfolio.py      # Portfolio Hub (holdings/transactions/dividends/FX/goals/watchlist/journal/calendar) + Macro Strategy dashboard endpoints
+│   ├── news_funnel_cards.py     # News Funnel → Kanban card generation
+│   ├── notebooklm_worker.py     # Background worker: NotebookLM audio generation
 │   ├── schemas.py                # API response DTOs (แยกจาก schemas/macro_schemas.py)
 │   └── state_db.py               # SQLite store: jobs, job_logs, kanban_cards
 ├── web/                          # React + TypeScript + Vite frontend (ดู web/README.md)
 ├── agents/
 │   ├── manager_agent.py         # Supervisor + LangGraph graph builder
-│   ├── researcher_agent.py      # Data fetching ReAct agent
 │   ├── archivist_agent.py       # PKM management ReAct agent
 │   ├── bookkeeper_agent.py      # Portfolio & accounting ReAct agent
 │   ├── macro_quant_agent.py     # Quant Macro Matrix ReAct agent
 │   ├── macro_economist_agent.py # Macroeconomic narrative synthesis ReAct agent
-│   └── strategic_allocator.py   # Strategic Allocator (Macro Strategy Direction + retry loop)
+│   ├── strategic_allocator.py   # Strategic Allocator (Macro Strategy Direction + retry loop)
+│   ├── equity_quant_agent.py    # Equity Intel Suite — Stage 1: ตัวเลข Fundamentals/Momentum/Analyst
+│   ├── equity_narrative_agent.py # Equity Intel Suite — Stage 2: Sentiment/News synthesis
+│   ├── equity_synthesizer.py    # Equity Intel Suite — Stage 3: รวมรายงานสุดท้าย
+│   ├── news_funnel_flow.py      # Kanban-dispatched flow: News triage → deep dive
+│   ├── news_youtube_flow.py     # Kanban-dispatched flow: YouTube URL → summary
+│   └── youtube_pitch_flow.py    # Kanban-dispatched flow: YouTube channel → Pitch/Briefing Book
 ├── tools/
 │   ├── macro/                   # Macro & Economic tools (FRED, Yield Curve, Valuation, Risk Analytics)
 │   ├── market/                  # Stock market tools (Yahoo Finance, Fundamentals)
-│   ├── portfolio/               # Portfolio ledger tools (Holdings, Trades, Goals)
+│   ├── portfolio/               # Portfolio ledger tools (Holdings, Trades, Ledger Replay, Dividends, FX, Goals, Watchlist)
 │   ├── knowledge/               # Web extraction & PDF tools
 │   ├── archivist/               # Vault indexing & RAG tools
 │   └── _atomic_io.py            # Atomic file writing utility
@@ -289,7 +305,7 @@ invest-agents/
 │   └── tools/                   # Tool-layer prompts (extractor, youtube_pitcher, news_funnel) — เดียวกับ prompts/skills/ แค่แยก root
 ├── core/
 │   ├── llm_factory.py           # LLM factory (Google / Anthropic / OpenRouter)
-│   ├── model_registry.py        # Centralized LLM model config — 12 slots (agent + tool layer), audit ผ่าน GET /api/debug/models
+│   ├── model_registry.py        # Centralized LLM model config — 14 slots (agent + tool layer), audit ผ่าน GET /api/debug/models
 │   ├── security.py              # PII redaction middleware
 │   ├── retry.py                 # Exponential backoff retry helper
 │   ├── agent_log.py             # Daily Markdown agent activity logger
@@ -334,11 +350,13 @@ invest-agents/
 | `manager` | `MANAGER_MODEL` | `gemini-3.1-flash-lite-preview` | agent | Manager Agent — routing and orchestration |
 | `router` | `ROUTER_MODEL` | `gemini-3.1-flash-lite-preview` | agent | Structured routing (RouterDecision) — ถ้าไม่ตั้งจะ chain ไปตามค่า `manager` ที่ resolve แล้ว |
 | `archivist` | `ARCHIVIST_MODEL` | `gemini-3.1-flash-lite-preview` | agent | PKM management agent |
-| `researcher` | `RESEARCHER_MODEL` | `gemini-3.1-flash-lite-preview` | agent | Data fetching agent |
 | `bookkeeper` | `BOOKKEEPER_MODEL` | `gemini-3.1-flash-lite-preview` | agent | Portfolio & accounting agent |
 | `macro_quant` | `MACRO_QUANT_MODEL` | `gemini-3.1-flash-lite-preview` | agent | Quant Macro Matrix agent |
 | `economist` | `MACRO_ECONOMIST_MODEL` | `gemini-3.1-flash-lite-preview` | agent | Macroeconomic narrative synthesis agent |
 | `allocator` | `STRATEGIC_ALLOCATOR_MODEL` | `gemini-3.1-flash-lite-preview` | agent | Strategic Allocator agent |
+| `equity_quant` | `EQUITY_QUANT_MODEL` | `gemini-3.1-flash-lite-preview` | agent | Equity Intel Suite — Stage 1: ตัวเลข (deterministic) |
+| `equity_narrative` | `EQUITY_NARRATIVE_MODEL` | `gemini-3.1-flash-lite-preview` | agent | Equity Intel Suite — Stage 2: Sentiment/Narrative |
+| `equity_synthesizer` | `EQUITY_SYNTHESIZER_MODEL` | `gemini-3.1-flash-lite-preview` | agent | Equity Intel Suite — Stage 3: สรุปรายงานสุดท้าย |
 | `extractor` | `EXTRACTOR_MODEL` | `gemini-3.1-flash-lite-preview` | tool | Article/PDF/YouTube content extraction |
 | `youtube_pitch` | `YOUTUBE_PITCH_MODEL` | `gemini-3.1-flash-lite-preview` | tool | YouTube Pitch generation + Briefing Book |
 | `news_triage` | `NEWS_FUNNEL_TRIAGE_MODEL` | `gemini-3.1-flash-lite-preview` | tool | News impact scoring (batch triage) |
@@ -367,6 +385,9 @@ invest-agents/
 | `python-frontmatter` | อ่าน/เขียน YAML frontmatter ใน Markdown |
 | `pydantic` | Data validation และ Schema |
 | `prompt_toolkit` | CLI interface |
+| `fastapi` / `uvicorn` | Web UI backend server |
+| `pandas` | คำนวณ Historical FX/Dividend series (Portfolio Hub) |
+| `filelock` | Cross-process lock ป้องกัน race condition ตอนเขียน Portfolio state |
 
 ---
 
@@ -376,32 +397,32 @@ invest-agents/
 uv run python -m pytest tests/ -q
 ```
 
-ปัจจุบันมี **633 tests** ฝั่ง Python ครอบคลุม: PII, Portfolio lifecycle, Market tools (TH/US), Retry logic, Atomic writes, Agent logging, Knowledge tools, Strategic Allocator guardrails/retry loop, Integration test แบบ E2E และ Web UI backend (`tests/api/`) — ฝั่ง frontend มี **Vitest + Testing Library** อีกชุด (รัน `npm test` ใน `web/`; ดู [`web/README.md`](web/README.md))
+ปัจจุบันมี **1,100+ tests** ฝั่ง Python ครอบคลุม: PII, Portfolio lifecycle (Trading, Ledger Replay, Dividend Sync, FX), Market tools (TH/US), Equity Intel Suite, Retry logic, Atomic writes, Vault isolation safety-net, Agent logging, Knowledge tools, Strategic Allocator guardrails/retry loop, Integration test แบบ E2E และ Web UI backend (`tests/api/`) — ฝั่ง frontend มี **230+ tests** ผ่าน Vitest + Testing Library (รัน `npm test` ใน `web/`; ดู [`web/README.md`](web/README.md))
 
 ---
 
 ## สถานะการพัฒนา
 
-- [x] Multi-agent Supervisor pattern (Manager → Researcher / Archivist / Bookkeeper / Macro Analyst)
+- [x] Multi-agent Supervisor pattern (Manager → Archivist / Bookkeeper / Macro Quant/Economist / Strategic Allocator / Equity Intel Suite)
 - [x] Macro data 19 ดัชนี (Yahoo Finance, Parallel fetch)
 - [x] US Sector Rotation 11 กลุ่ม
 - [x] Regional Pulse 7 ภูมิภาค
-- [x] Economic Fundamentals 19 ดัชนี (FRED API)
-- [x] Stock Analysis 6 มิติ — US & Thai stocks
-- [x] Portfolio tracking — Holdings, Trades, Goals, Performance history
+- [x] Economic Fundamentals 38 ดัชนี (FRED API)
+- [x] Equity Intel Suite — 3-Stage Pipeline (Quant → Narrative → Synthesizer), US & Thai stocks
+- [x] Portfolio Web Hub — Multi-Portfolio, Transaction Ledger + Ledger Replay Engine (แก้ไข/ลบย้อนหลังพร้อม Recalculation), Dividend Sync (Received/Upcoming), Historical FX Rate, Goals, Watchlist, Calendar
 - [x] Obsidian PKM — Save, Read, Semantic Search, Graph Context
 - [x] YouTube transcript summarization + Obsidian Canvas
 - [x] YouTube Weekly Monitor & Smart Checkbox + Auto-routing by Channel Name
 - [x] Article URL (3-Tier Fallback: Trafilatura, BS4, Playwright) + PDF knowledge ingestion
-- [x] News Radar (RSS Feed daily ingestion)
+- [x] News Radar (RSS Feed daily ingestion) + News Funnel → Kanban card auto-generation
 - [x] Strategic Allocator — Macro Strategy Direction พร้อม Institutional Guardrails (Valuation/Credit Spread/Pair-Trade/Correlation Pillars)
 - [x] LLM-Agnostic Warning Registry + Structured-Output Retry Loop
 - [x] Prompt Harness — แยก System Prompt เป็น Markdown Skill files พร้อม Hot-reload
 - [x] PII Redaction Middleware
-- [x] Atomic file writes + Exponential backoff retry
+- [x] Atomic file writes + Exponential backoff retry + Vault isolation safety-net (test suite)
 - [x] Daily agent activity logs
-- [x] 560 automated tests
-- [x] Web UI — FastAPI backend + React frontend (Kanban board, Macro dashboard, HITL approval flow)
+- [x] 1,100+ automated backend tests + 230+ frontend tests
+- [x] Web UI — FastAPI backend + React frontend (Portfolio Hub, Equity Analysis, Kanban board, Macro dashboard, NotebookLM Audio Overview, HITL approval flow)
 - [ ] Alert / Notification system
 
 ---
