@@ -416,9 +416,28 @@ def sync_dividends_from_history(portfolio_id: str = "default") -> dict:
             details[sym] = rounds
 
         # Anti-Drift: Re-derive summary total_accumulated_dividend (Received only!)
-        state.summary.total_accumulated_dividend = round(
+        total_acc_div = round(
             sum(h.accumulated_dividend_thb or 0.0 for h in state.holdings), _MONEY_DP
         )
+        state.summary.total_accumulated_dividend = total_acc_div
+
+        # Calculate YTD received dividends for passive_income_ytd
+        current_year = str(datetime.now().year)
+        ytd_received = 0.0
+        for h in state.holdings:
+            for r in (h.dividend_rounds or []):
+                status_val = getattr(r, "status", None)
+                if status_val == "received":
+                    date_val = getattr(r, "pay_date", None) or getattr(r, "ex_date", None) or ""
+                    if date_val.startswith(current_year):
+                        ytd_received += (getattr(r, "net_thb", None) or 0.0)
+
+        # Sync passive_income_ytd if it's currently 0 or smaller than ytd_received
+        if ytd_received > 0 and (state.summary.passive_income_ytd or 0.0) < ytd_received:
+            state.summary.passive_income_ytd = round(ytd_received, _MONEY_DP)
+        elif total_acc_div > 0 and (state.summary.passive_income_ytd or 0.0) == 0.0:
+            state.summary.passive_income_ytd = total_acc_div
+
         _save(post, state, portfolio_id=pid)
 
     return {

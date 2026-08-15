@@ -152,10 +152,15 @@ export default function PortfolioSummaryCards({
           </span>
         </div>
         <div className="mt-2.5 text-2xl sm:text-3xl lg:text-4xl font-extrabold font-sans tabular-nums tracking-tight text-zinc-900">
-          {formatTHB(summary.passive_income_ytd)}
+          {formatTHB(summary.total_accumulated_dividend || summary.passive_income_ytd || 0)}
         </div>
-        <div className="mt-2 flex items-center text-xs text-zinc-500 font-medium">
-          <span>เงินปันผลที่ได้รับตั้งแต่ต้นปี</span>
+        <div className="mt-2 flex items-center justify-between text-xs text-zinc-500 font-medium">
+          <span>เงินปันผลสะสมทั้งหมด</span>
+          {summary.passive_income_ytd > 0 && summary.total_accumulated_dividend !== summary.passive_income_ytd && (
+            <span className="text-[11px] text-zinc-400 font-mono">
+              (YTD: {formatTHB(summary.passive_income_ytd)})
+            </span>
+          )}
         </div>
       </div>
 
