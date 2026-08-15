@@ -138,7 +138,7 @@ describe('Portfolio Page', () => {
         {
           name: 'Retirement Fund',
           target_amount_thb: 5000000,
-          goal_type: 'Retirement',
+          goal_type: 'nav_target',
           current_amount_thb: 1000000,
           progress_pct: 20,
           deadline: '2035-12-31',

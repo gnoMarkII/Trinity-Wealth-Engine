@@ -1,3 +1,4 @@
+/* eslint-disable jsx-a11y/control-has-associated-label */
 import { useState, useEffect, useMemo, useCallback } from 'react'
 import type { TransactionItemDTO, TransactionSummaryDTO, ActualPortfolioStateDTO, ActualHoldingDTO } from '../../api/types'
 import { api } from '../../api/client'
@@ -600,9 +601,10 @@ export default function PortfolioTransactionsTab({
                           </button>
                         </div>
                       ) : (
-                        <div
+                        <button
+                          type="button"
                           onClick={() => startEditNote(tx)}
-                          className="cursor-pointer group/note rounded-lg px-2.5 py-1.5 hover:bg-sky-50 transition-colors"
+                          className="w-full text-left cursor-pointer group/note rounded-lg px-2.5 py-1.5 hover:bg-sky-50 transition-colors"
                           title="คลิกเพื่อแก้ไข Note ด่วน"
                         >
                           {tx.notes ? (
@@ -614,7 +616,7 @@ export default function PortfolioTransactionsTab({
                               + เพิ่มบันทึกช่วยจำ...
                             </span>
                           )}
-                        </div>
+                        </button>
                       )}
                     </td>
 
@@ -696,7 +698,7 @@ export default function PortfolioTransactionsTab({
                   <td className="py-3 px-4 text-right font-mono tabular-nums">
                     {filteredTotals.totalShares.toLocaleString(undefined, { maximumFractionDigits: 6 })}
                   </td>
-                  <td className="py-3 px-4 text-right" colSpan={2}></td>
+                  <td className="py-3 px-4 text-right" colSpan={2} aria-hidden="true">&nbsp;</td>
                   <td className="py-3 px-4 text-right font-mono tabular-nums text-zinc-900">
                     {actionFilter === 'BUY'
                       ? `-${formatTHB(filteredTotals.totalBuyTHB)}`
@@ -722,7 +724,7 @@ export default function PortfolioTransactionsTab({
                       <span className="text-zinc-400">-</span>
                     )}
                   </td>
-                  <td className="py-3 px-4" colSpan={2}></td>
+                  <td className="py-3 px-4" colSpan={2} aria-hidden="true">&nbsp;</td>
                 </tr>
               </tfoot>
             )}
@@ -844,24 +846,25 @@ export default function PortfolioTransactionsTab({
               ⚠️ <strong>ข้อควรระวัง:</strong> การลบรายการนี้จะทำให้ระบบทำการคำนวณย้อนหลัง (Replay) ต้นทุนถัวเฉลี่ยและกำไร/ขาดทุนสะสมของ {deletingTx.symbol} ใหม่ทั้งหมด
             </div>
 
-            <label className="flex items-start gap-2 cursor-pointer select-none">
+            <div className="flex items-start gap-2 select-none">
               <input
+                id="delete-tx-adjust-cash"
                 type="checkbox"
                 checked={deleteAdjustCash}
                 onChange={(e) => setDeleteAdjustCash(e.target.checked)}
-                className="mt-0.5 h-4 w-4 rounded border-zinc-300 text-flow-blue focus:ring-flow-blue"
+                className="mt-0.5 h-4 w-4 rounded border-zinc-300 text-flow-blue focus:ring-flow-blue cursor-pointer"
               />
               <div className="space-y-0.5">
-                <span className="text-xs font-semibold text-zinc-900">
+                <label htmlFor="delete-tx-adjust-cash" className="text-xs font-semibold text-zinc-900 cursor-pointer block">
                   ปรับปรุงยอดเงินสด (CASH_{deletingTx.currency}) คืนกลับ/หักออก อัตโนมัติ
-                </span>
+                </label>
                 <p className="text-[11px] text-zinc-500">
                   {deletingTx.action.toUpperCase() === 'BUY'
                     ? 'คืนเงินสดที่เคยใช้ซื้อกลับเข้าพอร์ต'
                     : 'หักเงินสดที่เคยได้รับจากการขายออกจากพอร์ต'}
                 </p>
               </div>
-            </label>
+            </div>
 
             <div className="flex justify-end gap-2 border-t border-zinc-100 pt-4">
               <button

@@ -52,7 +52,7 @@ export default function NewsFunnelPromptViewer({ prompt, onSelectionChange, onDi
     return () => {
       mounted = false
     }
-  }, [prompt])
+  }, [prompt, onSelectionChange])
 
   function toggle(id: string) {
     const next = new Set(selectedEventIds)

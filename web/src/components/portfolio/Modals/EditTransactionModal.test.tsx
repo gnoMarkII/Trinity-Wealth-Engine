@@ -42,7 +42,7 @@ describe('EditTransactionModal', () => {
 
   beforeEach(() => {
     vi.clearAllMocks()
-    vi.mocked(api.getFxRate).mockResolvedValue({ date: '2026-08-15', rate: 36.75, source: 'bot' })
+    vi.mocked(api.getFxRate).mockResolvedValue({ date: '2026-08-15', currency_pair: 'USDTHB', rate: 36.75, source: 'historical' })
   })
 
   it('renders modal with parsed date, time, units, price, fxRate, and notes', () => {

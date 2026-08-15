@@ -178,7 +178,7 @@ describe('PortfolioTransactionsTab', () => {
 
     // Click edit icon for PTT transaction (1st row in descending order)
     const editButtons = screen.getAllByTitle('แก้ไขข้อมูล Transaction (วัน, จำนวนหุ้น, ราคา, Note)')
-    fireEvent.click(editButtons[0])
+    fireEvent.click(editButtons[0]!)
 
     // Edit modal should open
     expect(screen.getByText('แก้ไขรายการ: PTT (SELL)')).toBeInTheDocument()
@@ -215,7 +215,7 @@ describe('PortfolioTransactionsTab', () => {
 
     // Click delete icon for PTT transaction (1st row in descending order)
     const deleteButtons = screen.getAllByTitle('ลบรายการ Transaction')
-    fireEvent.click(deleteButtons[0])
+    fireEvent.click(deleteButtons[0]!)
 
     // Delete confirmation modal should open
     expect(screen.getByText('ยืนยันการลบรายการ')).toBeInTheDocument()

@@ -115,7 +115,7 @@ export function getUniqueBucketColor(existingColors: (string | null | undefined)
 
   // 2. Fallback: Find maximal hue distance
   const existingHues = Array.from(normExisting).map((hex) => hexToHsl(hex)[0])
-  if (existingHues.length === 0) return VIBRANT_BUCKET_PALETTE[0]
+  if (existingHues.length === 0) return VIBRANT_BUCKET_PALETTE[0] ?? '#3B82F6'
 
   // Test candidate hues every 5 degrees to find max minimal distance
   let bestHue = 0
@@ -153,7 +153,7 @@ export function getRandomizedBucketColor(
 
   if (availableFromPalette.length > 0) {
     const randomIndex = Math.floor(Math.random() * availableFromPalette.length)
-    return availableFromPalette[randomIndex]
+    return availableFromPalette[randomIndex] ?? '#3B82F6'
   }
 
   // Fallback to maximal hue distance

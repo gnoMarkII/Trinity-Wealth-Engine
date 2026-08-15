@@ -17,7 +17,7 @@ export interface ParsedEquityStock {
 export function parseEquityStock(prompt: string, title?: string): ParsedEquityStock {
   const text = `${title || ''} ${prompt || ''}`
   const matchWithMarket = text.match(/วิเคราะห์หุ้น\s+([A-Z0-9.\-_]+)\s*\((US|TH)\)/i)
-  if (matchWithMarket) {
+  if (matchWithMarket && matchWithMarket[1] && matchWithMarket[2]) {
     return {
       ticker: matchWithMarket[1].toUpperCase(),
       market: matchWithMarket[2].toUpperCase() as 'US' | 'TH',
@@ -25,7 +25,7 @@ export function parseEquityStock(prompt: string, title?: string): ParsedEquitySt
   }
 
   const matchTicker = text.match(/วิเคราะห์หุ้น\s+([A-Z0-9.\-_]+)/i)
-  if (matchTicker) {
+  if (matchTicker && matchTicker[1]) {
     const ticker = matchTicker[1].toUpperCase()
     const isTH = ticker.endsWith('.BK') || ticker.endsWith('.TH')
     return {
@@ -205,10 +205,11 @@ export default function EquityStockControls({
       <div className="mt-3 space-y-2.5">
         {hasOptions && (
           <div>
-            <label className="block text-[11px] font-semibold text-sky-800 mb-1">
+            <label htmlFor="equity-select-stock" className="block text-[11px] font-semibold text-sky-800 mb-1">
               เลือกจาก Portfolio / Watchlist
             </label>
             <select
+              id="equity-select-stock"
               disabled={disabled}
               aria-label="เลือกหุ้นจากระบบ"
               value=""

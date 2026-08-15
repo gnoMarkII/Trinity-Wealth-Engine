@@ -183,10 +183,11 @@ export const RunEquityAnalysisModal: React.FC<RunEquityAnalysisModalProps> = ({
 
           {hasOptions && (
             <div>
-              <label className="block text-xs font-medium text-zinc-700 mb-1">
+              <label htmlFor="run-equity-select-opt" className="block text-xs font-medium text-zinc-700 mb-1">
                 เลือกหุ้นจาก Portfolio / Watchlist
               </label>
               <select
+                id="run-equity-select-opt"
                 aria-label="เลือกหุ้นจากระบบ"
                 defaultValue=""
                 onChange={(e) => {
@@ -257,10 +258,11 @@ export const RunEquityAnalysisModal: React.FC<RunEquityAnalysisModalProps> = ({
           )}
 
           <div>
-            <label className="block text-xs font-medium text-zinc-700 mb-1">
+            <label htmlFor="run-equity-ticker" className="block text-xs font-medium text-zinc-700 mb-1">
               Ticker Symbol (สัญลักษณ์หุ้น)
             </label>
             <TextInput
+              id="run-equity-ticker"
               value={ticker}
               onChange={(e) => setTicker(e.target.value.toUpperCase())}
               placeholder="เช่น AAPL, NVDA, PTT.BK"
@@ -270,10 +272,11 @@ export const RunEquityAnalysisModal: React.FC<RunEquityAnalysisModalProps> = ({
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-zinc-700 mb-1">
+            <label htmlFor="run-equity-market" className="block text-xs font-medium text-zinc-700 mb-1">
               ตลาด (Market)
             </label>
             <select
+              id="run-equity-market"
               value={market}
               onChange={(e) => {
                 setMarket(e.target.value as 'US' | 'TH')

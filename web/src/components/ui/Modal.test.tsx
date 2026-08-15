@@ -34,7 +34,7 @@ describe('Modal', () => {
   })
 
   it('คลิก backdrop → เรียก onClose แต่คลิกในกล่อง dialog ไม่ปิด', async () => {
-    const { onClose, container } = renderModal()
+    const { onClose } = renderModal()
     await userEvent.click(screen.getByRole('button', { name: 'ปุ่มแรก' }))
     expect(onClose).not.toHaveBeenCalled()
     const backdrop = document.body.querySelector('[aria-hidden="true"]')

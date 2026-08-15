@@ -1,7 +1,6 @@
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { render, screen, fireEvent } from '@testing-library/react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import BucketTargetModal from './BucketTargetModal'
-import { api } from '../../../api/client'
 
 vi.mock('../../../api/client', () => ({
   api: {
@@ -86,6 +85,6 @@ describe('BucketTargetModal', () => {
     fireEvent.click(randomizeAllBtn)
 
     const colorPickers = screen.getAllByTitle('เลือกสี') as HTMLInputElement[]
-    expect(colorPickers[0].value.toUpperCase()).not.toBe(colorPickers[1].value.toUpperCase())
+    expect(colorPickers[0]!.value.toUpperCase()).not.toBe(colorPickers[1]!.value.toUpperCase())
   })
 })

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import React, { useCallback, useEffect, useState } from 'react'
 
 export interface ToastProps {
   message: string
@@ -19,20 +19,20 @@ export const Toast: React.FC<ToastProps> = ({
 }) => {
   const [leaving, setLeaving] = useState(false)
 
+  const handleClose = useCallback(() => {
+    setLeaving(true)
+    setTimeout(() => {
+      onClose?.()
+    }, 200)
+  }, [onClose])
+
   useEffect(() => {
     if (durationMs <= 0) return
     const timer = setTimeout(() => {
       handleClose()
     }, durationMs)
     return () => clearTimeout(timer)
-  }, [durationMs])
-
-  const handleClose = () => {
-    setLeaving(true)
-    setTimeout(() => {
-      onClose?.()
-    }, 200)
-  }
+  }, [durationMs, handleClose])
 
   const typeStyles = {
     info: 'bg-zinc-900/90 text-white border-zinc-700 shadow-xl',

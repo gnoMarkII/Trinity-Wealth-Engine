@@ -61,7 +61,7 @@ function ObsidianNoteViewer({ content }: { content: string }) {
                   {item.key === 'tags' || item.key === 'tickers' || item.value.startsWith('[') ? (
                     <span className="inline-flex flex-wrap gap-1">
                       {item.value
-                        .replace(/[\[\]"']/g, '')
+                        .replace(/[[\]"']/g, '')
                         .split(',')
                         .map((t) => t.trim())
                         .filter(Boolean)
@@ -76,7 +76,7 @@ function ObsidianNoteViewer({ content }: { content: string }) {
                       {item.value}
                     </a>
                   ) : (
-                    item.value.replace(/[\[\]]/g, '')
+                    item.value.replace(/[[\]]/g, '')
                   )}
                 </span>
               </div>

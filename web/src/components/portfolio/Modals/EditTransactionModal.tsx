@@ -180,9 +180,9 @@ export default function EditTransactionModal({
       {/* Date & Time Selection with Quick Presets */}
       <div className="space-y-1.5">
         <div className="flex items-center justify-between">
-          <label className="text-xs font-semibold text-zinc-700">
+          <span className="text-xs font-semibold text-zinc-700">
             วันและเวลาที่ทำรายการ (Date & Time) <span className="text-rose-500">*</span>
-          </label>
+          </span>
           <div className="flex items-center gap-1.5">
             <button
               type="button"
@@ -310,24 +310,25 @@ export default function EditTransactionModal({
 
       {/* Cash Adjustment Checkbox */}
       <div className="rounded-xl border border-sky-100 bg-sky-50/50 p-3.5 space-y-2">
-        <label className="flex items-start gap-2.5 cursor-pointer select-none">
+        <div className="flex items-start gap-2.5 select-none">
           <input
+            id="edit-tx-adjust-cash"
             type="checkbox"
             checked={adjustCash}
             onChange={(e) => setAdjustCash(e.target.checked)}
-            className="mt-0.5 h-4 w-4 rounded border-sky-300 text-flow-blue focus:ring-flow-blue"
+            className="mt-0.5 h-4 w-4 rounded border-sky-300 text-flow-blue focus:ring-flow-blue cursor-pointer"
           />
           <div className="space-y-0.5">
-            <span className="text-xs font-semibold text-zinc-900">
+            <label htmlFor="edit-tx-adjust-cash" className="text-xs font-semibold text-zinc-900 cursor-pointer block">
               ปรับปรุงยอดเงินสด (CASH_{transaction.currency}) อัตโนมัติ
-            </span>
+            </label>
             <p className="text-[11px] text-zinc-500">
               {isBuy
                 ? 'หากซื้อเพิ่มขึ้นจะหักเงินสดเพิ่ม หากซื้อลดลงจะคืนเงินสดเข้าบัญชี'
                 : 'หากขายเพิ่มขึ้นจะเพิ่มเงินสด หากขายลดลงจะหักเงินสดออกจากบัญชี'}
             </p>
           </div>
-        </label>
+        </div>
 
         {/* Live Delta preview */}
         {Math.abs(deltaNative) > 0.0001 && (

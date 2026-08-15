@@ -43,7 +43,6 @@ export default function Equity() {
 
   const [portfolioStocks, setPortfolioStocks] = useState<StockOption[]>([])
   const [watchlistStocks, setWatchlistStocks] = useState<StockOption[]>([])
-  const [loadingStocks, setLoadingStocks] = useState(false)
 
   const [detailData, setDetailData] = useState<EquityDetailDTO | undefined>(undefined)
   const [detailStatus, setDetailStatus] = useState<'idle' | 'loading' | 'success' | 'error' | 'not-found'>('idle')
@@ -80,7 +79,6 @@ export default function Equity() {
   // 2. Fetch portfolio & watchlist stocks (fail-soft)
   useEffect(() => {
     let isMounted = true
-    setLoadingStocks(true)
 
     Promise.allSettled([
       api.getActualPortfolioState(),
@@ -118,8 +116,6 @@ export default function Equity() {
           })
         setWatchlistStocks(stocks)
       }
-    }).finally(() => {
-      if (isMounted) setLoadingStocks(false)
     })
 
     return () => {

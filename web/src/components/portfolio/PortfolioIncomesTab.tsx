@@ -45,8 +45,10 @@ export default function PortfolioIncomesTab({
     rounds: DividendRoundDTO[]
   } | null>(null)
 
-  const holdings = state?.holdings || []
-  const stockHoldings = useMemo(() => holdings.filter((h) => h.asset_type !== 'Cash'), [holdings])
+  const stockHoldings = useMemo(
+    () => (state?.holdings || []).filter((h) => h.asset_type !== 'Cash'),
+    [state?.holdings]
+  )
 
   const totalAccDividend = state?.summary.total_accumulated_dividend ?? 0
 
@@ -560,12 +562,12 @@ export default function PortfolioIncomesTab({
                 <span className="rounded-full bg-cyan-50 border border-cyan-200 px-2.5 py-0.5 text-xs font-bold text-cyan-700">NEXT</span>
               </div>
               <div className="mt-2.5 text-xl sm:text-2xl font-extrabold text-flow-blue">
-                {allUpcomingRounds.length > 0
+                {allUpcomingRounds.length > 0 && allUpcomingRounds[0]
                   ? `${allUpcomingRounds[0].pay_date || allUpcomingRounds[0].ex_date} (${allUpcomingRounds[0].symbol})`
                   : 'ไม่มีรายการรอจ่าย'}
               </div>
               <div className="mt-1.5 text-xs text-zinc-600 font-mono font-medium">
-                {allUpcomingRounds.length > 0
+                {allUpcomingRounds.length > 0 && allUpcomingRounds[0]
                   ? getDaysUntil(allUpcomingRounds[0].pay_date || allUpcomingRounds[0].ex_date).text
                   : 'ทุกรอบถูกจ่ายครบแล้ว'}
               </div>

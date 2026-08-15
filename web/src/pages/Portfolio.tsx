@@ -444,8 +444,9 @@ export default function Portfolio() {
               </p>
               <form onSubmit={handleCreatePortfolio} className="space-y-4">
                 <div>
-                  <label className="block text-xs font-semibold text-zinc-700 mb-1">ชื่อพอร์ต (Portfolio Name)</label>
+                  <label htmlFor="create-port-name" className="block text-xs font-semibold text-zinc-700 mb-1">ชื่อพอร์ต (Portfolio Name)</label>
                   <input
+                    id="create-port-name"
                     type="text"
                     required
                     value={newPortName}
@@ -487,8 +488,9 @@ export default function Portfolio() {
               </p>
               <form onSubmit={handleRenamePortfolio} className="space-y-4">
                 <div>
-                  <label className="block text-xs font-semibold text-zinc-700 mb-1">ชื่อพอร์ตใหม่ (Portfolio Name)</label>
+                  <label htmlFor="rename-port-name" className="block text-xs font-semibold text-zinc-700 mb-1">ชื่อพอร์ตใหม่ (Portfolio Name)</label>
                   <input
+                    id="rename-port-name"
                     type="text"
                     required
                     value={editPortName}

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import FormModal, { FormField, FormInput, FormSelect } from './FormModal'
 import { GoalIcon } from '../icons/PortfolioIcons'
 import { api } from '../../../api/client'
