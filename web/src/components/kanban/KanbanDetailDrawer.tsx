@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useRef, useState } from 'react'
+import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react'
 import ReactMarkdown from 'react-markdown'
 import { api, ApiError } from '../../api/client'
 import type { ApprovalPayload, KanbanCardDTO } from '../../api/types'
@@ -54,6 +54,10 @@ export default function KanbanDetailDrawer({ card, onClose, onCardTransition, on
   const [preSelectedEventIds, setPreSelectedEventIds] = useState<string[] | null>(null)
   const widthRef = useRef(width)
   const outputsRefreshTimer = useRef<number | null>(null)
+
+  const handleNewsFunnelSelectionChange = useCallback((selectedIds: string[]) => {
+    setPreSelectedEventIds(selectedIds)
+  }, [])
 
   useEffect(() => {
     setApprovalPayload(null)
@@ -259,7 +263,7 @@ export default function KanbanDetailDrawer({ card, onClose, onCardTransition, on
                     <NewsFunnelPromptViewer
                       prompt={card.prompt}
                       onItemDeleted={onCardTransition}
-                      onSelectionChange={(selectedIds) => setPreSelectedEventIds(selectedIds)}
+                      onSelectionChange={handleNewsFunnelSelectionChange}
                       onDispatch={() => {
                         if (card && onDispatchCard) {
                           onDispatchCard(card, 'news_funnel')

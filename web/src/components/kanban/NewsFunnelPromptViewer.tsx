@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { api } from '../../api/client'
 import type { NewsFunnelPendingItem, NewsFunnelFilteredItem } from '../../api/types'
 import ReactMarkdown from 'react-markdown'
@@ -19,6 +19,11 @@ export default function NewsFunnelPromptViewer({ prompt, onSelectionChange, onDi
   const [showFiltered, setShowFiltered] = useState(false)
   const [selectedEventIds, setSelectedEventIds] = useState<Set<string>>(new Set())
 
+  const onSelectionChangeRef = useRef(onSelectionChange)
+  useEffect(() => {
+    onSelectionChangeRef.current = onSelectionChange
+  })
+
   useEffect(() => {
     let mounted = true
     setLoading(true)
@@ -30,7 +35,7 @@ export default function NewsFunnelPromptViewer({ prompt, onSelectionChange, onDi
           setItems(data)
           const allIds = data.map((i) => i.event_id)
           setSelectedEventIds(new Set(allIds))
-          onSelectionChange?.(allIds)
+          onSelectionChangeRef.current?.(allIds)
         }
       })
       .catch((err) => {
@@ -52,7 +57,7 @@ export default function NewsFunnelPromptViewer({ prompt, onSelectionChange, onDi
     return () => {
       mounted = false
     }
-  }, [prompt, onSelectionChange])
+  }, [prompt])
 
   function toggle(id: string) {
     const next = new Set(selectedEventIds)
