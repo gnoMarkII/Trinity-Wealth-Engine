@@ -36,5 +36,7 @@ describe('EquityDetail', () => {
     expect(screen.getByText(mockEquityDetailAAPL.base_case_summary)).toBeInTheDocument()
     
     expect(screen.getByText('bullish')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '📈 Chart' })).toBeInTheDocument()
   })
 })
+

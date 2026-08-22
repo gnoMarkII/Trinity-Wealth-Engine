@@ -1,10 +1,12 @@
 """Pydantic schemas สำหรับ YouTube Content Pitching & Research-Grade Briefing Book"""
-from typing import List, Literal
-from pydantic import BaseModel, Field
+import re
+import unicodedata
+from typing import Any, List, Literal, Optional
+from pydantic import AliasChoices, BaseModel, Field, field_validator
 
 
 class YouTubeContentPitchItem(BaseModel):
-    """โครงสร้างไอเดียคลิป 1 หัวข้อ (Multi-source Pitch)"""
+    """โครงสร้างไอเดียคลิป 1 หัวข้อ (Single Deep Dive Anchor Pitch)"""
     pitch_id: str = Field(..., description="UUID รหัสไอเดีย")
     working_titles: List[str] = Field(
         ...,
@@ -13,7 +15,24 @@ class YouTubeContentPitchItem(BaseModel):
         description="รายชื่อหัวข้อคลิป 3 สไตล์: 1.คำถามเจาะลึก 2.วิเคราะห์สมมติฐาน 3.เตือนภัย/โอกาส",
     )
     target_audience: str = Field(..., description="กลุ่มคนดูเป้าหมาย")
-    core_hook: str = Field(..., description="ประโยค Hook 30 วินาทีแรกที่ดึงดูดความสนใจ")
+    core_thesis: str = Field(
+        ...,
+        validation_alias=AliasChoices("core_thesis", "core_hook"),
+        description="ใจความสำคัญหรือข้อสรุปหลัก 1 ประโยคภาษาไทย (Single Core Thesis)",
+    )
+    primary_anchor_event_id: str = Field(
+        default="",
+        description="รหัส event_id ของข่าวหลักที่เป็นแกน (Authoritative Primary Anchor Event ID)",
+    )
+    primary_anchor_title: Optional[str] = Field(
+        default=None,
+        description="ชื่อข่าวต้นทางของ Anchor event (Display Metadata ถูก hydrate จาก server)",
+    )
+    parking_lot_ideas: List[str] = Field(
+        default_factory=list,
+        max_length=5,
+        description="ไอเดียประเด็นย่อยน่าสนใจที่แยกเก็บไว้สำหรับคลิปถัดไป (สูงสุด 5 รายการ)",
+    )
     key_questions_to_answer: List[str] = Field(
         ...,
         min_length=3,
@@ -71,6 +90,24 @@ class YouTubeContentPitchItem(BaseModel):
         default="", description="Token รับรองความถูกต้องเพื่อ bypass ไปเป็น Unverified Draft"
     )
 
+    @field_validator("parking_lot_ideas", mode="before")
+    @classmethod
+    def normalize_and_dedup_parking_lot(cls, v: Any) -> List[str]:
+        if not isinstance(v, list):
+            return []
+        seen = set()
+        normalized = []
+        for item in v:
+            if not isinstance(item, str):
+                continue
+            norm = unicodedata.normalize("NFC", item).strip()
+            norm = re.sub(r"\s+", " ", norm)
+            key = norm.casefold()
+            if key and key not in seen:
+                seen.add(key)
+                normalized.append(norm)
+        return normalized[:5]
+
 
 class YouTubeContentPitchBatch(BaseModel):
     """รายการไอเดียทั้งหมดที่สกัดได้ตามช่วงวันที่เลือก"""
@@ -80,13 +117,27 @@ class YouTubeContentPitchBatch(BaseModel):
 
 
 def validate_generated_pitch(batch: YouTubeContentPitchBatch) -> None:
-    """ตรวจสอบความครบถ้วนของฟิลด์สืบสวนและอุปมาอุปไมยใน Pitch ที่เพิ่งสร้างใหม่จาก LLM"""
+    """ตรวจสอบความครบถ้วนของฟิลด์สืบสวน, Single Anchor, และสมมติฐานใน Pitch ที่เพิ่งสร้างใหม่จาก LLM"""
     for i, pitch in enumerate(batch.pitches):
+        thesis = pitch.core_thesis.strip()
         lead = pitch.counter_intuitive_lead.strip()
         analogy = pitch.analogy_generator.strip()
         takeaway = pitch.audience_takeaway.strip()
         thumbnail = pitch.thumbnail_concept.strip()
-        
+        anchor_id = pitch.primary_anchor_event_id.strip()
+
+        if len(thesis) < 15:
+            raise ValueError(
+                f"Pitch {i} ('{pitch.pitch_id}') missing or insufficient core_thesis (min 15 non-whitespace chars, got '{thesis}')"
+            )
+        if not anchor_id:
+            raise ValueError(
+                f"Pitch {i} ('{pitch.pitch_id}') missing primary_anchor_event_id"
+            )
+        if anchor_id not in pitch.source_event_ids:
+            raise ValueError(
+                f"Pitch {i} ('{pitch.pitch_id}') primary_anchor_event_id '{anchor_id}' is not in source_event_ids: {pitch.source_event_ids}"
+            )
         if len(lead) < 10:
             raise ValueError(
                 f"Pitch {i} ('{pitch.pitch_id}') missing or insufficient counter_intuitive_lead (min 10 non-whitespace chars)"
@@ -103,3 +154,4 @@ def validate_generated_pitch(batch: YouTubeContentPitchBatch) -> None:
             raise ValueError(
                 f"Pitch {i} ('{pitch.pitch_id}') missing or insufficient thumbnail_concept (min 5 non-whitespace chars)"
             )
+

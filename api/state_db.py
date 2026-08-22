@@ -58,6 +58,79 @@ CREATE TABLE IF NOT EXISTS kanban_cards (
     created_at REAL NOT NULL,
     updated_at REAL NOT NULL
 );
+
+CREATE TABLE IF NOT EXISTS dcf_evaluations_ledger (
+    evaluation_id TEXT PRIMARY KEY,
+    ticker TEXT NOT NULL,
+    market TEXT NOT NULL,
+    evaluated_at TEXT NOT NULL,
+    model_version TEXT NOT NULL DEFAULT 'dcf_v1.0',
+    valuation_price_basis TEXT NOT NULL DEFAULT 'split_adjusted_only',
+    current_price_at_eval REAL,
+    wacc_pct REAL,
+    valuation_verdict TEXT,
+    scenarios_json TEXT NOT NULL,
+    corporate_action_evidence_json TEXT,
+    input_snapshot_json TEXT,
+    created_at REAL NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_dcf_evaluations_ticker ON dcf_evaluations_ledger(ticker, evaluated_at DESC);
+
+CREATE TABLE IF NOT EXISTS sec_form4_raw_ledger (
+    accession_number TEXT PRIMARY KEY,
+    issuer_cik TEXT NOT NULL,
+    ticker TEXT NOT NULL,
+    filing_url TEXT NOT NULL,
+    filed_at TEXT NOT NULL,
+    reporting_owner_cik TEXT,
+    reporting_owner_name TEXT,
+    is_director INTEGER NOT NULL DEFAULT 0,
+    is_officer INTEGER NOT NULL DEFAULT 0,
+    is_ten_percent_owner INTEGER NOT NULL DEFAULT 0,
+    officer_title TEXT,
+    raw_xml_payload TEXT,
+    is_amendment INTEGER NOT NULL DEFAULT 0,
+    amends_accession_number TEXT,
+    created_at REAL NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_sec_raw_ticker ON sec_form4_raw_ledger(ticker, filed_at DESC);
+
+CREATE TABLE IF NOT EXISTS sec_insider_transactions (
+    transaction_id TEXT PRIMARY KEY,
+    accession_number TEXT NOT NULL,
+    ticker TEXT NOT NULL,
+    transaction_date TEXT NOT NULL,
+    transaction_code TEXT NOT NULL,
+    shares REAL NOT NULL,
+    price_per_share REAL NOT NULL,
+    acquired_or_disposed TEXT NOT NULL,
+    shares_owned_following REAL,
+    ownership_nature TEXT,
+    is_derivative INTEGER NOT NULL DEFAULT 0,
+    normalized_weight REAL NOT NULL DEFAULT 1.0,
+    created_at REAL NOT NULL,
+    FOREIGN KEY (accession_number) REFERENCES sec_form4_raw_ledger(accession_number)
+);
+CREATE INDEX IF NOT EXISTS idx_insider_tx_ticker ON sec_insider_transactions(ticker, transaction_date DESC);
+
+CREATE TABLE IF NOT EXISTS analyst_context_cache (
+    ticker           TEXT PRIMARY KEY,
+    provider_symbol  TEXT NOT NULL,
+    market           TEXT NOT NULL,
+    currency         TEXT NOT NULL,
+    exchange_tz      TEXT NOT NULL,
+    target_mean      REAL,
+    target_high      REAL,
+    target_low       REAL,
+    num_analysts     INTEGER,
+    next_earnings_date TEXT,
+    eps_history_json TEXT NOT NULL DEFAULT '[]',
+    source_as_of     TEXT,
+    data_status      TEXT NOT NULL DEFAULT 'ok',
+    synced_at        REAL NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_analyst_context_ticker ON analyst_context_cache(ticker);
+
 """
 
 
@@ -358,6 +431,52 @@ def create_kanban_card(
     conn.commit()
 
 
+def create_parking_lot_cards_atomic(
+    ideas: list[str],
+    source_pitch_id: str,
+    db_path: str | None = None,
+) -> int:
+    """Atomically create parking lot cards in backlog column with dedicated connection and BEGIN IMMEDIATE.
+
+    Returns the count of newly inserted cards.
+    """
+    if not ideas:
+        return 0
+    import hashlib
+    import re
+    import unicodedata
+    from contextlib import closing
+
+    now = time.time()
+    created_count = 0
+    with closing(get_connection(db_path)) as conn:
+        conn.isolation_level = None  # Autocommit mode for explicit transaction control
+        conn.execute("BEGIN IMMEDIATE")
+        try:
+            cur_seq = conn.execute("SELECT COALESCE(MAX(display_seq), 0) FROM kanban_cards").fetchone()[0]
+            for raw_idea in ideas[:5]:
+                norm = unicodedata.normalize("NFC", str(raw_idea)).strip()
+                norm = re.sub(r"\s+", " ", norm)
+                if not norm:
+                    continue
+                card_id = f"parking:{hashlib.sha256(norm.casefold().encode('utf-8')).hexdigest()}"
+                prompt = f"ไอเดียต่อยอดจาก YouTube Pitch ({source_pitch_id}): {norm}"
+                cur = conn.execute(
+                    "INSERT OR IGNORE INTO kanban_cards (card_id, title, column_name, job_id, flow, display_seq, prompt, scope, is_verified, created_at, updated_at) "
+                    "VALUES (?, ?, 'backlog', NULL, 'youtube_pitch', ?, ?, 'both', 1, ?, ?)",
+                    (card_id, norm, cur_seq + 1, prompt, now, now),
+                )
+                if cur.rowcount > 0:
+                    cur_seq += 1
+                    created_count += 1
+            conn.execute("COMMIT")
+        except Exception:
+            conn.execute("ROLLBACK")
+            raise
+    return created_count
+
+
+
 def update_kanban_card(
     conn: sqlite3.Connection, card_id: str, title: str, prompt: str | None, flow: str, scope: str
 ) -> None:
@@ -448,3 +567,267 @@ def find_kanban_card_by_title_in_column(
 def delete_kanban_card(conn: sqlite3.Connection, card_id: str) -> None:
     conn.execute("DELETE FROM kanban_cards WHERE card_id = ?", (card_id,))
     conn.commit()
+
+
+# ---------------------------------------------------------------------------
+# DCF Evaluations Ledger (Immutable Canonical SSOT)
+# ---------------------------------------------------------------------------
+
+def record_dcf_evaluation(
+    conn: sqlite3.Connection,
+    evaluation_id: str,
+    ticker: str,
+    market: str,
+    evaluated_at: str,
+    scenarios: dict,
+    model_version: str = "dcf_v1.0",
+    valuation_price_basis: str = "split_adjusted_only",
+    current_price_at_eval: float | None = None,
+    wacc_pct: float | None = None,
+    valuation_verdict: str = "unknown",
+    corporate_action_evidence: list | None = None,
+    input_snapshot: dict | None = None,
+) -> None:
+    """บันทึกการประเมิน DCF ลง Immutable Ledger แบบ Canonical Record"""
+    now = time.time()
+    conn.execute(
+        """
+        INSERT OR REPLACE INTO dcf_evaluations_ledger (
+            evaluation_id, ticker, market, evaluated_at, model_version,
+            valuation_price_basis, current_price_at_eval, wacc_pct,
+            valuation_verdict, scenarios_json, corporate_action_evidence_json,
+            input_snapshot_json, created_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """,
+        (
+            evaluation_id,
+            ticker.upper(),
+            market.upper(),
+            evaluated_at,
+            model_version,
+            valuation_price_basis,
+            current_price_at_eval,
+            wacc_pct,
+            valuation_verdict,
+            json.dumps(scenarios),
+            json.dumps(corporate_action_evidence or []),
+            json.dumps(input_snapshot or {}),
+            now,
+        ),
+    )
+    conn.commit()
+
+
+def get_latest_dcf_evaluation(conn: sqlite3.Connection, ticker: str) -> sqlite3.Row | None:
+    """ดึงผลการประเมิน DCF ล่าสุดสำหรับ ticker จาก Canonical Ledger"""
+    cur = conn.execute(
+        "SELECT * FROM dcf_evaluations_ledger WHERE ticker = ? ORDER BY evaluated_at DESC, created_at DESC LIMIT 1",
+        (ticker.upper(),),
+    )
+    return cur.fetchone()
+
+
+def get_dcf_evaluation_by_id(conn: sqlite3.Connection, evaluation_id: str) -> sqlite3.Row | None:
+    """ดึงผลการประเมิน DCF ตาม evaluation_id ที่เจาะจง"""
+    cur = conn.execute(
+        "SELECT * FROM dcf_evaluations_ledger WHERE evaluation_id = ?",
+        (evaluation_id,),
+    )
+    return cur.fetchone()
+
+
+# ---------------------------------------------------------------------------
+# SEC Form 4 Ingestion Pipeline & Raw Filing Ledger
+# ---------------------------------------------------------------------------
+
+def record_sec_form4_filing(
+    conn: sqlite3.Connection,
+    accession_number: str,
+    issuer_cik: str,
+    ticker: str,
+    filing_url: str,
+    filed_at: str,
+    reporting_owner_cik: str | None = None,
+    reporting_owner_name: str | None = None,
+    is_director: bool = False,
+    is_officer: bool = False,
+    is_ten_percent_owner: bool = False,
+    officer_title: str | None = None,
+    raw_xml_payload: str | None = None,
+    is_amendment: bool = False,
+    amends_accession_number: str | None = None,
+) -> None:
+    """บันทึก Raw SEC Form 4 Filing ลง Ledger พร้อมจัดการ Form 4/A Amendment Invalidation"""
+    now = time.time()
+    if is_amendment and amends_accession_number:
+        # Form 4/A Amendment: ลบ normalized transactions เดิมของ filing ที่ถูกแก้ไข
+        conn.execute("DELETE FROM sec_insider_transactions WHERE accession_number = ?", (amends_accession_number,))
+
+    conn.execute(
+        """
+        INSERT OR REPLACE INTO sec_form4_raw_ledger (
+            accession_number, issuer_cik, ticker, filing_url, filed_at,
+            reporting_owner_cik, reporting_owner_name, is_director,
+            is_officer, is_ten_percent_owner, officer_title, raw_xml_payload,
+            is_amendment, amends_accession_number, created_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """,
+        (
+            accession_number,
+            issuer_cik,
+            ticker.upper(),
+            filing_url,
+            filed_at,
+            reporting_owner_cik,
+            reporting_owner_name,
+            1 if is_director else 0,
+            1 if is_officer else 0,
+            1 if is_ten_percent_owner else 0,
+            officer_title,
+            raw_xml_payload,
+            1 if is_amendment else 0,
+            amends_accession_number,
+            now,
+        ),
+    )
+    conn.commit()
+
+
+def record_sec_insider_transaction(
+    conn: sqlite3.Connection,
+    transaction_id: str,
+    accession_number: str,
+    ticker: str,
+    transaction_date: str,
+    transaction_code: str,
+    shares: float,
+    price_per_share: float,
+    acquired_or_disposed: str,
+    shares_owned_following: float | None = None,
+    ownership_nature: str | None = None,
+    is_derivative: bool = False,
+    normalized_weight: float = 1.0,
+) -> None:
+    """บันทึก Normalized Transaction ที่สกัดจาก Form 4"""
+    now = time.time()
+    conn.execute(
+        """
+        INSERT OR REPLACE INTO sec_insider_transactions (
+            transaction_id, accession_number, ticker, transaction_date,
+            transaction_code, shares, price_per_share, acquired_or_disposed,
+            shares_owned_following, ownership_nature, is_derivative,
+            normalized_weight, created_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """,
+        (
+            transaction_id,
+            accession_number,
+            ticker.upper(),
+            transaction_date,
+            transaction_code.upper(),
+            shares,
+            price_per_share,
+            acquired_or_disposed.upper(),
+            shares_owned_following,
+            ownership_nature,
+            1 if is_derivative else 0,
+            normalized_weight,
+            now,
+        ),
+    )
+    conn.commit()
+
+
+def get_sec_insider_filings_and_transactions(
+    conn: sqlite3.Connection, ticker: str, since_date: str | None = None
+) -> list[dict]:
+    """ดึงประวัติ Insider Filings และ Transactions ของ ticker จาก Ledger"""
+    query = """
+        SELECT 
+            t.transaction_id, t.accession_number, t.ticker, t.transaction_date,
+            t.transaction_code, t.shares, t.price_per_share, t.acquired_or_disposed,
+            t.shares_owned_following, t.ownership_nature, t.is_derivative, t.normalized_weight,
+            f.issuer_cik, f.filing_url, f.filed_at, f.reporting_owner_cik,
+            f.reporting_owner_name, f.is_director, f.is_officer, f.is_ten_percent_owner,
+            f.officer_title, f.is_amendment, f.amends_accession_number
+        FROM sec_insider_transactions t
+        JOIN sec_form4_raw_ledger f ON t.accession_number = f.accession_number
+        WHERE t.ticker = ?
+    """
+    params = [ticker.upper()]
+    if since_date:
+        query += " AND t.transaction_date >= ?"
+        params.append(since_date)
+    query += " ORDER BY t.transaction_date DESC, f.filed_at DESC"
+
+    cur = conn.execute(query, params)
+    rows = cur.fetchall()
+    return [dict(r) for r in rows]
+
+
+def get_analyst_context_cache(conn: sqlite3.Connection, ticker: str) -> dict | None:
+    """ดึงข้อมูล Analyst Context จาก SQLite cache พร้อม decode JSON และ format synced_at เป็น ISO string"""
+    row = conn.execute(
+        "SELECT * FROM analyst_context_cache WHERE ticker = ?", (ticker.upper(),)
+    ).fetchone()
+    if not row:
+        return None
+    d = dict(row)
+    try:
+        raw_json = d.pop("eps_history_json", "[]") or "[]"
+        decoded = json.loads(raw_json)
+        if not isinstance(decoded, list):
+            return None  # Invalid JSON structure -> cache miss
+        d["earnings_history"] = decoded
+    except Exception:
+        return None  # Corrupted JSON -> cache miss
+    from datetime import datetime, timezone
+    d["synced_at"] = datetime.fromtimestamp(d["synced_at"], tz=timezone.utc).isoformat()
+    return d
+
+
+def upsert_analyst_context_cache(conn: sqlite3.Connection, ticker: str, data: dict) -> None:
+    """บันทึกข้อมูล Analyst Context ลง SQLite cache เฉพาะสถานะ ok และ partial"""
+    conn.execute(
+        """
+        INSERT INTO analyst_context_cache (
+            ticker, provider_symbol, market, currency, exchange_tz,
+            target_mean, target_high, target_low, num_analysts,
+            next_earnings_date, eps_history_json, source_as_of,
+            data_status, synced_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ON CONFLICT(ticker) DO UPDATE SET
+            provider_symbol=excluded.provider_symbol,
+            market=excluded.market,
+            currency=excluded.currency,
+            exchange_tz=excluded.exchange_tz,
+            target_mean=excluded.target_mean,
+            target_high=excluded.target_high,
+            target_low=excluded.target_low,
+            num_analysts=excluded.num_analysts,
+            next_earnings_date=excluded.next_earnings_date,
+            eps_history_json=excluded.eps_history_json,
+            source_as_of=excluded.source_as_of,
+            data_status=excluded.data_status,
+            synced_at=excluded.synced_at
+        """,
+        (
+            ticker.upper(),
+            data["provider_symbol"],
+            data["market"],
+            data["currency"],
+            data["exchange_tz"],
+            data.get("target_mean"),
+            data.get("target_high"),
+            data.get("target_low"),
+            data.get("num_analysts"),
+            data.get("next_earnings_date"),
+            json.dumps(data.get("earnings_history", [])),
+            data.get("source_as_of"),
+            data["data_status"],
+            data["synced_at"],
+        ),
+    )
+    conn.commit()
+
+

@@ -91,6 +91,32 @@ export const api = {
 
   getEquityNoteContent: (relPath: string) => request<import('./types').EquityNoteContentDTO>(`/api/equity/notes/content?rel_path=${encodeURIComponent(relPath)}`),
 
+  getEquityOHLCV: (ticker: string, range: string = '6mo', interval: string = '1d', signal?: AbortSignal) =>
+    request<import('./types').OHLCVResponseDTO>(
+      `/api/equity/${encodeURIComponent(ticker)}/ohlcv?range=${encodeURIComponent(range)}&interval=${encodeURIComponent(interval)}`,
+      { signal }
+    ),
+
+  getValuationTargets: (ticker: string, signal?: AbortSignal) =>
+    request<import('./types').ValuationTargetsDTO>(
+      `/api/equity/${encodeURIComponent(ticker)}/valuation-targets`,
+      { signal }
+    ),
+
+  getInsiderFilings: (ticker: string, range: string = '1y', interval: string = '1d', signal?: AbortSignal) =>
+    request<import('./types').InsiderFilingsResponseDTO>(
+      `/api/equity/${encodeURIComponent(ticker)}/insider-filings?range=${encodeURIComponent(range)}&interval=${encodeURIComponent(interval)}`,
+      { signal }
+    ),
+
+  getAnalystContext: (ticker: string, signal?: AbortSignal) =>
+    request<import('./types').AnalystContextDTO>(
+      `/api/equity/${encodeURIComponent(ticker)}/analyst-context`,
+      { signal }
+    ),
+
+
+
 
   getPortfolioCalendar: (portfolioId: string = 'default') =>
     request<import('./types').PortfolioCalendarDTO>(`/api/portfolio/calendar?portfolio_id=${encodeURIComponent(portfolioId)}`),

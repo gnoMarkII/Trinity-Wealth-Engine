@@ -591,11 +591,29 @@ function YoutubePitchApprovalView({
                     </ul>
                   </div>
 
-                  {p.core_hook && (
-                    <div className="rounded-lg bg-surface/70 p-2 border border-edge/60">
-                      <span className="font-semibold text-zinc-800">🔥 Core Hook:</span> {p.core_hook}
+                  {(p.primary_anchor_title || p.primary_anchor_event_id) && (
+                    <div className="rounded-lg bg-blue-50/70 p-2 border border-blue-200/60 text-blue-950">
+                      <span className="font-semibold text-blue-800">📌 Primary Anchor:</span> {p.primary_anchor_title || p.primary_anchor_event_id}
                     </div>
                   )}
+
+                  {(p.core_thesis || p.core_hook) && (
+                    <div className="rounded-lg bg-surface/70 p-2 border border-edge/60">
+                      <span className="font-semibold text-zinc-800">🎯 Core Thesis:</span> {p.core_thesis || p.core_hook}
+                    </div>
+                  )}
+
+                  {(p.parking_lot_ideas?.length ?? 0) > 0 && (
+                    <div className="rounded-lg bg-purple-50/70 p-2 border border-purple-200/60 text-purple-950">
+                      <span className="font-semibold text-purple-800">📦 Parking Lot ({p.parking_lot_ideas?.length} ideas):</span>
+                      <ul className="list-disc list-inside mt-1 space-y-0.5 text-xs text-purple-900">
+                        {p.parking_lot_ideas?.map((idea, idx) => (
+                          <li key={idx}>{idea}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
 
                   {p.counter_intuitive_lead && (
                     <div className="rounded-lg bg-red-50/70 p-2 border border-red-200/60 text-red-950">

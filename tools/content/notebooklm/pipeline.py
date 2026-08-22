@@ -343,10 +343,17 @@ async def _finalize_download(
     note: str = "",
 ) -> NotebookLMManifest:
     audio_path = await _download_audio(session, manifest, resolved_path)
+    try:
+        from tools.content.notebooklm.audio_utils import compress_audio_for_discord
+        audio_path = compress_audio_for_discord(audio_path)
+    except Exception as e:
+        logger.warning("[NotebookLM Pipeline] Audio compression step skipped: %s", e)
+
+
     manifest.audio_path = str(audio_path)
     manifest.status = "completed"
     save_manifest(manifest)
-    on_step("download", f"ดาวน์โหลดไฟล์ Audio สำเร็จ{note}: {audio_path.name}")
+    on_step("download", f"ดาวน์โหลดและเตรียมไฟล์ Audio สำเร็จ{note}: {audio_path.name}")
     return manifest
 
 

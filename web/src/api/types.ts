@@ -191,7 +191,11 @@ export interface YoutubePitchItemDTO {
   pitch_id: string
   working_titles: string[]
   target_audience: string
-  core_hook: string
+  core_thesis?: string
+  core_hook?: string
+  primary_anchor_event_id?: string
+  primary_anchor_title?: string
+  parking_lot_ideas?: string[]
   key_questions_to_answer: string[]
   research_hypotheses: string[]
   source_event_ids: string[]
@@ -211,6 +215,7 @@ export interface YoutubePitchItemDTO {
   unverified_draft_eligible?: boolean
   unverified_draft_eligibility_token?: string
 }
+
 
 export interface SourceOverrideAck {
   acknowledged: true
@@ -766,5 +771,238 @@ export interface SyncDividendsResponseDTO {
   skipped_manual: string[]
   details: Record<string, DividendRoundDTO[]>
 }
+
+export interface OHLCVCandleDTO {
+  timestamp: number // Unix epoch in milliseconds
+  open: number
+  high: number
+  low: number
+  close: number
+  volume: number
+}
+
+export interface PivotLevelsDTO {
+  pivot: number
+  r1: number
+  r2: number
+  r3: number
+  s1: number
+  s2: number
+  s3: number
+  s4: number
+}
+
+export interface CorporateActionEventDTO {
+  event_type: 'earnings' | 'ex_dividend' | 'split'
+  timestamp: number
+  date_str: string
+  label: string
+  color: 'green' | 'red' | 'blue' | 'purple'
+  tooltip: string
+  mapping_method: 'reported_date' | 'next_session' | 'period_enclosing' | 'unknown'
+  eps_actual?: number | null
+  eps_estimate?: number | null
+  dividend_amount?: number | null
+  split_numerator?: number | null
+  split_denominator?: number | null
+  split_formatted?: string | null
+}
+
+export interface CorporateActionsMetadataDTO {
+  status: 'available' | 'partial' | 'unavailable'
+  as_of?: string | null
+  earnings_status: 'ok' | 'failed' | 'empty'
+  earnings_as_of?: string | null
+  dividends_status: 'ok' | 'failed' | 'empty'
+  dividends_as_of?: string | null
+  splits_status: 'ok' | 'failed' | 'empty'
+  splits_as_of?: string | null
+  missing_sources: string[]
+  data_provenance: string
+}
+
+export interface IndicatorBurnInPolicyDTO {
+  algorithm_version: string
+  seed_method: string
+  convergence_tolerance_pct: number
+  required_burn_in_bars: number
+  burn_in_bars_remaining: number
+  first_reliable_timestamp?: number | null
+  first_reliable_index?: number | null
+}
+
+export interface IndicatorWarmupDetailDTO {
+  status: 'full' | 'partial' | 'unavailable'
+  required_bars: number
+  actual_warmup_bars: number
+  burn_in_bars_remaining: number
+  first_reliable_timestamp?: number | null
+  first_reliable_index?: number | null
+  burn_in_policy?: IndicatorBurnInPolicyDTO | null
+}
+
+export type ChartInterval = '15m' | '1h' | '1d' | '1wk' | '1mo'
+
+export interface OHLCVResponseDTO {
+  ticker: string
+  market: 'TH' | 'US'
+  currency: 'USD' | 'THB'
+  price_basis?: string
+  provider_name?: string
+  provider_tier?: 'best_effort' | 'institutional_licensed'
+  feed_latency_model?: 'realtime' | 'delayed_15m' | 'eod'
+  current_price: number | null
+  price_change: number | null
+  price_change_pct: number | null
+  price_as_of: string | null
+  candles: OHLCVCandleDTO[]
+  pivot_levels: PivotLevelsDTO | null
+  pivot_period: string | null
+  pivot_as_of: string | null
+  requested_range?: string
+  interval?: string
+  allowed_ranges?: string[]
+  effective_capabilities?: Record<string, string[]>
+  capability_reasons?: Record<string, string>
+  display_start_timestamp?: number | null
+  available_warmup_bars?: number
+  required_warmup_bars?: number
+  warmup_status?: 'full' | 'partial' | 'unavailable' | 'sufficient' | 'insufficient' | 'not_applicable' | 'unknown'
+  indicator_warmup?: Record<string, IndicatorWarmupDetailDTO>
+  events?: CorporateActionEventDTO[]
+  events_metadata?: CorporateActionsMetadataDTO | null
+  week52_high?: number | null
+  week52_low?: number | null
+  week52_coverage_calendar_days?: number
+}
+
+export interface CorporateActionFactorDTO {
+  event_type: 'split' | 'special_dividend' | 'spinoff'
+  effective_date: string
+  ratio?: number | null
+  amount?: number | null
+}
+
+export interface DCFScenarioLevelDTO {
+  scenario_name: string
+  label: string
+  target_price: number
+  upside_pct?: number | null
+  margin_of_safety_pct?: number | null
+  color: 'emerald' | 'green' | 'rose' | 'zinc'
+}
+
+export interface ValuationTargetsDTO {
+  evaluation_id: string
+  ticker: string
+  market: 'TH' | 'US'
+  currency: 'USD' | 'THB'
+  chart_price_basis: string
+  valuation_price_basis: string
+  comparability_status: 'comparable' | 'not_comparable' | 'unknown'
+  comparability_reasons: string[]
+  corporate_action_factors: CorporateActionFactorDTO[]
+  current_price_at_eval?: number | null
+  evaluated_at: string
+  as_of_label: string
+  model_version: string
+  valuation_verdict: 'undervalued' | 'fairly_valued' | 'overvalued' | 'unknown'
+  wacc_pct?: number | null
+  macro_observable_refs: string[]
+  data_quality_flags: string[]
+  status: 'available' | 'unavailable' | 'stale'
+  scenario_order_valid: boolean
+  scenarios: DCFScenarioLevelDTO[]
+}
+
+export interface InsiderTransactionDTO {
+  transaction_id: string
+  transaction_date: string
+  transaction_code: string
+  shares: number
+  price_per_share: number
+  acquired_or_disposed: 'A' | 'D'
+  shares_owned_following?: number | null
+  ownership_nature?: string | null
+  is_derivative: boolean
+  normalized_weight: number
+}
+
+export interface InsiderFilingDTO {
+  accession_number: string
+  issuer_cik: string
+  ticker: string
+  filing_url: string
+  filed_at: string
+  timestamp: number
+  reporting_owner_cik?: string | null
+  reporting_owner_name?: string | null
+  is_director: boolean
+  is_officer: boolean
+  is_ten_percent_owner: boolean
+  officer_title?: string | null
+  is_amendment: boolean
+  amends_accession_number?: string | null
+  is_cluster_buy: boolean
+  transactions: InsiderTransactionDTO[]
+}
+
+export interface InsiderFilingsResponseDTO {
+  ticker: string
+  market: 'TH' | 'US'
+  requested_range?: string
+  interval?: string
+  net_shares_30d: number
+  net_shares_90d: number
+  net_shares_180d: number
+  cluster_buy_count: number
+  total_filings_count: number
+  filings: InsiderFilingDTO[]
+}
+
+export interface EarningsHistoryEntryDTO {
+  date_str: string
+  eps_actual: number | null
+  eps_estimate: number | null
+}
+
+export interface AnalystContextDTO {
+  ticker: string
+  provider_symbol: string
+  market: 'US' | 'TH'
+  currency: 'USD' | 'THB'
+  exchange_tz: string
+  target_mean: number | null
+  target_high: number | null
+  target_low: number | null
+  num_analysts: number | null
+  next_earnings_date: string | null
+  days_to_earnings: number | null
+  earnings_history: EarningsHistoryEntryDTO[]
+  source_as_of: string | null
+  data_status: 'ok' | 'partial' | 'stale' | 'unavailable'
+  provider_tier: 'best_effort'
+  synced_at: string
+}
+
+export interface InsiderMarkerHoverDTO {
+  action_type: 'buy' | 'sell' | 'cluster_buy'
+  label: string
+  accession_number: string
+  insider_name: string
+  officer_title: string | null
+  shares: number
+  price: number
+  filing_url: string
+  all_filers: Array<{
+    name: string
+    officer_title: string | null
+    shares: number
+  }> | null
+}
+
+
+
+
 
 

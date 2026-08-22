@@ -333,3 +333,128 @@ def send_ingested_article_discord(md_content: str, note_path: str | None = None)
 
     if not ok:
         logger.warning("ส่ง Discord สำหรับบทความ '%s' ไม่สำเร็จ", title)
+
+
+DEFAULT_MAX_AUDIO_BYTES_LIMIT = 8 * 1024 * 1024  # 8.0 MiB
+DEFAULT_SAFE_AUDIO_BYTES = int(7.5 * 1024 * 1024)  # 7.5 MiB Safe Margin target
+
+
+def get_max_discord_audio_bytes() -> int:
+    """อ่านขนาดไฟล์เสียงสูงสุดที่อนุญาตให้อัปโหลดเข้า Discord พร้อม Safe Margin (Default 7.5 MiB)
+    Validate ค่า ณ runtime ทุกครั้งเพื่อรองรับ env dynamic และ monkeypatch ในเทสต์
+    """
+    raw = os.getenv("DISCORD_MAX_AUDIO_BYTES", "").strip()
+    if not raw:
+        return DEFAULT_SAFE_AUDIO_BYTES
+    try:
+        val = int(raw)
+        return val if val > 0 else DEFAULT_SAFE_AUDIO_BYTES
+    except (ValueError, TypeError):
+        return DEFAULT_SAFE_AUDIO_BYTES
+
+
+def get_notebooklm_webhook_url() -> str:
+    """คืนค่า Webhook URL สำหรับห้อง NotebookLM โดยเฉพาะ หรือ fallback ไปยัง Webhook กลาง"""
+    return os.getenv("DISCORD_NOTEBOOKLM_WEBHOOK_URL", "").strip() or os.getenv("DISCORD_WEBHOOK_URL", "").strip()
+
+
+def is_notebooklm_discord_enabled() -> bool:
+    """ตรวจว่ามีการตั้งค่า Discord Webhook สำหรับ NotebookLM หรือไม่"""
+    return bool(get_notebooklm_webhook_url())
+
+
+from dataclasses import dataclass
+
+@dataclass
+class DiscordAudioDeliveryResult:
+    status: str  # "sent" | "skipped_disabled" | "skipped_oversize" | "failed"
+    message: str = ""
+
+
+def send_notebooklm_audio_discord(
+    audio_path: str | Path,
+    title: str,
+    summary: str = "",
+    source_ref: str | None = None,
+) -> DiscordAudioDeliveryResult:
+    """ส่งไฟล์เสียง NotebookLM Podcast ไปยัง Discord Webhook ในรูปแบบ Forum Post / Thread
+
+    - ใช้ DISCORD_NOTEBOOKLM_WEBHOOK_URL ก่อน fallback DISCORD_WEBHOOK_URL
+    - บีบอัดไฟล์อัตโนมัติหากเกิน 7.5 MiB (Safe Margin)
+    - ตรวจสอบขนาดไฟล์ก่อน POST เสมอเพื่อป้องกัน HTTP 413
+    - Failure-tolerant — คืน structured result (sent | skipped_disabled | skipped_oversize | failed)
+    """
+    webhook_url = get_notebooklm_webhook_url()
+    if not webhook_url:
+        logger.info("Discord Webhook URL for NotebookLM not configured, skipping notification.")
+        return DiscordAudioDeliveryResult(status="skipped_disabled", message="Discord webhook not configured")
+
+    p = Path(audio_path).resolve()
+    if not p.exists() or not p.is_file():
+        logger.warning("Audio file not found for Discord upload: %s", p)
+        return DiscordAudioDeliveryResult(status="failed", message=f"Audio file not found: {p.name}")
+
+    max_bytes = get_max_discord_audio_bytes()
+
+    # Ensure compressed if larger than target max bytes
+    try:
+        from tools.content.notebooklm.audio_utils import compress_audio_for_discord
+        p = compress_audio_for_discord(p, max_size_bytes=max_bytes)
+    except Exception as e:
+        logger.warning("Auto-compress before Discord upload skipped: %s", e)
+
+    try:
+        file_bytes = p.read_bytes()
+    except OSError as e:
+        logger.warning("Failed reading audio file for Discord: %s", e)
+        return DiscordAudioDeliveryResult(status="failed", message=f"Cannot read audio file: {e}")
+
+    # Guard: Final file size check
+    if len(file_bytes) > max_bytes:
+        size_mb = len(file_bytes) / (1024 * 1024)
+        max_mb = max_bytes / (1024 * 1024)
+        logger.warning("Audio file %s (%.2f MB) exceeds Discord limit (%.2f MB), skipping upload.", p.name, size_mb, max_mb)
+        return DiscordAudioDeliveryResult(status="skipped_oversize", message=f"File size {size_mb:.2f} MB exceeds limit {max_mb:.2f} MB")
+
+    clean_title = (title or p.stem).strip()
+    thread_name = f"🎙️ {clean_title}"
+    if len(thread_name) > _MAX_THREAD_NAME_CHARS:
+        thread_name = thread_name[:_MAX_THREAD_NAME_CHARS - 3] + "..."
+
+    base_payload: Dict[str, Any] = {
+        "thread_name": thread_name,
+    }
+
+    tag_id = os.getenv("DISCORD_NOTEBOOKLM_TAG_ID", "").strip()
+    if tag_id:
+        base_payload["applied_tags"] = [tag_id]
+
+    fields = [
+        {"name": "ประเภท", "value": "Audio Overview (Podcast)", "inline": True},
+        {"name": "ขนาดไฟล์", "value": f"{len(file_bytes) / (1024 * 1024):.2f} MB", "inline": True},
+    ]
+    if source_ref:
+        # แสดงเฉพาะชื่อไฟล์หรือ relative path (ไม่ใส่ absolute path)
+        fields.append({"name": "แหล่งข้อมูล", "value": str(source_ref)[:256], "inline": False})
+
+    embed = {
+        "title": f"🎙️ {clean_title}"[:256],
+        "description": summary[:_MAX_INLINE_CONTENT_CHARS] if summary else "🎧 ฟังเสียงสรุปพอดแคสต์เชิงลึกจาก NotebookLM",
+        "color": _COLOR_NEUTRAL,
+        "fields": fields,
+        "footer": {"text": "NotebookLM Podcast • Trinity Wealth Engine"},
+    }
+
+    ok = _post_with_retry(
+        webhook_url,
+        data={"payload_json": json.dumps({**base_payload, "embeds": [embed]})},
+        files={"file": (p.name, file_bytes, "audio/mp4")},
+    )
+    if ok:
+        logger.info("ส่ง NotebookLM Audio ไป Discord สำเร็จ: %s", clean_title)
+        return DiscordAudioDeliveryResult(status="sent", message="Successfully posted to Discord")
+    else:
+        logger.warning("ส่ง NotebookLM Audio ไป Discord ไม่สำเร็จ: %s", clean_title)
+        return DiscordAudioDeliveryResult(status="failed", message="HTTP request to Discord webhook failed")
+
+

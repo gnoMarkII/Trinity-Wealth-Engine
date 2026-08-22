@@ -5,6 +5,7 @@ import ScoreRing from './ScoreRing'
 import { sentimentClass } from '../../lib/sentiment'
 import { EquityNews } from './EquityNews'
 import { EquityNotesTab } from './EquityNotesTab'
+import { EquityChartTab } from './EquityChartTab'
 import { DCFScenariosChart } from './DCFScenariosChart'
 import { DataQualityFlagsCard } from './DataQualityFlagsCard'
 
@@ -20,7 +21,7 @@ const eyebrowClass = 'text-xs font-semibold uppercase tracking-wider text-sky-60
 const QUANT_STAGGER_STEP_MS = 60
 
 export const EquityDetail: React.FC<EquityDetailProps> = ({ status, data, errorMessage, onOpenAnalysisModal }) => {
-  const [activeTab, setActiveTab] = useState<'overview' | 'news' | 'notes'>('overview')
+  const [activeTab, setActiveTab] = useState<'overview' | 'chart' | 'news' | 'notes'>('overview')
 
   if (status === 'idle') {
     return null
@@ -109,6 +110,16 @@ export const EquityDetail: React.FC<EquityDetailProps> = ({ status, data, errorM
           <span>📊 Overview</span>
         </button>
         <button
+          onClick={() => setActiveTab('chart')}
+          className={`pb-3 border-b-2 transition-colors flex items-center gap-2 ${
+            activeTab === 'chart'
+              ? 'border-sky-600 text-sky-600 font-semibold'
+              : 'border-transparent text-zinc-500 hover:text-zinc-900'
+          }`}
+        >
+          <span>📈 Chart</span>
+        </button>
+        <button
           onClick={() => setActiveTab('news')}
           className={`pb-3 border-b-2 transition-colors flex items-center gap-2 ${
             activeTab === 'news'
@@ -130,11 +141,19 @@ export const EquityDetail: React.FC<EquityDetailProps> = ({ status, data, errorM
         </button>
       </div>
 
-      {activeTab === 'news' ? (
+      {activeTab === 'chart' ? (
+        <EquityChartTab
+          ticker={data.ticker}
+          companyName={data.company_name ?? undefined}
+          market={data.market}
+          currentPrice={(data.quant_signals as any)?.current_price ?? null}
+        />
+      ) : activeTab === 'news' ? (
         <EquityNews ticker={data.ticker} />
       ) : activeTab === 'notes' ? (
         <EquityNotesTab ticker={data.ticker} />
       ) : (
+
 
         <>
           <DataQualityFlagsCard flags={data.data_quality_flags} />
@@ -214,22 +233,22 @@ export const EquityDetail: React.FC<EquityDetailProps> = ({ status, data, errorM
             </div>
           )}
 
-          {/* Editorial reading grid: main narrative (7/12) + sentiment rail (5/12) */}
-          <div className="grid grid-cols-1 gap-8 lg:grid-cols-12">
-            <div className="space-y-8 lg:col-span-7">
-              <section>
+          {/* Editorial reading grid: main narrative (7/12 on lg, 8/12 on xl) + sentiment rail (5/12 on lg, 4/12 on xl) */}
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-12 items-start">
+            <div className="space-y-6 lg:col-span-7 xl:col-span-8">
+              <section className="rounded-xl border border-edge bg-panel p-5 shadow-sm">
                 <h3 className={eyebrowClass}>Base Case Summary</h3>
-                <p className="mt-3 max-w-prose text-[15px] leading-7 text-zinc-700 whitespace-pre-line">{data.base_case_summary}</p>
+                <p className="mt-2.5 text-[15px] leading-relaxed text-zinc-700 whitespace-pre-line">{data.base_case_summary}</p>
               </section>
 
-              <section>
+              <section className="rounded-xl border border-edge bg-panel p-5 shadow-sm">
                 <h3 className={eyebrowClass}>Narrative Analysis</h3>
-                <p className="mt-3 max-w-prose text-[15px] leading-7 text-zinc-700 whitespace-pre-line">{data.narrative_analysis}</p>
+                <p className="mt-2.5 text-[15px] leading-relaxed text-zinc-700 whitespace-pre-line">{data.narrative_analysis}</p>
               </section>
             </div>
 
-            <div className="lg:col-span-5">
-              <div className="space-y-4 rounded-xl border border-edge bg-panel p-5 shadow-sm shadow-black/5">
+            <div className="lg:col-span-5 xl:col-span-4">
+              <div className="space-y-4 rounded-xl border border-edge bg-panel p-5 shadow-sm">
                 <h3 className={eyebrowClass}>Sentiment Context</h3>
 
                 {data.sentiment_context.key_themes && data.sentiment_context.key_themes.length > 0 && (

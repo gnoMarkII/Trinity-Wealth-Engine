@@ -313,17 +313,20 @@ def default_run_fn(
                         return
                     _log_manager_messages(log_conn, job_id, event)
                     if flow == "youtube_pitch":
-                        synthesis_update = event.get("synthesize_notebooklm")
-                        if isinstance(synthesis_update, dict):
-                            status = synthesis_update.get("synthesis_status")
-                            if status == "done_with_errors":
-                                failures = synthesis_update.get("synthesis_failures") or []
-                                terminal_status = "done_with_errors"
-                                terminal_error = "\n".join(str(item) for item in failures) or "Some approved pitches failed"
-                            elif status == "done_with_warnings":
-                                terminal_status = "done_with_warnings"
-                                terminal_error = "Completed with Unverified Drafts"
+                        for node_name in ("synthesize_notebooklm", "persist_parking_lot"):
+                            node_update = event.get(node_name)
+                            if isinstance(node_update, dict):
+                                status = node_update.get("synthesis_status")
+                                if status == "done_with_errors":
+                                    failures = node_update.get("synthesis_failures") or []
+                                    terminal_status = "done_with_errors"
+                                    terminal_error = "\n".join(str(item) for item in failures) or "Some approved pitches failed"
+                                elif status == "done_with_warnings" and terminal_status != "done_with_errors":
+                                    warnings = node_update.get("synthesis_warnings") or []
+                                    terminal_status = "done_with_warnings"
+                                    terminal_error = "\n".join(str(item) for item in warnings) or "Completed with warnings (Unverified Drafts or Parking Lot partial notices)"
                 _append_manager_summary(log_conn, job_id, instruction, flow=flow)
+
 
         with_retry(_stream_and_log)
 

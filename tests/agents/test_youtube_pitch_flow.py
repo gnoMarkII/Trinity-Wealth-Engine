@@ -233,3 +233,69 @@ def test_generate_pitches_routes_to_error_when_no_verified_source_can_be_selecte
     assert _route_after_pitch_generation(result) == "provenance_unavailable"
     with pytest.raises(ValueError, match="No selectable YouTube Pitch"):
         provenance_unavailable_node(result)
+
+
+def test_persist_parking_lot_node_success(tmp_path, monkeypatch):
+    from agents.youtube_pitch_flow import persist_parking_lot_node
+    from api import state_db
+
+    vault_dir = tmp_path / "vault"
+    db_path = str(tmp_path / "state.db")
+    monkeypatch.setattr("agents.youtube_pitch_flow.VAULT_PATH", str(vault_dir))
+    monkeypatch.setenv("WEBUI_STATE_DB_PATH", db_path)
+
+
+
+    state: YouTubePitchState = {
+        "pitches": [{
+            "pitch_id": "p-1",
+            "parking_lot_ideas": ["ไอเดียที่ 1", "ไอเดียที่ 2"],
+        }],
+        "synthesized_pitch_ids": ["p-1"],
+        "synthesis_status": "done",
+    }
+    config = {"configurable": {"job_id": "job-success-123"}}
+
+    res = persist_parking_lot_node(state, config)
+    assert res["synthesis_status"] == "done"
+    assert len(res["synthesis_warnings"]) == 0
+    assert len(res["messages"]) == 1
+
+    # Kanban cards in DB
+    conn = state_db.get_connection(db_path)
+    cards = state_db.list_kanban_cards(conn)
+    assert len(cards) == 2
+
+
+def test_persist_parking_lot_node_db_failure_fallback(tmp_path, monkeypatch):
+    from agents.youtube_pitch_flow import persist_parking_lot_node
+    import api.state_db
+
+    vault_dir = tmp_path / "vault"
+    monkeypatch.setattr("agents.youtube_pitch_flow.VAULT_PATH", str(vault_dir))
+
+    # Mock DB failure
+    def mock_db_error(*args, **kwargs):
+        raise RuntimeError("SQLite database is locked or corrupted")
+
+    monkeypatch.setattr("api.state_db.create_parking_lot_cards_atomic", mock_db_error)
+
+    state: YouTubePitchState = {
+        "pitches": [{
+            "pitch_id": "p-fail",
+            "parking_lot_ideas": ["ไอเดียที่ 1", "ไอเดียที่ 2"],
+        }],
+        "synthesized_pitch_ids": ["p-fail"],
+        "synthesis_status": "done",
+    }
+    config = {"configurable": {"job_id": "job-fail-456"}}
+
+    res = persist_parking_lot_node(state, config)
+    assert res["synthesis_status"] == "done_with_warnings"
+    assert len(res["synthesis_warnings"]) == 1
+    assert "SQLite" in res["synthesis_warnings"][0]
+
+    # Check Vault outbox file exists and is pending
+    outbox_file = vault_dir / "NotebookLM_Sources" / "outbox" / "parking_job-fail-456_p-fail.json"
+    assert outbox_file.exists()
+

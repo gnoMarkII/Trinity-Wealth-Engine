@@ -274,6 +274,53 @@ def fetch_news_for_pitching(
     return candidates, macro_baselines_str, is_layer2_fallback
 
 
+def _extract_topic_terms(instruction: str) -> Tuple[List[str], str]:
+    if not instruction:
+        return [], ""
+    cleaned = re.sub(r'lookback_days\s*=\s*[0-9]+', '', instruction, flags=re.IGNORECASE)
+    cleaned = re.sub(r'from_date\s*=\s*[0-9-]+', '', cleaned, flags=re.IGNORECASE)
+    cleaned = re.sub(r'to_date\s*=\s*[0-9-]+', '', cleaned, flags=re.IGNORECASE)
+    cleaned = re.sub(r'ไอเดียต่อยอดจาก\s*YouTube\s*Pitch\s*\([^\)]+\):\s*', '', cleaned, flags=re.IGNORECASE)
+    cleaned = re.sub(r'หาไอเดียทำคลิป(?:\s*YouTube)?(?:\s*เชิงลึก)?', '', cleaned, flags=re.IGNORECASE)
+    cleaned = re.sub(r'\[lookback_days=[0-9]+\]', '', cleaned, flags=re.IGNORECASE)
+    cleaned = cleaned.strip()
+
+    terms = [w.strip() for w in re.split(r'[\s,;:\'"()]+', cleaned) if len(w.strip()) >= 2]
+    stopwords = {'ของ', 'และ', 'ใน', 'ต่อ', 'ที่', 'กับ', 'หรือ', 'จาก', 'มี', 'เป็น', 'ไป', 'ได้', 'ให้', 'เรื่อง', 'เกี่ยวกับ', 'the', 'and', 'in', 'of', 'to', 'for', 'with', 'on', 'at'}
+    filtered_terms = [t for t in terms if t.lower() not in stopwords]
+    return filtered_terms, cleaned
+
+
+def _score_candidate_relevance(candidate: Dict[str, Any], query_terms: List[str], raw_query: str) -> float:
+    if not query_terms and not raw_query:
+        return 0.0
+    title = str(candidate.get("canonical_title") or candidate.get("title") or "").lower()
+    summary = str(candidate.get("comprehensive_summary") or candidate.get("summary") or "").lower()
+    tags = " ".join([str(t).lower() for t in candidate.get("tags", []) or []])
+    symbols = " ".join([str(s).lower() for s in candidate.get("target_symbols", []) or []])
+
+    score = 0.0
+    full_q = raw_query.strip().lower()
+    if full_q and len(full_q) >= 4:
+        if full_q in title:
+            score += 50.0
+        elif full_q in summary:
+            score += 25.0
+
+    for term in query_terms:
+        t_low = term.lower()
+        if not t_low or len(t_low) < 2:
+            continue
+        if t_low in symbols or t_low in tags:
+            score += 20.0
+        if t_low in title:
+            score += 15.0
+        elif t_low in summary:
+            score += 5.0
+
+    return score
+
+
 def _generate_pitches_internal(
     candidates: List[Dict[str, Any]],
     max_pitches: int,
@@ -281,14 +328,24 @@ def _generate_pitches_internal(
     date_summary: str,
 ) -> YouTubeContentPitchBatch:
     """ฟังก์ชันภายในสำหรับสร้าง Pitch ผ่าน structured LLM พร้อม validation"""
+    topic_terms, clean_query = _extract_topic_terms(instruction)
+
     # แบ่ง Quota ต่อ Layer: ข่าวทั่วไป (Layer 1/2) สูงสุด 12 รายการ + คลิปกูรู YouTube สูงสุด 8 รายการ
     news_cands = [c for c in candidates if c.get("source_layer") != "layer2_youtube"]
     yt_cands = [c for c in candidates if c.get("source_layer") == "layer2_youtube"]
-    # เรียงลำดับตามวันที่ (ใหม่ไปเก่า) หากมี ingested_at
-    news_cands.sort(key=lambda x: x.get("ingested_at", ""), reverse=True)
-    yt_cands.sort(key=lambda x: x.get("ingested_at", ""), reverse=True)
+
+    # เรียงลำดับตามความเกี่ยวข้องกับ Instruction ก่อน แล้วตามด้วยความใหม่ของข้อมูล
+    news_cands.sort(
+        key=lambda x: (_score_candidate_relevance(x, topic_terms, clean_query), x.get("ingested_at", "")),
+        reverse=True,
+    )
+    yt_cands.sort(
+        key=lambda x: (_score_candidate_relevance(x, topic_terms, clean_query), x.get("ingested_at", "")),
+        reverse=True,
+    )
 
     selected_candidates = news_cands[:12] + yt_cands[:8]
+
 
     cand_summary_lines = []
     for i, c in enumerate(selected_candidates, 1):
@@ -321,6 +378,17 @@ def _generate_pitches_internal(
         provider=os.getenv("YOUTUBE_PITCH_PROVIDER", "google"),
     )
     validate_generated_pitch(batch)
+
+    # Server-side authoritative hydration: map primary_anchor_event_id -> candidate canonical title
+    cand_by_id = {
+        c.get("event_id"): (c.get("canonical_title") or c.get("title") or "")
+        for c in candidates
+        if c.get("event_id")
+    }
+    for pitch in batch.pitches:
+        if pitch.primary_anchor_event_id in cand_by_id:
+            pitch.primary_anchor_title = cand_by_id[pitch.primary_anchor_event_id]
+
     return batch
 
 
@@ -348,6 +416,12 @@ def generate_youtube_pitches(
             logger.warning("Attempt %d generation failed: %s", attempt + 1, e)
 
     logger.error("Structured pitch generation failed after retries: %s. Creating heuristic fallback batch.", last_error)
+    first_ev_id = candidates[0].get("event_id", "ev-1") if candidates else "ev-1"
+    first_ev_title = (
+        (candidates[0].get("canonical_title") or candidates[0].get("title") or "ข่าวเหตุการณ์หลัก")
+        if candidates
+        else "ข่าวเหตุการณ์หลัก"
+    )
     # Lenient / Heuristic Fallback ในกรณีที่ LLM validation fail ซ้ำ
     fallback_item = YouTubeContentPitchItem(
         pitch_id=str(uuid.uuid4())[:8],
@@ -357,7 +431,10 @@ def generate_youtube_pitches(
             "เตือนภัยและโอกาส: เตรียมรับมือความผันผวนของเศรษฐกิจล่าสุด",
         ],
         target_audience="นักลงทุนและผู้สนใจเศรษฐกิจมหภาค",
-        core_hook=f"สรุปเหตุการณ์สำคัญจาก {len(candidates)} ข่าวเด่นที่กำลังขับเคลื่อนตลาดโลกและไทยในขณะนี้",
+        core_thesis=f"สรุปเหตุการณ์สำคัญจาก {len(candidates)} ข่าวเด่นที่กำลังขับเคลื่อนตลาดโลกและไทยในขณะนี้",
+        primary_anchor_event_id=first_ev_id,
+        primary_anchor_title=first_ev_title,
+        parking_lot_ideas=[],
         key_questions_to_answer=[
             "อะไรคือสาเหตุหลักของความเคลื่อนไหวในรอบนี้?",
             "ผลกระทบที่จะส่งต่อถึงตลาดหุ้นและสินทรัพย์ต่างๆ คืออะไร?",
@@ -373,6 +450,7 @@ def generate_youtube_pitches(
         recommended_format="Deep Dive 15m",
         estimated_impact="ผลกระทบวงกว้างต่อความเชื่อมั่นตลาดทุนและภาพรวมเศรษฐกิจ",
     )
+
     return YouTubeContentPitchBatch(
         pitches=[fallback_item],
         date_range_summary=date_summary,
@@ -456,13 +534,15 @@ def synthesize_notebooklm_source(
 
     pitch_info = "\n".join([
         f"Working Titles: {', '.join(getattr(pitch, 'working_titles', []) or ['untitled'])}",
-        f"Core Hook: {getattr(pitch, 'core_hook', '')}",
+        f"Core Thesis: {getattr(pitch, 'core_thesis', getattr(pitch, 'core_hook', ''))}",
+        f"Primary Anchor: {getattr(pitch, 'primary_anchor_title', '')} ({getattr(pitch, 'primary_anchor_event_id', '')})",
         f"Investigation Mode: {getattr(pitch, 'investigation_mode', 'mixed')}",
         f"Counter-intuitive Lead: {getattr(pitch, 'counter_intuitive_lead', '')}",
         f"Audience Takeaway: {getattr(pitch, 'audience_takeaway', '')}",
         f"Key Questions: {', '.join(getattr(pitch, 'key_questions_to_answer', []) or [])}",
         f"Research Hypotheses: {', '.join(getattr(pitch, 'research_hypotheses', []) or [])}",
     ])
+
 
     evidence_lines = []
     for s in bundle.sources:
@@ -503,8 +583,10 @@ def synthesize_notebooklm_source(
         max_output_tokens=16384,
     )
     draft = normalize_visual_directives(draft)
+    draft = normalize_draft_evidence_references(draft, bundle)
 
     from tools.content.briefing_renderer import (
+
         render_briefing_book,
         append_data_gap_notes,
         prepend_unverified_draft_banner,
@@ -605,7 +687,102 @@ def normalize_visual_directives(draft: Any) -> Any:
     draft.visual_directives = new_directives
     return draft
 
+
+def normalize_draft_evidence_references(draft: Any, bundle: Any) -> Any:
+    """Sanitize and coerce evidence IDs in draft to valid canonical EvidenceItem IDs from bundle."""
+    import re
+    if not draft or not bundle or not getattr(bundle, "evidence_items", None):
+        return draft
+
+    valid_eids = {e.evidence_id for e in bundle.evidence_items}
+    if not valid_eids:
+        return draft
+
+    all_valid_sorted = sorted(valid_eids)
+
+    # Build mapping for lookup
+    lookup: dict = {}
+    for eid in valid_eids:
+        lookup[eid.upper()] = [eid]
+        lookup[eid.lower()] = [eid]
+        lookup[f"[{eid}]".upper()] = [eid]
+        lookup[f"[{eid}]".lower()] = [eid]
+        m = re.match(r"^E(\d+)$", eid, re.IGNORECASE)
+        if m:
+            num = int(m.group(1))
+            lookup[f"E{num}".upper()] = [eid]
+            lookup[f"E{num}".lower()] = [eid]
+            lookup[f"[E{num}]".upper()] = [eid]
+            lookup[f"[E{num}]".lower()] = [eid]
+
+    for item in bundle.evidence_items:
+        for sid in getattr(item, "source_ids", []) or []:
+            lookup.setdefault(sid.upper(), []).append(item.evidence_id)
+            lookup.setdefault(sid.lower(), []).append(item.evidence_id)
+            lookup.setdefault(f"[{sid}]".upper(), []).append(item.evidence_id)
+            lookup.setdefault(f"[{sid}]".lower(), []).append(item.evidence_id)
+        if item.metric_name and ":" in item.metric_name:
+            sym = item.metric_name.split(":")[0].strip()
+            if sym:
+                lookup.setdefault(sym.upper(), []).append(item.evidence_id)
+                lookup.setdefault(sym.lower(), []).append(item.evidence_id)
+
+    def sanitize_id_list(raw_ids: Any, fallback_ids: list) -> list:
+        if isinstance(raw_ids, str):
+            raw_tokens = re.findall(r"\[?E\d+\]?|\[?S[A-Za-z0-9_]+\]?|[A-Za-z0-9_-]+", raw_ids)
+        elif isinstance(raw_ids, list):
+            raw_tokens = []
+            for item in raw_ids:
+                if isinstance(item, str):
+                    tokens = re.findall(r"\[?E\d+\]?|\[?S[A-Za-z0-9_]+\]?|[A-Za-z0-9_-]+", item)
+                    raw_tokens.extend(tokens if tokens else [item.strip()])
+                else:
+                    raw_tokens.append(str(item).strip())
+        else:
+            raw_tokens = []
+
+        resolved = []
+        for tok in raw_tokens:
+            cleaned = tok.strip()
+            if not cleaned:
+                continue
+            if cleaned in valid_eids:
+                resolved.append(cleaned)
+            elif cleaned.upper() in lookup:
+                resolved.extend(lookup[cleaned.upper()])
+            elif cleaned in lookup:
+                resolved.extend(lookup[cleaned])
+
+        final_ids = []
+        seen = set()
+        for eid in resolved:
+            if eid in valid_eids and eid not in seen:
+                seen.add(eid)
+                final_ids.append(eid)
+
+        if not final_ids:
+            return fallback_ids[:2] if fallback_ids else all_valid_sorted[:2]
+        return final_ids
+
+    for sc in getattr(draft, "causality_scenarios", []) or []:
+        sc.evidence_ids = sanitize_id_list(getattr(sc, "evidence_ids", []), all_valid_sorted[:2])
+
+    for ai in getattr(draft, "asset_impacts", []) or []:
+        sym = getattr(ai, "symbol_or_name", "").strip().upper()
+        sym_matched_eids = []
+        for word in re.findall(r"[A-Za-z0-9]+", sym):
+            if word.upper() in lookup:
+                sym_matched_eids.extend(lookup[word.upper()])
+        ai.evidence_ids = sanitize_id_list(getattr(ai, "evidence_ids", []), sym_matched_eids or all_valid_sorted[:2])
+
+    for vd in getattr(draft, "visual_directives", []) or []:
+        vd.evidence_ids = sanitize_id_list(getattr(vd, "evidence_ids", []), all_valid_sorted[:1])
+
+    return draft
+
+
 def select_financial_autopsy_assets(pitch: Any, events: Any) -> list:
+
     from tools.market.asset_resolver import resolve_asset
 
     potential_symbols = []
@@ -622,7 +799,7 @@ def select_financial_autopsy_assets(pitch: Any, events: Any) -> list:
     # Fallback to regex if we have absolutely nothing
     if not potential_symbols:
         import re
-        text_parts = [getattr(pitch, "title", ""), getattr(pitch, "core_hook", ""), *getattr(pitch, "working_titles", [])]
+        text_parts = [getattr(pitch, "title", ""), getattr(pitch, "core_thesis", getattr(pitch, "core_hook", "")), *getattr(pitch, "working_titles", [])]
         for ev in events:
             text_parts.append(ev.get("canonical_title", ""))
             text_parts.append(ev.get("comprehensive_summary", ""))
@@ -645,14 +822,35 @@ def select_financial_autopsy_assets(pitch: Any, events: Any) -> list:
     return resolved
 
 def _financial_snapshot_reference(result: Any) -> Any:
-    from schemas.briefing_book_schemas import FinancialAutopsySnapshotRef
+    from schemas.briefing_book_schemas import FinancialAutopsySnapshotRef, FinancialAutopsyPeriodRecord
+    period_records = []
+    for p in getattr(result, "periods", []) or []:
+        if isinstance(p, FinancialAutopsyPeriodRecord):
+            period_records.append(p)
+        elif hasattr(p, "model_dump"):
+            period_records.append(FinancialAutopsyPeriodRecord.model_validate(p.model_dump()))
+        elif isinstance(p, dict):
+            period_records.append(FinancialAutopsyPeriodRecord.model_validate(p))
+        else:
+            period_records.append(FinancialAutopsyPeriodRecord(
+                fiscal_period_end=str(getattr(p, "fiscal_period_end", "")),
+                free_cash_flow=getattr(p, "free_cash_flow", None),
+                operating_cash_flow=getattr(p, "operating_cash_flow", None),
+                capital_expenditure=getattr(p, "capital_expenditure", None),
+                total_debt=getattr(p, "total_debt", None),
+                total_revenue=getattr(p, "total_revenue", None),
+                net_income=getattr(p, "net_income", None),
+                dividends_paid=getattr(p, "dividends_paid", None),
+                payout_ratio_pct=getattr(p, "payout_ratio_pct", None),
+            ))
+
     return FinancialAutopsySnapshotRef(
         symbol=result.ticker,
         provider_symbol=result.provider_symbol,
         status="success",
         currency=result.currency,
         source=result.source,
-        periods=result.periods,
+        periods=period_records,
         market_cap=result.market_cap_formatted,
         revenue=result.revenue_formatted,
         net_income=result.net_income_formatted,
@@ -660,3 +858,4 @@ def _financial_snapshot_reference(result: Any) -> Any:
         total_debt=result.total_debt_formatted,
         health_notes=result.health_summary,
     )
+

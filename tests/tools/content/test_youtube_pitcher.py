@@ -79,7 +79,9 @@ def test_generate_youtube_pitches_success(mock_invoke):
         pitch_id="uuid-test",
         working_titles=["คำถามเจาะลึก?", "วิเคราะห์สมมติฐาน", "เตือนภัยตลาด"],
         target_audience="นักลงทุนไทย",
-        core_hook="Hook 30 วินาที",
+        core_thesis="ใจความสำคัญหลักหนึ่งประโยคที่ยาวเกิน 15 ตัวอักษรแน่นอน",
+        primary_anchor_event_id="ev-1",
+        primary_anchor_title="ข่าวธนาคารกลาง",
         key_questions_to_answer=["ข้อ 1", "ข้อ 2", "ข้อ 3"],
         research_hypotheses=["สมมติฐาน 1", "สมมติฐาน 2"],
         source_event_ids=["ev-1"],
@@ -92,6 +94,7 @@ def test_generate_youtube_pitches_success(mock_invoke):
         audience_takeaway="เก็บเงินสดสำรอง 6 เดือนก่อนตัดสินใจลงทุนเพิ่ม",
         thumbnail_concept="ภาพกราฟตลาดหุ้นพุ่งขึ้นแต่กระเป๋าเงินโล่ง",
     )
+
     mock_invoke.return_value = YouTubeContentPitchBatch(
         pitches=[mock_item],
         date_range_summary="7 วัน",
@@ -868,3 +871,205 @@ def test_synthesize_notebooklm_source_unverified_draft_stale_macro_bypass(
     assert isinstance(result, UnverifiedBriefingDraftResult)
     assert result.quality_report.publishable is False
     assert "All macro observations are stale" in result.content
+
+
+def test_create_parking_lot_cards_atomic(tmp_path):
+    from api import state_db
+    db_path = str(tmp_path / "state.db")
+
+    ideas = ["ไอเดียที่ 1  ", "ไอเดียที่ 2", "  ไอเดียที่ 1"]
+    count = state_db.create_parking_lot_cards_atomic(ideas=ideas, source_pitch_id="p-100", db_path=db_path)
+    assert count == 2
+
+    # Second insert with same ideas -> ignored, rowcount=0, count=0
+    count_again = state_db.create_parking_lot_cards_atomic(ideas=ideas, source_pitch_id="p-100", db_path=db_path)
+    assert count_again == 0
+
+    conn = state_db.get_connection(db_path)
+    cards = state_db.list_kanban_cards(conn)
+    assert len(cards) == 2
+    assert cards[0]["display_seq"] == 1
+    assert cards[1]["display_seq"] == 2
+    assert cards[0]["column_name"] == "backlog"
+
+
+def test_create_parking_lot_cards_atomic_concurrent(tmp_path):
+    import concurrent.futures
+    from api import state_db
+    db_path = str(tmp_path / "concurrent_state.db")
+
+    def insert_batch(batch_idx):
+        ideas = [f"ไอเดียกลุ่ม {batch_idx} รายการ {i}" for i in range(5)]
+        return state_db.create_parking_lot_cards_atomic(ideas=ideas, source_pitch_id=f"p-{batch_idx}", db_path=db_path)
+
+    with concurrent.futures.ThreadPoolExecutor(max_workers=4) as executor:
+        futures = [executor.submit(insert_batch, i) for i in range(4)]
+        results = [f.result() for f in futures]
+
+    assert sum(results) == 20
+    conn = state_db.get_connection(db_path)
+    cards = state_db.list_kanban_cards(conn)
+    assert len(cards) == 20
+    seqs = [c["display_seq"] for c in cards]
+    assert sorted(seqs) == list(range(1, 21))
+
+
+def test_financial_snapshot_reference_coercion():
+    from tools.market.financial_autopsy import FinancialAutopsyPeriod, FinancialAutopsySnapshot
+    from tools.content.youtube_pitcher import _financial_snapshot_reference
+    from schemas.briefing_book_schemas import FinancialAutopsySnapshotRef, FinancialAutopsyPeriodRecord
+
+    period = FinancialAutopsyPeriod(
+        fiscal_period_end="2026-06-30",
+        free_cash_flow=1000000.0,
+        operating_cash_flow=1200000.0,
+        capital_expenditure=200000.0,
+        total_debt=500000.0,
+        total_revenue=5000000.0,
+        net_income=800000.0,
+        ebit=900000.0,
+        income_before_tax=850000.0,
+    )
+    snap = FinancialAutopsySnapshot(
+        ticker="WDC",
+        provider_symbol="WDC",
+        market="US",
+        currency="USD",
+        retrieval_timestamp="2026-08-17T00:00:00",
+        periods=[period],
+        market_cap=25000000000.0,
+        health_summary="Strong cash flow",
+    )
+
+    ref = _financial_snapshot_reference(snap)
+    assert isinstance(ref, FinancialAutopsySnapshotRef)
+    assert ref.symbol == "WDC"
+    assert len(ref.periods) == 1
+    assert isinstance(ref.periods[0], FinancialAutopsyPeriodRecord)
+    assert ref.periods[0].fiscal_period_end == "2026-06-30"
+    assert ref.periods[0].free_cash_flow == 1000000.0
+
+
+def test_normalize_draft_evidence_references():
+    from schemas.briefing_book_schemas import (
+        InvestigativeBriefingBookDraft,
+        BriefingEvidenceBundle,
+        EvidenceItem,
+        ScenarioRecord,
+        AssetImpactRecord,
+        VisualEvidenceDirective,
+    )
+    from tools.content.youtube_pitcher import normalize_draft_evidence_references
+
+    bundle = BriefingEvidenceBundle(
+        pitch_id="p-1",
+        evidence_items=[
+
+            EvidenceItem(
+                evidence_id="E01",
+                claim="Fact 1",
+                source_ids=["S01"],
+                classification="verified_fact",
+            ),
+            EvidenceItem(
+                evidence_id="E02",
+                claim="Fact 2",
+                source_ids=["S02"],
+                classification="verified_fact",
+                metric_name="TTD:Revenue",
+            ),
+        ]
+    )
+
+
+    draft = InvestigativeBriefingBookDraft(
+        title="Title",
+        executive_summary="Summary",
+        bull_case="Bull",
+        bear_case="Bear",
+        falsification_triggers=["F1"],
+        act1_script="Act 1",
+        act2_script="Act 2",
+        act3_script="Act 3",
+        causality_scenarios=[
+            ScenarioRecord(
+                scenario_id="SC01",
+                name="Base",
+                description="Desc",
+                probability_pct=100.0,
+                trigger_conditions=["T1"],
+                falsification_triggers=["F1"],
+                evidence_ids=["[E01]", "E2", "S01"],  # formatting variations
+            )
+        ],
+        asset_impacts=[
+            AssetImpactRecord(
+                symbol_or_name="TTD",
+                impact_type="direct_upside",
+                reasoning="Reason",
+                risk_factors=["R1"],
+                invalidation_conditions=["I1"],
+                evidence_ids=["S_FIN_TTD", "UNKNOWN"],  # invalid / source
+            )
+        ],
+        visual_directives=[
+            VisualEvidenceDirective(
+                visual_id="V01",
+                act="Act I",
+                title="Title",
+                chart_type="Type",
+                description="Desc",
+                annotation="Annotation",
+                evidence_ids=["[E02]"],
+                series_keys=["KEY"],
+                date_range="2026",
+                sources=["S01"],
+            )
+
+        ],
+        notebooklm_prompts=[],
+    )
+
+
+    normalized = normalize_draft_evidence_references(draft, bundle)
+    # Scenarios should be cleaned to valid E01, E02
+    assert normalized.causality_scenarios[0].evidence_ids == ["E01", "E02"]
+    # Asset impacts for TTD should resolve to E02
+    assert "E02" in normalized.asset_impacts[0].evidence_ids
+    # Visual directive should be cleaned of brackets
+    assert normalized.visual_directives[0].evidence_ids == ["E02"]
+
+
+def test_candidate_topic_ranking_prioritization():
+    from tools.content.youtube_pitcher import _extract_topic_terms, _score_candidate_relevance
+
+    instruction = "ไอเดียต่อยอดจาก YouTube Pitch (p-004): ผลกระทบของ Applied Materials ต่อดัชนี Nasdaq [lookback_days=7]"
+    terms, clean_query = _extract_topic_terms(instruction)
+    assert "Applied" in terms
+    assert "Materials" in terms
+    assert "Nasdaq" in terms
+
+    matching_cand = {
+        "canonical_title": "ตลาดหุ้นร่วงหลังยอดค้าปลีกเซอร์ไพรส์ ด้าน Applied Materials ดิ่งหนักจากผลประกอบการ",
+        "summary": "Applied Materials รายงานผลประกอบการ",
+        "tags": ["AMAT", "Technology"],
+        "target_symbols": ["AMAT"],
+        "ingested_at": "2026-08-10T10:00:00",
+    }
+    unrelated_cand = {
+        "canonical_title": "ราคาน้ำมันดิบ Brent พุ่งสูงขึ้น",
+        "summary": "ความตึงเครียดในตะวันออกกลางดันราคาน้ำมัน",
+        "tags": ["Energy"],
+        "target_symbols": ["OIL"],
+        "ingested_at": "2026-08-17T12:00:00",  # Newer date
+    }
+
+    match_score = _score_candidate_relevance(matching_cand, terms, clean_query)
+    unrelated_score = _score_candidate_relevance(unrelated_cand, terms, clean_query)
+
+    assert match_score > unrelated_score
+    assert match_score >= 30.0
+
+
+
+

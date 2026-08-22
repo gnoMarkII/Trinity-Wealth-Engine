@@ -1,13 +1,16 @@
 """StateGraph Workflow สำหรับ YouTube Content Pitching & Research-Grade Briefing Book"""
+import hashlib
 from datetime import datetime
+from pathlib import Path
 from typing import Any, Literal, Optional, TypedDict
 from langchain_core.messages import AIMessage
+from langchain_core.runnables import RunnableConfig
 from langgraph.graph import END, START, StateGraph
 from langgraph.types import Command, interrupt
+from langsmith import traceable
 
 from core.logger import get_logger
 from schemas.youtube_pitch_schemas import YouTubeContentPitchItem
-from pathlib import Path
 
 from tools.content.youtube_pitcher import (
     fetch_news_for_pitching,
@@ -39,12 +42,15 @@ class YouTubePitchState(TypedDict, total=False):
     result_summary: str
     synthesis_status: Literal["done", "done_with_warnings", "done_with_errors", "error"]
     synthesis_failures: list[str]
+    synthesis_warnings: list[str]
+    synthesized_pitch_ids: list[str]
     pitch_generation_attempt: int
     approval_revision: int
     source_refresh_attempts: int
     force_provenance_refresh: bool
     provenance_summary: dict[str, Any]
     approval_block_reason: Optional[str]
+
 
 
 def fetch_topics_node(state: YouTubePitchState) -> dict:
@@ -366,6 +372,8 @@ def synthesize_notebooklm_node(state: YouTubePitchState, config: RunnableConfig)
     messages = []
     summary_lines = []
     failures: list[str] = []
+    warnings: list[str] = []
+    synthesized_pitch_ids: list[str] = []
     succeeded = 0
     today_str = datetime.now().strftime("%Y-%m-%d")
 
@@ -412,6 +420,8 @@ def synthesize_notebooklm_node(state: YouTubePitchState, config: RunnableConfig)
                 date_str=today_str,
             )
 
+            synthesized_pitch_ids.append(p_id)
+
             if is_draft:
                 line = f"✓ บันทึก Draft สำเร็จ: {saved_artifact.path} (หัวข้อ: {main_title})"
             else:
@@ -447,6 +457,70 @@ def synthesize_notebooklm_node(state: YouTubePitchState, config: RunnableConfig)
         "messages": messages,
         "synthesis_status": synthesis_status,
         "synthesis_failures": failures,
+        "synthesis_warnings": warnings,
+        "synthesized_pitch_ids": synthesized_pitch_ids,
+    }
+
+
+@traceable(run_type="chain")
+def persist_parking_lot_node(state: YouTubePitchState, config: RunnableConfig = None) -> dict:
+    """Best-effort persistence of parking lot ideas into Vault outbox and SQLite kanban backlog."""
+    from tools.content.parking_lot_outbox import write_parking_lot_outbox_atomic, mark_outbox_synced_atomic
+    from api.state_db import create_parking_lot_cards_atomic
+
+    pitches = state.get("pitches", [])
+    synthesized_ids = set(state.get("synthesized_pitch_ids", []))
+    current_status = state.get("synthesis_status", "done")
+    warnings = list(state.get("synthesis_warnings", []))
+    messages = []
+
+    job_id = "unknown"
+    if config and isinstance(config, dict) and "configurable" in config:
+        job_id = config["configurable"].get("job_id", "unknown")
+
+    for p_dict in pitches:
+        if not isinstance(p_dict, dict):
+            continue
+        p_id = str(p_dict.get("pitch_id", ""))
+        if p_id not in synthesized_ids:
+            continue
+
+        ideas = p_dict.get("parking_lot_ideas") or []
+        if not ideas:
+            continue
+
+        outbox_file = None
+        try:
+            outbox_file = write_parking_lot_outbox_atomic(
+                vault_root=Path(VAULT_PATH),
+                job_id=job_id,
+                pitch_id=p_id,
+                ideas=ideas,
+            )
+        except Exception as outbox_err:
+            logger.error("Failed to write parking lot outbox for pitch %s: %s", p_id, outbox_err)
+            idea_hashes = [hashlib.sha256(str(i).strip().casefold().encode("utf-8")).hexdigest()[:8] for i in ideas]
+            logger.warning("LAST-RESORT DIAGNOSTIC: Job %s Pitch %s ideas unwritten: %s", job_id, p_id, idea_hashes)
+
+        try:
+            created = create_parking_lot_cards_atomic(ideas=ideas, source_pitch_id=p_id)
+            if outbox_file:
+                mark_outbox_synced_atomic(outbox_file)
+            if created > 0:
+                msg = f"✓ บันทึกไอเดีย Parking Lot ลง Backlog สำเร็จ: {created} รายการ (จาก Pitch {p_id})"
+                messages.append(AIMessage(content=msg, name="persist_parking_lot"))
+        except Exception as db_err:
+            warn_msg = f"⚠️ ไม่สามารถบันทึกไอเดีย Parking Lot ({len(ideas)} รายการ) ลง SQLite ได้ (เก็บไว้ใน Outbox Vault แล้ว): {db_err}"
+            logger.warning("Parking lot SQLite persist warning for pitch %s: %s", p_id, db_err)
+            warnings.append(warn_msg)
+            messages.append(AIMessage(content=warn_msg, name="persist_parking_lot"))
+            if current_status != "done_with_errors":
+                current_status = "done_with_warnings"
+
+    return {
+        "messages": messages,
+        "synthesis_status": current_status,
+        "synthesis_warnings": warnings,
     }
 
 
@@ -457,6 +531,7 @@ def build_youtube_pitch_graph(checkpointer=None):
     builder.add_node("gate", gate_node)
     builder.add_node("provenance_unavailable", provenance_unavailable_node)
     builder.add_node("synthesize_notebooklm", synthesize_notebooklm_node)
+    builder.add_node("persist_parking_lot", persist_parking_lot_node)
 
     builder.add_edge(START, "fetch_topics")
     builder.add_edge("fetch_topics", "generate_pitches")
@@ -466,6 +541,8 @@ def build_youtube_pitch_graph(checkpointer=None):
         {"gate": "gate", "provenance_unavailable": "provenance_unavailable"},
     )
     builder.add_edge("provenance_unavailable", END)
-    builder.add_edge("synthesize_notebooklm", END)
+    builder.add_edge("synthesize_notebooklm", "persist_parking_lot")
+    builder.add_edge("persist_parking_lot", END)
 
     return builder.compile(checkpointer=checkpointer)
+

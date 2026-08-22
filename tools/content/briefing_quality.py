@@ -48,7 +48,61 @@ def _is_placeholder_provenance(value: str) -> bool:
     return val in {"mock", "n/a", "unknown", "placeholder"} or val.startswith("test")
 
 
+def _thai_ngram_jaccard(text1: str, text2: str, n: int = 3) -> float:
+    import unicodedata
+    t1 = re.sub(r"\s+", "", unicodedata.normalize("NFC", text1).casefold())
+    t2 = re.sub(r"\s+", "", unicodedata.normalize("NFC", text2).casefold())
+    if not t1 or not t2:
+        return 0.0
+    if len(t1) < n or len(t2) < n:
+        return 1.0 if t1 == t2 else 0.0
+    ng1 = {t1[i:i+n] for i in range(len(t1) - n + 1)}
+    ng2 = {t2[i:i+n] for i in range(len(t2) - n + 1)}
+    return len(ng1.intersection(ng2)) / len(ng1.union(ng2))
+
+
+def _check_script_loopbacks(draft: InvestigativeBriefingBookDraft, add_issue) -> None:
+    def clean_text(text: Any) -> str:
+        if not isinstance(text, str):
+            return ""
+        t = re.sub(r"\[VISUAL_EVIDENCE[^\]]*\]", "", text)
+        t = re.sub(r"\[E\d+\]", "", t)
+        t = re.sub(r"\[S\d+\]", "", t)
+        return t.strip()
+
+    def get_sentences(text: Any) -> List[str]:
+        cleaned = clean_text(text)
+        if not cleaned:
+            return []
+        raw_sents = re.split(r"[\n\.\?!]+", cleaned)
+        return [s.strip() for s in raw_sents if len(s.strip()) >= 15]
+
+    act1_sents = get_sentences(getattr(draft, "act1_script", ""))
+    act2_sents = get_sentences(getattr(draft, "act2_script", ""))
+    act3_sents = get_sentences(getattr(draft, "act3_script", ""))
+
+
+    acts = [("Act I", act1_sents), ("Act II", act2_sents), ("Act III", act3_sents)]
+    for i in range(len(acts)):
+        for j in range(i + 1, len(acts)):
+            name_a, sents_a = acts[i]
+            name_b, sents_b = acts[j]
+            for sa in sents_a:
+                for sb in sents_b:
+                    sim = _thai_ngram_jaccard(sa, sb, n=3)
+                    if sim >= 0.85:
+                        add_issue(
+                            "SCRIPT_LOOPBACK_WARNING",
+                            "other",
+                            "warning",
+                            f"ตรวจพบประโยคซ้ำซ้อนระหว่าง {name_a} และ {name_b} (similarity {sim:.2f}): '{sa[:40]}...'",
+                            bypassable=True,
+                        )
+                        return
+
+
 def validate_briefing_book_quality(
+
     evidence_bundle: BriefingEvidenceBundle,
     draft: InvestigativeBriefingBookDraft,
     rendered_briefing: RenderedBriefing,
@@ -373,6 +427,9 @@ def validate_briefing_book_quality(
         prompt_problem = True
     if not prompt_problem:
         rubric["notebooklm_prompts"] = weights["notebooklm_prompts"]
+
+    _check_script_loopbacks(draft, add_issue)
+
 
     unique_issues = []
     seen = set()

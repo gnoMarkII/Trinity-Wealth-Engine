@@ -2,7 +2,7 @@
 from datetime import datetime
 from typing import Any, Dict, List, Literal, Optional
 from pathlib import Path
-from pydantic import BaseModel, Field, model_validator, computed_field, ConfigDict
+from pydantic import BaseModel, Field, model_validator, computed_field, ConfigDict, field_validator
 
 from schemas.market_data_schemas import MacroObservation
 
@@ -71,6 +71,7 @@ class MacroAutopsySnapshot(BaseModel):
 
 class FinancialAutopsyPeriodRecord(BaseModel):
     """A serialisable financial-statement period used by the briefing renderer."""
+    model_config = ConfigDict(extra="ignore")
 
     fiscal_period_end: str
     free_cash_flow: Optional[float] = None
@@ -96,6 +97,36 @@ class FinancialAutopsySnapshotRef(BaseModel):
     fcf: Optional[str] = None
     total_debt: Optional[str] = None
     health_notes: Optional[str] = None
+
+    @field_validator("periods", mode="before")
+    @classmethod
+    def _coerce_periods(cls, v: Any) -> List[Any]:
+        if not isinstance(v, list):
+            return []
+        coerced = []
+        for item in v:
+            if isinstance(item, FinancialAutopsyPeriodRecord):
+                coerced.append(item)
+            elif hasattr(item, "model_dump"):
+                coerced.append(FinancialAutopsyPeriodRecord.model_validate(item.model_dump()))
+            elif isinstance(item, dict):
+                coerced.append(FinancialAutopsyPeriodRecord.model_validate(item))
+            elif hasattr(item, "fiscal_period_end"):
+                coerced.append(FinancialAutopsyPeriodRecord(
+                    fiscal_period_end=str(getattr(item, "fiscal_period_end", "")),
+                    free_cash_flow=getattr(item, "free_cash_flow", None),
+                    operating_cash_flow=getattr(item, "operating_cash_flow", None),
+                    capital_expenditure=getattr(item, "capital_expenditure", None),
+                    total_debt=getattr(item, "total_debt", None),
+                    total_revenue=getattr(item, "total_revenue", None),
+                    net_income=getattr(item, "net_income", None),
+                    dividends_paid=getattr(item, "dividends_paid", None),
+                    payout_ratio_pct=getattr(item, "payout_ratio_pct", None),
+                ))
+            else:
+                coerced.append(item)
+        return coerced
+
 
 
 class ScenarioRecord(BaseModel):
@@ -201,6 +232,14 @@ class InvestigativeBriefingBookDraft(BaseModel):
     act3_script: str = Field(description="โครงเรื่อง Act III พร้อม [VISUAL_EVIDENCE id=V03 evidence=E05,E06]")
     visual_directives: List[VisualEvidenceDirective] = Field(description="คำสั่งสร้างภาพประกอบที่ผลิตซ้ำได้ครบถ้วน")
     notebooklm_prompts: List[NotebookLMPromptRecord] = Field(description="ชุดคำถามวิจัยสำหรับ NotebookLM 5-8 ข้อ")
+    audio_overview_directive: Optional[str] = Field(
+        default=None,
+        description=(
+            "System-level Directive ภาษาไทย (มีคำศัพท์เทคนิคภาษาอังกฤษได้) สำหรับ NotebookLM Audio Overview "
+            "ทำหน้าที่ควบคุมสไตล์การจัดรายการและความกระชับโดยรวม ไม่ให้พูดวน ต่างจาก notebooklm_prompts ที่เป็นรายการคำถามเจาะลึก 5-8 ข้อ"
+        ),
+    )
+
 
 
 class BriefingEvidenceBundle(BaseModel):

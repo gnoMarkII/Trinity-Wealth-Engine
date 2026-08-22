@@ -119,6 +119,12 @@ def render_briefing_book(
             out = getattr(p, "expected_output_format", "")
             lines.append(f"- [{ptype}] {q}\n  *Output Format: {out}*")
 
+    if getattr(draft, "audio_overview_directive", None) and draft.audio_overview_directive.strip():
+        lines.append("## NotebookLM Audio Directive")
+        section_names.append("NotebookLM Audio Directive")
+        lines.append(draft.audio_overview_directive.strip())
+
+
     lines.append("## Evidence Ledger")
     section_names.append("Evidence Ledger")
     if bundle.sources:

@@ -168,4 +168,48 @@ describe('KanbanDetailDrawer', () => {
     // Should NOT show EquityStockControls label
     expect(screen.queryByText('เลือกรุ่นหุ้นสำหรับวิเคราะห์และดึงข่าว')).not.toBeInTheDocument()
   })
+
+  it('renders Discord toggle button and calls toggleCardDiscord on click', async () => {
+    vi.mocked(api.getNewsFunnelPending).mockResolvedValue([])
+    vi.mocked(api.getNewsFunnelFiltered).mockResolvedValue([])
+    const toggleMock = vi.fn().mockResolvedValue({ ok: true })
+    vi.mocked(api).toggleCardDiscord = toggleMock
+
+    const onCardTransition = vi.fn()
+    const card = {
+      card_id: 'card-nb-1',
+      title: 'NotebookLM Podcast Deep Dive',
+      prompt: 'memories/30_Knowledge_Base/NotebookLM_Sources/test.md',
+      flow: 'notebooklm',
+      scope: 'both',
+      column_name: 'backlog',
+      display_seq: 10,
+      discord_notify: true,
+      is_verified: true,
+      created_at: 1700000000,
+      updated_at: 1700000000,
+      job_id: null,
+    }
+
+    render(
+      <KanbanDetailDrawer
+        card={card}
+        onClose={vi.fn()}
+        onCardTransition={onCardTransition}
+        onDispatchCard={vi.fn()}
+      />
+    )
+
+    expect(screen.getByText('โพสต์ลง Discord (นักข่าวส่วนตัว)')).toBeInTheDocument()
+    expect(screen.getByText('เปิด')).toBeInTheDocument()
+
+    const toggleBtn = screen.getByRole('switch', { name: /สลับการแจ้งเตือน Discord/i })
+    fireEvent.click(toggleBtn)
+
+    await waitFor(() => {
+      expect(toggleMock).toHaveBeenCalledWith('card-nb-1', false)
+      expect(onCardTransition).toHaveBeenCalled()
+    })
+  })
 })
+

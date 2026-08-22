@@ -121,8 +121,9 @@ describe('ApprovalPanel', () => {
     render(<ApprovalPanel payload={pitchPayload} onApprove={onApprove} />)
 
     expect(screen.getByText('คลิปวิเคราะห์ Fed')).toBeInTheDocument()
-    expect(screen.getByText('🔥 Core Hook:')).toBeInTheDocument()
+    expect(screen.getByText('🎯 Core Thesis:')).toBeInTheDocument()
     expect(screen.getByText('🔍 Mode: macro')).toBeInTheDocument()
+
     expect(screen.getByText('⚡ Counter-Intuitive Lead:')).toBeInTheDocument()
     expect(screen.getByText('💡 Analogy Generator:')).toBeInTheDocument()
     expect(screen.getByText('🖼️ Thumbnail Concept:')).toBeInTheDocument()

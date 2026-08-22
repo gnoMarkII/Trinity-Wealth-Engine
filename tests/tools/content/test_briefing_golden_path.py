@@ -224,3 +224,44 @@ def test_prepend_unverified_draft_banner_appears_right_after_title():
     assert "User accepted incomplete provenance" in result
     assert "ไม่พบสำนักข่าวจากหน้าแหล่งข้อมูล" in result
     assert result.index("Unverified Draft") < result.index("Body")
+
+
+def test_render_briefing_book_with_audio_directive():
+    draft = make_valid_briefing_draft()
+    bundle = make_valid_evidence_bundle(mode="macro")
+    bundle.macro_snapshot.observations.append(make_valid_macro_observation("energy"))
+    draft.audio_overview_directive = "เน้นความกระชับ ดำเนินเรื่องแบบเดินหน้าทางเดียว ไม่พูดวนซ้ำ"
+
+    rendered = render_briefing_book(draft, bundle)
+    assert "## NotebookLM Audio Directive" in rendered.content
+    assert "เน้นความกระชับ ดำเนินเรื่องแบบเดินหน้าทางเดียว ไม่พูดวนซ้ำ" in rendered.content
+    assert "NotebookLM Audio Directive" in rendered.section_names
+
+
+def test_render_briefing_book_without_audio_directive():
+    draft = make_valid_briefing_draft()
+    bundle = make_valid_evidence_bundle(mode="macro")
+    bundle.macro_snapshot.observations.append(make_valid_macro_observation("energy"))
+    draft.audio_overview_directive = None
+
+    rendered = render_briefing_book(draft, bundle)
+    assert "## NotebookLM Audio Directive" not in rendered.content
+    assert "NotebookLM Audio Directive" not in rendered.section_names
+
+
+def test_script_loopback_warning_advisory():
+    draft = make_valid_briefing_draft()
+    bundle = make_valid_evidence_bundle(mode="macro")
+    bundle.macro_snapshot.observations.append(make_valid_macro_observation("energy"))
+    
+    # Inject near-identical sentence into Act I and Act II
+    draft.act1_script = draft.act1_script + "\nอัตราเงินเฟ้อที่พุ่งสูงขึ้นกำลังกดดันการเติบโตทางเศรษฐกิจอย่างรุนแรง"
+    draft.act2_script = draft.act2_script + "\nอัตราเงินเฟ้อที่พุ่งสูงขึ้นกำลังกดดันการเติบโตทางเศรษฐกิจอย่างรุนแรง"
+
+    rendered = render_briefing_book(draft, bundle)
+    report = validate_briefing_book_quality(bundle, draft, rendered)
+
+    assert report.publishable is True
+    assert len(report.hard_blockers) == 0
+    assert any(issue.code == "SCRIPT_LOOPBACK_WARNING" for issue in report.issues)
+

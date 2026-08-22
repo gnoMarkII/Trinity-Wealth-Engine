@@ -317,4 +317,27 @@ describe('Equity Page & normalizeTicker', () => {
     })
     expect(screen.queryByText('📊 วิเคราะห์หุ้นและดึงข่าวล่าสุด')).not.toBeInTheDocument()
   })
+
+  it('allows collapsing and expanding the sidebar to minimal mode and persists preference', async () => {
+    vi.mocked(api.getEquityLatest).mockResolvedValue(mockEquitySummary)
+
+    await renderComponent('/equity')
+
+    await waitFor(() => {
+      expect(screen.getByText('Equity Analysis')).toBeInTheDocument()
+    })
+
+    // Click collapse sidebar button
+    const collapseBtn = screen.getByRole('button', { name: 'Collapse Sidebar' })
+    await userEvent.click(collapseBtn)
+
+    // In minimal mode, full header title is hidden, and expand button is shown
+    expect(screen.queryByText('Equity Analysis')).not.toBeInTheDocument()
+    const expandBtn = screen.getByRole('button', { name: 'Expand Sidebar' })
+    expect(expandBtn).toBeInTheDocument()
+
+    // Click expand button to restore full view
+    await userEvent.click(expandBtn)
+    expect(screen.getByText('Equity Analysis')).toBeInTheDocument()
+  })
 })

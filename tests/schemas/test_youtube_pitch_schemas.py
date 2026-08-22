@@ -1,7 +1,7 @@
 """Unit tests สำหรับ schemas/youtube_pitch_schemas.py"""
 import pytest
 from pydantic import ValidationError
-from schemas.youtube_pitch_schemas import YouTubeContentPitchItem, YouTubeContentPitchBatch
+from schemas.youtube_pitch_schemas import YouTubeContentPitchItem, YouTubeContentPitchBatch, validate_generated_pitch
 
 
 def test_youtube_pitch_item_valid():
@@ -9,7 +9,10 @@ def test_youtube_pitch_item_valid():
         pitch_id="uuid-1",
         working_titles=["หัวข้อคำถามเจาะลึก", "หัวข้อวิเคราะห์สมมติฐาน", "หัวข้อเตือนภัยและโอกาส"],
         target_audience="นักลงทุนไทย",
-        core_hook="Hook ประโยคเปิดที่น่าสนใจมาก",
+        core_thesis="ใจความสำคัญหลัก 1 ประโยคที่ชัดเจนและยาวเกิน 15 ตัวอักษร",
+        primary_anchor_event_id="ev-1",
+        primary_anchor_title="ข่าวหลักเหตุการณ์ที่ 1",
+        parking_lot_ideas=["ไอเดียเสริมที่ 1", "ไอเดียเสริมที่ 2"],
         key_questions_to_answer=["คำถาม 1", "คำถาม 2", "คำถาม 3"],
         research_hypotheses=["สมมติฐาน 1", "สมมติฐาน 2"],
         source_event_ids=["ev-1", "ev-2"],
@@ -20,70 +23,40 @@ def test_youtube_pitch_item_valid():
     )
     assert item.pitch_id == "uuid-1"
     assert len(item.working_titles) == 3
+    assert item.core_thesis == "ใจความสำคัญหลัก 1 ประโยคที่ชัดเจนและยาวเกิน 15 ตัวอักษร"
+    assert item.primary_anchor_event_id == "ev-1"
+    assert item.primary_anchor_title == "ข่าวหลักเหตุการณ์ที่ 1"
+    assert len(item.parking_lot_ideas) == 2
 
 
-def test_youtube_pitch_item_invalid_working_titles_count():
-    # working_titles น้อยกว่าหรือมากกว่า 3 ต้องเกิด ValidationError
-    with pytest.raises(ValidationError):
-        YouTubeContentPitchItem(
-            pitch_id="uuid-2",
-            working_titles=["หัวข้อที่ 1", "หัวข้อที่ 2"],  # แค่ 2
-            target_audience="นักลงทุนไทย",
-            core_hook="Hook",
-            key_questions_to_answer=["คำถาม 1", "คำถาม 2", "คำถาม 3"],
-            research_hypotheses=["สมมติฐาน 1", "สมมติฐาน 2"],
-            source_event_ids=["ev-1"],
-            source_links=["http://example.com/1"],
-            source_titles=["ข่าวที่ 1"],
-            recommended_format="Quick 5m",
-            estimated_impact="Impact",
-        )
-
-    with pytest.raises(ValidationError):
-        YouTubeContentPitchItem(
-            pitch_id="uuid-3",
-            working_titles=["1", "2", "3", "4"],  # 4 ข้อ
-            target_audience="นักลงทุนไทย",
-            core_hook="Hook",
-            key_questions_to_answer=["คำถาม 1", "คำถาม 2", "คำถาม 3"],
-            research_hypotheses=["สมมติฐาน 1", "สมมติฐาน 2"],
-            source_event_ids=["ev-1"],
-            source_links=["http://example.com/1"],
-            source_titles=["ข่าวที่ 1"],
-            recommended_format="Quick 5m",
-            estimated_impact="Impact",
-        )
+def test_backward_input_alias_core_hook_to_core_thesis():
+    # Payload เก่าที่มีเฉพาะ core_hook ต้อง deserialize ได้เป็น core_thesis โดยอัตโนมัติ
+    old_payload = {
+        "pitch_id": "uuid-legacy",
+        "working_titles": ["หัวข้อ 1", "หัวข้อ 2", "หัวข้อ 3"],
+        "target_audience": "นักลงทุน",
+        "core_hook": "ประโยค Hook จาก checkpoint เก่า",
+        "key_questions_to_answer": ["Q1", "Q2", "Q3"],
+        "research_hypotheses": ["H1", "H2"],
+        "source_event_ids": ["ev-1"],
+        "source_links": ["http://example.com/1"],
+        "source_titles": ["ข่าว 1"],
+        "recommended_format": "Deep Dive 15m",
+        "estimated_impact": "Impact",
+    }
+    item = YouTubeContentPitchItem.model_validate(old_payload)
+    assert item.core_thesis == "ประโยค Hook จาก checkpoint เก่า"
+    assert item.primary_anchor_event_id == ""
+    assert item.parking_lot_ideas == []
 
 
-def test_youtube_pitch_batch_valid():
+def test_canonical_model_dump_emits_core_thesis():
     item = YouTubeContentPitchItem(
-        pitch_id="uuid-1",
-        working_titles=["หัวข้อคำถามเจาะลึก", "หัวข้อวิเคราะห์สมมติฐาน", "หัวข้อเตือนภัยและโอกาส"],
-        target_audience="นักลงทุนไทย",
-        core_hook="Hook",
-        key_questions_to_answer=["คำถาม 1", "คำถาม 2", "คำถาม 3"],
-        research_hypotheses=["สมมติฐาน 1", "สมมติฐาน 2"],
-        source_event_ids=["ev-1"],
-        source_links=["http://example.com/1"],
-        source_titles=["ข่าวที่ 1"],
-        recommended_format="Deep Dive 15m",
-        estimated_impact="Impact",
-    )
-    batch = YouTubeContentPitchBatch(
-        pitches=[item],
-        date_range_summary="7 วันล่าสุด",
-        total_source_events=1,
-    )
-    assert len(batch.pitches) == 1
-    assert batch.total_source_events == 1
-
-
-def test_youtube_pitch_item_defaults():
-    item = YouTubeContentPitchItem(
-        pitch_id="uuid-def",
-        working_titles=["111", "222", "333"],
+        pitch_id="uuid-dump",
+        working_titles=["1", "2", "3"],
         target_audience="aud",
-        core_hook="hook",
+        core_thesis="ข้อความ Core Thesis ใหม่",
+        primary_anchor_event_id="ev-1",
         key_questions_to_answer=["q1", "q2", "q3"],
         research_hypotheses=["h1", "h2"],
         source_event_ids=["ev-1"],
@@ -92,23 +65,77 @@ def test_youtube_pitch_item_defaults():
         recommended_format="format",
         estimated_impact="impact",
     )
-    assert item.investigation_mode == "mixed"
-    assert item.counter_intuitive_lead == ""
-    assert item.analogy_generator == ""
-    assert item.thumbnail_concept == ""
-    assert item.audience_takeaway == ""
+    dumped = item.model_dump()
+    assert "core_thesis" in dumped
+    assert dumped["core_thesis"] == "ข้อความ Core Thesis ใหม่"
+    assert "core_hook" not in dumped
+
+
+def test_dual_payload_prefers_core_thesis():
+    payload = {
+        "pitch_id": "uuid-dual",
+        "working_titles": ["1", "2", "3"],
+        "target_audience": "aud",
+        "core_thesis": "ค่าที่ถูกต้องจาก core_thesis",
+        "core_hook": "ค่าเก่าจาก core_hook",
+        "key_questions_to_answer": ["q1", "q2", "q3"],
+        "research_hypotheses": ["h1", "h2"],
+        "source_event_ids": ["ev-1"],
+        "source_links": ["http://example.com/1"],
+        "source_titles": ["news 1"],
+        "recommended_format": "format",
+        "estimated_impact": "impact",
+    }
+    item = YouTubeContentPitchItem.model_validate(payload)
+    assert item.core_thesis == "ค่าที่ถูกต้องจาก core_thesis"
+
+
+def test_parking_lot_ideas_normalization_and_dedup():
+    item = YouTubeContentPitchItem(
+        pitch_id="uuid-parking",
+        working_titles=["1", "2", "3"],
+        target_audience="aud",
+        core_thesis="ข้อความ Core Thesis ยาวพอสมควร",
+        primary_anchor_event_id="ev-1",
+        parking_lot_ideas=[
+            "  ไอเดียข้อ 1  ",
+            "ไอเดียข้อ 1",  # duplicate
+            "   ",  # whitespace only
+            "ไอเดียข้อ 2",
+            "ไอเดียข้อ 3",
+            "ไอเดียข้อ 4",
+            "ไอเดียข้อ 5",
+            "ไอเดียข้อ 6 เกินโควตา",
+        ],
+        key_questions_to_answer=["q1", "q2", "q3"],
+        research_hypotheses=["h1", "h2"],
+        source_event_ids=["ev-1"],
+        source_links=["http://example.com/1"],
+        source_titles=["news 1"],
+        recommended_format="format",
+        estimated_impact="impact",
+    )
+    # Should be normalized, deduplicated, stripped of empty items, and capped at 5
+    assert item.parking_lot_ideas == [
+        "ไอเดียข้อ 1",
+        "ไอเดียข้อ 2",
+        "ไอเดียข้อ 3",
+        "ไอเดียข้อ 4",
+        "ไอเดียข้อ 5",
+    ]
 
 
 def test_validate_generated_pitch_success():
-    from schemas.youtube_pitch_schemas import validate_generated_pitch
     item = YouTubeContentPitchItem(
         pitch_id="uuid-val",
         working_titles=["111", "222", "333"],
         target_audience="aud",
-        core_hook="hook",
+        core_thesis="สรุปใจความสำคัญหลักหนึ่งประโยคที่เกิน 15 ตัวอักษรแน่นอน",
+        primary_anchor_event_id="ev-1",
+        primary_anchor_title="ข่าวเหตุการณ์หลัก",
         key_questions_to_answer=["q1", "q2", "q3"],
         research_hypotheses=["h1", "h2"],
-        source_event_ids=["ev-1"],
+        source_event_ids=["ev-1", "ev-2"],
         source_links=["http://example.com/1"],
         source_titles=["news 1"],
         recommended_format="format",
@@ -119,63 +146,17 @@ def test_validate_generated_pitch_success():
         audience_takeaway="เก็บเงินสดสำรอง 6 เดือนไว้ก่อนตัดสินใจลงทุนเพิ่ม",
         thumbnail_concept="ภาพกราฟตลาดหุ้นพุ่งขึ้นแต่กระเป๋าเงินโล่ง",
     )
-    batch = YouTubeContentPitchBatch(pitches=[item], date_range_summary="summary", total_source_events=1)
+    batch = YouTubeContentPitchBatch(pitches=[item], date_range_summary="summary", total_source_events=2)
     validate_generated_pitch(batch)
 
 
-def test_validate_generated_pitch_failure_when_empty_or_short():
-    from schemas.youtube_pitch_schemas import validate_generated_pitch
+def test_validate_generated_pitch_failure_when_core_thesis_short():
     item = YouTubeContentPitchItem(
-        pitch_id="uuid-fail",
+        pitch_id="uuid-fail-thesis",
         working_titles=["111", "222", "333"],
         target_audience="aud",
-        core_hook="hook",
-        key_questions_to_answer=["q1", "q2", "q3"],
-        research_hypotheses=["h1", "h2"],
-        source_event_ids=["ev-1"],
-        source_links=["http://example.com/1"],
-        source_titles=["news 1"],
-        recommended_format="format",
-        estimated_impact="impact",
-        counter_intuitive_lead="สั้นไป",
-        analogy_generator="เหมือนรถ",
-    )
-    batch = YouTubeContentPitchBatch(pitches=[item], date_range_summary="summary", total_source_events=1)
-    with pytest.raises(ValueError, match="missing or insufficient counter_intuitive_lead"):
-        validate_generated_pitch(batch)
-
-
-def test_validate_generated_pitch_failure_when_audience_takeaway_short():
-    from schemas.youtube_pitch_schemas import validate_generated_pitch
-    item = YouTubeContentPitchItem(
-        pitch_id="uuid-fail-takeaway",
-        working_titles=["111", "222", "333"],
-        target_audience="aud",
-        core_hook="hook",
-        key_questions_to_answer=["q1", "q2", "q3"],
-        research_hypotheses=["h1", "h2"],
-        source_event_ids=["ev-1"],
-        source_links=["http://example.com/1"],
-        source_titles=["news 1"],
-        recommended_format="format",
-        estimated_impact="impact",
-        counter_intuitive_lead="เบาะแสสำคัญค้านสายตา: ตลาดหุ้นเติบโตแต่กระแสเงินสดติดลบ",
-        analogy_generator="คำเปรียบเปรย: เหมือนรถที่วิ่งด้วยความเร็วสูงแต่เชื้อเพลิงกำลังจะหมด",
-        audience_takeaway="สั้นไป",
-        thumbnail_concept="ok",
-    )
-    batch = YouTubeContentPitchBatch(pitches=[item], date_range_summary="summary", total_source_events=1)
-    with pytest.raises(ValueError, match="missing or insufficient audience_takeaway"):
-        validate_generated_pitch(batch)
-
-
-def test_validate_generated_pitch_failure_when_thumbnail_concept_short():
-    from schemas.youtube_pitch_schemas import validate_generated_pitch
-    item = YouTubeContentPitchItem(
-        pitch_id="uuid-fail-thumbnail",
-        working_titles=["111", "222", "333"],
-        target_audience="aud",
-        core_hook="hook",
+        core_thesis="สั้นเกินไป",  # < 15 chars
+        primary_anchor_event_id="ev-1",
         key_questions_to_answer=["q1", "q2", "q3"],
         research_hypotheses=["h1", "h2"],
         source_event_ids=["ev-1"],
@@ -186,20 +167,21 @@ def test_validate_generated_pitch_failure_when_thumbnail_concept_short():
         counter_intuitive_lead="เบาะแสสำคัญค้านสายตา: ตลาดหุ้นเติบโตแต่กระแสเงินสดติดลบ",
         analogy_generator="คำเปรียบเปรย: เหมือนรถที่วิ่งด้วยความเร็วสูงแต่เชื้อเพลิงกำลังจะหมด",
         audience_takeaway="เก็บเงินสดสำรอง 6 เดือนไว้ก่อนตัดสินใจลงทุนเพิ่ม",
-        thumbnail_concept="",
+        thumbnail_concept="ภาพกราฟตลาดหุ้นพุ่งขึ้นแต่กระเป๋าเงินโล่ง",
     )
     batch = YouTubeContentPitchBatch(pitches=[item], date_range_summary="summary", total_source_events=1)
-    with pytest.raises(ValueError, match="missing or insufficient thumbnail_concept"):
+    with pytest.raises(ValueError, match="missing or insufficient core_thesis"):
         validate_generated_pitch(batch)
 
 
-def test_youtube_pitch_item_presentation_style():
-    # 1. Default should be narrative
-    item_default = YouTubeContentPitchItem(
-        pitch_id="uuid-default",
-        working_titles=["1", "2", "3"],
+def test_validate_generated_pitch_failure_when_primary_anchor_missing_or_not_in_sources():
+    # 1. Missing anchor
+    item_missing = YouTubeContentPitchItem(
+        pitch_id="uuid-missing-anchor",
+        working_titles=["111", "222", "333"],
         target_audience="aud",
-        core_hook="hook",
+        core_thesis="สรุปใจความสำคัญหลักหนึ่งประโยคที่เกิน 15 ตัวอักษรแน่นอน",
+        primary_anchor_event_id="",
         key_questions_to_answer=["q1", "q2", "q3"],
         research_hypotheses=["h1", "h2"],
         source_event_ids=["ev-1"],
@@ -207,39 +189,35 @@ def test_youtube_pitch_item_presentation_style():
         source_titles=["news 1"],
         recommended_format="format",
         estimated_impact="impact",
+        counter_intuitive_lead="เบาะแสสำคัญค้านสายตา: ตลาดหุ้นเติบโตแต่กระแสเงินสดติดลบ",
+        analogy_generator="คำเปรียบเปรย: เหมือนรถที่วิ่งด้วยความเร็วสูงแต่เชื้อเพลิงกำลังจะหมด",
+        audience_takeaway="เก็บเงินสดสำรอง 6 เดือนไว้ก่อนตัดสินใจลงทุนเพิ่ม",
+        thumbnail_concept="ภาพกราฟตลาดหุ้นพุ่งขึ้นแต่กระเป๋าเงินโล่ง",
     )
-    assert item_default.presentation_style == "narrative"
+    batch1 = YouTubeContentPitchBatch(pitches=[item_missing], date_range_summary="summary", total_source_events=1)
+    with pytest.raises(ValueError, match="missing primary_anchor_event_id"):
+        validate_generated_pitch(batch1)
 
-    # 2. Should accept interview_qa
-    item_qa = YouTubeContentPitchItem(
-        pitch_id="uuid-qa",
-        working_titles=["1", "2", "3"],
+    # 2. Anchor not in source_event_ids
+    item_mismatch = YouTubeContentPitchItem(
+        pitch_id="uuid-mismatch-anchor",
+        working_titles=["111", "222", "333"],
         target_audience="aud",
-        core_hook="hook",
+        core_thesis="สรุปใจความสำคัญหลักหนึ่งประโยคที่เกิน 15 ตัวอักษรแน่นอน",
+        primary_anchor_event_id="ev-999",  # Not in source_event_ids
         key_questions_to_answer=["q1", "q2", "q3"],
         research_hypotheses=["h1", "h2"],
-        source_event_ids=["ev-1"],
+        source_event_ids=["ev-1", "ev-2"],
         source_links=["http://example.com/1"],
         source_titles=["news 1"],
         recommended_format="format",
         estimated_impact="impact",
-        presentation_style="interview_qa"
+        counter_intuitive_lead="เบาะแสสำคัญค้านสายตา: ตลาดหุ้นเติบโตแต่กระแสเงินสดติดลบ",
+        analogy_generator="คำเปรียบเปรย: เหมือนรถที่วิ่งด้วยความเร็วสูงแต่เชื้อเพลิงกำลังจะหมด",
+        audience_takeaway="เก็บเงินสดสำรอง 6 เดือนไว้ก่อนตัดสินใจลงทุนเพิ่ม",
+        thumbnail_concept="ภาพกราฟตลาดหุ้นพุ่งขึ้นแต่กระเป๋าเงินโล่ง",
     )
-    assert item_qa.presentation_style == "interview_qa"
+    batch2 = YouTubeContentPitchBatch(pitches=[item_mismatch], date_range_summary="summary", total_source_events=2)
+    with pytest.raises(ValueError, match="not in source_event_ids"):
+        validate_generated_pitch(batch2)
 
-    # 3. Should reject invalid literal
-    with pytest.raises(ValidationError):
-        YouTubeContentPitchItem(
-            pitch_id="uuid-invalid",
-            working_titles=["1", "2", "3"],
-            target_audience="aud",
-            core_hook="hook",
-            key_questions_to_answer=["q1", "q2", "q3"],
-            research_hypotheses=["h1", "h2"],
-            source_event_ids=["ev-1"],
-            source_links=["http://example.com/1"],
-            source_titles=["news 1"],
-            recommended_format="format",
-            estimated_impact="impact",
-            presentation_style="invalid_style"
-        )

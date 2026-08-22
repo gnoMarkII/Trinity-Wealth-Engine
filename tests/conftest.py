@@ -37,7 +37,7 @@ def _snapshot_protected_dirs():
         d = Path(d_name)
         if d.exists():
             for f in d.glob("**/*"):
-                if f.is_file():
+                if f.is_file() and ".obsidian" not in f.parts:
                     try:
                         content_hash = hashlib.sha256(f.read_bytes()).hexdigest()
                         snapshot[str(f.resolve())] = content_hash
