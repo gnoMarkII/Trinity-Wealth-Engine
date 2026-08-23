@@ -1,29 +1,18 @@
-"""FastAPI Portfolio Routes Facade (Backward Compatibility Re-export).
+"""FastAPI Portfolio Routers Aggregator.
 
-All route handlers are now implemented under `api.routers.portfolio.*`.
-This module maintains full backward compatibility for existing imports and test patches.
+Aggregates domain sub-routers:
+  - router_state: Portfolio CRUD, State, Buckets, Allocation Targets
+  - router_trading: Trade execution, Cash Flow, Income, FX rate, Dividends/Prices sync
+  - router_ledger: Transactions list, Note editing, Edit/Delete transactions
+  - router_extensions: Watchlist, Goals, Journal, Performance history
+  - router_macro: Macro Dashboard, Strategy, Indicators, News Funnel, Calendar
 """
-from tools.archivist.core import VAULT_PATH
-from tools.portfolio import (
-    core as portfolio_core,
-    trading as portfolio_trading,
-    watchlist as portfolio_watchlist,
-    goals as portfolio_goals,
-    performance as portfolio_perf,
-    journal as portfolio_journal,
-    prices as portfolio_prices,
-    dividends as portfolio_dividends,
-    ledger_replay as portfolio_ledger_replay,
-)
-from api.routers.portfolio import (
-    router,
-    handle_portfolio_exceptions,
-    _latest_strategy_json,
-    _STRATEGY_SUBDIR,
-    list_portfolios_endpoint,
-    create_portfolio_endpoint,
-    delete_portfolio_endpoint,
-    rename_portfolio_endpoint,
+from fastapi import APIRouter, Depends
+from api.auth import require_session
+
+from .common import handle_portfolio_exceptions, _latest_strategy_json, _STRATEGY_SUBDIR
+from .router_macro import (
+    router as macro_router,
     get_latest_portfolio,
     get_macro_dashboard,
     get_macro_indicator_series,
@@ -31,47 +20,62 @@ from api.routers.portfolio import (
     get_news_funnel_filtered,
     delete_news_funnel_pending,
     get_portfolio_calendar,
+)
+from .router_state import (
+    router as state_router,
+    list_portfolios_endpoint,
+    create_portfolio_endpoint,
+    delete_portfolio_endpoint,
+    rename_portfolio_endpoint,
     get_actual_portfolio_state,
     get_actual_bucket_allocations,
-    get_actual_watchlist,
-    get_actual_goals,
-    get_actual_performance,
-    trigger_performance_snapshot,
-    get_actual_journal,
-    get_actual_transactions,
-    update_transaction_note_endpoint,
-    edit_transaction_endpoint,
-    delete_transaction_endpoint,
-    get_fx_rate_endpoint,
-    sync_dividends_endpoint,
     upsert_allocation_targets,
     assign_holding_bucket,
     batch_assign_holding_buckets,
     batch_remove_holdings,
     reset_portfolio_clean_slate,
+)
+from .router_trading import (
+    router as trading_router,
     execute_trade_endpoint,
     manage_cash_flow_endpoint,
     record_income_endpoint,
     edit_holding_endpoint,
     remove_holding_endpoint,
+    get_fx_rate_endpoint,
+    sync_dividends_endpoint,
+)
+from .router_ledger import (
+    router as ledger_router,
+    get_actual_transactions,
+    update_transaction_note_endpoint,
+    edit_transaction_endpoint,
+    delete_transaction_endpoint,
+)
+from .router_extensions import (
+    router as extensions_router,
+    get_actual_watchlist,
     upsert_watchlist_item_endpoint,
     remove_watchlist_item_endpoint,
+    get_actual_goals,
     upsert_goal_endpoint,
     remove_goal_endpoint,
+    get_actual_journal,
     append_journal_endpoint,
+    get_actual_performance,
+    trigger_performance_snapshot,
 )
 
+router = APIRouter(dependencies=[Depends(require_session)])
+
+# Include sub-routers in explicit order
+router.include_router(state_router)
+router.include_router(trading_router)
+router.include_router(ledger_router)
+router.include_router(extensions_router)
+router.include_router(macro_router)
+
 __all__ = [
-    "VAULT_PATH",
-    "portfolio_core",
-    "portfolio_trading",
-    "portfolio_watchlist",
-    "portfolio_goals",
-    "portfolio_perf",
-    "portfolio_journal",
-    "portfolio_prices",
-    "portfolio_dividends",
-    "portfolio_ledger_replay",
     "router",
     "handle_portfolio_exceptions",
     "_latest_strategy_json",

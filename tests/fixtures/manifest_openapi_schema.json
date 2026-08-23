@@ -1,0 +1,1733 @@
+{
+  "openapi_version": "3.1.0",
+  "title": "Invest Agents Web UI",
+  "paths": {
+    "/api/agents/active": {
+      "get": {
+        "operationId": "get_active_agent_status_api_agents_active_get",
+        "tags": [],
+        "summary": "Get Active Agent Status",
+        "parameters": [],
+        "has_request_body": false,
+        "responses": [
+          "200"
+        ]
+      }
+    },
+    "/api/agents/dispatch": {
+      "post": {
+        "operationId": "dispatch_job_api_agents_dispatch_post",
+        "tags": [],
+        "summary": "Dispatch Job",
+        "parameters": [],
+        "has_request_body": true,
+        "responses": [
+          "200",
+          "422"
+        ]
+      }
+    },
+    "/api/agents/jobs/{job_id}": {
+      "get": {
+        "operationId": "get_job_status_api_agents_jobs__job_id__get",
+        "tags": [],
+        "summary": "Get Job Status",
+        "parameters": [
+          {
+            "name": "job_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Job Id"
+            }
+          }
+        ],
+        "has_request_body": false,
+        "responses": [
+          "200",
+          "422"
+        ]
+      }
+    },
+    "/api/agents/jobs/{job_id}/outputs": {
+      "get": {
+        "operationId": "get_job_outputs_api_agents_jobs__job_id__outputs_get",
+        "tags": [],
+        "summary": "Get Job Outputs",
+        "parameters": [
+          {
+            "name": "job_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Job Id"
+            }
+          }
+        ],
+        "has_request_body": false,
+        "responses": [
+          "200",
+          "422"
+        ]
+      }
+    },
+    "/api/agents/jobs/{job_id}/resume": {
+      "post": {
+        "operationId": "resume_job_api_agents_jobs__job_id__resume_post",
+        "tags": [],
+        "summary": "Resume Job",
+        "parameters": [
+          {
+            "name": "job_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Job Id"
+            }
+          }
+        ],
+        "has_request_body": true,
+        "responses": [
+          "200",
+          "422"
+        ]
+      }
+    },
+    "/api/agents/stream/{job_id}": {
+      "get": {
+        "operationId": "stream_job_api_agents_stream__job_id__get",
+        "tags": [],
+        "summary": "Stream Job",
+        "parameters": [
+          {
+            "name": "job_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Job Id"
+            }
+          }
+        ],
+        "has_request_body": false,
+        "responses": [
+          "200",
+          "422"
+        ]
+      }
+    },
+    "/api/auth/login": {
+      "post": {
+        "operationId": "login_api_auth_login_post",
+        "tags": [],
+        "summary": "Login",
+        "parameters": [],
+        "has_request_body": true,
+        "responses": [
+          "200",
+          "422"
+        ]
+      }
+    },
+    "/api/auth/logout": {
+      "post": {
+        "operationId": "logout_api_auth_logout_post",
+        "tags": [],
+        "summary": "Logout",
+        "parameters": [],
+        "has_request_body": false,
+        "responses": [
+          "200"
+        ]
+      }
+    },
+    "/api/auth/me": {
+      "get": {
+        "operationId": "me_api_auth_me_get",
+        "tags": [],
+        "summary": "Me",
+        "parameters": [],
+        "has_request_body": false,
+        "responses": [
+          "200"
+        ]
+      }
+    },
+    "/api/debug/models": {
+      "get": {
+        "operationId": "get_model_registry_api_debug_models_get",
+        "tags": [
+          "Debug"
+        ],
+        "summary": "Get Model Registry",
+        "parameters": [],
+        "has_request_body": false,
+        "responses": [
+          "200"
+        ]
+      }
+    },
+    "/api/equity/latest": {
+      "get": {
+        "operationId": "get_latest_equities_api_equity_latest_get",
+        "tags": [
+          "equity"
+        ],
+        "summary": "Get Latest Equities",
+        "parameters": [],
+        "has_request_body": false,
+        "responses": [
+          "200"
+        ]
+      }
+    },
+    "/api/equity/notes/content": {
+      "get": {
+        "operationId": "get_equity_note_content_api_equity_notes_content_get",
+        "tags": [
+          "equity"
+        ],
+        "summary": "Get Equity Note Content",
+        "parameters": [
+          {
+            "name": "rel_path",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Rel Path"
+            }
+          }
+        ],
+        "has_request_body": false,
+        "responses": [
+          "200",
+          "422"
+        ]
+      }
+    },
+    "/api/equity/{ticker}": {
+      "get": {
+        "operationId": "get_equity_detail_api_equity__ticker__get",
+        "tags": [
+          "equity"
+        ],
+        "summary": "Get Equity Detail",
+        "parameters": [
+          {
+            "name": "ticker",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Ticker"
+            }
+          }
+        ],
+        "has_request_body": false,
+        "responses": [
+          "200",
+          "422"
+        ]
+      }
+    },
+    "/api/equity/{ticker}/analyst-context": {
+      "get": {
+        "operationId": "get_equity_analyst_context_api_equity__ticker__analyst_context_get",
+        "tags": [
+          "equity"
+        ],
+        "summary": "Get Equity Analyst Context",
+        "parameters": [
+          {
+            "name": "ticker",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Ticker"
+            }
+          }
+        ],
+        "has_request_body": false,
+        "responses": [
+          "200",
+          "422"
+        ]
+      }
+    },
+    "/api/equity/{ticker}/financials": {
+      "get": {
+        "operationId": "get_equity_financial_statements_api_equity__ticker__financials_get",
+        "tags": [
+          "equity"
+        ],
+        "summary": "Get Equity Financial Statements",
+        "parameters": [
+          {
+            "name": "ticker",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Ticker"
+            }
+          },
+          {
+            "name": "market",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Market"
+            }
+          },
+          {
+            "name": "force_refresh",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false,
+              "title": "Force Refresh"
+            }
+          }
+        ],
+        "has_request_body": false,
+        "responses": [
+          "200",
+          "422"
+        ]
+      }
+    },
+    "/api/equity/{ticker}/insider-filings": {
+      "get": {
+        "operationId": "get_equity_insider_filings_api_equity__ticker__insider_filings_get",
+        "tags": [
+          "equity"
+        ],
+        "summary": "Get Equity Insider Filings",
+        "parameters": [
+          {
+            "name": "ticker",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Ticker"
+            }
+          },
+          {
+            "name": "range",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "1y",
+              "title": "Range"
+            }
+          },
+          {
+            "name": "interval",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "1d",
+              "title": "Interval"
+            }
+          }
+        ],
+        "has_request_body": false,
+        "responses": [
+          "200",
+          "422"
+        ]
+      }
+    },
+    "/api/equity/{ticker}/news": {
+      "get": {
+        "operationId": "get_equity_news_api_equity__ticker__news_get",
+        "tags": [
+          "equity"
+        ],
+        "summary": "Get Equity News",
+        "parameters": [
+          {
+            "name": "ticker",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Ticker"
+            }
+          }
+        ],
+        "has_request_body": false,
+        "responses": [
+          "200",
+          "422"
+        ]
+      }
+    },
+    "/api/equity/{ticker}/notes": {
+      "get": {
+        "operationId": "get_equity_notes_api_equity__ticker__notes_get",
+        "tags": [
+          "equity"
+        ],
+        "summary": "Get Equity Notes",
+        "parameters": [
+          {
+            "name": "ticker",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Ticker"
+            }
+          },
+          {
+            "name": "days",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 3,
+              "title": "Days"
+            }
+          }
+        ],
+        "has_request_body": false,
+        "responses": [
+          "200",
+          "422"
+        ]
+      }
+    },
+    "/api/equity/{ticker}/ohlcv": {
+      "get": {
+        "operationId": "get_equity_ohlcv_api_equity__ticker__ohlcv_get",
+        "tags": [
+          "equity"
+        ],
+        "summary": "Get Equity Ohlcv",
+        "parameters": [
+          {
+            "name": "ticker",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Ticker"
+            }
+          },
+          {
+            "name": "range",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "Historical range based on interval capability matrix",
+              "default": "6mo",
+              "title": "Range"
+            }
+          },
+          {
+            "name": "interval",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "Bar interval (15m, 1h, 1d, 1wk, 1mo)",
+              "default": "1d",
+              "title": "Interval"
+            }
+          }
+        ],
+        "has_request_body": false,
+        "responses": [
+          "200",
+          "422"
+        ]
+      }
+    },
+    "/api/equity/{ticker}/valuation-targets": {
+      "get": {
+        "operationId": "get_equity_valuation_targets_api_equity__ticker__valuation_targets_get",
+        "tags": [
+          "equity"
+        ],
+        "summary": "Get Equity Valuation Targets",
+        "parameters": [
+          {
+            "name": "ticker",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Ticker"
+            }
+          }
+        ],
+        "has_request_body": false,
+        "responses": [
+          "200",
+          "422"
+        ]
+      }
+    },
+    "/api/kanban/cards": {
+      "get": {
+        "operationId": "list_cards_api_kanban_cards_get",
+        "tags": [],
+        "summary": "List Cards",
+        "parameters": [],
+        "has_request_body": false,
+        "responses": [
+          "200"
+        ]
+      },
+      "post": {
+        "operationId": "create_card_api_kanban_cards_post",
+        "tags": [],
+        "summary": "Create Card",
+        "parameters": [],
+        "has_request_body": true,
+        "responses": [
+          "200",
+          "422"
+        ]
+      }
+    },
+    "/api/kanban/cards/{card_id}": {
+      "delete": {
+        "operationId": "delete_card_api_kanban_cards__card_id__delete",
+        "tags": [],
+        "summary": "Delete Card",
+        "parameters": [
+          {
+            "name": "card_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Card Id"
+            }
+          }
+        ],
+        "has_request_body": false,
+        "responses": [
+          "200",
+          "422"
+        ]
+      },
+      "patch": {
+        "operationId": "update_card_api_kanban_cards__card_id__patch",
+        "tags": [],
+        "summary": "Update Card",
+        "parameters": [
+          {
+            "name": "card_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Card Id"
+            }
+          }
+        ],
+        "has_request_body": true,
+        "responses": [
+          "200",
+          "422"
+        ]
+      }
+    },
+    "/api/kanban/cards/{card_id}/discord": {
+      "patch": {
+        "operationId": "toggle_card_discord_api_kanban_cards__card_id__discord_patch",
+        "tags": [],
+        "summary": "Toggle Card Discord",
+        "parameters": [
+          {
+            "name": "card_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Card Id"
+            }
+          }
+        ],
+        "has_request_body": true,
+        "responses": [
+          "200",
+          "422"
+        ]
+      }
+    },
+    "/api/kanban/move": {
+      "put": {
+        "operationId": "move_card_api_kanban_move_put",
+        "tags": [],
+        "summary": "Move Card",
+        "parameters": [],
+        "has_request_body": true,
+        "responses": [
+          "200",
+          "422"
+        ]
+      }
+    },
+    "/api/macro/dashboard": {
+      "get": {
+        "operationId": "get_macro_dashboard_api_macro_dashboard_get",
+        "tags": [],
+        "summary": "Get Macro Dashboard",
+        "parameters": [],
+        "has_request_body": false,
+        "responses": [
+          "200"
+        ]
+      }
+    },
+    "/api/macro/indicators/{indicator_id}/series": {
+      "get": {
+        "operationId": "get_macro_indicator_series_api_macro_indicators__indicator_id__series_get",
+        "tags": [],
+        "summary": "Get Macro Indicator Series",
+        "parameters": [
+          {
+            "name": "indicator_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Indicator Id"
+            }
+          },
+          {
+            "name": "range",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "3m",
+              "title": "Range"
+            }
+          }
+        ],
+        "has_request_body": false,
+        "responses": [
+          "200",
+          "422"
+        ]
+      }
+    },
+    "/api/macro/news_funnel/filtered": {
+      "get": {
+        "operationId": "get_news_funnel_filtered_api_macro_news_funnel_filtered_get",
+        "tags": [],
+        "summary": "Get News Funnel Filtered",
+        "parameters": [],
+        "has_request_body": false,
+        "responses": [
+          "200"
+        ]
+      }
+    },
+    "/api/macro/news_funnel/pending": {
+      "get": {
+        "operationId": "get_news_funnel_pending_api_macro_news_funnel_pending_get",
+        "tags": [],
+        "summary": "Get News Funnel Pending",
+        "parameters": [],
+        "has_request_body": false,
+        "responses": [
+          "200"
+        ]
+      }
+    },
+    "/api/macro/news_funnel/pending/{event_id}": {
+      "delete": {
+        "operationId": "delete_news_funnel_pending_api_macro_news_funnel_pending__event_id__delete",
+        "tags": [],
+        "summary": "Delete News Funnel Pending",
+        "parameters": [
+          {
+            "name": "event_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Event Id"
+            }
+          }
+        ],
+        "has_request_body": false,
+        "responses": [
+          "200",
+          "422"
+        ]
+      }
+    },
+    "/api/notebooklm/available-sources": {
+      "get": {
+        "operationId": "list_available_sources_api_notebooklm_available_sources_get",
+        "tags": [],
+        "summary": "List Available Sources",
+        "parameters": [],
+        "has_request_body": false,
+        "responses": [
+          "200"
+        ]
+      }
+    },
+    "/api/notebooklm/generate": {
+      "post": {
+        "operationId": "generate_notebooklm_audio_api_notebooklm_generate_post",
+        "tags": [],
+        "summary": "Generate Notebooklm Audio",
+        "parameters": [],
+        "has_request_body": true,
+        "responses": [
+          "200",
+          "422"
+        ]
+      }
+    },
+    "/api/notebooklm/status/{job_id}": {
+      "get": {
+        "operationId": "get_notebooklm_status_api_notebooklm_status__job_id__get",
+        "tags": [],
+        "summary": "Get Notebooklm Status",
+        "parameters": [
+          {
+            "name": "job_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Job Id"
+            }
+          }
+        ],
+        "has_request_body": false,
+        "responses": [
+          "200",
+          "422"
+        ]
+      }
+    },
+    "/api/portfolio/actual/allocations": {
+      "get": {
+        "operationId": "get_actual_bucket_allocations_api_portfolio_actual_allocations_get",
+        "tags": [],
+        "summary": "Get Actual Bucket Allocations",
+        "parameters": [
+          {
+            "name": "portfolio_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "default",
+              "title": "Portfolio Id"
+            }
+          }
+        ],
+        "has_request_body": false,
+        "responses": [
+          "200",
+          "422"
+        ]
+      }
+    },
+    "/api/portfolio/actual/allocations/targets": {
+      "put": {
+        "operationId": "upsert_allocation_targets_api_portfolio_actual_allocations_targets_put",
+        "tags": [],
+        "summary": "Upsert Allocation Targets",
+        "parameters": [
+          {
+            "name": "portfolio_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "default",
+              "title": "Portfolio Id"
+            }
+          }
+        ],
+        "has_request_body": true,
+        "responses": [
+          "200",
+          "422"
+        ]
+      }
+    },
+    "/api/portfolio/actual/cashflow": {
+      "post": {
+        "operationId": "manage_cash_flow_endpoint_api_portfolio_actual_cashflow_post",
+        "tags": [],
+        "summary": "Manage Cash Flow Endpoint",
+        "parameters": [
+          {
+            "name": "portfolio_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "default",
+              "title": "Portfolio Id"
+            }
+          }
+        ],
+        "has_request_body": true,
+        "responses": [
+          "200",
+          "422"
+        ]
+      }
+    },
+    "/api/portfolio/actual/fx-rate": {
+      "get": {
+        "operationId": "get_fx_rate_endpoint_api_portfolio_actual_fx_rate_get",
+        "tags": [],
+        "summary": "Get Fx Rate Endpoint",
+        "parameters": [
+          {
+            "name": "date",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Date"
+            }
+          },
+          {
+            "name": "portfolio_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "default",
+              "title": "Portfolio Id"
+            }
+          }
+        ],
+        "has_request_body": false,
+        "responses": [
+          "200",
+          "422"
+        ]
+      }
+    },
+    "/api/portfolio/actual/goals": {
+      "get": {
+        "operationId": "get_actual_goals_api_portfolio_actual_goals_get",
+        "tags": [],
+        "summary": "Get Actual Goals",
+        "parameters": [
+          {
+            "name": "portfolio_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Portfolio Id"
+            }
+          }
+        ],
+        "has_request_body": false,
+        "responses": [
+          "200",
+          "422"
+        ]
+      }
+    },
+    "/api/portfolio/actual/goals/{name}": {
+      "delete": {
+        "operationId": "remove_goal_endpoint_api_portfolio_actual_goals__name__delete",
+        "tags": [],
+        "summary": "Remove Goal Endpoint",
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Name"
+            }
+          },
+          {
+            "name": "portfolio_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Portfolio Id"
+            }
+          }
+        ],
+        "has_request_body": false,
+        "responses": [
+          "200",
+          "422"
+        ]
+      },
+      "put": {
+        "operationId": "upsert_goal_endpoint_api_portfolio_actual_goals__name__put",
+        "tags": [],
+        "summary": "Upsert Goal Endpoint",
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Name"
+            }
+          }
+        ],
+        "has_request_body": true,
+        "responses": [
+          "200",
+          "422"
+        ]
+      }
+    },
+    "/api/portfolio/actual/holdings/batch-bucket": {
+      "put": {
+        "operationId": "batch_assign_holding_buckets_api_portfolio_actual_holdings_batch_bucket_put",
+        "tags": [],
+        "summary": "Batch Assign Holding Buckets",
+        "parameters": [
+          {
+            "name": "portfolio_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "default",
+              "title": "Portfolio Id"
+            }
+          }
+        ],
+        "has_request_body": true,
+        "responses": [
+          "200",
+          "422"
+        ]
+      }
+    },
+    "/api/portfolio/actual/holdings/batch-delete": {
+      "post": {
+        "operationId": "batch_remove_holdings_api_portfolio_actual_holdings_batch_delete_post",
+        "tags": [],
+        "summary": "Batch Remove Holdings",
+        "parameters": [
+          {
+            "name": "portfolio_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "default",
+              "title": "Portfolio Id"
+            }
+          }
+        ],
+        "has_request_body": true,
+        "responses": [
+          "200",
+          "422"
+        ]
+      }
+    },
+    "/api/portfolio/actual/holdings/{symbol}": {
+      "delete": {
+        "operationId": "remove_holding_endpoint_api_portfolio_actual_holdings__symbol__delete",
+        "tags": [],
+        "summary": "Remove Holding Endpoint",
+        "parameters": [
+          {
+            "name": "symbol",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Symbol"
+            }
+          },
+          {
+            "name": "portfolio_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "default",
+              "title": "Portfolio Id"
+            }
+          }
+        ],
+        "has_request_body": false,
+        "responses": [
+          "200",
+          "422"
+        ]
+      }
+    },
+    "/api/portfolio/actual/holdings/{symbol}/bucket": {
+      "put": {
+        "operationId": "assign_holding_bucket_api_portfolio_actual_holdings__symbol__bucket_put",
+        "tags": [],
+        "summary": "Assign Holding Bucket",
+        "parameters": [
+          {
+            "name": "symbol",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Symbol"
+            }
+          },
+          {
+            "name": "portfolio_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "default",
+              "title": "Portfolio Id"
+            }
+          }
+        ],
+        "has_request_body": true,
+        "responses": [
+          "200",
+          "422"
+        ]
+      }
+    },
+    "/api/portfolio/actual/holdings/{symbol}/edit": {
+      "put": {
+        "operationId": "edit_holding_endpoint_api_portfolio_actual_holdings__symbol__edit_put",
+        "tags": [],
+        "summary": "Edit Holding Endpoint",
+        "parameters": [
+          {
+            "name": "symbol",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Symbol"
+            }
+          },
+          {
+            "name": "portfolio_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "default",
+              "title": "Portfolio Id"
+            }
+          }
+        ],
+        "has_request_body": true,
+        "responses": [
+          "200",
+          "422"
+        ]
+      }
+    },
+    "/api/portfolio/actual/income": {
+      "post": {
+        "operationId": "record_income_endpoint_api_portfolio_actual_income_post",
+        "tags": [],
+        "summary": "Record Income Endpoint",
+        "parameters": [
+          {
+            "name": "portfolio_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "default",
+              "title": "Portfolio Id"
+            }
+          }
+        ],
+        "has_request_body": true,
+        "responses": [
+          "200",
+          "422"
+        ]
+      }
+    },
+    "/api/portfolio/actual/journal": {
+      "get": {
+        "operationId": "get_actual_journal_api_portfolio_actual_journal_get",
+        "tags": [],
+        "summary": "Get Actual Journal",
+        "parameters": [
+          {
+            "name": "days",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Days"
+            }
+          },
+          {
+            "name": "keyword",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Keyword"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 50,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "portfolio_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "default",
+              "title": "Portfolio Id"
+            }
+          }
+        ],
+        "has_request_body": false,
+        "responses": [
+          "200",
+          "422"
+        ]
+      },
+      "post": {
+        "operationId": "append_journal_endpoint_api_portfolio_actual_journal_post",
+        "tags": [],
+        "summary": "Append Journal Endpoint",
+        "parameters": [
+          {
+            "name": "portfolio_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "default",
+              "title": "Portfolio Id"
+            }
+          }
+        ],
+        "has_request_body": true,
+        "responses": [
+          "200",
+          "422"
+        ]
+      }
+    },
+    "/api/portfolio/actual/performance": {
+      "get": {
+        "operationId": "get_actual_performance_api_portfolio_actual_performance_get",
+        "tags": [],
+        "summary": "Get Actual Performance",
+        "parameters": [
+          {
+            "name": "days",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 30,
+              "title": "Days"
+            }
+          },
+          {
+            "name": "portfolio_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "default",
+              "title": "Portfolio Id"
+            }
+          }
+        ],
+        "has_request_body": false,
+        "responses": [
+          "200",
+          "422"
+        ]
+      }
+    },
+    "/api/portfolio/actual/performance/snapshot": {
+      "post": {
+        "operationId": "trigger_performance_snapshot_api_portfolio_actual_performance_snapshot_post",
+        "tags": [],
+        "summary": "Trigger Performance Snapshot",
+        "parameters": [
+          {
+            "name": "refresh_prices",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false,
+              "title": "Refresh Prices"
+            }
+          },
+          {
+            "name": "portfolio_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "default",
+              "title": "Portfolio Id"
+            }
+          }
+        ],
+        "has_request_body": false,
+        "responses": [
+          "200",
+          "422"
+        ]
+      }
+    },
+    "/api/portfolio/actual/reset": {
+      "post": {
+        "operationId": "reset_portfolio_clean_slate_api_portfolio_actual_reset_post",
+        "tags": [],
+        "summary": "Reset Portfolio Clean Slate",
+        "parameters": [
+          {
+            "name": "portfolio_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "default",
+              "title": "Portfolio Id"
+            }
+          }
+        ],
+        "has_request_body": false,
+        "responses": [
+          "200",
+          "422"
+        ]
+      }
+    },
+    "/api/portfolio/actual/state": {
+      "get": {
+        "operationId": "get_actual_portfolio_state_api_portfolio_actual_state_get",
+        "tags": [],
+        "summary": "Get Actual Portfolio State",
+        "parameters": [
+          {
+            "name": "refresh_prices",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false,
+              "title": "Refresh Prices"
+            }
+          },
+          {
+            "name": "fetch_fundamentals",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false,
+              "title": "Fetch Fundamentals"
+            }
+          },
+          {
+            "name": "portfolio_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "default",
+              "title": "Portfolio Id"
+            }
+          }
+        ],
+        "has_request_body": false,
+        "responses": [
+          "200",
+          "422"
+        ]
+      }
+    },
+    "/api/portfolio/actual/sync-dividends": {
+      "post": {
+        "operationId": "sync_dividends_endpoint_api_portfolio_actual_sync_dividends_post",
+        "tags": [],
+        "summary": "Sync Dividends Endpoint",
+        "parameters": [
+          {
+            "name": "portfolio_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "default",
+              "title": "Portfolio Id"
+            }
+          }
+        ],
+        "has_request_body": false,
+        "responses": [
+          "200",
+          "422"
+        ]
+      }
+    },
+    "/api/portfolio/actual/trade": {
+      "post": {
+        "operationId": "execute_trade_endpoint_api_portfolio_actual_trade_post",
+        "tags": [],
+        "summary": "Execute Trade Endpoint",
+        "parameters": [
+          {
+            "name": "portfolio_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "default",
+              "title": "Portfolio Id"
+            }
+          }
+        ],
+        "has_request_body": true,
+        "responses": [
+          "200",
+          "422"
+        ]
+      }
+    },
+    "/api/portfolio/actual/transactions": {
+      "get": {
+        "operationId": "get_actual_transactions_api_portfolio_actual_transactions_get",
+        "tags": [],
+        "summary": "Get Actual Transactions",
+        "parameters": [
+          {
+            "name": "symbol",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Symbol"
+            }
+          },
+          {
+            "name": "portfolio_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "default",
+              "title": "Portfolio Id"
+            }
+          }
+        ],
+        "has_request_body": false,
+        "responses": [
+          "200",
+          "422"
+        ]
+      }
+    },
+    "/api/portfolio/actual/transactions/{tx_id}": {
+      "delete": {
+        "operationId": "delete_transaction_endpoint_api_portfolio_actual_transactions__tx_id__delete",
+        "tags": [],
+        "summary": "Delete Transaction Endpoint",
+        "parameters": [
+          {
+            "name": "tx_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Tx Id"
+            }
+          },
+          {
+            "name": "adjust_cash",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": true,
+              "title": "Adjust Cash"
+            }
+          },
+          {
+            "name": "portfolio_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "default",
+              "title": "Portfolio Id"
+            }
+          }
+        ],
+        "has_request_body": false,
+        "responses": [
+          "200",
+          "422"
+        ]
+      },
+      "put": {
+        "operationId": "edit_transaction_endpoint_api_portfolio_actual_transactions__tx_id__put",
+        "tags": [],
+        "summary": "Edit Transaction Endpoint",
+        "parameters": [
+          {
+            "name": "tx_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Tx Id"
+            }
+          },
+          {
+            "name": "portfolio_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "default",
+              "title": "Portfolio Id"
+            }
+          }
+        ],
+        "has_request_body": true,
+        "responses": [
+          "200",
+          "422"
+        ]
+      }
+    },
+    "/api/portfolio/actual/transactions/{tx_id}/note": {
+      "patch": {
+        "operationId": "update_transaction_note_endpoint_api_portfolio_actual_transactions__tx_id__note_patch",
+        "tags": [],
+        "summary": "Update Transaction Note Endpoint",
+        "parameters": [
+          {
+            "name": "tx_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Tx Id"
+            }
+          },
+          {
+            "name": "portfolio_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "default",
+              "title": "Portfolio Id"
+            }
+          }
+        ],
+        "has_request_body": true,
+        "responses": [
+          "200",
+          "422"
+        ]
+      }
+    },
+    "/api/portfolio/actual/watchlist": {
+      "get": {
+        "operationId": "get_actual_watchlist_api_portfolio_actual_watchlist_get",
+        "tags": [],
+        "summary": "Get Actual Watchlist",
+        "parameters": [
+          {
+            "name": "portfolio_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "default",
+              "title": "Portfolio Id"
+            }
+          }
+        ],
+        "has_request_body": false,
+        "responses": [
+          "200",
+          "422"
+        ]
+      }
+    },
+    "/api/portfolio/actual/watchlist/{symbol}": {
+      "delete": {
+        "operationId": "remove_watchlist_item_endpoint_api_portfolio_actual_watchlist__symbol__delete",
+        "tags": [],
+        "summary": "Remove Watchlist Item Endpoint",
+        "parameters": [
+          {
+            "name": "symbol",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Symbol"
+            }
+          },
+          {
+            "name": "portfolio_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "default",
+              "title": "Portfolio Id"
+            }
+          }
+        ],
+        "has_request_body": false,
+        "responses": [
+          "200",
+          "422"
+        ]
+      },
+      "put": {
+        "operationId": "upsert_watchlist_item_endpoint_api_portfolio_actual_watchlist__symbol__put",
+        "tags": [],
+        "summary": "Upsert Watchlist Item Endpoint",
+        "parameters": [
+          {
+            "name": "symbol",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Symbol"
+            }
+          },
+          {
+            "name": "portfolio_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "default",
+              "title": "Portfolio Id"
+            }
+          }
+        ],
+        "has_request_body": true,
+        "responses": [
+          "200",
+          "422"
+        ]
+      }
+    },
+    "/api/portfolio/calendar": {
+      "get": {
+        "operationId": "get_portfolio_calendar_api_portfolio_calendar_get",
+        "tags": [],
+        "summary": "Get Portfolio Calendar",
+        "parameters": [
+          {
+            "name": "portfolio_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "default",
+              "title": "Portfolio Id"
+            }
+          }
+        ],
+        "has_request_body": false,
+        "responses": [
+          "200",
+          "422"
+        ]
+      }
+    },
+    "/api/portfolio/create": {
+      "post": {
+        "operationId": "create_portfolio_endpoint_api_portfolio_create_post",
+        "tags": [],
+        "summary": "Create Portfolio Endpoint",
+        "parameters": [],
+        "has_request_body": true,
+        "responses": [
+          "200",
+          "422"
+        ]
+      }
+    },
+    "/api/portfolio/latest": {
+      "get": {
+        "operationId": "get_latest_portfolio_api_portfolio_latest_get",
+        "tags": [],
+        "summary": "Get Latest Portfolio",
+        "parameters": [],
+        "has_request_body": false,
+        "responses": [
+          "200"
+        ]
+      }
+    },
+    "/api/portfolio/list": {
+      "get": {
+        "operationId": "list_portfolios_endpoint_api_portfolio_list_get",
+        "tags": [],
+        "summary": "List Portfolios Endpoint",
+        "parameters": [],
+        "has_request_body": false,
+        "responses": [
+          "200"
+        ]
+      }
+    },
+    "/api/portfolio/{portfolio_id}": {
+      "delete": {
+        "operationId": "delete_portfolio_endpoint_api_portfolio__portfolio_id__delete",
+        "tags": [],
+        "summary": "Delete Portfolio Endpoint",
+        "parameters": [
+          {
+            "name": "portfolio_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Portfolio Id"
+            }
+          }
+        ],
+        "has_request_body": false,
+        "responses": [
+          "200",
+          "422"
+        ]
+      }
+    },
+    "/api/portfolio/{portfolio_id}/rename": {
+      "put": {
+        "operationId": "rename_portfolio_endpoint_api_portfolio__portfolio_id__rename_put",
+        "tags": [],
+        "summary": "Rename Portfolio Endpoint",
+        "parameters": [
+          {
+            "name": "portfolio_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Portfolio Id"
+            }
+          }
+        ],
+        "has_request_body": true,
+        "responses": [
+          "200",
+          "422"
+        ]
+      }
+    },
+    "/health": {
+      "get": {
+        "operationId": "health_health_get",
+        "tags": [],
+        "summary": "Health",
+        "parameters": [],
+        "has_request_body": false,
+        "responses": [
+          "200"
+        ]
+      }
+    }
+  }
+}

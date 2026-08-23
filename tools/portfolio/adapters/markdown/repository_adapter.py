@@ -169,6 +169,16 @@ class MarkdownPortfolioUnitOfWork(PortfolioUnitOfWork):
         self._cached_state = state
         return state
 
+    def read_trade_log_locked(self) -> List[Dict]:
+        fpath = get_trades_log_filepath(self.portfolio_id)
+        raw_rows = _read_and_migrate_trade_log_locked(fpath)
+        rows: List[Dict] = []
+        for r in raw_rows:
+            item_dict = {k.lower(): v for k, v in r.items()}
+            item_dict.update({k: v for k, v in r.items()})
+            rows.append(item_dict)
+        return rows
+
     def commit(self, state: PortfolioState, ledger_change: Optional[LedgerChange] = None) -> None:
         self.repo._commit_locked(self.portfolio_id, state, ledger_change)
 
@@ -275,6 +285,47 @@ class MarkdownVaultRepositoryAdapter(PortfolioRepositoryPort):
                 item_dict.update({k: v for k, v in r.items()})
                 rows.append(item_dict)
             return rows
+
+    def backup_and_reset_clean_slate(self, portfolio_id: str = "default") -> PortfolioState:
+        pid = validate_portfolio_id(portfolio_id)
+        with self.unit_of_work(pid) as uow:
+            state = uow.load_state()
+
+            # Create backup before wiping
+            portfolio_file = get_portfolio_filepath(pid)
+            holdings_dir = get_holdings_dir(pid)
+            backups_dir = portfolio_file.parent / ".backups"
+            timestamp = time.strftime("%Y%m%d_%H%M%S")
+            backup_dest = backups_dir / timestamp
+
+            try:
+                backup_dest.mkdir(parents=True, exist_ok=True)
+                if portfolio_file.exists():
+                    shutil.copy2(portfolio_file, backup_dest / portfolio_file.name)
+                if holdings_dir.exists():
+                    dest_holdings = backup_dest / "Holdings"
+                    dest_holdings.mkdir(parents=True, exist_ok=True)
+                    for f in holdings_dir.glob("*.md"):
+                        shutil.copy2(f, dest_holdings / f.name)
+            except Exception as e:
+                raise ValueError(f"สำรองข้อมูลก่อนล้างพอร์ตไม่สำเร็จ: {e}")
+
+            # Clean sidecars
+            if holdings_dir.exists():
+                for f in holdings_dir.glob("*.md"):
+                    try:
+                        f.unlink(missing_ok=True)
+                    except Exception:
+                        pass
+
+            new_state = PortfolioState(
+                last_updated=_now_iso(),
+                allocation_targets=default_allocation_targets(),
+                fx_rates={"USDTHB": 36.5},
+                holdings=[],
+            )
+            uow.commit(new_state, LedgerChange(kind="replace_all", rows=[]))
+            return new_state
 
     def list_portfolios(self) -> List[PortfolioMeta]:
         portfolios_dir = get_portfolio_dir("default").parent
@@ -554,7 +605,10 @@ class MarkdownVaultRepositoryAdapter(PortfolioRepositoryPort):
                 writer = csv.DictWriter(f, fieldnames=_TRADES_LOG_HEADER, lineterminator="\n")
                 writer.writeheader()
                 for r in rows_to_write:
-                    sanitized = {k: _sanitize_csv_field(str(v if v is not None else "")) for k, v in r.items()}
+                    sanitized = {
+                        col: _sanitize_csv_field(str(r.get(col) if r.get(col) is not None else (r.get(col.lower()) if r.get(col.lower()) is not None else "")))
+                        for col in _TRADES_LOG_HEADER
+                    }
                     writer.writerow(sanitized)
                 f.flush()
                 os.fsync(f.fileno())

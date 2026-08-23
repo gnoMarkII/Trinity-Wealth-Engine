@@ -1,0 +1,1268 @@
+{
+  "module": "api.state_db",
+  "functions": {
+    "_backfill_kanban_display_seq": {
+      "name": "_backfill_kanban_display_seq",
+      "parameters": [
+        {
+          "name": "conn",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "<EMPTY>",
+          "annotation": "Connection"
+        }
+      ],
+      "return_annotation": "None",
+      "docstring": "การ์ดเก่าที่มีอยู่ก่อน Rev.2 (ก่อนมีคอลัมน์ display_seq) จะมีค่า NULL — เติมเลขให้\nตามลำดับ created_at เพื่อให้ Linear-style #AG-N ID เรียงลำดับสร้างจริง ไม่ใช่เลขสุ่ม"
+    },
+    "_migrate_columns": {
+      "name": "_migrate_columns",
+      "parameters": [
+        {
+          "name": "conn",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "<EMPTY>",
+          "annotation": "Connection"
+        }
+      ],
+      "return_annotation": "None",
+      "docstring": "เพิ่มคอลัมน์ใหม่ให้ตารางเก่าที่มีอยู่แล้วในไฟล์ SQLite จริง — `CREATE TABLE IF NOT EXISTS`\nไม่แก้ตารางที่มีอยู่แล้ว ถ้า schema เปลี่ยนหลังจากไฟล์ .sqlite ถูกสร้างไปแล้ว (เช่น\nเพิ่ม flow/interrupt_payload ตอนทำ HITL) คอลัมน์ใหม่จะไม่มีอยู่จริง ทำให้ INSERT/SELECT\nพังด้วย \"table X has no column named Y\" — พบเจอจริงตอน dispatch งานจาก Kanban"
+    },
+    "_migrate_dispatcher_column_cards": {
+      "name": "_migrate_dispatcher_column_cards",
+      "parameters": [
+        {
+          "name": "conn",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "<EMPTY>",
+          "annotation": "Connection"
+        }
+      ],
+      "return_annotation": "None",
+      "docstring": "คอลัมน์ 'dispatcher' ถูกตัดออกจาก UI แล้ว (เหลือ backlog/approval/executing/done) —\nการ์ดเก่าที่ยังค้างอยู่ใน 'dispatcher' ต้องย้ายกลับ backlog ไม่งั้นจะไม่โผล่ในหน้าเว็บเลย\nเพราะ frontend ไม่มีคอลัมน์นั้นให้ render อีกต่อไป"
+    },
+    "append_job_log": {
+      "name": "append_job_log",
+      "parameters": [
+        {
+          "name": "conn",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "<EMPTY>",
+          "annotation": "Connection"
+        },
+        {
+          "name": "job_id",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "<EMPTY>",
+          "annotation": "str"
+        },
+        {
+          "name": "node_name",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "<EMPTY>",
+          "annotation": "str"
+        },
+        {
+          "name": "content",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "<EMPTY>",
+          "annotation": "str"
+        },
+        {
+          "name": "role",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "reply",
+          "annotation": "str"
+        },
+        {
+          "name": "label",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": null,
+          "annotation": "str | None"
+        }
+      ],
+      "return_annotation": "int",
+      "docstring": null
+    },
+    "cas_job_status": {
+      "name": "cas_job_status",
+      "parameters": [
+        {
+          "name": "conn",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "<EMPTY>",
+          "annotation": "Connection"
+        },
+        {
+          "name": "job_id",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "<EMPTY>",
+          "annotation": "str"
+        },
+        {
+          "name": "old_status",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "<EMPTY>",
+          "annotation": "str"
+        },
+        {
+          "name": "new_status",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "<EMPTY>",
+          "annotation": "str"
+        }
+      ],
+      "return_annotation": "bool",
+      "docstring": "Compare and Swap job status. Returns True if successful, False if current status was not old_status."
+    },
+    "claim_job_resume": {
+      "name": "claim_job_resume",
+      "parameters": [
+        {
+          "name": "conn",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "<EMPTY>",
+          "annotation": "Connection"
+        },
+        {
+          "name": "job_id",
+          "kind": "KEYWORD_ONLY",
+          "default": "<EMPTY>",
+          "annotation": "str"
+        },
+        {
+          "name": "resume_value_json",
+          "kind": "KEYWORD_ONLY",
+          "default": "<EMPTY>",
+          "annotation": "str"
+        },
+        {
+          "name": "token_uses",
+          "kind": "KEYWORD_ONLY",
+          "default": null,
+          "annotation": "list[dict[str, str | int]] | None"
+        }
+      ],
+      "return_annotation": "None",
+      "docstring": "Atomically consume Draft tokens and move one approval back to the queue.\n\nA compare-and-set status check is essential: two browser clicks must not\nenqueue the same LangGraph interrupt twice."
+    },
+    "clear_job_resume_value": {
+      "name": "clear_job_resume_value",
+      "parameters": [
+        {
+          "name": "conn",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "<EMPTY>",
+          "annotation": "Connection"
+        },
+        {
+          "name": "job_id",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "<EMPTY>",
+          "annotation": "str"
+        }
+      ],
+      "return_annotation": "None",
+      "docstring": null
+    },
+    "create_job": {
+      "name": "create_job",
+      "parameters": [
+        {
+          "name": "conn",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "<EMPTY>",
+          "annotation": "Connection"
+        },
+        {
+          "name": "job_id",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "<EMPTY>",
+          "annotation": "str"
+        },
+        {
+          "name": "thread_id",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "<EMPTY>",
+          "annotation": "str"
+        },
+        {
+          "name": "card_id",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "<EMPTY>",
+          "annotation": "str | None"
+        },
+        {
+          "name": "idempotency_key",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "<EMPTY>",
+          "annotation": "str"
+        },
+        {
+          "name": "instruction",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "<EMPTY>",
+          "annotation": "str"
+        },
+        {
+          "name": "status",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "queued",
+          "annotation": "str"
+        },
+        {
+          "name": "flow",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "manager",
+          "annotation": "str"
+        },
+        {
+          "name": "scope",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "both",
+          "annotation": "str"
+        }
+      ],
+      "return_annotation": "None",
+      "docstring": null
+    },
+    "create_kanban_card": {
+      "name": "create_kanban_card",
+      "parameters": [
+        {
+          "name": "conn",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "<EMPTY>",
+          "annotation": "Connection"
+        },
+        {
+          "name": "card_id",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "<EMPTY>",
+          "annotation": "str"
+        },
+        {
+          "name": "title",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "<EMPTY>",
+          "annotation": "str"
+        },
+        {
+          "name": "column_name",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "backlog",
+          "annotation": "str"
+        },
+        {
+          "name": "flow",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "manager",
+          "annotation": "str"
+        },
+        {
+          "name": "prompt",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": null,
+          "annotation": "str | None"
+        },
+        {
+          "name": "scope",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "both",
+          "annotation": "str"
+        },
+        {
+          "name": "is_verified",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": true,
+          "annotation": "bool"
+        }
+      ],
+      "return_annotation": "None",
+      "docstring": null
+    },
+    "create_parking_lot_cards_atomic": {
+      "name": "create_parking_lot_cards_atomic",
+      "parameters": [
+        {
+          "name": "ideas",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "<EMPTY>",
+          "annotation": "list"
+        },
+        {
+          "name": "source_pitch_id",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "<EMPTY>",
+          "annotation": "str"
+        },
+        {
+          "name": "db_path",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": null,
+          "annotation": "str | None"
+        }
+      ],
+      "return_annotation": "int",
+      "docstring": "Atomically create parking lot cards in backlog column with dedicated connection and BEGIN IMMEDIATE.\n\nReturns the count of newly inserted cards."
+    },
+    "delete_kanban_card": {
+      "name": "delete_kanban_card",
+      "parameters": [
+        {
+          "name": "conn",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "<EMPTY>",
+          "annotation": "Connection"
+        },
+        {
+          "name": "card_id",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "<EMPTY>",
+          "annotation": "str"
+        }
+      ],
+      "return_annotation": "None",
+      "docstring": null
+    },
+    "find_job_by_idempotency_key": {
+      "name": "find_job_by_idempotency_key",
+      "parameters": [
+        {
+          "name": "conn",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "<EMPTY>",
+          "annotation": "Connection"
+        },
+        {
+          "name": "idempotency_key",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "<EMPTY>",
+          "annotation": "str"
+        }
+      ],
+      "return_annotation": "sqlite3.Row | None",
+      "docstring": null
+    },
+    "find_kanban_card_by_title_in_column": {
+      "name": "find_kanban_card_by_title_in_column",
+      "parameters": [
+        {
+          "name": "conn",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "<EMPTY>",
+          "annotation": "Connection"
+        },
+        {
+          "name": "title",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "<EMPTY>",
+          "annotation": "str"
+        },
+        {
+          "name": "column_name",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "<EMPTY>",
+          "annotation": "str"
+        },
+        {
+          "name": "prompt",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": null,
+          "annotation": "str | None"
+        }
+      ],
+      "return_annotation": "sqlite3.Row | None",
+      "docstring": null
+    },
+    "get_analyst_context_cache": {
+      "name": "get_analyst_context_cache",
+      "parameters": [
+        {
+          "name": "conn",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "<EMPTY>",
+          "annotation": "Connection"
+        },
+        {
+          "name": "ticker",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "<EMPTY>",
+          "annotation": "str"
+        }
+      ],
+      "return_annotation": "dict | None",
+      "docstring": "ดึงข้อมูล Analyst Context จาก SQLite cache พร้อม decode JSON และ format synced_at เป็น ISO string"
+    },
+    "get_connection": {
+      "name": "get_connection",
+      "parameters": [
+        {
+          "name": "db_path",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": null,
+          "annotation": "str | None"
+        }
+      ],
+      "return_annotation": "Connection",
+      "docstring": null
+    },
+    "get_dcf_evaluation_by_id": {
+      "name": "get_dcf_evaluation_by_id",
+      "parameters": [
+        {
+          "name": "conn",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "<EMPTY>",
+          "annotation": "Connection"
+        },
+        {
+          "name": "evaluation_id",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "<EMPTY>",
+          "annotation": "str"
+        }
+      ],
+      "return_annotation": "sqlite3.Row | None",
+      "docstring": "ดึงผลการประเมิน DCF ตาม evaluation_id ที่เจาะจง"
+    },
+    "get_financial_statements_cache": {
+      "name": "get_financial_statements_cache",
+      "parameters": [
+        {
+          "name": "conn",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "<EMPTY>",
+          "annotation": "Connection"
+        },
+        {
+          "name": "market",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "<EMPTY>",
+          "annotation": "str"
+        },
+        {
+          "name": "provider_symbol",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "<EMPTY>",
+          "annotation": "str"
+        }
+      ],
+      "return_annotation": "dict | None",
+      "docstring": "ดึงข้อมูลงบการเงิน V5 จาก SQLite cache พร้อม decode JSON และ backward compatibility กับ V4"
+    },
+    "get_job": {
+      "name": "get_job",
+      "parameters": [
+        {
+          "name": "conn",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "<EMPTY>",
+          "annotation": "Connection"
+        },
+        {
+          "name": "job_id",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "<EMPTY>",
+          "annotation": "str"
+        }
+      ],
+      "return_annotation": "sqlite3.Row | None",
+      "docstring": null
+    },
+    "get_job_log_count": {
+      "name": "get_job_log_count",
+      "parameters": [
+        {
+          "name": "conn",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "<EMPTY>",
+          "annotation": "Connection"
+        },
+        {
+          "name": "job_id",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "<EMPTY>",
+          "annotation": "str"
+        }
+      ],
+      "return_annotation": "int",
+      "docstring": null
+    },
+    "get_job_logs_since": {
+      "name": "get_job_logs_since",
+      "parameters": [
+        {
+          "name": "conn",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "<EMPTY>",
+          "annotation": "Connection"
+        },
+        {
+          "name": "job_id",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "<EMPTY>",
+          "annotation": "str"
+        },
+        {
+          "name": "after_seq",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": 0,
+          "annotation": "int"
+        }
+      ],
+      "return_annotation": "list",
+      "docstring": null
+    },
+    "get_job_reply_logs": {
+      "name": "get_job_reply_logs",
+      "parameters": [
+        {
+          "name": "conn",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "<EMPTY>",
+          "annotation": "Connection"
+        },
+        {
+          "name": "job_id",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "<EMPTY>",
+          "annotation": "str"
+        }
+      ],
+      "return_annotation": "list",
+      "docstring": null
+    },
+    "get_kanban_card": {
+      "name": "get_kanban_card",
+      "parameters": [
+        {
+          "name": "conn",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "<EMPTY>",
+          "annotation": "Connection"
+        },
+        {
+          "name": "card_id",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "<EMPTY>",
+          "annotation": "str"
+        }
+      ],
+      "return_annotation": "sqlite3.Row | None",
+      "docstring": null
+    },
+    "get_latest_dcf_evaluation": {
+      "name": "get_latest_dcf_evaluation",
+      "parameters": [
+        {
+          "name": "conn",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "<EMPTY>",
+          "annotation": "Connection"
+        },
+        {
+          "name": "ticker",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "<EMPTY>",
+          "annotation": "str"
+        }
+      ],
+      "return_annotation": "sqlite3.Row | None",
+      "docstring": "ดึงผลการประเมิน DCF ล่าสุดสำหรับ ticker จาก Canonical Ledger"
+    },
+    "get_latest_job_log_node": {
+      "name": "get_latest_job_log_node",
+      "parameters": [
+        {
+          "name": "conn",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "<EMPTY>",
+          "annotation": "Connection"
+        },
+        {
+          "name": "job_id",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "<EMPTY>",
+          "annotation": "str"
+        }
+      ],
+      "return_annotation": "str | None",
+      "docstring": null
+    },
+    "get_raw_financial_statements_cache": {
+      "name": "get_raw_financial_statements_cache",
+      "parameters": [
+        {
+          "name": "conn",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "<EMPTY>",
+          "annotation": "Connection"
+        },
+        {
+          "name": "market",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "<EMPTY>",
+          "annotation": "str"
+        },
+        {
+          "name": "provider_symbol",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "<EMPTY>",
+          "annotation": "str"
+        }
+      ],
+      "return_annotation": "dict | None",
+      "docstring": "ดึงข้อมูล cache ดิบทั้งหมด (รวม legacy schema) โดยไม่ลบแถว เพื่อใช้สำหรับ fallback เมื่อจำเป็น"
+    },
+    "get_sec_insider_filings_and_transactions": {
+      "name": "get_sec_insider_filings_and_transactions",
+      "parameters": [
+        {
+          "name": "conn",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "<EMPTY>",
+          "annotation": "Connection"
+        },
+        {
+          "name": "ticker",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "<EMPTY>",
+          "annotation": "str"
+        },
+        {
+          "name": "since_date",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": null,
+          "annotation": "str | None"
+        }
+      ],
+      "return_annotation": "list",
+      "docstring": "ดึงประวัติ Insider Filings และ Transactions ของ ticker จาก Ledger"
+    },
+    "init_schema": {
+      "name": "init_schema",
+      "parameters": [
+        {
+          "name": "conn",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "<EMPTY>",
+          "annotation": "Connection"
+        }
+      ],
+      "return_annotation": "None",
+      "docstring": null
+    },
+    "list_jobs_by_status": {
+      "name": "list_jobs_by_status",
+      "parameters": [
+        {
+          "name": "conn",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "<EMPTY>",
+          "annotation": "Connection"
+        },
+        {
+          "name": "statuses",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "<EMPTY>",
+          "annotation": "list"
+        },
+        {
+          "name": "flows",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": null,
+          "annotation": "list[str] | None"
+        }
+      ],
+      "return_annotation": "list",
+      "docstring": "flows=None (default) = ทุก flow เหมือนเดิมทุกประการ — ใส่ให้ JobQueue ที่แชร์ DB เดียวกันกับ\nคิวอื่น (เช่น notebooklm_job_queue) กรองเฉพาะ flow ของตัวเอง กัน reenqueue_pending() ข้ามคิวไปกวาด\nงานคนละ flow มาประมวลผลผิดที่"
+    },
+    "list_kanban_cards": {
+      "name": "list_kanban_cards",
+      "parameters": [
+        {
+          "name": "conn",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "<EMPTY>",
+          "annotation": "Connection"
+        }
+      ],
+      "return_annotation": "list",
+      "docstring": null
+    },
+    "mark_discord_events_sent": {
+      "name": "mark_discord_events_sent",
+      "parameters": [
+        {
+          "name": "conn",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "<EMPTY>",
+          "annotation": "Connection"
+        },
+        {
+          "name": "card_id",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "<EMPTY>",
+          "annotation": "str"
+        },
+        {
+          "name": "event_ids",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "<EMPTY>",
+          "annotation": "list"
+        }
+      ],
+      "return_annotation": "None",
+      "docstring": "เพิ่ม event_ids ที่เพิ่งส่ง Discord สำเร็จเข้า discord_sent_events (JSON array) — อ่านค่าเก่า\nมารวมกับใหม่แล้ว UPDATE เฉพาะคอลัมน์นี้ ป้องกันแจ้งซ้ำเมื่อการ์ดถูก upsert รอบถัดไป"
+    },
+    "move_kanban_card": {
+      "name": "move_kanban_card",
+      "parameters": [
+        {
+          "name": "conn",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "<EMPTY>",
+          "annotation": "Connection"
+        },
+        {
+          "name": "card_id",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "<EMPTY>",
+          "annotation": "str"
+        },
+        {
+          "name": "column_name",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "<EMPTY>",
+          "annotation": "str"
+        },
+        {
+          "name": "job_id",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": null,
+          "annotation": "str | None"
+        }
+      ],
+      "return_annotation": "None",
+      "docstring": null
+    },
+    "record_dcf_evaluation": {
+      "name": "record_dcf_evaluation",
+      "parameters": [
+        {
+          "name": "conn",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "<EMPTY>",
+          "annotation": "Connection"
+        },
+        {
+          "name": "evaluation_id",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "<EMPTY>",
+          "annotation": "str"
+        },
+        {
+          "name": "ticker",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "<EMPTY>",
+          "annotation": "str"
+        },
+        {
+          "name": "market",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "<EMPTY>",
+          "annotation": "str"
+        },
+        {
+          "name": "evaluated_at",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "<EMPTY>",
+          "annotation": "str"
+        },
+        {
+          "name": "scenarios",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "<EMPTY>",
+          "annotation": "dict"
+        },
+        {
+          "name": "model_version",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "dcf_v1.0",
+          "annotation": "str"
+        },
+        {
+          "name": "valuation_price_basis",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "split_adjusted_only",
+          "annotation": "str"
+        },
+        {
+          "name": "current_price_at_eval",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": null,
+          "annotation": "float | None"
+        },
+        {
+          "name": "wacc_pct",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": null,
+          "annotation": "float | None"
+        },
+        {
+          "name": "valuation_verdict",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "unknown",
+          "annotation": "str"
+        },
+        {
+          "name": "corporate_action_evidence",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": null,
+          "annotation": "list | None"
+        },
+        {
+          "name": "input_snapshot",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": null,
+          "annotation": "dict | None"
+        }
+      ],
+      "return_annotation": "None",
+      "docstring": "บันทึกการประเมิน DCF ลง Immutable Ledger แบบ Canonical Record"
+    },
+    "record_sec_form4_filing": {
+      "name": "record_sec_form4_filing",
+      "parameters": [
+        {
+          "name": "conn",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "<EMPTY>",
+          "annotation": "Connection"
+        },
+        {
+          "name": "accession_number",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "<EMPTY>",
+          "annotation": "str"
+        },
+        {
+          "name": "issuer_cik",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "<EMPTY>",
+          "annotation": "str"
+        },
+        {
+          "name": "ticker",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "<EMPTY>",
+          "annotation": "str"
+        },
+        {
+          "name": "filing_url",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "<EMPTY>",
+          "annotation": "str"
+        },
+        {
+          "name": "filed_at",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "<EMPTY>",
+          "annotation": "str"
+        },
+        {
+          "name": "reporting_owner_cik",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": null,
+          "annotation": "str | None"
+        },
+        {
+          "name": "reporting_owner_name",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": null,
+          "annotation": "str | None"
+        },
+        {
+          "name": "is_director",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": false,
+          "annotation": "bool"
+        },
+        {
+          "name": "is_officer",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": false,
+          "annotation": "bool"
+        },
+        {
+          "name": "is_ten_percent_owner",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": false,
+          "annotation": "bool"
+        },
+        {
+          "name": "officer_title",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": null,
+          "annotation": "str | None"
+        },
+        {
+          "name": "raw_xml_payload",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": null,
+          "annotation": "str | None"
+        },
+        {
+          "name": "is_amendment",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": false,
+          "annotation": "bool"
+        },
+        {
+          "name": "amends_accession_number",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": null,
+          "annotation": "str | None"
+        }
+      ],
+      "return_annotation": "None",
+      "docstring": "บันทึก Raw SEC Form 4 Filing ลง Ledger พร้อมจัดการ Form 4/A Amendment Invalidation"
+    },
+    "record_sec_insider_transaction": {
+      "name": "record_sec_insider_transaction",
+      "parameters": [
+        {
+          "name": "conn",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "<EMPTY>",
+          "annotation": "Connection"
+        },
+        {
+          "name": "transaction_id",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "<EMPTY>",
+          "annotation": "str"
+        },
+        {
+          "name": "accession_number",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "<EMPTY>",
+          "annotation": "str"
+        },
+        {
+          "name": "ticker",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "<EMPTY>",
+          "annotation": "str"
+        },
+        {
+          "name": "transaction_date",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "<EMPTY>",
+          "annotation": "str"
+        },
+        {
+          "name": "transaction_code",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "<EMPTY>",
+          "annotation": "str"
+        },
+        {
+          "name": "shares",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "<EMPTY>",
+          "annotation": "float"
+        },
+        {
+          "name": "price_per_share",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "<EMPTY>",
+          "annotation": "float"
+        },
+        {
+          "name": "acquired_or_disposed",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "<EMPTY>",
+          "annotation": "str"
+        },
+        {
+          "name": "shares_owned_following",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": null,
+          "annotation": "float | None"
+        },
+        {
+          "name": "ownership_nature",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": null,
+          "annotation": "str | None"
+        },
+        {
+          "name": "is_derivative",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": false,
+          "annotation": "bool"
+        },
+        {
+          "name": "normalized_weight",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": 1.0,
+          "annotation": "float"
+        }
+      ],
+      "return_annotation": "None",
+      "docstring": "บันทึก Normalized Transaction ที่สกัดจาก Form 4"
+    },
+    "set_job_awaiting_approval": {
+      "name": "set_job_awaiting_approval",
+      "parameters": [
+        {
+          "name": "conn",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "<EMPTY>",
+          "annotation": "Connection"
+        },
+        {
+          "name": "job_id",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "<EMPTY>",
+          "annotation": "str"
+        },
+        {
+          "name": "interrupt_payload_json",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "<EMPTY>",
+          "annotation": "str"
+        }
+      ],
+      "return_annotation": "None",
+      "docstring": null
+    },
+    "set_job_resume_value": {
+      "name": "set_job_resume_value",
+      "parameters": [
+        {
+          "name": "conn",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "<EMPTY>",
+          "annotation": "Connection"
+        },
+        {
+          "name": "job_id",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "<EMPTY>",
+          "annotation": "str"
+        },
+        {
+          "name": "resume_value_json",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "<EMPTY>",
+          "annotation": "str"
+        }
+      ],
+      "return_annotation": "None",
+      "docstring": null
+    },
+    "set_kanban_card_source": {
+      "name": "set_kanban_card_source",
+      "parameters": [
+        {
+          "name": "conn",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "<EMPTY>",
+          "annotation": "Connection"
+        },
+        {
+          "name": "card_id",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "<EMPTY>",
+          "annotation": "str"
+        },
+        {
+          "name": "prompt",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "<EMPTY>",
+          "annotation": "str"
+        },
+        {
+          "name": "is_verified",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "<EMPTY>",
+          "annotation": "bool"
+        }
+      ],
+      "return_annotation": "None",
+      "docstring": "UPDATE เฉพาะ prompt/is_verified — partial patch โดยตั้งใจ ไม่แตะ title/flow/scope (pattern\nเดียวกับ toggle_kanban_card_discord) ใช้ตอนผู้ใช้เลือก Briefing Book ให้การ์ด NotebookLM\nครั้งแรกใน Drawer ไม่ให้กระทบชื่อการ์ด/flow ที่ผู้ใช้ตั้งไว้ตอนสร้าง"
+    },
+    "toggle_kanban_card_discord": {
+      "name": "toggle_kanban_card_discord",
+      "parameters": [
+        {
+          "name": "conn",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "<EMPTY>",
+          "annotation": "Connection"
+        },
+        {
+          "name": "card_id",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "<EMPTY>",
+          "annotation": "str"
+        },
+        {
+          "name": "enabled",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "<EMPTY>",
+          "annotation": "bool"
+        }
+      ],
+      "return_annotation": "None",
+      "docstring": "UPDATE เฉพาะคอลัมน์ discord_notify — partial patch โดยตั้งใจ ไม่แตะ title/prompt/flow/scope\nเพื่อไม่ให้ toggle ถูก reset ทุกครั้งที่ upsert_news_funnel_card เรียก update_kanban_card"
+    },
+    "update_job_status": {
+      "name": "update_job_status",
+      "parameters": [
+        {
+          "name": "conn",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "<EMPTY>",
+          "annotation": "Connection"
+        },
+        {
+          "name": "job_id",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "<EMPTY>",
+          "annotation": "str"
+        },
+        {
+          "name": "status",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "<EMPTY>",
+          "annotation": "str"
+        },
+        {
+          "name": "error_message",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": null,
+          "annotation": "str | None"
+        }
+      ],
+      "return_annotation": "None",
+      "docstring": null
+    },
+    "update_kanban_card": {
+      "name": "update_kanban_card",
+      "parameters": [
+        {
+          "name": "conn",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "<EMPTY>",
+          "annotation": "Connection"
+        },
+        {
+          "name": "card_id",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "<EMPTY>",
+          "annotation": "str"
+        },
+        {
+          "name": "title",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "<EMPTY>",
+          "annotation": "str"
+        },
+        {
+          "name": "prompt",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "<EMPTY>",
+          "annotation": "str | None"
+        },
+        {
+          "name": "flow",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "<EMPTY>",
+          "annotation": "str"
+        },
+        {
+          "name": "scope",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "<EMPTY>",
+          "annotation": "str"
+        }
+      ],
+      "return_annotation": "None",
+      "docstring": null
+    },
+    "upsert_analyst_context_cache": {
+      "name": "upsert_analyst_context_cache",
+      "parameters": [
+        {
+          "name": "conn",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "<EMPTY>",
+          "annotation": "Connection"
+        },
+        {
+          "name": "ticker",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "<EMPTY>",
+          "annotation": "str"
+        },
+        {
+          "name": "data",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "<EMPTY>",
+          "annotation": "dict"
+        }
+      ],
+      "return_annotation": "None",
+      "docstring": "บันทึกข้อมูล Analyst Context ลง SQLite cache เฉพาะสถานะ ok และ partial"
+    },
+    "upsert_financial_statements_cache": {
+      "name": "upsert_financial_statements_cache",
+      "parameters": [
+        {
+          "name": "conn",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "<EMPTY>",
+          "annotation": "Connection"
+        },
+        {
+          "name": "market",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "<EMPTY>",
+          "annotation": "str"
+        },
+        {
+          "name": "provider_symbol",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "<EMPTY>",
+          "annotation": "str"
+        },
+        {
+          "name": "provider",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "<EMPTY>",
+          "annotation": "str"
+        },
+        {
+          "name": "data_json",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "<EMPTY>",
+          "annotation": "str"
+        },
+        {
+          "name": "synced_at",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "<EMPTY>",
+          "annotation": "float"
+        }
+      ],
+      "return_annotation": "None",
+      "docstring": "บันทึกข้อมูลงบการเงินลง SQLite cache แบบ (market, provider_symbol)"
+    }
+  },
+  "constants": [
+    "_SCHEMA"
+  ]
+}

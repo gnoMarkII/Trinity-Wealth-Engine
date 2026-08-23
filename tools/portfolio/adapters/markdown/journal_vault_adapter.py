@@ -33,7 +33,9 @@ def _inject_journal_wikilinks(content: str) -> str:
 class JournalVaultAdapter(TradeJournalPort):
     """Obsidian Markdown Vault adapter for Trade Journal."""
 
-    def append_journal(self, entry: str, portfolio_id: str = "default") -> List[Dict]:
+    def append_journal(
+        self, entry: str, date_str: Optional[str] = None, portfolio_id: str = "default"
+    ) -> List[Dict]:
         content = (entry or "").strip()
         if not content:
             raise ValueError("entry ต้องไม่ว่าง")
@@ -43,13 +45,24 @@ class JournalVaultAdapter(TradeJournalPort):
         with lock:
             jpath = get_journal_filepath(pid)
             jpath.parent.mkdir(parents=True, exist_ok=True)
-            timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            if date_str:
+                if len(date_str) == 10:
+                    timestamp = f"{date_str} 12:00:00"
+                else:
+                    timestamp = date_str
+            else:
+                timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             linked = _inject_journal_wikilinks(content)
             block = f"\n## [{timestamp}]\n\n{linked}\n"
             existing = jpath.read_text(encoding="utf-8") if jpath.exists() else ""
             _atomic_write_to(jpath, existing + block)
 
         return self.read_journal(days=365, limit=100, portfolio_id=pid)
+
+    def append_system_entry(
+        self, entry: str, date_str: Optional[str] = None, portfolio_id: str = "default"
+    ) -> None:
+        self.append_journal(entry, date_str=date_str, portfolio_id=portfolio_id)
 
     def read_journal(
         self, days: Optional[int] = 365, keyword: Optional[str] = None, limit: int = 100, portfolio_id: str = "default"

@@ -1,0 +1,809 @@
+{
+  "module": "tools.portfolio.agent_tools",
+  "tools": {
+    "add_to_watchlist": {
+      "name": "add_to_watchlist",
+      "description": "เพิ่มหรืออัปเดตสินทรัพย์ใน Watchlist\n\n    [Usage/When to use]\n    ใช้เมื่อต้องการจับตาสินทรัพย์ที่สนใจลงทุนในอนาคต พร้อมระบุราคาเป้าหมาย (Target Price)\n    - สามารถอัปเดต Target Price สำหรับสินทรัพย์ที่มีอยู่แล้วได้ (Upsert)\n\n    Args:\n        symbol (str): Ticker ของสินทรัพย์\n        asset_type (str): ประเภทสินทรัพย์\n        target_price (float | None): ราคาที่ต้องการแจ้งเตือนเมื่อถึงเป้า\n        notes (str | None): บันทึกเตือนความจำเพิ่มเติม\n        portfolio_id (str): พอร์ตการลงทุนที่ต้องการเพิ่ม (ค่าเริ่มต้น 'default')",
+      "func_name": "add_to_watchlist",
+      "args_schema": {
+        "description": "เพิ่มหรืออัปเดตสินทรัพย์ใน Watchlist\n\n[Usage/When to use]\nใช้เมื่อต้องการจับตาสินทรัพย์ที่สนใจลงทุนในอนาคต พร้อมระบุราคาเป้าหมาย (Target Price)\n- สามารถอัปเดต Target Price สำหรับสินทรัพย์ที่มีอยู่แล้วได้ (Upsert)\n\nArgs:\n    symbol (str): Ticker ของสินทรัพย์\n    asset_type (str): ประเภทสินทรัพย์\n    target_price (float | None): ราคาที่ต้องการแจ้งเตือนเมื่อถึงเป้า\n    notes (str | None): บันทึกเตือนความจำเพิ่มเติม\n    portfolio_id (str): พอร์ตการลงทุนที่ต้องการเพิ่ม (ค่าเริ่มต้น 'default')",
+        "properties": {
+          "symbol": {
+            "title": "Symbol",
+            "type": "string"
+          },
+          "asset_type": {
+            "title": "Asset Type",
+            "type": "string"
+          },
+          "target_price": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Target Price"
+          },
+          "notes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Notes"
+          },
+          "portfolio_id": {
+            "default": "default",
+            "title": "Portfolio Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "symbol",
+          "asset_type"
+        ],
+        "title": "add_to_watchlist",
+        "type": "object"
+      },
+      "return_direct": false
+    },
+    "append_trading_journal": {
+      "name": "append_trading_journal",
+      "description": "บันทึกการเทรดและข้อคิดเห็น (Trading Journal)\n\n    [Usage/When to use]\n    ใช้จดบันทึกเหตุผลที่ซื้อ/ขาย สภาพตลาด บทเรียนที่ได้ หรือข้อผิดพลาด (Mistakes)\n    - เพื่อแยกข้อมูล Qualitative (เหตุผล) ออกจากข้อมูล Quantitative (ตัวเลข Portfolio)\n\n    [Caution]\n    - ไม่ใช้เพื่อแก้ข้อมูลพอร์ต ให้ใช้บันทึกเป็น Text เท่านั้น\n\n    Args:\n        entry (str): เนื้อหาที่จะบันทึก (ระบบจะลง Timestamp ให้อัตโนมัติ)\n        portfolio_id (str): พอร์ตการลงทุนที่ต้องการบันทึก (ค่าเริ่มต้น 'default')",
+      "func_name": "append_trading_journal",
+      "args_schema": {
+        "description": "บันทึกการเทรดและข้อคิดเห็น (Trading Journal)\n\n[Usage/When to use]\nใช้จดบันทึกเหตุผลที่ซื้อ/ขาย สภาพตลาด บทเรียนที่ได้ หรือข้อผิดพลาด (Mistakes)\n- เพื่อแยกข้อมูล Qualitative (เหตุผล) ออกจากข้อมูล Quantitative (ตัวเลข Portfolio)\n\n[Caution]\n- ไม่ใช้เพื่อแก้ข้อมูลพอร์ต ให้ใช้บันทึกเป็น Text เท่านั้น\n\nArgs:\n    entry (str): เนื้อหาที่จะบันทึก (ระบบจะลง Timestamp ให้อัตโนมัติ)\n    portfolio_id (str): พอร์ตการลงทุนที่ต้องการบันทึก (ค่าเริ่มต้น 'default')",
+        "properties": {
+          "entry": {
+            "title": "Entry",
+            "type": "string"
+          },
+          "portfolio_id": {
+            "default": "default",
+            "title": "Portfolio Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "entry"
+        ],
+        "title": "append_trading_journal",
+        "type": "object"
+      },
+      "return_direct": false
+    },
+    "batch_import_holdings": {
+      "name": "batch_import_holdings",
+      "description": "นำเข้า (Import) รายการสินทรัพย์หลายรายการพร้อมกัน\n\n    [Usage/When to use]\n    ใช้เมื่อผู้ใช้ต้องการย้ายพอร์ต หรือบันทึกสินทรัพย์เริ่มต้นโดยไม่ต้องผ่านการเทรดแบบหัก Cash\n    - โหมด 'merge' จะอัปเดตสินทรัพย์เดิมและเพิ่มสินทรัพย์ใหม่\n    - โหมด 'overwrite' จะล้างพอร์ตเดิม (ยกเว้นเงินสด) และทับด้วยข้อมูลใหม่\n\n    [Caution]\n    - การใช้โหมด 'overwrite' จะลบประวัติพอร์ตเก่า ต้องระวัง!\n\n    Args:\n        assets_list (list[dict]): รายการสินทรัพย์ (symbol, asset_type, units, avg_cost, currency)\n        mode (Literal[\"overwrite\", \"merge\"]): โหมดนำเข้า ค่าเริ่มต้นคือ 'merge'\n        reset_cash_usd (bool): หาก True จะตั้งค่าเงินสด USD เป็น 0 ด้วย\n        portfolio_id (str): พอร์ตการลงทุนที่ต้องการนำเข้า (ค่าเริ่มต้น 'default')",
+      "func_name": "batch_import_holdings",
+      "args_schema": {
+        "description": "นำเข้า (Import) รายการสินทรัพย์หลายรายการพร้อมกัน\n\n[Usage/When to use]\nใช้เมื่อผู้ใช้ต้องการย้ายพอร์ต หรือบันทึกสินทรัพย์เริ่มต้นโดยไม่ต้องผ่านการเทรดแบบหัก Cash\n- โหมด 'merge' จะอัปเดตสินทรัพย์เดิมและเพิ่มสินทรัพย์ใหม่\n- โหมด 'overwrite' จะล้างพอร์ตเดิม (ยกเว้นเงินสด) และทับด้วยข้อมูลใหม่\n\n[Caution]\n- การใช้โหมด 'overwrite' จะลบประวัติพอร์ตเก่า ต้องระวัง!\n\nArgs:\n    assets_list (list[dict]): รายการสินทรัพย์ (symbol, asset_type, units, avg_cost, currency)\n    mode (Literal[\"overwrite\", \"merge\"]): โหมดนำเข้า ค่าเริ่มต้นคือ 'merge'\n    reset_cash_usd (bool): หาก True จะตั้งค่าเงินสด USD เป็น 0 ด้วย\n    portfolio_id (str): พอร์ตการลงทุนที่ต้องการนำเข้า (ค่าเริ่มต้น 'default')",
+        "properties": {
+          "assets_list": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Assets List",
+            "type": "array"
+          },
+          "mode": {
+            "default": "merge",
+            "enum": [
+              "overwrite",
+              "merge"
+            ],
+            "title": "Mode",
+            "type": "string"
+          },
+          "reset_cash_usd": {
+            "default": false,
+            "title": "Reset Cash Usd",
+            "type": "boolean"
+          },
+          "portfolio_id": {
+            "default": "default",
+            "title": "Portfolio Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "assets_list"
+        ],
+        "title": "batch_import_holdings",
+        "type": "object"
+      },
+      "return_direct": false
+    },
+    "compute_allocation_breakdown": {
+      "name": "compute_allocation_breakdown",
+      "description": "Calculate portfolio Asset Allocation breakdown.\n\n    Args:\n        group_by: Dimension to group by ('asset_type' or 'currency'). Defaults to 'asset_type'.\n        portfolio_id (str): พอร์ตการลงทุนที่ต้องการคำนวณ (ค่าเริ่มต้น 'default')\n\n    Returns:\n        JSON string: {group_by, total_nav_thb, breakdown: [{group, value_thb, pct, count}], generated_at}",
+      "func_name": "compute_allocation_breakdown",
+      "args_schema": {
+        "description": "Calculate portfolio Asset Allocation breakdown.\n\nArgs:\n    group_by: Dimension to group by ('asset_type' or 'currency'). Defaults to 'asset_type'.\n    portfolio_id (str): พอร์ตการลงทุนที่ต้องการคำนวณ (ค่าเริ่มต้น 'default')\n\nReturns:\n    JSON string: {group_by, total_nav_thb, breakdown: [{group, value_thb, pct, count}], generated_at}",
+        "properties": {
+          "group_by": {
+            "default": "asset_type",
+            "enum": [
+              "asset_type",
+              "currency"
+            ],
+            "title": "Group By",
+            "type": "string"
+          },
+          "portfolio_id": {
+            "default": "default",
+            "title": "Portfolio Id",
+            "type": "string"
+          }
+        },
+        "title": "compute_allocation_breakdown",
+        "type": "object"
+      },
+      "return_direct": false
+    },
+    "edit_holding": {
+      "name": "edit_holding",
+      "description": "แก้ไขข้อมูล Holding ที่บันทึกผิด (Correction Tool)\n\n    [Usage/When to use]\n    ใช้เมื่อผู้ใช้พิมพ์ผิด แจ้งต้นทุนผิด หรือต้องการแก้จำนวนหุ้นหลังจาก Corporate Action (เช่น แตกพาร์)\n    - แก้ไขได้เฉพาะข้อมูลดิบ (units, avg_cost, ฯลฯ) ข้อมูลที่คำนวณจะอัปเดตอัตโนมัติ\n\n    [Caution]\n    - หลีกเลี่ยงการใช้คำสั่งนี้แทนการซื้อ/ขาย (`execute_trade`)\n\n    Args:\n        symbol (str): Ticker ที่ต้องการแก้ไข\n        units (float | None): จำนวนหน่วยใหม่\n        avg_cost (float | None): ต้นทุนเฉลี่ยใหม่\n        accumulated_dividend_thb (float | None): เงินปันผลสะสมใหม่\n        asset_type (str | None): ประเภทสินทรัพย์ใหม่\n        reason (str): เหตุผลที่แก้ไข (เพื่อบันทึกลง Log)\n        portfolio_id (str): พอร์ตการลงทุนที่ต้องการแก้ไข (ค่าเริ่มต้น 'default')",
+      "func_name": "edit_holding",
+      "args_schema": {
+        "description": "แก้ไขข้อมูล Holding ที่บันทึกผิด (Correction Tool)\n\n[Usage/When to use]\nใช้เมื่อผู้ใช้พิมพ์ผิด แจ้งต้นทุนผิด หรือต้องการแก้จำนวนหุ้นหลังจาก Corporate Action (เช่น แตกพาร์)\n- แก้ไขได้เฉพาะข้อมูลดิบ (units, avg_cost, ฯลฯ) ข้อมูลที่คำนวณจะอัปเดตอัตโนมัติ\n\n[Caution]\n- หลีกเลี่ยงการใช้คำสั่งนี้แทนการซื้อ/ขาย (`execute_trade`)\n\nArgs:\n    symbol (str): Ticker ที่ต้องการแก้ไข\n    units (float | None): จำนวนหน่วยใหม่\n    avg_cost (float | None): ต้นทุนเฉลี่ยใหม่\n    accumulated_dividend_thb (float | None): เงินปันผลสะสมใหม่\n    asset_type (str | None): ประเภทสินทรัพย์ใหม่\n    reason (str): เหตุผลที่แก้ไข (เพื่อบันทึกลง Log)\n    portfolio_id (str): พอร์ตการลงทุนที่ต้องการแก้ไข (ค่าเริ่มต้น 'default')",
+        "properties": {
+          "symbol": {
+            "title": "Symbol",
+            "type": "string"
+          },
+          "units": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Units"
+          },
+          "avg_cost": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Avg Cost"
+          },
+          "accumulated_dividend_thb": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Accumulated Dividend Thb"
+          },
+          "asset_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Asset Type"
+          },
+          "reason": {
+            "default": "",
+            "title": "Reason",
+            "type": "string"
+          },
+          "portfolio_id": {
+            "default": "default",
+            "title": "Portfolio Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "symbol"
+        ],
+        "title": "edit_holding",
+        "type": "object"
+      },
+      "return_direct": false
+    },
+    "execute_trade": {
+      "name": "execute_trade",
+      "description": "ดำเนินการเทรดซื้อหรือขายสินทรัพย์ พร้อมจัดการเงินสดและคำนวณต้นทุน/กำไรอัตโนมัติ\n\n    [Usage/When to use]\n    ใช้เมื่อผู้ใช้สั่งซื้อ (buy) หรือขาย (sell) สินทรัพย์\n    - [Buy] หักเงินสด (CASH) อัตโนมัติและสร้าง/อัปเดต Holding พร้อมคำนวณ Weighted-average cost\n    - [Sell] เพิ่มเงินสด (CASH) อัตโนมัติและคำนวณ Realized P&L\n    - ห้ามใช้เพื่อเพิ่มสินทรัพย์แบบดื้อๆ โดยไม่หักเงิน ให้ใช้ `batch_import_holdings` ถ้าเป็นการย้ายพอร์ตมา\n\n    [Caution]\n    - ต้องมีเงินสด (CASH_THB/USD) เพียงพอสำหรับการซื้อ หากไม่พอ Trade จะถูกปฏิเสธ\n    - การแก้ไขข้อผิดพลาดในการเทรดต้องใช้ `edit_holding` หรือถอนเงินเข้า/ออกผ่าน `manage_cash_flow`\n\n    Args:\n        symbol (str): Ticker ของสินทรัพย์ (เช่น 'AAPL', 'PTT')\n        asset_type (str): ประเภทสินทรัพย์ (เช่น 'Stock', 'ETF', 'Bond')\n        action (Literal[\"buy\", \"sell\"]): ประเภทคำสั่ง\n        units (float): จำนวนหน่วยที่ทำรายการ (>0)\n        price (float): ราคาต่อหน่วย\n        currency (Literal[\"THB\", \"USD\"]): สกุลเงินที่ใช้เทรด (มีผลกับบัญชี Cash ที่หัก/รับ)\n        notes (str): บันทึกเพิ่มเติมสำหรับรายการเทรดนี้\n        portfolio_id (str): พอร์ตการลงทุนที่ต้องการเทรด (ค่าเริ่มต้น 'default')",
+      "func_name": "execute_trade",
+      "args_schema": {
+        "description": "ดำเนินการเทรดซื้อหรือขายสินทรัพย์ พร้อมจัดการเงินสดและคำนวณต้นทุน/กำไรอัตโนมัติ\n\n[Usage/When to use]\nใช้เมื่อผู้ใช้สั่งซื้อ (buy) หรือขาย (sell) สินทรัพย์\n- [Buy] หักเงินสด (CASH) อัตโนมัติและสร้าง/อัปเดต Holding พร้อมคำนวณ Weighted-average cost\n- [Sell] เพิ่มเงินสด (CASH) อัตโนมัติและคำนวณ Realized P&L\n- ห้ามใช้เพื่อเพิ่มสินทรัพย์แบบดื้อๆ โดยไม่หักเงิน ให้ใช้ `batch_import_holdings` ถ้าเป็นการย้ายพอร์ตมา\n\n[Caution]\n- ต้องมีเงินสด (CASH_THB/USD) เพียงพอสำหรับการซื้อ หากไม่พอ Trade จะถูกปฏิเสธ\n- การแก้ไขข้อผิดพลาดในการเทรดต้องใช้ `edit_holding` หรือถอนเงินเข้า/ออกผ่าน `manage_cash_flow`\n\nArgs:\n    symbol (str): Ticker ของสินทรัพย์ (เช่น 'AAPL', 'PTT')\n    asset_type (str): ประเภทสินทรัพย์ (เช่น 'Stock', 'ETF', 'Bond')\n    action (Literal[\"buy\", \"sell\"]): ประเภทคำสั่ง\n    units (float): จำนวนหน่วยที่ทำรายการ (>0)\n    price (float): ราคาต่อหน่วย\n    currency (Literal[\"THB\", \"USD\"]): สกุลเงินที่ใช้เทรด (มีผลกับบัญชี Cash ที่หัก/รับ)\n    notes (str): บันทึกเพิ่มเติมสำหรับรายการเทรดนี้\n    portfolio_id (str): พอร์ตการลงทุนที่ต้องการเทรด (ค่าเริ่มต้น 'default')",
+        "properties": {
+          "symbol": {
+            "title": "Symbol",
+            "type": "string"
+          },
+          "asset_type": {
+            "title": "Asset Type",
+            "type": "string"
+          },
+          "action": {
+            "enum": [
+              "buy",
+              "sell"
+            ],
+            "title": "Action",
+            "type": "string"
+          },
+          "units": {
+            "title": "Units",
+            "type": "number"
+          },
+          "price": {
+            "title": "Price",
+            "type": "number"
+          },
+          "currency": {
+            "default": "THB",
+            "enum": [
+              "THB",
+              "USD"
+            ],
+            "title": "Currency",
+            "type": "string"
+          },
+          "notes": {
+            "default": "",
+            "title": "Notes",
+            "type": "string"
+          },
+          "portfolio_id": {
+            "default": "default",
+            "title": "Portfolio Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "symbol",
+          "asset_type",
+          "action",
+          "units",
+          "price"
+        ],
+        "title": "execute_trade",
+        "type": "object"
+      },
+      "return_direct": false
+    },
+    "get_goals_progress": {
+      "name": "get_goals_progress",
+      "description": "เรียกดูความคืบหน้าของเป้าหมายทั้งหมด\n\n    [Usage/When to use]\n    ใช้เมื่อต้องการคำนวณ Progress (%) เทียบยอดเงินใน Portfolio กับเป้าหมายที่บันทึกไว้\n\n    Args:\n        portfolio_id (str | None): กรองเฉพาะเป้าหมายที่ผูกกับพอร์ตนี้ (None = ดูทุกพอร์ต)\n\n    Returns:\n        str: JSON string ประกอบด้วยสถานะของแต่ละเป้าหมาย",
+      "func_name": "get_goals_progress",
+      "args_schema": {
+        "description": "เรียกดูความคืบหน้าของเป้าหมายทั้งหมด\n\n[Usage/When to use]\nใช้เมื่อต้องการคำนวณ Progress (%) เทียบยอดเงินใน Portfolio กับเป้าหมายที่บันทึกไว้\n\nArgs:\n    portfolio_id (str | None): กรองเฉพาะเป้าหมายที่ผูกกับพอร์ตนี้ (None = ดูทุกพอร์ต)\n\nReturns:\n    str: JSON string ประกอบด้วยสถานะของแต่ละเป้าหมาย",
+        "properties": {
+          "portfolio_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Portfolio Id"
+          }
+        },
+        "title": "get_goals_progress",
+        "type": "object"
+      },
+      "return_direct": false
+    },
+    "get_portfolio_state": {
+      "name": "get_portfolio_state",
+      "description": "อ่านสถานะ Portfolio ปัจจุบันคืนเป็น JSON string (Read-only)\n\n    [Usage/When to use]\n    ใช้เมื่อต้องการสรุปภาพรวมพอร์ตโฟลิโอ สินทรัพย์ที่ถือครอง หรือคำนวณ NAV\n    - ดึงราคาตลาดล่าสุดจาก yfinance อัตโนมัติ (ยกเว้นสั่ง refresh_prices=False)\n\n    [Caution]\n    - ไม่ทำการเปลี่ยนแปลงสถานะพอร์ต\n\n    Args:\n        refresh_prices (bool): True (ดึงราคาตลาดล่าสุด, default), False (ใช้ราคาเดิม)\n        portfolio_id (str): พอร์ตการลงทุนที่ต้องการอ่าน (ค่าเริ่มต้น 'default')\n\n    Returns:\n        str: JSON string ของ PortfolioState พร้อมสถานะการอัปเดตราคา (_price_refresh)",
+      "func_name": "get_portfolio_state",
+      "args_schema": {
+        "description": "อ่านสถานะ Portfolio ปัจจุบันคืนเป็น JSON string (Read-only)\n\n[Usage/When to use]\nใช้เมื่อต้องการสรุปภาพรวมพอร์ตโฟลิโอ สินทรัพย์ที่ถือครอง หรือคำนวณ NAV\n- ดึงราคาตลาดล่าสุดจาก yfinance อัตโนมัติ (ยกเว้นสั่ง refresh_prices=False)\n\n[Caution]\n- ไม่ทำการเปลี่ยนแปลงสถานะพอร์ต\n\nArgs:\n    refresh_prices (bool): True (ดึงราคาตลาดล่าสุด, default), False (ใช้ราคาเดิม)\n    portfolio_id (str): พอร์ตการลงทุนที่ต้องการอ่าน (ค่าเริ่มต้น 'default')\n\nReturns:\n    str: JSON string ของ PortfolioState พร้อมสถานะการอัปเดตราคา (_price_refresh)",
+        "properties": {
+          "refresh_prices": {
+            "default": true,
+            "title": "Refresh Prices",
+            "type": "boolean"
+          },
+          "portfolio_id": {
+            "default": "default",
+            "title": "Portfolio Id",
+            "type": "string"
+          }
+        },
+        "title": "get_portfolio_state",
+        "type": "object"
+      },
+      "return_direct": false
+    },
+    "manage_cash_flow": {
+      "name": "manage_cash_flow",
+      "description": "ฝาก (Deposit) หรือ ถอน (Withdraw) เงินสดเข้า/ออกจากพอร์ตโฟลิโอ\n\n    [Usage/When to use]\n    ใช้เมื่อผู้ใช้เติมเงินเข้าพอร์ต (Deposit) หรือถอนเงินออกไปใช้จ่าย (Withdraw)\n    - เปลี่ยนแปลงยอดเงินใน CASH_THB หรือ CASH_USD ทันที\n\n    [Caution]\n    - ไม่ใช่การเทรดสินทรัพย์ ใช้จัดการเฉพาะเงินสดที่รอลงทุนเท่านั้น\n\n    Args:\n        amount (float): จำนวนเงิน\n        action (Literal[\"deposit\", \"withdraw\"]): ฝากหรือถอน\n        currency (Literal[\"THB\", \"USD\"]): สกุลเงิน\n        portfolio_id (str): พอร์ตการลงทุนที่ต้องการฝาก/ถอน (ค่าเริ่มต้น 'default')",
+      "func_name": "manage_cash_flow",
+      "args_schema": {
+        "description": "ฝาก (Deposit) หรือ ถอน (Withdraw) เงินสดเข้า/ออกจากพอร์ตโฟลิโอ\n\n[Usage/When to use]\nใช้เมื่อผู้ใช้เติมเงินเข้าพอร์ต (Deposit) หรือถอนเงินออกไปใช้จ่าย (Withdraw)\n- เปลี่ยนแปลงยอดเงินใน CASH_THB หรือ CASH_USD ทันที\n\n[Caution]\n- ไม่ใช่การเทรดสินทรัพย์ ใช้จัดการเฉพาะเงินสดที่รอลงทุนเท่านั้น\n\nArgs:\n    amount (float): จำนวนเงิน\n    action (Literal[\"deposit\", \"withdraw\"]): ฝากหรือถอน\n    currency (Literal[\"THB\", \"USD\"]): สกุลเงิน\n    portfolio_id (str): พอร์ตการลงทุนที่ต้องการฝาก/ถอน (ค่าเริ่มต้น 'default')",
+        "properties": {
+          "amount": {
+            "title": "Amount",
+            "type": "number"
+          },
+          "action": {
+            "enum": [
+              "deposit",
+              "withdraw"
+            ],
+            "title": "Action",
+            "type": "string"
+          },
+          "currency": {
+            "default": "THB",
+            "enum": [
+              "THB",
+              "USD"
+            ],
+            "title": "Currency",
+            "type": "string"
+          },
+          "portfolio_id": {
+            "default": "default",
+            "title": "Portfolio Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "amount",
+          "action"
+        ],
+        "title": "manage_cash_flow",
+        "type": "object"
+      },
+      "return_direct": false
+    },
+    "read_performance_history": {
+      "name": "read_performance_history",
+      "description": "อ่านประวัติและวิเคราะห์ผลตอบแทนของพอร์ตโฟลิโอ (Performance Analytics)\n\n    [Usage/When to use]\n    ใช้เมื่อต้องการวิเคราะห์การเติบโต NAV, Drawdown, หรือผลตอบแทนย้อนหลัง\n    - ระบบจะคำนวณ metrics เช่น P&L, Drawdown ให้อัตโนมัติ\n\n    Args:\n        days (int): จำนวนวันย้อนหลังที่ต้องการวิเคราะห์ (default 30)\n        portfolio_id (str): พอร์ตการลงทุนที่ต้องการอ่าน (ค่าเริ่มต้น 'default')\n\n    Returns:\n        str: สรุปผลตอบแทนและ Metrics ในรูปแบบ Markdown",
+      "func_name": "read_performance_history",
+      "args_schema": {
+        "description": "อ่านประวัติและวิเคราะห์ผลตอบแทนของพอร์ตโฟลิโอ (Performance Analytics)\n\n[Usage/When to use]\nใช้เมื่อต้องการวิเคราะห์การเติบโต NAV, Drawdown, หรือผลตอบแทนย้อนหลัง\n- ระบบจะคำนวณ metrics เช่น P&L, Drawdown ให้อัตโนมัติ\n\nArgs:\n    days (int): จำนวนวันย้อนหลังที่ต้องการวิเคราะห์ (default 30)\n    portfolio_id (str): พอร์ตการลงทุนที่ต้องการอ่าน (ค่าเริ่มต้น 'default')\n\nReturns:\n    str: สรุปผลตอบแทนและ Metrics ในรูปแบบ Markdown",
+        "properties": {
+          "days": {
+            "default": 30,
+            "title": "Days",
+            "type": "integer"
+          },
+          "portfolio_id": {
+            "default": "default",
+            "title": "Portfolio Id",
+            "type": "string"
+          }
+        },
+        "title": "read_performance_history",
+        "type": "object"
+      },
+      "return_direct": false
+    },
+    "read_trading_journal": {
+      "name": "read_trading_journal",
+      "description": "อ่านบันทึกการเทรด (Trading Journal) ย้อนหลัง\n\n    [Usage/When to use]\n    ใช้ดึงประวัติการบันทึกการลงทุน (Journal) เพื่อทบทวนเหตุผล ข้อคิด หรือสรุปบทเรียน\n    - สามารถระบุ keyword เพื่อกรองเฉพาะบันทึกที่เกี่ยวข้องได้\n\n    Args:\n        days (int): จำนวนวันย้อนหลังที่ต้องการดึง\n        keyword (str | None): คำที่ต้องการค้นหา\n        limit (int): จำนวนบันทึกสูงสุดที่จะแสดง\n        portfolio_id (str): พอร์ตการลงทุนที่ต้องการอ่าน (ค่าเริ่มต้น 'default')\n    Returns:\n        str: JSON string: {n_total_in_window, n_returned, filters_used, entries:[{timestamp, content}]}\n        entries เรียงจากใหม่สุดไปเก่าสุด",
+      "func_name": "read_trading_journal",
+      "args_schema": {
+        "description": "อ่านบันทึกการเทรด (Trading Journal) ย้อนหลัง\n\n[Usage/When to use]\nใช้ดึงประวัติการบันทึกการลงทุน (Journal) เพื่อทบทวนเหตุผล ข้อคิด หรือสรุปบทเรียน\n- สามารถระบุ keyword เพื่อกรองเฉพาะบันทึกที่เกี่ยวข้องได้\n\nArgs:\n    days (int): จำนวนวันย้อนหลังที่ต้องการดึง\n    keyword (str | None): คำที่ต้องการค้นหา\n    limit (int): จำนวนบันทึกสูงสุดที่จะแสดง\n    portfolio_id (str): พอร์ตการลงทุนที่ต้องการอ่าน (ค่าเริ่มต้น 'default')\nReturns:\n    str: JSON string: {n_total_in_window, n_returned, filters_used, entries:[{timestamp, content}]}\n    entries เรียงจากใหม่สุดไปเก่าสุด",
+        "properties": {
+          "days": {
+            "default": 30,
+            "title": "Days",
+            "type": "integer"
+          },
+          "keyword": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Keyword"
+          },
+          "limit": {
+            "default": 20,
+            "title": "Limit",
+            "type": "integer"
+          },
+          "portfolio_id": {
+            "default": "default",
+            "title": "Portfolio Id",
+            "type": "string"
+          }
+        },
+        "title": "read_trading_journal",
+        "type": "object"
+      },
+      "return_direct": false
+    },
+    "read_watchlist": {
+      "name": "read_watchlist",
+      "description": "อ่านรายการสินทรัพย์ที่อยู่ใน Watchlist\n\n    [Usage/When to use]\n    ใช้เพื่อดูรายการสินทรัพย์ที่จับตาดูอยู่และราคาเป้าหมาย\n\n    Args:\n        portfolio_id (str): พอร์ตการลงทุนที่ต้องการอ่าน (ค่าเริ่มต้น 'default')\n\n    Returns:\n        str: ข้อมูล Watchlist ในรูปแบบ JSON String",
+      "func_name": "read_watchlist",
+      "args_schema": {
+        "description": "อ่านรายการสินทรัพย์ที่อยู่ใน Watchlist\n\n[Usage/When to use]\nใช้เพื่อดูรายการสินทรัพย์ที่จับตาดูอยู่และราคาเป้าหมาย\n\nArgs:\n    portfolio_id (str): พอร์ตการลงทุนที่ต้องการอ่าน (ค่าเริ่มต้น 'default')\n\nReturns:\n    str: ข้อมูล Watchlist ในรูปแบบ JSON String",
+        "properties": {
+          "portfolio_id": {
+            "default": "default",
+            "title": "Portfolio Id",
+            "type": "string"
+          }
+        },
+        "title": "read_watchlist",
+        "type": "object"
+      },
+      "return_direct": false
+    },
+    "record_income": {
+      "name": "record_income",
+      "description": "บันทึกรายรับ Passive Income (เช่น เงินปันผล, ดอกเบี้ย)\n\n    [Usage/When to use]\n    ใช้เมื่อผู้ใช้ได้รับเงินปันผล หรือรายรับอื่นๆ ที่ไม่ต้องขายสินทรัพย์\n    - ระบบจะบวกเงินสดเข้า CASH_THB อัตโนมัติ และอัปเดตสถิติ Passive Income YTD\n    - หากระบุ `source_symbol` จะบันทึกเป็นเงินปันผลสะสมของสินทรัพย์นั้นๆ ด้วย\n\n    Args:\n        income_type (Literal[\"Dividend\", \"Interest\", \"Rental\", \"Other\"]): ประเภทรายได้\n        amount_thb (float): จำนวนเงิน (บาท)\n        source_symbol (str | None): Ticker ต้นทางที่จ่ายปันผล (ถ้ามี)\n        portfolio_id (str): พอร์ตการลงทุนที่ต้องการบันทึกรายรับ (ค่าเริ่มต้น 'default')",
+      "func_name": "record_income",
+      "args_schema": {
+        "description": "บันทึกรายรับ Passive Income (เช่น เงินปันผล, ดอกเบี้ย)\n\n[Usage/When to use]\nใช้เมื่อผู้ใช้ได้รับเงินปันผล หรือรายรับอื่นๆ ที่ไม่ต้องขายสินทรัพย์\n- ระบบจะบวกเงินสดเข้า CASH_THB อัตโนมัติ และอัปเดตสถิติ Passive Income YTD\n- หากระบุ `source_symbol` จะบันทึกเป็นเงินปันผลสะสมของสินทรัพย์นั้นๆ ด้วย\n\nArgs:\n    income_type (Literal[\"Dividend\", \"Interest\", \"Rental\", \"Other\"]): ประเภทรายได้\n    amount_thb (float): จำนวนเงิน (บาท)\n    source_symbol (str | None): Ticker ต้นทางที่จ่ายปันผล (ถ้ามี)\n    portfolio_id (str): พอร์ตการลงทุนที่ต้องการบันทึกรายรับ (ค่าเริ่มต้น 'default')",
+        "properties": {
+          "income_type": {
+            "enum": [
+              "Dividend",
+              "Interest",
+              "Rental",
+              "Other"
+            ],
+            "title": "Income Type",
+            "type": "string"
+          },
+          "amount_thb": {
+            "title": "Amount Thb",
+            "type": "number"
+          },
+          "source_symbol": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Source Symbol"
+          },
+          "portfolio_id": {
+            "default": "default",
+            "title": "Portfolio Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "income_type",
+          "amount_thb"
+        ],
+        "title": "record_income",
+        "type": "object"
+      },
+      "return_direct": false
+    },
+    "record_performance_snapshot": {
+      "name": "record_performance_snapshot",
+      "description": "บันทึก Snapshot สถานะพอร์ตโฟลิโอ ณ สิ้นวัน (Performance Logging)\n\n    [Usage/When to use]\n    ใช้บันทึกประวัติการเติบโตของพอร์ตประจำวัน (Time-series) ลงใน CSV\n    - บันทึก Date, Total_NAV, Total_Cost, Unrealized_PnL, Cash_Balance\n    - ทำงานภายใต้ portfolio lock และแทนที่บรรทัดเดิมทันทีหากเป็นวันเดียวกัน (Atomic Upsert)\n\n    Args:\n        refresh_prices (bool): True (อัปเดตราคาล่าสุดก่อนบันทึก, default)\n        portfolio_id (str): พอร์ตการลงทุนที่ต้องการบันทึก snapshot (ค่าเริ่มต้น 'default')",
+      "func_name": "record_performance_snapshot",
+      "args_schema": {
+        "description": "บันทึก Snapshot สถานะพอร์ตโฟลิโอ ณ สิ้นวัน (Performance Logging)\n\n[Usage/When to use]\nใช้บันทึกประวัติการเติบโตของพอร์ตประจำวัน (Time-series) ลงใน CSV\n- บันทึก Date, Total_NAV, Total_Cost, Unrealized_PnL, Cash_Balance\n- ทำงานภายใต้ portfolio lock และแทนที่บรรทัดเดิมทันทีหากเป็นวันเดียวกัน (Atomic Upsert)\n\nArgs:\n    refresh_prices (bool): True (อัปเดตราคาล่าสุดก่อนบันทึก, default)\n    portfolio_id (str): พอร์ตการลงทุนที่ต้องการบันทึก snapshot (ค่าเริ่มต้น 'default')",
+        "properties": {
+          "refresh_prices": {
+            "default": true,
+            "title": "Refresh Prices",
+            "type": "boolean"
+          },
+          "portfolio_id": {
+            "default": "default",
+            "title": "Portfolio Id",
+            "type": "string"
+          }
+        },
+        "title": "record_performance_snapshot",
+        "type": "object"
+      },
+      "return_direct": false
+    },
+    "remove_from_watchlist": {
+      "name": "remove_from_watchlist",
+      "description": "ลบสินทรัพย์ออกจาก Watchlist\n\n    [Usage/When to use]\n    ใช้ลบสินทรัพย์ที่เลิกสนใจติดตามแล้ว\n\n    Args:\n        symbol (str): Ticker ที่ต้องการลบ\n        portfolio_id (str): พอร์ตการลงทุนที่ต้องการลบ (ค่าเริ่มต้น 'default')",
+      "func_name": "remove_from_watchlist",
+      "args_schema": {
+        "description": "ลบสินทรัพย์ออกจาก Watchlist\n\n[Usage/When to use]\nใช้ลบสินทรัพย์ที่เลิกสนใจติดตามแล้ว\n\nArgs:\n    symbol (str): Ticker ที่ต้องการลบ\n    portfolio_id (str): พอร์ตการลงทุนที่ต้องการลบ (ค่าเริ่มต้น 'default')",
+        "properties": {
+          "symbol": {
+            "title": "Symbol",
+            "type": "string"
+          },
+          "portfolio_id": {
+            "default": "default",
+            "title": "Portfolio Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "symbol"
+        ],
+        "title": "remove_from_watchlist",
+        "type": "object"
+      },
+      "return_direct": false
+    },
+    "remove_goal": {
+      "name": "remove_goal",
+      "description": "ลบเป้าหมายทางการเงินออกจากระบบ\n\n    [Usage/When to use]\n    ใช้เมื่อต้องการยกเลิกหรือลบเป้าหมายที่ไม่ต้องการติดตามแล้ว\n\n    Args:\n        name (str): ชื่อเป้าหมายที่ต้องการลบ",
+      "func_name": "remove_goal",
+      "args_schema": {
+        "description": "ลบเป้าหมายทางการเงินออกจากระบบ\n\n[Usage/When to use]\nใช้เมื่อต้องการยกเลิกหรือลบเป้าหมายที่ไม่ต้องการติดตามแล้ว\n\nArgs:\n    name (str): ชื่อเป้าหมายที่ต้องการลบ",
+        "properties": {
+          "name": {
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "title": "remove_goal",
+        "type": "object"
+      },
+      "return_direct": false
+    },
+    "set_goal": {
+      "name": "set_goal",
+      "description": "บันทึกหรืออัปเดตเป้าหมายทางการเงิน (Financial Goals)\n\n    [Usage/When to use]\n    ใช้ตั้งเป้าหมายทางการเงิน เช่น เป้าหมายมูลค่าพอร์ต (NAV), จำนวนเงินสดสำรอง, หรือรายได้ Passive Income\n\n    [Caution]\n    - ข้อมูลเป้าหมายจะถูกใช้เมื่อสั่งคำนวณ Progress\n\n    Args:\n        name (str): ชื่อเป้าหมาย\n        goal_type (Literal[\"nav_target\", \"cash_target\", \"passive_income_ytd\", \"bucket_target\"]): ประเภทเป้าหมาย\n        target_amount_thb (float): จำนวนเป้าหมาย (บาท)\n        deadline (str | None): กำหนดเวลา (ถ้ามี)\n        years_from_now (int | None): จำนวนปีจากปัจจุบัน (ถ้ามี)\n        notes (str | None): บันทึกเพิ่มเติม\n        portfolio_id (str): พอร์ตการลงทุนที่ต้องการให้เป้าหมายนี้ติดตาม NAV/เงินสด (ค่าเริ่มต้น 'default')\n        bucket_id (str | None): ระบุ Strategy Bucket ที่ต้องการติดตาม (สำหรับ goal_type='bucket_target')\n    Returns:\n        str: ข้อความยืนยันการบันทึกเป้าหมาย\n\n    Raises:\n        ValueError: name ว่าง, target_amount_thb <= 0, deadline format ผิด",
+      "func_name": "set_goal",
+      "args_schema": {
+        "description": "บันทึกหรืออัปเดตเป้าหมายทางการเงิน (Financial Goals)\n\n[Usage/When to use]\nใช้ตั้งเป้าหมายทางการเงิน เช่น เป้าหมายมูลค่าพอร์ต (NAV), จำนวนเงินสดสำรอง, หรือรายได้ Passive Income\n\n[Caution]\n- ข้อมูลเป้าหมายจะถูกใช้เมื่อสั่งคำนวณ Progress\n\nArgs:\n    name (str): ชื่อเป้าหมาย\n    goal_type (Literal[\"nav_target\", \"cash_target\", \"passive_income_ytd\", \"bucket_target\"]): ประเภทเป้าหมาย\n    target_amount_thb (float): จำนวนเป้าหมาย (บาท)\n    deadline (str | None): กำหนดเวลา (ถ้ามี)\n    years_from_now (int | None): จำนวนปีจากปัจจุบัน (ถ้ามี)\n    notes (str | None): บันทึกเพิ่มเติม\n    portfolio_id (str): พอร์ตการลงทุนที่ต้องการให้เป้าหมายนี้ติดตาม NAV/เงินสด (ค่าเริ่มต้น 'default')\n    bucket_id (str | None): ระบุ Strategy Bucket ที่ต้องการติดตาม (สำหรับ goal_type='bucket_target')\nReturns:\n    str: ข้อความยืนยันการบันทึกเป้าหมาย\n\nRaises:\n    ValueError: name ว่าง, target_amount_thb <= 0, deadline format ผิด",
+        "properties": {
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "goal_type": {
+            "enum": [
+              "nav_target",
+              "cash_target",
+              "passive_income_ytd",
+              "bucket_target"
+            ],
+            "title": "Goal Type",
+            "type": "string"
+          },
+          "target_amount_thb": {
+            "title": "Target Amount Thb",
+            "type": "number"
+          },
+          "deadline": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Deadline"
+          },
+          "years_from_now": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Years From Now"
+          },
+          "notes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Notes"
+          },
+          "portfolio_id": {
+            "default": "default",
+            "title": "Portfolio Id",
+            "type": "string"
+          },
+          "bucket_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Bucket Id"
+          }
+        },
+        "required": [
+          "name",
+          "goal_type",
+          "target_amount_thb"
+        ],
+        "title": "set_goal",
+        "type": "object"
+      },
+      "return_direct": false
+    },
+    "sync_market_prices": {
+      "name": "sync_market_prices",
+      "description": "ดึงราคาตลาดล่าสุดของทุกสินทรัพย์ในพอร์ตโฟลิโอ",
+      "func_name": "sync_market_prices",
+      "args_schema": {
+        "description": "ดึงราคาตลาดล่าสุดของทุกสินทรัพย์ในพอร์ตโฟลิโอ",
+        "properties": {
+          "portfolio_id": {
+            "default": "default",
+            "title": "Portfolio Id",
+            "type": "string"
+          }
+        },
+        "title": "sync_market_prices",
+        "type": "object"
+      },
+      "return_direct": false
+    },
+    "tool_create_portfolio": {
+      "name": "tool_create_portfolio",
+      "description": "สร้างพอร์ตการลงทุนใหม่ เช่น พอร์ตเงินสำรองฉุกเฉิน หรือพอร์ตเกษียณ\n\n    [Usage/When to use]\n    ใช้เมื่อผู้ใช้ต้องการแยกเงิน/สินทรัพย์ออกเป็นอีกพอร์ตหนึ่งที่เป็นอิสระจากพอร์ตหลักโดยสิ้นเชิง\n\n    [Caution]\n    - ห้ามใช้ id 'default' (สงวนไว้สำหรับพอร์ตหลัก)\n    - ถ้าไม่ระบุ portfolio_id ระบบจะสร้างให้อัตโนมัติจากชื่อ\n\n    Args:\n        name (str): ชื่อพอร์ตที่จะแสดงผล (ภาษาไทยได้)\n        portfolio_id (str | None): รหัสพอร์ตที่ต้องการกำหนดเอง (ตัวอักษร/ตัวเลข/ขีดล่างเท่านั้น หากเป็น None จะสร้างอัตโนมัติ)",
+      "func_name": "tool_create_portfolio",
+      "args_schema": {
+        "description": "สร้างพอร์ตการลงทุนใหม่ เช่น พอร์ตเงินสำรองฉุกเฉิน หรือพอร์ตเกษียณ\n\n[Usage/When to use]\nใช้เมื่อผู้ใช้ต้องการแยกเงิน/สินทรัพย์ออกเป็นอีกพอร์ตหนึ่งที่เป็นอิสระจากพอร์ตหลักโดยสิ้นเชิง\n\n[Caution]\n- ห้ามใช้ id 'default' (สงวนไว้สำหรับพอร์ตหลัก)\n- ถ้าไม่ระบุ portfolio_id ระบบจะสร้างให้อัตโนมัติจากชื่อ\n\nArgs:\n    name (str): ชื่อพอร์ตที่จะแสดงผล (ภาษาไทยได้)\n    portfolio_id (str | None): รหัสพอร์ตที่ต้องการกำหนดเอง (ตัวอักษร/ตัวเลข/ขีดล่างเท่านั้น หากเป็น None จะสร้างอัตโนมัติ)",
+        "properties": {
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "portfolio_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Portfolio Id"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "title": "tool_create_portfolio",
+        "type": "object"
+      },
+      "return_direct": false
+    },
+    "tool_delete_portfolio": {
+      "name": "tool_delete_portfolio",
+      "description": "ลบพอร์ตการลงทุนออกจากระบบ\n\n    [Usage/When to use]\n    ใช้เมื่อผู้ใช้ต้องการปิด/ลบพอร์ตที่ไม่ใช้แล้ว\n\n    [Caution]\n    - ลบไฟล์ทันทีถาวร ไม่มี undo — ไม่สามารถลบพอร์ตหลัก (default) ได้\n\n    Args:\n        portfolio_id (str): รหัสพอร์ตที่ต้องการลบ (ดูได้จาก tool_list_portfolios)",
+      "func_name": "tool_delete_portfolio",
+      "args_schema": {
+        "description": "ลบพอร์ตการลงทุนออกจากระบบ\n\n[Usage/When to use]\nใช้เมื่อผู้ใช้ต้องการปิด/ลบพอร์ตที่ไม่ใช้แล้ว\n\n[Caution]\n- ลบไฟล์ทันทีถาวร ไม่มี undo — ไม่สามารถลบพอร์ตหลัก (default) ได้\n\nArgs:\n    portfolio_id (str): รหัสพอร์ตที่ต้องการลบ (ดูได้จาก tool_list_portfolios)",
+        "properties": {
+          "portfolio_id": {
+            "title": "Portfolio Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "portfolio_id"
+        ],
+        "title": "tool_delete_portfolio",
+        "type": "object"
+      },
+      "return_direct": false
+    },
+    "tool_list_portfolios": {
+      "name": "tool_list_portfolios",
+      "description": "เรียกดูรายการพอร์ตการลงทุนทั้งหมดในระบบ\n\n    [Usage/When to use]\n    ใช้เพื่อดูว่ามีพอร์ตอะไรบ้าง และหา `portfolio_id` ที่ถูกต้องก่อนเรียก tool อื่นที่ต้องระบุพอร์ต\n    - พอร์ตหลักเสมอมี id เป็น 'default'\n\n    Returns:\n        str: JSON list ของพอร์ตทั้งหมด (id, name, is_default, created_at)",
+      "func_name": "tool_list_portfolios",
+      "args_schema": {
+        "description": "เรียกดูรายการพอร์ตการลงทุนทั้งหมดในระบบ\n\n[Usage/When to use]\nใช้เพื่อดูว่ามีพอร์ตอะไรบ้าง และหา `portfolio_id` ที่ถูกต้องก่อนเรียก tool อื่นที่ต้องระบุพอร์ต\n- พอร์ตหลักเสมอมี id เป็น 'default'\n\nReturns:\n    str: JSON list ของพอร์ตทั้งหมด (id, name, is_default, created_at)",
+        "properties": {},
+        "title": "tool_list_portfolios",
+        "type": "object"
+      },
+      "return_direct": false
+    },
+    "tool_rename_portfolio": {
+      "name": "tool_rename_portfolio",
+      "description": "เปลี่ยนชื่อพอร์ตการลงทุน\n\n    [Usage/When to use]\n    ใช้เมื่อผู้ใช้ต้องการเปลี่ยนชื่อพอร์ตที่มีอยู่\n\n    Args:\n        portfolio_id (str): รหัสพอร์ตที่ต้องการเปลี่ยนชื่อ (เช่น 'default' หรือ 'port_xxx')\n        new_name (str): ชื่อใหม่ของพอร์ต",
+      "func_name": "tool_rename_portfolio",
+      "args_schema": {
+        "description": "เปลี่ยนชื่อพอร์ตการลงทุน\n\n[Usage/When to use]\nใช้เมื่อผู้ใช้ต้องการเปลี่ยนชื่อพอร์ตที่มีอยู่\n\nArgs:\n    portfolio_id (str): รหัสพอร์ตที่ต้องการเปลี่ยนชื่อ (เช่น 'default' หรือ 'port_xxx')\n    new_name (str): ชื่อใหม่ของพอร์ต",
+        "properties": {
+          "portfolio_id": {
+            "title": "Portfolio Id",
+            "type": "string"
+          },
+          "new_name": {
+            "title": "New Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "portfolio_id",
+          "new_name"
+        ],
+        "title": "tool_rename_portfolio",
+        "type": "object"
+      },
+      "return_direct": false
+    },
+    "update_fx_rate": {
+      "name": "update_fx_rate",
+      "description": "อัปเดตอัตราแลกเปลี่ยน USD/THB ของพอร์ต\n\n    [Usage/When to use]\n    ใช้เมื่อต้องการอัปเดตอัตราแลกเปลี่ยน (FX Rate) เพื่อให้มูลค่าพอร์ตที่เป็น USD ถูกคำนวณกลับมาเป็น THB อย่างแม่นยำ\n    - ดึงข้อมูลจาก yfinance อัตโนมัติหากไม่ระบุ `rate`\n    - ทำให้ Unrealized P/L และ NAV ถูกคำนวณใหม่ทั้งพอร์ตทันที\n\n    Args:\n        rate (float | None): อัตราแลกเปลี่ยนใหม่ที่กำหนดเอง (หากเป็น None จะดึงอัตโนมัติ)\n        portfolio_id (str): พอร์ตการลงทุนที่ต้องการอัปเดต FX (ค่าเริ่มต้น 'default')",
+      "func_name": "update_fx_rate",
+      "args_schema": {
+        "description": "อัปเดตอัตราแลกเปลี่ยน USD/THB ของพอร์ต\n\n[Usage/When to use]\nใช้เมื่อต้องการอัปเดตอัตราแลกเปลี่ยน (FX Rate) เพื่อให้มูลค่าพอร์ตที่เป็น USD ถูกคำนวณกลับมาเป็น THB อย่างแม่นยำ\n- ดึงข้อมูลจาก yfinance อัตโนมัติหากไม่ระบุ `rate`\n- ทำให้ Unrealized P/L และ NAV ถูกคำนวณใหม่ทั้งพอร์ตทันที\n\nArgs:\n    rate (float | None): อัตราแลกเปลี่ยนใหม่ที่กำหนดเอง (หากเป็น None จะดึงอัตโนมัติ)\n    portfolio_id (str): พอร์ตการลงทุนที่ต้องการอัปเดต FX (ค่าเริ่มต้น 'default')",
+        "properties": {
+          "rate": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Rate"
+          },
+          "portfolio_id": {
+            "default": "default",
+            "title": "Portfolio Id",
+            "type": "string"
+          }
+        },
+        "title": "update_fx_rate",
+        "type": "object"
+      },
+      "return_direct": false
+    }
+  }
+}

@@ -37,6 +37,9 @@ class InMemoryPortfolioUnitOfWork(PortfolioUnitOfWork):
     def load_state(self) -> PortfolioState:
         return self.repo.load_state(self.portfolio_id)
 
+    def read_trade_log_locked(self) -> List[Dict]:
+        return self.repo.read_trade_log(self.portfolio_id)
+
     def commit(self, state: PortfolioState, ledger_change: Optional[LedgerChange] = None) -> None:
         self.repo._states[self.portfolio_id] = state.model_copy(deep=True)
         if ledger_change and ledger_change.kind == "append" and ledger_change.row:
@@ -71,6 +74,17 @@ class InMemoryPortfolioRepository(PortfolioRepositoryPort):
                 ],
             )
         return self._states[portfolio_id].model_copy(deep=True)
+
+    def backup_and_reset_clean_slate(self, portfolio_id: str = "default") -> PortfolioState:
+        clean_state = PortfolioState(
+            last_updated=_now_iso(),
+            allocation_targets=default_allocation_targets(),
+            fx_rates={"USDTHB": 36.5},
+            holdings=[],
+        )
+        self._states[portfolio_id] = clean_state
+        self._trades[portfolio_id] = []
+        return clean_state
 
     def read_trade_log(self, portfolio_id: str = "default", symbol: Optional[str] = None) -> List[Dict]:
         rows = self._trades.get(portfolio_id, [])
@@ -146,10 +160,18 @@ class InMemoryJournalAdapter(TradeJournalPort):
     def __init__(self):
         self._entries: Dict[str, List[Dict]] = {}
 
-    def append_journal(self, entry: str, portfolio_id: str = "default") -> List[Dict]:
-        item = {"timestamp": _now_iso(), "content": entry}
+    def append_journal(
+        self, entry: str, date_str: Optional[str] = None, portfolio_id: str = "default"
+    ) -> List[Dict]:
+        ts = date_str or _now_iso()
+        item = {"timestamp": ts, "content": entry}
         self._entries.setdefault(portfolio_id, []).append(item)
         return list(self._entries[portfolio_id])
+
+    def append_system_entry(
+        self, entry: str, date_str: Optional[str] = None, portfolio_id: str = "default"
+    ) -> None:
+        self.append_journal(entry, date_str=date_str, portfolio_id=portfolio_id)
 
     def read_journal(self, days: Optional[int] = 365, keyword: Optional[str] = None, limit: int = 100, portfolio_id: str = "default") -> List[Dict]:
         return list(self._entries.get(portfolio_id, []))
@@ -254,8 +276,8 @@ def test_full_portfolio_flow_with_di():
     # 8. Journal Operations
     svc.append_trading_journal("Good trade on PTT")
     entries = svc.get_structured_journal()
-    assert len(entries) == 1
-    assert "Good trade on PTT" in entries[0]["content"]
+    assert len(entries) == 6
+    assert any("Good trade on PTT" in e["content"] for e in entries)
 
     # 9. Performance Snapshot
     msg = svc.record_performance_snapshot()

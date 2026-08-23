@@ -1,16 +1,8 @@
-"""SQLite store สำหรับ job log + kanban state — Facade Re-export Layer.
+"""API SQLite Database Layer.
 
-Decomposed into DAO repositories under `api.db.*`:
-  - `api.db.connection`: SQLite Connection, Schema Management & Migrations
-  - `api.db.repositories.job_repository`: Job Lifecycle & Job Logs
-  - `api.db.repositories.kanban_repository`: Kanban Cards & Parking Lot Atomicity
-  - `api.db.repositories.dcf_repository`: Canonical DCF Evaluations Ledger
-  - `api.db.repositories.insider_repository`: SEC Form 4 Filings & Transactions
-  - `api.db.repositories.cache_repository`: Analyst Context & Financial Statements Caches
-
-This facade provides 100% backward compatibility for all existing imports and tests.
+Exports connection, schema management, and DAO repositories.
 """
-from api.db import (
+from api.db.connection import (
     _SCHEMA,
     _COLUMN_MIGRATIONS,
     _INITIALIZED_DB_PATHS,
@@ -20,6 +12,8 @@ from api.db import (
     _backfill_kanban_display_seq,
     init_schema,
     get_connection,
+)
+from api.db.repositories.job_repository import (
     create_job,
     set_job_awaiting_approval,
     set_job_resume_value,
@@ -35,6 +29,8 @@ from api.db import (
     get_job_reply_logs,
     get_latest_job_log_node,
     get_job_log_count,
+)
+from api.db.repositories.kanban_repository import (
     list_kanban_cards,
     create_kanban_card,
     create_parking_lot_cards_atomic,
@@ -46,12 +42,18 @@ from api.db import (
     get_kanban_card,
     find_kanban_card_by_title_in_column,
     delete_kanban_card,
+)
+from api.db.repositories.dcf_repository import (
     record_dcf_evaluation,
     get_latest_dcf_evaluation,
     get_dcf_evaluation_by_id,
+)
+from api.db.repositories.insider_repository import (
     record_sec_form4_filing,
     record_sec_insider_transaction,
     get_sec_insider_filings_and_transactions,
+)
+from api.db.repositories.cache_repository import (
     get_analyst_context_cache,
     upsert_analyst_context_cache,
     get_financial_statements_cache,

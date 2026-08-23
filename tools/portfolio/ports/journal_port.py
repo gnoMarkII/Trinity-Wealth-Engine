@@ -6,8 +6,17 @@ class TradeJournalPort(ABC):
     """Port interface for Trade Journal entries."""
 
     @abstractmethod
-    def append_journal(self, entry: str, portfolio_id: str = "default") -> List[Dict]:
+    def append_journal(
+        self, entry: str, date_str: Optional[str] = None, portfolio_id: str = "default"
+    ) -> List[Dict]:
         """Append an entry to the trading journal and return updated entries."""
+        ...
+
+    @abstractmethod
+    def append_system_entry(
+        self, entry: str, date_str: Optional[str] = None, portfolio_id: str = "default"
+    ) -> None:
+        """Append an automated system transaction entry to the trading journal."""
         ...
 
     @abstractmethod

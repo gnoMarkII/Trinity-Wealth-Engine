@@ -88,6 +88,9 @@ class MirroredPortfolioUnitOfWork(PortfolioUnitOfWork):
     def load_state(self) -> PortfolioState:
         return self.underlying_uow.load_state()
 
+    def read_trade_log_locked(self) -> List[Dict]:
+        return self.underlying_uow.read_trade_log_locked()
+
     def commit(self, state: PortfolioState, ledger_change: Optional[LedgerChange] = None) -> None:
         # 1. Authoritative Markdown Commit
         self.underlying_uow.commit(state, ledger_change)
@@ -212,6 +215,11 @@ class SqliteMirroredPortfolioRepository(PortfolioRepositoryPort):
     # Delegated direct methods to underlying repository
     def read_trade_log(self, portfolio_id: str = "default", symbol: Optional[str] = None) -> List[Dict]:
         return self.underlying_repo.read_trade_log(portfolio_id, symbol=symbol)
+
+    def backup_and_reset_clean_slate(self, portfolio_id: str = "default") -> PortfolioState:
+        state = self.underlying_repo.backup_and_reset_clean_slate(portfolio_id)
+        self._write_mirror(portfolio_id, state)
+        return state
 
     def list_portfolios(self) -> List[PortfolioMeta]:
         return self.underlying_repo.list_portfolios()

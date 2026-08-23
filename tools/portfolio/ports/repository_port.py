@@ -13,6 +13,11 @@ class PortfolioUnitOfWork(ContextManager["PortfolioUnitOfWork"], ABC):
         ...
 
     @abstractmethod
+    def read_trade_log_locked(self) -> List[Dict]:
+        """Read transaction ledger rows under the active transaction lock."""
+        ...
+
+    @abstractmethod
     def commit(self, state: PortfolioState, ledger_change: Optional[LedgerChange] = None) -> None:
         """Crash-consistent recoverable commit writing Master + Ledger + Sidecars."""
         ...
@@ -39,6 +44,11 @@ class PortfolioRepositoryPort(ABC):
     @abstractmethod
     def read_trade_log(self, portfolio_id: str = "default", symbol: Optional[str] = None) -> List[Dict]:
         """Read transaction ledger rows."""
+        ...
+
+    @abstractmethod
+    def backup_and_reset_clean_slate(self, portfolio_id: str = "default") -> PortfolioState:
+        """Backup existing markdown sidecars and reset portfolio state and trade ledger to a clean slate."""
         ...
 
     @abstractmethod

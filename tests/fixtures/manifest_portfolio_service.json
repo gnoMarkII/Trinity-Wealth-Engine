@@ -1,0 +1,1952 @@
+{
+  "class": "PortfolioService",
+  "module": "tools.portfolio.service",
+  "methods": {
+    "__init__": {
+      "name": "__init__",
+      "docstring": "Initialize self.  See help(type(self)) for accurate signature.",
+      "parameters": [
+        {
+          "name": "self",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "<EMPTY>",
+          "annotation": "empty"
+        },
+        {
+          "name": "repo",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": null,
+          "annotation": "Optional"
+        },
+        {
+          "name": "watchlist_repo",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": null,
+          "annotation": "Optional"
+        },
+        {
+          "name": "goals_repo",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": null,
+          "annotation": "Optional"
+        },
+        {
+          "name": "perf_repo",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": null,
+          "annotation": "Optional"
+        },
+        {
+          "name": "journal_provider",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": null,
+          "annotation": "Optional"
+        },
+        {
+          "name": "price_provider",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": null,
+          "annotation": "Optional"
+        }
+      ],
+      "return_annotation": "empty"
+    },
+    "_edit_holding_internal": {
+      "name": "_edit_holding_internal",
+      "docstring": null,
+      "parameters": [
+        {
+          "name": "self",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "<EMPTY>",
+          "annotation": "empty"
+        },
+        {
+          "name": "symbol",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "<EMPTY>",
+          "annotation": "str"
+        },
+        {
+          "name": "units",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": null,
+          "annotation": "Optional"
+        },
+        {
+          "name": "avg_cost",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": null,
+          "annotation": "Optional"
+        },
+        {
+          "name": "accumulated_dividend_thb",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": null,
+          "annotation": "Optional"
+        },
+        {
+          "name": "asset_type",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": null,
+          "annotation": "Optional"
+        },
+        {
+          "name": "reason",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "",
+          "annotation": "str"
+        },
+        {
+          "name": "bucket_id",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": null,
+          "annotation": "Optional"
+        },
+        {
+          "name": "portfolio_id",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "default",
+          "annotation": "str"
+        }
+      ],
+      "return_annotation": "Tuple"
+    },
+    "_execute_trade_internal": {
+      "name": "_execute_trade_internal",
+      "docstring": null,
+      "parameters": [
+        {
+          "name": "self",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "<EMPTY>",
+          "annotation": "empty"
+        },
+        {
+          "name": "symbol",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "<EMPTY>",
+          "annotation": "str"
+        },
+        {
+          "name": "asset_type",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "<EMPTY>",
+          "annotation": "str"
+        },
+        {
+          "name": "action",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "<EMPTY>",
+          "annotation": "Literal"
+        },
+        {
+          "name": "units",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "<EMPTY>",
+          "annotation": "float"
+        },
+        {
+          "name": "price",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "<EMPTY>",
+          "annotation": "float"
+        },
+        {
+          "name": "currency",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "THB",
+          "annotation": "Literal"
+        },
+        {
+          "name": "exchange_rate",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": null,
+          "annotation": "Optional"
+        },
+        {
+          "name": "date",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": null,
+          "annotation": "Optional"
+        },
+        {
+          "name": "notes",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "",
+          "annotation": "str"
+        },
+        {
+          "name": "bucket_id",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": null,
+          "annotation": "Optional"
+        },
+        {
+          "name": "portfolio_id",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "default",
+          "annotation": "str"
+        }
+      ],
+      "return_annotation": "Tuple"
+    },
+    "_manage_cash_flow_internal": {
+      "name": "_manage_cash_flow_internal",
+      "docstring": null,
+      "parameters": [
+        {
+          "name": "self",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "<EMPTY>",
+          "annotation": "empty"
+        },
+        {
+          "name": "amount",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "<EMPTY>",
+          "annotation": "float"
+        },
+        {
+          "name": "action",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "<EMPTY>",
+          "annotation": "Literal"
+        },
+        {
+          "name": "currency",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "THB",
+          "annotation": "Literal"
+        },
+        {
+          "name": "exchange_rate",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": null,
+          "annotation": "Optional"
+        },
+        {
+          "name": "date",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": null,
+          "annotation": "Optional"
+        },
+        {
+          "name": "notes",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "",
+          "annotation": "str"
+        },
+        {
+          "name": "portfolio_id",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "default",
+          "annotation": "str"
+        }
+      ],
+      "return_annotation": "Tuple"
+    },
+    "_record_income_internal": {
+      "name": "_record_income_internal",
+      "docstring": null,
+      "parameters": [
+        {
+          "name": "self",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "<EMPTY>",
+          "annotation": "empty"
+        },
+        {
+          "name": "income_type",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "<EMPTY>",
+          "annotation": "Literal"
+        },
+        {
+          "name": "amount_thb",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "<EMPTY>",
+          "annotation": "float"
+        },
+        {
+          "name": "source_symbol",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": null,
+          "annotation": "Optional"
+        },
+        {
+          "name": "date",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": null,
+          "annotation": "Optional"
+        },
+        {
+          "name": "notes",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "",
+          "annotation": "str"
+        },
+        {
+          "name": "portfolio_id",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "default",
+          "annotation": "str"
+        }
+      ],
+      "return_annotation": "Tuple"
+    },
+    "add_to_watchlist": {
+      "name": "add_to_watchlist",
+      "docstring": null,
+      "parameters": [
+        {
+          "name": "self",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "<EMPTY>",
+          "annotation": "empty"
+        },
+        {
+          "name": "symbol",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "<EMPTY>",
+          "annotation": "str"
+        },
+        {
+          "name": "asset_type",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "<EMPTY>",
+          "annotation": "str"
+        },
+        {
+          "name": "target_price",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": null,
+          "annotation": "Optional"
+        },
+        {
+          "name": "notes",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "",
+          "annotation": "str"
+        },
+        {
+          "name": "portfolio_id",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "default",
+          "annotation": "str"
+        }
+      ],
+      "return_annotation": "str"
+    },
+    "append_trading_journal": {
+      "name": "append_trading_journal",
+      "docstring": null,
+      "parameters": [
+        {
+          "name": "self",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "<EMPTY>",
+          "annotation": "empty"
+        },
+        {
+          "name": "entry",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "<EMPTY>",
+          "annotation": "str"
+        },
+        {
+          "name": "portfolio_id",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "default",
+          "annotation": "str"
+        }
+      ],
+      "return_annotation": "str"
+    },
+    "batch_import_holdings": {
+      "name": "batch_import_holdings",
+      "docstring": null,
+      "parameters": [
+        {
+          "name": "self",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "<EMPTY>",
+          "annotation": "empty"
+        },
+        {
+          "name": "assets_list",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "<EMPTY>",
+          "annotation": "Union"
+        },
+        {
+          "name": "mode",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "merge",
+          "annotation": "Literal"
+        },
+        {
+          "name": "reset_cash_usd",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": false,
+          "annotation": "bool"
+        },
+        {
+          "name": "portfolio_id",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "default",
+          "annotation": "str"
+        }
+      ],
+      "return_annotation": "str"
+    },
+    "compute_allocation_breakdown": {
+      "name": "compute_allocation_breakdown",
+      "docstring": null,
+      "parameters": [
+        {
+          "name": "self",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "<EMPTY>",
+          "annotation": "empty"
+        },
+        {
+          "name": "group_by",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "asset_type",
+          "annotation": "Literal"
+        },
+        {
+          "name": "portfolio_id",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "default",
+          "annotation": "str"
+        }
+      ],
+      "return_annotation": "str"
+    },
+    "create_portfolio": {
+      "name": "create_portfolio",
+      "docstring": null,
+      "parameters": [
+        {
+          "name": "self",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "<EMPTY>",
+          "annotation": "empty"
+        },
+        {
+          "name": "name",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "<EMPTY>",
+          "annotation": "str"
+        },
+        {
+          "name": "portfolio_id",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": null,
+          "annotation": "Optional"
+        }
+      ],
+      "return_annotation": "PortfolioMeta"
+    },
+    "delete_portfolio": {
+      "name": "delete_portfolio",
+      "docstring": null,
+      "parameters": [
+        {
+          "name": "self",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "<EMPTY>",
+          "annotation": "empty"
+        },
+        {
+          "name": "portfolio_id",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "<EMPTY>",
+          "annotation": "str"
+        }
+      ],
+      "return_annotation": "None"
+    },
+    "delete_transaction": {
+      "name": "delete_transaction",
+      "docstring": null,
+      "parameters": [
+        {
+          "name": "self",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "<EMPTY>",
+          "annotation": "empty"
+        },
+        {
+          "name": "tx_id",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "<EMPTY>",
+          "annotation": "str"
+        },
+        {
+          "name": "adjust_cash",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": true,
+          "annotation": "bool"
+        },
+        {
+          "name": "portfolio_id",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "default",
+          "annotation": "str"
+        }
+      ],
+      "return_annotation": "PortfolioState"
+    },
+    "edit_holding": {
+      "name": "edit_holding",
+      "docstring": null,
+      "parameters": [
+        {
+          "name": "self",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "<EMPTY>",
+          "annotation": "empty"
+        },
+        {
+          "name": "symbol",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "<EMPTY>",
+          "annotation": "str"
+        },
+        {
+          "name": "units",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": null,
+          "annotation": "Optional"
+        },
+        {
+          "name": "avg_cost",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": null,
+          "annotation": "Optional"
+        },
+        {
+          "name": "accumulated_dividend_thb",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": null,
+          "annotation": "Optional"
+        },
+        {
+          "name": "asset_type",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": null,
+          "annotation": "Optional"
+        },
+        {
+          "name": "reason",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "",
+          "annotation": "str"
+        },
+        {
+          "name": "portfolio_id",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "default",
+          "annotation": "str"
+        }
+      ],
+      "return_annotation": "str"
+    },
+    "edit_transaction": {
+      "name": "edit_transaction",
+      "docstring": null,
+      "parameters": [
+        {
+          "name": "self",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "<EMPTY>",
+          "annotation": "empty"
+        },
+        {
+          "name": "tx_id",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "<EMPTY>",
+          "annotation": "str"
+        },
+        {
+          "name": "timestamp",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": null,
+          "annotation": "Optional"
+        },
+        {
+          "name": "units",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": null,
+          "annotation": "Optional"
+        },
+        {
+          "name": "price",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": null,
+          "annotation": "Optional"
+        },
+        {
+          "name": "fx_rate",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": null,
+          "annotation": "Optional"
+        },
+        {
+          "name": "notes",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": null,
+          "annotation": "Optional"
+        },
+        {
+          "name": "adjust_cash",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": true,
+          "annotation": "bool"
+        },
+        {
+          "name": "portfolio_id",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "default",
+          "annotation": "str"
+        }
+      ],
+      "return_annotation": "PortfolioState"
+    },
+    "execute_trade": {
+      "name": "execute_trade",
+      "docstring": null,
+      "parameters": [
+        {
+          "name": "self",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "<EMPTY>",
+          "annotation": "empty"
+        },
+        {
+          "name": "symbol",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "<EMPTY>",
+          "annotation": "str"
+        },
+        {
+          "name": "asset_type",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "<EMPTY>",
+          "annotation": "str"
+        },
+        {
+          "name": "action",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "<EMPTY>",
+          "annotation": "Literal"
+        },
+        {
+          "name": "units",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "<EMPTY>",
+          "annotation": "float"
+        },
+        {
+          "name": "price",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "<EMPTY>",
+          "annotation": "float"
+        },
+        {
+          "name": "currency",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "THB",
+          "annotation": "Literal"
+        },
+        {
+          "name": "notes",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "",
+          "annotation": "str"
+        },
+        {
+          "name": "portfolio_id",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "default",
+          "annotation": "str"
+        }
+      ],
+      "return_annotation": "str"
+    },
+    "fetch_fx_rate": {
+      "name": "fetch_fx_rate",
+      "docstring": null,
+      "parameters": [
+        {
+          "name": "self",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "<EMPTY>",
+          "annotation": "empty"
+        },
+        {
+          "name": "date_str",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": null,
+          "annotation": "Optional"
+        },
+        {
+          "name": "fallback_rate",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": null,
+          "annotation": "Optional"
+        }
+      ],
+      "return_annotation": "Tuple"
+    },
+    "fetch_latest_price": {
+      "name": "fetch_latest_price",
+      "docstring": null,
+      "parameters": [
+        {
+          "name": "self",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "<EMPTY>",
+          "annotation": "empty"
+        },
+        {
+          "name": "symbol",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "<EMPTY>",
+          "annotation": "str"
+        },
+        {
+          "name": "currency",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "THB",
+          "annotation": "Literal"
+        }
+      ],
+      "return_annotation": "Optional"
+    },
+    "get_goals_progress": {
+      "name": "get_goals_progress",
+      "docstring": null,
+      "parameters": [
+        {
+          "name": "self",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "<EMPTY>",
+          "annotation": "empty"
+        },
+        {
+          "name": "portfolio_id",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "default",
+          "annotation": "str"
+        }
+      ],
+      "return_annotation": "str"
+    },
+    "get_portfolio_state": {
+      "name": "get_portfolio_state",
+      "docstring": null,
+      "parameters": [
+        {
+          "name": "self",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "<EMPTY>",
+          "annotation": "empty"
+        },
+        {
+          "name": "refresh_prices",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": true,
+          "annotation": "bool"
+        },
+        {
+          "name": "portfolio_id",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "default",
+          "annotation": "str"
+        }
+      ],
+      "return_annotation": "str"
+    },
+    "get_structured_bucket_allocation": {
+      "name": "get_structured_bucket_allocation",
+      "docstring": null,
+      "parameters": [
+        {
+          "name": "self",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "<EMPTY>",
+          "annotation": "empty"
+        },
+        {
+          "name": "state",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": null,
+          "annotation": "Optional"
+        },
+        {
+          "name": "portfolio_id",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "default",
+          "annotation": "str"
+        }
+      ],
+      "return_annotation": "Tuple"
+    },
+    "get_structured_goals": {
+      "name": "get_structured_goals",
+      "docstring": null,
+      "parameters": [
+        {
+          "name": "self",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "<EMPTY>",
+          "annotation": "empty"
+        },
+        {
+          "name": "portfolio_id",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": null,
+          "annotation": "Optional"
+        }
+      ],
+      "return_annotation": "List"
+    },
+    "get_structured_journal": {
+      "name": "get_structured_journal",
+      "docstring": null,
+      "parameters": [
+        {
+          "name": "self",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "<EMPTY>",
+          "annotation": "empty"
+        },
+        {
+          "name": "days",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": 365,
+          "annotation": "Optional"
+        },
+        {
+          "name": "keyword",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": null,
+          "annotation": "Optional"
+        },
+        {
+          "name": "limit",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": 100,
+          "annotation": "int"
+        },
+        {
+          "name": "portfolio_id",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "default",
+          "annotation": "str"
+        }
+      ],
+      "return_annotation": "List"
+    },
+    "get_structured_performance_history": {
+      "name": "get_structured_performance_history",
+      "docstring": null,
+      "parameters": [
+        {
+          "name": "self",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "<EMPTY>",
+          "annotation": "empty"
+        },
+        {
+          "name": "days",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": null,
+          "annotation": "Optional"
+        },
+        {
+          "name": "portfolio_id",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "default",
+          "annotation": "str"
+        }
+      ],
+      "return_annotation": "List"
+    },
+    "get_structured_portfolio_state": {
+      "name": "get_structured_portfolio_state",
+      "docstring": null,
+      "parameters": [
+        {
+          "name": "self",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "<EMPTY>",
+          "annotation": "empty"
+        },
+        {
+          "name": "refresh_prices",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": false,
+          "annotation": "bool"
+        },
+        {
+          "name": "fetch_fundamentals",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": false,
+          "annotation": "bool"
+        },
+        {
+          "name": "portfolio_id",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "default",
+          "annotation": "str"
+        }
+      ],
+      "return_annotation": "PortfolioState"
+    },
+    "get_structured_trades_log": {
+      "name": "get_structured_trades_log",
+      "docstring": null,
+      "parameters": [
+        {
+          "name": "self",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "<EMPTY>",
+          "annotation": "empty"
+        },
+        {
+          "name": "portfolio_id",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "default",
+          "annotation": "str"
+        },
+        {
+          "name": "symbol",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": null,
+          "annotation": "Optional"
+        }
+      ],
+      "return_annotation": "List"
+    },
+    "get_structured_watchlist": {
+      "name": "get_structured_watchlist",
+      "docstring": null,
+      "parameters": [
+        {
+          "name": "self",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "<EMPTY>",
+          "annotation": "empty"
+        },
+        {
+          "name": "portfolio_id",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "default",
+          "annotation": "str"
+        }
+      ],
+      "return_annotation": "WatchlistState"
+    },
+    "list_portfolios": {
+      "name": "list_portfolios",
+      "docstring": null,
+      "parameters": [
+        {
+          "name": "self",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "<EMPTY>",
+          "annotation": "empty"
+        }
+      ],
+      "return_annotation": "List"
+    },
+    "manage_cash_flow": {
+      "name": "manage_cash_flow",
+      "docstring": null,
+      "parameters": [
+        {
+          "name": "self",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "<EMPTY>",
+          "annotation": "empty"
+        },
+        {
+          "name": "amount",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "<EMPTY>",
+          "annotation": "float"
+        },
+        {
+          "name": "action",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "<EMPTY>",
+          "annotation": "Literal"
+        },
+        {
+          "name": "currency",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "THB",
+          "annotation": "Literal"
+        },
+        {
+          "name": "portfolio_id",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "default",
+          "annotation": "str"
+        }
+      ],
+      "return_annotation": "str"
+    },
+    "read_performance_history": {
+      "name": "read_performance_history",
+      "docstring": null,
+      "parameters": [
+        {
+          "name": "self",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "<EMPTY>",
+          "annotation": "empty"
+        },
+        {
+          "name": "days",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": 30,
+          "annotation": "int"
+        },
+        {
+          "name": "portfolio_id",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "default",
+          "annotation": "str"
+        }
+      ],
+      "return_annotation": "str"
+    },
+    "read_trading_journal": {
+      "name": "read_trading_journal",
+      "docstring": null,
+      "parameters": [
+        {
+          "name": "self",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "<EMPTY>",
+          "annotation": "empty"
+        },
+        {
+          "name": "days",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": 30,
+          "annotation": "int"
+        },
+        {
+          "name": "keyword",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": null,
+          "annotation": "Optional"
+        },
+        {
+          "name": "limit",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": 20,
+          "annotation": "int"
+        },
+        {
+          "name": "portfolio_id",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "default",
+          "annotation": "str"
+        }
+      ],
+      "return_annotation": "str"
+    },
+    "read_watchlist": {
+      "name": "read_watchlist",
+      "docstring": null,
+      "parameters": [
+        {
+          "name": "self",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "<EMPTY>",
+          "annotation": "empty"
+        },
+        {
+          "name": "portfolio_id",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "default",
+          "annotation": "str"
+        }
+      ],
+      "return_annotation": "str"
+    },
+    "record_income": {
+      "name": "record_income",
+      "docstring": null,
+      "parameters": [
+        {
+          "name": "self",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "<EMPTY>",
+          "annotation": "empty"
+        },
+        {
+          "name": "income_type",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "<EMPTY>",
+          "annotation": "Literal"
+        },
+        {
+          "name": "amount_thb",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "<EMPTY>",
+          "annotation": "float"
+        },
+        {
+          "name": "source_symbol",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": null,
+          "annotation": "Optional"
+        },
+        {
+          "name": "portfolio_id",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "default",
+          "annotation": "str"
+        }
+      ],
+      "return_annotation": "str"
+    },
+    "record_performance_snapshot": {
+      "name": "record_performance_snapshot",
+      "docstring": null,
+      "parameters": [
+        {
+          "name": "self",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "<EMPTY>",
+          "annotation": "empty"
+        },
+        {
+          "name": "refresh_prices",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": true,
+          "annotation": "bool"
+        },
+        {
+          "name": "portfolio_id",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "default",
+          "annotation": "str"
+        }
+      ],
+      "return_annotation": "str"
+    },
+    "remove_from_watchlist": {
+      "name": "remove_from_watchlist",
+      "docstring": null,
+      "parameters": [
+        {
+          "name": "self",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "<EMPTY>",
+          "annotation": "empty"
+        },
+        {
+          "name": "symbol",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "<EMPTY>",
+          "annotation": "str"
+        },
+        {
+          "name": "portfolio_id",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "default",
+          "annotation": "str"
+        }
+      ],
+      "return_annotation": "str"
+    },
+    "remove_goal": {
+      "name": "remove_goal",
+      "docstring": null,
+      "parameters": [
+        {
+          "name": "self",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "<EMPTY>",
+          "annotation": "empty"
+        },
+        {
+          "name": "name",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "<EMPTY>",
+          "annotation": "str"
+        }
+      ],
+      "return_annotation": "str"
+    },
+    "set_goal": {
+      "name": "set_goal",
+      "docstring": null,
+      "parameters": [
+        {
+          "name": "self",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "<EMPTY>",
+          "annotation": "empty"
+        },
+        {
+          "name": "name",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "<EMPTY>",
+          "annotation": "str"
+        },
+        {
+          "name": "goal_type",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "<EMPTY>",
+          "annotation": "Literal"
+        },
+        {
+          "name": "target_amount_thb",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "<EMPTY>",
+          "annotation": "float"
+        },
+        {
+          "name": "deadline",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": null,
+          "annotation": "Optional"
+        },
+        {
+          "name": "years_from_now",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": null,
+          "annotation": "Optional"
+        },
+        {
+          "name": "notes",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": null,
+          "annotation": "Optional"
+        },
+        {
+          "name": "portfolio_id",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "default",
+          "annotation": "str"
+        },
+        {
+          "name": "bucket_id",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": null,
+          "annotation": "Optional"
+        }
+      ],
+      "return_annotation": "str"
+    },
+    "structured_append_journal": {
+      "name": "structured_append_journal",
+      "docstring": null,
+      "parameters": [
+        {
+          "name": "self",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "<EMPTY>",
+          "annotation": "empty"
+        },
+        {
+          "name": "entry",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "<EMPTY>",
+          "annotation": "str"
+        },
+        {
+          "name": "portfolio_id",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "default",
+          "annotation": "str"
+        }
+      ],
+      "return_annotation": "List"
+    },
+    "structured_assign_holding_bucket": {
+      "name": "structured_assign_holding_bucket",
+      "docstring": null,
+      "parameters": [
+        {
+          "name": "self",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "<EMPTY>",
+          "annotation": "empty"
+        },
+        {
+          "name": "symbol",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "<EMPTY>",
+          "annotation": "str"
+        },
+        {
+          "name": "bucket_id",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "<EMPTY>",
+          "annotation": "Optional"
+        },
+        {
+          "name": "portfolio_id",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "default",
+          "annotation": "str"
+        }
+      ],
+      "return_annotation": "PortfolioState"
+    },
+    "structured_batch_assign_holding_buckets": {
+      "name": "structured_batch_assign_holding_buckets",
+      "docstring": null,
+      "parameters": [
+        {
+          "name": "self",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "<EMPTY>",
+          "annotation": "empty"
+        },
+        {
+          "name": "symbols",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "<EMPTY>",
+          "annotation": "List"
+        },
+        {
+          "name": "bucket_id",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "<EMPTY>",
+          "annotation": "Optional"
+        },
+        {
+          "name": "portfolio_id",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "default",
+          "annotation": "str"
+        }
+      ],
+      "return_annotation": "PortfolioState"
+    },
+    "structured_batch_remove_holdings": {
+      "name": "structured_batch_remove_holdings",
+      "docstring": null,
+      "parameters": [
+        {
+          "name": "self",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "<EMPTY>",
+          "annotation": "empty"
+        },
+        {
+          "name": "symbols",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "<EMPTY>",
+          "annotation": "List"
+        },
+        {
+          "name": "portfolio_id",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "default",
+          "annotation": "str"
+        }
+      ],
+      "return_annotation": "PortfolioState"
+    },
+    "structured_edit_holding": {
+      "name": "structured_edit_holding",
+      "docstring": null,
+      "parameters": [
+        {
+          "name": "self",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "<EMPTY>",
+          "annotation": "empty"
+        },
+        {
+          "name": "symbol",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "<EMPTY>",
+          "annotation": "str"
+        },
+        {
+          "name": "units",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": null,
+          "annotation": "Optional"
+        },
+        {
+          "name": "avg_cost",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": null,
+          "annotation": "Optional"
+        },
+        {
+          "name": "accumulated_dividend_thb",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": null,
+          "annotation": "Optional"
+        },
+        {
+          "name": "asset_type",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": null,
+          "annotation": "Optional"
+        },
+        {
+          "name": "reason",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "",
+          "annotation": "str"
+        },
+        {
+          "name": "bucket_id",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": null,
+          "annotation": "Optional"
+        },
+        {
+          "name": "portfolio_id",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "default",
+          "annotation": "str"
+        }
+      ],
+      "return_annotation": "PortfolioState"
+    },
+    "structured_execute_trade": {
+      "name": "structured_execute_trade",
+      "docstring": null,
+      "parameters": [
+        {
+          "name": "self",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "<EMPTY>",
+          "annotation": "empty"
+        },
+        {
+          "name": "symbol",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "<EMPTY>",
+          "annotation": "str"
+        },
+        {
+          "name": "asset_type",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "<EMPTY>",
+          "annotation": "str"
+        },
+        {
+          "name": "action",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "<EMPTY>",
+          "annotation": "Literal"
+        },
+        {
+          "name": "units",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "<EMPTY>",
+          "annotation": "float"
+        },
+        {
+          "name": "price",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "<EMPTY>",
+          "annotation": "float"
+        },
+        {
+          "name": "currency",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "THB",
+          "annotation": "Literal"
+        },
+        {
+          "name": "exchange_rate",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": null,
+          "annotation": "Optional"
+        },
+        {
+          "name": "date",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": null,
+          "annotation": "Optional"
+        },
+        {
+          "name": "notes",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "",
+          "annotation": "str"
+        },
+        {
+          "name": "bucket_id",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": null,
+          "annotation": "Optional"
+        },
+        {
+          "name": "portfolio_id",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "default",
+          "annotation": "str"
+        }
+      ],
+      "return_annotation": "PortfolioState"
+    },
+    "structured_manage_cash_flow": {
+      "name": "structured_manage_cash_flow",
+      "docstring": null,
+      "parameters": [
+        {
+          "name": "self",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "<EMPTY>",
+          "annotation": "empty"
+        },
+        {
+          "name": "amount",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "<EMPTY>",
+          "annotation": "float"
+        },
+        {
+          "name": "action",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "<EMPTY>",
+          "annotation": "Literal"
+        },
+        {
+          "name": "currency",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "THB",
+          "annotation": "Literal"
+        },
+        {
+          "name": "exchange_rate",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": null,
+          "annotation": "Optional"
+        },
+        {
+          "name": "date",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": null,
+          "annotation": "Optional"
+        },
+        {
+          "name": "notes",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "",
+          "annotation": "str"
+        },
+        {
+          "name": "portfolio_id",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "default",
+          "annotation": "str"
+        }
+      ],
+      "return_annotation": "PortfolioState"
+    },
+    "structured_record_income": {
+      "name": "structured_record_income",
+      "docstring": null,
+      "parameters": [
+        {
+          "name": "self",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "<EMPTY>",
+          "annotation": "empty"
+        },
+        {
+          "name": "income_type",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "<EMPTY>",
+          "annotation": "Literal"
+        },
+        {
+          "name": "amount_thb",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "<EMPTY>",
+          "annotation": "float"
+        },
+        {
+          "name": "source_symbol",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": null,
+          "annotation": "Optional"
+        },
+        {
+          "name": "date",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": null,
+          "annotation": "Optional"
+        },
+        {
+          "name": "notes",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "",
+          "annotation": "str"
+        },
+        {
+          "name": "portfolio_id",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "default",
+          "annotation": "str"
+        }
+      ],
+      "return_annotation": "PortfolioState"
+    },
+    "structured_remove_goal": {
+      "name": "structured_remove_goal",
+      "docstring": null,
+      "parameters": [
+        {
+          "name": "self",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "<EMPTY>",
+          "annotation": "empty"
+        },
+        {
+          "name": "name",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "<EMPTY>",
+          "annotation": "str"
+        },
+        {
+          "name": "portfolio_id",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": null,
+          "annotation": "Optional"
+        }
+      ],
+      "return_annotation": "List"
+    },
+    "structured_remove_holding": {
+      "name": "structured_remove_holding",
+      "docstring": null,
+      "parameters": [
+        {
+          "name": "self",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "<EMPTY>",
+          "annotation": "empty"
+        },
+        {
+          "name": "symbol",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "<EMPTY>",
+          "annotation": "str"
+        },
+        {
+          "name": "portfolio_id",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "default",
+          "annotation": "str"
+        }
+      ],
+      "return_annotation": "PortfolioState"
+    },
+    "structured_remove_watchlist_item": {
+      "name": "structured_remove_watchlist_item",
+      "docstring": null,
+      "parameters": [
+        {
+          "name": "self",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "<EMPTY>",
+          "annotation": "empty"
+        },
+        {
+          "name": "symbol",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "<EMPTY>",
+          "annotation": "str"
+        },
+        {
+          "name": "portfolio_id",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "default",
+          "annotation": "str"
+        }
+      ],
+      "return_annotation": "WatchlistState"
+    },
+    "structured_reset_clean_slate": {
+      "name": "structured_reset_clean_slate",
+      "docstring": null,
+      "parameters": [
+        {
+          "name": "self",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "<EMPTY>",
+          "annotation": "empty"
+        },
+        {
+          "name": "portfolio_id",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "default",
+          "annotation": "str"
+        }
+      ],
+      "return_annotation": "PortfolioState"
+    },
+    "structured_upsert_allocation_targets": {
+      "name": "structured_upsert_allocation_targets",
+      "docstring": null,
+      "parameters": [
+        {
+          "name": "self",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "<EMPTY>",
+          "annotation": "empty"
+        },
+        {
+          "name": "targets",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "<EMPTY>",
+          "annotation": "List"
+        },
+        {
+          "name": "portfolio_id",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "default",
+          "annotation": "str"
+        }
+      ],
+      "return_annotation": "PortfolioState"
+    },
+    "structured_upsert_goal": {
+      "name": "structured_upsert_goal",
+      "docstring": null,
+      "parameters": [
+        {
+          "name": "self",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "<EMPTY>",
+          "annotation": "empty"
+        },
+        {
+          "name": "name",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "<EMPTY>",
+          "annotation": "str"
+        },
+        {
+          "name": "goal_type",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "<EMPTY>",
+          "annotation": "Literal"
+        },
+        {
+          "name": "target_amount_thb",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "<EMPTY>",
+          "annotation": "float"
+        },
+        {
+          "name": "deadline",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": null,
+          "annotation": "Optional"
+        },
+        {
+          "name": "years_from_now",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": null,
+          "annotation": "Optional"
+        },
+        {
+          "name": "notes",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": null,
+          "annotation": "Optional"
+        },
+        {
+          "name": "portfolio_id",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "default",
+          "annotation": "str"
+        },
+        {
+          "name": "bucket_id",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": null,
+          "annotation": "Optional"
+        }
+      ],
+      "return_annotation": "List"
+    },
+    "structured_upsert_watchlist_item": {
+      "name": "structured_upsert_watchlist_item",
+      "docstring": null,
+      "parameters": [
+        {
+          "name": "self",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "<EMPTY>",
+          "annotation": "empty"
+        },
+        {
+          "name": "symbol",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "<EMPTY>",
+          "annotation": "str"
+        },
+        {
+          "name": "asset_type",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "<EMPTY>",
+          "annotation": "str"
+        },
+        {
+          "name": "target_price",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": null,
+          "annotation": "Optional"
+        },
+        {
+          "name": "notes",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "",
+          "annotation": "str"
+        },
+        {
+          "name": "portfolio_id",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "default",
+          "annotation": "str"
+        }
+      ],
+      "return_annotation": "WatchlistState"
+    },
+    "sync_dividends_from_history": {
+      "name": "sync_dividends_from_history",
+      "docstring": "Sync dividend payouts and history for holdings.",
+      "parameters": [
+        {
+          "name": "self",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "<EMPTY>",
+          "annotation": "empty"
+        },
+        {
+          "name": "portfolio_id",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "default",
+          "annotation": "str"
+        }
+      ],
+      "return_annotation": "Dict"
+    },
+    "sync_market_prices": {
+      "name": "sync_market_prices",
+      "docstring": null,
+      "parameters": [
+        {
+          "name": "self",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "<EMPTY>",
+          "annotation": "empty"
+        },
+        {
+          "name": "portfolio_id",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "default",
+          "annotation": "str"
+        }
+      ],
+      "return_annotation": "str"
+    },
+    "update_fx_rate": {
+      "name": "update_fx_rate",
+      "docstring": null,
+      "parameters": [
+        {
+          "name": "self",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "<EMPTY>",
+          "annotation": "empty"
+        },
+        {
+          "name": "rate",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": null,
+          "annotation": "Optional"
+        },
+        {
+          "name": "portfolio_id",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "default",
+          "annotation": "str"
+        }
+      ],
+      "return_annotation": "str"
+    },
+    "update_portfolio_name": {
+      "name": "update_portfolio_name",
+      "docstring": null,
+      "parameters": [
+        {
+          "name": "self",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "<EMPTY>",
+          "annotation": "empty"
+        },
+        {
+          "name": "portfolio_id",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "<EMPTY>",
+          "annotation": "str"
+        },
+        {
+          "name": "name",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "<EMPTY>",
+          "annotation": "str"
+        }
+      ],
+      "return_annotation": "PortfolioMeta"
+    },
+    "update_trade_note": {
+      "name": "update_trade_note",
+      "docstring": null,
+      "parameters": [
+        {
+          "name": "self",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "<EMPTY>",
+          "annotation": "empty"
+        },
+        {
+          "name": "tx_id",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "<EMPTY>",
+          "annotation": "str"
+        },
+        {
+          "name": "notes",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "<EMPTY>",
+          "annotation": "str"
+        },
+        {
+          "name": "portfolio_id",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "default",
+          "annotation": "str"
+        }
+      ],
+      "return_annotation": "Dict"
+    }
+  }
+}
