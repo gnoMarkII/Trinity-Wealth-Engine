@@ -37,6 +37,8 @@ describe('EquityDetail', () => {
     
     expect(screen.getByText('bullish')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '📈 Chart' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '📑 Financials' })).toBeInTheDocument()
   })
 })
+
 

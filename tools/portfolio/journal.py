@@ -1,21 +1,25 @@
-from langsmith import traceable
-import concurrent.futures
-import csv
 import json
-import os
 import re
-import tempfile
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Literal
+from typing import Optional, List, Dict
 
-import frontmatter
-import yfinance as yf
-from filelock import FileLock, Timeout
+from filelock import Timeout
 from langchain_core.tools import tool
-from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from core.logger import get_logger
+from tools._atomic_io import _atomic_write_to
+from tools.tool_errors import LOCK_TIMEOUT, validation_error
+from .core import _get_portfolio_lock, _normalize_portfolio_id, _portfolio_exists
+from .constants import (
+    CASH_THB_SYMBOL,
+    CASH_USD_SYMBOL,
+    CASH_SYMBOL,
+    _CASH_SYMBOLS,
+    _LOCK_TIMEOUT,
+    PORTFOLIOS_DIR,
+    get_journal_filepath as _get_journal_filepath,
+)
 
 log = get_logger(__name__)
 
@@ -25,40 +29,8 @@ _JOURNAL_BLOCK_RE = re.compile(
     re.DOTALL | re.MULTILINE,
 )
 
-from tools._atomic_io import _atomic_write_to
-from tools.tool_errors import LOCK_TIMEOUT, validation_error
-from .core import _load_or_init, _save, _recalc_all, _recalc_holding, _recalc_summary, _find_holding, _require_cash, _require_fx, get_portfolio_state, _holding_currency, compute_allocation_breakdown
-from .models import _now_iso, _coerce_iso_string, Holding, Summary, PortfolioState, WatchlistItem, WatchlistState, GoalItem, GoalsState
-
-
-from .constants import *
-
-CASH_THB_SYMBOL = "CASH_THB"
-CASH_USD_SYMBOL = "CASH_USD"
-_CASH_SYMBOLS = (CASH_THB_SYMBOL, CASH_USD_SYMBOL)
-# Back-compat alias — call sites and tests still reference CASH_SYMBOL
-CASH_SYMBOL = CASH_THB_SYMBOL
-
-_FLOAT_EPS = 1e-6
-_MONEY_DP = 2
-_COST_DP = 6
-_PCT_DP = 2
-
-_LOCK_TIMEOUT = 15  # seconds — wait up to 15s for another process to release
-_PRICE_FETCH_TIMEOUT = 6  # seconds per symbol when refreshing
-
-from .core import _get_portfolio_lock, _load_or_init, _save, _portfolio_exists, _normalize_portfolio_id
-
-
-def _get_journal_filepath(portfolio_id: str = "default") -> Path:
-    pid = _normalize_portfolio_id(portfolio_id)
-    pdir = PORTFOLIOS_DIR / pid
-    pdir.mkdir(parents=True, exist_ok=True)
-    return pdir / "Trading_Journal.md"
-
 
 def _inject_journal_wikilinks(content: str) -> str:
-    """เติม ' — [[SYMBOL]]' หลัง trade title เพื่อเชื่อม Layer 3 → Layer 1 ใน Graph"""
     def _replace(m: re.Match) -> str:
         symbol = m.group(2)
         if symbol in _CASH_SYMBOLS:
@@ -68,7 +40,6 @@ def _inject_journal_wikilinks(content: str) -> str:
 
 
 def _write_journal_entry(content: str, date_str: str | None = None, portfolio_id: str = "default") -> str:
-    """Append timestamped block ลง Trading Journal — คืน timestamp ที่ใช้"""
     pid = _normalize_portfolio_id(portfolio_id)
     if pid != "default" and not _portfolio_exists(pid):
         raise ValueError(f"ไม่พบพอร์ตไอดี '{pid}' ในระบบ — ใช้ tool_create_portfolio ก่อน")
@@ -76,7 +47,7 @@ def _write_journal_entry(content: str, date_str: str | None = None, portfolio_id
     jpath.parent.mkdir(parents=True, exist_ok=True)
     if date_str and date_str.strip():
         val = date_str.strip()
-        if len(val) == 10:  # YYYY-MM-DD
+        if len(val) == 10:
             timestamp = f"{val} 12:00:00"
         else:
             timestamp = val
@@ -91,19 +62,7 @@ def _write_journal_entry(content: str, date_str: str | None = None, portfolio_id
 
 @tool
 def append_trading_journal(entry: str, portfolio_id: str = "default") -> str:
-    """บันทึกการเทรดและข้อคิดเห็น (Trading Journal)
-
-    [Usage/When to use]
-    ใช้จดบันทึกเหตุผลที่ซื้อ/ขาย สภาพตลาด บทเรียนที่ได้ หรือข้อผิดพลาด (Mistakes)
-    - เพื่อแยกข้อมูล Qualitative (เหตุผล) ออกจากข้อมูล Quantitative (ตัวเลข Portfolio)
-
-    [Caution]
-    - ไม่ใช้เพื่อแก้ข้อมูลพอร์ต ให้ใช้บันทึกเป็น Text เท่านั้น
-
-    Args:
-        entry (str): เนื้อหาที่จะบันทึก (ระบบจะลง Timestamp ให้อัตโนมัติ)
-        portfolio_id (str): พอร์ตการลงทุนที่ต้องการบันทึก (ค่าเริ่มต้น 'default')
-    """
+    """บันทึกการเทรดและข้อคิดเห็น (Trading Journal)"""
     content = (entry or "").strip()
     if not content:
         return validation_error("entry ต้องไม่ว่าง")
@@ -120,57 +79,7 @@ def append_trading_journal(entry: str, portfolio_id: str = "default") -> str:
     return f"[JOURNAL] บันทึกสำเร็จ | [{timestamp}] | {len(content)} chars"
 
 
-@tool
-def read_trading_journal(
-    days: int = 30,
-    keyword: str | None = None,
-    limit: int = 20,
-    portfolio_id: str = "default",
-) -> str:
-    """อ่านบันทึกการเทรด (Trading Journal) ย้อนหลัง
-
-    [Usage/When to use]
-    ใช้ดึงประวัติการบันทึกการลงทุน (Journal) เพื่อทบทวนเหตุผล ข้อคิด หรือสรุปบทเรียน
-    - สามารถระบุ keyword เพื่อกรองเฉพาะบันทึกที่เกี่ยวข้องได้
-
-    Args:
-        days (int): จำนวนวันย้อนหลังที่ต้องการดึง
-        keyword (str | None): คำที่ต้องการค้นหา
-        limit (int): จำนวนบันทึกสูงสุดที่จะแสดง
-        portfolio_id (str): พอร์ตการลงทุนที่ต้องการอ่าน (ค่าเริ่มต้น 'default')
-    Returns:
-        str: JSON string: {n_total_in_window, n_returned, filters_used, entries:[{timestamp, content}]}
-        entries เรียงจากใหม่สุดไปเก่าสุด
-    """
-    if days <= 0:
-        return validation_error("days ต้องมากกว่า 0")
-    if limit <= 0:
-        return validation_error("limit ต้องมากกว่า 0")
-
-    jpath = _get_journal_filepath(portfolio_id)
-    if not jpath.exists():
-        return json.dumps(
-            {"error": "ยังไม่มี Trading_Journal.md — ใช้ append_trading_journal บันทึกก่อน"},
-            ensure_ascii=False,
-        )
-
-    returned = get_structured_journal(days=days, keyword=keyword, limit=limit, portfolio_id=portfolio_id)
-    all_in_window = get_structured_journal(days=days, keyword=keyword, limit=1000000, portfolio_id=portfolio_id)
-
-    return json.dumps(
-        {
-            "n_total_in_window": len(all_in_window),
-            "n_returned": len(returned),
-            "filters_used": {"days": days, "keyword": keyword, "limit": limit},
-            "entries": returned,
-        },
-        ensure_ascii=False,
-        indent=2,
-    )
-
-
 def get_structured_journal(days: int | None = 365, keyword: str | None = None, limit: int = 100, portfolio_id: str = "default") -> list[dict]:
-    """Structured read accessor คืนค่า entries จาก Trading Journal เป็น list of dicts"""
     if days is None:
         days = 365
     jpath = _get_journal_filepath(portfolio_id)
@@ -198,8 +107,42 @@ def get_structured_journal(days: int | None = 365, keyword: str | None = None, l
     return entries[:limit]
 
 
+@tool
+def read_trading_journal(
+    days: int = 30,
+    keyword: str | None = None,
+    limit: int = 20,
+    portfolio_id: str = "default",
+) -> str:
+    """อ่านบันทึกการเทรด (Trading Journal) ย้อนหลัง"""
+    if days <= 0:
+        return validation_error("days ต้องมากกว่า 0")
+    if limit <= 0:
+        return validation_error("limit ต้องมากกว่า 0")
+
+    jpath = _get_journal_filepath(portfolio_id)
+    if not jpath.exists():
+        return json.dumps(
+            {"error": "ยังไม่มี Trading_Journal.md — ใช้ append_trading_journal บันทึกก่อน"},
+            ensure_ascii=False,
+        )
+
+    returned = get_structured_journal(days=days, keyword=keyword, limit=limit, portfolio_id=portfolio_id)
+    all_in_window = get_structured_journal(days=days, keyword=keyword, limit=1000000, portfolio_id=portfolio_id)
+
+    return json.dumps(
+        {
+            "n_total_in_window": len(all_in_window),
+            "n_returned": len(returned),
+            "filters_used": {"days": days, "keyword": keyword, "limit": limit},
+            "entries": returned,
+        },
+        ensure_ascii=False,
+        indent=2,
+    )
+
+
 def structured_append_journal(entry: str, portfolio_id: str = "default") -> list[dict]:
-    """Structured mutation accessor สำหรับบันทึก Trading Journal คืนรายการล่าสุดเป็น list of dicts"""
     content = (entry or "").strip()
     if not content:
         raise ValueError("entry ต้องไม่ว่าง")
@@ -207,6 +150,3 @@ def structured_append_journal(entry: str, portfolio_id: str = "default") -> list
     with lock:
         _write_journal_entry(content, portfolio_id=portfolio_id)
     return get_structured_journal(days=365, limit=100, portfolio_id=portfolio_id)
-
-
-

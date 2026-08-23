@@ -1,74 +1,35 @@
-from langsmith import traceable
-import concurrent.futures
 import csv
 from io import StringIO
 import json
 import os
-import re
-import tempfile
-from datetime import datetime, timedelta
+from datetime import datetime
 from pathlib import Path
-from typing import Literal
+from typing import Literal, Optional, List, Dict
 
 import frontmatter
-import yfinance as yf
 from filelock import FileLock, Timeout
 from langchain_core.tools import tool
-from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from core.logger import get_logger
+from tools._atomic_io import _atomic_write_to
+from tools.tool_errors import LOCK_TIMEOUT, validation_error
+from .models import _now_iso, PortfolioState, Holding, Summary
+from .core import _load_or_init, _save, _recalc_all, _compute_total_cost, _require_fx, _get_portfolio_lock
+from .prices import _refresh_prices
+from .constants import (
+    _MONEY_DP,
+    _PCT_DP,
+    _LOCK_TIMEOUT,
+    _PERFORMANCE_LOG_HEADER,
+)
+from .adapters.markdown.paths import get_performance_filepath as _get_performance_filepath
 
 log = get_logger(__name__)
 
 
-from tools._atomic_io import _atomic_write_to
-from tools.tool_errors import LOCK_TIMEOUT, validation_error
-from .models import _now_iso, _coerce_iso_string, Holding, Summary, PortfolioState, WatchlistItem, WatchlistState, GoalItem, GoalsState
-from .core import _load_or_init, _save, _recalc_all, _recalc_holding, _recalc_summary, _compute_total_cost, _find_holding, _require_cash, _require_fx, get_portfolio_state, _holding_currency, compute_allocation_breakdown
-from .prices import fetch_latest_price, _fetch_last_price, _fetch_fx_rate, _refresh_prices, sync_market_prices
-from .journal import append_trading_journal, _inject_journal_wikilinks, _write_journal_entry
-
-
-from .constants import *
-from .constants import _PERFORMANCE_LOG_HEADER
-
-CASH_THB_SYMBOL = "CASH_THB"
-CASH_USD_SYMBOL = "CASH_USD"
-_CASH_SYMBOLS = (CASH_THB_SYMBOL, CASH_USD_SYMBOL)
-# Back-compat alias — call sites and tests still reference CASH_SYMBOL
-CASH_SYMBOL = CASH_THB_SYMBOL
-
-_FLOAT_EPS = 1e-6
-_MONEY_DP = 2
-_COST_DP = 6
-_PCT_DP = 2
-
-_LOCK_TIMEOUT = 15  # seconds — wait up to 15s for another process to release
-_PRICE_FETCH_TIMEOUT = 6  # seconds per symbol when refreshing
-
-from .core import _get_portfolio_lock, _load_or_init, _save, _normalize_portfolio_id
-
-
-def _get_performance_filepath(portfolio_id: str = "default") -> Path:
-    pid = _normalize_portfolio_id(portfolio_id)
-    pdir = PORTFOLIOS_DIR / pid
-    pdir.mkdir(parents=True, exist_ok=True)
-    return pdir / "Performance_Log.csv"
-
-
 @tool
 def record_performance_snapshot(refresh_prices: bool = True, portfolio_id: str = "default") -> str:
-    """บันทึก Snapshot สถานะพอร์ตโฟลิโอ ณ สิ้นวัน (Performance Logging)
-
-    [Usage/When to use]
-    ใช้บันทึกประวัติการเติบโตของพอร์ตประจำวัน (Time-series) ลงใน CSV
-    - บันทึก Date, Total_NAV, Total_Cost, Unrealized_PnL, Cash_Balance
-    - ทำงานภายใต้ portfolio lock และแทนที่บรรทัดเดิมทันทีหากเป็นวันเดียวกัน (Atomic Upsert)
-
-    Args:
-        refresh_prices (bool): True (อัปเดตราคาล่าสุดก่อนบันทึก, default)
-        portfolio_id (str): พอร์ตการลงทุนที่ต้องการบันทึก snapshot (ค่าเริ่มต้น 'default')
-    """
+    """บันทึก Snapshot สถานะพอร์ตโฟลิโอ ณ สิ้นวัน (Performance Logging)"""
     lock = _get_portfolio_lock(portfolio_id)
     try:
         with lock:
@@ -148,7 +109,6 @@ def record_performance_snapshot(refresh_prices: bool = True, portfolio_id: str =
 
 
 def get_structured_performance_history(days: int | None = None, portfolio_id: str = "default") -> list[dict]:
-    """Structured read accessor คืนค่าประวัติ Performance เป็น list of dicts"""
     perf_path = _get_performance_filepath(portfolio_id)
     if not perf_path.exists():
         return []
@@ -180,23 +140,9 @@ def get_structured_performance_history(days: int | None = None, portfolio_id: st
     return result
 
 
-
 @tool
 def read_performance_history(days: int = 30, portfolio_id: str = "default") -> str:
-    """อ่านประวัติและวิเคราะห์ผลตอบแทนของพอร์ตโฟลิโอ (Performance Analytics)
-
-    [Usage/When to use]
-    ใช้เมื่อต้องการวิเคราะห์การเติบโต NAV, Drawdown, หรือผลตอบแทนย้อนหลัง
-    - ระบบจะคำนวณ metrics เช่น P&L, Drawdown ให้อัตโนมัติ
-
-    Args:
-        days (int): จำนวนวันย้อนหลังที่ต้องการวิเคราะห์ (default 30)
-        portfolio_id (str): พอร์ตการลงทุนที่ต้องการอ่าน (ค่าเริ่มต้น 'default')
-
-    Returns:
-        str: สรุปผลตอบแทนและ Metrics ในรูปแบบ Markdown
-    """
-
+    """อ่านประวัติและวิเคราะห์ผลตอบแทนของพอร์ตโฟลิโอ (Performance Analytics)"""
     if days <= 0:
         return validation_error("days ต้องมากกว่า 0")
 
@@ -225,7 +171,6 @@ def read_performance_history(days: int = 30, portfolio_id: str = "default") -> s
     change_abs = latest_nav - first_nav
     change_pct = (change_abs / first_nav * 100) if first_nav > 0 else 0.0
 
-    # Max drawdown: running peak จาก left → right, เทียบ current value
     peak = navs[0]
     max_dd = 0.0
     for nav in navs:
@@ -253,5 +198,3 @@ def read_performance_history(days: int = 30, portfolio_id: str = "default") -> s
         ensure_ascii=False,
         indent=2,
     )
-
-

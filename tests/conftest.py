@@ -120,14 +120,32 @@ def _pin_portfolio_vault_baseline(monkeypatch):
         "tools.portfolio.performance": "perf",
         "tools.portfolio.dividends": "dividends",
         "tools.portfolio.ledger_replay": "ledger_replay",
+        "tools.portfolio.adapters.markdown.paths": "md_paths",
     }
     live_mods = {}
+    portfolios_dir = safe_vault / "20_Portfolio_Management/Current_Holdings/Portfolios"
+    default_dir = portfolios_dir / "default"
+    goals_path = safe_vault / "20_Portfolio_Management/Goals/Goals.md"
+    goals_items_dir = safe_vault / "20_Portfolio_Management/Goals/Items"
+    watchlist_path = safe_vault / "20_Portfolio_Management/Watchlist/Watchlist.md"
+    watchlist_items_dir = safe_vault / "20_Portfolio_Management/Watchlist/Items"
+    journal_path = safe_vault / "20_Portfolio_Management/Trading_Journal.md"
+    journal_dir = safe_vault / "20_Portfolio_Management/Journal"
+
     for mod_name, key in mod_key_by_name.items():
         mod = sys.modules.get(mod_name)
         if mod is not None:
             monkeypatch.setattr(mod, "VAULT_PATH", safe_vault, raising=False)
-            monkeypatch.setattr(mod, "PORTFOLIOS_DIR", safe_vault / "20_Portfolio_Management/Current_Holdings/Portfolios", raising=False)
-            monkeypatch.setattr(mod, "GOALS_PATH", safe_vault / "20_Portfolio_Management/Goals/Goals.md", raising=False)
+            monkeypatch.setattr(mod, "PORTFOLIOS_DIR", portfolios_dir, raising=False)
+            monkeypatch.setattr(mod, "PORTFOLIO_PATH", default_dir / "Portfolio_Holdings.md", raising=False)
+            monkeypatch.setattr(mod, "HOLDINGS_DIR", default_dir / "Holdings", raising=False)
+            monkeypatch.setattr(mod, "TRADES_LOG_PATH", default_dir / "Trades_Log.csv", raising=False)
+            monkeypatch.setattr(mod, "GOALS_PATH", goals_path, raising=False)
+            monkeypatch.setattr(mod, "GOALS_ITEMS_DIR", goals_items_dir, raising=False)
+            monkeypatch.setattr(mod, "WATCHLIST_PATH", watchlist_path, raising=False)
+            monkeypatch.setattr(mod, "WATCHLIST_ITEMS_DIR", watchlist_items_dir, raising=False)
+            monkeypatch.setattr(mod, "JOURNAL_PATH", journal_path, raising=False)
+            monkeypatch.setattr(mod, "JOURNAL_DIR", journal_dir, raising=False)
             live_mods[key] = mod
 
     rp = sys.modules.get("api.routes_portfolio")
@@ -157,8 +175,14 @@ def _reset_portfolio_modules(tmp_vault, monkeypatch):
     import sys
 
     for mod_name in list(sys.modules):
-        if mod_name.startswith("tools.portfolio.") or mod_name.startswith("tools.portfolio_tools"):
+        if mod_name == "tools.portfolio" or mod_name.startswith("tools.portfolio.") or mod_name.startswith("tools.portfolio_tools"):
             del sys.modules[mod_name]
+
+    vpath = Path(tmp_vault).resolve()
+    monkeypatch.setenv("OBSIDIAN_VAULT_PATH", str(vpath))
+
+    import tools.archivist.core as arch_core
+    monkeypatch.setattr(arch_core, "VAULT_PATH", vpath, raising=False)
 
     import tools.portfolio.constants as constants
     import tools.portfolio.core as core
@@ -170,12 +194,45 @@ def _reset_portfolio_modules(tmp_vault, monkeypatch):
     import tools.portfolio.performance as perf
     import tools.portfolio.dividends as dividends
     import tools.portfolio.ledger_replay as ledger_replay
+    import tools.portfolio.adapters.markdown.paths as md_paths
+    from tools.portfolio import set_default_service_for_testing
+    set_default_service_for_testing(None)
 
-    vpath = Path(tmp_vault).resolve()
-    for mod in [constants, core, trading, watchlist, goals, journal, prices, perf, dividends, ledger_replay]:
+    all_mods = [
+        constants, core, trading, watchlist, goals, journal, prices, perf, dividends, ledger_replay, md_paths
+    ]
+
+    portfolios_dir = vpath / "20_Portfolio_Management/Current_Holdings/Portfolios"
+    default_dir = portfolios_dir / "default"
+    goals_path = vpath / "20_Portfolio_Management/Goals/Goals.md"
+    goals_items_dir = vpath / "20_Portfolio_Management/Goals/Items"
+    watchlist_path = vpath / "20_Portfolio_Management/Watchlist/Watchlist.md"
+    watchlist_items_dir = vpath / "20_Portfolio_Management/Watchlist/Items"
+    journal_path = vpath / "20_Portfolio_Management/Trading_Journal.md"
+    journal_dir = vpath / "20_Portfolio_Management/Journal"
+
+    for mod in all_mods:
         monkeypatch.setattr(mod, "VAULT_PATH", vpath, raising=False)
-        monkeypatch.setattr(mod, "PORTFOLIOS_DIR", vpath / "20_Portfolio_Management/Current_Holdings/Portfolios", raising=False)
-        monkeypatch.setattr(mod, "GOALS_PATH", vpath / "20_Portfolio_Management/Goals/Goals.md", raising=False)
+        monkeypatch.setattr(mod, "PORTFOLIOS_DIR", portfolios_dir, raising=False)
+        monkeypatch.setattr(mod, "PORTFOLIO_PATH", default_dir / "Portfolio_Holdings.md", raising=False)
+        monkeypatch.setattr(mod, "HOLDINGS_DIR", default_dir / "Holdings", raising=False)
+        monkeypatch.setattr(mod, "TRADES_LOG_PATH", default_dir / "Trades_Log.csv", raising=False)
+        monkeypatch.setattr(mod, "GOALS_PATH", goals_path, raising=False)
+        monkeypatch.setattr(mod, "GOALS_ITEMS_DIR", goals_items_dir, raising=False)
+        monkeypatch.setattr(mod, "WATCHLIST_PATH", watchlist_path, raising=False)
+        monkeypatch.setattr(mod, "WATCHLIST_ITEMS_DIR", watchlist_items_dir, raising=False)
+        monkeypatch.setattr(mod, "JOURNAL_PATH", journal_path, raising=False)
+        monkeypatch.setattr(mod, "JOURNAL_DIR", journal_dir, raising=False)
+
+    from filelock import FileLock
+    goals_lock = FileLock(str(goals_path) + ".lock", timeout=15)
+    monkeypatch.setattr(goals, "_goals_lock", goals_lock, raising=False)
+
+    watchlist_lock = FileLock(str(watchlist_path) + ".lock", timeout=15)
+    monkeypatch.setattr(watchlist, "_watchlist_lock", watchlist_lock, raising=False)
+
+    journal_lock = FileLock(str(journal_path) + ".lock", timeout=15)
+    monkeypatch.setattr(journal, "_journal_lock", journal_lock, raising=False)
 
     if "api.routes_portfolio" in sys.modules:
         import api.routes_portfolio as rp

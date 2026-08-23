@@ -31,6 +31,7 @@ from api.schemas import (
     ValuationTargetsDTO,
     AnalystContextDTO,
     EarningsHistoryEntryDTO,
+    FinancialStatementsDTO,
 )
 from api.state_db import (
     get_connection,
@@ -43,6 +44,7 @@ from api.state_db import (
 from tools.market.asset_resolver import resolve_asset
 from tools.market.calendar import get_asset_calendar
 from tools.market.earnings import fetch_earnings_dates, finite_or_none
+from tools.market.financials import get_financial_statements
 from tools.market.sec_form4_pipeline import sync_insider_filings_from_yfinance
 
 from core.nlp_utils import calculate_freshness
@@ -1013,6 +1015,52 @@ def get_equity_analyst_context(ticker: str) -> AnalystContextDTO:
             provider_tier="best_effort",
             synced_at=synced_at_str,
         )
+
+
+@router.get("/{ticker}/financials", response_model=FinancialStatementsDTO)
+def get_equity_financial_statements(
+    ticker: str,
+    market: Optional[str] = None,
+    force_refresh: bool = False,
+    session: dict = Depends(require_session),
+) -> FinancialStatementsDTO:
+    """ดึงข้อมูลงบการเงินย้อนหลัง (Income Statement, Balance Sheet, Cash Flow) พร้อมระบบ Dual-Provider (EDGAR/yfinance)"""
+    clean_ticker = ticker.strip().upper()
+    if not clean_ticker or len(clean_ticker) > 20 or not re.match(r"^[A-Z0-9.\-_]+$", clean_ticker):
+        raise HTTPException(status_code=400, detail="Invalid ticker format")
+
+    # 1. Authoritative Market & Asset Resolution
+    resolved = resolve_asset(clean_ticker)
+    if not resolved:
+        raise HTTPException(status_code=404, detail=f"Asset not found for ticker: {clean_ticker}")
+
+    provider_symbol = resolved.provider_symbol or clean_ticker
+    resolved_market: Literal["US", "TH"] = "TH" if (resolved.market == "TH" or provider_symbol.endswith(".BK")) else "US"
+
+    # ตรวจสอบว่าเป็น Equity หรือไม่
+    asset_class_str = resolved.asset_class.value if hasattr(resolved.asset_class, "value") else str(resolved.asset_class)
+    if asset_class_str not in ["STOCK_US", "STOCK_TH", "equity"]:
+        raise HTTPException(status_code=400, detail=f"Asset {clean_ticker} is not an equity ({asset_class_str})")
+
+    # 2. ตรวจสอบหาก Client แนบ market query param มา แล้วขัดแย้งกับ authoritative market
+    if market:
+        req_market = market.strip().upper()
+        if req_market not in ["US", "TH"]:
+            raise HTTPException(status_code=400, detail=f"Invalid market query param: {market}")
+        if req_market != resolved_market:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Market mismatch: requested market '{req_market}' does not match authoritative market '{resolved_market}' for {clean_ticker}",
+            )
+
+    provider_symbol = resolved.provider_symbol or clean_ticker
+    return get_financial_statements(
+        ticker=clean_ticker,
+        market=resolved_market,  # type: ignore
+        provider_symbol=provider_symbol,
+        force_refresh=force_refresh,
+    )
+
 
 
 

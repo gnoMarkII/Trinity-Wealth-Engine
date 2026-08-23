@@ -115,6 +115,16 @@ export const api = {
       { signal }
     ),
 
+  getEquityFinancials: (ticker: string, market?: 'US' | 'TH', forceRefresh = false, signal?: AbortSignal) => {
+    const params = new URLSearchParams({ force_refresh: String(forceRefresh) })
+    if (market) params.set('market', market)
+    return request<import('./types').FinancialStatementsDTO>(
+      `/api/equity/${encodeURIComponent(ticker)}/financials?${params.toString()}`,
+      { signal }
+    )
+  },
+
+
 
 
 

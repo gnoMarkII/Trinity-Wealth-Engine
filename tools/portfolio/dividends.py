@@ -31,7 +31,6 @@ def _normalize_tz_series(s: pd.Series | None) -> pd.Series | None:
     s = s.copy()
     if hasattr(s.index, "tz") and s.index.tz is not None:
         s.index = s.index.tz_localize(None)
-    # Normalize timestamps to midnight for clean date matching
     if hasattr(s.index, "normalize"):
         s.index = s.index.normalize()
     return s
@@ -99,13 +98,11 @@ def _parse_trades_for_symbol(trades_rows: list[list[str]], symbol: str) -> list[
     for r in trades_rows:
         if len(r) < 5:
             continue
-        # header: Transaction_ID, Timestamp, Symbol, Action, Units, ...
         r_sym = r[2].strip().upper()
         if r_sym != sym_norm:
             continue
         try:
             raw_ts = r[1].strip()
-            # Parse ISO or YYYY-MM-DD
             trade_dt = datetime.fromisoformat(raw_ts).date() if "T" in raw_ts else datetime.strptime(raw_ts[:10], "%Y-%m-%d").date()
             action = r[3].strip().upper()
             units = float(r[4])
@@ -114,7 +111,6 @@ def _parse_trades_for_symbol(trades_rows: list[list[str]], symbol: str) -> list[
         except Exception as e:
             log.debug("error parsing trade row %s: %s", r, e)
 
-    # Sort chronological
     timeline.sort(key=lambda x: x[0])
     return timeline
 
@@ -190,7 +186,6 @@ def _calculate_symbol_dividends(
     if divs is None or divs.empty:
         return empty_res
 
-    # Normalize timezone
     divs = _normalize_tz_series(divs)
     tax_rate = _get_withholding_tax_rate(currency)
     rounds: list[dict] = []
@@ -203,7 +198,6 @@ def _calculate_symbol_dividends(
 
     today = date.today()
 
-    # Identify the latest XD date in history to avoid bleeding calendar_pay_date to old rounds
     latest_xd_date: date | None = None
     for ts in divs.index:
         d = ts.date() if hasattr(ts, "date") else ts
@@ -224,9 +218,6 @@ def _calculate_symbol_dividends(
         if units_held <= _FLOAT_EPS:
             continue
 
-        # Determine pay_date:
-        # Match calendar_pay_date ONLY if this round exactly matches calendar_ex_date,
-        # or if calendar_ex_date is unavailable and this is the latest XD date
         pay_date_val: date | None = None
         if calendar_pay_date and calendar_ex_date and xd_date == calendar_ex_date:
             pay_date_val = calendar_pay_date
@@ -239,10 +230,8 @@ def _calculate_symbol_dividends(
         ):
             pay_date_val = calendar_pay_date
         else:
-            # Standard empirical lag: US ~21 days, TH ~21 days
             pay_date_val = xd_date + timedelta(days=21)
 
-        # Status: "received" if pay_date <= today and xd_date <= today, else "upcoming"
         status = "received" if (pay_date_val <= today and xd_date <= today) else "upcoming"
 
         fx_rate = _get_fx_at_date(fx_series, xd_date, fallback_fx) if currency == "USD" else 1.0
@@ -277,7 +266,6 @@ def _calculate_symbol_dividends(
             upcoming_net_native += net_native
             upcoming_count += 1
 
-    # Sort rounds latest ex_date first
     rounds.sort(key=lambda r: r["ex_date"], reverse=True)
     return {
         "rounds": rounds,
@@ -291,23 +279,15 @@ def _calculate_symbol_dividends(
 
 
 def sync_dividends_from_history(portfolio_id: str = "default") -> dict:
-    """Calculate and synchronize accumulated dividends from Trades_Log and yfinance history.
-
-    Uses a 3-Phase Narrow Lock Architecture:
-    1. Phase 1: Short Lock to snapshot eligible targets and Trades_Log.
-    2. Phase 2: No Lock for concurrent network dividend fetching and historical FX lookup.
-    3. Phase 3: Short Lock to reload fresh state, perform TOCTOU re-check, and apply updates.
-    """
+    """Calculate and synchronize accumulated dividends from Trades_Log and yfinance history."""
     pid = _normalize_portfolio_id(portfolio_id)
     lock = _get_portfolio_lock(pid)
 
-    # ─── PHASE 1: Short Lock (Read Snapshot) ───
     with lock:
         _migrate_trades_log_if_needed(pid)
         post, state = _load_or_init(portfolio_id=pid)
         fallback_fx = state.fx_rates.get("USDTHB", 36.5)
 
-        # Filter eligible non-cash holdings
         targets: list[tuple[str, str]] = []
         skipped_manual: list[str] = []
 
@@ -320,7 +300,6 @@ def sync_dividends_from_history(portfolio_id: str = "default") -> dict:
                 curr = _holding_currency(h)
                 targets.append((h.symbol, curr))
 
-        # Read Trades_Log.csv rows
         trades_path = _get_trades_log_filepath(pid)
         trades_rows: list[list[str]] = []
         if trades_path.exists():
@@ -329,7 +308,7 @@ def sync_dividends_from_history(portfolio_id: str = "default") -> dict:
                 reader = csv.reader(io.StringIO(content))
                 rows = list(reader)
                 if rows:
-                    trades_rows = rows[1:]  # skip header
+                    trades_rows = rows[1:]
             except Exception as e:
                 log.warning("failed to read trades log for %s: %s", pid, e)
 
@@ -345,7 +324,6 @@ def sync_dividends_from_history(portfolio_id: str = "default") -> dict:
             "details": {},
         }
 
-    # ─── PHASE 2: No Lock (Network & In-Memory Computation) ───
     earliest_date_str = "2020-01-01"
     for r in trades_rows:
         if len(r) > 1 and r[1].strip():
@@ -378,7 +356,6 @@ def sync_dividends_from_history(portfolio_id: str = "default") -> dict:
                     "upcoming_count": 0,
                 }
 
-    # ─── PHASE 3: Short Lock (Reload, TOCTOU Re-check, and Save) ───
     with lock:
         post, state = _load_or_init(portfolio_id=pid)
         total_rounds = 0
@@ -395,7 +372,6 @@ def sync_dividends_from_history(portfolio_id: str = "default") -> dict:
             if target_h is None:
                 continue
 
-            # TOCTOU Check: If holding was edited manually during Phase 2, do NOT overwrite
             if target_h.dividend_source == "manual":
                 if sym not in final_skipped_manual:
                     final_skipped_manual.append(sym)
@@ -415,29 +391,9 @@ def sync_dividends_from_history(portfolio_id: str = "default") -> dict:
             total_upcoming_thb += res["upcoming_net_thb"]
             details[sym] = rounds
 
-        # Anti-Drift: Re-derive summary total_accumulated_dividend (Received only!)
-        total_acc_div = round(
+        state.summary.total_accumulated_dividend = round(
             sum(h.accumulated_dividend_thb or 0.0 for h in state.holdings), _MONEY_DP
         )
-        state.summary.total_accumulated_dividend = total_acc_div
-
-        # Calculate YTD received dividends for passive_income_ytd
-        current_year = str(datetime.now().year)
-        ytd_received = 0.0
-        for h in state.holdings:
-            for r in (h.dividend_rounds or []):
-                status_val = getattr(r, "status", None)
-                if status_val == "received":
-                    date_val = getattr(r, "pay_date", None) or getattr(r, "ex_date", None) or ""
-                    if date_val.startswith(current_year):
-                        ytd_received += (getattr(r, "net_thb", None) or 0.0)
-
-        # Sync passive_income_ytd if it's currently 0 or smaller than ytd_received
-        if ytd_received > 0 and (state.summary.passive_income_ytd or 0.0) < ytd_received:
-            state.summary.passive_income_ytd = round(ytd_received, _MONEY_DP)
-        elif total_acc_div > 0 and (state.summary.passive_income_ytd or 0.0) == 0.0:
-            state.summary.passive_income_ytd = total_acc_div
-
         _save(post, state, portfolio_id=pid)
 
     return {

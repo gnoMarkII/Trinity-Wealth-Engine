@@ -1,882 +1,46 @@
-from langsmith import traceable
-import concurrent.futures
-import csv
-import io
-import json
-import os
-import re
-import tempfile
-import uuid
-from datetime import datetime, timedelta
-from pathlib import Path
-from typing import Literal
-
-import frontmatter
-import yfinance as yf
-from filelock import FileLock, Timeout
-from langchain_core.tools import tool
-from pydantic import BaseModel, ConfigDict, Field, field_validator
-
-from core.logger import get_logger
-
-log = get_logger(__name__)
-
-_EDITABLE_HOLDING_FIELDS = ("units", "avg_cost", "accumulated_dividend_thb", "asset_type")
-
-
-from tools._atomic_io import _atomic_write_to
-from tools.tool_errors import CASH_VIA_MANAGE, LOCK_TIMEOUT, validation_error
-from .models import _now_iso, _coerce_iso_string, Holding, Summary, PortfolioState, WatchlistItem, WatchlistState, GoalItem, GoalsState
-from .core import _load_or_init, _save, _recalc_all, _recalc_holding, _recalc_summary, _compute_total_cost, _find_holding, _require_cash, _require_fx, get_portfolio_state, _holding_currency, compute_allocation_breakdown, _get_portfolio_lock, _normalize_portfolio_id
-from .prices import fetch_latest_price, _fetch_last_price, _fetch_fx_rate, fetch_fx_rate, _refresh_prices, sync_market_prices, _USDTHB_TICKER
-from .journal import append_trading_journal, _inject_journal_wikilinks, _write_journal_entry
-
-
-from .constants import *
-from .constants import _TRADES_LOG_HEADER
-
-CASH_THB_SYMBOL = "CASH_THB"
-CASH_USD_SYMBOL = "CASH_USD"
-_CASH_SYMBOLS = (CASH_THB_SYMBOL, CASH_USD_SYMBOL)
-# Back-compat alias — call sites and tests still reference CASH_SYMBOL
-CASH_SYMBOL = CASH_THB_SYMBOL
-
-_FLOAT_EPS = 1e-6
-_MONEY_DP = 2
-_COST_DP = 6
-_PCT_DP = 2
-
-_LOCK_TIMEOUT = 15  # seconds — wait up to 15s for another process to release
-_PRICE_FETCH_TIMEOUT = 6  # seconds per symbol when refreshing
-
-
-def _get_trades_log_filepath(portfolio_id: str = "default") -> Path:
-    pid = _normalize_portfolio_id(portfolio_id)
-    pdir = PORTFOLIOS_DIR / pid
-    pdir.mkdir(parents=True, exist_ok=True)
-    return pdir / "Trades_Log.csv"
-
-
-def _sanitize_csv_field(value: str) -> str:
-    """กัน CSV/Formula injection — ถ้าค่าขึ้นต้นด้วยอักขระที่สเปรดชีตตีความเป็นสูตร
-    (=, +, -, @, tab, CR) ให้เติม ' นำหน้าเพื่อบังคับให้อ่านเป็น text เฉยๆ
-    """
-    if value and value[0] in ("=", "+", "-", "@", "\t", "\r"):
-        return "'" + value
-    return value
-
-
-@tool
-def execute_trade(
-    symbol: str,
-    asset_type: str,
-    action: Literal["buy", "sell"],
-    units: float,
-    price: float,
-    currency: Literal["THB", "USD"] = "THB",
-    notes: str = "",
-    portfolio_id: str = "default",
-) -> str:
-    """ดำเนินการเทรดซื้อหรือขายสินทรัพย์ พร้อมจัดการเงินสดและคำนวณต้นทุน/กำไรอัตโนมัติ
-
-    [Usage/When to use]
-    ใช้เมื่อผู้ใช้สั่งซื้อ (buy) หรือขาย (sell) สินทรัพย์
-    - [Buy] หักเงินสด (CASH) อัตโนมัติและสร้าง/อัปเดต Holding พร้อมคำนวณ Weighted-average cost
-    - [Sell] เพิ่มเงินสด (CASH) อัตโนมัติและคำนวณ Realized P&L
-    - ห้ามใช้เพื่อเพิ่มสินทรัพย์แบบดื้อๆ โดยไม่หักเงิน ให้ใช้ `batch_import_holdings` ถ้าเป็นการย้ายพอร์ตมา
-
-    [Caution]
-    - ต้องมีเงินสด (CASH_THB/USD) เพียงพอสำหรับการซื้อ หากไม่พอ Trade จะถูกปฏิเสธ
-    - การแก้ไขข้อผิดพลาดในการเทรดต้องใช้ `edit_holding` หรือถอนเงินเข้า/ออกผ่าน `manage_cash_flow`
-
-    Args:
-        symbol (str): Ticker ของสินทรัพย์ (เช่น 'AAPL', 'PTT')
-        asset_type (str): ประเภทสินทรัพย์ (เช่น 'Stock', 'ETF', 'Bond')
-        action (Literal["buy", "sell"]): ประเภทคำสั่ง
-        units (float): จำนวนหน่วยที่ทำรายการ (>0)
-        price (float): ราคาต่อหน่วย
-        currency (Literal["THB", "USD"]): สกุลเงินที่ใช้เทรด (มีผลกับบัญชี Cash ที่หัก/รับ)
-        notes (str): บันทึกเพิ่มเติมสำหรับรายการเทรดนี้
-        portfolio_id (str): พอร์ตการลงทุนที่ต้องการเทรด (ค่าเริ่มต้น 'default')
-    """
-    if symbol.strip().upper() in _CASH_SYMBOLS:
-        return CASH_VIA_MANAGE.format(symbols="/".join(_CASH_SYMBOLS))
-    if units <= 0:
-        return validation_error("units ต้องมากกว่า 0")
-    if price <= 0:
-        return validation_error("price ต้องมากกว่า 0")
-    if action not in ("buy", "sell"):
-        return validation_error("action ต้องเป็น 'buy' หรือ 'sell'")
-
-    lock = _get_portfolio_lock(portfolio_id)
-    try:
-        with lock:
-            return _execute_trade_locked(symbol, asset_type, action, units, price, currency, notes=notes, portfolio_id=portfolio_id)
-    except Timeout:
-        return LOCK_TIMEOUT.format(detail=f"portfolio lock {_LOCK_TIMEOUT}s")
-    except ValueError as e:
-        return f"Error: {e}"
-
-
-def _generate_tx_id() -> str:
-    return f"tx_{uuid.uuid4().hex[:12]}"
-
+from typing import Optional, List, Dict, Literal
+from tools.portfolio import get_default_service
+from tools.portfolio.domain.models import PortfolioState, Holding, _now_iso
+from tools.portfolio.domain.constants import (
+    CASH_THB_SYMBOL,
+    CASH_USD_SYMBOL,
+    CASH_SYMBOL,
+    _CASH_SYMBOLS,
+    _FLOAT_EPS,
+    _MONEY_DP,
+    _COST_DP,
+    _PCT_DP,
+    _EDITABLE_HOLDING_FIELDS,
+)
+from tools.portfolio.domain.calculations import compute_total_cost as _compute_total_cost
+from tools.portfolio.adapters.markdown.paths import (
+    get_trades_log_filepath as _get_trades_log_filepath,
+    _TRADES_LOG_HEADER,
+    _LOCK_TIMEOUT,
+)
+from tools.portfolio.adapters.markdown.repository_adapter import (
+    _sanitize_csv_field,
+    _read_and_migrate_trade_log_locked,
+)
 
 def _migrate_trades_log_if_needed(portfolio_id: str = "default") -> None:
-    """ตรวจสอบและ migrate ไฟล์ Trades_Log.csv ให้เป็นไปตาม _TRADES_LOG_HEADER ใหม่
-    - ถ้าไฟล์ยังเป็น 10 คอลัมน์ (ไม่มี Transaction_ID) หรือมีบางแถวที่ Transaction_ID ว่าง
-      จะ backfill Transaction_ID ให้เฉพาะแถวที่ว่าง และเขียนกลับไฟล์แบบ atomic
-    - ปลอดภัยและ idempotent (ไม่ regenerate ซ้ำถ้ามีอยู่แล้ว)
-    """
-    trades_log_path = _get_trades_log_filepath(portfolio_id)
-    if not trades_log_path.exists() or trades_log_path.stat().st_size == 0:
-        return
-
-    try:
-        content = trades_log_path.read_text(encoding="utf-8")
-    except Exception as e:
-        log.warning("Failed to read trades log for migration: %s", e)
-        return
-
-    if not content.strip():
-        return
-
-    reader = csv.reader(io.StringIO(content))
-    rows = list(reader)
-    if not rows:
-        return
-
-    header = rows[0]
-    data_rows = rows[1:]
-
-    needs_migration = False
-    has_tx_id_in_header = (len(header) > 0 and header[0] == "Transaction_ID")
-
-    if not has_tx_id_in_header:
-        needs_migration = True
-    else:
-        for r in data_rows:
-            if not r:
-                continue
-            if len(r) < len(_TRADES_LOG_HEADER) or not r[0].strip():
-                needs_migration = True
-                break
-
-    if not needs_migration:
-        return
-
-    migrated_rows: list[list[str]] = []
-    for r in data_rows:
-        if not r:
-            continue
-        if not has_tx_id_in_header:
-            padded = r + [""] * max(0, 10 - len(r))
-            tx_id = _generate_tx_id()
-            new_row = [tx_id] + padded[:10]
-            migrated_rows.append(new_row)
-        else:
-            padded = r + [""] * max(0, len(_TRADES_LOG_HEADER) - len(r))
-            tx_id = padded[0].strip() if padded[0].strip() else _generate_tx_id()
-            padded[0] = tx_id
-            migrated_rows.append(padded[:len(_TRADES_LOG_HEADER)])
-
-    out = io.StringIO()
-    writer = csv.writer(out, lineterminator="\n")
-    writer.writerow(_TRADES_LOG_HEADER)
-    for r in migrated_rows:
-        writer.writerow(r)
-
-    _atomic_write_to(trades_log_path, out.getvalue())
-    log.info("Migrated Trades_Log.csv for portfolio %s to 11 columns with Transaction_ID", portfolio_id)
-
-
-def _append_trade_ledger_row(
-    symbol: str,
-    action: str,
-    units: float,
-    price: float,
-    currency: str,
-    fx_rate: float | None,
-    cost_thb: float,
-    realized_pnl_thb: float | None = None,
-    notes: str = "",
-    timestamp: str | None = None,
-    portfolio_id: str = "default",
-) -> None:
-    """Append 1 แถวลงใน Trades_Log.csv ของพอร์ตนั้นๆ — เรียก migration ก่อนเสมอ"""
-    try:
-        _migrate_trades_log_if_needed(portfolio_id)
-        trades_log_path = _get_trades_log_filepath(portfolio_id)
-        trades_log_path.parent.mkdir(parents=True, exist_ok=True)
-        file_exists = trades_log_path.exists() and trades_log_path.stat().st_size > 0
-        tx_id = _generate_tx_id()
-        if timestamp and timestamp.strip():
-            ts = timestamp.strip()
-            if len(ts) == 10:
-                ts = f"{ts}T12:00:00"
-        else:
-            ts = _now_iso()
-        with trades_log_path.open("a", encoding="utf-8", newline="") as f:
-            writer = csv.writer(f, lineterminator="\n")
-            if not file_exists:
-                writer.writerow(_TRADES_LOG_HEADER)
-            writer.writerow([
-                tx_id,
-                ts,
-                symbol,
-                action.upper(),
-                f"{units:g}",
-                f"{price:.2f}",
-                currency,
-                f"{fx_rate:.4f}" if fx_rate is not None else "",
-                f"{cost_thb:.2f}",
-                f"{realized_pnl_thb:.2f}" if realized_pnl_thb is not None else "",
-                _sanitize_csv_field(notes),
-            ])
-    except Exception as e:
-        log.warning("Failed to append trade ledger row for %s: %s", symbol, e)
-
-
-def _execute_trade_locked(
-    symbol: str,
-    asset_type: str,
-    action: Literal["buy", "sell"],
-    units: float,
-    price: float,
-    currency: Literal["THB", "USD"],
-    notes: str = "",
-    fx_rate_override: float | None = None,
-    date: str | None = None,
-    portfolio_id: str = "default",
-) -> str:
-    post, state = _load_or_init(portfolio_id=portfolio_id)
-    cash = _require_cash(state, currency)
-    target = _find_holding(state, symbol)
-
-    fx_rate = (
-        fx_rate_override
-        if fx_rate_override is not None
-        else (_require_fx(state) if currency == "USD" else None)
-    )
-    # ทุก trade เคลื่อนเงินสดในสกุลเงินของตัวเอง (USD trade → CASH_USD, THB trade → CASH_THB)
-    amount_native = units * price
-
-    if action == "buy":
-        if cash.units + _FLOAT_EPS < amount_native:
-            raise ValueError(
-                f"Insufficient cash balance — มี {cash.units:,.2f} {currency} "
-                f"ต้องใช้ {amount_native:,.2f} {currency}"
-            )
-
-        if target is None:
-            new_h = Holding(
-                symbol=symbol,
-                asset_type=asset_type,
-                units=units,
-                accumulated_dividend_thb=0.0,
-            )
-            if currency == "USD":
-                new_h.avg_cost_usd = round(price, _COST_DP)
-                new_h.current_price_usd = price
-                new_h.fx_rate = fx_rate
-            else:
-                new_h.avg_cost_thb = round(price, _COST_DP)
-                new_h.current_price_thb = price
-            state.holdings.append(new_h)
-            target = new_h
-            avg_cost_note = ""
-        else:
-            if currency == "USD":
-                if target.avg_cost_usd is None:
-                    raise ValueError(
-                        f"{symbol} เป็นสินทรัพย์ THB อยู่แล้ว ไม่สามารถซื้อเพิ่มเป็น USD ได้"
-                    )
-                old_basis = target.units * target.avg_cost_usd
-                new_basis = units * price
-                target.units += units
-                target.avg_cost_usd = round((old_basis + new_basis) / target.units, _COST_DP)
-                target.current_price_usd = price
-                # fx_rate ของ holding คือ historical cost-basis FX — ห้าม update ตอน weighted-avg buy
-                # (ถ้าต้องการ true weighted-avg FX ต้อง refactor ที่ Holding model ทั้งหมด)
-                avg_cost_note = f" (Avg cost updated to ${target.avg_cost_usd:.2f})"
-            else:
-                if target.avg_cost_thb is None:
-                    raise ValueError(
-                        f"{symbol} เป็นสินทรัพย์ USD อยู่แล้ว ไม่สามารถซื้อเพิ่มเป็น THB ได้"
-                    )
-                old_basis = target.units * target.avg_cost_thb
-                new_basis = units * price
-                target.units += units
-                target.avg_cost_thb = round((old_basis + new_basis) / target.units, _COST_DP)
-                target.current_price_thb = price
-                avg_cost_note = f" (Avg cost updated to ฿{target.avg_cost_thb:.2f})"
-
-        cash.units = round(cash.units - amount_native, _MONEY_DP)
-        realized = 0.0
-        cost_thb = amount_native * fx_rate if currency == "USD" and fx_rate is not None else amount_native
-        action_tag = "[BUY]"
-        cashflow_sign = "-"
-
-    else:  # sell
-        if target is None:
-            raise ValueError(f"Insufficient units to sell — {symbol} ไม่มีในพอร์ต")
-        if units > target.units + _FLOAT_EPS:
-            raise ValueError(
-                f"Insufficient units to sell — มี {symbol} {target.units} หน่วย แต่สั่งขาย {units} หน่วย"
-            )
-
-        if currency == "USD":
-            if target.avg_cost_usd is None:
-                raise ValueError(f"{symbol} cost เป็น THB ไม่สามารถขายด้วย USD ได้")
-            realized = (price - target.avg_cost_usd) * units * fx_rate
-            cost_thb = target.avg_cost_usd * units * fx_rate
-            target.current_price_usd = price
-            # ไม่ update target.fx_rate — เป็น historical cost-basis ของหน่วยที่เหลือ
-        else:
-            if target.avg_cost_thb is None:
-                raise ValueError(f"{symbol} cost เป็น USD ไม่สามารถขายด้วย THB ได้")
-            realized = (price - target.avg_cost_thb) * units
-            cost_thb = target.avg_cost_thb * units
-            target.current_price_thb = price
-
-        target.units = round(target.units - units, _COST_DP)
-        cash.units = round(cash.units + amount_native, _MONEY_DP)
-        state.summary.total_realized_profit_ytd = round(
-            state.summary.total_realized_profit_ytd + realized, _MONEY_DP
-        )
-
-        if target.units < _FLOAT_EPS:
-            state.holdings.remove(target)
-
-        avg_cost_note = ""
-        action_tag = "[SELL]"
-        cashflow_sign = "+"
-
-    _save(post, state, portfolio_id=portfolio_id)
-    _append_trade_ledger_row(
-        symbol=symbol,
-        action=action,
-        units=units,
-        price=price,
-        currency=currency,
-        fx_rate=fx_rate,
-        cost_thb=cost_thb,
-        realized_pnl_thb=realized if action == "sell" else None,
-        notes=notes,
-        timestamp=date,
-        portfolio_id=portfolio_id,
-    )
-
-    cash_sym = CASH_USD_SYMBOL if currency == "USD" else CASH_THB_SYMBOL
-    cash_after = _find_holding(state, cash_sym)
-    cash_after_units = cash_after.units if cash_after else 0.0
-
-    price_str = f"${price:.2f}" if currency == "USD" else f"฿{price:.2f}"
-    parts = [
-        f"{action_tag} {symbol} {units:g} units @ {price_str}{avg_cost_note}",
-        f"กระแสเงินสด: {cashflow_sign}{amount_native:,.2f} {currency}",
-    ]
-    if action == "sell":
-        parts.append(f"Realized P/L: {realized:+,.2f} THB")
-    parts.append(f"{cash_sym} คงเหลือ: {cash_after_units:,.2f} {currency}")
-    return " | ".join(parts)
-
-
-@tool
-def record_income(
-    income_type: Literal["Dividend", "Interest", "Rental", "Other"],
-    amount_thb: float,
-    source_symbol: str | None = None,
-    portfolio_id: str = "default",
-) -> str:
-    """บันทึกรายรับ Passive Income (เช่น เงินปันผล, ดอกเบี้ย)
-
-    [Usage/When to use]
-    ใช้เมื่อผู้ใช้ได้รับเงินปันผล หรือรายรับอื่นๆ ที่ไม่ต้องขายสินทรัพย์
-    - ระบบจะบวกเงินสดเข้า CASH_THB อัตโนมัติ และอัปเดตสถิติ Passive Income YTD
-    - หากระบุ `source_symbol` จะบันทึกเป็นเงินปันผลสะสมของสินทรัพย์นั้นๆ ด้วย
-
-    Args:
-        income_type (Literal["Dividend", "Interest", "Rental", "Other"]): ประเภทรายได้
-        amount_thb (float): จำนวนเงิน (บาท)
-        source_symbol (str | None): Ticker ต้นทางที่จ่ายปันผล (ถ้ามี)
-        portfolio_id (str): พอร์ตการลงทุนที่ต้องการบันทึกรายรับ (ค่าเริ่มต้น 'default')
-    """
-    if amount_thb <= 0:
-        return validation_error("amount_thb ต้องมากกว่า 0")
-
-    lock = _get_portfolio_lock(portfolio_id)
-    try:
-        with lock:
-            return _record_income_locked(income_type, amount_thb, source_symbol, portfolio_id=portfolio_id)
-    except Timeout:
-        return LOCK_TIMEOUT.format(detail=f"portfolio lock {_LOCK_TIMEOUT}s")
-    except ValueError as e:
-        return f"Error: {e}"
-
-
-def _record_income_locked(
-    income_type: Literal["Dividend", "Interest", "Rental", "Other"],
-    amount_thb: float,
-    source_symbol: str | None,
-    portfolio_id: str = "default",
-) -> str:
-    post, state = _load_or_init(portfolio_id=portfolio_id)
-    cash = _require_cash(state)
-
-    target: Holding | None = None
-    if source_symbol:
-        src_norm = source_symbol.strip().upper()
-        if src_norm in _CASH_SYMBOLS:
-            raise ValueError(f"source_symbol ห้ามเป็น cash sentinel ({'/'.join(_CASH_SYMBOLS)})")
-        target = _find_holding(state, source_symbol)
-        if target is None:
-            raise ValueError(f"ไม่พบ {source_symbol} ใน portfolio")
-
-    cash.units = round(cash.units + amount_thb, _MONEY_DP)
-    state.summary.passive_income_ytd = round(
-        state.summary.passive_income_ytd + amount_thb, _MONEY_DP
-    )
-    state.summary.total_accumulated_dividend = round(
-        state.summary.total_accumulated_dividend + amount_thb, _MONEY_DP
-    )
-
-    if target is not None:
-        current = target.accumulated_dividend_thb or 0.0
-        target.accumulated_dividend_thb = round(current + amount_thb, _MONEY_DP)
-        target.dividend_source = "manual"
-
-    _save(post, state, portfolio_id=portfolio_id)
-
-    tag = {"Dividend": "[DIV]", "Interest": "[INT]", "Rental": "[RENT]"}.get(income_type, "[INCOME]")
-    src_note = f" จาก {source_symbol}" if source_symbol else ""
-    return (
-        f"{tag} +{amount_thb:,.2f} THB{src_note} | "
-        f"passive_income_ytd: {state.summary.passive_income_ytd:,.2f} | "
-        f"เงินสดคงเหลือ: {cash.units:,.2f} บาท"
-    )
-
-
-@tool
-def batch_import_holdings(
-    assets_list: list[dict],
-    mode: Literal["overwrite", "merge"] = "merge",
-    reset_cash_usd: bool = False,
-    portfolio_id: str = "default",
-) -> str:
-    """นำเข้า (Import) รายการสินทรัพย์หลายรายการพร้อมกัน
-
-    [Usage/When to use]
-    ใช้เมื่อผู้ใช้ต้องการย้ายพอร์ต หรือบันทึกสินทรัพย์เริ่มต้นโดยไม่ต้องผ่านการเทรดแบบหัก Cash
-    - โหมด 'merge' จะอัปเดตสินทรัพย์เดิมและเพิ่มสินทรัพย์ใหม่
-    - โหมด 'overwrite' จะล้างพอร์ตเดิม (ยกเว้นเงินสด) และทับด้วยข้อมูลใหม่
-
-    [Caution]
-    - การใช้โหมด 'overwrite' จะลบประวัติพอร์ตเก่า ต้องระวัง!
-
-    Args:
-        assets_list (list[dict]): รายการสินทรัพย์ (symbol, asset_type, units, avg_cost, currency)
-        mode (Literal["overwrite", "merge"]): โหมดนำเข้า ค่าเริ่มต้นคือ 'merge'
-        reset_cash_usd (bool): หาก True จะตั้งค่าเงินสด USD เป็น 0 ด้วย
-        portfolio_id (str): พอร์ตการลงทุนที่ต้องการนำเข้า (ค่าเริ่มต้น 'default')
-    """
-    if mode not in ("overwrite", "merge"):
-        return validation_error("mode ต้องเป็น 'overwrite' หรือ 'merge'")
-    if not isinstance(assets_list, list):
-        return validation_error("assets_list ต้องเป็น list")
-    if not assets_list and mode != "overwrite":
-        return validation_error("assets_list ต้องเป็น list ที่ไม่ว่าง")
-
-    # ─── 1. Pre-validate + normalize + duplicate check (ไม่ต้องล็อก) ───
-    normalized: list[dict] = []
-    seen: set[str] = set()
-    for i, a in enumerate(assets_list):
-        if not isinstance(a, dict):
-            return validation_error(f"item ลำดับ {i} ไม่ใช่ dict")
-        try:
-            sym = str(a["symbol"]).strip().upper()
-            asset_type = str(a["asset_type"]).strip()
-            units = float(a["units"])
-            avg_cost = float(a["avg_cost"])
-            currency = str(a["currency"]).strip().upper()
-        except (KeyError, TypeError, ValueError) as e:
-            return validation_error(f"item ลำดับ {i}: field ขาดหรือ format ผิด — {e}")
-
-        if not sym:
-            return validation_error(f"item ลำดับ {i}: symbol ว่าง")
-        if sym in _CASH_SYMBOLS:
-            return CASH_VIA_MANAGE.format(symbols="/".join(_CASH_SYMBOLS))
-        if units <= 0:
-            return validation_error(f"{sym}: units ต้องมากกว่า 0")
-        if avg_cost <= 0:
-            return validation_error(f"{sym}: avg_cost ต้องมากกว่า 0")
-        if currency not in ("THB", "USD"):
-            return validation_error(f"{sym}: currency ต้องเป็น 'THB' หรือ 'USD' (got '{currency}')")
-        if sym in seen:
-            return validation_error(f"symbol '{sym}' ซ้ำใน assets_list")
-        seen.add(sym)
-
-        cp_raw = a.get("current_price")
-        current_price: float | None = None
-        if cp_raw is not None:
-            try:
-                current_price = float(cp_raw)
-            except (TypeError, ValueError) as e:
-                return validation_error(f"{sym}: current_price format ผิด — {e}")
-            if current_price <= 0:
-                return validation_error(f"{sym}: current_price ต้องมากกว่า 0 (หรือส่ง None เพื่อให้ระบบดึงให้)")
-
-        normalized.append({
-            "symbol": sym,
-            "asset_type": asset_type,
-            "units": units,
-            "avg_cost": avg_cost,
-            "currency": currency,
-            "current_price": current_price,
-            "_source": "provided" if current_price is not None else "pending",
-        })
-
-    # ─── 2. Parallel fetch ราคาที่ขาด (นอก lock เพื่อไม่บล็อก ops อื่น) ───
-    to_fetch = [a for a in normalized if a["_source"] == "pending"]
-    if to_fetch:
-        with concurrent.futures.ThreadPoolExecutor(max_workers=min(8, len(to_fetch))) as ex:
-            future_map = {
-                ex.submit(fetch_latest_price, a["symbol"], a["currency"]): a
-                for a in to_fetch
-            }
-            try:
-                for future in concurrent.futures.as_completed(
-                    future_map, timeout=_PRICE_FETCH_TIMEOUT * 2
-                ):
-                    asset = future_map[future]
-                    try:
-                        price = future.result()
-                    except Exception:
-                        price = None
-                    if price is not None:
-                        asset["current_price"] = price
-                        asset["_source"] = "fetched"
-                    else:
-                        asset["current_price"] = asset["avg_cost"]
-                        asset["_source"] = "fallback_avg_cost"
-            except concurrent.futures.TimeoutError:
-                for f, asset in future_map.items():
-                    if not f.done():
-                        asset["current_price"] = asset["avg_cost"]
-                        asset["_source"] = "fallback_timeout"
-
-    # ─── 3. Acquire lock → mutate → save (atomic + recalc) ───
-    lock = _get_portfolio_lock(portfolio_id)
-    try:
-        with lock:
-            post, state = _load_or_init(portfolio_id=portfolio_id)
-            current_fx = _require_fx(state)
-
-            if mode == "overwrite":
-                state.holdings = [h for h in state.holdings if h.asset_type == "Cash"]
-                if reset_cash_usd:
-                    cash_usd = _find_holding(state, CASH_USD_SYMBOL)
-                    if cash_usd is not None:
-                        cash_usd.units = 0.0
-
-            for asset in normalized:
-                sym = asset["symbol"]
-                existing = next((h for h in state.holdings if h.symbol == sym), None)
-                preserved_div = (existing.accumulated_dividend_thb if existing else None) or 0.0
-
-                new_h = Holding(
-                    symbol=sym,
-                    asset_type=asset["asset_type"],
-                    units=round(asset["units"], _COST_DP),
-                    accumulated_dividend_thb=preserved_div,
-                )
-                if asset["currency"] == "USD":
-                    new_h.avg_cost_usd = round(asset["avg_cost"], _COST_DP)
-                    new_h.current_price_usd = float(asset["current_price"])
-                    new_h.fx_rate = current_fx
-                else:
-                    new_h.avg_cost_thb = round(asset["avg_cost"], _COST_DP)
-                    new_h.current_price_thb = float(asset["current_price"])
-
-                if existing is not None:
-                    state.holdings[state.holdings.index(existing)] = new_h
-                else:
-                    state.holdings.append(new_h)
-
-            _save(post, state, portfolio_id=portfolio_id)  # ← _recalc_all bottom-up + atomic write
-            total_nav = state.summary.total_value_thb
-            non_cash = sum(1 for h in state.holdings if h.asset_type != "Cash")
-    except Timeout:
-        return LOCK_TIMEOUT.format(detail=f"portfolio lock {_LOCK_TIMEOUT}s")
-    except ValueError as e:
-        return f"Error: {e}"
-
-    # ─── 4. รายงานผล (Channel B format §4.2) ───
-    counts = {"provided": 0, "fetched": 0, "fallback_avg_cost": 0, "fallback_timeout": 0}
-    for a in normalized:
-        counts[a["_source"]] = counts.get(a["_source"], 0) + 1
-    fallback_total = counts["fallback_avg_cost"] + counts["fallback_timeout"]
-
-    return (
-        f"[IMPORT {mode.upper()}] {len(normalized)} assets | "
-        f"prices(provided={counts['provided']}, fetched={counts['fetched']}, "
-        f"fallback={fallback_total}) | "
-        f"holdings: {non_cash} non-cash | NAV: {total_nav:,.2f} THB"
-    )
-
-
-@tool
-def manage_cash_flow(
-    amount: float,
-    action: Literal["deposit", "withdraw"],
-    currency: Literal["THB", "USD"] = "THB",
-    portfolio_id: str = "default",
-) -> str:
-    """ฝาก (Deposit) หรือ ถอน (Withdraw) เงินสดเข้า/ออกจากพอร์ตโฟลิโอ
-
-    [Usage/When to use]
-    ใช้เมื่อผู้ใช้เติมเงินเข้าพอร์ต (Deposit) หรือถอนเงินออกไปใช้จ่าย (Withdraw)
-    - เปลี่ยนแปลงยอดเงินใน CASH_THB หรือ CASH_USD ทันที
-
-    [Caution]
-    - ไม่ใช่การเทรดสินทรัพย์ ใช้จัดการเฉพาะเงินสดที่รอลงทุนเท่านั้น
-
-    Args:
-        amount (float): จำนวนเงิน
-        action (Literal["deposit", "withdraw"]): ฝากหรือถอน
-        currency (Literal["THB", "USD"]): สกุลเงิน
-        portfolio_id (str): พอร์ตการลงทุนที่ต้องการฝาก/ถอน (ค่าเริ่มต้น 'default')
-    """
-    if amount <= 0:
-        return validation_error("amount ต้องมากกว่า 0")
-    if action not in ("deposit", "withdraw"):
-        return validation_error("action ต้องเป็น 'deposit' หรือ 'withdraw'")
-    if currency not in ("THB", "USD"):
-        return validation_error(f"currency ต้องเป็น 'THB' หรือ 'USD' (got '{currency}')")
-
-    lock = _get_portfolio_lock(portfolio_id)
-    try:
-        with lock:
-            return _manage_cash_flow_locked(amount, action, currency, portfolio_id=portfolio_id)
-    except Timeout:
-        return LOCK_TIMEOUT.format(detail=f"portfolio lock {_LOCK_TIMEOUT}s")
-    except ValueError as e:
-        return f"Error: {e}"
-
-
-def _manage_cash_flow_locked(
-    amount: float,
-    action: Literal["deposit", "withdraw"],
-    currency: Literal["THB", "USD"],
-    portfolio_id: str = "default",
-) -> str:
-    post, state = _load_or_init(portfolio_id=portfolio_id)
-    cash = _require_cash(state, currency)
-
-    if action == "deposit":
-        cash.units = round(cash.units + amount, _MONEY_DP)
-        tag = "[DEPOSIT]"
-        sign = "+"
-    else:  # withdraw
-        if cash.units + _FLOAT_EPS < amount:
-            raise ValueError(
-                f"Insufficient cash balance — มี {cash.units:,.2f} {currency} "
-                f"ต้องถอน {amount:,.2f} {currency}"
-            )
-        cash.units = round(cash.units - amount, _MONEY_DP)
-        tag = "[WITHDRAW]"
-        sign = "-"
-
-    _save(post, state, portfolio_id=portfolio_id)
-
-    cash_sym = CASH_USD_SYMBOL if currency == "USD" else CASH_THB_SYMBOL
-    return (
-        f"{tag} {currency} | {sign}{amount:,.2f} {currency} | "
-        f"{cash_sym} คงเหลือ: {cash.units:,.2f} {currency}"
-    )
-
-
-@tool
-def update_fx_rate(rate: float | None = None, portfolio_id: str = "default") -> str:
-    """อัปเดตอัตราแลกเปลี่ยน USD/THB ของพอร์ต
-
-    [Usage/When to use]
-    ใช้เมื่อต้องการอัปเดตอัตราแลกเปลี่ยน (FX Rate) เพื่อให้มูลค่าพอร์ตที่เป็น USD ถูกคำนวณกลับมาเป็น THB อย่างแม่นยำ
-    - ดึงข้อมูลจาก yfinance อัตโนมัติหากไม่ระบุ `rate`
-    - ทำให้ Unrealized P/L และ NAV ถูกคำนวณใหม่ทั้งพอร์ตทันที
-
-    Args:
-        rate (float | None): อัตราแลกเปลี่ยนใหม่ที่กำหนดเอง (หากเป็น None จะดึงอัตโนมัติ)
-        portfolio_id (str): พอร์ตการลงทุนที่ต้องการอัปเดต FX (ค่าเริ่มต้น 'default')
-    """
-    if rate is not None and rate <= 0:
-        return validation_error("rate ต้องมากกว่า 0")
-
-    lock = _get_portfolio_lock(portfolio_id)
-    try:
-        with lock:
-            return _update_fx_rate_locked(rate, portfolio_id=portfolio_id)
-    except Timeout:
-        return LOCK_TIMEOUT.format(detail=f"portfolio lock {_LOCK_TIMEOUT}s")
-    except ValueError as e:
-        return f"Error: {e}"
-
-
-def _update_fx_rate_locked(rate: float | None, portfolio_id: str = "default") -> str:
-    post, state = _load_or_init(portfolio_id=portfolio_id)
-    old_rate = state.fx_rates.get("USDTHB", 0.0) or 0.0
-    nav_before = state.summary.total_value_thb
-    unrealized_before = state.summary.total_unrealized_profit
-
-    if rate is None:
-        fetched = _fetch_fx_rate()
-        if fetched is None or fetched <= 0:
-            raise ValueError(
-                f"auto-fetch FX ล้มเหลว ({_USDTHB_TICKER}) — ลองระบุ rate manual"
-            )
-        new_rate = fetched
-        source = "yfinance"
-    else:
-        new_rate = float(rate)
-        source = "manual"
-
-    state.fx_rates["USDTHB"] = new_rate
-    _save(post, state, portfolio_id=portfolio_id)
-
-    nav_after = state.summary.total_value_thb
-    unrealized_after = state.summary.total_unrealized_profit
-    pct_change = ((new_rate - old_rate) / old_rate * 100) if old_rate > 0 else 0.0
-
-    return (
-        f"[FX {source}] | USDTHB: {old_rate:.4f} → {new_rate:.4f} ({pct_change:+.2f}%) | "
-        f"NAV: {nav_before:,.2f} → {nav_after:,.2f} THB | "
-        f"unrealized: {unrealized_before:+,.2f} → {unrealized_after:+,.2f} THB"
-    )
-
-
-@tool
-def edit_holding(
-    symbol: str,
-    units: float | None = None,
-    avg_cost: float | None = None,
-    accumulated_dividend_thb: float | None = None,
-    asset_type: str | None = None,
-    reason: str = "",
-    portfolio_id: str = "default",
-) -> str:
-    """แก้ไขข้อมูล Holding ที่บันทึกผิด (Correction Tool)
-
-    [Usage/When to use]
-    ใช้เมื่อผู้ใช้พิมพ์ผิด แจ้งต้นทุนผิด หรือต้องการแก้จำนวนหุ้นหลังจาก Corporate Action (เช่น แตกพาร์)
-    - แก้ไขได้เฉพาะข้อมูลดิบ (units, avg_cost, ฯลฯ) ข้อมูลที่คำนวณจะอัปเดตอัตโนมัติ
-
-    [Caution]
-    - หลีกเลี่ยงการใช้คำสั่งนี้แทนการซื้อ/ขาย (`execute_trade`)
-
-    Args:
-        symbol (str): Ticker ที่ต้องการแก้ไข
-        units (float | None): จำนวนหน่วยใหม่
-        avg_cost (float | None): ต้นทุนเฉลี่ยใหม่
-        accumulated_dividend_thb (float | None): เงินปันผลสะสมใหม่
-        asset_type (str | None): ประเภทสินทรัพย์ใหม่
-        reason (str): เหตุผลที่แก้ไข (เพื่อบันทึกลง Log)
-        portfolio_id (str): พอร์ตการลงทุนที่ต้องการแก้ไข (ค่าเริ่มต้น 'default')
-    """
-    sym = symbol.strip().upper()
-    if sym in _CASH_SYMBOLS:
-        return CASH_VIA_MANAGE.format(symbols="/".join(_CASH_SYMBOLS))
-    if all(v is None for v in (units, avg_cost, accumulated_dividend_thb, asset_type)):
-        return validation_error(f"ต้องระบุอย่างน้อย 1 field ที่จะแก้ ({', '.join(_EDITABLE_HOLDING_FIELDS)})")
-    if units is not None and units <= 0:
-        return validation_error("units ต้องมากกว่า 0")
-    if avg_cost is not None and avg_cost <= 0:
-        return validation_error("avg_cost ต้องมากกว่า 0")
-    if accumulated_dividend_thb is not None and accumulated_dividend_thb < 0:
-        return validation_error("accumulated_dividend_thb ต้อง >= 0")
-
-    lock = _get_portfolio_lock(portfolio_id)
-    try:
-        with lock:
-            return _edit_holding_locked(
-                sym, units, avg_cost, accumulated_dividend_thb, asset_type, reason, portfolio_id=portfolio_id
-            )
-    except Timeout:
-        return LOCK_TIMEOUT.format(detail=f"portfolio lock {_LOCK_TIMEOUT}s")
-    except ValueError as e:
-        return f"Error: {e}"
-
-
-def _edit_holding_locked(
-    symbol: str,
-    units: float | None,
-    avg_cost: float | None,
-    accumulated_dividend_thb: float | None,
-    asset_type: str | None,
-    reason: str,
-    portfolio_id: str = "default",
-) -> str:
-    post, state = _load_or_init(portfolio_id=portfolio_id)
-    target = _find_holding(state, symbol)
-    if target is None:
-        raise ValueError(f"ไม่พบ {symbol} ใน portfolio")
-    if target.asset_type == "Cash":
-        raise ValueError(f"{symbol} เป็น Cash holding — ใช้ manage_cash_flow")
-
-    nav_before = state.summary.total_value_thb
-    changes: list[str] = []
-
-    if units is not None and units != target.units:
-        changes.append(f"units: {target.units:g} → {units:g}")
-        target.units = round(units, _COST_DP)
-
-    if avg_cost is not None:
-        if target.avg_cost_usd is not None:
-            if avg_cost != target.avg_cost_usd:
-                changes.append(f"avg_cost_usd: ${target.avg_cost_usd:.4f} → ${avg_cost:.4f}")
-                target.avg_cost_usd = round(avg_cost, _COST_DP)
-        elif target.avg_cost_thb is not None:
-            if avg_cost != target.avg_cost_thb:
-                changes.append(f"avg_cost_thb: ฿{target.avg_cost_thb:.4f} → ฿{avg_cost:.4f}")
-                target.avg_cost_thb = round(avg_cost, _COST_DP)
-        else:
-            raise ValueError(
-                f"{symbol} ไม่มี avg_cost_thb/usd เดิม — สร้าง holding ใหม่ผ่าน execute_trade แทน"
-            )
-
-    if accumulated_dividend_thb is not None:
-        current = target.accumulated_dividend_thb or 0.0
-        if accumulated_dividend_thb != current:
-            changes.append(
-                f"accumulated_dividend_thb: {current:,.2f} → {accumulated_dividend_thb:,.2f}"
-            )
-            target.accumulated_dividend_thb = round(accumulated_dividend_thb, _MONEY_DP)
-            target.dividend_source = "manual"
-
-    if asset_type is not None:
-        new_type = asset_type.strip()
-        if new_type and new_type != target.asset_type:
-            changes.append(f"asset_type: {target.asset_type} → {new_type}")
-            target.asset_type = new_type
-
-    if not changes:
-        raise ValueError("ค่าใหม่เหมือนเดิมทั้งหมด — ไม่มีอะไรต้องแก้")
-
-    _save(post, state, portfolio_id=portfolio_id)
-    nav_after = state.summary.total_value_thb
-
-    reason_text = reason.strip() or "(no reason given)"
-    _write_journal_entry(
-        f"**[EDIT {symbol}]** {' | '.join(changes)}\n\nReason: {reason_text}",
-        portfolio_id=portfolio_id,
-    )
-
-    return (
-        f"[EDIT {symbol}] | {' | '.join(changes)} | reason: {reason_text} | "
-        f"NAV: {nav_before:,.2f} → {nav_after:,.2f} THB"
-    )
-
-
-
+    fpath = _get_trades_log_filepath(portfolio_id)
+    if fpath.exists():
+        _read_and_migrate_trade_log_locked(fpath)
+from tools.portfolio.agent_tools import (
+    execute_trade,
+    record_income,
+    batch_import_holdings,
+    manage_cash_flow,
+    update_fx_rate,
+    edit_holding,
+)
+
+from tools.portfolio.prices import fetch_latest_price, fetch_fx_rate
+
+_PRICE_FETCH_TIMEOUT = 6.0
+
+# --- Structured API Functions Delegation ---
 
 def structured_execute_trade(
     symbol: str,
@@ -885,330 +49,167 @@ def structured_execute_trade(
     units: float,
     price: float,
     currency: Literal["THB", "USD"] = "THB",
-    exchange_rate: float | None = None,
-    date: str | None = None,
+    exchange_rate: Optional[float] = None,
+    date: Optional[str] = None,
     notes: str = "",
-    bucket_id: str | None = None,
+    bucket_id: Optional[str] = None,
     portfolio_id: str = "default",
 ) -> PortfolioState:
-    """Structured mutation accessor สำหรับ execute trade โดย raise exceptions เพื่อให้ REST mapping ทำงาน"""
-    sym = symbol.strip().upper()
-    if sym in _CASH_SYMBOLS:
-        raise ValueError(f"ไม่สามารถเทรด cash sentinel โดยตรง ({sym})")
-    if units <= 0:
-        raise ValueError("units ต้องมากกว่า 0")
-    if price <= 0:
-        raise ValueError("price ต้องมากกว่า 0")
-    if action not in ("buy", "sell"):
-        raise ValueError("action ต้องเป็น 'buy' หรือ 'sell'")
-
-    lock = _get_portfolio_lock(portfolio_id)
-    with lock:
-        post, state = _load_or_init(portfolio_id=portfolio_id)
-        resolved_fx: float | None = None
-        if currency == "USD":
-            if exchange_rate is not None and exchange_rate > 0:
-                resolved_fx = exchange_rate
-                today_str = _now_iso()[:10]
-                if not date or date.strip() == today_str:
-                    state.fx_rates["USDTHB"] = exchange_rate
-                    _save(post, state, portfolio_id=portfolio_id)
-            elif date and date.strip():
-                portfolio_fallback = state.fx_rates.get("USDTHB", 36.5)
-                resolved_fx, _ = fetch_fx_rate(date_str=date.strip(), fallback_rate=portfolio_fallback)
-
-        _execute_trade_locked(
-            sym,
-            asset_type,
-            action,
-            units,
-            price,
-            currency,
-            notes=notes,
-            fx_rate_override=resolved_fx,
-            date=date,
-            portfolio_id=portfolio_id,
-        )
-
-        post, state = _load_or_init(portfolio_id=portfolio_id)
-        target = _find_holding(state, sym)
-        modified = False
-        if target is not None and bucket_id is not None:
-            target.bucket_id = bucket_id
-            modified = True
-        if notes.strip() or (date and date.strip()):
-            content = f"**[TRADE NOTE - {sym}]** {action.upper()} {units:g} @ {price:,.4f} {currency}"
-            if notes.strip():
-                content += f" — {notes.strip()}"
-            _write_journal_entry(content, date_str=date, portfolio_id=portfolio_id)
-        if modified:
-            _save(post, state, portfolio_id=portfolio_id)
-        return state
-
+    return get_default_service().structured_execute_trade(
+        symbol=symbol,
+        asset_type=asset_type,
+        action=action,
+        units=units,
+        price=price,
+        currency=currency,
+        exchange_rate=exchange_rate,
+        date=date,
+        notes=notes,
+        bucket_id=bucket_id,
+        portfolio_id=portfolio_id,
+    )
 
 def structured_manage_cash_flow(
     amount: float,
     action: Literal["deposit", "withdraw"],
     currency: Literal["THB", "USD"] = "THB",
-    exchange_rate: float | None = None,
-    date: str | None = None,
+    exchange_rate: Optional[float] = None,
+    date: Optional[str] = None,
     notes: str = "",
     portfolio_id: str = "default",
 ) -> PortfolioState:
-    """Structured mutation accessor สำหรับฝาก/ถอนเงินสด"""
-    if amount <= 0:
-        raise ValueError("amount ต้องมากกว่า 0")
-    if action not in ("deposit", "withdraw"):
-        raise ValueError("action ต้องเป็น 'deposit' หรือ 'withdraw'")
-    if currency not in ("THB", "USD"):
-        raise ValueError(f"currency ต้องเป็น 'THB' หรือ 'USD' (got '{currency}')")
-
-    lock = _get_portfolio_lock(portfolio_id)
-    with lock:
-        if exchange_rate is not None and exchange_rate > 0 and currency == "USD":
-            today_str = _now_iso()[:10]
-            if not date or date.strip() == today_str:
-                post, state = _load_or_init(portfolio_id=portfolio_id)
-                state.fx_rates["USDTHB"] = exchange_rate
-                _save(post, state, portfolio_id=portfolio_id)
-
-        _manage_cash_flow_locked(amount, action, currency, portfolio_id=portfolio_id)
-        post, state = _load_or_init(portfolio_id=portfolio_id)
-        if notes.strip() or (date and date.strip()):
-            content = f"**[CASH FLOW NOTE]** {action.upper()} {amount:,.2f} {currency}"
-            if notes.strip():
-                content += f" — {notes.strip()}"
-            _write_journal_entry(content, date_str=date, portfolio_id=portfolio_id)
-        return state
-
+    return get_default_service().structured_manage_cash_flow(
+        amount=amount,
+        action=action,
+        currency=currency,
+        exchange_rate=exchange_rate,
+        date=date,
+        notes=notes,
+        portfolio_id=portfolio_id,
+    )
 
 def structured_record_income(
     income_type: Literal["Dividend", "Interest", "Rental", "Other"],
     amount_thb: float,
-    source_symbol: str | None = None,
-    date: str | None = None,
+    source_symbol: Optional[str] = None,
+    date: Optional[str] = None,
     notes: str = "",
     portfolio_id: str = "default",
 ) -> PortfolioState:
-    """Structured mutation accessor สำหรับบันทึกรายได้"""
-    if amount_thb <= 0:
-        raise ValueError("amount_thb ต้องมากกว่า 0")
-
-    lock = _get_portfolio_lock(portfolio_id)
-    with lock:
-        _record_income_locked(income_type, amount_thb, source_symbol, portfolio_id=portfolio_id)
-        post, state = _load_or_init(portfolio_id=portfolio_id)
-        if notes.strip() or (date and date.strip()):
-            src_note = f" ({source_symbol})" if source_symbol else ""
-            content = f"**[INCOME NOTE - {income_type}{src_note}]** +{amount_thb:,.2f} THB"
-            if notes.strip():
-                content += f" — {notes.strip()}"
-            _write_journal_entry(content, date_str=date, portfolio_id=portfolio_id)
-        return state
-
+    return get_default_service().structured_record_income(
+        income_type=income_type,
+        amount_thb=amount_thb,
+        source_symbol=source_symbol,
+        date=date,
+        notes=notes,
+        portfolio_id=portfolio_id,
+    )
 
 def structured_edit_holding(
     symbol: str,
-    units: float | None = None,
-    avg_cost: float | None = None,
-    accumulated_dividend_thb: float | None = None,
-    asset_type: str | None = None,
+    units: Optional[float] = None,
+    avg_cost: Optional[float] = None,
+    accumulated_dividend_thb: Optional[float] = None,
+    asset_type: Optional[str] = None,
     reason: str = "",
-    bucket_id: str | None = None,
+    bucket_id: Optional[str] = None,
     portfolio_id: str = "default",
 ) -> PortfolioState:
-    """Structured mutation accessor สำหรับแก้ไข Holding"""
-    sym = symbol.strip().upper()
-    if sym in _CASH_SYMBOLS:
-        raise ValueError(f"ไม่สามารถแก้ไขรายการเงินสดโดยตรง ({sym}) ใช้ manage_cash_flow")
-    if all(v is None for v in (units, avg_cost, accumulated_dividend_thb, asset_type, bucket_id)):
-        raise ValueError("ต้องระบุข้อมูลที่จะแก้ไขอย่างน้อย 1 รายการ")
-    if units is not None and units <= 0:
-        raise ValueError("units ต้องมากกว่า 0")
-    if avg_cost is not None and avg_cost <= 0:
-        raise ValueError("avg_cost ต้องมากกว่า 0")
-    if accumulated_dividend_thb is not None and accumulated_dividend_thb < 0:
-        raise ValueError("accumulated_dividend_thb ต้อง >= 0")
-
-    lock = _get_portfolio_lock(portfolio_id)
-    with lock:
-        post, state = _load_or_init(portfolio_id=portfolio_id)
-        target = _find_holding(state, sym)
-        if target is None:
-            raise ValueError(f"ไม่พบ {sym} ใน portfolio")
-
-        if any(v is not None for v in (units, avg_cost, accumulated_dividend_thb, asset_type)):
-            _edit_holding_locked(sym, units, avg_cost, accumulated_dividend_thb, asset_type, reason or "Structured API Edit", portfolio_id=portfolio_id)
-
-        post, state = _load_or_init(portfolio_id=portfolio_id)
-        target = _find_holding(state, sym)
-        if target is not None and bucket_id is not None and target.bucket_id != bucket_id:
-            target.bucket_id = bucket_id
-            _save(post, state, portfolio_id=portfolio_id)
-        return state
-
+    return get_default_service().structured_edit_holding(
+        symbol=symbol,
+        units=units,
+        avg_cost=avg_cost,
+        accumulated_dividend_thb=accumulated_dividend_thb,
+        asset_type=asset_type,
+        reason=reason,
+        bucket_id=bucket_id,
+        portfolio_id=portfolio_id,
+    )
 
 def structured_remove_holding(symbol: str, portfolio_id: str = "default") -> PortfolioState:
-    """Structured mutation accessor สำหรับลบ Holding ออกจากพอร์ตโดยตรง"""
-    sym = symbol.strip().upper()
-    if sym in _CASH_SYMBOLS:
-        raise ValueError("ไม่สามารถลบรายการเงินสด (Cash) ผ่าน remove_holding ได้")
-    lock = _get_portfolio_lock(portfolio_id)
-    with lock:
-        post, state = _load_or_init(portfolio_id=portfolio_id)
-        target = _find_holding(state, sym)
-        if target is None:
-            raise ValueError(f"ไม่พบสินทรัพย์ {sym} ในพอร์ต")
-        state.holdings.remove(target)
-        _save(post, state, portfolio_id=portfolio_id)
-        _write_journal_entry(f"**[REMOVE {sym}]** ลบสินทรัพย์ออกจากพอร์ตโดยตรง", portfolio_id=portfolio_id)
-        return state
-
+    return get_default_service().structured_remove_holding(symbol=symbol, portfolio_id=portfolio_id)
 
 def get_structured_trades_log(
-    portfolio_id: str = "default",
-    symbol: str | None = None,
-) -> list[dict]:
-    """อ่านรายการประวัติการซื้อขายทั้งหมดจาก Trades_Log.csv ผ่าน DictReader (ภายใต้ lock)"""
-    lock = _get_portfolio_lock(portfolio_id)
-    with lock:
-        _migrate_trades_log_if_needed(portfolio_id)
-        trades_log_path = _get_trades_log_filepath(portfolio_id)
-        if not trades_log_path.exists() or trades_log_path.stat().st_size == 0:
-            return []
+    portfolio_id: str = "default", symbol: Optional[str] = None
+) -> List[Dict]:
+    return get_default_service().get_structured_trades_log(portfolio_id=portfolio_id, symbol=symbol)
 
-        target_symbol = symbol.strip().upper() if symbol else None
-        results: list[dict] = []
+def update_trade_note(tx_id: str, notes: str, portfolio_id: str = "default") -> Dict:
+    return get_default_service().update_trade_note(tx_id=tx_id, notes=notes, portfolio_id=portfolio_id)
 
-        try:
-            with trades_log_path.open("r", encoding="utf-8", newline="") as f:
-                reader = csv.DictReader(f)
-                for row in reader:
-                    row_sym = str(row.get("Symbol") or "").strip().upper()
-                    if target_symbol and row_sym != target_symbol:
-                        continue
+from tools.portfolio.adapters.markdown.repository_adapter import _get_portfolio_lock
 
-                    # Parse numerical fields safely
-                    try:
-                        units_val = float(row.get("Units") or 0.0)
-                    except (ValueError, TypeError):
-                        units_val = 0.0
+def _fetch_fx_rate() -> Optional[float]:
+    from tools.portfolio.prices import _fetch_fx_rate as prices_fetch_fx
+    return prices_fetch_fx()
 
-                    try:
-                        price_val = float(row.get("Price") or 0.0)
-                    except (ValueError, TypeError):
-                        price_val = 0.0
+# --- Compatibility Hooks for tests/conftest.py ---
 
-                    fx_raw = row.get("FX_Rate")
-                    fx_val = None
-                    if fx_raw is not None and str(fx_raw).strip() != "":
-                        try:
-                            fx_val = float(fx_raw)
-                        except (ValueError, TypeError):
-                            fx_val = None
+def _execute_trade_locked(symbol, asset_type, action, units, price, currency="THB", notes="", portfolio_id="default"):
+    res_str, _ = get_default_service()._execute_trade_internal(
+        symbol=symbol, asset_type=asset_type, action=action, units=units, price=price, currency=currency, notes=notes, portfolio_id=portfolio_id
+    )
+    return res_str
 
-                    try:
-                        cost_val = float(row.get("Cost_THB") or 0.0)
-                    except (ValueError, TypeError):
-                        cost_val = 0.0
+def _record_income_locked(income_type, amount_thb, source_symbol=None, portfolio_id="default"):
+    res_str, _ = get_default_service()._record_income_internal(
+        income_type=income_type, amount_thb=amount_thb, source_symbol=source_symbol, portfolio_id=portfolio_id
+    )
+    return res_str
 
-                    pnl_raw = row.get("Realized_PnL_THB")
-                    pnl_val = None
-                    if pnl_raw is not None and str(pnl_raw).strip() != "":
-                        try:
-                            pnl_val = float(pnl_raw)
-                        except (ValueError, TypeError):
-                            pnl_val = None
+def _manage_cash_flow_locked(*args, **kwargs):
+    currency = kwargs.get("currency", "THB")
+    notes = kwargs.get("notes", "")
+    portfolio_id = kwargs.get("portfolio_id", "default")
 
-                    results.append({
-                        "transaction_id": str(row.get("Transaction_ID") or ""),
-                        "timestamp": str(row.get("Timestamp") or ""),
-                        "symbol": row_sym,
-                        "action": str(row.get("Action") or "BUY").strip().upper(),
-                        "units": units_val,
-                        "price": price_val,
-                        "currency": str(row.get("Currency") or "THB").strip().upper(),
-                        "fx_rate": fx_val,
-                        "cost_thb": cost_val,
-                        "realized_pnl_thb": pnl_val,
-                        "notes": str(row.get("Notes") or ""),
-                    })
-        except Exception as e:
-            log.warning("Failed to read trades log for %s: %s", portfolio_id, e)
-            return []
+    if "amount" in kwargs and "action" in kwargs:
+        amt = float(kwargs["amount"])
+        act = kwargs["action"]
+    elif len(args) >= 2:
+        if isinstance(args[0], (int, float)):
+            amt = float(args[0])
+            act = args[1]
+        else:
+            act = args[0]
+            amt = float(args[1])
+        if len(args) >= 3:
+            currency = args[2]
+        if len(args) >= 4:
+            notes = args[3]
+        if len(args) >= 5:
+            portfolio_id = args[4]
+    else:
+        raise ValueError("Invalid arguments for _manage_cash_flow_locked")
 
-        # Sort descending by timestamp / order
-        results.sort(key=lambda x: x["timestamp"], reverse=True)
-        return results
+    res_str, _ = get_default_service()._manage_cash_flow_internal(
+        amount=amt, action=act, currency=currency, portfolio_id=portfolio_id
+    )
+    return res_str
 
+def _update_fx_rate_locked(rate=None, portfolio_id="default"):
+    if rate is not None:
+        if rate <= 0:
+            raise ValueError("rate ต้องมากกว่า 0")
+        new_rate = float(rate)
+        source = "manual"
+    else:
+        new_rate = _fetch_fx_rate()
+        if new_rate is None or new_rate <= 0:
+            raise ValueError("auto-fetch FX ล้มเหลว กรุณาระบุ rate ด้วยตนเอง")
+        source = "yfinance"
 
-def update_trade_note(
-    tx_id: str,
-    notes: str,
-    portfolio_id: str = "default",
-) -> dict:
-    """แก้ไข Notes ของรายการ Transaction ตาม ID พร้อม sanitize และ atomic write ภายใต้ lock"""
-    lock = _get_portfolio_lock(portfolio_id)
-    with lock:
-        _migrate_trades_log_if_needed(portfolio_id)
-        trades_log_path = _get_trades_log_filepath(portfolio_id)
-        if not trades_log_path.exists() or trades_log_path.stat().st_size == 0:
-            raise ValueError(f"Trades log not found for portfolio '{portfolio_id}'")
+    with get_default_service().repo.unit_of_work(portfolio_id) as uow:
+        state = uow.load_state()
+        old_rate = state.fx_rates.get("USDTHB", 36.5)
+        state.fx_rates["USDTHB"] = new_rate
+        from tools.portfolio.domain.calculations import recalc_all
+        from tools.portfolio.domain.ledger_change import LedgerChange
+        recalc_all(state)
+        uow.commit(state, LedgerChange(kind="unchanged"))
+        return f"[FX {source}] USDTHB: {old_rate:.4f} → {new_rate:.4f}"
 
-        rows: list[dict] = []
-        found_target = False
-        target_item: dict | None = None
-
-        with trades_log_path.open("r", encoding="utf-8", newline="") as f:
-            reader = csv.DictReader(f)
-            for row in reader:
-                current_id = str(row.get("Transaction_ID") or "").strip()
-                if current_id == tx_id:
-                    found_target = True
-                    row["Notes"] = _sanitize_csv_field(notes)
-                    # Prepare return item
-                    try:
-                        units_val = float(row.get("Units") or 0.0)
-                    except (ValueError, TypeError):
-                        units_val = 0.0
-                    try:
-                        price_val = float(row.get("Price") or 0.0)
-                    except (ValueError, TypeError):
-                        price_val = 0.0
-                    fx_raw = row.get("FX_Rate")
-                    fx_val = float(fx_raw) if fx_raw is not None and str(fx_raw).strip() != "" else None
-                    try:
-                        cost_val = float(row.get("Cost_THB") or 0.0)
-                    except (ValueError, TypeError):
-                        cost_val = 0.0
-                    pnl_raw = row.get("Realized_PnL_THB")
-                    pnl_val = float(pnl_raw) if pnl_raw is not None and str(pnl_raw).strip() != "" else None
-
-                    target_item = {
-                        "transaction_id": current_id,
-                        "timestamp": str(row.get("Timestamp") or ""),
-                        "symbol": str(row.get("Symbol") or "").strip().upper(),
-                        "action": str(row.get("Action") or "BUY").strip().upper(),
-                        "units": units_val,
-                        "price": price_val,
-                        "currency": str(row.get("Currency") or "THB").strip().upper(),
-                        "fx_rate": fx_val,
-                        "cost_thb": cost_val,
-                        "realized_pnl_thb": pnl_val,
-                        "notes": row["Notes"],
-                    }
-                rows.append(row)
-
-        if not found_target or target_item is None:
-            raise ValueError(f"Transaction with ID '{tx_id}' not found")
-
-        out = io.StringIO()
-        writer = csv.DictWriter(out, fieldnames=_TRADES_LOG_HEADER, lineterminator="\n")
-        writer.writeheader()
-        for r in rows:
-            writer.writerow(r)
-
-        _atomic_write_to(trades_log_path, out.getvalue())
-        return target_item
-
-
+def _edit_holding_locked(symbol, units=None, avg_cost=None, accumulated_dividend_thb=None, asset_type=None, reason="", portfolio_id="default"):
+    res_str, _ = get_default_service()._edit_holding_internal(
+        symbol=symbol, units=units, avg_cost=avg_cost, accumulated_dividend_thb=accumulated_dividend_thb, asset_type=asset_type, reason=reason, portfolio_id=portfolio_id
+    )
+    return res_str

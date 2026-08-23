@@ -11,7 +11,9 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "typecheck": "tsc -b",
-    "test:coverage": "vitest run --coverage"
+    "test:coverage": "vitest run --coverage",
+    "gen:types": "..\\.venv\\Scripts\\python ..\\scripts\\export_openapi.py && npx openapi-typescript openapi.json -o src/api/types.generated.ts",
+    "check:types": "..\\.venv\\Scripts\\python ..\\scripts\\export_openapi.py && node scripts/check_types_drift.mjs"
   },
   "dependencies": {
     "klinecharts": "10.0.2",
@@ -32,6 +34,7 @@
     "@vitest/coverage-v8": "^4.1.10",
     "autoprefixer": "^10.5.2",
     "jsdom": "^29.1.1",
+    "openapi-typescript": "^7.6.1",
     "oxlint": "^1.71.0",
     "postcss": "^8.5.16",
     "tailwindcss": "3.4",

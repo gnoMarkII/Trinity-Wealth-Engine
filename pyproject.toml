@@ -41,6 +41,7 @@ dependencies = [
     "itsdangerous>=2.2.0",
     "notebooklm-mcp-cli>=0.9.4",
     "imageio-ffmpeg>=0.6.0",
+    "edgartools>=3.0.0",
 ]
 
 [dependency-groups]

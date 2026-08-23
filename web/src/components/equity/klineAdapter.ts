@@ -276,10 +276,10 @@ export function initKlineChart(
     chart.scrollToRealTime()
 
     // Inspect actual viewport via getVisibleRange API & re-check loop
-    if (typeof chart.getVisibleRange === 'function') {
+    if (typeof chart.getVisibleRange === 'function' && displayStartIndex > 0) {
       let visibleRange = chart.getVisibleRange()
       let attempts = 0
-      while (visibleRange && displayStartIndex > 0 && visibleRange.realFrom < displayStartIndex && attempts < 4) {
+      while (visibleRange && visibleRange.realFrom < displayStartIndex && attempts < 4) {
         optimalBarSpace = Math.min(50, optimalBarSpace * 1.25)
         chart.setBarSpace(optimalBarSpace)
         chart.scrollToRealTime()

@@ -1,48 +1,40 @@
-from langsmith import traceable
-import concurrent.futures
 import csv
 import json
 import os
-import re
 import tempfile
-from datetime import datetime, timedelta
+from datetime import datetime
 from pathlib import Path
-from typing import Literal
+from typing import Literal, Optional, List, Dict
 
 import frontmatter
-import yfinance as yf
 from filelock import FileLock, Timeout
 from langchain_core.tools import tool
-from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from core.logger import get_logger
+from tools._atomic_io import _atomic_write_to
+from tools.tool_errors import LOCK_TIMEOUT, validation_error
+from .core import _load_or_init, _recalc_all, _get_portfolio_lock
+from .models import _now_iso, GoalItem, GoalsState, PortfolioState
+from .constants import (
+    CASH_THB_SYMBOL,
+    CASH_USD_SYMBOL,
+    _MONEY_DP,
+    _PCT_DP,
+    _LOCK_TIMEOUT,
+    VAULT_PATH,
+    GOALS_PATH,
+)
 
 log = get_logger(__name__)
 
 _GOALS_KEY_ORDER = ("schema_version", "doc_type", "last_updated", "goals")
+GOALS_ITEMS_DIR = VAULT_PATH / "20_Portfolio_Management/Goals/Items"
+_GOALS_LOCK_PATH = str(GOALS_PATH) + ".lock"
+_goals_lock = FileLock(_GOALS_LOCK_PATH, timeout=_LOCK_TIMEOUT)
 
 
-from tools._atomic_io import _atomic_write_to
-from tools.tool_errors import LOCK_TIMEOUT, validation_error
-from .core import _load_or_init, _save, _recalc_all, _recalc_holding, _recalc_summary, _find_holding, _require_cash, _require_fx, get_portfolio_state, _holding_currency, compute_allocation_breakdown
-from .models import _now_iso, _coerce_iso_string, Holding, Summary, PortfolioState, WatchlistItem, WatchlistState, GoalItem, GoalsState
-
-
-from .constants import *
-
-CASH_THB_SYMBOL = "CASH_THB"
-CASH_USD_SYMBOL = "CASH_USD"
-_CASH_SYMBOLS = (CASH_THB_SYMBOL, CASH_USD_SYMBOL)
-# Back-compat alias — call sites and tests still reference CASH_SYMBOL
-CASH_SYMBOL = CASH_THB_SYMBOL
-
-_FLOAT_EPS = 1e-6
-_MONEY_DP = 2
-_COST_DP = 6
-_PCT_DP = 2
-
-_LOCK_TIMEOUT = 15  # seconds — wait up to 15s for another process to release
-_PRICE_FETCH_TIMEOUT = 6  # seconds per symbol when refreshing
+def _get_goals_filepath() -> Path:
+    return GOALS_PATH
 
 
 def _atomic_write_goals(serialized: str) -> None:
@@ -67,9 +59,9 @@ def _goal_item_to_md(goal: GoalItem) -> str:
         "derived: true",
         f"name: {goal.name}",
         f"goal_type: {goal.goal_type}",
+        f"target_amount_thb: {goal.target_amount_thb}",
+        f"created_date: {goal.created_date}",
     ]
-    lines.append(f"target_amount_thb: {goal.target_amount_thb}")
-    lines.append(f"created_date: {goal.created_date}")
     if goal.deadline is not None:
         lines.append(f"deadline: {goal.deadline}")
     if goal.notes is not None:
@@ -134,9 +126,6 @@ def _load_or_init_goals() -> tuple[frontmatter.Post, GoalsState]:
     return post, state
 
 
-from .core import _get_portfolio_lock
-
-
 @tool
 def set_goal(
     name: str,
@@ -148,29 +137,7 @@ def set_goal(
     portfolio_id: str = "default",
     bucket_id: str | None = None,
 ) -> str:
-    """บันทึกหรืออัปเดตเป้าหมายทางการเงิน (Financial Goals)
-
-    [Usage/When to use]
-    ใช้ตั้งเป้าหมายทางการเงิน เช่น เป้าหมายมูลค่าพอร์ต (NAV), จำนวนเงินสดสำรอง, หรือรายได้ Passive Income
-
-    [Caution]
-    - ข้อมูลเป้าหมายจะถูกใช้เมื่อสั่งคำนวณ Progress
-
-    Args:
-        name (str): ชื่อเป้าหมาย
-        goal_type (Literal["nav_target", "cash_target", "passive_income_ytd", "bucket_target"]): ประเภทเป้าหมาย
-        target_amount_thb (float): จำนวนเป้าหมาย (บาท)
-        deadline (str | None): กำหนดเวลา (ถ้ามี)
-        years_from_now (int | None): จำนวนปีจากปัจจุบัน (ถ้ามี)
-        notes (str | None): บันทึกเพิ่มเติม
-        portfolio_id (str): พอร์ตการลงทุนที่ต้องการให้เป้าหมายนี้ติดตาม NAV/เงินสด (ค่าเริ่มต้น 'default')
-        bucket_id (str | None): ระบุ Strategy Bucket ที่ต้องการติดตาม (สำหรับ goal_type='bucket_target')
-    Returns:
-        str: ข้อความยืนยันการบันทึกเป้าหมาย
-
-    Raises:
-        ValueError: name ว่าง, target_amount_thb <= 0, deadline format ผิด
-    """
+    """บันทึกหรืออัปเดตเป้าหมายทางการเงิน (Financial Goals)"""
     nm = name.strip()
     if not nm:
         return validation_error("name ต้องไม่ว่าง")
@@ -181,10 +148,9 @@ def set_goal(
             return validation_error("years_from_now ต้องมากกว่า 0")
         if deadline is not None:
             return validation_error("ห้ามระบุทั้ง deadline และ years_from_now พร้อมกัน")
-        
         target_year = datetime.now().year + years_from_now
         deadline = f"{target_year}-12-31"
-        
+
     if deadline is not None:
         try:
             datetime.strptime(deadline, "%Y-%m-%d")
@@ -231,14 +197,7 @@ def set_goal(
 
 @tool
 def remove_goal(name: str) -> str:
-    """ลบเป้าหมายทางการเงินออกจากระบบ
-
-    [Usage/When to use]
-    ใช้เมื่อต้องการยกเลิกหรือลบเป้าหมายที่ไม่ต้องการติดตามแล้ว
-
-    Args:
-        name (str): ชื่อเป้าหมายที่ต้องการลบ
-    """
+    """ลบเป้าหมายทางการเงินออกจากระบบ"""
     nm = name.strip()
     if not nm:
         return validation_error("name ต้องไม่ว่าง")
@@ -261,19 +220,15 @@ def remove_goal(name: str) -> str:
 
 
 def get_structured_goals(portfolio_id: str | None = None) -> list[dict]:
-    """Structured read accessor คืนค่าความคืบหน้าของเป้าหมายทั้งหมดเป็น list of dicts"""
     with _goals_lock:
         _, goals_state = _load_or_init_goals()
 
     now = datetime.now()
     results = []
-
-    # Cache portfolio states by portfolio_id
     port_states: dict[str, PortfolioState] = {}
 
     for g in goals_state.goals:
         pid = g.portfolio_id if g.portfolio_id else "default"
-        # If caller passed a specific portfolio_id filter, skip goals belonging to other portfolios
         if portfolio_id and pid != portfolio_id:
             continue
 
@@ -310,7 +265,7 @@ def get_structured_goals(portfolio_id: str | None = None) -> list[dict]:
                 if g.bucket_id
                 else 0.0
             )
-        else:  # passive_income_ytd
+        else:
             current = passive_ytd
 
         pct = round(
@@ -342,17 +297,7 @@ def get_structured_goals(portfolio_id: str | None = None) -> list[dict]:
 
 @tool
 def get_goals_progress(portfolio_id: str | None = None) -> str:
-    """เรียกดูความคืบหน้าของเป้าหมายทั้งหมด
-
-    [Usage/When to use]
-    ใช้เมื่อต้องการคำนวณ Progress (%) เทียบยอดเงินใน Portfolio กับเป้าหมายที่บันทึกไว้
-
-    Args:
-        portfolio_id (str | None): กรองเฉพาะเป้าหมายที่ผูกกับพอร์ตนี้ (None = ดูทุกพอร์ต)
-
-    Returns:
-        str: JSON string ประกอบด้วยสถานะของแต่ละเป้าหมาย
-    """
+    """เรียกดูความคืบหน้าของเป้าหมายทั้งหมด"""
     try:
         results = get_structured_goals(portfolio_id=portfolio_id)
     except Timeout:
@@ -382,7 +327,6 @@ def structured_upsert_goal(
     portfolio_id: str = "default",
     bucket_id: str | None = None,
 ) -> list[dict]:
-    """Structured mutation accessor สำหรับเพิ่มหรืออัปเดตเป้าหมาย"""
     nm = name.strip()
     if not nm:
         raise ValueError("name ต้องไม่ว่าง")
@@ -426,13 +370,10 @@ def structured_upsert_goal(
             state.goals.append(new_goal)
         _save_goals(post, state)
 
-    # คืนเป้าหมายทุกพอร์ตรวมกันเสมอ (ไม่ใช่กรองแค่ portfolio_id ของ goal ที่เพิ่งบันทึก)
-    # เพื่อให้ UI ที่โชว์ Goals ข้ามพอร์ตไม่หายไปจากจอหลังบันทึก
     return get_structured_goals(portfolio_id=None)
 
 
 def structured_remove_goal(name: str, portfolio_id: str | None = None) -> list[dict]:
-    """Structured mutation accessor สำหรับลบเป้าหมาย"""
     nm = name.strip()
     if not nm:
         raise ValueError("name ต้องไม่ว่าง")
@@ -444,8 +385,3 @@ def structured_remove_goal(name: str, portfolio_id: str | None = None) -> list[d
         state.goals.remove(existing)
         _save_goals(post, state)
     return get_structured_goals(portfolio_id=portfolio_id)
-
-
-GOALS_ITEMS_DIR = VAULT_PATH / "20_Portfolio_Management/Goals/Items"
-_GOALS_LOCK_PATH = str(GOALS_PATH) + ".lock"
-_goals_lock = FileLock(_GOALS_LOCK_PATH, timeout=_LOCK_TIMEOUT)

@@ -298,6 +298,7 @@ export const EquityChart: React.FC<EquityChartProps> = ({
     valuationTargets,
     insiderFilings,
     analystContext,
+    config,
   ])
 
   // Sync indicator config changes atomically to KlineChartInstance
@@ -685,6 +686,7 @@ export const EquityChart: React.FC<EquityChartProps> = ({
       {/* Accessible Indicator & Drawing Toolbar */}
       <div
         role="toolbar"
+        tabIndex={0}
         aria-label="Technical Indicators and Drawing Toolbar"
         onKeyDown={handleToolbarKeyDown}
         className="mt-3 flex flex-wrap items-center justify-between gap-3 border-b border-edge/40 pb-3"

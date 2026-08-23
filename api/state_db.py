@@ -4,6 +4,7 @@
 import json
 import os
 import sqlite3
+import threading
 import time
 
 from api.config import get_state_db_path
@@ -131,10 +132,21 @@ CREATE TABLE IF NOT EXISTS analyst_context_cache (
 );
 CREATE INDEX IF NOT EXISTS idx_analyst_context_ticker ON analyst_context_cache(ticker);
 
+CREATE TABLE IF NOT EXISTS financial_statements_cache (
+    market           TEXT NOT NULL,
+    provider_symbol  TEXT NOT NULL,
+    provider         TEXT NOT NULL,
+    data_json        TEXT NOT NULL,
+    synced_at        REAL NOT NULL,
+    PRIMARY KEY (market, provider_symbol)
+);
+CREATE INDEX IF NOT EXISTS idx_financial_statements_cache_pk ON financial_statements_cache(market, provider_symbol);
+
 """
 
 
 _INITIALIZED_DB_PATHS: set[str] = set()
+_INIT_LOCK = threading.Lock()
 
 
 def get_connection(db_path: str | None = None) -> sqlite3.Connection:
@@ -143,11 +155,16 @@ def get_connection(db_path: str | None = None) -> sqlite3.Connection:
     if parent:
         os.makedirs(parent, exist_ok=True)
     conn = sqlite3.connect(path, check_same_thread=False, timeout=30)
-    conn.execute("PRAGMA journal_mode=WAL")
+    try:
+        conn.execute("PRAGMA busy_timeout=30000")
+        conn.execute("PRAGMA journal_mode=WAL")
+    except sqlite3.OperationalError:
+        pass
     conn.row_factory = sqlite3.Row
-    if path not in _INITIALIZED_DB_PATHS:
-        init_schema(conn)
-        _INITIALIZED_DB_PATHS.add(path)
+    with _INIT_LOCK:
+        if path not in _INITIALIZED_DB_PATHS:
+            init_schema(conn)
+            _INITIALIZED_DB_PATHS.add(path)
     return conn
 
 
@@ -184,7 +201,11 @@ def _migrate_columns(conn: sqlite3.Connection) -> None:
         existing = {row["name"] for row in conn.execute(f"PRAGMA table_info({table})")}
         for col_name, col_def in columns.items():
             if col_name not in existing:
-                conn.execute(f"ALTER TABLE {table} ADD COLUMN {col_def}")
+                try:
+                    conn.execute(f"ALTER TABLE {table} ADD COLUMN {col_def}")
+                except sqlite3.OperationalError as e:
+                    if "duplicate column" not in str(e).lower():
+                        raise
     conn.commit()
 
 
@@ -829,5 +850,99 @@ def upsert_analyst_context_cache(conn: sqlite3.Connection, ticker: str, data: di
         ),
     )
     conn.commit()
+
+
+def get_financial_statements_cache(
+    conn: sqlite3.Connection, market: str, provider_symbol: str
+) -> dict | None:
+    """ดึงข้อมูลงบการเงิน V5 จาก SQLite cache พร้อม decode JSON และ backward compatibility กับ V4"""
+    row = conn.execute(
+        "SELECT * FROM financial_statements_cache WHERE market = ? AND provider_symbol = ?",
+        (market.upper(), provider_symbol.upper()),
+    ).fetchone()
+    if not row:
+        return None
+    d = dict(row)
+    try:
+        raw_json = d.get("data_json", "{}") or "{}"
+        decoded = json.loads(raw_json)
+        if not isinstance(decoded, dict):
+            # Non-dict JSON -> Corrupted row
+            conn.execute(
+                "DELETE FROM financial_statements_cache WHERE market = ? AND provider_symbol = ?",
+                (market.upper(), provider_symbol.upper()),
+            )
+            conn.commit()
+            return None
+
+        # Support Schema V6 (Do not reuse V5/V4 caches with potentially faulty FCF fields)
+        s_ver = decoded.get("schema_version")
+        if s_ver != 6:
+            return None
+
+        from datetime import datetime, timezone
+        decoded["synced_at"] = datetime.fromtimestamp(d["synced_at"], tz=timezone.utc).isoformat()
+        decoded["_raw_synced_at"] = d["synced_at"]
+        return decoded
+    except Exception:
+        # Corrupted JSON string -> Auto-heal by deleting
+        try:
+            conn.execute(
+                "DELETE FROM financial_statements_cache WHERE market = ? AND provider_symbol = ?",
+                (market.upper(), provider_symbol.upper()),
+            )
+            conn.commit()
+        except Exception:
+            pass
+        return None
+
+
+def get_raw_financial_statements_cache(
+    conn: sqlite3.Connection, market: str, provider_symbol: str
+) -> dict | None:
+    """ดึงข้อมูล cache ดิบทั้งหมด (รวม legacy schema) โดยไม่ลบแถว เพื่อใช้สำหรับ fallback เมื่อจำเป็น"""
+    row = conn.execute(
+        "SELECT * FROM financial_statements_cache WHERE market = ? AND provider_symbol = ?",
+        (market.upper(), provider_symbol.upper()),
+    ).fetchone()
+    if not row:
+        return None
+    d = dict(row)
+    try:
+        raw_json = d.get("data_json", "{}") or "{}"
+        decoded = json.loads(raw_json)
+        if isinstance(decoded, dict):
+            from datetime import datetime, timezone
+            decoded["synced_at"] = datetime.fromtimestamp(d["synced_at"], tz=timezone.utc).isoformat()
+            decoded["_raw_synced_at"] = d["synced_at"]
+            return decoded
+    except Exception:
+        pass
+    return None
+
+
+def upsert_financial_statements_cache(
+    conn: sqlite3.Connection,
+    market: str,
+    provider_symbol: str,
+    provider: str,
+    data_json: str,
+    synced_at: float,
+) -> None:
+    """บันทึกข้อมูลงบการเงินลง SQLite cache แบบ (market, provider_symbol)"""
+    conn.execute(
+        """
+        INSERT INTO financial_statements_cache (
+            market, provider_symbol, provider, data_json, synced_at
+        ) VALUES (?, ?, ?, ?, ?)
+        ON CONFLICT(market, provider_symbol) DO UPDATE SET
+            provider=excluded.provider,
+            data_json=excluded.data_json,
+            synced_at=excluded.synced_at
+        """,
+        (market.upper(), provider_symbol.upper(), provider, data_json, synced_at),
+    )
+    conn.commit()
+
 
 

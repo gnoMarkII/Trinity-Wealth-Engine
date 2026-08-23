@@ -6,6 +6,7 @@ import { sentimentClass } from '../../lib/sentiment'
 import { EquityNews } from './EquityNews'
 import { EquityNotesTab } from './EquityNotesTab'
 import { EquityChartTab } from './EquityChartTab'
+import { FinancialsTab } from './FinancialsTab'
 import { DCFScenariosChart } from './DCFScenariosChart'
 import { DataQualityFlagsCard } from './DataQualityFlagsCard'
 
@@ -21,7 +22,7 @@ const eyebrowClass = 'text-xs font-semibold uppercase tracking-wider text-sky-60
 const QUANT_STAGGER_STEP_MS = 60
 
 export const EquityDetail: React.FC<EquityDetailProps> = ({ status, data, errorMessage, onOpenAnalysisModal }) => {
-  const [activeTab, setActiveTab] = useState<'overview' | 'chart' | 'news' | 'notes'>('overview')
+  const [activeTab, setActiveTab] = useState<'overview' | 'chart' | 'financials' | 'news' | 'notes'>('overview')
 
   if (status === 'idle') {
     return null
@@ -120,6 +121,16 @@ export const EquityDetail: React.FC<EquityDetailProps> = ({ status, data, errorM
           <span>📈 Chart</span>
         </button>
         <button
+          onClick={() => setActiveTab('financials')}
+          className={`pb-3 border-b-2 transition-colors flex items-center gap-2 ${
+            activeTab === 'financials'
+              ? 'border-sky-600 text-sky-600 font-semibold'
+              : 'border-transparent text-zinc-500 hover:text-zinc-900'
+          }`}
+        >
+          <span>📑 Financials</span>
+        </button>
+        <button
           onClick={() => setActiveTab('news')}
           className={`pb-3 border-b-2 transition-colors flex items-center gap-2 ${
             activeTab === 'news'
@@ -147,6 +158,11 @@ export const EquityDetail: React.FC<EquityDetailProps> = ({ status, data, errorM
           companyName={data.company_name ?? undefined}
           market={data.market}
           currentPrice={(data.quant_signals as any)?.current_price ?? null}
+        />
+      ) : activeTab === 'financials' ? (
+        <FinancialsTab
+          ticker={data.ticker}
+          market={data.market}
         />
       ) : activeTab === 'news' ? (
         <EquityNews ticker={data.ticker} />

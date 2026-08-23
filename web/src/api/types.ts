@@ -1001,6 +1001,103 @@ export interface InsiderMarkerHoverDTO {
   }> | null
 }
 
+export interface LineItemMetaDTO {
+  canonical_key: string
+  display_label: string
+  unit_type: 'currency' | 'per_share' | 'shares' | 'ratio' | 'percentage'
+  is_primary_highlight: boolean
+}
+
+export interface FinancialCellDTO {
+  value: number | null
+  yoy_growth_pct: number | null
+  source_type?: 'reported' | 'derived' | 'not_applicable' | 'unavailable'
+  source_concept?: string | null
+  source_filing_url?: string | null
+  derivation?: string | null
+  formula?: string | null
+  input_items?: string[] | null
+  source_period?: string | null
+  unavailable_reason?: string | null
+  is_derived: boolean
+}
+
+export interface FinancialPeriodDTO {
+  period_key: string
+  fiscal_year: number
+  fiscal_quarter?: number | null
+  period_end_date: string
+  period_kind: 'instant' | 'duration'
+  duration_days?: number | null
+  form_type: string
+  filing_url?: string | null
+  is_derived: boolean
+  items: Record<string, FinancialCellDTO>
+}
+
+export interface FinancialStatementCategoryDTO {
+  statement_type: 'income' | 'balance_sheet' | 'cash_flow'
+  period_kind: 'duration' | 'instant'
+  periods: FinancialPeriodDTO[]
+  line_items: LineItemMetaDTO[]
+}
+
+export interface FinancialSummaryChartPointDTO {
+  period_key: string
+  date: string
+  revenue: number | null
+  gross_profit: number | null
+  operating_income: number | null
+  net_income: number | null
+  free_cash_flow: number | null
+  calculated_free_cash_flow?: number | null
+  reported_free_cash_flow?: number | null
+  operating_margin_pct: number | null
+  net_margin_pct: number | null
+}
+
+export interface FinancialRatioPointDTO {
+  period_key: string
+  period_end_date: string
+  gross_margin_pct: number | null
+  operating_margin_pct: number | null
+  net_margin_pct: number | null
+  fcf_margin_pct: number | null
+  debt_to_equity: number | null
+  current_ratio: number | null
+}
+
+export interface FinancialStatementsDTO {
+  schema_version: number
+  ticker: string
+  market: 'US' | 'TH'
+  currency: string
+  provider: 'edgartools' | 'yfinance' | null
+  provider_symbol: string
+  data_status: 'ok' | 'partial' | 'empty' | 'stale'
+  coverage_status: 'complete' | 'partial'
+  core_coverage_status: 'complete' | 'partial'
+  expanded_coverage_status: 'complete' | 'partial' | 'not_available'
+  expanded_data_status: 'complete' | 'partial' | 'not_available'
+  core_coverage_pct?: number | null
+  expanded_coverage_pct?: number | null
+  missing_required_items: string[]
+  missing_expanded_items?: string[]
+  validation_warnings: string[]
+  expanded_validation_warnings?: string[]
+  expanded_error_count?: number
+  error_code?: string | null
+  warnings: string[]
+  quarterly: FinancialStatementCategoryDTO[]
+  annual: FinancialStatementCategoryDTO[]
+  summary_chart_quarterly: FinancialSummaryChartPointDTO[]
+  summary_chart_annual: FinancialSummaryChartPointDTO[]
+  ratios_quarterly: FinancialRatioPointDTO[]
+  ratios_annual: FinancialRatioPointDTO[]
+  synced_at?: string | null
+}
+
+
 
 
 

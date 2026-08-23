@@ -50,27 +50,9 @@ def isolated_calendar_portfolio(tmp_path, monkeypatch):
 @pytest.fixture
 def empty_calendar_portfolio(tmp_path, monkeypatch):
     """Set up isolated empty portfolio vault path."""
-    monkeypatch.setenv("OBSIDIAN_VAULT_PATH", str(tmp_path))
-
-    for mod_name in list(sys.modules):
-        if mod_name.startswith("tools.portfolio.") or mod_name.startswith("tools.portfolio_tools"):
-            del sys.modules[mod_name]
-
-    import tools.portfolio.core as core
-    import tools.portfolio.trading as trading
-    import tools.portfolio.watchlist as watchlist
-    import tools.portfolio.goals as goals
-    import tools.portfolio.performance as perf
-    import tools.portfolio.journal as journal
-
-    if "api.routes_portfolio" in sys.modules:
-        import api.routes_portfolio as rp
-        rp.portfolio_core = core
-        rp.portfolio_trading = trading
-        rp.portfolio_watchlist = watchlist
-        rp.portfolio_goals = goals
-        rp.portfolio_perf = perf
-        rp.portfolio_journal = journal
+    from tests.conftest import _reset_portfolio_modules
+    mods = _reset_portfolio_modules(tmp_path, monkeypatch)
+    core = mods.core
 
     post, state = core._load_or_init()
     state.holdings = []
