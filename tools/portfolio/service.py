@@ -3,39 +3,13 @@
 This module exposes the unified `PortfolioService` facade, delegating domain operations
 to specialized sub-services under `tools.portfolio.services`.
 """
-import json
 from typing import Optional, List, Dict, Tuple, Literal, Union
 
-from core.logger import get_logger
-from tools.portfolio.domain.constants import (
-    CASH_THB_SYMBOL,
-    CASH_USD_SYMBOL,
-    _CASH_SYMBOLS,
-    _FLOAT_EPS,
-    _MONEY_DP,
-    _COST_DP,
-    _PCT_DP,
-    _EDITABLE_HOLDING_FIELDS,
-)
 from tools.portfolio.domain.models import (
     PortfolioState,
-    Holding,
-    Summary,
     PortfolioMeta,
     AllocationTarget,
     WatchlistState,
-    WatchlistItem,
-    GoalsState,
-    GoalItem,
-    _now_iso,
-    default_allocation_targets,
-)
-from tools.portfolio.domain.ledger_change import LedgerChange
-from tools.portfolio.domain.errors import (
-    InvalidTradeError,
-    InsufficientCashError,
-    HoldingNotFoundError,
-    PortfolioNotFoundError,
 )
 from tools.portfolio.ports.repository_port import PortfolioRepositoryPort
 from tools.portfolio.ports.watchlist_port import WatchlistRepositoryPort
@@ -43,31 +17,6 @@ from tools.portfolio.ports.goals_port import GoalsRepositoryPort
 from tools.portfolio.ports.performance_port import PerformanceRepositoryPort
 from tools.portfolio.ports.journal_port import TradeJournalPort
 from tools.portfolio.ports.price_port import MarketPricePort
-
-from tools.portfolio.services.portfolio_state_service import PortfolioStateService
-from tools.portfolio.services.trading_service import PortfolioTradingService
-from tools.portfolio.services.cash_flow_service import PortfolioCashFlowService
-from tools.portfolio.services.ledger_service import PortfolioLedgerService
-from tools.portfolio.services.goal_service import PortfolioGoalService
-from tools.portfolio.services.performance_service import PortfolioPerformanceService
-from tools.portfolio.services.watchlist_service import PortfolioWatchlistService
-from tools.portfolio.services.journal_service import PortfolioJournalService
-
-log = get_logger(__name__)
-
-
-def _find_holding(state: PortfolioState, symbol: str) -> Optional[Holding]:
-    return next((h for h in state.holdings if h.symbol == symbol), None)
-
-
-def _require_cash(state: PortfolioState, currency: Literal["THB", "USD"] = "THB") -> Holding:
-    sym = CASH_THB_SYMBOL if currency == "THB" else CASH_USD_SYMBOL
-    cash = _find_holding(state, sym)
-    if cash is None:
-        cash = Holding(symbol=sym, asset_type="Cash", units=0.0, market_value_thb=0.0)
-        state.holdings.append(cash)
-    return cash
-
 
 def _require_fx(state: PortfolioState) -> float:
     fx = state.fx_rates.get("USDTHB")
@@ -88,53 +37,47 @@ class PortfolioService:
         journal_provider: Optional[TradeJournalPort] = None,
         price_provider: Optional[MarketPricePort] = None,
     ):
-        if repo is None:
-            from tools.portfolio.adapters.markdown.repository_adapter import MarkdownVaultRepositoryAdapter
-            from tools.portfolio.adapters.sqlite_mirror_decorator import SqliteMirroredPortfolioRepository
-            md_repo = MarkdownVaultRepositoryAdapter()
-            self.repo = SqliteMirroredPortfolioRepository(underlying_repo=md_repo)
-        else:
-            self.repo = repo
+        """Initialize self.  See help(type(self)) for accurate signature."""
+        from tools.portfolio.bootstrap import (
+            resolve_legacy_portfolio_dependencies,
+        )
 
-        if watchlist_repo is None:
-            from tools.portfolio.adapters.markdown.watchlist_adapter import MarkdownWatchlistAdapter
-            self.watchlist_repo = MarkdownWatchlistAdapter()
-        else:
-            self.watchlist_repo = watchlist_repo
+        self._bind_dependencies(resolve_legacy_portfolio_dependencies(
+            repo=repo,
+            watchlist_repo=watchlist_repo,
+            goals_repo=goals_repo,
+            perf_repo=perf_repo,
+            journal_provider=journal_provider,
+            price_provider=price_provider,
+        ))
 
-        if goals_repo is None:
-            from tools.portfolio.adapters.markdown.goals_adapter import MarkdownGoalsAdapter
-            self.goals_repo = MarkdownGoalsAdapter()
-        else:
-            self.goals_repo = goals_repo
+    def _bind_dependencies(self, deps) -> None:
+        """Bind an already-composed dependency bundle to the facade.
 
-        if perf_repo is None:
-            from tools.portfolio.adapters.markdown.performance_adapter import MarkdownPerformanceAdapter
-            self.perf_repo = MarkdownPerformanceAdapter()
-        else:
-            self.perf_repo = perf_repo
+        Kept private so the historical constructor/signature remains frozen;
+        the API composition root can inject the complete bundle (including the
+        DividendHistoryPort) without making the facade construct adapters.
+        """
+        from tools.portfolio.bootstrap import build_portfolio_application
 
-        if journal_provider is None:
-            from tools.portfolio.adapters.markdown.journal_vault_adapter import JournalVaultAdapter
-            self.journal_provider = JournalVaultAdapter()
-        else:
-            self.journal_provider = journal_provider
-
-        if price_provider is None:
-            from tools.portfolio.adapters.price_yfinance_adapter import PriceYFinanceAdapter
-            self.price_provider = PriceYFinanceAdapter()
-        else:
-            self.price_provider = price_provider
+        self._deps = deps
+        self.repo = self._deps.repo
+        self.watchlist_repo = self._deps.watchlist_repo
+        self.goals_repo = self._deps.goals_repo
+        self.perf_repo = self._deps.perf_repo
+        self.journal_provider = self._deps.journal_provider
+        self.price_provider = self._deps.price_provider
+        self._app = build_portfolio_application(self._deps)
 
         # Initialize Sub-services
-        self._state_service = PortfolioStateService(self.repo, price_provider=self.price_provider)
-        self._trading_service = PortfolioTradingService(self.repo, self.price_provider, self.journal_provider)
-        self._cash_flow_service = PortfolioCashFlowService(self.repo, self.price_provider, journal_provider=self.journal_provider)
-        self._ledger_service = PortfolioLedgerService(self.repo)
-        self._goal_service = PortfolioGoalService(self.goals_repo)
-        self._perf_service = PortfolioPerformanceService(self.repo, self.perf_repo, self.price_provider)
-        self._watchlist_service = PortfolioWatchlistService(self.watchlist_repo)
-        self._journal_service = PortfolioJournalService(self.journal_provider)
+        self._state_service = self._app.state_service
+        self._trading_service = self._app.trading_service
+        self._cash_flow_service = self._app.cash_flow_service
+        self._ledger_service = self._app.ledger_service
+        self._goal_service = self._app.goal_service
+        self._perf_service = self._app.performance_service
+        self._watchlist_service = self._app.watchlist_service
+        self._journal_service = self._app.journal_service
 
     # =========================================================================
     # 0. Portfolio Lifecycle & Management
@@ -657,4 +600,5 @@ class PortfolioService:
         return self._cash_flow_service.fetch_latest_price(symbol=symbol, currency=currency)
 
     def sync_dividends_from_history(self, portfolio_id: str = "default") -> Dict:
+        """Sync dividend payouts and history for holdings."""
         return self._cash_flow_service.sync_dividends_from_history(portfolio_id=portfolio_id)

@@ -36,6 +36,7 @@ REGISTRY: dict[str, ModelSlot] = {
     "youtube_pitch":           ModelSlot("YOUTUBE_PITCH_MODEL",          "gemini-3.1-flash-lite-preview", "YouTube Pitch generation + Briefing Book", "tool"),
     "news_triage":             ModelSlot("NEWS_FUNNEL_TRIAGE_MODEL",     "gemini-3.1-flash-lite-preview", "News impact scoring (batch triage)", "tool"),
     "thai_title_translation":  ModelSlot("NEWS_FUNNEL_SYNTHESIS_MODEL",  "gemini-3.1-flash-lite-preview", "Thai title translation for news", "tool"),
+    "earnings_call_summarizer": ModelSlot("EARNINGS_CALL_MODEL",          "gemini-3.1-flash-lite-preview", "Earnings Call Transcript Summarizer", "tool"),
 }
 
 

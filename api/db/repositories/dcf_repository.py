@@ -47,7 +47,6 @@ def record_dcf_evaluation(
             now,
         ),
     )
-    conn.commit()
 
 
 def get_latest_dcf_evaluation(conn: sqlite3.Connection, ticker: str) -> sqlite3.Row | None:

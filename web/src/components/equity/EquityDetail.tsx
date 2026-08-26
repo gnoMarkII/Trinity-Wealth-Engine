@@ -1,5 +1,7 @@
-import React, { useState } from 'react'
-import type { EquityDetailDTO } from '../../api/types'
+import React, { useState, useEffect } from 'react'
+import ReactMarkdown from 'react-markdown'
+import { api } from '../../api/client'
+import type { EquityDetailDTO, EarningsCallNoteItem } from '../../api/types'
 import { ScoreCard } from './ScoreCard'
 import ScoreRing from './ScoreRing'
 import { sentimentClass } from '../../lib/sentiment'
@@ -9,6 +11,7 @@ import { EquityChartTab } from './EquityChartTab'
 import { FinancialsTab } from './FinancialsTab'
 import { DCFScenariosChart } from './DCFScenariosChart'
 import { DataQualityFlagsCard } from './DataQualityFlagsCard'
+import { EarningsCallTab } from './EarningsCallTab'
 
 interface EquityDetailProps {
   status: 'loading' | 'error' | 'not-found' | 'success' | 'idle'
@@ -22,7 +25,24 @@ const eyebrowClass = 'text-xs font-semibold uppercase tracking-wider text-sky-60
 const QUANT_STAGGER_STEP_MS = 60
 
 export const EquityDetail: React.FC<EquityDetailProps> = ({ status, data, errorMessage, onOpenAnalysisModal }) => {
-  const [activeTab, setActiveTab] = useState<'overview' | 'chart' | 'financials' | 'news' | 'notes'>('overview')
+  const [activeTab, setActiveTab] = useState<'overview' | 'chart' | 'financials' | 'news' | 'notes' | 'earnings-call'>('overview')
+  const [latestEarningsCall, setLatestEarningsCall] = useState<EarningsCallNoteItem | null>(null)
+
+  useEffect(() => {
+    if (!data?.ticker) return
+    api.getEarningsCalls(data.ticker)
+      .then((res) => {
+        if (res.items && res.items.length > 0) {
+          setLatestEarningsCall(res.items[0] ?? null)
+        } else {
+          setLatestEarningsCall(null)
+        }
+      })
+      .catch(() => {
+        setLatestEarningsCall(null)
+      })
+  }, [data?.ticker])
+
 
   if (status === 'idle') {
     return null
@@ -150,6 +170,16 @@ export const EquityDetail: React.FC<EquityDetailProps> = ({ status, data, errorM
         >
           <span>📓 Notes</span>
         </button>
+        <button
+          onClick={() => setActiveTab('earnings-call')}
+          className={`pb-3 border-b-2 transition-colors flex items-center gap-2 ${
+            activeTab === 'earnings-call'
+              ? 'border-sky-600 text-sky-600 font-semibold'
+              : 'border-transparent text-zinc-500 hover:text-zinc-900'
+          }`}
+        >
+          <span>🎙️ Earnings Call</span>
+        </button>
       </div>
 
       {activeTab === 'chart' ? (
@@ -168,7 +198,10 @@ export const EquityDetail: React.FC<EquityDetailProps> = ({ status, data, errorM
         <EquityNews ticker={data.ticker} />
       ) : activeTab === 'notes' ? (
         <EquityNotesTab ticker={data.ticker} />
+      ) : activeTab === 'earnings-call' ? (
+        <EarningsCallTab ticker={data.ticker} market={data.market} />
       ) : (
+
 
 
         <>
@@ -252,6 +285,50 @@ export const EquityDetail: React.FC<EquityDetailProps> = ({ status, data, errorM
           {/* Editorial reading grid: main narrative (7/12 on lg, 8/12 on xl) + sentiment rail (5/12 on lg, 4/12 on xl) */}
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-12 items-start">
             <div className="space-y-6 lg:col-span-7 xl:col-span-8">
+              {latestEarningsCall && (
+                <section className="rounded-2xl border border-sky-200/80 bg-gradient-to-br from-sky-50/60 via-panel to-panel p-6 shadow-sm">
+                  <div className="flex flex-wrap items-center justify-between gap-3 border-b border-edge/60 pb-3 mb-4">
+                    <div className="flex items-center gap-2.5">
+                      <span className="text-xl">🎙️</span>
+                      <div>
+                        <h3 className="text-base font-bold text-zinc-900 flex items-center gap-2">
+                          <span>Earnings Call Highlights — {latestEarningsCall.period}</span>
+                          <span className="px-2 py-0.5 rounded bg-sky-100 text-sky-800 text-[11px] font-semibold">
+                            AI Sourced
+                          </span>
+                        </h3>
+                        <span className="text-xs text-zinc-500">
+                          วิเคราะห์เมื่อ {latestEarningsCall.date} • {latestEarningsCall.vault_path}
+                        </span>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => setActiveTab('earnings-call')}
+                      className="px-3 py-1.5 rounded-lg bg-sky-600 hover:bg-sky-700 text-white text-xs font-semibold flex items-center gap-1 shadow-sm transition-colors"
+                    >
+                      <span>ดูฉบับเต็ม</span>
+                      <span>→</span>
+                    </button>
+                  </div>
+                  <div className="prose prose-sm max-w-none text-zinc-800 line-clamp-6 leading-relaxed">
+                    <ReactMarkdown
+                      components={{
+                        a: ({ children, href }) => (
+                          <a href={href} target="_blank" rel="noreferrer" className="text-sky-600 underline font-medium">
+                            {children}
+                          </a>
+                        ),
+                        h3: ({ children }) => <h4 className="text-sm font-bold text-zinc-900 mt-3 mb-1">{children}</h4>,
+                        p: ({ children }) => <p className="my-1.5 text-zinc-700 text-sm">{children}</p>,
+                        ul: ({ children }) => <ul className="my-1.5 space-y-1 list-disc pl-4 text-zinc-700 text-sm">{children}</ul>,
+                      }}
+                    >
+                      {latestEarningsCall.highlights}
+                    </ReactMarkdown>
+                  </div>
+                </section>
+              )}
+
               <section className="rounded-xl border border-edge bg-panel p-5 shadow-sm">
                 <h3 className={eyebrowClass}>Base Case Summary</h3>
                 <p className="mt-2.5 text-[15px] leading-relaxed text-zinc-700 whitespace-pre-line">{data.base_case_summary}</p>

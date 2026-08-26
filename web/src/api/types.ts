@@ -1097,9 +1097,54 @@ export interface FinancialStatementsDTO {
   synced_at?: string | null
 }
 
+export interface EarningsCallSummarizeRequest {
+  period: string
+  transcript: string
+}
 
+export interface EarningsCallRunResponse {
+  run_id: string
+  ticker: string
+  period: string
+  status: 'new' | 'summarized' | 'note_written' | 'kanban_pending' | 'completed' | 'failed' | string
+  kanban_status: 'none' | 'pending' | 'created' | 'existing' | 'failed' | string
+  highlights?: string | null
+  vault_path?: string | null
+  kanban_card_id?: string | null
+  reused_existing_run: boolean
+  is_idempotent_replay: boolean
+  last_error_code?: string | null
+  created_at: number
+  updated_at: number
+}
 
+export interface EarningsCallSummarizeResponse {
+  run_id: string
+  ticker: string
+  period: string
+  status: 'new' | 'summarized' | 'note_written' | 'kanban_pending' | 'completed' | 'failed' | string
+  kanban_status: 'none' | 'pending' | 'created' | 'existing' | 'failed' | string
+  highlights?: string | null
+  vault_path?: string | null
+  kanban_card_id?: string | null
+  reused_existing_run: boolean
+  is_idempotent_replay: boolean
+}
 
+export interface EarningsCallNoteItem {
+  title: string
+  ticker: string
+  period: string
+  vault_path: string
+  highlights: string
+  date: string
+  last_updated: string
+  has_full_transcript: boolean
+}
 
-
+export interface EarningsCallListResponse {
+  ticker: string
+  total_count: number
+  items: EarningsCallNoteItem[]
+}
 

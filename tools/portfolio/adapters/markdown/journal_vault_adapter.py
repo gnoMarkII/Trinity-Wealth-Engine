@@ -6,8 +6,10 @@ from typing import Optional, List, Dict
 from core.logger import get_logger
 from tools._atomic_io import _atomic_write_to
 from tools.portfolio.domain.constants import _CASH_SYMBOLS
+from tools.portfolio.domain.events import _normalize_journal_timestamp
 from tools.portfolio.domain.validator import validate_portfolio_id
 from tools.portfolio.ports.journal_port import TradeJournalPort
+from .journal_format import inject_journal_wikilinks
 from .paths import get_journal_filepath
 from .repository_adapter import _get_portfolio_lock
 
@@ -45,14 +47,8 @@ class JournalVaultAdapter(TradeJournalPort):
         with lock:
             jpath = get_journal_filepath(pid)
             jpath.parent.mkdir(parents=True, exist_ok=True)
-            if date_str:
-                if len(date_str) == 10:
-                    timestamp = f"{date_str} 12:00:00"
-                else:
-                    timestamp = date_str
-            else:
-                timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-            linked = _inject_journal_wikilinks(content)
+            timestamp = _normalize_journal_timestamp(date_str)
+            linked = inject_journal_wikilinks(content)
             block = f"\n## [{timestamp}]\n\n{linked}\n"
             existing = jpath.read_text(encoding="utf-8") if jpath.exists() else ""
             _atomic_write_to(jpath, existing + block)

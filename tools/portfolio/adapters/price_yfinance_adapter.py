@@ -62,17 +62,63 @@ class PriceYFinanceAdapter(MarketPricePort):
     def fetch_price(self, symbol: str, currency: Literal["THB", "USD"]) -> Optional[float]:
         if currency not in ("THB", "USD"):
             raise ValueError(f"currency ต้องเป็น 'THB' หรือ 'USD' (got '{currency}')")
-
-        import tools.portfolio.prices as prices_mod
-        return prices_mod.fetch_latest_price(symbol, currency)
+        yf_sym = _yf_symbol(symbol, currency)
+        return _fetch_last_price(yf_sym)
 
     def fetch_fx_rate(
         self, date_str: Optional[str] = None, fallback_rate: Optional[float] = None
     ) -> Tuple[float, Literal["historical", "live", "fallback"]]:
-        import tools.portfolio.prices as prices_mod
-        return prices_mod.fetch_fx_rate(date_str=date_str, fallback_rate=fallback_rate)
+        default_fallback = fallback_rate if fallback_rate is not None and fallback_rate > 0 else 36.5
+        today_str = datetime.now().strftime("%Y-%m-%d")
+
+        if date_str and date_str.strip() and date_str.strip() < today_str:
+            clean_date = date_str.strip()
+
+            def _get_historical():
+                try:
+                    target_dt = datetime.strptime(clean_date, "%Y-%m-%d")
+                except Exception:
+                    return None
+                start_dt = target_dt - timedelta(days=5)
+                end_dt = target_dt + timedelta(days=1)
+                df = yf.download(
+                    _USDTHB_TICKER,
+                    start=start_dt.strftime("%Y-%m-%d"),
+                    end=end_dt.strftime("%Y-%m-%d"),
+                    progress=False,
+                )
+                if df is not None and not df.empty:
+                    close = df["Close"]
+                    if hasattr(close, "columns"):
+                        close = close.iloc[:, 0]
+                    if hasattr(close.index, "tz") and close.index.tz is not None:
+                        close.index = close.index.tz_localize(None)
+                    val = close.asof(target_dt)
+                    if val is not None:
+                        val_float = float(val)
+                        if val_float > 0 and val_float == val_float:
+                            return round(val_float, 4)
+                return None
+
+            try:
+                rate = with_retry(_get_historical)
+                if rate is not None:
+                    return rate, "historical"
+            except Exception:
+                pass
+            return default_fallback, "fallback"
+
+        try:
+            live = _fetch_last_price(_USDTHB_TICKER)
+            if live is not None and live > 0:
+                return round(live, 4), "live"
+        except Exception:
+            pass
+
+        return default_fallback, "fallback"
 
     def refresh_portfolio_prices(self, state: PortfolioState) -> Dict[str, str]:
+
         targets = []
         for h in state.holdings:
             if h.asset_type == "Cash":

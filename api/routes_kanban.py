@@ -1,15 +1,14 @@
 """GET/POST /api/kanban/cards, PUT /api/kanban/move — state เก็บใน SQLite ของ Web UI เอง
 ไม่สร้างไฟล์ลง Obsidian Vault (ดู Rev.2 1.1 — Vault ต้องคงความสะอาดเป็น institutional archive)
 """
-import uuid
-from contextlib import closing
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 
-from api import state_db
 from api.auth import require_session
+from api.dependencies import get_kanban_service
+from application.kanban.service import KanbanApplicationService
 from api.schemas import KanbanCardDTO
 
 router = APIRouter(dependencies=[Depends(require_session)])
@@ -46,99 +45,96 @@ class CreateCardResponse(BaseModel):
     created: bool
 
 
-def _card_to_dto(row) -> KanbanCardDTO:
-    return KanbanCardDTO(
-        card_id=row["card_id"],
-        title=row["title"],
-        prompt=row["prompt"],
-        column_name=row["column_name"],
-        job_id=row["job_id"],
-        flow=row["flow"],
-        scope=row["scope"],
-        display_seq=row["display_seq"],
-        discord_notify=bool(row["discord_notify"]) if row["discord_notify"] is not None else True,
-        is_verified=bool(row["is_verified"]) if row["is_verified"] is not None else True,
-        created_at=row["created_at"],
-        updated_at=row["updated_at"],
-    )
+def _to_api_card(card) -> KanbanCardDTO:
+    """Map application DTO to the transport DTO (separate bounded contexts)."""
+    return KanbanCardDTO.model_validate(card.__dict__ if hasattr(card, "__dict__") else card)
 
 
 @router.get("/api/kanban/cards", response_model=list[KanbanCardDTO])
-def list_cards() -> list[KanbanCardDTO]:
-    with closing(state_db.get_connection()) as conn:
-        rows = state_db.list_kanban_cards(conn)
-    return [_card_to_dto(r) for r in rows]
+def list_cards(
+    service: KanbanApplicationService = Depends(get_kanban_service),
+) -> list[KanbanCardDTO]:
+    return [_to_api_card(card) for card in service.list_cards()]
 
 
 @router.post("/api/kanban/cards", response_model=CreateCardResponse)
-def create_card(payload: CreateCardRequest) -> CreateCardResponse:
+def create_card(
+    payload: CreateCardRequest,
+    service: KanbanApplicationService = Depends(get_kanban_service),
+) -> CreateCardResponse:
     title = payload.title.strip()
     if not title:
         raise HTTPException(status_code=400, detail="title ว่างเปล่า")
-    prompt = (payload.prompt or "").strip() or None
 
-    with closing(state_db.get_connection()) as conn:
-        # กันการ์ดซ้ำใน Backlog — ถ้ามีการ์ดชื่อ+prompt เดียวกันอยู่แล้วให้คืนอันเดิม ไม่สร้างซ้ำ
-        # (idiom เดียวกับ idempotency ของ JobQueue.dispatch())
-        existing = state_db.find_kanban_card_by_title_in_column(conn, title, "backlog", prompt=prompt)
-        if existing is not None:
-            return CreateCardResponse(card=_card_to_dto(existing), created=False)
-
-        card_id = str(uuid.uuid4())
-        state_db.create_kanban_card(
-            conn, card_id, title, column_name="backlog", flow=payload.flow, prompt=prompt, scope=payload.scope
-        )
-        row = state_db.get_kanban_card(conn, card_id)
-    return CreateCardResponse(card=_card_to_dto(row), created=True)
+    card_dto, created = service.create_card(
+        title=title,
+        flow=payload.flow,
+        prompt=payload.prompt,
+        scope=payload.scope,
+    )
+    return CreateCardResponse(card=_to_api_card(card_dto), created=created)
 
 
 @router.patch("/api/kanban/cards/{card_id}", response_model=KanbanCardDTO)
-def update_card(card_id: str, payload: UpdateCardRequest) -> KanbanCardDTO:
+def update_card(
+    card_id: str,
+    payload: UpdateCardRequest,
+    service: KanbanApplicationService = Depends(get_kanban_service),
+) -> KanbanCardDTO:
     title = payload.title.strip()
     if not title:
         raise HTTPException(status_code=400, detail="title ว่างเปล่า")
-    prompt = (payload.prompt or "").strip() or None
 
-    with closing(state_db.get_connection()) as conn:
-        existing = state_db.get_kanban_card(conn, card_id)
-        if existing is None:
-            raise HTTPException(status_code=404, detail="ไม่พบการ์ดนี้")
-        if existing["column_name"] != "backlog":
-            raise HTTPException(status_code=400, detail="แก้ไขได้เฉพาะการ์ดที่ยังอยู่ใน Backlog เท่านั้น")
-        state_db.update_kanban_card(conn, card_id, title=title, prompt=prompt, flow=payload.flow, scope=payload.scope)
-        row = state_db.get_kanban_card(conn, card_id)
-    return _card_to_dto(row)
+    existing = service.get_card(card_id)
+    if existing is None:
+        raise HTTPException(status_code=404, detail="ไม่พบการ์ดนี้")
+    if existing.column_name != "backlog":
+        raise HTTPException(status_code=400, detail="แก้ไขได้เฉพาะการ์ดที่ยังอยู่ใน Backlog เท่านั้น")
+
+    updated = service.update_card(
+        card_id=card_id,
+        title=title,
+        flow=payload.flow,
+        prompt=payload.prompt,
+        scope=payload.scope,
+    )
+    if updated is None:
+        raise HTTPException(status_code=404, detail="ไม่พบการ์ดนี้")
+    return _to_api_card(updated)
 
 
 @router.put("/api/kanban/move", response_model=KanbanCardDTO)
-def move_card(payload: MoveCardRequest) -> KanbanCardDTO:
+def move_card(
+    payload: MoveCardRequest,
+    service: KanbanApplicationService = Depends(get_kanban_service),
+) -> KanbanCardDTO:
     if payload.column_name not in _VALID_COLUMNS:
         raise HTTPException(status_code=400, detail=f"column_name ต้องเป็นหนึ่งใน {sorted(_VALID_COLUMNS)}")
-    with closing(state_db.get_connection()) as conn:
-        existing = state_db.get_kanban_card(conn, payload.card_id)
-        if existing is None:
-            raise HTTPException(status_code=404, detail="ไม่พบการ์ดนี้")
-        state_db.move_kanban_card(conn, payload.card_id, payload.column_name, job_id=payload.job_id)
-        row = state_db.get_kanban_card(conn, payload.card_id)
-    return _card_to_dto(row)
+
+    updated = service.move_card(card_id=payload.card_id, target_column=payload.column_name, job_id=payload.job_id)
+    if updated is None:
+        raise HTTPException(status_code=404, detail="ไม่พบการ์ดนี้")
+    return _to_api_card(updated)
 
 
 @router.patch("/api/kanban/cards/{card_id}/discord", response_model=KanbanCardDTO)
-def toggle_card_discord(card_id: str, payload: ToggleDiscordRequest) -> KanbanCardDTO:
-    with closing(state_db.get_connection()) as conn:
-        existing = state_db.get_kanban_card(conn, card_id)
-        if existing is None:
-            raise HTTPException(status_code=404, detail="ไม่พบการ์ดนี้")
-        state_db.toggle_kanban_card_discord(conn, card_id, payload.enabled)
-        row = state_db.get_kanban_card(conn, card_id)
-    return _card_to_dto(row)
+def toggle_card_discord(
+    card_id: str,
+    payload: ToggleDiscordRequest,
+    service: KanbanApplicationService = Depends(get_kanban_service),
+) -> KanbanCardDTO:
+    updated = service.toggle_discord(card_id=card_id, enabled=payload.enabled)
+    if updated is None:
+        raise HTTPException(status_code=404, detail="ไม่พบการ์ดนี้")
+    return _to_api_card(updated)
 
 
 @router.delete("/api/kanban/cards/{card_id}")
-def delete_card(card_id: str) -> dict:
-    with closing(state_db.get_connection()) as conn:
-        existing = state_db.get_kanban_card(conn, card_id)
-        if existing is None:
-            raise HTTPException(status_code=404, detail="ไม่พบการ์ดนี้")
-        state_db.delete_kanban_card(conn, card_id)
+def delete_card(
+    card_id: str,
+    service: KanbanApplicationService = Depends(get_kanban_service),
+) -> dict:
+    deleted = service.delete_card(card_id=card_id)
+    if not deleted:
+        raise HTTPException(status_code=404, detail="ไม่พบการ์ดนี้")
     return {"ok": True}

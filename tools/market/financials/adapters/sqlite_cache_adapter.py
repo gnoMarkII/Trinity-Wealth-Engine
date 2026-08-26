@@ -1,4 +1,6 @@
 """SQLite Persistence Adapter for Financial Statements Cache."""
+import os
+import sqlite3
 from datetime import datetime, timezone
 import json
 import logging
@@ -12,14 +14,30 @@ log = logging.getLogger(__name__)
 class SQLiteCacheAdapter(FinancialCachePort):
     """Driven Adapter: จัดเก็บและดึงงบการเงินจาก SQLite table `financial_statements_cache`"""
 
-    def __init__(self, conn_factory: Optional[Any] = None):
+    def __init__(self, conn_factory: Optional[Any] = None, db_path: Optional[str] = None):
         self._conn_factory = conn_factory
+        self._db_path = db_path
 
     def _get_conn(self) -> Any:
         if self._conn_factory:
             return self._conn_factory()
-        from api.state_db import get_connection
-        return get_connection()
+        path = self._db_path or os.getenv("WEBUI_STATE_DB_PATH", "./data/webui_state.db")
+        os.makedirs(os.path.dirname(os.path.abspath(path)), exist_ok=True)
+        conn = sqlite3.connect(path, check_same_thread=False, timeout=30)
+        conn.row_factory = sqlite3.Row
+        conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS financial_statements_cache (
+                market           TEXT NOT NULL,
+                provider_symbol  TEXT NOT NULL,
+                provider         TEXT NOT NULL,
+                data_json        TEXT NOT NULL,
+                synced_at        REAL NOT NULL,
+                PRIMARY KEY (market, provider_symbol)
+            )
+            """
+        )
+        return conn
 
     def get(self, market: str, provider_symbol: str) -> Optional[CacheEntry]:
         conn = self._get_conn()

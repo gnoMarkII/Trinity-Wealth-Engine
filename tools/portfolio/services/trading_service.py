@@ -4,7 +4,6 @@ import time
 import uuid
 from typing import Optional, List, Dict, Tuple, Literal, Union
 
-from core.logger import get_logger
 from tools.portfolio.domain.constants import (
     CASH_THB_SYMBOL,
     CASH_USD_SYMBOL,
@@ -14,6 +13,8 @@ from tools.portfolio.domain.constants import (
 )
 from tools.portfolio.domain.models import PortfolioState, Holding, _now_iso
 from tools.portfolio.domain.ledger_change import LedgerChange
+from tools.portfolio.domain.events import SystemJournalEvent
+from tools.portfolio.domain.mutation import PortfolioMutation
 from tools.portfolio.domain.calculations import (
     calc_weighted_avg_cost,
     calc_realized_pnl,
@@ -23,8 +24,7 @@ from tools.portfolio.domain.validator import validate_portfolio_id
 from tools.portfolio.ports.repository_port import PortfolioRepositoryPort
 from tools.portfolio.ports.price_port import MarketPricePort
 from tools.portfolio.ports.journal_port import TradeJournalPort
-
-log = get_logger(__name__)
+from ._mutation_commit import commit_mutation
 
 
 def _find_holding(state: PortfolioState, symbol: str) -> Optional[Holding]:
@@ -276,13 +276,27 @@ class PortfolioTradingService:
                 sign = "+" if realized_pnl >= 0 else ""
                 res_str = f"[SELL] {clean_sym} {units:g} units @ {price:,.2f} {currency} | Realized P/L: {sign}{realized_pnl:,.2f} {currency} | CASH_{currency} คงเหลือ: {cash.units:,.2f} {currency}"
 
-            recalc_all(state)
-            uow.commit(state, LedgerChange(kind="append", row=ledger_row, tx_id=tx_id))
-
             content = f"**[TRADE NOTE - {clean_sym}]** {action.upper()} {units:g} @ {price:,.4f} {currency}"
             if notes and notes.strip():
                 content += f" — {notes.strip()}"
-            self.journal_provider.append_system_entry(content, date_str=date, portfolio_id=pid)
+            recalc_all(state)
+            commit_mutation(
+                uow,
+                state,
+                PortfolioMutation(
+                    ledger_change=LedgerChange(kind="append", row=ledger_row, tx_id=tx_id),
+                    system_journal_events=[
+                        SystemJournalEvent.from_entry(
+                            event_type="trade_executed",
+                            message=content,
+                            date_str=date,
+                            metadata={"transaction_id": tx_id, "symbol": clean_sym},
+                        )
+                    ],
+                ),
+                journal_provider=self.journal_provider,
+                portfolio_id=pid,
+            )
 
             return res_str, state
 
@@ -394,15 +408,8 @@ class PortfolioTradingService:
                     else:
                         fetched = None
                         try:
-                            import tools.portfolio.trading as trading_mod
-                            timeout = getattr(trading_mod, "_PRICE_FETCH_TIMEOUT", 6.0)
-                            import concurrent.futures
-                            with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
-                                future = executor.submit(trading_mod.fetch_latest_price, sym, ccy)
-                                try:
-                                    fetched = future.result(timeout=timeout)
-                                except Exception:
-                                    fetched = None
+                            if self.price_provider:
+                                fetched = self.price_provider.fetch_price(sym, ccy)
                         except Exception:
                             fetched = None
 
@@ -551,13 +558,24 @@ class PortfolioTradingService:
                 raise ValueError("ค่าที่ระบุไม่มีการเปลี่ยนแปลงจากข้อมูลเดิม (เหมือนเดิม)")
 
             reason_text = reason.strip() or "(no reason given)"
-            self.journal_provider.append_system_entry(
-                f"**[EDIT {clean_sym}]** {' | '.join(changes)}\n\nReason: {reason_text}",
+            journal_message = f"**[EDIT {clean_sym}]** {' | '.join(changes)}\n\nReason: {reason_text}"
+            recalc_all(state)
+            commit_mutation(
+                uow,
+                state,
+                PortfolioMutation(
+                    ledger_change=LedgerChange(kind="unchanged"),
+                    system_journal_events=[
+                        SystemJournalEvent.from_entry(
+                            event_type="holding_edited",
+                            message=journal_message,
+                            metadata={"symbol": clean_sym},
+                        )
+                    ],
+                ),
+                journal_provider=self.journal_provider,
                 portfolio_id=pid,
             )
-
-            recalc_all(state)
-            uow.commit(state, LedgerChange(kind="unchanged"))
             res_str = f"[EDIT {clean_sym}] {', '.join(changes)} (เหตุผล: {reason})"
             return res_str, state
 
@@ -573,9 +591,21 @@ class PortfolioTradingService:
                 raise ValueError(f"ไม่พบสินทรัพย์ {clean_sym} ในพอร์ต")
             state.holdings.remove(target)
             recalc_all(state)
-            uow.commit(state, LedgerChange(kind="unchanged"))
-            self.journal_provider.append_system_entry(
-                f"**[REMOVE {clean_sym}]** ลบสินทรัพย์ออกจากพอร์ตโดยตรง", portfolio_id=pid
+            commit_mutation(
+                uow,
+                state,
+                PortfolioMutation(
+                    ledger_change=LedgerChange(kind="unchanged"),
+                    system_journal_events=[
+                        SystemJournalEvent.from_entry(
+                            event_type="holding_removed",
+                            message=f"**[REMOVE {clean_sym}]** ลบสินทรัพย์ออกจากพอร์ตโดยตรง",
+                            metadata={"symbol": clean_sym},
+                        )
+                    ],
+                ),
+                journal_provider=self.journal_provider,
+                portfolio_id=pid,
             )
             return state
 
@@ -583,6 +613,7 @@ class PortfolioTradingService:
         pid = validate_portfolio_id(portfolio_id)
         with self.repo.unit_of_work(pid) as uow:
             state = uow.load_state()
+            journal_events: List[SystemJournalEvent] = []
             for sym in symbols:
                 clean_sym = sym.strip().upper()
                 if clean_sym in _CASH_SYMBOLS:
@@ -590,11 +621,24 @@ class PortfolioTradingService:
                 target = _find_holding(state, clean_sym)
                 if target:
                     state.holdings.remove(target)
-                    self.journal_provider.append_system_entry(
-                        f"**[REMOVE {clean_sym}]** ลบสินทรัพย์ออกจากพอร์ตโดยตรง", portfolio_id=pid
+                    journal_events.append(
+                        SystemJournalEvent.from_entry(
+                            event_type="holding_removed",
+                            message=f"**[REMOVE {clean_sym}]** ลบสินทรัพย์ออกจากพอร์ตโดยตรง",
+                            metadata={"symbol": clean_sym},
+                        )
                     )
             recalc_all(state)
-            uow.commit(state, LedgerChange(kind="unchanged"))
+            commit_mutation(
+                uow,
+                state,
+                PortfolioMutation(
+                    ledger_change=LedgerChange(kind="unchanged"),
+                    system_journal_events=journal_events,
+                ),
+                journal_provider=self.journal_provider,
+                portfolio_id=pid,
+            )
             return state
 
     # =========================================================================
@@ -611,14 +655,8 @@ class PortfolioTradingService:
             source = "manual"
         else:
             try:
-                import tools.portfolio.trading as trading_fresh
-                if hasattr(trading_fresh, "_fetch_fx_rate") and callable(trading_fresh._fetch_fx_rate):
-                    new_rate = trading_fresh._fetch_fx_rate()
-                    if isinstance(new_rate, tuple):
-                        new_rate = new_rate[0]
-                else:
-                    rate_val, _ = self.price_provider.fetch_fx_rate()
-                    new_rate = rate_val
+                rate_val, _ = self.price_provider.fetch_fx_rate()
+                new_rate = rate_val
             except Exception:
                 new_rate = None
             if new_rate is None or new_rate <= 0:
@@ -640,5 +678,34 @@ class PortfolioTradingService:
             return f"Error: {e}"
 
     def sync_market_prices(self, portfolio_id: str = "default") -> str:
-        from tools.portfolio.prices import _sync_market_prices_impl
-        return _sync_market_prices_impl(portfolio_id=portfolio_id)
+        from filelock import Timeout
+        from tools.tool_errors import LOCK_TIMEOUT
+
+        pid = validate_portfolio_id(portfolio_id)
+        try:
+            with self.repo.unit_of_work(pid) as uow:
+                state = uow.load_state()
+                has_non_cash = any(
+                    h.asset_type != "Cash" and h.status == "active" and h.units > _FLOAT_EPS
+                    for h in state.holdings
+                )
+                results = self.price_provider.refresh_portfolio_prices(state)
+                if not results and not has_non_cash:
+                    return f"[SYNC] {pid}: no non-cash holdings to update"
+
+                total_count = len(results)
+                success_count = sum(1 for value in results.values() if value == "ok")
+                failed_items = [f"{key}={value}" for key, value in results.items() if value != "ok"]
+                recalc_all(state)
+                uow.commit(state, LedgerChange(kind="unchanged"))
+
+                if failed_items:
+                    return (
+                        f"[SYNC] updated prices: refreshed {success_count}/{total_count} "
+                        f"({', '.join(failed_items)})"
+                    )
+                return f"[SYNC] updated prices: refreshed {success_count}/{total_count}"
+        except Timeout:
+            return LOCK_TIMEOUT.format(detail=f"portfolio lock '{pid}'")
+        except Exception as exc:
+            return f"Error: {exc}"

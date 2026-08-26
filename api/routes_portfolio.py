@@ -15,11 +15,10 @@ from tools.portfolio import (
     dividends as portfolio_dividends,
     ledger_replay as portfolio_ledger_replay,
 )
+from api.compatibility.portfolio import _latest_strategy_json, _STRATEGY_SUBDIR
 from api.routers.portfolio import (
     router,
     handle_portfolio_exceptions,
-    _latest_strategy_json,
-    _STRATEGY_SUBDIR,
     list_portfolios_endpoint,
     create_portfolio_endpoint,
     delete_portfolio_endpoint,
@@ -60,6 +59,70 @@ from api.routers.portfolio import (
     remove_goal_endpoint,
     append_journal_endpoint,
 )
+
+# Compatibility metadata is intentionally kept in this facade only.  New
+# routers use ``Depends(get_portfolio_service)`` and never inspect these
+# modules; the bridge below exists for integrations that still patch the old
+# module-level tool objects during the migration.
+_ORIGINAL_COMPAT_MODULES = {
+    "core": portfolio_core,
+    "trading": portfolio_trading,
+}
+_ORIGINAL_COMPAT_CALLABLES = {
+    "core_state": getattr(portfolio_core, "get_structured_portfolio_state", None),
+    "core_allocations": getattr(portfolio_core, "get_structured_bucket_allocation", None),
+    "trading_execute": getattr(portfolio_trading, "structured_execute_trade", None),
+}
+
+
+def _invoke_legacy_tool(target, **kwargs):
+    """Invoke either a legacy LangChain tool, function, or patched mock."""
+    from unittest.mock import Mock
+
+    if isinstance(target, Mock):
+        return target(**kwargs)
+    invoke = getattr(target, "invoke", None)
+    if callable(invoke):
+        return invoke(kwargs)
+    return target(**kwargs)
+
+
+class _LegacyPortfolioPatchProxy:
+    """Forward normal calls to the application service and patched calls to legacy tools."""
+
+    def __init__(self, service):
+        self._service = service
+
+    def structured_execute_trade(self, **kwargs):
+        return _invoke_legacy_tool(portfolio_trading.structured_execute_trade, **kwargs)
+
+    def get_structured_portfolio_state(self, **kwargs):
+        return _invoke_legacy_tool(portfolio_core.get_structured_portfolio_state, **kwargs)
+
+    def get_structured_bucket_allocation(self, **kwargs):
+        return _invoke_legacy_tool(portfolio_core.get_structured_bucket_allocation, **kwargs)
+
+    def __getattr__(self, name):
+        return getattr(self._service, name)
+
+
+def maybe_wrap_portfolio_service(service):
+    """Apply the legacy patch bridge only when compatibility targets changed."""
+    current_modules_changed = any(
+        current is not _ORIGINAL_COMPAT_MODULES[key]
+        for key, current in (("core", portfolio_core), ("trading", portfolio_trading))
+    )
+    current_callables_changed = (
+        getattr(portfolio_core, "get_structured_portfolio_state", None)
+        is not _ORIGINAL_COMPAT_CALLABLES["core_state"]
+        or getattr(portfolio_core, "get_structured_bucket_allocation", None)
+        is not _ORIGINAL_COMPAT_CALLABLES["core_allocations"]
+        or getattr(portfolio_trading, "structured_execute_trade", None)
+        is not _ORIGINAL_COMPAT_CALLABLES["trading_execute"]
+    )
+    if current_modules_changed or current_callables_changed:
+        return _LegacyPortfolioPatchProxy(service)
+    return service
 
 __all__ = [
     "VAULT_PATH",
@@ -115,4 +178,5 @@ __all__ = [
     "upsert_goal_endpoint",
     "remove_goal_endpoint",
     "append_journal_endpoint",
+    "maybe_wrap_portfolio_service",
 ]

@@ -4,10 +4,12 @@
 import uuid
 from contextlib import closing
 from pathlib import Path
+import time
 
 import pytest
 
 from api import routes_notebooklm, state_db
+import api.dependencies as dependencies
 from tools.content.notebooklm import manifest as manifest_mod
 from tools.content.notebooklm.models import PreflightError
 
@@ -17,8 +19,10 @@ def _isolate_sources_dir(tmp_path, monkeypatch):
     sources_dir = tmp_path / "NotebookLM_Sources"
     sources_dir.mkdir()
     monkeypatch.setattr(routes_notebooklm, "NOTEBOOKLM_SOURCES_DIR", sources_dir.resolve())
+    monkeypatch.setattr(dependencies, "NOTEBOOKLM_SOURCES_DIR", sources_dir.resolve())
     monkeypatch.setattr(manifest_mod, "MANIFEST_DIR", tmp_path / "notebooklm_runs")
     monkeypatch.setattr(routes_notebooklm, "check_binary_available", lambda: None)
+    monkeypatch.setattr(dependencies, "check_binary_available", lambda: None)
     return sources_dir
 
 
@@ -116,6 +120,7 @@ def test_generate_returns_503_when_binary_not_available(authed_client, _isolate_
         raise PreflightError("ไม่พบคำสั่ง 'notebooklm-mcp'")
 
     monkeypatch.setattr(routes_notebooklm, "check_binary_available", _raise_preflight)
+    monkeypatch.setattr(dependencies, "check_binary_available", _raise_preflight)
 
     r = authed_client.post("/api/notebooklm/generate", json={"card_id": card_id})
     assert r.status_code == 503
@@ -144,10 +149,19 @@ def test_generate_dispatches_moves_card_to_executing_and_returns_job_id(authed_c
     body = r.json()
     assert body["job_id"]
 
-    with closing(state_db.get_connection()) as conn:
-        card = state_db.get_kanban_card(conn, card_id)
     # fake run_fn (no-op, patched ใน conftest) จบเร็วมาก — worker อาจไล่การ์ดจาก executing ไป
-    # done ได้ก่อน assert นี้จะรัน ของจริงใช้เวลาเป็นนาทีจึงไม่ racy แบบนี้ (สำคัญคือย้ายออกจาก backlog แล้ว)
+    # done ได้ก่อน assert นี้จะรัน ของจริงใช้เวลาเป็นนาทีจึงไม่ racy แบบนี้
+    # Poll briefly because the queue worker and the request use separate DB
+    # connections; the invariant is that dispatch must leave the card out of
+    # backlog, not that the worker has reached a particular terminal state.
+    card = None
+    for _ in range(20):
+        with closing(state_db.get_connection()) as conn:
+            card = state_db.get_kanban_card(conn, card_id)
+        if card and card["column_name"] in ("executing", "done"):
+            break
+        time.sleep(0.05)
+    # สำคัญคือย้ายออกจาก backlog แล้ว
     assert card["column_name"] in ("executing", "done")
     assert card["job_id"] == body["job_id"]
 

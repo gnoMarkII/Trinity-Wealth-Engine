@@ -1,4 +1,4 @@
-﻿"""PortfolioPerformanceService — Snapshot, NAV History, Drawdown."""
+"""PortfolioPerformanceService — Snapshot, NAV History, Drawdown."""
 import json
 from datetime import datetime
 from typing import Optional, List, Dict
@@ -38,9 +38,8 @@ class PortfolioPerformanceService:
             from tools.portfolio.domain.ledger_change import LedgerChange
             with self.repo.unit_of_work(pid) as uow:
                 state = uow.load_state()
-                if refresh_prices:
-                    from tools.portfolio.prices import _refresh_prices
-                    _refresh_prices(state)
+                if refresh_prices and self.price_provider:
+                    self.price_provider.refresh_portfolio_prices(state)
                 recalc_all(state)
                 uow.commit(state, LedgerChange(kind="unchanged"))
 

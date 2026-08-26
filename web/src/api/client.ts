@@ -124,6 +124,38 @@ export const api = {
     )
   },
 
+  summarizeEarningsCall: (ticker: string, period: string, transcript: string, signal?: AbortSignal) =>
+    request<import('./types').EarningsCallSummarizeResponse>(
+      `/api/equity/${encodeURIComponent(ticker)}/earnings-call/summarize`,
+      {
+        method: 'POST',
+        body: JSON.stringify({ period, transcript }),
+        signal,
+      }
+    ),
+
+  getEarningsCallRun: (ticker: string, runId: string, signal?: AbortSignal) =>
+    request<import('./types').EarningsCallRunResponse>(
+      `/api/equity/${encodeURIComponent(ticker)}/earnings-call/runs/${encodeURIComponent(runId)}`,
+      { signal }
+    ),
+
+  retryEarningsCallRun: (ticker: string, runId: string, signal?: AbortSignal) =>
+    request<import('./types').EarningsCallRunResponse>(
+      `/api/equity/${encodeURIComponent(ticker)}/earnings-call/runs/${encodeURIComponent(runId)}/retry`,
+      {
+        method: 'POST',
+        signal,
+      }
+    ),
+
+  getEarningsCalls: (ticker: string, signal?: AbortSignal) =>
+    request<import('./types').EarningsCallListResponse>(
+      `/api/equity/${encodeURIComponent(ticker)}/earnings-calls`,
+      { signal }
+    ),
+
+
 
 
 

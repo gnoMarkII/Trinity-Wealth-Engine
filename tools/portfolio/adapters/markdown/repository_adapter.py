@@ -7,7 +7,7 @@ import threading
 import time
 import uuid
 from pathlib import Path
-from typing import Optional, List, Dict, Tuple
+from typing import Optional, List, Dict, Tuple, Union
 
 import frontmatter
 from filelock import FileLock, Timeout
@@ -29,6 +29,8 @@ from tools.portfolio.domain.models import (
     default_allocation_targets,
 )
 from tools.portfolio.domain.ledger_change import LedgerChange
+from tools.portfolio.domain.mutation import PortfolioMutation
+from tools.portfolio.domain.events import SystemJournalEvent
 from tools.portfolio.domain.errors import RecoveryConflictError, PortfolioNotFoundError
 from tools.portfolio.domain.calculations import recalc_all
 from tools.portfolio.domain.validator import validate_portfolio_id
@@ -40,9 +42,11 @@ from .paths import (
     get_trades_log_filepath,
     get_pending_manifest_path,
     get_holdings_dir,
+    get_journal_filepath,
     _TRADES_LOG_HEADER,
     _LOCK_TIMEOUT,
 )
+from .journal_format import inject_journal_wikilinks
 
 log = get_logger(__name__)
 
@@ -142,6 +146,8 @@ def _holding_to_md(h: Holding) -> str:
 class MarkdownPortfolioUnitOfWork(PortfolioUnitOfWork):
     """Concrete Unit of Work for Markdown Repository under FileLock with Decision Matrix Recovery."""
 
+    supports_staged_mutations = True
+
     def __init__(self, repo: "MarkdownVaultRepositoryAdapter", portfolio_id: str = "default"):
         self.repo = repo
         self.portfolio_id = validate_portfolio_id(portfolio_id)
@@ -179,7 +185,11 @@ class MarkdownPortfolioUnitOfWork(PortfolioUnitOfWork):
             rows.append(item_dict)
         return rows
 
-    def commit(self, state: PortfolioState, ledger_change: Optional[LedgerChange] = None) -> None:
+    def commit(
+        self,
+        state: PortfolioState,
+        ledger_change: Optional[Union[LedgerChange, PortfolioMutation]] = None,
+    ) -> None:
         self.repo._commit_locked(self.portfolio_id, state, ledger_change)
 
     def rollback(self) -> None:
@@ -486,13 +496,13 @@ class MarkdownVaultRepositoryAdapter(PortfolioRepositoryPort):
                     log.warning("Failed to archive sidecar %s: %s", old.name, e)
 
     def _cleanup_staged_files(self, manifest: dict) -> None:
-        for key in ("staged_master_file", "staged_ledger_file"):
+        for key in ("staged_master_file", "staged_ledger_file", "staged_journal_file"):
             p = manifest.get(key)
             if p:
                 Path(p).unlink(missing_ok=True)
 
     def _reconcile_pending_commit(self, portfolio_id: str) -> None:
-        """Deterministic 2-File Recovery Decision Matrix."""
+        """Deterministic Multi-File Crash Recovery Decision Matrix."""
         manifest_path = get_pending_manifest_path(portfolio_id)
         if not manifest_path.exists():
             return
@@ -506,25 +516,29 @@ class MarkdownVaultRepositoryAdapter(PortfolioRepositoryPort):
 
         master_file = get_portfolio_filepath(portfolio_id)
         ledger_file = get_trades_log_filepath(portfolio_id)
+        journal_file = get_journal_filepath(portfolio_id)
 
         disk_master_sha = _compute_sha256(master_file)
         disk_ledger_sha = _compute_sha256(ledger_file)
+        disk_journal_sha = _compute_sha256(journal_file)
 
         pre_master_sha = manifest.get("pre_master_sha256") or ""
         staged_master_sha = manifest.get("staged_master_sha256") or ""
         pre_ledger_sha = manifest.get("pre_ledger_sha256") or ""
         target_ledger_sha = manifest.get("staged_ledger_sha256") or pre_ledger_sha or ""
+        pre_journal_sha = manifest.get("pre_journal_sha256") or ""
+        target_journal_sha = manifest.get("staged_journal_sha256") or pre_journal_sha or ""
         ledger_kind = manifest.get("ledger_kind", "unchanged")
 
-        # Step 1: Clean Rollback (Master & Ledger both at pre-state)
-        if disk_master_sha == pre_master_sha and disk_ledger_sha == pre_ledger_sha:
+        # Step 1: Clean Rollback (Master & Ledger & Journal all at pre-state)
+        if disk_master_sha == pre_master_sha and disk_ledger_sha == pre_ledger_sha and disk_journal_sha == pre_journal_sha:
             self._cleanup_staged_files(manifest)
             manifest_path.unlink(missing_ok=True)
             log.info("[RECOVERY] Rollback uncommitted transaction %s for %s", manifest.get("tx_id"), portfolio_id)
             return
 
-        # Step 2: Commit Already Complete (Master & Ledger both at target state)
-        if disk_master_sha == staged_master_sha and disk_ledger_sha == target_ledger_sha:
+        # Step 2: Commit Already Complete (Master & Ledger & Journal at target state)
+        if disk_master_sha == staged_master_sha and disk_ledger_sha == target_ledger_sha and disk_journal_sha == target_journal_sha:
             _, state = self._load_or_init_locked(portfolio_id)
             self._sync_sidecars(state, portfolio_id=portfolio_id)
             self._cleanup_staged_files(manifest)
@@ -532,48 +546,66 @@ class MarkdownVaultRepositoryAdapter(PortfolioRepositoryPort):
             log.info("[RECOVERY] Cleaned completed manifest for %s (ledger_kind=%s)", portfolio_id, ledger_kind)
             return
 
-        # Step 3: Roll-Forward Ledger (Master committed, Ledger at pre-state, mutated ledger)
-        if disk_master_sha == staged_master_sha and disk_ledger_sha == pre_ledger_sha and ledger_kind != "unchanged":
-            staged_ledger = Path(manifest["staged_ledger_file"]) if manifest.get("staged_ledger_file") else None
-            if staged_ledger and staged_ledger.exists() and _compute_sha256(staged_ledger) == target_ledger_sha:
-                os.replace(staged_ledger, ledger_file)
-                _, state = self._load_or_init_locked(portfolio_id)
-                self._sync_sidecars(state, portfolio_id=portfolio_id)
-                self._cleanup_staged_files(manifest)
-                manifest_path.unlink(missing_ok=True)
-                log.info("[RECOVERY] Roll-forward committed ledger for %s", portfolio_id)
-                return
-            else:
-                log.critical("[RECOVERY CONFLICT] Staged ledger missing or corrupted for %s", portfolio_id)
-                raise RecoveryConflictError(
-                    f"ไม่สามารถ Roll-forward Ledger ของพอร์ต '{portfolio_id}' ได้เนื่องจากไฟล์ staged เสียหาย — ระงับการทำงานเพื่อความปลอดภัย"
-                )
+        # Step 3: Roll-Forward Ledger / Journal (Master committed, remaining files at pre-state)
+        if disk_master_sha == staged_master_sha:
+            # Roll forward ledger if staged
+            if disk_ledger_sha == pre_ledger_sha and ledger_kind != "unchanged":
+                staged_ledger = Path(manifest["staged_ledger_file"]) if manifest.get("staged_ledger_file") else None
+                if staged_ledger and staged_ledger.exists() and _compute_sha256(staged_ledger) == target_ledger_sha:
+                    os.replace(staged_ledger, ledger_file)
+                    log.info("[RECOVERY] Roll-forward committed ledger for %s", portfolio_id)
+                elif staged_ledger:
+                    log.critical("[RECOVERY CONFLICT] Staged ledger missing or corrupted for %s", portfolio_id)
+                    raise RecoveryConflictError(
+                        f"ไม่สามารถ Roll-forward Ledger ของพอร์ต '{portfolio_id}' ได้เนื่องจากไฟล์ staged เสียหาย — ระงับการทำงานเพื่อความปลอดภัย"
+                    )
+
+            # Roll forward journal if staged
+            if disk_journal_sha == pre_journal_sha and manifest.get("staged_journal_file"):
+                staged_journal = Path(manifest["staged_journal_file"])
+                if staged_journal and staged_journal.exists() and _compute_sha256(staged_journal) == target_journal_sha:
+                    os.replace(staged_journal, journal_file)
+                    log.info("[RECOVERY] Roll-forward committed journal for %s", portfolio_id)
+                else:
+                    log.critical("[RECOVERY CONFLICT] Staged journal missing or corrupted for %s", portfolio_id)
+                    raise RecoveryConflictError(
+                        f"ไม่สามารถ Roll-forward Journal ของพอร์ต '{portfolio_id}' ได้เนื่องจากไฟล์ staged เสียหาย — ระงับการทำงานเพื่อความปลอดภัย"
+                    )
+
+            _, state = self._load_or_init_locked(portfolio_id)
+            self._sync_sidecars(state, portfolio_id=portfolio_id)
+            self._cleanup_staged_files(manifest)
+            manifest_path.unlink(missing_ok=True)
+            return
 
         # Step 4: Recovery Conflict (Any unknown hash or unexpected state combination)
         log.critical(
-            "[RECOVERY CONFLICT] Unresolvable hash divergence on %s (Master: %s, Ledger: %s). Manifest preserved.",
-            portfolio_id, disk_master_sha, disk_ledger_sha,
+            "[RECOVERY CONFLICT] Unresolvable hash divergence on %s (Master: %s, Ledger: %s, Journal: %s). Manifest preserved.",
+            portfolio_id, disk_master_sha, disk_ledger_sha, disk_journal_sha,
         )
         raise RecoveryConflictError(
-            f"ตรวจพบความขัดแย้งของไฟล์ Master/Ledger ระหว่างกู้คืนพอร์ต '{portfolio_id}' — ไฟล์ถูกแก้ไขภายนอกหรือเสียหาย ระงับการเขียนทับโดยเด็ดขาด"
+            f"ตรวจพบความขัดแย้งของไฟล์ Master/Ledger/Journal ระหว่างกู้คืนพอร์ต '{portfolio_id}' — ไฟล์ถูกแก้ไขภายนอกหรือเสียหาย ระงับการเขียนทับโดยเด็ดขาด"
         )
 
     def _commit_locked(
         self,
         portfolio_id: str,
         state: PortfolioState,
-        ledger_change: Optional[LedgerChange] = None,
+        ledger_change: Optional[Union[LedgerChange, PortfolioMutation]] = None,
     ) -> None:
-        """Durable staged commit with fsync sequencing."""
+        """Durable staged commit with crash-consistent recovery sequencing."""
         pdir = get_portfolio_dir(portfolio_id)
         master_file = get_portfolio_filepath(portfolio_id)
         ledger_file = get_trades_log_filepath(portfolio_id)
+        journal_file = get_journal_filepath(portfolio_id)
         manifest_path = get_pending_manifest_path(portfolio_id)
 
         pre_master_sha = _compute_sha256(master_file)
         pre_ledger_sha = _compute_sha256(ledger_file)
+        pre_journal_sha = _compute_sha256(journal_file)
 
-        change = ledger_change or LedgerChange(kind="unchanged")
+        mutation = PortfolioMutation.from_change(ledger_change)
+        change = mutation.ledger_change or LedgerChange(kind="unchanged")
         tx_id = change.tx_id or str(uuid.uuid4())
 
         # 1. Stage Master File
@@ -614,19 +646,40 @@ class MarkdownVaultRepositoryAdapter(PortfolioRepositoryPort):
                 os.fsync(f.fileno())
             staged_ledger_sha = _compute_sha256(staged_ledger)
 
-        # 3. Write Durable Pending Manifest
+        # 3. Stage Journal File if system journal events present
+        staged_journal: Optional[Path] = None
+        staged_journal_sha: Optional[str] = None
+
+        if mutation.system_journal_events:
+            staged_journal = pdir / f".journal_{tx_id}.staged"
+            existing_journal = journal_file.read_text(encoding="utf-8") if journal_file.exists() else ""
+            journal_blocks = []
+            for event in mutation.system_journal_events:
+                rendered_message = inject_journal_wikilinks(event.message)
+                journal_blocks.append(f"\n## [{event.timestamp}]\n\n{rendered_message}\n")
+            with staged_journal.open("w", encoding="utf-8") as f:
+                f.write(existing_journal + "".join(journal_blocks))
+                f.flush()
+                os.fsync(f.fileno())
+            staged_journal_sha = _compute_sha256(staged_journal)
+
+        # 4. Write Durable Pending Manifest
         manifest_data = {
-            "schema_version": 1,
+            "schema_version": 2,
             "tx_id": tx_id,
             "portfolio_id": portfolio_id,
             "timestamp": time.time(),
             "ledger_kind": change.kind,
+            "has_journal_events": bool(mutation.system_journal_events),
             "pre_master_sha256": pre_master_sha,
             "staged_master_file": str(staged_master),
             "staged_master_sha256": staged_master_sha,
             "pre_ledger_sha256": pre_ledger_sha,
             "staged_ledger_file": str(staged_ledger) if staged_ledger else None,
             "staged_ledger_sha256": staged_ledger_sha,
+            "pre_journal_sha256": pre_journal_sha,
+            "staged_journal_file": str(staged_journal) if staged_journal else None,
+            "staged_journal_sha256": staged_journal_sha,
             "sidecars_dirty": True,
         }
         with manifest_path.open("w", encoding="utf-8") as f:
@@ -634,15 +687,19 @@ class MarkdownVaultRepositoryAdapter(PortfolioRepositoryPort):
             f.flush()
             os.fsync(f.fileno())
 
-        # 4. Atomic Master Replace (Master Commit Point)
+        # 5. Atomic Master Replace (Master Commit Point)
         os.replace(staged_master, master_file)
 
-        # 5. Atomic Ledger Replace (Ledger Commit Point)
+        # 6. Atomic Ledger Replace (Ledger Commit Point)
         if staged_ledger and staged_ledger.exists():
             os.replace(staged_ledger, ledger_file)
 
-        # 6. Sync Derived Sidecars (Deferred Sync)
+        # 7. Atomic Journal Replace (Journal Commit Point)
+        if staged_journal and staged_journal.exists():
+            os.replace(staged_journal, journal_file)
+
+        # 8. Sync Derived Sidecars (Deferred Sync)
         self._sync_sidecars(state, portfolio_id=portfolio_id)
 
-        # 7. Unlink Manifest
+        # 9. Unlink Manifest
         manifest_path.unlink(missing_ok=True)

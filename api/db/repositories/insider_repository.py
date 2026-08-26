@@ -53,7 +53,6 @@ def record_sec_form4_filing(
             now,
         ),
     )
-    conn.commit()
 
 
 def record_sec_insider_transaction(
@@ -98,7 +97,6 @@ def record_sec_insider_transaction(
             now,
         ),
     )
-    conn.commit()
 
 
 def get_sec_insider_filings_and_transactions(
@@ -126,3 +124,52 @@ def get_sec_insider_filings_and_transactions(
     cur = conn.execute(query, params)
     rows = cur.fetchall()
     return [dict(r) for r in rows]
+
+
+def record_parsed_filing(conn: sqlite3.Connection, parsed_data: Dict) -> None:
+    """Persist one normalized filing and its transactions without committing.
+
+    The caller owns the transaction, allowing a provider sync to atomically
+    replace amendments and insert all related rows.
+    """
+    is_amendment = bool(parsed_data.get("is_amendment", False))
+    amends_accession = parsed_data.get("amends_accession_number")
+    if is_amendment and amends_accession:
+        conn.execute(
+            "DELETE FROM sec_insider_transactions WHERE accession_number = ?",
+            (amends_accession,),
+        )
+
+    record_sec_form4_filing(
+        conn=conn,
+        accession_number=parsed_data["accession_number"],
+        issuer_cik=parsed_data.get("issuer_cik", ""),
+        ticker=parsed_data["ticker"],
+        filing_url=parsed_data.get("filing_url", ""),
+        filed_at=parsed_data.get("filed_at", ""),
+        reporting_owner_cik=parsed_data.get("reporting_owner_cik"),
+        reporting_owner_name=parsed_data.get("reporting_owner_name"),
+        is_director=bool(parsed_data.get("is_director", False)),
+        is_officer=bool(parsed_data.get("is_officer", False)),
+        is_ten_percent_owner=bool(parsed_data.get("is_ten_percent_owner", False)),
+        officer_title=parsed_data.get("officer_title"),
+        raw_xml_payload=parsed_data.get("raw_xml_payload"),
+        is_amendment=is_amendment,
+        amends_accession_number=amends_accession,
+    )
+    for tx in parsed_data.get("transactions", []):
+        record_sec_insider_transaction(
+            conn=conn,
+            transaction_id=tx["transaction_id"],
+            accession_number=parsed_data["accession_number"],
+            ticker=parsed_data["ticker"],
+            transaction_date=tx.get("transaction_date", ""),
+            transaction_code=tx.get("transaction_code", ""),
+            shares=float(tx.get("shares", 0.0) or 0.0),
+            price_per_share=float(tx.get("price_per_share", 0.0) or 0.0),
+            acquired_or_disposed=tx.get("acquired_or_disposed", "A"),
+            shares_owned_following=tx.get("shares_owned_following"),
+            ownership_nature=tx.get("ownership_nature"),
+            is_derivative=bool(tx.get("is_derivative", False)),
+            normalized_weight=float(tx.get("normalized_weight", 1.0) or 1.0),
+        )

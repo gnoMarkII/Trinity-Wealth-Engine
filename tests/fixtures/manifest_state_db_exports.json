@@ -80,7 +80,7 @@
           "annotation": "str | None"
         }
       ],
-      "return_annotation": "int",
+      "return_annotation": "None",
       "docstring": null
     },
     "cas_job_status": {
@@ -112,7 +112,7 @@
         }
       ],
       "return_annotation": "bool",
-      "docstring": "Compare and Swap job status. Returns True if successful, False if current status was not old_status."
+      "docstring": null
     },
     "claim_job_resume": {
       "name": "claim_job_resume",
@@ -143,7 +143,7 @@
         }
       ],
       "return_annotation": "None",
-      "docstring": "Atomically consume Draft tokens and move one approval back to the queue.\n\nA compare-and-set status check is essential: two browser clicks must not\nenqueue the same LangGraph interrupt twice."
+      "docstring": null
     },
     "clear_job_resume_value": {
       "name": "clear_job_resume_value",
@@ -303,7 +303,7 @@
         }
       ],
       "return_annotation": "int",
-      "docstring": "Atomically create parking lot cards in backlog column with dedicated connection and BEGIN IMMEDIATE.\n\nReturns the count of newly inserted cards."
+      "docstring": null
     },
     "delete_kanban_card": {
       "name": "delete_kanban_card",
@@ -391,7 +391,7 @@
         }
       ],
       "return_annotation": "dict | None",
-      "docstring": "ดึงข้อมูล Analyst Context จาก SQLite cache พร้อม decode JSON และ format synced_at เป็น ISO string"
+      "docstring": null
     },
     "get_connection": {
       "name": "get_connection",
@@ -404,7 +404,7 @@
         }
       ],
       "return_annotation": "Connection",
-      "docstring": null
+      "docstring": "Compatibility connection factory preserving monkeypatchable init hook."
     },
     "get_dcf_evaluation_by_id": {
       "name": "get_dcf_evaluation_by_id",
@@ -423,7 +423,7 @@
         }
       ],
       "return_annotation": "sqlite3.Row | None",
-      "docstring": "ดึงผลการประเมิน DCF ตาม evaluation_id ที่เจาะจง"
+      "docstring": null
     },
     "get_financial_statements_cache": {
       "name": "get_financial_statements_cache",
@@ -448,7 +448,7 @@
         }
       ],
       "return_annotation": "dict | None",
-      "docstring": "ดึงข้อมูลงบการเงิน V5 จาก SQLite cache พร้อม decode JSON และ backward compatibility กับ V4"
+      "docstring": null
     },
     "get_job": {
       "name": "get_job",
@@ -568,7 +568,7 @@
         }
       ],
       "return_annotation": "sqlite3.Row | None",
-      "docstring": "ดึงผลการประเมิน DCF ล่าสุดสำหรับ ticker จาก Canonical Ledger"
+      "docstring": null
     },
     "get_latest_job_log_node": {
       "name": "get_latest_job_log_node",
@@ -612,7 +612,7 @@
         }
       ],
       "return_annotation": "dict | None",
-      "docstring": "ดึงข้อมูล cache ดิบทั้งหมด (รวม legacy schema) โดยไม่ลบแถว เพื่อใช้สำหรับ fallback เมื่อจำเป็น"
+      "docstring": null
     },
     "get_sec_insider_filings_and_transactions": {
       "name": "get_sec_insider_filings_and_transactions",
@@ -637,7 +637,7 @@
         }
       ],
       "return_annotation": "list",
-      "docstring": "ดึงประวัติ Insider Filings และ Transactions ของ ticker จาก Ledger"
+      "docstring": null
     },
     "init_schema": {
       "name": "init_schema",
@@ -713,7 +713,7 @@
         }
       ],
       "return_annotation": "None",
-      "docstring": "เพิ่ม event_ids ที่เพิ่งส่ง Discord สำเร็จเข้า discord_sent_events (JSON array) — อ่านค่าเก่า\nมารวมกับใหม่แล้ว UPDATE เฉพาะคอลัมน์นี้ ป้องกันแจ้งซ้ำเมื่อการ์ดถูก upsert รอบถัดไป"
+      "docstring": null
     },
     "move_kanban_card": {
       "name": "move_kanban_card",
@@ -829,7 +829,7 @@
         }
       ],
       "return_annotation": "None",
-      "docstring": "บันทึกการประเมิน DCF ลง Immutable Ledger แบบ Canonical Record"
+      "docstring": null
     },
     "record_sec_form4_filing": {
       "name": "record_sec_form4_filing",
@@ -926,7 +926,7 @@
         }
       ],
       "return_annotation": "None",
-      "docstring": "บันทึก Raw SEC Form 4 Filing ลง Ledger พร้อมจัดการ Form 4/A Amendment Invalidation"
+      "docstring": null
     },
     "record_sec_insider_transaction": {
       "name": "record_sec_insider_transaction",
@@ -1011,7 +1011,7 @@
         }
       ],
       "return_annotation": "None",
-      "docstring": "บันทึก Normalized Transaction ที่สกัดจาก Form 4"
+      "docstring": null
     },
     "set_job_awaiting_approval": {
       "name": "set_job_awaiting_approval",
@@ -1092,7 +1092,7 @@
         }
       ],
       "return_annotation": "None",
-      "docstring": "UPDATE เฉพาะ prompt/is_verified — partial patch โดยตั้งใจ ไม่แตะ title/flow/scope (pattern\nเดียวกับ toggle_kanban_card_discord) ใช้ตอนผู้ใช้เลือก Briefing Book ให้การ์ด NotebookLM\nครั้งแรกใน Drawer ไม่ให้กระทบชื่อการ์ด/flow ที่ผู้ใช้ตั้งไว้ตอนสร้าง"
+      "docstring": null
     },
     "toggle_kanban_card_discord": {
       "name": "toggle_kanban_card_discord",
@@ -1117,7 +1117,7 @@
         }
       ],
       "return_annotation": "None",
-      "docstring": "UPDATE เฉพาะคอลัมน์ discord_notify — partial patch โดยตั้งใจ ไม่แตะ title/prompt/flow/scope\nเพื่อไม่ให้ toggle ถูก reset ทุกครั้งที่ upsert_news_funnel_card เรียก update_kanban_card"
+      "docstring": null
     },
     "update_job_status": {
       "name": "update_job_status",
@@ -1216,7 +1216,7 @@
         }
       ],
       "return_annotation": "None",
-      "docstring": "บันทึกข้อมูล Analyst Context ลง SQLite cache เฉพาะสถานะ ok และ partial"
+      "docstring": null
     },
     "upsert_financial_statements_cache": {
       "name": "upsert_financial_statements_cache",
@@ -1259,7 +1259,7 @@
         }
       ],
       "return_annotation": "None",
-      "docstring": "บันทึกข้อมูลงบการเงินลง SQLite cache แบบ (market, provider_symbol)"
+      "docstring": null
     }
   },
   "constants": [

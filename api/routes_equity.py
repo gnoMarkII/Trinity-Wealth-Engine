@@ -7,8 +7,7 @@ import yfinance as yf
 from tools.market.calendar import get_asset_calendar
 from tools.market.earnings import fetch_earnings_dates
 from tools.archivist.core import VAULT_PATH
-from api.routers.equity import (
-    router,
+from api.compatibility.equity import (
     _validate_ticker,
     _validate_schema,
     _get_equity_files,
@@ -19,6 +18,9 @@ from api.routers.equity import (
     _extract_note_datetime,
     _get_analyst_lock,
     positive_int_or_none,
+)
+from api.routers.equity import (
+    router,
     get_latest_equities,
     get_equity_note_content,
     get_equity_valuation_targets,

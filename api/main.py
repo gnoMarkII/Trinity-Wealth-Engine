@@ -17,7 +17,13 @@ from core.logger import setup_logging
 
 setup_logging()
 
-from api import auth, jobs, notebooklm_worker, routes_agents, routes_debug, routes_kanban, routes_notebooklm, routes_portfolio, routes_equity, routes_ohlcv, state_db
+from api import auth, jobs, notebooklm_worker, routes_debug, routes_kanban
+from api.db import get_connection, init_schema
+from api.routers.agents_router import router as agents_router
+from api.routers.notebooklm_router import router as notebooklm_router
+from api.routers.portfolio import router as portfolio_router
+from api.routers.equity import router as equity_router
+from api.routers.equity.router_ohlcv import router as ohlcv_router
 
 WEB_DIST = Path(__file__).resolve().parent.parent / "web" / "dist"
 
@@ -25,6 +31,7 @@ WEB_DIST = Path(__file__).resolve().parent.parent / "web" / "dist"
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     from api import config
+    from api.db.bootstrap import configure_content_outbox_sync
     if not config.get_webui_password():
         raise RuntimeError("WEBUI_PASSWORD must be set in environment variables.")
 
@@ -36,8 +43,10 @@ async def lifespan(app: FastAPI):
     if not draft_key or len(draft_key) < 32:
         raise RuntimeError("UNVERIFIED_DRAFT_SIGNING_KEY must be set and at least 32 characters long to sign tokens securely.")
 
-    with closing(state_db.get_connection()) as conn:
-        state_db.init_schema(conn)
+    configure_content_outbox_sync()
+
+    with closing(get_connection()) as conn:
+        init_schema(conn)
 
     # คิวหลักกับคิว notebooklm แชร์ WEBUI_STATE_DB_PATH เดียวกัน (kanban_cards ต้องเห็นข้อมูล
     # เดียวกันเสมอ — move_kanban_card ที่ถูกเรียกจาก _run_job ของแต่ละคิวต้องแก้แถวการ์ดจริง
@@ -57,7 +66,15 @@ async def lifespan(app: FastAPI):
     app.state.notebooklm_job_queue.reenqueue_pending()
     app.state.notebooklm_job_queue.start()
 
+    from api.workers.earnings_call_outbox_worker import EarningsCallOutboxWorker
+    app.state.earnings_call_outbox_worker = None
+    if config.enable_background_workers():
+        app.state.earnings_call_outbox_worker = EarningsCallOutboxWorker()
+        app.state.earnings_call_outbox_worker.start()
+
     yield
+    if app.state.earnings_call_outbox_worker is not None:
+        await app.state.earnings_call_outbox_worker.stop()
     await app.state.job_queue.stop()
     await app.state.notebooklm_job_queue.stop()
 
@@ -80,13 +97,13 @@ async def security_and_cache_headers(request, call_next):
     return response
 
 app.include_router(auth.router)
-app.include_router(routes_portfolio.router)
-app.include_router(routes_agents.router)
+app.include_router(portfolio_router)
+app.include_router(agents_router)
 app.include_router(routes_kanban.router)
 app.include_router(routes_debug.router)
-app.include_router(routes_notebooklm.router)
-app.include_router(routes_equity.router)
-app.include_router(routes_ohlcv.router)
+app.include_router(notebooklm_router)
+app.include_router(equity_router)
+app.include_router(ohlcv_router)
 
 
 @app.get("/health")

@@ -7,13 +7,24 @@ import hashlib
 import json
 import logging
 import os
-from datetime import datetime
-from pathlib import Path
-from typing import Any, Dict, List, Optional
+import re
+import sqlite3
 import unicodedata
 import uuid
+from contextlib import closing
+from datetime import datetime
+from pathlib import Path
+from typing import Any, Callable, Dict, List, Optional
 
 logger = logging.getLogger(__name__)
+
+_SYNC_HANDLER: Optional[Callable[[List[str], str, Optional[str]], int]] = None
+
+
+def set_sync_handler(handler: Optional[Callable[[List[str], str, Optional[str]], int]]) -> None:
+    """Configure the outbound parking-lot persistence port at composition time."""
+    global _SYNC_HANDLER
+    _SYNC_HANDLER = handler
 
 
 def _get_outbox_dir(vault_root: Path) -> Path:
@@ -111,12 +122,71 @@ def mark_outbox_synced_atomic(outbox_file: Path) -> None:
         logger.warning("Failed to mark outbox record as synced for %s: %s", outbox_file, e)
 
 
+def _sync_ideas_to_sqlite(ideas: List[str], source_pitch_id: str, db_path: Optional[str] = None) -> int:
+    if _SYNC_HANDLER is not None:
+        return _SYNC_HANDLER(ideas, source_pitch_id, db_path)
+
+    path = db_path or os.getenv("WEBUI_STATE_DB_PATH", "./data/webui_state.db")
+    created_count = 0
+    now = datetime.now().timestamp()
+    try:
+        with closing(sqlite3.connect(path, timeout=30)) as conn:
+            conn.isolation_level = None
+            conn.execute(
+                """
+                CREATE TABLE IF NOT EXISTS kanban_cards (
+                    card_id TEXT PRIMARY KEY,
+                    title TEXT NOT NULL,
+                    column_name TEXT NOT NULL,
+                    job_id TEXT,
+                    flow TEXT DEFAULT 'agent_orchestrator',
+                    display_seq INTEGER,
+                    created_at REAL NOT NULL,
+                    updated_at REAL NOT NULL,
+                    prompt TEXT,
+                    scope TEXT DEFAULT 'both',
+                    is_verified INTEGER DEFAULT 0,
+                    discord_notify INTEGER DEFAULT 1,
+                    discord_sent_events TEXT DEFAULT '[]'
+                )
+                """
+            )
+            conn.execute("BEGIN IMMEDIATE")
+            try:
+                cur_seq_row = conn.execute("SELECT COALESCE(MAX(display_seq), 0) FROM kanban_cards").fetchone()
+                cur_seq = cur_seq_row[0] if cur_seq_row else 0
+                for raw_idea in ideas[:5]:
+                    norm = unicodedata.normalize("NFC", str(raw_idea)).strip()
+                    norm = re.sub(r"\s+", " ", norm)
+                    if not norm:
+                        continue
+                    card_id = f"parking:{hashlib.sha256(norm.casefold().encode('utf-8')).hexdigest()}"
+                    prompt = f"ไอเดียต่อยอดจาก YouTube Pitch ({source_pitch_id}): {norm}"
+                    cur = conn.execute(
+                        "INSERT OR IGNORE INTO kanban_cards (card_id, title, column_name, job_id, flow, display_seq, prompt, scope, is_verified, created_at, updated_at) "
+                        "VALUES (?, ?, 'backlog', NULL, 'youtube_pitch', ?, ?, 'both', 1, ?, ?)",
+                        (card_id, norm, cur_seq + 1, prompt, now, now),
+                    )
+                    if cur.rowcount > 0:
+                        cur_seq += 1
+                        created_count += 1
+                conn.execute("COMMIT")
+            except Exception:
+                conn.execute("ROLLBACK")
+                raise
+    except Exception as exc:
+        logger.warning("Could not sync ideas to sqlite directly: %s", exc)
+        raise
+    return created_count
+
+
 def reconcile_parking_lot_outbox(
     vault_root: Path,
+    sync_fn: Optional[Callable[[List[str], str, Optional[str]], int]] = None,
     db_path: Optional[str] = None,
 ) -> Dict[str, Any]:
     """Scan outbox directory for pending records, sync to SQLite, and quarantine corrupted files."""
-    from api.state_db import create_parking_lot_cards_atomic
+    sync_handler = sync_fn or (lambda ids, pid, path: _sync_ideas_to_sqlite(ids, pid, path))
 
     outbox_dir = _get_outbox_dir(vault_root)
     quarantine_dir = _get_quarantine_dir(vault_root)
@@ -165,7 +235,7 @@ def reconcile_parking_lot_outbox(
 
         if ideas:
             try:
-                create_parking_lot_cards_atomic(ideas=ideas, source_pitch_id=pitch_id, db_path=db_path)
+                sync_handler(ideas, pitch_id, db_path)
                 mark_outbox_synced_atomic(entry)
                 summary["reconciled_count"] += len(ideas)
             except Exception as insert_err:

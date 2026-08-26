@@ -1,342 +1,176 @@
-# CLAUDE.md — คู่มือควบคุมพฤติกรรมและสถาปัตยกรรมของ AI
+# CLAUDE.md — กฎเหล็กและคู่มือสถาปัตยกรรมระบบ (Trinity Wealth Engine)
 
 > **Project:** `invest-agents` (Trinity-Wealth-Engine)
-> **Scope:** เอกสารฉบับนี้เป็น "กฎเหล็กและแนวทางปฏิบัติ" สำหรับ Claude Code (และ AI Coding Agent อื่นที่ทำงานในโปรเจกต์นี้) — แปลง/รวมมาจาก `.antigravityrules` เพื่อให้ Claude โหลดอัตโนมัติทุก session
-> **Principle:** เน้นที่ *หลักคิด* และ *กฎเหล็กเชิงสถาปัตยกรรม* ไม่ใช่การกำหนดชื่อตัวแปรหรือสูตรคำนวณตายตัว — AI มีอิสระเลือกแนวทางวิศวกรรมที่ดีที่สุด ตราบใดที่ไม่ละเมิดกรอบความถูกต้องทางการเงิน
+> **Scope:** เอกสารฉบับนี้เป็น "กฎเหล็กและแนวทางปฏิบัติเชิงวิศวกรรม" สำหรับ Claude Code และ AI Coding Agent ในการพัฒนา ดูแลรักษา และปรับปรุงระบบ
+> **Core Principle:** ยึดมั่นในความถูกต้องทางการเงิน (Financial Integrity), สถาปัตยกรรม Hexagonal Architecture, และเสถียรภาพระดับ Production (High Resilience & Distributed Safety)
 
 ---
 
-## 1. สภาพแวดล้อมและคำสั่งที่สำคัญ (Environment & CLI Commands)
+## 1. ⚙️ สภาพแวดล้อมและคำสั่งหลัก (Environment & CLI Commands)
 
 * **ระบบปฏิบัติการ:** Windows
-* **ภาษาและเทคโนโลยีหลัก:** Python 3.11+, LangGraph, LangChain
-* **การจัดการ Dependency:** `uv` (Fast Python Package Manager)
+* **เทคโนโลยีหลัก:** Python 3.11+, FastAPI, React 19, Vite, TypeScript, SQLite, LangGraph/LangChain
+* **การจัดการ Dependency:** `uv` (Fast Python Package Manager) และ `npm`
 
-### คำสั่งที่ใช้ในการจัดการโปรเจกต์
-* **การติดตั้ง / ซิงค์ Dependencies:**
+### 🚀 คำสั่งจัดการระบบ
+* **ติดตั้ง / ซิงค์ Python Dependencies:**
   ```powershell
   uv sync
   ```
-* **การรันแอปพลิเคชัน (CLI / Interactive Loop):**
+* **รัน Backend Server (FastAPI + Outbox Workers):**
   ```powershell
-  uv run python main.py
+  .venv\Scripts\python -m uvicorn api.main:app --port 8000 --reload
   ```
-* **การรันชุดทดสอบ (Automated Tests):**
-  * รันทั้งหมดแบบเงียบ (Quiet Mode):
+* **รัน Frontend Dev Server (React + Vite):**
+  ```powershell
+  npm --prefix web run dev
+  ```
+* **รัน Automated Test Suites:**
+  * Backend Pytest (สถาปัตยกรรม, Unit, Integration):
     ```powershell
-    uv run python -m pytest tests/ -q
+    .venv\Scripts\pytest tests/ -v
     ```
-  * รันแบบปกติ:
+  * Frontend Vitest:
     ```powershell
-    uv run pytest
+    npm --prefix web test -- --run
     ```
-* **Web UI:**
-  * Backend: `uv run uvicorn api.main:app --reload`
-  * Frontend: `npm run dev` (ใน `web/`)
+  * Frontend TypeScript Check:
+    ```powershell
+    npm --prefix web run typecheck
+    ```
+* **สร้าง / ปรับปรุง Golden Baseline Manifests:**
+  ```powershell
+  .venv\Scripts\python scripts/generate_golden_manifests.py
+  ```
 
 ---
 
-## 2. 🧠 Mandatory Plan-First Workflow (กฎเหล็ก: คิดก่อนลงมือทำ)
-นี่คือกฎที่สำคัญที่สุด ห้ามละเมิดเด็ดขาดไม่ว่าในกรณีใดๆ:
-1. **ห้ามแก้ไขไฟล์ทันที:** เมื่อได้รับคำสั่งให้เขียนโค้ด, สร้างฟีเจอร์, หรือแก้บั๊กที่มีความซับซ้อนเกินกว่า one-liner **ห้าม** แก้ไขไฟล์หรือรันสคริปต์เขียนโค้ดทันที
-2. **ต้องเสนอแผนก่อนเสมอ:** ร่าง "Step-by-Step Execution Plan" (แผนการทำงานทีละขั้นตอน) เป็นภาษาไทย กลับมาให้ผู้ใช้ดูก่อนทุกครั้ง โดยแผนต้องระบุชัดเจนว่า:
-   - 📂 จะไปแก้ไข หรือ สร้างไฟล์ไหนบ้าง (ระบุ Path)
-   - ⚙️ จะเปลี่ยน Logic หรือเพิ่มฟังก์ชันอะไรในไฟล์นั้น
-   - ⚠️ ความเสี่ยงหรือผลกระทบต่อไฟล์อื่น (ถ้ามี)
-3. **รอการอนุมัติ (Wait for Approval):** เมื่อเสนอแผนเสร็จ ให้หยุดทำงานและรอจนกว่าผู้ใช้จะตอบกลับว่า "Approve", "OK", "เห็นด้วย", "ลุยเลย", "ทำตามแผน" หรือคำที่มีความหมายทำนองเดียวกัน
-4. **ลงมือทำ:** เมื่อได้รับอนุมัติแล้วเท่านั้น จึงจะเริ่มใช้เครื่องมือแก้ไขไฟล์จริงตามแผนที่ตกลงกันไว้
-5. **งานเล็กหรืองาน debug เฉพาะหน้า** (เช่น หาสาเหตุบั๊กจาก log, ตอบคำถามเกี่ยวกับโค้ด) ไม่จำเป็นต้องผ่านขั้นตอนนี้ทุกครั้ง — ใช้ดุลพินิจ แต่ถ้าไม่แน่ใจว่างานใหญ่แค่ไหน ให้เอียงไปทาง "เสนอแผนก่อน"
+## 2. 🧠 Mandatory Plan-First Workflow (กฎเหล็ก: วางแผนก่อนลงมือทำ)
+
+1. **ห้ามแก้ไขไฟล์ทันที:** เมื่อได้รับโจทย์ที่ซับซ้อน (สร้างฟีเจอร์, ปรับสถาปัตยกรรม, แก้ไขบั๊กข้ามชั้น) **ห้าม** แตะต้องไฟล์โค้ดทันที
+2. **เสนอแผนงานก่อนเสมอ (Execution Plan):** ร่างแผนการทำงานทีละขั้นตอน (Step-by-Step) เป็นภาษาไทย โดยระบุ:
+   - 📂 ไฟล์ที่จะแก้ไขหรือสร้างใหม่ (ระบุ Path ชัดเจน)
+   - ⚙️ Logic หรือ Interface ที่จะเปลี่ยนแปลง
+   - ⚠️ ผลกระทบต่อ Layer อื่น และความเสี่ยง (Risks & Mitigations)
+   - 🧪 แผนการทดสอบเพื่อยืนยันความถูกต้อง (Verification Plan)
+3. **รอการอนุมัติ (Wait for Approval):** หยุดรอจนกว่าผู้ใช้จะอนุมัติ ("Approve", "OK", "เห็นด้วย", "ลุยเลย")
+4. **ลงมือทำแบบศัลยกรรม (Surgical Changes):** แก้ไขเฉพาะจุดที่จำเป็น เคารพสไตล์เดิม ไม่ refactor โค้ดรอบข้างโดยไม่จำเป็น และไม่ทิ้ง Dead Code
 
 ---
 
-## 3. ปรัชญาหลักในการเขียนโค้ด (Core Coding Philosophies)
+## 3. 🏛️ สถาปัตยกรรม Hexagonal Architecture & 16 AST Rules
 
-### 3.1 Think Before Coding — คิดให้จบก่อนลงมือ
-* **ห้ามเดา ห้ามซ่อนความคลุมเครือ** ก่อนเขียนโค้ดทุกครั้ง ต้องระบุ *ข้อกำหนด (Requirements)* และ *ข้อตกลงเบื้องต้น (Assumptions)* ที่ใช้ออกมาให้เห็นชัดเจน
-* หากพบ **จุดที่ตีความได้หลายแบบ** หรือมี **Tradeoffs หลายทาง** (เช่น Performance vs Readability, Atomic vs Streaming, Strict Schema vs Flexible Dict) ต้อง **หยุดและถามผู้ใช้ทันที** — ห้ามแอบเลือกแนวทางใดแนวทางหนึ่งเองอย่างเงียบ ๆ
-* หากผู้ใช้ส่งคำสั่งกว้างหรือกำกวม ให้สรุปความเข้าใจของตนเองกลับไปยืนยันก่อนเริ่ม ไม่ใช่กระโจนเข้าโค้ดทันที
+ระบบถูกตรวจสอบความถูกต้องเชิงสถาปัตยกรรมอัตโนมัติผ่าน 16 AST Rules ใน `tests/architecture/test_dependency_rules.py` โดยมีโครงสร้างแบ่งแยกชั้นดังนี้:
 
-### 3.2 Simplicity First — เรียบง่ายเข้าไว้
-* เขียนโค้ดให้ **น้อยที่สุดเท่าที่จำเป็น** เพื่อแก้ปัญหาที่ได้รับมอบหมายอย่าง *ตรงจุด*
-* **ห้ามเพิ่ม** ฟีเจอร์ที่ไม่ได้ขอ, abstraction layers, configuration knobs, dependency ใหม่, หรือความยืดหยุ่นเผื่ออนาคต (Speculative Generality) ที่ยังไม่มีใครต้องการ
-* เลือก data structure และ control flow ที่ *อ่านครั้งเดียวเข้าใจ* — ความฉลาดของโค้ดวัดที่ความชัดเจน ไม่ใช่ความซับซ้อน
-* *"Three similar lines is better than a premature abstraction."* — ทำซ้ำ 3 บรรทัดดีกว่าสร้าง helper ที่ผิดทิศ
-
-### 3.3 Surgical Changes — แก้ไขแบบศัลยกรรมเฉพาะจุด
-* แตะเฉพาะส่วนที่ **จำเป็นต่อภารกิจ** เท่านั้น
-* **ต้องเคารพสไตล์เดิมของโปรเจกต์อย่างเคร่งครัด** (naming convention, import order, indentation, docstring style, error-handling pattern) แม้จะรู้สึกว่ามีแบบที่ "ดีกว่า"
-* **ห้าม "ปรับปรุง" หรือ refactor โค้ดรอบข้างที่ยังทำงานได้ดี** — แม้จะคิดว่ามันเขียนได้สวยกว่านี้ก็ตาม
-* ลบได้เฉพาะ `imports`, `variables`, หรือ `functions` ที่กลายเป็น **Dead Code อันเป็นผลโดยตรง** จากการแก้ไขของตนเองเท่านั้น ห้ามไล่ลบของเก่าที่ไม่เกี่ยวข้องกับงาน
-
-### 3.4 Goal-Driven Execution — ขับเคลื่อนด้วยเป้าหมายและการตรวจสอบ
-* ทุกงานต้องถูกแบ่งออกเป็น **ขั้นตอนที่ชัดเจน** พร้อม **เกณฑ์ตรวจสอบความสำเร็จ** ของแต่ละขั้น
-* รูปแบบที่แนะนำ:
-  > **ขั้นตอน (Step):** ทำอะไร → **วิธีตรวจสอบ (Verify):** จะรู้ได้อย่างไรว่าผ่าน
-* ก่อนปิดงานต้องตอบให้ได้ว่า: *"ระบบยังผ่านเกณฑ์ความถูกต้องเดิมอยู่หรือไม่ และเงื่อนไขใหม่ที่ขอผ่านครบไหม"* — รัน `uv run pytest tests/ -q` จริงเสมอ ไม่ใช่แค่เดาว่าผ่าน
-* หากตรวจสอบไม่ได้ด้วยตนเอง (เช่น UI, manual flow, external service เช่น Discord webhook) ต้อง **ระบุชัดเจน** ว่าทดสอบไม่ได้ ไม่ใช่เคลมว่าผ่าน — ถ้าเป็นไปได้ให้ทำ manual verification จริงและรายงานผลตามที่เกิดขึ้นจริง
-
----
-
-## 4. ขอบเขตและกฎเกณฑ์ของระบบ Multi-Agent (LangGraph Architecture)
-
-ระบบนี้ใช้สถาปัตยกรรม **Supervisor + Specialist Workers** บน LangGraph `StateGraph`
-**กฎเหล็ก:** ห้ามให้ Agent ตัวใดทำงานนอกขอบเขตหน้าที่ของตน (Domain Boundaries) แม้จะ "ทำได้" ในเชิงเทคนิคก็ตาม เพื่อป้องกัน *ข้อมูลตีกัน* และ *Single Source of Truth ที่พัง*
-
-### 4.1 Manager / Supervisor Agent — ผู้ประสานงาน
-* หน้าที่: **Routing และ State Transitions** เท่านั้น
-* ต้องตัดสินใจจาก **ผลลัพธ์ของ Tools** (เช่น structured output, frontmatter validation) — *ไม่ใช่* จากการ "เดา" เนื้อหาในข้อความ
-* ห้ามแก้ไขข้อมูลในไฟล์ ห้ามคำนวณตัวเลข ห้ามปลอมตัวเป็น Worker
-* หากผลจาก Worker ไม่ผ่าน schema/validator ที่กำหนด → ต้อง fall back ไปยังเส้นทางที่ปลอดภัย (return to user) ห้ามฝืนส่งต่อ
-
-### 4.2 Bookkeeper Agent — ผู้จัดการข้อมูลมีโครงสร้าง (Structured State Owner)
-* เป็น **เอนทิตีเดียวในระบบ** ที่มีสิทธิ์อ่าน/แก้ไขสถานะข้อมูลแบบมีโครงสร้าง (YAML Frontmatter, Portfolio Ledger, Holdings Table)
-* **กฎเหล็กข้อ 1:** ต้องเรียก Tool เพื่อ **อ่านข้อมูลล่าสุดจากดิสก์ก่อนการวิเคราะห์ทุกครั้ง** — ห้ามใช้ค่าจาก context เดิมที่อาจ stale
-* **กฎเหล็กข้อ 2:** **ห้ามคำนวณตัวเลขทางการเงินใน-context (In-Context Math) เด็ดขาด** ไม่ว่าจะเป็นการบวก ลบ คูณ หาร เปอร์เซ็นต์ผลตอบแทน หรือสัดส่วน Asset Allocation — *ทุกตัวเลข* ต้องผ่าน Python Tool ที่ deterministic เท่านั้น
-* LLM มีหน้าที่ *ตัดสินใจว่าจะเรียก Tool อะไร ด้วย argument อะไร* ไม่ใช่หน้าที่เป็นเครื่องคิดเลข
-
-### 4.3 Archivist Agent — ผู้จัดการข้อมูลไร้โครงสร้าง (Unstructured Content)
-* รับผิดชอบ **เนื้อหาภาษา**: บันทึกประจำวัน, สรุปข่าว, สรุปบทวิเคราะห์, YouTube transcript summary, Markdown body ทั่วไป
-* ใช้งาน vectorstore / semantic search ได้เต็มที่ในขอบเขตของตน
-* **ห้ามแตะ** ค่าตัวเลขใน YAML Frontmatter ที่เป็นของระบบบัญชี (เช่น `quantity`, `cost_basis`, `current_value`, `allocation_pct`) — ส่วนนี้เป็นพื้นที่ของ Bookkeeper เท่านั้น
-* หากผู้ใช้สั่งงานที่ต้องแก้ทั้งสองโดเมน → ต้องร้องขอผ่าน Manager ให้ orchestrate ไปยัง Bookkeeper ก่อน แล้วค่อย Archivist ตามหลัง
-
-### 4.4 PII Gateway — ด่านป้องกันข้อมูลส่วนบุคคล
-* ระบบกรอง PII (PII Anonymization Middleware) มีลอจิกการทำงานหลักสถิตอยู่ที่ไฟล์ `core/security.py` และถูกบังคับใช้ที่จุดรับข้อมูลหลัก (`main.py`) เป็น **โครงสร้างที่ห้ามแก้ไข ห้ามข้าม ห้าม bypass** เด็ดขาด
-* ข้อมูลดิบที่มี PII (เลขบัตรประชาชน, เบอร์โทร, อีเมล, เลขบัตรเครดิต ฯลฯ) ต้องถูก **ปกปิด/แทนที่ก่อน** ส่งออกไปยังโมเดล LLM ภายนอกเสมอ
-* หากต้องเพิ่มชนิด PII ใหม่ ให้เพิ่มที่ middleware layer เดิม ไม่ใช่สร้างทางลัดใหม่
-* การแก้ไข PII Gateway ต้องถูก *ขออนุญาตผู้ใช้อย่างชัดเจนเป็นลายลักษณ์อักษร* ก่อนเสมอ
-
-### 4.5 Macro Quant Agent — ผู้เชี่ยวชาญด้านข้อมูลเชิงปริมาณและตัวชี้วัดมหภาค (Quantitative Macro)
-* ทำหน้าที่รวบรวมและคำนวณข้อมูลตัวเลข Hard Data, Market Observables, Quant Matrix Score ตลอดจนตัวชี้วัดเชิงลึก (Equity Risk Premium, Credit Spread, Derived Pair Ratios, Rolling 60-Day Correlation)
-* **กฎเหล็กข้อ 1:** ต้องบันทึกตัวชี้วัดและอัตราส่วนที่ดัดแปลง (Derived Observables) ลงในฟิลด์ `metadata` แบบ Dict/JSON เสมอเพื่อให้เป็นมาตรฐาน Machine-Readable
-* **กฎเหล็กข้อ 2:** ต้องบังคับใช้เกณฑ์คุณภาพข้อมูล (Data Quality Guard) เช่น การหาความสัมพันธ์ต้องมีวันทำการตรงกันอย่างน้อย 45 วัน (overlapping_days ≥ 45) หากต่ำกว่าเกณฑ์ต้องตั้งสถานะ `is_valid = False` ทันที
-
-### 4.6 Macro Economist Agent — ผู้วิเคราะห์กระแสระดับมหภาค (Narrative & Macro)
-* ทำหน้าที่สกัดธีมการลงทุนหลัก (Dominant Themes), Tail Risks, Market Sentiment และ Policy Signals จากแหล่งข้อมูลข่าวสาร (News, YouTube, Articles) ในชั้น Economic Layer
-* **กฎเหล็กข้อ 1:** ต้องอิงจากข้อมูลล่าสุดผ่านเครื่องมือ (Tools) อย่าง `generate_news_radar_daily`, `get_macro_baselines` เสมอ และคัดลอกตัวเลขอย่าง `sources_count` หรือ `age_hours` จากต้นฉบับมาอย่างซื่อสัตย์ ห้าม Hallucinate ขึ้นมาเอง
-* **กฎเหล็กข้อ 2:** ห้ามคำนวณคะแนน (Score) ความมั่นใจใดๆ เอง — หน้าที่คำนวณและประเมินน้ำหนัก (เช่น Conviction/Freshness/Event Confidence) ถูกบังคับจัดการผ่าน Python Schema (`@computed_field` / `@model_validator`) แล้ว Agent ห้ามแทรกแซง
-
-### 4.7 Strategic Allocator Agent — ผู้สังเคราะห์ข้อมูลเพื่อการจัดพอร์ต (4-Layer Institutional Grade)
-* ทำหน้าที่ตัดสินใจทิศทางและน้ำหนักการลงทุน (`MacroStrategyDirection`) ครอบคลุม 5 กลุ่มสินทรัพย์หลัก พร้อมระบุความน่าจะเป็นของ Regime, แผนเทรดคู่ (Pair Trades) และแผนป้องกันความเสี่ยง (Hedging Plan) ตามรูปแบบ 7-Section Dashboard Formatting
-* **กฎเหล็กข้อ 1:** ต้องอ้างอิง Hard Data และตัวชี้วัดจริงผ่านรหัส `observable_refs` เสมอ เพื่อไม่ให้ตกเกณฑ์ Single Source Penalty และห้ามข้ามขั้นตอนของ Guardrails
-* **กฎเหล็กข้อ 2:** ต้องปฏิบัติตามกฎของ Validator Separation โดยตรรกะการตรวจสอบ (เช่น Valuation Guardrail, Stale Exemption, Correlation Breakdown) ถูกแยกจัดการใน `validators/` และส่งผลต่อระดับความมั่นใจรวม (Conviction Level) อย่างเคร่งครัด
-
-### 4.8 Graph Composition & State Management
-* **Native Subgraph Composition:** ห้ามใช้ `.invoke()` หรือเรียก Execute Graph ซ้อน Graph ภายใน Node ให้ใช้การนำ Graph ลูกมาเป็น Node ของ Graph แม่โดยตรงผ่าน `builder.add_node("name", sub_graph)`
-* **State Schema:** สถานะ (State) ของ Agent และ Graph ต้องประกาศชนิดด้วย `TypedDict` หรือสืบทอดจาก `MessagesState` (ซึ่งเป็น TypedDict) เสมอ **ห้ามใช้ Pydantic `BaseModel` ในการกำหนด State Schema** เด็ดขาด
-
----
-
-## 5. ความถูกต้องของข้อมูลและหลักความปลอดภัยทางการเงิน (Data Integrity Invariants)
-
-ส่วนนี้คือ **Architectural Invariants** ของระบบ — กฎที่ต้องเป็นจริง *ตลอดเวลา* ไม่ว่าจะเกิดอะไรขึ้น
-
-### 5.1 Atomic Storage Mutations — การบันทึกไฟล์ที่ปลอดภัย
-> **เหตุผล:** หากระบบแครชระหว่างเขียนไฟล์ Markdown/YAML ของ Portfolio ไฟล์ครึ่ง ๆ กลาง ๆ จะทำให้ข้อมูลบัญชีพังทั้งระบบและกู้คืนยาก
-
-**กฎเหล็ก:** ทุกฟังก์ชันที่เขียน/แก้ไขไฟล์โลคอล (โดยเฉพาะใน Obsidian Vault) ต้องทำตามขั้นตอน:
-1. เขียนเนื้อหาทั้งหมดลง **ไฟล์ชั่วคราว (shadow/temp file)** ในไดเรกทอรีเดียวกันก่อน
-2. เมื่อเขียนเสร็จสมบูรณ์ ใช้ **OS-level atomic rename** (เช่น `os.replace()` ใน Python) สลับไฟล์เดิมออก
-3. ห้ามใช้ pattern เปิดไฟล์เดิมแล้วเขียนทับโดยตรง (`open(path, "w")` แล้วเขียนทันที) สำหรับไฟล์ที่เป็น source of truth ทางการเงิน
-
-*หลักนี้ครอบคลุมถึง: YAML frontmatter updates, ledger entries, index rewrites, snapshot files*
-
-### 5.2 Anti-Drift Aggregations — ลูปคำนวณจากล่างขึ้นบน
-> **เหตุผล:** ตัวเลขสรุประดับ Summary/Dashboard ห้าม drift ออกจากผลรวมของข้อมูลรายตัว — มิฉะนั้นผู้ใช้จะตัดสินใจลงทุนผิดพลาด
-
-**กฎเหล็ก:** ทุกครั้งที่มีการเปลี่ยนแปลงค่ารายสินทรัพย์ (Per-Asset Mutation) ระบบต้องรัน **Bottom-Up Recalculation Loop** ให้ครบก่อน commit ลงไฟล์เสมอ:
-1. **Per-Asset Layer:** คำนวณมูลค่ารายตัวใหม่ (current value, unrealized P/L, %change)
-2. **Summary Layer:** Re-sum ยอดรวมพอร์ตจากผลของขั้นที่ 1 (ห้ามอัปเดต summary แบบ delta-patch อย่างเดียว)
-3. **Allocation Layer:** คำนวณสัดส่วน Asset Allocation % ใหม่ทั้งหมดจากตัวเลขที่ re-sum แล้ว
-4. **Persist:** จึงค่อยเขียนผลทั้งหมดลงไฟล์ด้วยกฎ Atomic ในข้อ 5.1
-
-**ห้าม** ใช้ shortcut อัปเดตเฉพาะตัวเลขที่เปลี่ยน โดยไว้ใจว่ายอดรวมเดิม "น่าจะยังถูก"
-
-### 5.3 Single Source of Truth — แหล่งความจริงเดียว
-* ข้อมูลพอร์ตและธุรกรรมต้องมี **แหล่งความจริงเดียวบนดิสก์** (Markdown + YAML ใน Vault)
-* ห้ามสร้าง cache, copy, หรือ derived state ที่อาจ "หลุดซิงค์" จากต้นทาง โดยไม่มีกลไก invalidation ที่ชัดเจน
-* หากต้อง denormalize เพื่อ performance ต้องระบุชัดว่าใครเป็น *master* ใครเป็น *derived* และต้องมีฟังก์ชัน rebuild derived จาก master ได้เสมอ
-
-### 5.4 API Resilience — การรับมือเครือข่ายล้มเหลว
-> **เหตุผล:** ระบบ Multi-Agent นี้พึ่งพา LLM API ภายนอก (Google Gemini, OpenRouter) และ Data API (yfinance, FRED, Discord) เป็นหลัก — เครือข่ายและโควต้ามีโอกาสสะดุดเป็นเรื่องปกติ หากไม่จัดการอย่างเป็นระบบ ระบบจะแครชกลางคันและผู้ใช้สูญเสีย context การสนทนา
-
-**กฎเหล็ก:** ทุกการเชื่อมต่อกับ LLM หรือ External API ทั้งในปัจจุบันและที่เพิ่มเข้ามาในอนาคต **ต้องครอบด้วยระบบดักจับ Transient Error และกลไก Exponential Backoff Retry เสมอ** — ห้ามปล่อยให้ระบบหยุดทำงานทันทีเมื่อเครือข่ายสะดุด
-
-แนวทางที่ต้องปฏิบัติ:
-1. **Transient Error Detection** — ต้องดักจับ error ที่ retry แล้วน่าจะหายเอง โดยเฉพาะ:
-   * HTTP `429` (Rate Limit / Resource Exhausted)
-   * HTTP `500` / `502` / `503` / `504` (Server Error / Bad Gateway / Service Unavailable / Gateway Timeout)
-   * Network-level exceptions (`TimeoutError`, `ConnectionError`, `httpx.TimeoutException` ฯลฯ)
-2. **Exponential Backoff** — ระยะรอต้องเพิ่มขึ้นเรื่อย ๆ ต่อรอบ retry (เช่น `2 ** attempt` วินาที) ห้าม retry ติด ๆ เพราะจะยิ่งซ้ำเติมเซิร์ฟเวอร์ปลายทาง
-3. **Retry Budget ที่ชัดเจน** — กำหนดจำนวนครั้งสูงสุดไว้แน่นอน (เช่น 3 ครั้ง หรือ 1 ครั้งสำหรับ webhook แจ้งเตือนที่ไม่ critical) ห้าม retry แบบไม่จำกัด
-4. **Graceful Fallback** — เมื่อ retry หมดโควต้าแล้วยังไม่สำเร็จ ต้องแจ้งผู้ใช้ด้วยข้อความที่อ่านเข้าใจง่าย ห้ามโยน stack trace ดิบขึ้นจอ และต้อง **คงสถานะการทำงานของลูปหลักไว้** ให้ผู้ใช้พิมพ์คำสั่งใหม่ได้ — ฟีเจอร์เสริมที่ไม่ critical (เช่น ส่ง Discord notification) ต้อง fail-safe ไม่ทำให้ pipeline หลักพังตาม
-
-*Reference Implementation:* ดูรูปแบบสถาปัตยกรรมที่เสถียรได้จากลูปการรันของไฟล์ `main.py`, ตัวดักจับใน `core/retry.py`, หรือ `core/discord_notifier.py::_post_with_retry`
-
-### 5.5 Secret Management — การจัดการความลับและ API Keys
-* **เหตุผล:** เพื่อความปลอดภัยและหลีกเลี่ยงการรั่วไหลของข้อมูลระบุตัวตนและ API credentials ลงไปใน repository สาธารณะ
-
-**กฎเหล็ก:** ห้าม Hardcode API Keys/Webhook URLs (เช่น `OPENAI_API_KEY`, `FRED_API_KEY`, `GOOGLE_API_KEY`, `DISCORD_WEBHOOK_URL`) ลงในไฟล์โค้ดเด็ดขาด
-* ต้องเรียกใช้งานผ่าน `os.getenv()` และโหลดผ่านไฟล์ `.env` เท่านั้น
-* หากต้องเขียนโค้ดทดสอบหรือทำ Test Mock ให้ใช้ตัวแปรจำลองที่เป็น Dummy Value เสมอ เช่น `sk-test-123` หรือ `mock-api-key`
-* **ทุก external-service credential ที่เพิ่มเข้ามาใหม่ (webhook, API key ฯลฯ) ต้องถูกเพิ่มเข้า `tests/conftest.py::_no_real_llm_keys` (หรือ fixture ที่ทำหน้าที่เดียวกัน) ด้วยเสมอ** เพื่อกันไม่ให้ test suite ยิงออกไปหา service จริงโดยไม่ตั้งใจ — `api/main.py` เรียก `load_dotenv()` แบบไม่มีเงื่อนไขตอน import ทำให้ค่าจริงจาก `.env` รั่วเข้า `os.environ` ของทั้ง pytest process ได้ถ้าไม่ clear (เคยเกิดเหตุการณ์จริงกับ `DISCORD_WEBHOOK_URL`)
-
-### 5.6 Centralized Model Configuration (Model Registry)
-> **เหตุผล:** เพื่อให้ง่ายต่อการปรับเปลี่ยน LLM Model ทั้งระบบจากจุดเดียว และให้สามารถตรวจสอบ (Audit) ได้ง่ายว่าแต่ละ Slot ใช้ Model อะไรอยู่
-
-**กฎเหล็ก:** ห้าม Hardcode ชื่อ Model (เช่น `"gemini-3.1-flash-lite-preview"`) หรือเรียกอ่านค่า Environment Variable ตรงๆ (เช่น `os.getenv("MANAGER_MODEL")`) กระจัดกระจายในโค้ด
-* ทุกการกำหนดค่า LLM Model สำหรับทั้ง Agent Layer และ Tool Layer ต้องรวมศูนย์ผ่าน Registry เสมอ
-* ให้เรียกใช้งานผ่านโมดูล `core.model_registry` (เช่น `get_model_name("extractor")` หรือดึงจาก `REGISTRY["extractor"].env_var`)
-* **ข้อยกเว้นสำคัญ:** slot ที่เรียกผ่าน `invoke_structured_llm(model_env: str, ...)` (เช่น `youtube_pitch`, `news_triage`, `thai_title_translation`) **ห้ามเรียก `get_model_name()`** เพราะฟังก์ชันนั้นรับ `model_env` เป็น "ชื่อ env var" ไม่ใช่ "ชื่อ model ที่ resolve แล้ว" — ให้ดึง `REGISTRY[key].env_var`/`REGISTRY[key].default` ไปส่งตรงๆ แทน ไม่งั้น env var override จะหายไปเงียบๆ
-* ตรวจสอบค่าที่ resolve จริงได้ที่ `GET /api/debug/models` (ต้อง login)
-
-### 5.7 Institutional Grade Macro Guardrails & Validator Separation
-> **เหตุผล:** เพื่อป้องกันการเกิด Hallucination ในกลยุทธ์การลงทุน และให้ระบบมีความน่าเชื่อถือเทียบเท่ามาตรฐานสถาบันการเงินจริง
-
-**กฎเหล็ก:** ระบบวิเคราะห์และจัดสรรพอร์ตมหภาคต้องยึดมั่นใน 4 เสาหลัก (Institutional Grade Pillars) ดังนี้:
-1. **Explicit Observable References (`observable_refs`):** ทุกหลักฐานการประเมิน (Regime Evidence) และมุมมองรายสินทรัพย์ (Asset Allocation Stance) ต้องอ้างอิงรหัส ID ของ Observables (`obs_*`) จาก Registry เสมอ ห้ามเขียนลอย ๆ โดยไม่มีรหัสอ้างอิง
-2. **Validator Separation:** ตรรกะการตรวจสอบกฎเกณฑ์ (Guardrails / Contradiction Rules) ต้องแยกออกจาก Pydantic Schema ไปไว้ในโมดูลชั้น `validators/` (เช่น `valuation_guardrails.py`, `contradiction_rules.py`) เพื่อให้ตรวจสอบได้อิสระและไม่เกิด Circular Validation
-3. **Valuation & Credit Guardrails (Pillar 1):** ห้ามกำหนดระดับความมั่นใจเป็น HIGH และต้องแจ้งเตือนระบบ หาก Equity Risk Premium (ERP) < 1.5% (`VALUATION_RICH_WARNING`) หรือ High Yield Credit Spread กว้างกว่าเกณฑ์ 5.0% (`CREDIT_SPREAD_WARNING`)
-4. **Active Stale Exemption (Pillar 2):** หากพบคำเตือนข้อมูลล่าช้า (Stale Data Warning) แต่มีการอ้างอิง Leading Indicators ครบอย่างน้อย 2 รหัสที่ถูกต้องใน `observable_refs` ระบบจะได้รับสิทธิ์ยกเว้นการลดระดับความมั่นใจ (Exemption)
-5. **Derived Metadata & Correlation Quality (Pillar 3 & 4):** ข้อมูลดัดแปลง (Pair Ratios) ต้องเก็บบันทึกสถิติในฟิลด์ `metadata` แบบ Dict/JSON (Machine-Readable) เสมอ และการคำนวณ Rolling Correlation ต้องมีวันทำการตรงกัน ≥ 45 วัน มิฉะนั้นต้องตั้งสถานะ `is_valid = False` ทันที
-
----
-
-## 6. มาตรฐานการแสดงผลและการบันทึก Log (Communication Standards)
-
-### 6.1 หลักการ — Scannable, Parseable, Terse
-ข้อความระหว่าง Agent และ Log บน Terminal ต้อง:
-* **กวาดสายตาเข้าใจได้ทันที** (Scannable) — ไม่ต้องอ่านยาว
-* **โค้ดดึงไปประมวลผลต่อได้สะดวก** (Parseable) — มี structure ที่ regex/split ได้
-* **กระชับ** (Terse) — ไม่พ่นข้อความสนทนายาว ๆ และไม่พ่น JSON ดิบทั้งก้อนลง stdout
-
-### 6.2 รูปแบบบังคับ — Prefix Token Structure
-ใช้รูปแบบ **structured prefix** คั่นด้วย ` | ` (pipe + space) เป็นมาตรฐานหลัก:
-```
-[การกระทำ] | [ตัวเลข/Delta สำคัญที่เปลี่ยน] | [สถานะคลังเงินสด/บริบทปัจจุบัน]
+```text
+[ Inbound Routers (api/routers/) ]    [ Background Workers (api/workers/) ]
+                  │                                     │
+                  ▼                                     ▼
+         [ Application Services / Ports / DTOs (application/) ]
+                                  │
+                                  ▼
+                    [ Domain Entities / Core Logic (core/) ]
+                                  ▲
+                                  │
+[ Driven Adapters: Obsidian Vault | SQLite DB | LLMs | Data APIs (tools/ | api/db/) ]
 ```
 
-**ตัวอย่างที่ถูกต้อง:**
-```
-[BUY AOT] | qty +100 @ 62.50 | cash 125,430 → 119,180
-[REBALANCE] | TECH 28% → 25% | cash 119,180
-[ROUTE → Bookkeeper] | reason: structured_mutation | turn 4
-[SAVE OK] | file: Holdings.md | atomic_swap done
-```
-
-**ตัวอย่างที่ผิด (ห้ามใช้):**
-```
-ครับ ผมได้ทำการบันทึกการซื้อหุ้น AOT จำนวน 100 หุ้น ที่ราคา 62.50 บาท เรียบร้อยแล้วนะครับ ตอนนี้ยอดเงินสดในพอร์ตของคุณคือ...
-```
-หรือ:
-```json
-{"action": "buy", "symbol": "AOT", "qty": 100, "price": 62.5, "cash_before": 125430}
-```
-
-### 6.3 Verbosity Levels
-* **DEBUG:** dump payload เต็มได้ (สำหรับ trace ปัญหา)
-* **INFO (default):** prefix-token format เท่านั้น
-* **WARNING/ERROR:** prefix-token + reason สั้น ๆ + actionable hint
-
-ทุกคำสั่ง LLM-to-LLM ที่เป็น routing (เช่น `[Manager → Bookkeeper]`, `[Manager → Archivist]`) **ต้องใช้รูปแบบ prefix นี้บังคับ** เพื่อให้ระบบ trace flow ได้
+### 3.1 กฎการแยก Layer (Layer Isolation Rules)
+1. **Domain Layer (`core/`, `domain/`):** เป็นศูนย์กลางของ Business Rules ห้าม Import ชั้นนอก (Infrastructure, Application, API, หรือ Adapters) เด็ดขาด
+2. **Application Layer (`application/`):** จัดการ Use Case Workflows, Ports (Interfaces), DTOs และ Saga Orchestrators **ห้าม Import Database Direct Query, SQLite Connection หรือ HTTP Frameworks ตรงๆ**
+3. **Driven Adapters (`tools/`, `infrastructure/`):** ทำหน้าที่ Implement Ports ที่ Application กำหนด (เช่น `ObsidianEarningsCallAdapter`, `SqliteEarningsCallWorkflowAdapter`)
+4. **Inbound Adapters (`api/routers/`):** ทำหน้าที่รับ HTTP Request, Validate ข้อมูล และส่งต่อให้ Application Service **ห้ามทำ Filesystem I/O ใน Router เด็ดขาด**
+5. **DAO Pattern (`api/db/repositories/`):** ห้าม DAO เรียก `.commit()` หรือ `.rollback()` เองภายในฟังก์ชัน การเปิด-ปิด Transaction ต้องถูกควบคุมในระดับ Service หรือ Unit of Work
+6. **Background Workers (`api/workers/`):** ต้องทำงานผ่าน Application Services และ Outbox Repositories เท่านั้น ห้ามเรียก State DB โดยตรง
 
 ---
 
-## 7. โครงสร้างและการจัดการโฟลเดอร์เครื่องมือ (Tools Directory Architecture)
+## 4. 🔄 Distributed Safety: Saga & Transactional Outbox Pattern
 
-ระบบได้เปลี่ยนผ่านจากโครงสร้างแบบไฟล์เดี่ยวขนาดใหญ่ (Monolithic God-files) ไปสู่การแบ่งโมดูลตามโดเมน (Domain-Driven Modularization) เพื่อลดความซับซ้อน ป้องกันโค้ดพันกัน และง่ายต่อการเขียนเทสต์
+เมื่อมีกระบวนการที่ต้องทำงานข้ามระบบที่ไม่สามารถ Commit ใน Transaction เดียวกันได้ (เช่น Obsidian Markdown Vault + LLM API + SQLite Database / Kanban):
 
-**กฎเหล็กสำหรับการจัดการโฟลเดอร์ `tools/`:**
-1. **ห้ามสร้างไฟล์ Facade รวมศูนย์ (God-files):** ห้ามสร้างไฟล์อย่าง `tools/portfolio_tools.py` หรือ `tools/archivist_tools.py` ที่รวมทุกฟังก์ชันไว้ในไฟล์เดียวอีกต่อไป
-2. **แบ่งโค้ดตามโดเมน (Domain-Driven):** โค้ดฟังก์ชัน/เครื่องมือทั้งหมดต้องถูกแยกย้ายไปอยู่ภายใต้ Sub-package ของโดเมนตัวเองอย่างชัดเจน (เช่น `tools/portfolio/`, `tools/archivist/`, `tools/market/`, `tools/macro/`, `tools/knowledge/`, `tools/content/`)
-3. **แยกไฟล์ตามหน้าที่ (Separation of Concerns):** ภายในโฟลเดอร์แต่ละโดเมน ให้ซอยไฟล์ย่อยตามหน้าที่การทำงานที่เจาะจง (เช่น `parser.py`, `search.py`, `writer.py`, `core.py`)
-4. **ป้องกันตัวแปรสูญหาย (Unknown Variables) และ Circular Dependency:** เมื่อมีการแตกไฟล์ (Refactor) ต้องตรวจสอบให้แน่ใจว่าได้คัดลอกตัวแปร Global, Constants หรือ Regex ตามไปครบถ้วน และให้ระวังการ Import ชนกันเอง (แนะนำให้ใช้ Local Import ภายในฟังก์ชันหากจำเป็น — โดยเฉพาะโมดูลที่มี dependency หนัก เช่น `tools/archivist/parser.py` ที่ลาก `langchain_chroma` มาด้วย)
-5. **ทดสอบผลกระทบเสมอ:** ทุกครั้งที่เพิ่มไฟล์ใหม่หรือจัดระเบียบ Tools ต้องรัน Full Test Suite (`uv run pytest`) จริง และเช็ค import แบบ standalone (`uv run python -c "import ..."`) เพื่อจับ syntax/import error เร็วกว่ารอ pytest collect ทั้งชุด
+### 4.1 Saga State Machine & Transactional Outbox
+* **Saga States:** `NEW` $\rightarrow$ `SUMMARIZED` $\rightarrow$ `NOTE_WRITTEN` $\rightarrow$ `KANBAN_PENDING` $\rightarrow$ `COMPLETED` / `FAILED`
+* **Transactional Outbox:** ทุกครั้งที่เขียน Obsidian Note สำเร็จ ต้องบันทึกสถานะและสร้าง Outbox Event ภายใน Atomic DB Transaction เดียวกัน เพื่อรับประกันว่างานจะไม่สูญหาย (At-Least-Once Delivery)
+* **Outbox Worker:** Background Worker ดึง Event ไปส่งมอบ พร้อมระบบเช่าเวลา (Lease), กู้คืนงานค้าง (Lease Expiry Recovery), และนับจำนวน Retry สูงสุด
 
----
+### 4.2 Idempotency & Fencing Token Lease
+* **Deterministic Source Key:** คำนวณ Idempotency Key จาก canonical ticker, canonical period, transcript hash, และ prompt version เพื่อป้องกันการรันซ้ำ
+* **Execution Lease Fencing:** เมื่อมี Request ซ้ำเข้ามาพร้อมกัน เฉพาะผู้ที่ถือ `owns_execution = True` (Fencing Token) เท่านั้นที่มีสิทธิ์เรียก LLM และเขียน Obsidian ส่วน Caller อื่นจะได้รับสถานะเดิมกลับไป (ป้องกัน Duplicate LLM Calls และ Race Conditions)
 
-## 8. การสร้าง Tools และระบบ Self-Correction Loop (Tool Interface & Error Handling)
+### 4.3 HTTP Status Code Contract
+* **`200 OK`:** กระบวนการทำงานเสร็จสิ้นสมบูรณ์ (Workflow Completed)
+* **`202 Accepted`:** รับคำขอเรียบร้อย อยู่ระหว่างประมวลผลเบื้องหลัง (In Progress / Kanban Pending) พร้อมส่ง Run State ให้ Client ทำ Polling
+* **`422 Unprocessable Content`:** ข้อมูล Request ไม่ผ่านการตรวจสอบของ Domain/Schema Validation
+* **`503 Service Unavailable`:** ผู้ให้บริการภายนอก (LLM Provider / External API) ไม่พร้อมใช้งานหรือ Timeout
+* **`404 Not Found`:** ไม่พบ Resource หรือ Entity (พร้อมการตรวจสอบ Ticker Ownership Isolation)
 
-การออกแบบเครื่องมือ (Tools) สำหรับให้ LLM ใช้งาน ต้องเอื้อต่อการดักจับข้อผิดพลาดและให้ Agent สามารถแก้ไขตัวเองได้ (Self-Correction) แทนการทำให้ระบบ Crash
-
-1. **Return Error String แทนการ Raise Exception ใน Interface Layer:**
-   - ฟังก์ชันที่ครอบด้วย `@tool` (Interface Layer) **ห้ามปล่อย Exception ทะลุกลับไปหา LLM** (เช่น `ValueError`, `TimeoutError`) เพราะจะทำให้ LangChain/Agent ล้มเหลวและหยุดทำงาน
-   - ให้ใช้ `try/except` ดักจับ Exception เหล่านั้น แล้ว Return เป็น String ที่เริ่มต้นด้วย `"Error: "` เสมอ (เช่น `return f"Error: {str(e)}"` หรือใช้ `validation_error(...)` ใน `tool_errors.py`)
-   - การทำเช่นนี้จะช่วยให้ LLM ได้รับ String ข้อผิดพลาดกลับไปคิดทบทวน และเรียกใช้ Tool ใหม่อีกครั้งด้วย Argument ที่ถูกต้อง (Self-Correction Loop)
-2. **รักษา Internal Logic ให้เป็น Pythonic Exception:**
-   - ลอจิกที่อยู่ข้างใต้ฟังก์ชันย่อย (Internal/Private functions เช่น `_*_locked`) ให้ใช้การ `raise ValueError` หรือ Exception ตามปกติ เพื่อความแข็งแกร่งของ Business Logic และเอื้อต่อการเขียน Unit Test
-3. **ใช้ Google Style Docstrings เพื่อกำหนด Tool Description (Native Tool Calling):**
-   - **ห้าม** ใส่เงื่อนไขการเลือกใช้ Tool หรือคำอธิบายการใช้งานไว้ใน System Prompt ของ Agent
-   - คำอธิบาย, เงื่อนไข (Usage/When to use, Caution), พารามิเตอร์ (Args), และข้อควรระวังต่างๆ ต้องถูกระบุอย่างละเอียดใน **Docstring (Google Style)** ของฟังก์ชันที่ครอบด้วย `@tool` เสมอ
-   - เพื่อให้ Agent พึ่งพาระบบ `bind_tools` ในการดึงข้อมูล Schema ไปประมวลผลการตัดสินใจด้วยตัวเอง ซึ่งช่วยลด Token ใน Prompt และทำให้โค้ดสั้นกระชับขึ้น
+### 4.4 OpenAPI Golden Manifest Rule
+* **ห้ามแก้ไขไฟล์ `tests/fixtures/manifest_openapi_schema.json` ด้วยมือเด็ดขาด**
+* ทุกครั้งที่มีการเพิ่ม/แก้ไข API Router หรือ Schema ให้รัน `.venv\Scripts\python scripts/generate_golden_manifests.py` เพื่อสร้าง Baseline Manifest ใหม่หลังตรวจสอบความถูกต้องแล้ว
 
 ---
 
-## 9. การจัดการความสะอาดของ Workspace และไฟล์ทดสอบ (Workspace Cleanliness & Generated Files)
+## 5. 🛡️ ความถูกต้องทางการเงินและข้อมูล (Data Integrity Invariants)
 
-1. **Test Reports & Artifacts:** ไฟล์รายงานผลที่สร้างจากการรัน Test (เช่น `testing_report.html`, `coverage_report/`, `coverage.xml`) หรือไฟล์จำลองต่างๆ (Mock/Temp Files) ต้องถูกตั้งค่าให้ไปจัดเก็บไว้ในโฟลเดอร์ที่เกี่ยวข้อง (เช่น `tests/`) เท่านั้น ห้ามปล่อยให้ตกค้างหรือสร้างทิ้งไว้ใน Root Directory เด็ดขาด
-2. **Scratch & Temp Files:** หากมีการสร้างไฟล์เพื่อทดสอบโค้ดชั่วคราว, เขียนสคริปต์สั้นๆ เพื่อดีบัก หรือสร้างไฟล์ล็อก ต้องสร้างไว้ในโฟลเดอร์ scratchpad ของ session หรือถูกลบทิ้ง (Clean up) ทันทีเมื่อไม่ใช้งานแล้ว — ห้ามทิ้ง reproduction script/debug file ค้างไว้ใน `tests/` ของจริง
-3. **No Root Clutter:** ห้ามสร้างไฟล์ขยะ โฟลเดอร์ใหม่ หรือเทสต์ที่วางสะเปะสะปะบน Root Directory โดยไม่ได้รับอนุญาต
+กฎเหล่านี้คือ **Invariants ที่ห้ามละเมิดเด็ดขาด**:
 
----
+### 5.1 Atomic Storage Mutations (การบันทึกไฟล์ปลอดภัย)
+* ทุกฟังก์ชันที่เขียนไฟล์ลง Obsidian Vault หรือไฟล์การเงิน ต้องเขียนลง **ไฟล์ชั่วคราว (Shadow/Temp file)** ก่อนเสมอ
+* ใช้ **OS-level Atomic Swap** (`os.replace()` หรือ `_atomic_write_text()`) ในการสลับไฟล์จริง เพื่อป้องกันไฟล์เสียหายหากไฟดับหรือระบบ Crash กลางคัน
 
-## 10. มาตรฐานการทำ Tracing ด้วย LangSmith (LangSmith Observability)
+### 5.2 Anti-Drift Bottom-Up Recalculation Loop
+* ทุกครั้งที่มีการเปลี่ยนแปลงข้อมูลรายการสินทรัพย์ (Asset Mutation):
+  1. **Per-Asset Layer:** คำนวณ Market Value, Cost Basis, Unrealized P/L รายตัว
+  2. **Summary Layer:** Re-sum ยอดรวมพอร์ตทั้งหมดจากระดับสินทรัพย์ (ห้าม Patch เฉพาะส่วนต่าง Delta)
+  3. **Allocation Layer:** Re-calculate สัดส่วน Asset Allocation % ใหม่ทั้งหมด
+  4. **Commit:** จึงบันทึกผลลง Storage แบบ Atomic
 
-เพื่อประสิทธิภาพในการดีบักและติดตามการทำงานของ Agent (Tracing) ทุกฟังก์ชันที่เกี่ยวข้องกับ Agent ต้องปฏิบัติตามมาตรฐานดังนี้:
-1. **ครอบฟังก์ชันด้วย `@traceable` เสมอ:** ฟังก์ชันทุกตัวในระบบ (โดยเฉพาะในโฟลเดอร์ `tools/` และ `core/`) ที่ถูกใช้งานโดย Agent หรือทำงานเป็นสเตปที่ชัดเจน ต้องถูกครอบด้วย `@traceable` (จาก `langsmith`)
-2. **ระบุประเภท `run_type` ให้ถูกต้อง:** ต้องระบุพารามิเตอร์ `run_type` ใน `@traceable` ให้ตรงกับบริบทการทำงานของฟังก์ชันนั้น ๆ เสมอ:
-   - `llm`: สำหรับโค้ดที่รัน LLM โมเดลโดยตรง
-   - `retriever`: สำหรับฟังก์ชันดึงข้อมูลหรือค้นหาเอกสาร (เช่น การ Query จาก Vector DB / Vault)
-   - `tool`: สำหรับเครื่องมือทั่วไปที่ Agent ใช้ (เช่น ดึงราคาหุ้น, ข่าว, API ต่าง ๆ)
-   - `chain`: สำหรับท่อหรือ Logic Orchestrator ที่เรียกใช้งานหลาย ๆ ขั้นตอน
-   - `prompt`: สำหรับฟังก์ชันสร้าง Prompt / จัดการ Context String
-   - `parser`: สำหรับฟังก์ชันแปลง / สกัดข้อมูล (เช่น การ Normalize หรือ Parse JSON)
-3. **กำหนด Metadata ในระดับ Graph/Orchestrator:** ทุกครั้งที่มีการรัน LangGraph StateGraph (เช่นใน `main.py`) ใน `config` จะต้องมีการแนบ `metadata` ระบุ `run_type: "chain"` และ `session_source` ให้ชัดเจน เพื่อให้การวิเคราะห์พฤติกรรมในระดับ Root เป็นไปอย่างแม่นยำ
+### 5.3 No In-Context Financial Math (ห้าม LLM คำนวณเลขในใจ)
+* **ห้ามให้ LLM คำนวณตัวเลขทางการเงินใน Prompt หรือ Context เด็ดขาด** (เช่น บวก ลบ กำไรขาดทุน คำนวณดอกเบี้ย สัดส่วนพอร์ต)
+* ตัวเลขทุกตัวต้องถูกคำนวณผ่าน **Deterministic Python Tools** เท่านั้น LLM มีหน้าที่เลือกว่าจะเรียก Tool ใดด้วย Argument อะไร
 
----
+### 5.4 Single Source of Truth & Clean Cache
+* แหล่งความจริงเดียวของข้อมูลพอร์ตคือไฟล์ใน Obsidian Vault (`memories/`)
+* SQLite ทำหน้าที่เป็น Index และ Cache เสริมความเร็ว โดยต้องมีกลไก Invalidation หรือ Rebuild จาก Vault เสมอ
 
-## 11. มาตรฐานการเขียนและการจัดการ Prompt Harness (Agent & Tool Prompt Standards)
-ระบบนี้ใช้สถาปัตยกรรมตัวโหลดและจัดการ Prompt แบบไดนามิกผ่านโมดูล `core/prompt_harness.py` (`PromptHarness`) เพื่อให้การพัฒนาระบบมีความยืดหยุ่น ปราศจาก Hardcoding และรองรับ Hot-Reloading ทั้งในระดับ Agent และระดับ Tool
-
-**กฎเหล็กสำหรับการเขียนและจัดการ Prompt:**
-1. **Modular Skill Files (ห้าม Hardcode Prompt):** ห้ามเขียนข้อความ Prompt ยาว ๆ ฝังตายตัวในไฟล์ Python บังคับให้แยกจัดเก็บไฟล์ Markdown ไว้ภายใต้โฟลเดอร์:
-   - ฝั่ง Agent: `prompts/skills/<agent_name>/`
-   - ฝั่ง Tool: `prompts/tools/<tool_name>/` (เข้าถึงผ่าน `skills_root=TOOLS_PROMPTS_ROOT`)
-   โดยควรแบ่งโมดูลย่อย (โดยเฉพาะของ Agent) เป็น:
-   - `SKILL.md` (หรือ `<AGENT_NAME>_SKILL.md`): อธิบายภารกิจ บทบาท และบทบัญญัติหลักของ Agent
-   - `pillars.md` (ทางเลือก): กำหนดเสาหลัก กฎเกณฑ์เชิงโครงสร้าง หรือแนวทางการประเมิน
-   - `guardrails.md` (ทางเลือก): ระบุข้อจำกัด ความปลอดภัย และกฎห้ามละเมิด
-   - `few_shots.md` (ทางเลือก): ตัวอย่างผลลัพธ์ โครงสร้าง JSON Schema หรือตารางที่ถูกต้องสำหรับส่งให้ Retry Layer
-2. **Hot-Reloading & In-Memory Caching (`get_harness`):** การเรียกใช้งาน Prompt ในโค้ดของ Agent/Tool ต้องเรียกผ่าน `get_harness("name", skills_root=...)` และ `harness.get_system_prompt()` หรือ `harness.get_skill_text()` เสมอ ระบบจะทำการเช็คเวลาแก้ไขไฟล์ (`mtime`) และ Cache ไว้ในหน่วยความจำ ช่วยให้ Developer สามารถแก้ไข Prompt ใน Markdown แล้วมีผลทันทีในรอบรันถัดไป (Hot-Reloading) โดยไม่ต้องรีสตาร์ทแอปพลิเคชัน
-3. **Mustache Template (`{{variable}}`) ป้องกัน JSON Collision:** การแทรกตัวแปรไดนามิกลงใน Prompt บังคับใช้รูปแบบ Mustache syntax (`{{variable_name}}`) ผ่านฟังก์ชัน `format_mustache()` หรือพารามิเตอร์ของ `get_system_prompt(**kwargs)`/`get_skill_text(**kwargs)` **ห้าม** ใช้ Python f-strings หรือ `.format()` (`{}`) เด็ดขาด เพื่อป้องกันปัญหาข้อผิดพลาดจากปีกกาของ JSON Schema หรือ Markdown Table ชนกับรหัสจัดรูปแบบของ Python (และควรเปิด `strict=True` เพื่อดักจับตัวแปรที่ตกหล่นก่อนส่งหา LLM)
-   - **เนื้อหา dynamic ที่เป็น list/บล็อกยาว (เช่น candidate list, evidence bundle) ต้องส่งเป็น Mustache variable ที่วางตำแหน่งตรงกับ template เดิม ห้าม concat string ต่อท้ายหลัง `get_skill_text()`** เพราะจะทำให้ลำดับเนื้อหาใน prompt สลับจากของเดิม (ตำแหน่งของ dynamic content เทียบกับกฎ/คำสั่งที่ตามมาสำคัญต่อพฤติกรรม LLM)
-4. **Dynamic Few-Shot Injection สำหรับ Retry Loop:** เมื่อเชื่อมต่อ Agent เข้ากับระบบ `invoke_with_retry` หรือ `structured_output_retry` ต้องส่งต่อข้อความซ่อมแซมผ่าน `harness.get_few_shots_feedback()` เพื่อฉีดตัวอย่างจากไฟล์ `few_shots.md` เข้าไปใน Prompt Feedback ช่วยชี้นำให้ LLM สามารถแก้ไขโครงสร้าง JSON หรือตารางที่ผิดพลาดด้วยตัวเอง (Self-Correction) ได้อย่างแม่นยำ
-5. **Mojibake Repair & Encoding Safety:** ไฟล์ Skill ทุกไฟล์ต้องถูกโหลดผ่านระบบที่จัดการภาษาและตัวอักษรอย่างปลอดภัย โดย `PromptHarness` จะครอบการซ่อมแซมตัวอักษรขยะด้วย `repair_mojibake` โดยอัตโนมัติ เพื่อป้องกันปัญหาไฟล์อักษรไทย TIS-620/Latin-1 แสดงผลผิดเพี้ยน
-6. **หลักการเขียน Test Harness สำหรับ Agents (Agent Test Harness Principles):** การทดสอบระบบ Agents ต้องแบ่งออกเป็น 2 ชั้นอย่างชัดเจน คือ (1) **Mock Harness (Unit Testing):** สำหรับทดสอบตรรกะ Guardrails, State Transitions, และ Fallback mechanisms โดยใช้ Mock Data / Fallback Calculators เพื่อให้ชุดทดสอบรันได้อย่างรวดเร็ว ไม่พึ่งพาพาหะภายนอก และ (2) **Integration Harness (Production Verification):** สำหรับทดสอบในระบบจริง ต้องบังคับปิดโหมด Mock Fallback (`use_mock_fallback=False`) และเชื่อมต่อกับ Real Data Calculators (เช่น ดึงราคาจริงผ่าน `yfinance` หรือ Vault) เสมอ เพื่อให้มั่นใจว่าในแวดล้อม Production จะไม่มีการปล่อยตัวเลขจำลองหลุดออกไปในรายงานการลงทุน
+### 5.5 PII Gateway & Secret Safety
+* ข้อมูล PII ต้องถูกแปลง/ปกปิดผ่าน `core/security.py` ก่อนส่งไปยัง External LLM เสมอ ห้าม Bypass
+* ห้าม Hardcode API Keys ลงในโค้ด ต้องโหลดผ่าน `.env` และ `os.getenv()` เสมอ
 
 ---
 
-## 12. หลักปฏิบัติสุดท้าย (Final Doctrine)
+## 6. 🤖 มาตรฐาน Multi-Agent, Tools & Observability
 
-1. **เมื่อได้รับคำสั่งเขียนโค้ด** — เสนอแผนงานและรออนุมัติ (Plan-First Workflow) ห้ามแก้ไขไฟล์ทันที
-2. **เมื่อสงสัย** — ถาม ไม่ใช่เดา
-3. **เมื่อเป็นเงิน** — ใช้ Tool ไม่ใช่คำนวณในใจ (In-Context Math)
-4. **เมื่อจะลบ** — ตรวจสามรอบ ว่าเป็น dead code จากงานตนเองจริง
-5. **เมื่อจะเขียนไฟล์** — Atomic เสมอ
-6. **เมื่อตัวเลขเปลี่ยน** — Re-aggregate จากล่างขึ้นบน
-7. **เมื่อพูดกับ Terminal** — Prefix Token ไม่ใช่ prose
-8. **เมื่อใช้ API Keys/Webhook URLs** — ดึงจาก env เท่านั้น ห้าม Hardcode และต้องเพิ่มเข้า test isolation fixture ด้วย
-9. **เมื่อจัดการ Tools** — แยกไฟล์ตามโดเมน ห้ามสร้าง God-files
-10. **เมื่อสร้างไฟล์ชั่วคราว/Report** — เก็บใน `tests/` หรือ scratchpad เสมอ ห้ามวางทิ้งให้รก Root Directory
-11. **เมื่อสร้าง Tools ใหม่** — คืนค่า `"Error: ..."` เสมอแทนที่จะปล่อย Exception ทะลุ (Self-Correction)
-12. **เมื่อเขียนฟังก์ชัน/เครื่องมือใหม่ให้ Agent** — ต้องครอบ `@traceable(run_type="...")` ให้ถูกหมวดหมู่เสมอ
-13. **เมื่อกำหนดวิธีใช้ Tool** — เขียนเงื่อนไขและวิธีใช้งานลงใน Docstring (Google Style) ของ `@tool` เท่านั้น ห้ามใส่ใน System Prompt
-14. **เมื่อวิเคราะห์ข้อมูลมหภาคและจัดสรรพอร์ต (Macro & Allocation)** — ต้องอ้างอิง Hard Data ผ่าน `observable_refs` เสมอ และห้ามข้ามขั้นตอนการตรวจสอบของ Institutional Guardrails (ERP < 1.5%, Stale Exemption, Correlation ≥ 45 days)
-15. **เมื่อสร้างข้อมูลตัวชี้วัดดัดแปลง (Derived Observables)** — ต้องบันทึกสถิติเชิงลึกในรูปแบบ Dict/JSON ลงใน `metadata` เสมอ เพื่อให้เป็นมาตรฐาน Machine-Readable
-16. **เมื่อเขียนหรือแก้ไข Prompt ของ Agent/Tool** — ต้องจัดการผ่าน `PromptHarness` (`get_harness`) และไฟล์ `.md` ใน `prompts/skills/` หรือ `prompts/tools/` เสมอ ห้าม Hardcode ในไฟล์ Python และห้าม concat dynamic content ต่อท้ายแบบทำลายลำดับเดิม
-17. **เมื่อออกแบบและเรียกใช้ฟังก์ชันตรวจสอบระบบ (Validation & Guardrails):** ต้องรับประกันคุณสมบัติ **Idempotent** เสมอ ห้ามสร้างคำเตือนซ้ำซ้อนหรือลดระดับความมั่นใจซ้ำสองเมื่อประมวลผลบนข้อมูลชุดเดิม
-18. **เมื่อสร้างข้อมูลตัวชี้วัดในโหมด Production:** ห้ามใช้ตัวเลขจำลอง (Mock Data) เป็น Fallback เด็ดขาด หากไม่มีข้อมูลจริงต้องแจ้งสถานะ `is_valid=False` และระบุเหตุผลใน `stale_reason` ทันที
-19. **เมื่อตรวจสอบความครบถ้วนของพอร์ต (Institutional Coverage Guardrails):** ต้องตรวจสอบการครอบคลุมสินทรัพย์หลักทั้ง 5 กลุ่ม (`equities`, `fixed_income`, `commodities`, `fx`, `cash`) เสมอ และห้ามข้ามการตรวจสอบทิศทางค่าเงินทั้งสองมุมมอง (`USD vs THB` และ `THB vs USD`)
-20. **เมื่อจัดการ Model Config** — ห้าม hardcode ชื่อ model หรือ `os.getenv()` กระจาย ต้องผ่าน `core.model_registry` เสมอ ยกเว้น slot ที่ผ่าน `invoke_structured_llm` ต้องส่ง `env_var`/`default` จาก Registry ตรงๆ ไม่ใช่เรียก `get_model_name()`
+### 6.1 Agent Roles & Boundaries
+* **Supervisor / Manager:** ควบคุม Routing และ State Transition ตามผลลัพธ์ของ Tools ไม่คำนวณตัวเลขเอง
+* **Bookkeeper:** เอนทิตีเดียวที่ดูแล Structured State (พอร์ตการลงทุน, Ledger, Holdings)
+* **Archivist:** ดูแล Unstructured Content (สรุปบทวิเคราะห์, ข่าว, Earnings Calls, YouTube Transcripts)
+* **Macro Quant & Strategic Allocator:** คำนวณ Macro Metrics, Guardrails, และ Portfolio Asset Stance
 
-> *"Code is read far more often than it is written. Optimize for the reader — and the reader of a financial system is auditing for correctness, not admiring cleverness."*
+### 6.2 Tool Interface & Self-Correction Loop
+* **Native Tool Calling:** กำหนดคำอธิบาย วิธีใช้งาน และ Argument Constraints ใน **Google Style Docstrings** ของ `@tool` เพื่อให้โมเดลผูก Schema อัตโนมัติ (ห้ามยัดลง System Prompt)
+* **Tool Error Handling:** ฟังก์ชัน `@tool` (Interface Layer) **ห้ามปล่อย Exception ทะลุกลับหา LLM** ให้ Catch และ Return เป็น Error String (เช่น `"Error: ..."` หรือ `validation_error(...)`) เพื่อให้ LLM เกิด Self-Correction Loop ในการแก้ไข Argument
+* **Centralized Model Registry:** ห้าม Hardcode ชื่อโมเดล ให้ดึงผ่าน `core.model_registry` (เช่น `get_model_name("extractor")`)
+
+### 6.3 Communication & Logging Standards
+* **Prefix Token Structure:** ข้อความ Log และ Agent Communication ต้องกวาดสายตาเข้าใจง่าย (Scannable) และ Parse สะดวก คั่นด้วย ` | `:
+  ```text
+  [ACTION] | [KEY_DELTA_OR_METRIC] | [CURRENT_CONTEXT_STATUS]
+  ```
+  *ตัวอย่าง:* `[BUY AAPL] | qty +10 @ 225.50 | cash $15,400 -> $13,145`
+
+---
+
+## 7. 🧹 สุขอนามัยของ Workspace (Workspace Cleanliness)
+
+1. **ห้ามสร้างไฟล์ขยะบน Root Directory:** ไฟล์เทสต์ ชั่วคราว หรือ Artifacts ต้องเก็บใน `tests/` หรือ `scratch/` เท่านั้น
+2. **Whitespace & Formatting Integrity:** ตรวจสอบให้ `git diff --check` ผ่านเสมอ ห้ามมี Trailing Whitespace หรือข้อผิดพลาดเรื่อง Line Ending
+3. **Green Test Gate:** ก่อนส่งมอบงานทุกครั้ง โค้ดต้องผ่านการทดสอบครบถ้วน:
+   - Architecture AST Rules: `pytest tests/architecture/test_dependency_rules.py`
+   - OpenAPI Contract: `pytest tests/api/test_openapi_contract.py`
+   - Frontend Typecheck & Tests: `npm --prefix web run typecheck` และ `npm --prefix web test`
+
+---
+
+> *"Code is read far more often than it is written. Optimize for correctness, resilience, and architectural integrity."*

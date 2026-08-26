@@ -96,4 +96,94 @@ describe('api client', () => {
       action: 'approve',
     })
   })
+
+  it('summarizeEarningsCall ส่ง POST payload ไปยัง /api/equity/{ticker}/earnings-call/summarize ถูกต้อง', async () => {
+    const fetchMock = mockFetchOnce({
+      jsonBody: {
+        run_id: 'run-1',
+        ticker: 'TSM',
+        period: 'Q4 2024',
+        status: 'completed',
+        kanban_status: 'created',
+        highlights: 'Highlights text',
+        vault_path: '30_Knowledge_Base/Earnings_Calls/TSM/2024-Q4_TSM_Earnings_Call.md',
+        kanban_card_id: 'card-123',
+        reused_existing_run: false,
+        is_idempotent_replay: false,
+      },
+    })
+    const res = await api.summarizeEarningsCall('TSM', 'Q4 2024', 'Transcript text here...')
+    const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit]
+    expect(url).toBe('/api/equity/TSM/earnings-call/summarize')
+    expect(init.method).toBe('POST')
+    expect(JSON.parse(init.body as string)).toEqual({
+      period: 'Q4 2024',
+      transcript: 'Transcript text here...',
+    })
+    expect(res.ticker).toBe('TSM')
+    expect(res.highlights).toBe('Highlights text')
+  })
+
+  it('getEarningsCallRun ส่ง GET request ถูกต้อง', async () => {
+    const fetchMock = mockFetchOnce({
+      jsonBody: {
+        run_id: 'run-1',
+        ticker: 'TSM',
+        period: 'Q4 2024',
+        status: 'completed',
+        kanban_status: 'created',
+        created_at: 100,
+        updated_at: 200,
+      },
+    })
+    const res = await api.getEarningsCallRun('TSM', 'run-1')
+    const [url] = fetchMock.mock.calls[0] as [string, RequestInit]
+    expect(url).toBe('/api/equity/TSM/earnings-call/runs/run-1')
+    expect(res.run_id).toBe('run-1')
+  })
+
+  it('retryEarningsCallRun ส่ง POST request ถูกต้อง', async () => {
+    const fetchMock = mockFetchOnce({
+      jsonBody: {
+        run_id: 'run-1',
+        ticker: 'TSM',
+        period: 'Q4 2024',
+        status: 'completed',
+        kanban_status: 'created',
+        created_at: 100,
+        updated_at: 200,
+      },
+    })
+    const res = await api.retryEarningsCallRun('TSM', 'run-1')
+    const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit]
+    expect(url).toBe('/api/equity/TSM/earnings-call/runs/run-1/retry')
+    expect(init.method).toBe('POST')
+    expect(res.status).toBe('completed')
+  })
+
+  it('getEarningsCalls ส่ง GET request ไปยัง /api/equity/{ticker}/earnings-calls ถูกต้อง', async () => {
+    const fetchMock = mockFetchOnce({
+      jsonBody: {
+        ticker: 'TSM',
+        total_count: 1,
+        items: [
+          {
+            title: 'TSM Earnings Call Q4 2024',
+            ticker: 'TSM',
+            period: 'Q4 2024',
+            vault_path: '30_Knowledge_Base/Earnings_Calls/TSM/2024-Q4_TSM_Earnings_Call.md',
+            highlights: 'Highlights text',
+            date: '2026-08-26',
+            last_updated: '2026-08-26 23:01:06',
+            has_full_transcript: true,
+          },
+        ],
+      },
+    })
+    const res = await api.getEarningsCalls('TSM')
+    const [url] = fetchMock.mock.calls[0] as [string, RequestInit]
+    expect(url).toBe('/api/equity/TSM/earnings-calls')
+    expect(res.total_count).toBe(1)
+    expect(res.items[0]?.period).toBe('Q4 2024')
+  })
 })

@@ -273,7 +273,12 @@ def edit_holding(symbol: str, units: float | None = None, avg_cost: float | None
         return validation_error("accumulated_dividend_thb ต้องไม่ติดลบ (>= 0)")
     return _get_service().edit_holding(symbol=symbol, units=units, avg_cost=avg_cost, accumulated_dividend_thb=accumulated_dividend_thb, asset_type=asset_type, reason=reason, portfolio_id=portfolio_id)
 
-from tools.portfolio.prices import sync_market_prices
+
+@tool
+def sync_market_prices(portfolio_id: str = "default") -> str:
+    """ดึงราคาตลาดล่าสุดของทุกสินทรัพย์ในพอร์ตโฟลิโอ"""
+    return _get_service().sync_market_prices(portfolio_id=portfolio_id)
+
 
 @tool
 def append_trading_journal(entry: str, portfolio_id: str = 'default') -> str:

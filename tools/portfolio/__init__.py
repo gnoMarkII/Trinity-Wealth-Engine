@@ -13,30 +13,23 @@ def get_default_service() -> "PortfolioService":
         with _SERVICE_LOCK:
             if _service_instance is None:
                 from .service import PortfolioService
-                from .adapters.markdown.repository_adapter import MarkdownVaultRepositoryAdapter
-                from .adapters.markdown.watchlist_adapter import MarkdownWatchlistAdapter
-                from .adapters.markdown.goals_adapter import MarkdownGoalsAdapter
-                from .adapters.markdown.performance_adapter import MarkdownPerformanceAdapter
-                from .adapters.markdown.journal_vault_adapter import JournalVaultAdapter
-                from .adapters.sqlite_mirror_decorator import SqliteMirroredPortfolioRepository
-                from .adapters.price_yfinance_adapter import PriceYFinanceAdapter
+                from .bootstrap import build_default_portfolio_dependencies
+                from .adapters.legacy_price_compatibility import LegacyPriceCompatibilityAdapter
 
-                md_repo = MarkdownVaultRepositoryAdapter()
-                mirror_repo = SqliteMirroredPortfolioRepository(underlying_repo=md_repo)
-                watchlist_repo = MarkdownWatchlistAdapter()
-                goals_repo = MarkdownGoalsAdapter()
-                perf_repo = MarkdownPerformanceAdapter()
-                journal_provider = JournalVaultAdapter()
-                price_provider = PriceYFinanceAdapter()
-
+                deps = build_default_portfolio_dependencies()
+                # Keep the legacy agent-tool patch points functional at the
+                # composition boundary while services consume only ports.
+                compat_price = LegacyPriceCompatibilityAdapter(deps.price_provider)
                 _service_instance = PortfolioService(
-                    repo=mirror_repo,
-                    watchlist_repo=watchlist_repo,
-                    goals_repo=goals_repo,
-                    perf_repo=perf_repo,
-                    journal_provider=journal_provider,
-                    price_provider=price_provider,
+                    repo=deps.repo,
+                    watchlist_repo=deps.watchlist_repo,
+                    goals_repo=deps.goals_repo,
+                    perf_repo=deps.perf_repo,
+                    journal_provider=deps.journal_provider,
+                    price_provider=compat_price,
                 )
+                if deps.dividend_provider is not None:
+                    _service_instance._cash_flow_service.dividend_provider = deps.dividend_provider
     return _service_instance
 
 

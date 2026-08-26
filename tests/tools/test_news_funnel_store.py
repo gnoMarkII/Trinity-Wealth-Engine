@@ -5,6 +5,7 @@ import pytest
 
 from tools.macro.news_funnel_store import (
     load_store,
+    resolve_store_path,
     save_store,
     is_title_or_url_processed,
     save_triage_events,
@@ -21,6 +22,19 @@ from tools.macro.news_funnel_store import (
 def temp_store(tmp_path):
     store_file = tmp_path / "test_state.json"
     return str(store_file)
+
+
+def test_resolve_store_path_reads_environment_at_call_time(monkeypatch, tmp_path):
+    first = tmp_path / "first.json"
+    second = tmp_path / "second.json"
+    monkeypatch.setenv("NEWS_FUNNEL_STORE_PATH", str(first))
+    assert resolve_store_path() == str(first)
+
+    monkeypatch.setenv("NEWS_FUNNEL_STORE_PATH", str(second))
+    assert resolve_store_path() == str(second)
+
+    explicit = tmp_path / "explicit.json"
+    assert resolve_store_path(explicit) == str(explicit)
 
 
 def test_load_initial_store(temp_store):

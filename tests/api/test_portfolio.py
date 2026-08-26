@@ -37,6 +37,8 @@ _SAMPLE_DIRECTION = {
 
 
 def _write_sidecar(tmp_path, monkeypatch, module, payload=_SAMPLE_DIRECTION):
+    import api.dependencies as dependencies
+
     vault_dir = tmp_path / "vault"
     strategy_dir = vault_dir / "30_Knowledge_Base" / "Strategies"
     strategy_dir.mkdir(parents=True)
@@ -44,6 +46,7 @@ def _write_sidecar(tmp_path, monkeypatch, module, payload=_SAMPLE_DIRECTION):
         json.dumps(payload, ensure_ascii=False), encoding="utf-8"
     )
     monkeypatch.setattr(module, "VAULT_PATH", vault_dir)
+    monkeypatch.setattr(dependencies, "VAULT_PATH", vault_dir)
 
 
 def test_portfolio_latest_maps_dto_fields(authed_client, tmp_path, monkeypatch):
@@ -160,10 +163,12 @@ def test_macro_indicator_series_uses_registered_latest_indicator(authed_client, 
 
 def test_portfolio_latest_404_when_no_report_exists(authed_client, tmp_path, monkeypatch):
     import api.routes_portfolio as routes_portfolio_module
+    import api.dependencies as dependencies
 
     vault_dir = tmp_path / "empty_vault"
     (vault_dir / "30_Knowledge_Base" / "Strategies").mkdir(parents=True)
     monkeypatch.setattr(routes_portfolio_module, "VAULT_PATH", vault_dir)
+    monkeypatch.setattr(dependencies, "VAULT_PATH", vault_dir)
 
     r = authed_client.get("/api/portfolio/latest")
     assert r.status_code == 404

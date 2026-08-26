@@ -269,7 +269,7 @@ def test_persist_parking_lot_node_success(tmp_path, monkeypatch):
 
 def test_persist_parking_lot_node_db_failure_fallback(tmp_path, monkeypatch):
     from agents.youtube_pitch_flow import persist_parking_lot_node
-    import api.state_db
+    import tools.content.parking_lot_outbox as parking_lot_outbox
 
     vault_dir = tmp_path / "vault"
     monkeypatch.setattr("agents.youtube_pitch_flow.VAULT_PATH", str(vault_dir))
@@ -278,7 +278,9 @@ def test_persist_parking_lot_node_db_failure_fallback(tmp_path, monkeypatch):
     def mock_db_error(*args, **kwargs):
         raise RuntimeError("SQLite database is locked or corrupted")
 
-    monkeypatch.setattr("api.state_db.create_parking_lot_cards_atomic", mock_db_error)
+    # The workflow now exercises the outbound outbox sync port.  Patch that
+    # boundary directly instead of reaching through the legacy state_db facade.
+    monkeypatch.setattr(parking_lot_outbox, "_SYNC_HANDLER", mock_db_error)
 
     state: YouTubePitchState = {
         "pitches": [{
@@ -298,4 +300,3 @@ def test_persist_parking_lot_node_db_failure_fallback(tmp_path, monkeypatch):
     # Check Vault outbox file exists and is pending
     outbox_file = vault_dir / "NotebookLM_Sources" / "outbox" / "parking_job-fail-456_p-fail.json"
     assert outbox_file.exists()
-

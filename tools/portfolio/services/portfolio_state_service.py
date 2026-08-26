@@ -63,12 +63,10 @@ class PortfolioStateService:
         if refresh_prices or fetch_fundamentals:
             with self.repo.unit_of_work(pid) as uow:
                 state = uow.load_state()
-                if refresh_prices:
-                    from tools.portfolio.prices import _refresh_prices
-                    _refresh_prices(state)
-                if fetch_fundamentals:
-                    from tools.portfolio.prices import _fetch_fundamentals
-                    _fetch_fundamentals(state, force=False)
+                if refresh_prices and self.price_provider:
+                    self.price_provider.refresh_portfolio_prices(state)
+                if fetch_fundamentals and self.price_provider:
+                    self.price_provider.fetch_fundamentals(state, force=False)
                 recalc_all(state)
                 uow.commit(state, LedgerChange(kind="unchanged"))
                 return state
@@ -81,9 +79,8 @@ class PortfolioStateService:
         try:
             with self.repo.unit_of_work(pid) as uow:
                 state = uow.load_state()
-                if refresh_prices:
-                    from tools.portfolio.prices import _refresh_prices
-                    refresh_info = _refresh_prices(state)
+                if refresh_prices and self.price_provider:
+                    refresh_info = self.price_provider.refresh_portfolio_prices(state)
                     uow.commit(state, LedgerChange(kind="unchanged"))
                 else:
                     recalc_all(state)
@@ -91,8 +88,8 @@ class PortfolioStateService:
             return json.dumps({"error": f"portfolio lock timeout for '{portfolio_id}'"}, ensure_ascii=False)
 
         dump = state.model_dump(exclude_none=True)
-        if refresh_info:
-            dump["_price_refresh"] = refresh_info
+        if refresh_info or getattr(state, "price_refresh_info", None):
+            dump["_price_refresh"] = refresh_info or getattr(state, "price_refresh_info", {})
         return json.dumps(dump, ensure_ascii=False, indent=2)
 
     # ------------------------------------------------------------------

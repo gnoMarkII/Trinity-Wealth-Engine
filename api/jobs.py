@@ -14,10 +14,9 @@ import asyncio
 import json
 import sqlite3
 import uuid
-from contextlib import closing
 from typing import Any, Callable, Optional
 
-from api import state_db
+from api.db.uow import DbUnitOfWork
 
 # run_fn(job_id=..., thread_id=..., instruction=..., flow=..., scope=..., resume_value=...) -> None
 RunFn = Callable[..., None]
@@ -35,9 +34,6 @@ class JobQueue:
         self._queue: "asyncio.Queue[str]" = asyncio.Queue()
         self._loop: Optional[asyncio.AbstractEventLoop] = None
         self._worker_task: Optional[asyncio.Task] = None
-
-    def _conn(self) -> sqlite3.Connection:
-        return state_db.get_connection(self._db_path)
 
     def start(self) -> None:
         if self._worker_task is None:
@@ -59,8 +55,8 @@ class JobQueue:
         flow ต้องอยู่ใน key ด้วย ไม่งั้นงานชื่อเดียวกัน scope เดียวกันแต่คนละ flow จะ dedup ผิดตัว
         """
         idempotency_key = f"{flow}:{card_id or 'nocard'}:{instruction.strip()}:{scope}"
-        with closing(self._conn()) as conn:
-            existing = state_db.find_job_by_idempotency_key(conn, idempotency_key)
+        with DbUnitOfWork(db_path=self._db_path) as uow:
+            existing = uow.jobs.find_job_by_idempotency_key(idempotency_key)
             if existing is not None and existing["status"] in ("queued", "running", "awaiting_approval"):
                 return existing["job_id"]
 
@@ -70,14 +66,23 @@ class JobQueue:
             if existing is not None:
                 # เคยมีงานเดิม (done/error) ใช้ key นี้แล้ว — เติม job_id กันชน UNIQUE constraint
                 key = f"{idempotency_key}:{job_id}"
-            state_db.create_job(conn, job_id, thread_id, card_id, key, instruction, status="queued", flow=flow, scope=scope)
+            uow.jobs.create_job(
+                job_id,
+                thread_id,
+                card_id,
+                key,
+                instruction,
+                status="queued",
+                flow=flow,
+                scope=scope,
+            )
 
         self.enqueue(job_id)
         return job_id
 
     def resume(self, job_id: str, resume_value: dict[str, Any]) -> None:
-        """Deprecated: Use state_db.claim_job_resume instead"""
-        raise NotImplementedError("Use state_db.claim_job_resume directly to ensure atomicity")
+        """Deprecated: resume claims are owned by the application/API layer."""
+        raise NotImplementedError("Use the JobApplicationService resume use case")
 
     def enqueue(self, job_id: str) -> None:
         """Queue a job whose durable state has already been updated."""
@@ -99,17 +104,17 @@ class JobQueue:
                 logging.getLogger(__name__).exception("Unexpected error processing job %s", job_id)
 
     async def _run_job(self, job_id: str) -> None:
-        with closing(self._conn()) as conn:
-            job = state_db.get_job(conn, job_id)
+        with DbUnitOfWork(db_path=self._db_path) as uow:
+            job = uow.jobs.get_job(job_id)
             if job is None:
                 return
             if job["status"] != "queued":
                 return
-            if not state_db.cas_job_status(conn, job_id, "queued", "running"):
+            if not uow.jobs.cas_job_status(job_id, "queued", "running"):
                 return
 
             if job["card_id"]:
-                state_db.move_kanban_card(conn, job["card_id"], "executing", job_id)
+                uow.kanban.move_kanban_card(job["card_id"], "executing", job_id)
 
             thread_id = job["thread_id"]
             instruction = job["instruction"]
@@ -128,23 +133,23 @@ class JobQueue:
                 scope=scope,
                 resume_value=resume_value,
             )
-            with closing(self._conn()) as conn:
-                current = state_db.get_job(conn, job_id)
+            with DbUnitOfWork(db_path=self._db_path) as uow:
+                current = uow.jobs.get_job(job_id)
                 if current is not None:
                     if resume_value is not None:
-                        state_db.clear_job_resume_value(conn, job_id)
+                        uow.jobs.clear_job_resume_value(job_id)
 
                     if current["status"] == "running":
-                        state_db.update_job_status(conn, job_id, "done")
+                        uow.jobs.update_job_status(job_id, "done")
                         if current["card_id"]:
-                            state_db.move_kanban_card(conn, current["card_id"], "done", job_id)
+                            uow.kanban.move_kanban_card(current["card_id"], "done", job_id)
                     elif current["status"] in ("done", "done_with_warnings", "done_with_errors", "error"):
                         if current["card_id"]:
                             col = "done" if current["status"] in ("done", "done_with_warnings", "done_with_errors") else "backlog"
-                            state_db.move_kanban_card(conn, current["card_id"], col, job_id)
+                            uow.kanban.move_kanban_card(current["card_id"], col, job_id)
                     elif current["status"] == "awaiting_approval":
                         if current["card_id"]:
-                            state_db.move_kanban_card(conn, current["card_id"], "approval", job_id)
+                            uow.kanban.move_kanban_card(current["card_id"], "approval", job_id)
         except Exception as e:
             def _extract_msg(ex: BaseException) -> str:
                 if isinstance(ex, BaseExceptionGroup) and ex.exceptions:
@@ -152,19 +157,18 @@ class JobQueue:
                 return str(ex) or ex.__class__.__name__
             
             error_message = _extract_msg(e)
-            with closing(self._conn()) as conn:
-                state_db.append_job_log(
-                    conn,
+            with DbUnitOfWork(db_path=self._db_path) as uow:
+                uow.jobs.append_job_log(
                     job_id,
                     "system_error",
                     f"Job failed: {error_message}",
                     role="reply",
                     label="System Error",
                 )
-                state_db.update_job_status(conn, job_id, "error", error_message=error_message)
-                current = state_db.get_job(conn, job_id)
+                uow.jobs.update_job_status(job_id, "error", error_message=error_message)
+                current = uow.jobs.get_job(job_id)
                 if current and current["card_id"]:
-                    state_db.move_kanban_card(conn, current["card_id"], "backlog", job_id)
+                    uow.kanban.move_kanban_card(current["card_id"], "backlog", job_id)
 
     def reenqueue_pending(self) -> None:
         """เรียกตอน FastAPI startup — งานที่ยัง `queued` (ไม่ทันเริ่มรันตอน process ตาย)
@@ -175,20 +179,20 @@ class JobQueue:
         งานที่ `awaiting_approval` ไม่ต้องแตะ — checkpoint ถูกบันทึกไว้แล้วตอน interrupt()
         เกิดขึ้น (ต้องมี checkpointer เสมอ) ปลอดภัยที่จะรอ user approve ทีหลังได้แม้ restart
         """
-        with closing(self._conn()) as conn:
-            for job in state_db.list_jobs_by_status(conn, ["running"], flows=self._flows):
-                state_db.update_job_status(
-                    conn, job["job_id"], "error",
+        with DbUnitOfWork(db_path=self._db_path) as uow:
+            for job in uow.jobs.list_jobs_by_status(["running"], flows=self._flows):
+                uow.jobs.update_job_status(
+                    job["job_id"], "error",
                     error_message="ถูกขัดจังหวะเพราะ server restart กลางคัน — กรุณาสั่งงานใหม่อีกครั้ง",
                 )
                 if job["card_id"]:
-                    state_db.move_kanban_card(conn, job["card_id"], "backlog", job["job_id"])
-            queued = state_db.list_jobs_by_status(conn, ["queued"], flows=self._flows)
+                    uow.kanban.move_kanban_card(job["card_id"], "backlog", job["job_id"])
+            queued = uow.jobs.list_jobs_by_status(["queued"], flows=self._flows)
         for job in queued:
             self._queue.put_nowait(job["job_id"])
 
 
-def _log_manager_messages(log_conn, job_id: str, event: dict) -> None:
+def _log_manager_messages(job_repo, job_id: str, event: dict) -> None:
     from langchain_core.messages import HumanMessage
     from core.utils import normalize_content
 
@@ -217,16 +221,25 @@ def _log_manager_messages(log_conn, job_id: str, event: dict) -> None:
             else:
                 role = "reply"
                 label = node_name
-            state_db.append_job_log(log_conn, job_id, node_name, content, role=role, label=label)
+            job_repo.append_job_log(job_id, node_name, content, role=role, label=label)
 
 
-def _append_manager_summary(log_conn, job_id: str, instruction: str, flow: str = "manager") -> None:
+def _append_manager_summary(job_repo, job_id: str, instruction: str, flow: str = "manager") -> None:
     if flow != "manager":
         return
 
     from agents.manager_agent import generate_manager_summary
 
-    reply_logs = state_db.get_job_reply_logs(log_conn, job_id)
+    # Private helper compatibility: older callers passed a raw sqlite
+    # connection.  New worker code passes the typed connection-bound
+    # repository from DbUnitOfWork.
+    legacy_conn = job_repo if isinstance(job_repo, sqlite3.Connection) else None
+    if legacy_conn is not None:
+        from api.db.adapters import SqliteJobRepositoryAdapter
+
+        job_repo = SqliteJobRepositoryAdapter(conn=legacy_conn)
+
+    reply_logs = job_repo.get_job_reply_logs(job_id)
     if any(row["node_name"] == "manager_summary" for row in reply_logs):
         return
 
@@ -245,7 +258,9 @@ def _append_manager_summary(log_conn, job_id: str, instruction: str, flow: str =
         ]
     summary = generate_manager_summary(instruction, deliverables)
     if summary:
-        state_db.append_job_log(log_conn, job_id, "manager_summary", summary, role="reply", label="Manager Summary")
+        job_repo.append_job_log(job_id, "manager_summary", summary, role="reply", label="Manager Summary")
+        if legacy_conn is not None:
+            legacy_conn.commit()
 
 
 def default_run_fn(
@@ -256,80 +271,16 @@ def default_run_fn(
     scope: str = "both",
     resume_value: Optional[dict[str, Any]] = None,
 ) -> None:
-    """run_fn จริงสำหรับ production — เรียก LangGraph ผ่าน with_retry, สตรีม log ทีละ node
-    ลง job_logs (ผูกกับ job_id เดียวกัน) ให้ SSE endpoint tail ได้
+    """Compatibility entry point delegating graph execution to the agent driver."""
+    from agents.job_runner import run_job_workflow
 
-    ถ้า stream เจอ __interrupt__ (LangGraph human-in-the-loop) จะตั้งสถานะ job เป็น
-    awaiting_approval พร้อมเก็บ payload ไว้ แล้ว return ปกติ (ไม่ raise) — รอ resume ทีหลัง
-    """
-    from langgraph.checkpoint.sqlite import SqliteSaver
-
-    from api.config import get_checkpoint_db_path
-    from core.retry import with_retry
-
-    with SqliteSaver.from_conn_string(get_checkpoint_db_path()) as checkpointer:
-        terminal_status: Optional[str] = None
-        terminal_error: Optional[str] = None
-
-        if flow == "news_youtube":
-            from agents.news_youtube_flow import build_news_youtube_graph
-            graph = build_news_youtube_graph(checkpointer=checkpointer)
-            fresh_inputs: dict = {"scope": scope}
-        elif flow == "news_funnel":
-            from agents.news_funnel_flow import build_news_funnel_graph
-            graph = build_news_funnel_graph(checkpointer=checkpointer)
-            fresh_inputs = {}
-        elif flow == "youtube_pitch":
-            from agents.youtube_pitch_flow import build_youtube_pitch_graph
-            graph = build_youtube_pitch_graph(checkpointer=checkpointer)
-            fresh_inputs = {"instruction": instruction}
-        else:
-            from agents.manager_agent import build_graph
-            graph = build_graph(checkpointer=checkpointer)
-            fresh_inputs = {"messages": [("user", instruction)]}
-
-        config = {
-            "configurable": {"thread_id": thread_id},
-            "recursion_limit": 40,
-            "tags": ["invest-agents", "web-session", flow],
-            "metadata": {"run_type": "chain", "session_source": "web", "job_id": job_id},
-        }
-
-        if resume_value is not None:
-            from langgraph.types import Command
-            stream_input = Command(resume=resume_value)
-        else:
-            stream_input = fresh_inputs
-
-        def _stream_and_log() -> None:
-            nonlocal terminal_status, terminal_error
-            with closing(state_db.get_connection()) as log_conn:
-                for event in graph.stream(stream_input, config=config, stream_mode="updates"):
-                    if "__interrupt__" in event:
-                        payload = event["__interrupt__"][0].value
-                        state_db.set_job_awaiting_approval(
-                            log_conn, job_id, json.dumps(payload, ensure_ascii=False)
-                        )
-                        return
-                    _log_manager_messages(log_conn, job_id, event)
-                    if flow == "youtube_pitch":
-                        for node_name in ("synthesize_notebooklm", "persist_parking_lot"):
-                            node_update = event.get(node_name)
-                            if isinstance(node_update, dict):
-                                status = node_update.get("synthesis_status")
-                                if status == "done_with_errors":
-                                    failures = node_update.get("synthesis_failures") or []
-                                    terminal_status = "done_with_errors"
-                                    terminal_error = "\n".join(str(item) for item in failures) or "Some approved pitches failed"
-                                elif status == "done_with_warnings" and terminal_status != "done_with_errors":
-                                    warnings = node_update.get("synthesis_warnings") or []
-                                    terminal_status = "done_with_warnings"
-                                    terminal_error = "\n".join(str(item) for item in warnings) or "Completed with warnings (Unverified Drafts or Parking Lot partial notices)"
-                _append_manager_summary(log_conn, job_id, instruction, flow=flow)
-
-
-        with_retry(_stream_and_log)
-
-        if terminal_status:
-            with closing(state_db.get_connection()) as log_conn:
-                state_db.update_job_status(log_conn, job_id, terminal_status, error_message=terminal_error)
+    with DbUnitOfWork() as uow:
+        run_job_workflow(
+            state=uow.jobs,
+            job_id=job_id,
+            thread_id=thread_id,
+            instruction=instruction,
+            flow=flow,
+            scope=scope,
+            resume_value=resume_value,
+        )

@@ -66,7 +66,7 @@ export function FinancialsTab({ ticker, market = 'US', currency }: FinancialsTab
   const [showExpandedItems, setShowExpandedItems] = useState<boolean>(true)
 
   useEffect(() => {
-    let timer: NodeJS.Timeout | null = null
+    let timer: ReturnType<typeof setInterval> | null = null
     if (loading || refreshing) {
       setElapsedSeconds(0)
       timer = setInterval(() => {

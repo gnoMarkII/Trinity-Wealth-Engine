@@ -67,7 +67,6 @@ def upsert_analyst_context_cache(conn: sqlite3.Connection, ticker: str, data: di
             data["synced_at"],
         ),
     )
-    conn.commit()
 
 
 def get_financial_statements_cache(
@@ -90,7 +89,6 @@ def get_financial_statements_cache(
                 "DELETE FROM financial_statements_cache WHERE market = ? AND provider_symbol = ?",
                 (market.upper(), provider_symbol.upper()),
             )
-            conn.commit()
             return None
 
         # Support Schema V6 (Do not reuse V5/V4 caches with potentially faulty FCF fields)
@@ -108,7 +106,6 @@ def get_financial_statements_cache(
                 "DELETE FROM financial_statements_cache WHERE market = ? AND provider_symbol = ?",
                 (market.upper(), provider_symbol.upper()),
             )
-            conn.commit()
         except Exception:
             pass
         return None
@@ -158,4 +155,3 @@ def upsert_financial_statements_cache(
         """,
         (market.upper(), provider_symbol.upper(), provider, data_json, synced_at),
     )
-    conn.commit()

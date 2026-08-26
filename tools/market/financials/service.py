@@ -8,9 +8,6 @@ import threading
 import time
 from typing import Literal, Optional
 
-from tools.market.financials.adapters.composite_us_provider import CompositeUsFinancialProvider
-from tools.market.financials.adapters.sqlite_cache_adapter import SQLiteCacheAdapter
-from tools.market.financials.adapters.thai_set_provider import ThaiSetFinancialProvider
 from tools.market.financials.domain.models import FinancialStatementsDTO
 from tools.market.financials.ports.cache_port import CacheEntry, FinancialCachePort
 from tools.market.financials.ports.provider_port import FinancialStatementProviderPort
@@ -43,13 +40,13 @@ class FinancialsService:
 
     def __init__(
         self,
-        cache_port: Optional[FinancialCachePort] = None,
+        cache_port: FinancialCachePort,
         us_provider: Optional[FinancialStatementProviderPort] = None,
         th_provider: Optional[FinancialStatementProviderPort] = None,
     ):
-        self._cache = cache_port or SQLiteCacheAdapter()
-        self._us_provider = us_provider or CompositeUsFinancialProvider()
-        self._th_provider = th_provider or ThaiSetFinancialProvider()
+        self._cache = cache_port
+        self._us_provider = us_provider
+        self._th_provider = th_provider
 
     def get_financial_statements(
         self,

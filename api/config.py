@@ -37,3 +37,8 @@ def get_state_db_path() -> str:
 
 def get_checkpoint_db_path() -> str:
     return os.getenv("CHECKPOINT_DB_PATH", "data/checkpoints.sqlite")
+
+
+def enable_background_workers() -> bool:
+    val = os.getenv("ENABLE_BACKGROUND_WORKERS", "true").strip().lower()
+    return val not in ("0", "false", "no", "off")

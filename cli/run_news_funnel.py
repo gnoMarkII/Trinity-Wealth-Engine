@@ -27,16 +27,16 @@ from tools.macro.news_funnel import (
     run_news_funnel_synthesize,
 )
 from tools.macro.news_funnel_store import (
-    DEFAULT_STORE_PATH,
     get_pending_high_impact_events,
     get_raw_candidates,
+    resolve_store_path,
 )
 
 logger = get_logger("run_news_funnel")
 
 
 def _pipeline_lock_path(store_path: str | None) -> str:
-    resolved = Path(store_path or DEFAULT_STORE_PATH)
+    resolved = Path(resolve_store_path(store_path))
     return str(resolved.with_suffix(resolved.suffix + ".pipeline.lock"))
 
 
@@ -167,5 +167,4 @@ def main():
 
 if __name__ == "__main__":
     main()
-
 

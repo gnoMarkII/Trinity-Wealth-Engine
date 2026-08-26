@@ -1,11 +1,17 @@
 from abc import ABC, abstractmethod
-from typing import ContextManager, Optional, List, Dict
+from typing import ContextManager, Optional, List, Dict, Union
 from tools.portfolio.domain.models import PortfolioState, PortfolioMeta
 from tools.portfolio.domain.ledger_change import LedgerChange
+from tools.portfolio.domain.mutation import PortfolioMutation
 
 
 class PortfolioUnitOfWork(ContextManager["PortfolioUnitOfWork"], ABC):
     """Unit of Work interface guaranteeing exclusive lock and crash-consistent commit."""
+
+    # Compatibility implementations may still expose the historical
+    # ``commit(state, LedgerChange)`` contract. Concrete repositories that
+    # understand the richer mutation envelope opt in with this flag.
+    supports_staged_mutations: bool = False
 
     @abstractmethod
     def load_state(self) -> PortfolioState:
@@ -18,9 +24,26 @@ class PortfolioUnitOfWork(ContextManager["PortfolioUnitOfWork"], ABC):
         ...
 
     @abstractmethod
-    def commit(self, state: PortfolioState, ledger_change: Optional[LedgerChange] = None) -> None:
-        """Crash-consistent recoverable commit writing Master + Ledger + Sidecars."""
+    def commit(
+        self,
+        state: PortfolioState,
+        ledger_change: Optional[Union[LedgerChange, PortfolioMutation]] = None,
+    ) -> None:
+        """Crash-consistent recoverable commit writing Master + Ledger + System Journal + Sidecars."""
         ...
+
+    def commit_mutation(self, state: PortfolioState, mutation: PortfolioMutation) -> bool:
+        """Commit a mutation and report whether journal events were staged atomically.
+
+        The default path deliberately targets the legacy ``commit`` shape so
+        third-party/in-memory UoWs remain source-compatible. Concrete staged
+        repositories opt into the richer envelope via ``supports_staged_mutations``.
+        """
+        if self.supports_staged_mutations:
+            self.commit(state, mutation)
+            return True
+        self.commit(state, mutation.ledger_change)
+        return False
 
     @abstractmethod
     def rollback(self) -> None:

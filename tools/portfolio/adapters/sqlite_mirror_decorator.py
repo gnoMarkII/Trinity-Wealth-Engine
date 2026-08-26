@@ -3,12 +3,13 @@ import json
 import sqlite3
 import time
 from pathlib import Path
-from typing import Optional, List, Dict, Set
+from typing import Optional, List, Dict, Set, Union
 
+import os
 from core.logger import get_logger
-from api.config import get_state_db_path
 from tools.portfolio.domain.models import PortfolioState, PortfolioMeta
 from tools.portfolio.domain.ledger_change import LedgerChange
+from tools.portfolio.domain.mutation import PortfolioMutation
 from tools.portfolio.domain.validator import validate_portfolio_id
 from tools.portfolio.ports.repository_port import PortfolioRepositoryPort, PortfolioUnitOfWork
 from .markdown.paths import get_portfolio_filepath, get_trades_log_filepath
@@ -77,6 +78,11 @@ class MirroredPortfolioUnitOfWork(PortfolioUnitOfWork):
         self.underlying_uow = underlying_uow
         self.decorator = decorator
         self.portfolio_id = portfolio_id
+        # Preserve the authoritative UoW's capability for the shared
+        # compatibility commit_mutation hook.
+        self.supports_staged_mutations = bool(
+            getattr(underlying_uow, "supports_staged_mutations", False)
+        )
 
     def __enter__(self) -> "MirroredPortfolioUnitOfWork":
         self.underlying_uow.__enter__()
@@ -91,7 +97,11 @@ class MirroredPortfolioUnitOfWork(PortfolioUnitOfWork):
     def read_trade_log_locked(self) -> List[Dict]:
         return self.underlying_uow.read_trade_log_locked()
 
-    def commit(self, state: PortfolioState, ledger_change: Optional[LedgerChange] = None) -> None:
+    def commit(
+        self,
+        state: PortfolioState,
+        ledger_change: Optional[Union[LedgerChange, PortfolioMutation]] = None,
+    ) -> None:
         # 1. Authoritative Markdown Commit
         self.underlying_uow.commit(state, ledger_change)
 
@@ -111,7 +121,7 @@ class SqliteMirroredPortfolioRepository(PortfolioRepositoryPort):
         db_path: Optional[str] = None,
     ):
         self.underlying_repo = underlying_repo
-        self.db_path = db_path or get_state_db_path()
+        self.db_path = db_path or os.getenv("WEBUI_STATE_DB_PATH", "./data/webui_state.db")
 
     def unit_of_work(self, portfolio_id: str = "default") -> PortfolioUnitOfWork:
         pid = validate_portfolio_id(portfolio_id)

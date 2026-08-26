@@ -1,15 +1,19 @@
 """PortfolioCashFlowService — Deposit/Withdraw, Record Income, FX, Dividends."""
-from typing import Optional, Literal, Tuple
+from datetime import date as date_type, datetime, timedelta
+from typing import Dict, List, Optional, Literal, Tuple
 
 from tools.portfolio.domain.constants import _FLOAT_EPS, _MONEY_DP, CASH_THB_SYMBOL, CASH_USD_SYMBOL, _CASH_SYMBOLS
-from tools.portfolio.domain.models import PortfolioState, Holding, _now_iso
+from tools.portfolio.domain.models import PortfolioState, Holding, DividendRound, _now_iso
 from tools.portfolio.domain.ledger_change import LedgerChange
+from tools.portfolio.domain.events import SystemJournalEvent
+from tools.portfolio.domain.mutation import PortfolioMutation
 from tools.portfolio.domain.calculations import recalc_all
 from tools.portfolio.domain.validator import validate_portfolio_id
 from tools.portfolio.ports.repository_port import PortfolioRepositoryPort
 from tools.portfolio.ports.price_port import MarketPricePort
 from tools.portfolio.ports.journal_port import TradeJournalPort
 from tools.portfolio.ports.dividend_port import DividendHistoryPort
+from ._mutation_commit import commit_mutation
 
 
 def _find_holding(state: PortfolioState, symbol: str):
@@ -46,13 +50,6 @@ class PortfolioCashFlowService:
         self.price_provider = price_provider
         self.dividend_provider = dividend_provider
         self.journal_provider = journal_provider
-
-    def _append_journal(self, content: str, date_str: Optional[str] = None, portfolio_id: str = "default") -> None:
-        if self.journal_provider:
-            self.journal_provider.append_system_entry(content, date_str=date_str, portfolio_id=portfolio_id)
-        else:
-            from tools.portfolio.journal import _write_journal_entry
-            _write_journal_entry(content, date_str=date_str, portfolio_id=portfolio_id)
 
     # ------------------------------------------------------------------
     # Cash Flow (Deposit / Withdraw)
@@ -129,8 +126,6 @@ class PortfolioCashFlowService:
             else:
                 cash.units += amount
 
-            recalc_all(state)
-            uow.commit(state, LedgerChange(kind="unchanged"))
             res_str = (
                 f"[{action.upper()}] {currency} | "
                 f"{'+' if action == 'deposit' else '-'}{amount:,.2f} {currency} | "
@@ -140,7 +135,24 @@ class PortfolioCashFlowService:
             content = f"**[CASH FLOW NOTE]** {action.upper()} {amount:,.2f} {currency}"
             if notes and notes.strip():
                 content += f" — {notes.strip()}"
-            self._append_journal(content, date_str=date, portfolio_id=pid)
+            recalc_all(state)
+            commit_mutation(
+                uow,
+                state,
+                PortfolioMutation(
+                    ledger_change=LedgerChange(kind="unchanged"),
+                    system_journal_events=[
+                        SystemJournalEvent.from_entry(
+                            event_type="cash_flow_recorded",
+                            message=content,
+                            date_str=date,
+                            metadata={"action": action, "currency": currency},
+                        )
+                    ],
+                ),
+                journal_provider=self.journal_provider,
+                portfolio_id=pid,
+            )
 
             return res_str, state
 
@@ -227,9 +239,6 @@ class PortfolioCashFlowService:
                             (h.accumulated_dividend_thb or 0.0) + amount_thb, _MONEY_DP
                         )
 
-            recalc_all(state)
-            uow.commit(state, LedgerChange(kind="unchanged"))
-
             tag_map = {"Dividend": "DIV", "Interest": "INT", "Rental": "RENT", "Other": "INCOME"}
             tag = tag_map.get(income_type, "INCOME")
             src_str = f" จาก {clean_src}" if clean_src else ""
@@ -243,7 +252,24 @@ class PortfolioCashFlowService:
             content = f"**[INCOME NOTE - {income_type}{src_note}]** +{amount_thb:,.2f} THB"
             if notes and notes.strip():
                 content += f" — {notes.strip()}"
-            self._append_journal(content, date_str=date, portfolio_id=pid)
+            recalc_all(state)
+            commit_mutation(
+                uow,
+                state,
+                PortfolioMutation(
+                    ledger_change=LedgerChange(kind="unchanged"),
+                    system_journal_events=[
+                        SystemJournalEvent.from_entry(
+                            event_type="income_recorded",
+                            message=content,
+                            date_str=date,
+                            metadata={"income_type": income_type, "source_symbol": clean_src},
+                        )
+                    ],
+                ),
+                journal_provider=self.journal_provider,
+                portfolio_id=pid,
+            )
 
             return res_str, state
 
@@ -260,6 +286,159 @@ class PortfolioCashFlowService:
         return self.price_provider.fetch_price(symbol, currency)
 
     def sync_dividends_from_history(self, portfolio_id: str = "default"):
+        """Fetch dividend history through the port and persist derived totals atomically."""
+        if self.dividend_provider is None:
+            raise RuntimeError("Dividend history provider is not configured")
+
         pid = validate_portfolio_id(portfolio_id)
-        from tools.portfolio.dividends import sync_dividends_from_history as _div_sync
-        return _div_sync(portfolio_id=pid)
+        with self.repo.unit_of_work(pid) as uow:
+            state = uow.load_state()
+            targets = [
+                holding
+                for holding in state.holdings
+                if holding.asset_type != "Cash"
+                and holding.status == "active"
+                and holding.dividend_source != "manual"
+            ]
+            skipped_manual = [
+                holding.symbol
+                for holding in state.holdings
+                if holding.asset_type != "Cash" and holding.dividend_source == "manual"
+            ]
+            if not targets:
+                return {
+                    "synced_symbols": 0,
+                    "total_rounds": 0,
+                    "total_received_rounds": 0,
+                    "total_upcoming_rounds": 0,
+                    "total_dividend_thb": 0.0,
+                    "total_upcoming_thb": 0.0,
+                    "skipped_manual": skipped_manual,
+                    "details": {},
+                }
+
+            histories = self.dividend_provider.fetch_dividend_history([h.symbol for h in targets])
+            trade_rows = uow.read_trade_log_locked()
+            fallback_fx = state.fx_rates.get("USDTHB", 36.5)
+            details: Dict[str, List[Dict]] = {}
+            total_rounds = total_received_rounds = total_upcoming_rounds = 0
+            total_received_thb = total_upcoming_thb = 0.0
+
+            for holding in targets:
+                currency = "USD" if holding.avg_cost_usd is not None else "THB"
+                rounds: List[Dict] = []
+                for record in histories.get(holding.symbol, []) or []:
+                    ex_date = self._dividend_date(record.get("ex_date") or record.get("date"))
+                    if ex_date is None:
+                        continue
+                    dps = float(record.get("dps", record.get("amount", 0.0)) or 0.0)
+                    if dps <= 0:
+                        continue
+                    units_held = self._units_held_before(trade_rows, holding.symbol, ex_date)
+                    if units_held <= _FLOAT_EPS:
+                        continue
+
+                    pay_date = self._dividend_date(record.get("pay_date")) or (ex_date + timedelta(days=21))
+                    status = "received" if pay_date <= date_type.today() and ex_date <= date_type.today() else "upcoming"
+                    record_currency = str(record.get("currency") or currency).upper()
+                    tax_rate = 0.10 if record_currency == "THB" else 0.15 if record_currency == "USD" else 0.0
+                    fx_rate = 1.0
+                    if record_currency == "USD":
+                        try:
+                            fx_rate, _ = self.price_provider.fetch_fx_rate(
+                                date_str=ex_date.isoformat(), fallback_rate=fallback_fx
+                            )
+                        except Exception:
+                            fx_rate = fallback_fx
+                    gross_native = round(units_held * dps, 4)
+                    net_native = round(gross_native * (1.0 - tax_rate), 4)
+                    net_thb = round(net_native * fx_rate, _MONEY_DP)
+                    round_data = {
+                        "symbol": holding.symbol,
+                        "ex_date": ex_date.isoformat(),
+                        "pay_date": pay_date.isoformat(),
+                        "dps": round(dps, 4),
+                        "currency": record_currency,
+                        "units_held": units_held,
+                        "status": status,
+                        "gross_native": gross_native,
+                        "net_native": net_native,
+                        "gross_thb": round(gross_native * fx_rate, _MONEY_DP),
+                        "tax_rate": tax_rate,
+                        "net_thb": net_thb,
+                        "fx_rate": round(fx_rate, 4),
+                    }
+                    rounds.append(round_data)
+
+                rounds.sort(key=lambda item: item["ex_date"], reverse=True)
+                received = [item for item in rounds if item["status"] == "received"]
+                upcoming = [item for item in rounds if item["status"] == "upcoming"]
+                holding.accumulated_dividend_thb = round(sum(item["net_thb"] for item in received), _MONEY_DP)
+                holding.accumulated_dividend_native = round(sum(item["net_native"] for item in received), 4)
+                holding.upcoming_dividend_thb = round(sum(item["net_thb"] for item in upcoming), _MONEY_DP)
+                holding.upcoming_dividend_native = round(sum(item["net_native"] for item in upcoming), 4)
+                holding.dividend_rounds = [DividendRound(**item) for item in rounds]
+                holding.dividend_source = "synced"
+                if rounds:
+                    details[holding.symbol] = rounds
+                total_rounds += len(rounds)
+                total_received_rounds += len(received)
+                total_upcoming_rounds += len(upcoming)
+                total_received_thb += sum(item["net_thb"] for item in received)
+                total_upcoming_thb += sum(item["net_thb"] for item in upcoming)
+
+            state.summary.total_accumulated_dividend = round(
+                sum(holding.accumulated_dividend_thb or 0.0 for holding in state.holdings), _MONEY_DP
+            )
+            recalc_all(state)
+            uow.commit(state, LedgerChange(kind="unchanged"))
+
+        return {
+            "synced_symbols": len(details),
+            "total_rounds": total_rounds,
+            "total_received_rounds": total_received_rounds,
+            "total_upcoming_rounds": total_upcoming_rounds,
+            "total_dividend_thb": round(total_received_thb, _MONEY_DP),
+            "total_upcoming_thb": round(total_upcoming_thb, _MONEY_DP),
+            "skipped_manual": skipped_manual,
+            "details": details,
+        }
+
+    @staticmethod
+    def _dividend_date(value) -> Optional[date_type]:
+        if value is None:
+            return None
+        if isinstance(value, datetime):
+            return value.date()
+        if isinstance(value, date_type):
+            return value
+        try:
+            return datetime.fromisoformat(str(value)[:10]).date()
+        except (TypeError, ValueError):
+            return None
+
+    @classmethod
+    def _units_held_before(cls, rows: List[Dict], symbol: str, before: date_type) -> float:
+        units = 0.0
+        clean_symbol = symbol.strip().upper()
+        timeline = []
+        for row in rows:
+            row_symbol = str(row.get("Symbol", row.get("symbol", ""))).strip().upper()
+            if row_symbol != clean_symbol:
+                continue
+            trade_date = cls._dividend_date(row.get("Timestamp", row.get("timestamp")))
+            if trade_date is None or trade_date >= before:
+                continue
+            try:
+                quantity = float(row.get("Units", row.get("units", 0.0)) or 0.0)
+            except (TypeError, ValueError):
+                continue
+            timeline.append((trade_date, str(row.get("Action", row.get("action", ""))).upper(), quantity))
+        for _, action, quantity in sorted(timeline, key=lambda item: item[0]):
+            if quantity <= 0:
+                continue
+            if action == "BUY":
+                units += quantity
+            elif action == "SELL":
+                units = max(0.0, units - quantity)
+        return round(units, 8)

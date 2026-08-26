@@ -1,6 +1,6 @@
 """Tests for Actual Portfolio Hub Mutation Endpoints (/api/portfolio/actual/*)."""
 import sys
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 import pytest
 from filelock import Timeout
 
@@ -180,12 +180,20 @@ def test_mutation_value_error_mapping(authed_client, isolated_mutation_portfolio
 
 
 def test_mutation_timeout_error_mapping(authed_client, isolated_mutation_portfolio):
-    with patch("api.routes_portfolio.portfolio_trading.structured_execute_trade", side_effect=Timeout("test lock")):
+    from api.main import app
+    from api.dependencies import get_portfolio_service
+
+    fake_service = MagicMock()
+    fake_service.structured_execute_trade.side_effect = Timeout("test lock")
+    app.dependency_overrides[get_portfolio_service] = lambda: fake_service
+    try:
         r = authed_client.post("/api/portfolio/actual/trade", json={
             "symbol": "AAPL", "asset_type": "Stock", "action": "buy", "units": 5.0, "price": 100.0
         })
         assert r.status_code == 503
         assert "timeout" in r.json()["detail"].lower()
+    finally:
+        app.dependency_overrides.pop(get_portfolio_service, None)
 
 
 def test_append_journal_endpoint(authed_client, isolated_mutation_portfolio):

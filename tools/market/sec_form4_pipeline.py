@@ -4,18 +4,10 @@
 1. Raw Filing Ledger (`sec_form4_raw_ledger`) — Immutable append-only audit trail
 2. Normalized Insider Transactions (`sec_insider_transactions`) — Canonical transaction records
 """
-import logging
 import sqlite3
 import time
 import xml.etree.ElementTree as ET
-from datetime import datetime, timezone, timedelta
-from typing import Optional
-import urllib.request
-import json
-
-from api.state_db import get_connection, record_sec_form4_filing, record_sec_insider_transaction
-
-log = logging.getLogger(__name__)
+from datetime import datetime, timezone
 
 # Weight mapping by transaction code
 TRANSACTION_CODE_WEIGHTS = {
@@ -128,104 +120,72 @@ def parse_form4_xml(xml_content: str, accession_number: str, filing_url: str = "
 
 def ingest_form4_data(conn: sqlite3.Connection, parsed_data: dict) -> None:
     """บันทึก parsed form 4 เข้า raw ledger และ transactions"""
-    record_sec_form4_filing(
-        conn=conn,
-        accession_number=parsed_data["accession_number"],
-        issuer_cik=parsed_data["issuer_cik"],
-        ticker=parsed_data["ticker"],
-        filing_url=parsed_data["filing_url"],
-        filed_at=parsed_data["filed_at"],
-        reporting_owner_cik=parsed_data.get("reporting_owner_cik"),
-        reporting_owner_name=parsed_data.get("reporting_owner_name"),
-        is_director=parsed_data.get("is_director", False),
-        is_officer=parsed_data.get("is_officer", False),
-        is_ten_percent_owner=parsed_data.get("is_ten_percent_owner", False),
-        officer_title=parsed_data.get("officer_title"),
-        raw_xml_payload=parsed_data.get("raw_xml_payload"),
-        is_amendment=parsed_data.get("is_amendment", False),
-        amends_accession_number=parsed_data.get("amends_accession_number"),
+    now = time.time()
+    is_amendment = parsed_data.get("is_amendment", False)
+    amends_accession = parsed_data.get("amends_accession_number")
+    if is_amendment and amends_accession:
+        conn.execute("DELETE FROM sec_insider_transactions WHERE accession_number = ?", (amends_accession,))
+
+    conn.execute(
+        """
+        INSERT OR REPLACE INTO sec_form4_raw_ledger (
+            accession_number, issuer_cik, ticker, filing_url, filed_at,
+            reporting_owner_cik, reporting_owner_name, is_director,
+            is_officer, is_ten_percent_owner, officer_title, raw_xml_payload,
+            is_amendment, amends_accession_number, created_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """,
+        (
+            parsed_data["accession_number"],
+            parsed_data["issuer_cik"],
+            parsed_data["ticker"].upper(),
+            parsed_data["filing_url"],
+            parsed_data["filed_at"],
+            parsed_data.get("reporting_owner_cik"),
+            parsed_data.get("reporting_owner_name"),
+            1 if parsed_data.get("is_director", False) else 0,
+            1 if parsed_data.get("is_officer", False) else 0,
+            1 if parsed_data.get("is_ten_percent_owner", False) else 0,
+            parsed_data.get("officer_title"),
+            parsed_data.get("raw_xml_payload"),
+            1 if is_amendment else 0,
+            amends_accession,
+            now,
+        ),
     )
 
     for tx in parsed_data.get("transactions", []):
-        record_sec_insider_transaction(
-            conn=conn,
-            transaction_id=tx["transaction_id"],
-            accession_number=parsed_data["accession_number"],
-            ticker=parsed_data["ticker"],
-            transaction_date=tx["transaction_date"],
-            transaction_code=tx["transaction_code"],
-            shares=tx["shares"],
-            price_per_share=tx["price_per_share"],
-            acquired_or_disposed=tx["acquired_or_disposed"],
-            shares_owned_following=tx.get("shares_owned_following"),
-            ownership_nature=tx.get("ownership_nature"),
-            is_derivative=tx.get("is_derivative", False),
-            normalized_weight=tx.get("normalized_weight", 1.0),
+        conn.execute(
+            """
+            INSERT OR REPLACE INTO sec_insider_transactions (
+                transaction_id, accession_number, ticker, transaction_date,
+                transaction_code, shares, price_per_share, acquired_or_disposed,
+                shares_owned_following, ownership_nature, is_derivative,
+                normalized_weight, created_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                tx["transaction_id"],
+                parsed_data["accession_number"],
+                parsed_data["ticker"].upper(),
+                tx["transaction_date"],
+                tx["transaction_code"].upper(),
+                tx["shares"],
+                tx["price_per_share"],
+                tx["acquired_or_disposed"].upper(),
+                tx.get("shares_owned_following"),
+                tx.get("ownership_nature"),
+                1 if tx.get("is_derivative", False) else 0,
+                tx.get("normalized_weight", 1.0),
+                now,
+            ),
         )
+    conn.commit()
 
 
 def sync_insider_filings_from_yfinance(conn: sqlite3.Connection, ticker: str) -> None:
-    """Fallback: แปลง yfinance insider transactions เข้าสู่ SEC Raw Ledger & Transactions DTOs"""
-    try:
-        import yfinance as yf
-        t = yf.Ticker(ticker)
-        df = t.insider_transactions
-        if df is None or df.empty:
-            return
+    """Deprecated compatibility wrapper; production uses SqliteInsiderSyncAdapter."""
+    from tools.market.adapters.insider_provider import YFinanceInsiderHistoryAdapter
 
-        # Iterate over records
-        for i, row in df.head(30).iterrows():
-            insider_name = str(row.get("Insider", "Unknown"))
-            position = str(row.get("Position", ""))
-            tx_text = str(row.get("Text", "")).lower()
-            date_val = row.get("Start Date") or row.get("Date")
-            
-            if hasattr(date_val, "strftime"):
-                tx_date = date_val.strftime("%Y-%m-%d")
-            else:
-                tx_date = str(date_val)[:10] if date_val else datetime.now(timezone.utc).strftime("%Y-%m-%d")
-
-            shares = float(row.get("Shares", 0) or 0)
-            price = float(row.get("Value", 0) or 0)
-            if shares > 0 and price > 0:
-                price_per_share = price / shares
-            else:
-                price_per_share = 0.0
-
-            acq_disp = "D" if "sale" in tx_text or "sold" in tx_text else "A"
-            tx_code = "S" if acq_disp == "D" else "P"
-            accession = f"yf_{ticker}_{tx_date}_{i}"
-
-            parsed = {
-                "accession_number": accession,
-                "issuer_cik": "0000000000",
-                "ticker": ticker.upper(),
-                "filing_url": f"https://www.sec.gov/edgar/searchedgar/companysearch?company={ticker}",
-                "filed_at": tx_date,
-                "reporting_owner_cik": None,
-                "reporting_owner_name": insider_name,
-                "is_director": "director" in position.lower(),
-                "is_officer": "officer" in position.lower() or "ceo" in position.lower() or "cfo" in position.lower(),
-                "is_ten_percent_owner": "10%" in position.lower(),
-                "officer_title": position,
-                "raw_xml_payload": None,
-                "is_amendment": False,
-                "amends_accession_number": None,
-                "transactions": [
-                    {
-                        "transaction_id": f"{accession}_tx_0",
-                        "transaction_date": tx_date,
-                        "transaction_code": tx_code,
-                        "shares": shares,
-                        "price_per_share": round(price_per_share, 2),
-                        "acquired_or_disposed": acq_disp,
-                        "shares_owned_following": None,
-                        "ownership_nature": "D",
-                        "is_derivative": False,
-                        "normalized_weight": TRANSACTION_CODE_WEIGHTS.get(tx_code, 1.0),
-                    }
-                ],
-            }
-            ingest_form4_data(conn, parsed)
-    except Exception as e:
-        log.warning("Failed to sync yfinance insider transactions for %s: %s", ticker, e)
+    for parsed in YFinanceInsiderHistoryAdapter().fetch(ticker):
+        ingest_form4_data(conn, parsed)

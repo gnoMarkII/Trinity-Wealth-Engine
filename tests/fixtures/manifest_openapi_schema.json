@@ -259,6 +259,124 @@
         ]
       }
     },
+    "/api/equity/{ticker}/earnings-call/runs/{run_id}": {
+      "get": {
+        "operationId": "get_earnings_call_run_api_equity__ticker__earnings_call_runs__run_id__get",
+        "tags": [
+          "equity"
+        ],
+        "summary": "Get Earnings Call Run Status",
+        "parameters": [
+          {
+            "name": "ticker",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Ticker"
+            }
+          },
+          {
+            "name": "run_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Run Id"
+            }
+          }
+        ],
+        "has_request_body": false,
+        "responses": [
+          "200",
+          "422"
+        ]
+      }
+    },
+    "/api/equity/{ticker}/earnings-call/runs/{run_id}/retry": {
+      "post": {
+        "operationId": "retry_earnings_call_run_api_equity__ticker__earnings_call_runs__run_id__retry_post",
+        "tags": [
+          "equity"
+        ],
+        "summary": "Retry Earnings Call Kanban Delivery",
+        "parameters": [
+          {
+            "name": "ticker",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Ticker"
+            }
+          },
+          {
+            "name": "run_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Run Id"
+            }
+          }
+        ],
+        "has_request_body": false,
+        "responses": [
+          "200",
+          "422"
+        ]
+      }
+    },
+    "/api/equity/{ticker}/earnings-call/summarize": {
+      "post": {
+        "operationId": "summarize_earnings_call_api_equity__ticker__earnings_call_summarize_post",
+        "tags": [
+          "equity"
+        ],
+        "summary": "Summarize Earnings Call Transcript",
+        "parameters": [
+          {
+            "name": "ticker",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Ticker"
+            }
+          }
+        ],
+        "has_request_body": true,
+        "responses": [
+          "200",
+          "422"
+        ]
+      }
+    },
+    "/api/equity/{ticker}/earnings-calls": {
+      "get": {
+        "operationId": "get_earnings_calls_api_equity__ticker__earnings_calls_get",
+        "tags": [
+          "equity"
+        ],
+        "summary": "List Existing Earnings Calls for Ticker",
+        "parameters": [
+          {
+            "name": "ticker",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Ticker"
+            }
+          }
+        ],
+        "has_request_body": false,
+        "responses": [
+          "200",
+          "422"
+        ]
+      }
+    },
     "/api/equity/{ticker}/financials": {
       "get": {
         "operationId": "get_equity_financial_statements_api_equity__ticker__financials_get",

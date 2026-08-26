@@ -13,6 +13,7 @@ from api.db.connection import (
     init_schema,
     get_connection,
 )
+from api.db.uow import DbUnitOfWork
 from api.db.repositories.job_repository import (
     create_job,
     set_job_awaiting_approval,
@@ -33,7 +34,7 @@ from api.db.repositories.job_repository import (
 from api.db.repositories.kanban_repository import (
     list_kanban_cards,
     create_kanban_card,
-    create_parking_lot_cards_atomic,
+    create_parking_lot_cards,
     update_kanban_card,
     set_kanban_card_source,
     toggle_kanban_card_discord,
@@ -59,6 +60,13 @@ from api.db.repositories.cache_repository import (
     get_financial_statements_cache,
     get_raw_financial_statements_cache,
     upsert_financial_statements_cache,
+)
+from api.db.repositories.outbox_repository import (
+    enqueue_event,
+    get_event,
+    list_pending,
+    mark_sent,
+    mark_failed,
 )
 
 __all__ = [
@@ -88,7 +96,7 @@ __all__ = [
     "get_job_log_count",
     "list_kanban_cards",
     "create_kanban_card",
-    "create_parking_lot_cards_atomic",
+    "create_parking_lot_cards",
     "update_kanban_card",
     "set_kanban_card_source",
     "toggle_kanban_card_discord",
@@ -108,4 +116,9 @@ __all__ = [
     "get_financial_statements_cache",
     "get_raw_financial_statements_cache",
     "upsert_financial_statements_cache",
+    "enqueue_event",
+    "get_event",
+    "list_pending",
+    "mark_sent",
+    "mark_failed",
 ]

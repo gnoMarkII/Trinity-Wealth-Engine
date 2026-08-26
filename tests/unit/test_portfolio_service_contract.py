@@ -1,7 +1,7 @@
 """Phase 0 Gate: Read-Only Contract Test for PortfolioService.
 
 Asserts that PortfolioService public methods, parameter names, kinds, defaults,
-and return type annotations match the immutable golden manifest exactly.
+return type annotations, and docstrings match the immutable golden manifest exactly.
 """
 import inspect
 import json
@@ -46,7 +46,9 @@ def test_portfolio_service_methods_exist(golden_manifest):
         if not name.startswith("_") or name == "__init__" or name in expected_methods
     }
     missing = expected_methods - actual_methods
+    extra = actual_methods - expected_methods
     assert not missing, f"PortfolioService is missing public methods: {missing}"
+    assert not extra, f"PortfolioService has unexpected unmanifested methods: {extra}"
 
 
 def test_portfolio_service_method_signatures(golden_manifest):
@@ -75,3 +77,12 @@ def test_portfolio_service_method_signatures(golden_manifest):
         assert (
             actual_return == expected_return
         ), f"Return annotation mismatch for '{method_name}': Expected {expected_return}, got {actual_return}"
+
+        # Docstring check (if present in expected manifest)
+        expected_doc = expected_info.get("docstring")
+        if expected_doc:
+            actual_doc = inspect.getdoc(method) or (method.__doc__.strip() if method.__doc__ else "")
+            # Normalize whitespace
+            assert (
+                actual_doc.strip() == expected_doc.strip()
+            ), f"Docstring mismatch on '{method_name}':\nExpected: {expected_doc}\nActual: {actual_doc}"

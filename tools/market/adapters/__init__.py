@@ -1,0 +1,1 @@
+"""Outbound market provider adapters."""

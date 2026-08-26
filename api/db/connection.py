@@ -137,6 +137,62 @@ CREATE TABLE IF NOT EXISTS financial_statements_cache (
     PRIMARY KEY (market, provider_symbol)
 );
 CREATE INDEX IF NOT EXISTS idx_financial_statements_cache_pk ON financial_statements_cache(market, provider_symbol);
+
+CREATE TABLE IF NOT EXISTS notification_outbox (
+    event_id TEXT PRIMARY KEY,
+    idempotency_key TEXT NOT NULL UNIQUE,
+    aggregate_type TEXT NOT NULL,
+    aggregate_id TEXT NOT NULL,
+    event_type TEXT NOT NULL,
+    payload_json TEXT NOT NULL,
+    status TEXT NOT NULL DEFAULT 'pending',
+    attempts INTEGER NOT NULL DEFAULT 0,
+    last_error TEXT,
+    created_at REAL NOT NULL,
+    updated_at REAL NOT NULL,
+    sent_at REAL
+);
+CREATE INDEX IF NOT EXISTS idx_notification_outbox_pending
+    ON notification_outbox(status, created_at ASC);
+
+CREATE TABLE IF NOT EXISTS earnings_call_runs (
+    run_id TEXT PRIMARY KEY,
+    source_key TEXT NOT NULL UNIQUE,
+    ticker TEXT NOT NULL,
+    period TEXT NOT NULL,
+    transcript_hash TEXT NOT NULL,
+    prompt_version TEXT NOT NULL,
+    status TEXT NOT NULL,
+    kanban_status TEXT NOT NULL DEFAULT 'none',
+    highlights TEXT,
+    vault_path TEXT,
+    kanban_card_id TEXT,
+    execution_token TEXT,
+    execution_expires_at REAL,
+    attempt_count INTEGER NOT NULL DEFAULT 0,
+    last_error_code TEXT,
+    created_at REAL NOT NULL,
+    updated_at REAL NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_earnings_call_runs_ticker ON earnings_call_runs(ticker, created_at DESC);
+
+CREATE TABLE IF NOT EXISTS earnings_call_outbox (
+    event_id TEXT PRIMARY KEY,
+    run_id TEXT NOT NULL,
+    source_key TEXT NOT NULL,
+    event_type TEXT NOT NULL,
+    status TEXT NOT NULL DEFAULT 'pending',
+    attempts INTEGER NOT NULL DEFAULT 0,
+    last_error TEXT,
+    available_at REAL NOT NULL,
+    lease_token TEXT,
+    lease_expires_at REAL,
+    created_at REAL NOT NULL,
+    updated_at REAL NOT NULL,
+    UNIQUE(run_id, event_type)
+);
+CREATE INDEX IF NOT EXISTS idx_earnings_call_outbox_pending
+    ON earnings_call_outbox(status, available_at ASC);
 """
 
 _INITIALIZED_DB_PATHS: set[str] = set()
@@ -157,6 +213,7 @@ _COLUMN_MIGRATIONS: dict[str, dict[str, str]] = {
         "flow": "flow TEXT NOT NULL DEFAULT 'manager'",
         "display_seq": "display_seq INTEGER",
         "prompt": "prompt TEXT",
+        "source_key": "source_key TEXT",
         "scope": "scope TEXT NOT NULL DEFAULT 'both'",
         "discord_notify": "discord_notify INTEGER NOT NULL DEFAULT 1",
         "discord_sent_events": "discord_sent_events TEXT",
@@ -216,10 +273,18 @@ def init_schema(conn: sqlite3.Connection) -> None:
     _migrate_columns(conn)
     _migrate_dispatcher_column_cards(conn)
     _backfill_kanban_display_seq(conn)
+    conn.execute(
+        "CREATE UNIQUE INDEX IF NOT EXISTS idx_kanban_cards_source_key "
+        "ON kanban_cards(source_key) WHERE source_key IS NOT NULL"
+    )
+    conn.commit()
 
 
-def get_connection(db_path: str | None = None) -> sqlite3.Connection:
-    import sys
+def get_connection(
+    db_path: str | None = None,
+    *,
+    schema_initializer=None,
+) -> sqlite3.Connection:
     path = db_path or get_state_db_path()
     parent = os.path.dirname(path)
     if parent:
@@ -233,8 +298,6 @@ def get_connection(db_path: str | None = None) -> sqlite3.Connection:
     conn.row_factory = sqlite3.Row
     with _INIT_LOCK:
         if path not in _INITIALIZED_DB_PATHS:
-            state_db_mod = sys.modules.get("api.state_db")
-            init_fn = getattr(state_db_mod, "init_schema", init_schema) if state_db_mod else init_schema
-            init_fn(conn)
+            (schema_initializer or init_schema)(conn)
             _INITIALIZED_DB_PATHS.add(path)
     return conn

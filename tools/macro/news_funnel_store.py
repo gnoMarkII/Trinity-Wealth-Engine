@@ -19,11 +19,29 @@ from tools._atomic_io import _atomic_write_to
 logger = get_logger(__name__)
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
-DEFAULT_STORE_PATH = os.getenv("NEWS_FUNNEL_STORE_PATH", str(PROJECT_ROOT / "data" / "news_funnel_state.json"))
+# Keep the production fallback stable, but resolve environment overrides at
+# call time.  Import-time environment capture made test isolation depend on
+# pytest collection order (and allowed a CLI import to retain the production
+# data path).
+DEFAULT_STORE_PATH = str(PROJECT_ROOT / "data" / "news_funnel_state.json")
+
+
+def resolve_store_path(store_path: Union[str, Path, None] = None) -> str:
+    """Return the effective store path for the current process.
+
+    Explicit paths win.  Otherwise the environment is evaluated at call time
+    so application composition and test fixtures can safely redirect the
+    store after this module has already been imported.
+    """
+    if store_path is not None:
+        return str(store_path)
+    return os.getenv("NEWS_FUNNEL_STORE_PATH") or DEFAULT_STORE_PATH
 
 
 def _get_paths(store_path: Union[str, Path, None] = None):
-    s_path = str(store_path) if store_path is not None else DEFAULT_STORE_PATH
+    # Resolve the environment at call time so composition/test fixtures can
+    # swap the store without depending on import order.
+    s_path = resolve_store_path(store_path)
     l_path = s_path + ".lock"
     return s_path, l_path
 
@@ -422,4 +440,3 @@ def remove_processed_raw_candidates(
             kept_raw.append(rc)
         state["raw_candidates"] = kept_raw
         _save_unlocked(state, s_path)
-

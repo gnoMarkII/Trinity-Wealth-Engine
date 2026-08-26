@@ -43,8 +43,8 @@ class PortfolioLedgerService:
             rows = uow.read_trade_log_locked()
             found = False
             updated_row: Dict = {}
-            from tools.portfolio.adapters.markdown.repository_adapter import _sanitize_csv_field
-            clean_notes = _sanitize_csv_field(notes)
+            raw_notes = (notes or "").strip()
+            clean_notes = "'" + raw_notes if raw_notes and raw_notes[0] in ("=", "+", "-", "@", "\t", "\r") else raw_notes
             for r in rows:
                 if r.get("Transaction_ID") == tx_id or r.get("transaction_id") == tx_id:
                     r["Notes"] = clean_notes

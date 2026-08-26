@@ -113,9 +113,9 @@ def test_get_equity_analyst_context_endpoint(client):
     conn.commit()
 
     try:
-        with patch("api.routes_equity.yf.Ticker") as mock_ticker, \
-             patch("api.routes_equity.get_asset_calendar") as mock_cal, \
-             patch("api.routes_equity.fetch_earnings_dates") as mock_earnings:
+        with patch("api.dependencies.yf.Ticker") as mock_ticker, \
+             patch("api.dependencies.get_asset_calendar") as mock_cal, \
+             patch("api.dependencies.fetch_earnings_dates") as mock_earnings:
 
             # Mock yfinance price targets
             instance = MagicMock()

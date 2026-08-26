@@ -1,9 +1,11 @@
 """Tests for Actual Portfolio Hub Read Endpoints (/api/portfolio/actual/*)."""
 import importlib
 import sys
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 import pytest
 from filelock import Timeout
+from api.main import app
+from api.dependencies import get_portfolio_service
 
 
 @pytest.fixture
@@ -51,10 +53,15 @@ def test_actual_portfolio_state_route_no_network_calls(authed_client, isolated_a
 
 
 def test_actual_portfolio_state_route_lock_timeout(authed_client, isolated_api_portfolio):
-    with patch("api.routes_portfolio.portfolio_core.get_structured_portfolio_state", side_effect=Timeout("test lock")):
+    fake_service = MagicMock()
+    fake_service.get_structured_portfolio_state.side_effect = Timeout("test lock")
+    app.dependency_overrides[get_portfolio_service] = lambda: fake_service
+    try:
         r = authed_client.get("/api/portfolio/actual/state")
         assert r.status_code == 503
         assert "timeout" in r.json()["detail"].lower()
+    finally:
+        app.dependency_overrides.pop(get_portfolio_service, None)
 
 
 def test_actual_allocations_route(authed_client, isolated_api_portfolio):
@@ -99,10 +106,15 @@ def test_actual_journal_route(authed_client, isolated_api_portfolio):
 
 
 def test_value_error_mapping(authed_client, isolated_api_portfolio):
-    with patch("api.routes_portfolio.portfolio_core.get_structured_bucket_allocation", side_effect=ValueError("Invalid state")):
+    fake_service = MagicMock()
+    fake_service.get_structured_bucket_allocation.side_effect = ValueError("Invalid state")
+    app.dependency_overrides[get_portfolio_service] = lambda: fake_service
+    try:
         r = authed_client.get("/api/portfolio/actual/allocations")
         assert r.status_code == 400
         assert "Invalid state" in r.json()["detail"]
+    finally:
+        app.dependency_overrides.pop(get_portfolio_service, None)
 
 
 def test_actual_transactions_route_and_note_update(authed_client, isolated_api_portfolio):

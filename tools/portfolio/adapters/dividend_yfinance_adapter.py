@@ -6,9 +6,15 @@ import pandas as pd
 import yfinance as yf
 
 from tools.portfolio.ports.dividend_port import DividendHistoryPort
-from tools.portfolio.prices import _yf_symbol
 
 log = logging.getLogger(__name__)
+
+
+def _normalize_yf_symbol(symbol: str) -> str:
+    s = symbol.strip().upper()
+    if s in {"THB", "USD", "CASH_THB", "CASH_USD"}:
+        return s
+    return s
 
 
 class DividendYFinanceAdapter(DividendHistoryPort):
@@ -19,7 +25,7 @@ class DividendYFinanceAdapter(DividendHistoryPort):
 
         for sym in symbols:
             clean_sym = sym.strip().upper()
-            yf_sym = _yf_symbol(clean_sym)
+            yf_sym = _normalize_yf_symbol(clean_sym)
             try:
                 ticker = yf.Ticker(yf_sym)
                 divs = ticker.dividends

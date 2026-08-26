@@ -49,6 +49,19 @@ def _snapshot_protected_dirs():
 @pytest.fixture(scope="session", autouse=True)
 def enforce_vault_isolation():
     """Safety check: ensure tests do not modify production vault or data files"""
+    # Some API modules are imported while pytest collects tests, before
+    # function-scoped fixtures run. Pin both the environment and the already
+    # imported store module so collection order cannot redirect writes to the
+    # repository's production JSON file.
+    safe_news_store = _GLOBAL_TEST_TEMP / "news_funnel_state.json"
+    os.environ["NEWS_FUNNEL_STORE_PATH"] = str(safe_news_store)
+    try:
+        from tools.macro import news_funnel_store
+
+        news_funnel_store.DEFAULT_STORE_PATH = str(safe_news_store)
+    except Exception:
+        pass
+
     initial_snapshot = _snapshot_protected_dirs()
 
     yield

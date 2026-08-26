@@ -10,6 +10,7 @@ vi.mock('../api/client', () => ({
   api: {
     getEquityLatest: vi.fn(),
     getEquityDetail: vi.fn(),
+    getEarningsCalls: vi.fn().mockResolvedValue({ ticker: 'AAPL', total_count: 0, items: [] }),
     createKanbanCard: vi.fn(),
     dispatchJob: vi.fn(),
     getActualPortfolioState: vi.fn(),

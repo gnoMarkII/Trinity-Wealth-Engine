@@ -10,7 +10,7 @@ Aggregates domain sub-routers:
 from fastapi import APIRouter, Depends
 from api.auth import require_session
 
-from .common import handle_portfolio_exceptions, _latest_strategy_json, _STRATEGY_SUBDIR
+from .common import handle_portfolio_exceptions
 from .router_macro import (
     router as macro_router,
     get_latest_portfolio,
@@ -78,8 +78,6 @@ router.include_router(macro_router)
 __all__ = [
     "router",
     "handle_portfolio_exceptions",
-    "_latest_strategy_json",
-    "_STRATEGY_SUBDIR",
     "list_portfolios_endpoint",
     "create_portfolio_endpoint",
     "delete_portfolio_endpoint",

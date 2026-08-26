@@ -465,8 +465,10 @@ def synthesize_notebooklm_node(state: YouTubePitchState, config: RunnableConfig)
 @traceable(run_type="chain")
 def persist_parking_lot_node(state: YouTubePitchState, config: RunnableConfig = None) -> dict:
     """Best-effort persistence of parking lot ideas into Vault outbox and SQLite kanban backlog."""
-    from tools.content.parking_lot_outbox import write_parking_lot_outbox_atomic, mark_outbox_synced_atomic
-    from api.state_db import create_parking_lot_cards_atomic
+    from tools.content.parking_lot_outbox import (
+        write_parking_lot_outbox_atomic,
+        reconcile_parking_lot_outbox,
+    )
 
     pitches = state.get("pitches", [])
     synthesized_ids = set(state.get("synthesized_pitch_ids", []))
@@ -489,9 +491,8 @@ def persist_parking_lot_node(state: YouTubePitchState, config: RunnableConfig = 
         if not ideas:
             continue
 
-        outbox_file = None
         try:
-            outbox_file = write_parking_lot_outbox_atomic(
+            write_parking_lot_outbox_atomic(
                 vault_root=Path(VAULT_PATH),
                 job_id=job_id,
                 pitch_id=p_id,
@@ -503,12 +504,18 @@ def persist_parking_lot_node(state: YouTubePitchState, config: RunnableConfig = 
             logger.warning("LAST-RESORT DIAGNOSTIC: Job %s Pitch %s ideas unwritten: %s", job_id, p_id, idea_hashes)
 
         try:
-            created = create_parking_lot_cards_atomic(ideas=ideas, source_pitch_id=p_id)
-            if outbox_file:
-                mark_outbox_synced_atomic(outbox_file)
-            if created > 0:
-                msg = f"✓ บันทึกไอเดีย Parking Lot ลง Backlog สำเร็จ: {created} รายการ (จาก Pitch {p_id})"
+            summary = reconcile_parking_lot_outbox(Path(VAULT_PATH))
+            reconciled = summary.get("reconciled_count", 0)
+            if reconciled > 0:
+                msg = f"✓ บันทึกไอเดีย Parking Lot ลง Backlog สำเร็จ: {reconciled} รายการ (จาก Pitch {p_id})"
                 messages.append(AIMessage(content=msg, name="persist_parking_lot"))
+            if summary.get("warnings"):
+                for w in summary["warnings"]:
+                    warn_msg = f"⚠️ ไม่สามารถบันทึกไอเดีย Parking Lot ลง SQLite ได้: {w}"
+                    warnings.append(warn_msg)
+                    messages.append(AIMessage(content=warn_msg, name="persist_parking_lot"))
+                if current_status != "done_with_errors":
+                    current_status = "done_with_warnings"
         except Exception as db_err:
             warn_msg = f"⚠️ ไม่สามารถบันทึกไอเดีย Parking Lot ({len(ideas)} รายการ) ลง SQLite ได้ (เก็บไว้ใน Outbox Vault แล้ว): {db_err}"
             logger.warning("Parking lot SQLite persist warning for pitch %s: %s", p_id, db_err)
