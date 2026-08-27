@@ -218,10 +218,7 @@ def create_parking_lot_cards_atomic(
 ) -> int:
     # The compatibility facade owns the historical standalone transaction;
     # the inner DAO only executes SQL on this connection.
-    # ``kanban_repository.get_connection`` remains a narrow compatibility
-    # hook for callers that inject a failing connection in characterization
-    # tests; transaction ownership still lives in this facade.
-    with closing(_kanban_repo.get_connection(db_path)) as conn:
+    with closing(get_connection(db_path)) as conn:
         conn.isolation_level = None
         conn.execute("BEGIN IMMEDIATE")
         try:

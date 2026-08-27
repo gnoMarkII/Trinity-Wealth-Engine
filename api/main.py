@@ -48,6 +48,10 @@ async def lifespan(app: FastAPI):
     with closing(get_connection()) as conn:
         init_schema(conn)
 
+    workers_enabled = config.enable_background_workers()
+    job_workers_enabled = config.enable_job_workers()
+    schedulers_enabled = config.schedulers_enabled()
+
     # คิวหลักกับคิว notebooklm แชร์ WEBUI_STATE_DB_PATH เดียวกัน (kanban_cards ต้องเห็นข้อมูล
     # เดียวกันเสมอ — move_kanban_card ที่ถูกเรียกจาก _run_job ของแต่ละคิวต้องแก้แถวการ์ดจริง
     # ไฟล์เดียวกัน) แยกกันด้วย `flows` allowlist แทน เพื่อกัน reenqueue_pending()/worker loop
@@ -56,20 +60,30 @@ async def lifespan(app: FastAPI):
         run_fn=jobs.default_run_fn,
         flows={"manager", "news_youtube", "news_funnel", "youtube_pitch"},
     )
-    app.state.job_queue.reenqueue_pending()
-    app.state.job_queue.start()
 
     app.state.notebooklm_job_queue = jobs.JobQueue(
         run_fn=notebooklm_worker.notebooklm_run_fn,
         flows={"notebooklm"},
     )
-    app.state.notebooklm_job_queue.reenqueue_pending()
-    app.state.notebooklm_job_queue.start()
+    # Queue objects remain available to request dependencies for compatibility,
+    # but no background task or scheduler is started when explicitly disabled
+    # (notably in tests and one-shot CLI deployments).
+    if job_workers_enabled:
+        if schedulers_enabled:
+            app.state.job_queue.reenqueue_pending()
+        app.state.job_queue.start()
+        if schedulers_enabled:
+            app.state.notebooklm_job_queue.reenqueue_pending()
+        app.state.notebooklm_job_queue.start()
 
     from api.workers.earnings_call_outbox_worker import EarningsCallOutboxWorker
     app.state.earnings_call_outbox_worker = None
-    if config.enable_background_workers():
-        app.state.earnings_call_outbox_worker = EarningsCallOutboxWorker()
+    if workers_enabled:
+        from api.dependencies import get_earnings_call_service
+
+        app.state.earnings_call_outbox_worker = EarningsCallOutboxWorker(
+            service=get_earnings_call_service()
+        )
         app.state.earnings_call_outbox_worker.start()
 
     yield

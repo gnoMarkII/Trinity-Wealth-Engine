@@ -1,16 +1,16 @@
-"""Tests for core/model_registry.py — centralized LLM model config (12 slots)"""
+"""Tests for core/model_registry.py — centralized LLM model config."""
 from core.model_registry import REGISTRY, get_model_name, get_registry_summary
 
 
-def test_registry_has_exactly_14_slots():
-    assert len(REGISTRY) == 14
+def test_registry_has_exactly_15_slots():
+    assert len(REGISTRY) == 15
 
 
-def test_registry_has_10_agent_and_4_tool_slots():
+def test_registry_has_10_agent_and_5_tool_slots():
     agent_slots = [s for s in REGISTRY.values() if s.layer == "agent"]
     tool_slots = [s for s in REGISTRY.values() if s.layer == "tool"]
     assert len(agent_slots) == 10
-    assert len(tool_slots) == 4
+    assert len(tool_slots) == 5
 
 
 def test_all_expected_slot_keys_present():
@@ -19,6 +19,7 @@ def test_all_expected_slot_keys_present():
         "macro_quant", "economist", "allocator",
         "equity_quant", "equity_narrative", "equity_synthesizer",
         "extractor", "youtube_pitch", "news_triage", "thai_title_translation",
+        "earnings_call_summarizer",
     }
     assert set(REGISTRY.keys()) == expected
 
@@ -39,9 +40,9 @@ def test_get_model_name_unknown_slot_raises_keyerror():
         get_model_name("does_not_exist")
 
 
-def test_get_registry_summary_returns_14_entries():
+def test_get_registry_summary_returns_15_entries():
     summary = get_registry_summary()
-    assert len(summary) == 14
+    assert len(summary) == 15
 
 
 def test_get_registry_summary_marks_overridden_slot(monkeypatch):

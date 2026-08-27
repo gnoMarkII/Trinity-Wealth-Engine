@@ -36,6 +36,12 @@ class _Provider:
         return self.records
 
 
+def test_insider_sync_requires_an_injected_history_provider():
+    """Provider construction belongs to the composition root, never the DB adapter."""
+    with pytest.raises(TypeError):
+        SqliteInsiderSyncAdapter(db_path="unused.sqlite")
+
+
 def test_insider_sync_persists_provider_records(tmp_path):
     db_path = str(tmp_path / "insider.sqlite")
     SqliteInsiderSyncAdapter(

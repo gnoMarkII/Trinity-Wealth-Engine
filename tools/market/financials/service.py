@@ -43,9 +43,11 @@ class FinancialsService:
         cache_port: FinancialCachePort,
         us_provider: Optional[FinancialStatementProviderPort] = None,
         th_provider: Optional[FinancialStatementProviderPort] = None,
+        us_fallback_provider: Optional[FinancialStatementProviderPort] = None,
     ):
         self._cache = cache_port
         self._us_provider = us_provider
+        self._us_fallback_provider = us_fallback_provider
         self._th_provider = th_provider
 
     def get_financial_statements(
@@ -118,13 +120,18 @@ class FinancialsService:
 
             try:
                 if mkt == "US":
-                    fresh_dto = self._us_provider.fetch_statements(ticker, sym)
-                    if not fresh_dto:
+                    if self._us_provider is not None:
+                        fresh_dto = self._us_provider.fetch_statements(ticker, sym)
+                    else:
+                        log.warning("No primary US financials provider is configured for %s", sym)
+                    if not fresh_dto and self._us_fallback_provider is not None:
                         log.info("US SEC EDGAR returned None. Trying US yfinance fallback for %s", sym)
-                        fallback_provider = ThaiSetFinancialProvider(market="US")
-                        fresh_dto = fallback_provider.fetch_statements(ticker, sym)
+                        fresh_dto = self._us_fallback_provider.fetch_statements(ticker, sym)
                 else:
-                    fresh_dto = self._th_provider.fetch_statements(ticker, sym)
+                    if self._th_provider is not None:
+                        fresh_dto = self._th_provider.fetch_statements(ticker, sym)
+                    else:
+                        log.warning("No Thai financials provider is configured for %s", sym)
             finally:
                 _FETCH_SEMAPHORE.release()
 

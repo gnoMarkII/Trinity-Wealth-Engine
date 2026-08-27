@@ -42,3 +42,28 @@ def get_checkpoint_db_path() -> str:
 def enable_background_workers() -> bool:
     val = os.getenv("ENABLE_BACKGROUND_WORKERS", "true").strip().lower()
     return val not in ("0", "false", "no", "off")
+
+
+def enable_job_workers() -> bool:
+    """Return whether the durable agent/job queue workers may run.
+
+    ``ENABLE_BACKGROUND_WORKERS`` historically controlled both queue workers
+    and the Earnings Call outbox worker.  Keep that value as the default for
+    deployments that do not opt into the split, while allowing tests and
+    one-shot environments to disable the outbox without making API dispatch
+    requests hang forever with jobs left in ``queued`` state.
+    """
+    raw = os.getenv("ENABLE_JOB_WORKERS")
+    if raw is None:
+        return enable_background_workers()
+    return raw.strip().lower() not in ("0", "false", "no", "off")
+
+
+def schedulers_enabled() -> bool:
+    """Return whether periodic schedulers may be started by the composition root.
+
+    Keeping this switch in configuration makes test and one-shot deployments
+    independent of production scheduler side effects.
+    """
+    val = os.getenv("SCHEDULER_ENABLED", "true").strip().lower()
+    return val not in ("0", "false", "no", "off")

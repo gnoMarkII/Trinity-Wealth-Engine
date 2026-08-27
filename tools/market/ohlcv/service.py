@@ -27,7 +27,6 @@ from tools.market.ohlcv.domain.calculations import (
     map_corporate_actions as _map_corporate_actions,
 )
 from tools.market.ohlcv.ports.ohlcv_port import OhlcvProviderPort, CorporateActionProviderPort, AssetResolverPort
-from tools.market.adapters.equity_research import MarketAssetResolverAdapter
 from tools.market.ohlcv.application.query_service import OHLCVQueryService, CachedOhlcvQueryService
 
 log = logging.getLogger(__name__)
@@ -36,8 +35,14 @@ EARNINGS_CACHE_TTL = 6 * 3600            # 6 Hours
 DIVIDENDS_SPLITS_CACHE_TTL = 24 * 3600   # 24 Hours
 
 
-class OhlcvService(CachedOhlcvQueryService):
-    """Facade for OHLCV Service (maintained for backward compatibility)."""
+class OhlcvService:
+    """Legacy facade delegating construction to the OHLCV composition root.
+
+    New application code should inject ``OHLCVQueryService`` from
+    ``build_ohlcv_service``.  This compatibility type retains the historical
+    constructor and query method while keeping concrete adapter construction
+    outside the application-facing service module.
+    """
 
     def __init__(
         self,
@@ -46,13 +51,18 @@ class OhlcvService(CachedOhlcvQueryService):
         resolver: Optional[AssetResolverPort] = None,
         cache_ttl: float = 300.0,
     ):
-        resolved_resolver = resolver or MarketAssetResolverAdapter()
-        super().__init__(
+        from tools.market.ohlcv.bootstrap import build_ohlcv_service
+
+        self._delegate = build_ohlcv_service(
             ohlcv_provider=ohlcv_provider,
             action_provider=action_provider,
-            resolver=resolved_resolver,
+            resolver=resolver,
             cache_ttl=cache_ttl,
         )
+
+    def get_ohlcv(self, ticker: str, range_str: str = "6mo", interval_str: str = "1d") -> OHLCVResponseDTO:
+        """Forward the legacy query API to the composed query service."""
+        return self._delegate.get_ohlcv(ticker=ticker, range_str=range_str, interval_str=interval_str)
 
 
 __all__ = [

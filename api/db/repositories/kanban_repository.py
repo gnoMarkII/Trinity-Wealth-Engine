@@ -7,11 +7,6 @@ import time
 import unicodedata
 from typing import Optional, List, Dict
 
-# Compatibility import retained for failure-injection tests and old callers.
-# Transaction ownership remains in the facade; the DAO itself never invokes
-# this factory from its SQL methods.
-from api.db.connection import get_connection
-
 
 def list_kanban_cards(conn: sqlite3.Connection) -> list[sqlite3.Row]:
     cur = conn.execute("SELECT * FROM kanban_cards ORDER BY created_at ASC")
@@ -32,7 +27,10 @@ def create_kanban_card(
     now = time.time()
     next_seq = conn.execute("SELECT COALESCE(MAX(display_seq), 0) + 1 FROM kanban_cards").fetchone()[0]
     conn.execute(
-        "INSERT INTO kanban_cards (card_id, title, column_name, job_id, flow, display_seq, prompt, source_key, scope, is_verified, created_at, updated_at) "
+        # The partial unique index on source_key is the final concurrency
+        # guard.  INSERT OR IGNORE lets a racing caller re-read the canonical
+        # card instead of surfacing an IntegrityError as a duplicate delivery.
+        "INSERT OR IGNORE INTO kanban_cards (card_id, title, column_name, job_id, flow, display_seq, prompt, source_key, scope, is_verified, created_at, updated_at) "
         "VALUES (?, ?, ?, NULL, ?, ?, ?, ?, ?, ?, ?, ?)",
         (card_id, title, column_name, flow, next_seq, prompt, source_key, scope, 1 if is_verified else 0, now, now),
     )

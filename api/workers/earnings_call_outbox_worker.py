@@ -1,7 +1,6 @@
 """Background Outbox Polling Worker for Earnings Call Saga."""
 import asyncio
 import logging
-from typing import Optional
 
 from application.earnings_call.service import EarningsCallApplicationService
 
@@ -13,13 +12,19 @@ class EarningsCallOutboxWorker:
 
     def __init__(
         self,
-        service: Optional[EarningsCallApplicationService] = None,
+        service: EarningsCallApplicationService,
         poll_interval_seconds: float = 3.0,
     ) -> None:
+        """Create a worker with an already-composed application service.
+
+        The worker is an infrastructure entrypoint, not a composition root.
+        Requiring the service here prevents a background task from resolving
+        dependencies through a module-level service locator after startup.
+        """
         self._service = service
         self._poll_interval = poll_interval_seconds
         self._running = False
-        self._task: Optional[asyncio.Task] = None
+        self._task: asyncio.Task | None = None
 
     def start(self) -> None:
         if self._running:
@@ -47,15 +52,9 @@ class EarningsCallOutboxWorker:
                 if not self._running:
                     break
 
-                service = self._service
-                if service is None:
-                    from api.dependencies import get_earnings_call_service
-
-                    service = get_earnings_call_service()
-
                 # Run blocking DB work in default executor
                 loop = asyncio.get_running_loop()
-                count = await loop.run_in_executor(None, service.process_outbox_batch, 10)
+                count = await loop.run_in_executor(None, self._service.process_outbox_batch, 10)
                 if count > 0:
                     log.info("EarningsCallOutboxWorker processed %d outbox events", count)
             except asyncio.CancelledError:

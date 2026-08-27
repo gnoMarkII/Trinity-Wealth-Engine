@@ -139,6 +139,7 @@ def build_portfolio_application(
     )
     ledger_service = PortfolioLedgerService(
         repo=resolved_deps.repo,
+        journal_provider=resolved_deps.journal_provider,
     )
     goal_service = PortfolioGoalService(
         goals_repo=resolved_deps.goals_repo,

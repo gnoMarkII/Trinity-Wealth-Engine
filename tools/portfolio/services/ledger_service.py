@@ -4,9 +4,13 @@ from typing import Optional, Dict
 from tools.portfolio.domain.constants import _FLOAT_EPS, _MONEY_DP
 from tools.portfolio.domain.models import PortfolioState, Holding
 from tools.portfolio.domain.ledger_change import LedgerChange
+from tools.portfolio.domain.events import SystemJournalEvent
+from tools.portfolio.domain.mutation import PortfolioMutation
 from tools.portfolio.domain.calculations import recalc_all, _replay_symbol_trades
 from tools.portfolio.domain.validator import validate_portfolio_id
 from tools.portfolio.ports.repository_port import PortfolioRepositoryPort
+from tools.portfolio.ports.journal_port import TradeJournalPort
+from ._mutation_commit import commit_mutation
 
 
 def _find_holding(state: PortfolioState, symbol: str):
@@ -26,8 +30,13 @@ def _require_cash(state: PortfolioState, currency: str):
 class PortfolioLedgerService:
     """Handles Trade Log reads, edit/delete transaction with PnL replay."""
 
-    def __init__(self, repo: PortfolioRepositoryPort) -> None:
+    def __init__(
+        self,
+        repo: PortfolioRepositoryPort,
+        journal_provider: Optional[TradeJournalPort] = None,
+    ) -> None:
         self.repo = repo
+        self.journal_provider = journal_provider
 
     # ------------------------------------------------------------------
     # Trade Log Read
@@ -56,7 +65,22 @@ class PortfolioLedgerService:
                     break
             if not found:
                 raise ValueError(f"ไม่พบ transaction id '{tx_id}'")
-            uow.commit(state, LedgerChange(kind="replace_all", rows=rows, tx_id=tx_id))
+            commit_mutation(
+                uow,
+                state,
+                PortfolioMutation(
+                    ledger_change=LedgerChange(kind="replace_all", rows=rows, tx_id=tx_id),
+                    system_journal_events=[
+                        SystemJournalEvent.from_entry(
+                            event_type="trade_note_updated",
+                            message=f"**[TRADE NOTE UPDATED]** {tx_id}",
+                            metadata={"transaction_id": tx_id},
+                        )
+                    ],
+                ),
+                journal_provider=self.journal_provider,
+                portfolio_id=pid,
+            )
             return updated_row
 
     # ------------------------------------------------------------------
@@ -89,16 +113,22 @@ class PortfolioLedgerService:
             old_price = float(target_row.get("Price") or target_row.get("price") or 0)
             action = str(target_row.get("Action") or target_row.get("action") or "BUY").upper()
 
+            changed_fields = []
             if timestamp is not None:
                 target_row["Timestamp"] = timestamp
+                changed_fields.append("timestamp")
             if units is not None:
                 target_row["Units"] = f"{units:g}"
+                changed_fields.append("units")
             if price is not None:
                 target_row["Price"] = f"{price:.2f}"
+                changed_fields.append("price")
             if fx_rate is not None:
                 target_row["FX_Rate"] = f"{fx_rate:.4f}"
+                changed_fields.append("fx_rate")
             if notes is not None:
                 target_row["Notes"] = notes
+                changed_fields.append("notes")
 
             new_units_val = float(target_row.get("Units") or target_row.get("units") or 0)
             new_price_val = float(target_row.get("Price") or target_row.get("price") or 0)
@@ -143,7 +173,22 @@ class PortfolioLedgerService:
                 _MONEY_DP,
             )
             recalc_all(state)
-            uow.commit(state, LedgerChange(kind="replace_all", rows=new_rows, tx_id=tx_id))
+            commit_mutation(
+                uow,
+                state,
+                PortfolioMutation(
+                    ledger_change=LedgerChange(kind="replace_all", rows=new_rows, tx_id=tx_id),
+                    system_journal_events=[
+                        SystemJournalEvent.from_entry(
+                            event_type="transaction_edited",
+                            message=f"**[TRANSACTION EDITED]** {sym} ({tx_id})",
+                            metadata={"transaction_id": tx_id, "symbol": sym, "fields": changed_fields},
+                        )
+                    ],
+                ),
+                journal_provider=self.journal_provider,
+                portfolio_id=pid,
+            )
             return state
 
     # ------------------------------------------------------------------
@@ -209,5 +254,20 @@ class PortfolioLedgerService:
                 _MONEY_DP,
             )
             recalc_all(state)
-            uow.commit(state, LedgerChange(kind="replace_all", rows=new_rows, tx_id=tx_id))
+            commit_mutation(
+                uow,
+                state,
+                PortfolioMutation(
+                    ledger_change=LedgerChange(kind="replace_all", rows=new_rows, tx_id=tx_id),
+                    system_journal_events=[
+                        SystemJournalEvent.from_entry(
+                            event_type="transaction_deleted",
+                            message=f"**[TRANSACTION DELETED]** {sym} ({tx_id})",
+                            metadata={"transaction_id": tx_id, "symbol": sym},
+                        )
+                    ],
+                ),
+                journal_provider=self.journal_provider,
+                portfolio_id=pid,
+            )
             return state

@@ -20,6 +20,14 @@ os.environ["OBSIDIAN_VAULT_PATH"] = str(_GLOBAL_TEST_TEMP / "vault")
 os.environ["WEBUI_STATE_DB_PATH"] = str(_GLOBAL_TEST_TEMP / "webui_state.sqlite")
 os.environ["CHECKPOINT_DB_PATH"] = str(_GLOBAL_TEST_TEMP / "checkpoints.sqlite")
 os.environ["NEWS_FUNNEL_STORE_PATH"] = str(_GLOBAL_TEST_TEMP / "news_funnel_state.json")
+# Never start production background workers/schedulers during tests.  The
+# application lifespan still constructs queue objects for dependency shape
+# compatibility, but no task is started and no durable work is re-enqueued.
+os.environ["ENABLE_BACKGROUND_WORKERS"] = "false"
+# Keep the in-process job queues alive for API tests that assert dispatch and
+# SSE completion; the Earnings Call outbox worker remains disabled above.
+os.environ["ENABLE_JOB_WORKERS"] = "true"
+os.environ["SCHEDULER_ENABLED"] = "false"
 
 # ทำให้ทุก test resolve absolute imports ได้ (agents/, tools/, core/, schemas/)
 _PROJECT_ROOT = Path(__file__).resolve().parent.parent

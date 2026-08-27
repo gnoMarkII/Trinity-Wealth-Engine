@@ -46,3 +46,23 @@ def test_ohlcv_service_instantiation_with_mocks():
 
     service = OhlcvService(ohlcv_provider=mock_ohlcv, action_provider=mock_actions)
     assert service is not None
+
+
+def test_ohlcv_legacy_facade_delegates_to_composition_root(monkeypatch):
+    """Legacy facade must not construct a concrete resolver/provider itself."""
+    delegated = MagicMock()
+    delegated.get_ohlcv.return_value = "delegated-response"
+    build = MagicMock(return_value=delegated)
+    monkeypatch.setattr("tools.market.ohlcv.bootstrap.build_ohlcv_service", build)
+
+    service = OhlcvService(cache_ttl=42.0)
+    result = service.get_ohlcv("AAPL", range_str="1mo", interval_str="1d")
+
+    build.assert_called_once_with(
+        ohlcv_provider=None,
+        action_provider=None,
+        resolver=None,
+        cache_ttl=42.0,
+    )
+    assert result == "delegated-response"
+    delegated.get_ohlcv.assert_called_once_with(ticker="AAPL", range_str="1mo", interval_str="1d")

@@ -10,6 +10,8 @@ from application.earnings_call.dto import EarningsCallRunDTO
 from application.earnings_call.errors import (
     EarningsCallProviderUnavailableError,
     EarningsCallRunNotFoundError,
+    EarningsCallRunNotReadyError,
+    EarningsCallRunInProgressError,
     EarningsCallTickerMismatchError,
     EarningsCallValidationError,
 )
@@ -132,6 +134,30 @@ def test_summarize_earnings_call_provider_unavailable_503(client):
     assert "LLM provider is currently unavailable" in response.json()["detail"]
 
 
+def test_summarize_earnings_call_lease_contention_returns_202(client):
+    mock_service = MagicMock()
+    mock_service.summarize_and_store.side_effect = EarningsCallRunInProgressError("run-live")
+    mock_service.get_run_for_ticker.return_value = _make_run(
+        run_id="run-live",
+        status=EarningsCallRunStatus.SUMMARIZED,
+        kanban_status=EarningsCallKanbanStatus.NONE,
+        kanban_card_id=None,
+    )
+    app.dependency_overrides[get_earnings_call_service] = lambda: mock_service
+
+    response = client.post(
+        "/api/equity/TSM/earnings-call/summarize",
+        json={
+            "period": "Q4 2024",
+            "transcript": "Good morning and welcome to TSMC Fourth Quarter 2024 Earnings Call.",
+        },
+    )
+
+    assert response.status_code == 202
+    assert response.json()["run_id"] == "run-live"
+    mock_service.get_run_for_ticker.assert_called_once_with(ticker="TSM", run_id="run-live")
+
+
 def test_get_earnings_call_run_success(client):
     mock_service = MagicMock()
     mock_service.get_run_for_ticker.return_value = _make_run(run_id="run-123", ticker="TSM")
@@ -163,6 +189,36 @@ def test_retry_earnings_call_run_200(client):
     response = client.post("/api/equity/TSM/earnings-call/runs/run-123/retry")
     assert response.status_code == 200
     assert response.json()["status"] == "completed"
+
+
+def test_retry_earnings_call_run_not_ready_409(client):
+    mock_service = MagicMock()
+    mock_service.retry_run_for_ticker.side_effect = EarningsCallRunNotReadyError(
+        "Run is not ready for Kanban retry"
+    )
+    app.dependency_overrides[get_earnings_call_service] = lambda: mock_service
+
+    response = client.post("/api/equity/TSM/earnings-call/runs/run-123/retry")
+
+    assert response.status_code == 409
+    assert "not ready" in response.json()["detail"]
+
+
+def test_retry_earnings_call_run_lease_contention_returns_202(client):
+    mock_service = MagicMock()
+    mock_service.retry_run_for_ticker.side_effect = EarningsCallRunInProgressError("run-live")
+    mock_service.get_run_for_ticker.return_value = _make_run(
+        run_id="run-live",
+        status=EarningsCallRunStatus.KANBAN_PENDING,
+        kanban_status=EarningsCallKanbanStatus.PENDING,
+        kanban_card_id=None,
+    )
+    app.dependency_overrides[get_earnings_call_service] = lambda: mock_service
+
+    response = client.post("/api/equity/TSM/earnings-call/runs/run-live/retry")
+
+    assert response.status_code == 202
+    assert response.json()["status"] == "kanban_pending"
 
 
 def test_get_earnings_calls_success(client):

@@ -42,8 +42,10 @@ def enqueue_event(
         "  lease_token, lease_expires_at, created_at, updated_at"
         ") VALUES (?, ?, ?, ?, 'leased', 1, ?, ?, ?, ?, ?) "
         "ON CONFLICT(run_id, event_type) DO UPDATE SET "
-        "  status = 'leased', attempts = attempts + 1, lease_token = excluded.lease_token,"
-        "  lease_expires_at = excluded.lease_expires_at, updated_at = excluded.updated_at",
+        "  source_key = excluded.source_key, status = 'leased', "
+        "  attempts = attempts + 1, lease_token = excluded.lease_token,"
+        "  lease_expires_at = excluded.lease_expires_at, last_error = NULL, "
+        "  updated_at = excluded.updated_at",
         (event_id, run_id, source_key, event_type, now, lease_token, lease_expires_at, now, now),
     )
 
@@ -65,7 +67,7 @@ def list_pending(
     cur = conn.execute(
         "SELECT * FROM earnings_call_outbox "
         "WHERE (status = 'pending' AND available_at <= ?) "
-        "   OR (status = 'leased' AND lease_expires_at <= ?) "
+        "   OR (status = 'leased' AND (lease_expires_at IS NULL OR lease_expires_at <= ?)) "
         "ORDER BY available_at ASC LIMIT ?",
         (now, now, limit),
     )
@@ -84,7 +86,8 @@ def lease_event(
     cur = conn.execute(
         "UPDATE earnings_call_outbox SET "
         "  status = 'leased', lease_token = ?, lease_expires_at = ?, attempts = attempts + 1, updated_at = ? "
-        "WHERE event_id = ? AND ((status = 'pending' AND available_at <= ?) OR (status = 'leased' AND lease_expires_at <= ?))",
+        "WHERE event_id = ? AND ((status = 'pending' AND available_at <= ?) "
+        "OR (status = 'leased' AND (lease_expires_at IS NULL OR lease_expires_at <= ?)))",
         (lease_token, lease_expires_at, now, event_id, now, now),
     )
     if cur.rowcount == 0:
@@ -100,9 +103,11 @@ def complete_event(
     now = time.time()
     cur = conn.execute(
         "UPDATE earnings_call_outbox SET "
-        "  status = 'completed', lease_token = NULL, lease_expires_at = NULL, updated_at = ? "
-        "WHERE event_id = ? AND lease_token = ?",
-        (now, event_id, lease_token),
+        "  status = 'completed', last_error = NULL, lease_token = NULL, "
+        "  lease_expires_at = NULL, updated_at = ? "
+        "WHERE event_id = ? AND lease_token = ? "
+        "  AND status = 'leased' AND lease_expires_at > ?",
+        (now, event_id, lease_token, now),
     )
     return cur.rowcount > 0
 
@@ -119,8 +124,9 @@ def schedule_retry(
     cur = conn.execute(
         "UPDATE earnings_call_outbox SET "
         "  status = 'pending', available_at = ?, last_error = ?, lease_token = NULL, lease_expires_at = NULL, updated_at = ? "
-        "WHERE event_id = ? AND lease_token = ?",
-        (available_at, error_code, now, event_id, lease_token),
+        "WHERE event_id = ? AND lease_token = ? "
+        "  AND status = 'leased' AND lease_expires_at > ?",
+        (available_at, error_code, now, event_id, lease_token, now),
     )
     return cur.rowcount > 0
 
@@ -135,8 +141,9 @@ def mark_dead_letter(
     cur = conn.execute(
         "UPDATE earnings_call_outbox SET "
         "  status = 'dead_letter', last_error = ?, lease_token = NULL, lease_expires_at = NULL, updated_at = ? "
-        "WHERE event_id = ? AND lease_token = ?",
-        (error_code, now, event_id, lease_token),
+        "WHERE event_id = ? AND lease_token = ? "
+        "  AND status = 'leased' AND lease_expires_at > ?",
+        (error_code, now, event_id, lease_token, now),
     )
     return cur.rowcount > 0
 
@@ -144,6 +151,7 @@ def mark_dead_letter(
 def reset_for_manual_retry(
     conn: sqlite3.Connection,
     run_id: str,
+    source_key: str,
     lease_seconds: int = 60,
 ) -> tuple[EarningsCallOutboxEventDTO, LeaseDTO]:
     now = time.time()
@@ -152,15 +160,23 @@ def reset_for_manual_retry(
 
     cur = conn.execute(
         "UPDATE earnings_call_outbox SET "
-        "  status = 'leased', attempts = 1, available_at = ?, lease_token = ?, lease_expires_at = ?, updated_at = ? "
-        "WHERE run_id = ?",
-        (now, lease_token, lease_expires_at, now, run_id),
+        "  status = 'leased', attempts = 1, available_at = ?, last_error = NULL, "
+        "  lease_token = ?, lease_expires_at = ?, updated_at = ? "
+        "WHERE run_id = ? AND source_key = ? AND event_type = 'deliver_kanban' "
+        "  AND (status IN ('pending', 'dead_letter') "
+        "       OR (status = 'leased' AND (lease_expires_at IS NULL OR lease_expires_at <= ?)))",
+        (now, lease_token, lease_expires_at, now, run_id, source_key, now),
     )
     if cur.rowcount == 0:
-        # If no outbox event existed, create one
-        return enqueue_event(conn, run_id=run_id, source_key="manual_retry", outbox_lease_seconds=lease_seconds)
+        raise RuntimeError(
+            f"Run '{run_id}' has no retryable deliver_kanban outbox event"
+        )
 
-    row = conn.execute("SELECT * FROM earnings_call_outbox WHERE run_id = ?", (run_id,)).fetchone()
+    row = conn.execute(
+        "SELECT * FROM earnings_call_outbox "
+        "WHERE run_id = ? AND source_key = ? AND event_type = 'deliver_kanban'",
+        (run_id, source_key),
+    ).fetchone()
     dto = _row_to_outbox_dto(row)
     lease = LeaseDTO(lease_token=lease_token, lease_expires_at=lease_expires_at)
     return dto, lease

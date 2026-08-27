@@ -72,6 +72,15 @@ class KanbanApplicationService:
             scope=scope,
         )
         row = self._repo.get_kanban_card(card_id)
+        if row is None and source_key_clean:
+            # Another caller may have won the source_key unique constraint
+            # between our pre-check and INSERT.  Return that canonical card
+            # rather than manufacturing an empty DTO or duplicate side effect.
+            existing = self._repo.find_kanban_card_by_source_key(source_key_clean)
+            if existing is not None:
+                return _dict_to_dto(existing), False
+        if row is None:
+            raise RuntimeError("Kanban card insert was ignored unexpectedly")
         return _dict_to_dto(row or {}), True
 
     def update_card(

@@ -1,6 +1,7 @@
 """Application Layer Service for Earnings Call Saga Orchestration & Outbox Delivery."""
 from dataclasses import replace
 import re
+import time
 from typing import Optional
 
 from core.logger import get_logger
@@ -16,6 +17,9 @@ from application.earnings_call.errors import (
     EarningsCallProcessingError,
     EarningsCallRunNotFoundError,
     EarningsCallTickerMismatchError,
+    EarningsCallLeaseExpiredError,
+    EarningsCallRunNotReadyError,
+    EarningsCallRunInProgressError,
 )
 from application.earnings_call.ports import (
     EarningsCallLlmPort,
@@ -61,7 +65,9 @@ class EarningsCallApplicationService:
         if not ticker or not _TICKER_RE.match(ticker):
             raise EarningsCallValidationError(f"Invalid ticker symbol: '{dto.ticker}'")
 
-        period = (dto.period or "").strip()
+        # Canonicalize period whitespace/case so semantically identical
+        # requests share one idempotency key and one persisted run.
+        period = " ".join((dto.period or "").split()).upper()
         if not period or len(period) > 20:
             raise EarningsCallValidationError(f"Invalid period format: '{dto.period}'")
 
@@ -107,32 +113,48 @@ class EarningsCallApplicationService:
             log.info("Run %s is in-progress by another execution owner; returning 202 status", run.run_id)
             return run
 
-        execution_token = claim.execution_token or "initial_owner"
+        execution_token = claim.execution_token
+        if not execution_token:
+            raise EarningsCallLeaseExpiredError(
+                f"Execution lease for run '{run.run_id}' is missing"
+            )
 
         # 2. Generate Highlights via LLM if not yet done
         highlights = run.highlights
         if not highlights:
-            self._workflow.renew_execution_lease(run.run_id, execution_token, extension_seconds=90)
+            self._renew_or_raise(run.run_id, execution_token, extension_seconds=90)
             highlights = self._llm.summarize(ticker=ticker, period=period, transcript=transcript)
             if not highlights or not highlights.strip():
                 raise EarningsCallProcessingError("LLM returned empty highlights")
-            run = self._workflow.save_summary(run.run_id, execution_token, highlights)
+            self._renew_or_raise(run.run_id, execution_token, extension_seconds=90)
+            try:
+                run = self._workflow.save_summary(run.run_id, execution_token, highlights)
+            except EarningsCallLeaseExpiredError as exc:
+                raise EarningsCallRunInProgressError(run.run_id) from exc
 
         # 3. Write note to Obsidian and enqueue Outbox event
         vault_path = run.vault_path
         if not vault_path:
+            self._renew_or_raise(run.run_id, execution_token, extension_seconds=90)
             vault_path = self._writer.write_note(
                 ticker=ticker,
                 period=period,
                 transcript=transcript,
                 highlights=highlights,
             )
-            run, event, outbox_lease = self._workflow.record_note_and_enqueue(
-                run_id=run.run_id,
-                execution_token=execution_token,
-                vault_path=vault_path,
-                outbox_lease_seconds=60,
-            )
+            # The filesystem call is outside SQLite; renew immediately before
+            # recording its result so a slow write cannot cross the execution
+            # lease boundary and then mutate state with a stale token.
+            self._renew_or_raise(run.run_id, execution_token, extension_seconds=90)
+            try:
+                run, event, outbox_lease = self._workflow.record_note_and_enqueue(
+                    run_id=run.run_id,
+                    execution_token=execution_token,
+                    vault_path=vault_path,
+                    outbox_lease_seconds=60,
+                )
+            except EarningsCallLeaseExpiredError as exc:
+                raise EarningsCallRunInProgressError(run.run_id) from exc
         else:
             # Note already written in previous attempt, grab pending outbox event if available
             events = self._workflow.list_pending_outbox(limit=10)
@@ -144,6 +166,16 @@ class EarningsCallApplicationService:
             run = self._deliver_outbox_event(run=run, event=event, lease=outbox_lease)
 
         return run
+
+    def _renew_or_raise(
+        self, run_id: str, execution_token: str, extension_seconds: int
+    ) -> None:
+        """Require ownership immediately before an external or durable step."""
+        renewed = self._workflow.renew_execution_lease(
+            run_id, execution_token, extension_seconds=extension_seconds
+        )
+        if renewed is None:
+            raise EarningsCallRunInProgressError(run_id)
 
     def _deliver_outbox_event(
         self, run: EarningsCallRunDTO, event: EarningsCallOutboxEventDTO, lease: LeaseDTO
@@ -163,25 +195,40 @@ class EarningsCallApplicationService:
                 card_id=card_res.card_id,
                 is_existing=not card_res.created,
             )
+        except EarningsCallLeaseExpiredError as exc:
+            # The fencing token is authoritative.  Once ownership is lost we
+            # must not attempt a retry/dead-letter update with the stale token.
+            raise EarningsCallRunInProgressError(run.run_id) from exc
+        except EarningsCallRunInProgressError:
+            raise
         except Exception as exc:
             log.warning("Initial Kanban delivery failed for run %s: %s", run.run_id, exc)
             error_code = "ERR_KANBAN_DELIVERY_FAILED"
+            # ``list_pending_outbox`` returns the event before this worker's
+            # lease increment is visible in the DTO.  Count the delivery that
+            # just failed as the next attempt.
             if event.attempts + 1 >= self._max_attempts:
-                return self._workflow.mark_terminal_failure(
-                    run_id=run.run_id,
-                    event_id=event.event_id,
-                    lease_token=lease.lease_token,
-                    error_code=error_code,
-                )
+                try:
+                    return self._workflow.mark_terminal_failure(
+                        run_id=run.run_id,
+                        event_id=event.event_id,
+                        lease_token=lease.lease_token,
+                        error_code=error_code,
+                    )
+                except EarningsCallLeaseExpiredError as lease_exc:
+                    raise EarningsCallRunInProgressError(run.run_id) from lease_exc
             else:
                 retry_delay = min(300, 5 * (2 ** event.attempts))
-                return self._workflow.schedule_kanban_retry(
-                    run_id=run.run_id,
-                    event_id=event.event_id,
-                    lease_token=lease.lease_token,
-                    error_code=error_code,
-                    retry_delay_seconds=retry_delay,
-                )
+                try:
+                    return self._workflow.schedule_kanban_retry(
+                        run_id=run.run_id,
+                        event_id=event.event_id,
+                        lease_token=lease.lease_token,
+                        error_code=error_code,
+                        retry_delay_seconds=retry_delay,
+                    )
+                except EarningsCallLeaseExpiredError as lease_exc:
+                    raise EarningsCallRunInProgressError(run.run_id) from lease_exc
 
     def get_run_for_ticker(self, ticker: str, run_id: str) -> EarningsCallRunDTO:
         clean_ticker = (ticker or "").strip().upper()
@@ -198,6 +245,30 @@ class EarningsCallApplicationService:
         run = self.get_run_for_ticker(ticker=ticker, run_id=run_id)
         if run.status == EarningsCallRunStatus.COMPLETED:
             return run
+
+        # A manual retry is a delivery retry only.  It must never create a
+        # Kanban card before the note/outbox step has completed.
+        if run.status in {
+            EarningsCallRunStatus.NEW,
+            EarningsCallRunStatus.SUMMARIZED,
+        }:
+            if run.execution_expires_at and run.execution_expires_at > time.time():
+                return run
+            raise EarningsCallRunNotReadyError(
+                f"Run '{run_id}' is not ready for Kanban retry"
+            )
+        if run.status == EarningsCallRunStatus.NOTE_WRITTEN and (
+            run.execution_expires_at and run.execution_expires_at > time.time()
+        ):
+            return run
+        if run.status not in {
+            EarningsCallRunStatus.NOTE_WRITTEN,
+            EarningsCallRunStatus.KANBAN_PENDING,
+            EarningsCallRunStatus.FAILED,
+        } or not run.vault_path:
+            raise EarningsCallRunNotReadyError(
+                f"Run '{run_id}' is not ready for Kanban retry"
+            )
 
         # Reset dead-lettered / pending outbox event for manual retry
         run, event, lease = self._workflow.reset_run_for_manual_retry(run_id=run_id, lease_seconds=60)
@@ -217,7 +288,12 @@ class EarningsCallApplicationService:
             if not run:
                 continue
 
-            self._deliver_outbox_event(run=run, event=event, lease=lease)
+            try:
+                self._deliver_outbox_event(run=run, event=event, lease=lease)
+            except EarningsCallRunInProgressError:
+                # Another worker won the fencing race.  The event remains
+                # recoverable and will be visible again after its lease ends.
+                continue
             processed_count += 1
 
         return processed_count

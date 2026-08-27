@@ -10,6 +10,7 @@ def build_financials_service(
     cache_port: Optional[FinancialCachePort] = None,
     us_provider: Optional[FinancialStatementProviderPort] = None,
     th_provider: Optional[FinancialStatementProviderPort] = None,
+    us_fallback_provider: Optional[FinancialStatementProviderPort] = None,
 ) -> FinancialsService:
     """Build FinancialsService with injected or default concrete adapters."""
     from tools.market.financials.adapters.sqlite_cache_adapter import SQLiteCacheAdapter
@@ -19,6 +20,7 @@ def build_financials_service(
     return FinancialsService(
         cache_port=cache_port or SQLiteCacheAdapter(),
         us_provider=us_provider or CompositeUsFinancialProvider(),
+        us_fallback_provider=us_fallback_provider or ThaiSetFinancialProvider(market="US"),
         th_provider=th_provider or ThaiSetFinancialProvider(),
     )
 

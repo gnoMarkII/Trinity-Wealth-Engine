@@ -211,5 +211,35 @@ describe('KanbanDetailDrawer', () => {
       expect(onCardTransition).toHaveBeenCalled()
     })
   })
+
+  it('does not render Discord toggle for flows without Discord integration (e.g. manager, youtube_pitch)', () => {
+    const card = {
+      card_id: 'card-mgr-1',
+      title: 'Macro Strategy Analysis',
+      prompt: 'Summarize global market stance',
+      flow: 'manager',
+      scope: 'both',
+      column_name: 'backlog',
+      display_seq: 1,
+      discord_notify: true,
+      is_verified: true,
+      created_at: 1700000000,
+      updated_at: 1700000000,
+      job_id: null,
+    }
+
+    render(
+      <KanbanDetailDrawer
+        card={card}
+        onClose={vi.fn()}
+        onCardTransition={vi.fn()}
+        onDispatchCard={vi.fn()}
+      />
+    )
+
+    expect(screen.queryByRole('switch', { name: /สลับการแจ้งเตือน Discord/i })).toBeNull()
+    expect(screen.queryByText('แจ้งเตือนผ่าน Discord')).toBeNull()
+    expect(screen.queryByText('โพสต์ลง Discord (นักข่าวส่วนตัว)')).toBeNull()
+  })
 })
 

@@ -132,7 +132,12 @@ def test_application_and_router_layers_do_not_import_infrastructure():
             PROJECT_ROOT / "tools" / "market" / "financials" / "application",
         ]
     )
-    application_files = [PROJECT_ROOT / "tools" / "market" / "financials" / "service.py"]
+    application_files = [
+        PROJECT_ROOT / "tools" / "market" / "financials" / "service.py",
+        # The legacy OHLCV facade may delegate to its bootstrap factory, but
+        # must not import or construct concrete adapters itself.
+        PROJECT_ROOT / "tools" / "market" / "ohlcv" / "service.py",
+    ]
     application_forbidden = (
         "api.db",
         "api.state_db",
@@ -367,6 +372,45 @@ def test_dao_no_commit_or_rollback():
                     violations.append(f"{rel_path}:{node.lineno} calls forbidden method '{node.func.attr}()' on connection")
 
     assert not violations, "Raw DAOs calling transaction methods directly:\n" + "\n".join(violations)
+
+
+def test_raw_daos_do_not_construct_connections():
+    """Raw SQL repositories must receive a connection from their caller."""
+    repo_dir = PROJECT_ROOT / "api" / "db" / "repositories"
+    violations = []
+    for file_path in repo_dir.glob("*.py"):
+        rel_path = file_path.relative_to(PROJECT_ROOT).as_posix()
+        for lineno, imported in _get_imports(file_path):
+            if imported == "api.db.connection" or imported.startswith("api.db.connection."):
+                violations.append(f"{rel_path}:{lineno} imports connection factory '{imported}'")
+
+    assert not violations, "Raw DAOs importing the connection factory:\n" + "\n".join(violations)
+
+
+def test_db_uow_exposes_typed_workflow_boundary_without_dynamic_dao_proxy():
+    """The UoW must expose a concrete workflow adapter, not a dynamic DAO service locator."""
+    path = PROJECT_ROOT / "api" / "db" / "uow.py"
+    source = path.read_text(encoding="utf-8-sig")
+    assert "class _ConnectionBoundDao" not in source
+    assert "def __getattr__" not in source
+    assert "def earnings_call_workflow" in source
+    assert "SqliteEarningsCallWorkflowAdapter" in source
+
+
+def test_insider_sync_adapter_receives_provider_from_composition_root():
+    """SQLite infrastructure must not instantiate the yfinance provider itself."""
+    adapter_path = PROJECT_ROOT / "api" / "db" / "adapters.py"
+    imports = _get_imports(adapter_path)
+    forbidden = [
+        imported
+        for _, imported in imports
+        if imported == "tools.market.adapters.insider_provider"
+        or imported.startswith("tools.market.adapters.insider_provider.")
+    ]
+    assert not forbidden, "SQLite adapter constructs a concrete insider provider: " + ", ".join(forbidden)
+
+    source = adapter_path.read_text(encoding="utf-8-sig")
+    assert "YFinanceInsiderHistoryAdapter" not in source
 
 
 def test_no_unallowed_sys_modules_in_production():

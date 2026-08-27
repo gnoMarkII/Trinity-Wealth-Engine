@@ -1,4 +1,5 @@
 """FastAPI Application Dependencies & Composition Provider."""
+from pathlib import Path
 from typing import Optional
 from fastapi import Request
 import yfinance as yf
@@ -24,8 +25,8 @@ from application.earnings_call.bootstrap import build_earnings_call_service
 from tools.content.earnings_call.adapters.llm_adapter import LlmEarningsCallSummarizerAdapter
 from tools.content.earnings_call.adapters.obsidian_adapter import ObsidianEarningsCallAdapter
 from tools.content.earnings_call.adapters.kanban_adapter import KanbanEarningsCallAdapter
-from tools.market.ohlcv.service import OhlcvService
 from tools.market.ohlcv.bootstrap import build_ohlcv_service
+from tools.market.ohlcv.application.query_service import OHLCVQueryService
 from tools.market.financials.service import FinancialsService
 from tools.market.financials.bootstrap import build_default_financials_service
 from api.db.adapters import (
@@ -55,7 +56,7 @@ from tools.content.notebooklm.adapters.filesystem import (
     FilesystemSourceCatalogAdapter,
 )
 from tools.content.notebooklm.adapter import check_binary_available
-from tools.archivist.core import VAULT_PATH
+from tools.archivist import core as archivist_core
 from tools.market.calendar import get_asset_calendar
 from tools.market.earnings import fetch_earnings_dates
 from tools.market.adapters.equity_research import (
@@ -63,6 +64,7 @@ from tools.market.adapters.equity_research import (
     YFinanceAnalystProviderAdapter,
     EquitySidecarValuationAdapter,
 )
+from tools.market.adapters.insider_provider import YFinanceInsiderHistoryAdapter
 from tools.market.adapters.equity_vault_query_adapter import EquityVaultQueryAdapter
 from tools.macro.adapters.market_calendar_adapter import (
     MarketAssetResolverAdapter as MacroMarketAssetResolverAdapter,
@@ -70,6 +72,24 @@ from tools.macro.adapters.market_calendar_adapter import (
 )
 from tools.macro.adapters.news_funnel_store_adapter import NewsFunnelStoreAdapter
 from tools.macro.adapters.strategy_vault_adapter import IndicatorSeriesAdapter, StrategyVaultAdapter
+
+# Compatibility seam for legacy tests/importers that patch the composition
+# root's vault path.  Production code resolves adapters here; routers and
+# application services never import this symbol.
+VAULT_PATH = archivist_core.VAULT_PATH
+_INITIAL_VAULT_PATH = VAULT_PATH
+
+
+def _get_vault_path() -> Path:
+    """Resolve the injectable vault path while honoring legacy patch seams.
+
+    New callers can patch the archivist core path; older tests/importers patch
+    ``api.dependencies.VAULT_PATH``.  Both remain composition-root concerns
+    and neither leaks into the application layer.
+    """
+    if VAULT_PATH != _INITIAL_VAULT_PATH:
+        return Path(VAULT_PATH)
+    return Path(archivist_core.VAULT_PATH)
 
 # Process-scoped query service: the cache is application state, not a new
 # object per request.  Tests and compatibility callers can clear the exposed
@@ -136,8 +156,8 @@ def get_notebooklm_service(request: Request) -> NotebookLMApplicationService:
     )
 
 
-def get_ohlcv_service() -> OhlcvService:
-    """Dependency provider for OhlcvService."""
+def get_ohlcv_service() -> OHLCVQueryService:
+    """Dependency provider for the canonical OHLCV query service."""
     return _OHLCV_SERVICE
 
 
@@ -179,7 +199,7 @@ def get_asset_resolver() -> MarketAssetResolverAdapter:
 
 def get_macro_service() -> MacroApplicationService:
     """Compose Macro read-model ports at the application boundary."""
-    strategy = StrategyVaultAdapter(vault_path=VAULT_PATH)
+    strategy = StrategyVaultAdapter(vault_path=_get_vault_path())
     card_service = NewsFunnelCardApplicationService(
         storage=LegacyNewsFunnelCardAdapter(),
         prompt=NewsFunnelPromptAdapter(),
@@ -226,7 +246,7 @@ def get_equity_insider_service() -> EquityInsiderApplicationService:
     """Compose the insider application service and its ledger/sync ports."""
     return EquityInsiderApplicationService(
         ledger=SqliteInsiderLedgerAdapter(),
-        sync=SqliteInsiderSyncAdapter(),
+        sync=SqliteInsiderSyncAdapter(provider=YFinanceInsiderHistoryAdapter()),
     )
 
 
@@ -235,8 +255,7 @@ def get_earnings_call_service() -> EarningsCallApplicationService:
     kanban_service = get_kanban_service()
     return build_earnings_call_service(
         llm_port=LlmEarningsCallSummarizerAdapter(),
-        writer_port=ObsidianEarningsCallAdapter(),
+        writer_port=ObsidianEarningsCallAdapter(vault_path=_get_vault_path()),
         workflow_port=SqliteEarningsCallWorkflowAdapter(),
         kanban_port=KanbanEarningsCallAdapter(kanban_service=kanban_service),
     )
-

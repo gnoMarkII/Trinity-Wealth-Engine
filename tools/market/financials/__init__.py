@@ -63,7 +63,12 @@ def get_financial_statements(
     - Intentional API Expansion: เพิ่ม default market="US" และ provider_symbol=None (fallback สู่ ticker)
     """
     resolved_symbol = provider_symbol or ticker
-    return FinancialsService().get_financial_statements(
+    # Default concrete adapters are assembled at the composition root.  This
+    # legacy function remains the public compatibility entry point without
+    # making the application service construct infrastructure itself.
+    from tools.market.financials.bootstrap import build_default_financials_service
+
+    return build_default_financials_service().get_financial_statements(
         ticker=ticker,
         market=market,
         provider_symbol=resolved_symbol,

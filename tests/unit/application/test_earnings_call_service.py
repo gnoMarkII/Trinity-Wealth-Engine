@@ -12,8 +12,11 @@ from application.earnings_call.dto import (
     LeaseDTO,
 )
 from application.earnings_call.errors import (
+    EarningsCallLeaseExpiredError,
+    EarningsCallRunInProgressError,
     EarningsCallProcessingError,
     EarningsCallRunNotFoundError,
+    EarningsCallRunNotReadyError,
     EarningsCallTickerMismatchError,
     EarningsCallValidationError,
 )
@@ -76,6 +79,26 @@ def test_validate_and_normalize_success():
     assert ticker == "TSM"
     assert period == "Q4 2024"
     assert "TSM with enough length" in transcript
+
+
+def test_validate_and_normalize_canonicalizes_period_for_idempotency():
+    service = EarningsCallApplicationService(
+        llm_port=MagicMock(),
+        writer_port=MagicMock(),
+        workflow_port=MagicMock(),
+        kanban_port=MagicMock(),
+    )
+    dto = EarningsCallSummarizeRequestDTO(
+        ticker="tsm",
+        period="  q4   2024 ",
+        transcript="This is a valid earnings call transcript for TSM with enough length.",
+    )
+
+    ticker, period, transcript = service.validate_and_normalize(dto)
+
+    assert ticker == "TSM"
+    assert period == "Q4 2024"
+    assert transcript.startswith("This is a valid")
 
 
 @pytest.mark.parametrize(
@@ -342,6 +365,162 @@ def test_empty_llm_output_raises_processing_error():
 
     with pytest.raises(EarningsCallProcessingError, match="empty highlights"):
         service.summarize_and_store(request_dto)
+
+
+def test_execution_lease_loss_blocks_external_work():
+    """A caller that loses its execution lease must not invoke LLM or writer."""
+    workflow_port = MagicMock()
+    workflow_port.claim_or_resume.return_value = ClaimDTO(
+        run=_make_run(status=EarningsCallRunStatus.NEW),
+        owns_execution=True,
+        execution_token="exec-1",
+    )
+    workflow_port.renew_execution_lease.return_value = None
+
+    llm_port = MagicMock()
+    writer_port = MagicMock()
+    service = EarningsCallApplicationService(
+        llm_port=llm_port,
+        writer_port=writer_port,
+        workflow_port=workflow_port,
+        kanban_port=MagicMock(),
+    )
+
+    request_dto = EarningsCallSummarizeRequestDTO(
+        ticker="TSM",
+        period="Q4 2024",
+        transcript="Welcome to TSMC fourth quarter 2024 earnings conference call.",
+    )
+
+    with pytest.raises(EarningsCallRunInProgressError) as exc_info:
+        service.summarize_and_store(request_dto)
+
+    assert exc_info.value.run_id == "run-1"
+
+    llm_port.summarize.assert_not_called()
+    writer_port.write_note.assert_not_called()
+    workflow_port.save_summary.assert_not_called()
+
+
+def test_manual_retry_cannot_bypass_note_written_state():
+    """Retry is a Kanban delivery operation, never a shortcut around the Saga."""
+    workflow_port = MagicMock()
+    workflow_port.get_run.return_value = _make_run(
+        status=EarningsCallRunStatus.NEW,
+        execution_expires_at=0.0,
+    )
+    service = EarningsCallApplicationService(
+        llm_port=MagicMock(),
+        writer_port=MagicMock(),
+        workflow_port=workflow_port,
+        kanban_port=MagicMock(),
+    )
+
+    with pytest.raises(EarningsCallRunNotReadyError):
+        service.retry_run_for_ticker(ticker="TSM", run_id="run-1")
+
+    workflow_port.reset_run_for_manual_retry.assert_not_called()
+
+
+def test_manual_retry_returns_active_execution_without_duplicate_delivery():
+    workflow_port = MagicMock()
+    workflow_port.get_run.return_value = _make_run(
+        status=EarningsCallRunStatus.NOTE_WRITTEN,
+        vault_path="path/to/note.md",
+        execution_expires_at=9999999999.0,
+    )
+    kanban_port = MagicMock()
+    service = EarningsCallApplicationService(
+        llm_port=MagicMock(),
+        writer_port=MagicMock(),
+        workflow_port=workflow_port,
+        kanban_port=kanban_port,
+    )
+
+    result = service.retry_run_for_ticker(ticker="TSM", run_id="run-1")
+
+    assert result.status == EarningsCallRunStatus.NOTE_WRITTEN
+    workflow_port.reset_run_for_manual_retry.assert_not_called()
+    kanban_port.ensure_card.assert_not_called()
+
+
+def test_stale_outbox_fence_is_not_reclassified_as_delivery_failure():
+    workflow_port = MagicMock()
+    workflow_port.complete_kanban_delivery.side_effect = EarningsCallLeaseExpiredError(
+        "stale fence"
+    )
+    kanban_port = MagicMock()
+    kanban_port.ensure_card.return_value = KanbanCardResultDTO(
+        card_id="card-1",
+        created=True,
+        title="[TSM] Earnings Call Q4 2024",
+    )
+    service = EarningsCallApplicationService(
+        llm_port=MagicMock(),
+        writer_port=MagicMock(),
+        workflow_port=workflow_port,
+        kanban_port=kanban_port,
+    )
+    event = EarningsCallOutboxEventDTO(
+        event_id="event-1",
+        run_id="run-1",
+        source_key="source-key-1",
+        event_type="deliver_kanban",
+        status="leased",
+        attempts=1,
+        available_at=0.0,
+    )
+    lease = LeaseDTO(lease_token="lease-1", lease_expires_at=9999999999.0)
+
+    with pytest.raises(EarningsCallRunInProgressError) as exc_info:
+        service._deliver_outbox_event(
+            run=_make_run(status=EarningsCallRunStatus.NOTE_WRITTEN, vault_path="path/to/note.md"),
+            event=event,
+            lease=lease,
+        )
+
+    assert exc_info.value.run_id == "run-1"
+
+    workflow_port.schedule_kanban_retry.assert_not_called()
+    workflow_port.mark_terminal_failure.assert_not_called()
+
+
+def test_outbox_attempt_limit_counts_current_delivery():
+    workflow_port = MagicMock()
+    workflow_port.mark_terminal_failure.return_value = _make_run(
+        status=EarningsCallRunStatus.FAILED,
+        kanban_status=EarningsCallKanbanStatus.FAILED,
+        vault_path="path/to/note.md",
+    )
+    kanban_port = MagicMock()
+    kanban_port.ensure_card.side_effect = RuntimeError("temporary Kanban failure")
+    service = EarningsCallApplicationService(
+        llm_port=MagicMock(),
+        writer_port=MagicMock(),
+        workflow_port=workflow_port,
+        kanban_port=kanban_port,
+        max_attempts=2,
+    )
+    event = EarningsCallOutboxEventDTO(
+        event_id="event-limit",
+        run_id="run-1",
+        source_key="source-key-1",
+        event_type="deliver_kanban",
+        status="leased",
+        attempts=1,
+        available_at=0.0,
+    )
+    lease = LeaseDTO(lease_token="lease-limit", lease_expires_at=9999999999.0)
+
+    result = service._deliver_outbox_event(
+        run=_make_run(status=EarningsCallRunStatus.NOTE_WRITTEN, vault_path="path/to/note.md"),
+        event=event,
+        lease=lease,
+    )
+
+    assert result.status == EarningsCallRunStatus.FAILED
+    workflow_port.mark_terminal_failure.assert_called_once()
+    workflow_port.schedule_kanban_retry.assert_not_called()
 
 
 def test_get_run_ticker_ownership_check():

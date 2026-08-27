@@ -219,6 +219,27 @@ _COLUMN_MIGRATIONS: dict[str, dict[str, str]] = {
         "discord_sent_events": "discord_sent_events TEXT",
         "is_verified": "is_verified INTEGER NOT NULL DEFAULT 1",
     },
+    # Earnings Call tables were introduced before execution/outbox leasing was
+    # finalized.  Keep these additive migrations so an existing deployment
+    # can be upgraded in place instead of failing on SELECT/UPDATE of a new
+    # column.
+    "earnings_call_runs": {
+        "kanban_status": "kanban_status TEXT NOT NULL DEFAULT 'none'",
+        "execution_token": "execution_token TEXT",
+        "execution_expires_at": "execution_expires_at REAL",
+        "attempt_count": "attempt_count INTEGER NOT NULL DEFAULT 0",
+        "last_error_code": "last_error_code TEXT",
+    },
+    "earnings_call_outbox": {
+        "source_key": "source_key TEXT NOT NULL DEFAULT ''",
+        "event_type": "event_type TEXT NOT NULL DEFAULT 'deliver_kanban'",
+        "status": "status TEXT NOT NULL DEFAULT 'pending'",
+        "attempts": "attempts INTEGER NOT NULL DEFAULT 0",
+        "last_error": "last_error TEXT",
+        "available_at": "available_at REAL NOT NULL DEFAULT 0",
+        "lease_token": "lease_token TEXT",
+        "lease_expires_at": "lease_expires_at REAL",
+    },
 }
 
 

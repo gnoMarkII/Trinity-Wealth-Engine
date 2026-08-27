@@ -104,8 +104,7 @@ def test_create_parking_lot_cards_atomic_failure_injection_rollback(tmp_path, mo
     state_db.create_kanban_card(conn, card_id="card_init_1", title="Existing Card", column_name="backlog")
     conn.close()
 
-    import api.db.repositories.kanban_repository as kanban_repo
-    real_get_conn = kanban_repo.get_connection
+    real_get_conn = state_db.get_connection
 
     class FailingConnectionProxy:
         def __init__(self, real_conn):
@@ -135,7 +134,7 @@ def test_create_parking_lot_cards_atomic_failure_injection_rollback(tmp_path, mo
         conn = real_get_conn(*args, **kwargs)
         return FailingConnectionProxy(conn)
 
-    monkeypatch.setattr(kanban_repo, "get_connection", failing_get_connection)
+    monkeypatch.setattr(state_db, "get_connection", failing_get_connection)
 
     ideas = ["Fail Idea 1", "Fail Idea 2", "Fail Idea 3"]
     with pytest.raises(sqlite3.OperationalError):

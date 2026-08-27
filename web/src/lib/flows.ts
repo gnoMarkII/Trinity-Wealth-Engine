@@ -44,3 +44,10 @@ export const SCOPE_OPTIONS: FlowOption[] = [
 export function flowLabel(flow: string): string {
   return (FLOW_LABEL as Record<string, string | undefined>)[flow] ?? flow
 }
+
+/** Flows ที่มี Backend Integration ในการส่งแจ้งเตือนหรือไฟล์เสียงเข้า Discord จริง */
+export const FLOWS_WITH_DISCORD_SUPPORT: ReadonlySet<string> = new Set(['notebooklm'])
+
+export function isDiscordSupportedFlow(flow: string): boolean {
+  return FLOWS_WITH_DISCORD_SUPPORT.has(flow)
+}

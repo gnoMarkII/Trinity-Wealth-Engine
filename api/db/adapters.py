@@ -39,6 +39,10 @@ import api.db.repositories.outbox_repository as outbox_repo_dao
 import api.db.repositories.earnings_call_repository as earnings_call_repo_dao
 import api.db.repositories.earnings_call_outbox_repository as earnings_call_outbox_repo_dao
 from application.earnings_call.ports import EarningsCallWorkflowPort
+from application.earnings_call.errors import (
+    EarningsCallLeaseExpiredError,
+    EarningsCallRunNotReadyError,
+)
 from application.earnings_call.dto import (
     ClaimDTO,
     EarningsCallRunDTO,
@@ -412,13 +416,9 @@ class SqliteInsiderSyncAdapter(InsiderSyncPort):
         self,
         db_path: Optional[str] = None,
         *,
-        provider: Optional[InsiderHistoryProviderPort] = None,
+        provider: InsiderHistoryProviderPort,
     ) -> None:
         self._db_path = db_path
-        if provider is None:
-            from tools.market.adapters.insider_provider import YFinanceInsiderHistoryAdapter
-
-            provider = YFinanceInsiderHistoryAdapter()
         self._provider = provider
 
     def sync(self, ticker: str) -> None:
@@ -507,15 +507,20 @@ class SqliteEarningsCallWorkflowAdapter(_SqliteAdapterBase, EarningsCallWorkflow
         is_existing: bool,
     ) -> EarningsCallRunDTO:
         with self._connection(write=True) as conn:
-            earnings_call_outbox_repo_dao.complete_event(
+            completed = earnings_call_outbox_repo_dao.complete_event(
                 conn=conn,
                 event_id=event_id,
                 lease_token=lease_token,
             )
+            if not completed:
+                raise EarningsCallLeaseExpiredError(
+                    f"Outbox lease for event '{event_id}' has expired or is invalid"
+                )
             return earnings_call_repo_dao.complete_kanban_delivery(
                 conn=conn,
                 run_id=run_id,
                 card_id=card_id,
+                is_existing=is_existing,
             )
 
     def schedule_kanban_retry(
@@ -527,13 +532,17 @@ class SqliteEarningsCallWorkflowAdapter(_SqliteAdapterBase, EarningsCallWorkflow
         retry_delay_seconds: int,
     ) -> EarningsCallRunDTO:
         with self._connection(write=True) as conn:
-            earnings_call_outbox_repo_dao.schedule_retry(
+            scheduled = earnings_call_outbox_repo_dao.schedule_retry(
                 conn=conn,
                 event_id=event_id,
                 lease_token=lease_token,
                 error_code=error_code,
                 retry_delay_seconds=retry_delay_seconds,
             )
+            if not scheduled:
+                raise EarningsCallLeaseExpiredError(
+                    f"Outbox lease for event '{event_id}' has expired or is invalid"
+                )
             return earnings_call_repo_dao.schedule_kanban_retry(
                 conn=conn,
                 run_id=run_id,
@@ -548,12 +557,16 @@ class SqliteEarningsCallWorkflowAdapter(_SqliteAdapterBase, EarningsCallWorkflow
         error_code: str,
     ) -> EarningsCallRunDTO:
         with self._connection(write=True) as conn:
-            earnings_call_outbox_repo_dao.mark_dead_letter(
+            dead_lettered = earnings_call_outbox_repo_dao.mark_dead_letter(
                 conn=conn,
                 event_id=event_id,
                 lease_token=lease_token,
                 error_code=error_code,
             )
+            if not dead_lettered:
+                raise EarningsCallLeaseExpiredError(
+                    f"Outbox lease for event '{event_id}' has expired or is invalid"
+                )
             return earnings_call_repo_dao.mark_terminal_failure(
                 conn=conn,
                 run_id=run_id,
@@ -584,10 +597,18 @@ class SqliteEarningsCallWorkflowAdapter(_SqliteAdapterBase, EarningsCallWorkflow
         with self._connection(write=True) as conn:
             run_dto = earnings_call_repo_dao.get_run(conn=conn, run_id=run_id)
             if not run_dto:
-                raise RuntimeError(f"Run '{run_id}' not found")
-            event_dto, lease_dto = earnings_call_outbox_repo_dao.reset_for_manual_retry(
-                conn=conn,
-                run_id=run_id,
-                lease_seconds=lease_seconds,
-            )
+                raise EarningsCallRunNotReadyError(f"Run '{run_id}' not found")
+            try:
+                event_dto, lease_dto = earnings_call_outbox_repo_dao.reset_for_manual_retry(
+                    conn=conn,
+                    run_id=run_id,
+                    source_key=run_dto.source_key,
+                    lease_seconds=lease_seconds,
+                )
+            except RuntimeError as exc:
+                # A live lease belongs to another worker (or the event is
+                # already completed).  Surface a typed application error so
+                # the inbound adapter can return a deterministic 409 rather
+                # than leaking an infrastructure failure as HTTP 500.
+                raise EarningsCallRunNotReadyError(str(exc)) from exc
             return run_dto, event_dto, lease_dto

@@ -162,13 +162,16 @@ def complete_kanban_delivery(
     conn: sqlite3.Connection,
     run_id: str,
     card_id: str,
+    is_existing: bool = False,
 ) -> EarningsCallRunDTO:
     now = time.time()
+    kanban_status = "existing" if is_existing else "created"
     conn.execute(
-        "UPDATE earnings_call_runs SET status = 'completed', kanban_status = 'created', "
-        "  kanban_card_id = ?, execution_token = NULL, execution_expires_at = NULL, updated_at = ? "
+        "UPDATE earnings_call_runs SET status = 'completed', kanban_status = ?, "
+        "  kanban_card_id = ?, last_error_code = NULL, execution_token = NULL, "
+        "  execution_expires_at = NULL, updated_at = ? "
         "WHERE run_id = ?",
-        (card_id, now, run_id),
+        (kanban_status, card_id, now, run_id),
     )
     row = conn.execute("SELECT * FROM earnings_call_runs WHERE run_id = ?", (run_id,)).fetchone()
     return _row_to_run_dto(row)

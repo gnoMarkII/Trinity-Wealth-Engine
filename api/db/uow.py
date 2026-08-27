@@ -5,9 +5,12 @@ functions and connection-bound adapters never commit themselves; the context
 manager decides whether the whole unit is committed or rolled back.
 """
 import sqlite3
-from typing import Optional
+from typing import TYPE_CHECKING, Optional
 
 from api.db.connection import get_connection
+
+if TYPE_CHECKING:
+    from application.earnings_call.ports import EarningsCallWorkflowPort
 
 
 class DbUnitOfWork:
@@ -22,6 +25,7 @@ class DbUnitOfWork:
         self._kanban = None
         self._notebooklm = None
         self._outbox = None
+        self._earnings_call_workflow = None
 
     def __enter__(self) -> "DbUnitOfWork":
         if self._conn is None:
@@ -108,8 +112,12 @@ class DbUnitOfWork:
         return self._outbox
 
     @property
-    def earnings_call_workflow(self):
+    def earnings_call_workflow(self) -> "EarningsCallWorkflowPort":
         """Connection-bound :class:`EarningsCallWorkflowPort` adapter."""
-        from api.db.adapters import SqliteEarningsCallWorkflowAdapter
+        if self._earnings_call_workflow is None:
+            from api.db.adapters import SqliteEarningsCallWorkflowAdapter
 
-        return SqliteEarningsCallWorkflowAdapter(conn=self.conn)
+            self._earnings_call_workflow = SqliteEarningsCallWorkflowAdapter(
+                conn=self.conn
+            )
+        return self._earnings_call_workflow

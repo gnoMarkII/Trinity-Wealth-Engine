@@ -9,6 +9,7 @@ from tools.portfolio.domain.ledger_change import LedgerChange
 from tools.portfolio.domain.events import SystemJournalEvent
 from tools.portfolio.domain.mutation import PortfolioMutation
 from tools.portfolio.adapters.markdown.repository_adapter import MarkdownVaultRepositoryAdapter
+from tools.portfolio.services.ledger_service import PortfolioLedgerService
 from tools.portfolio.adapters.markdown.paths import (
     get_portfolio_dir,
     get_portfolio_filepath,
@@ -36,6 +37,38 @@ def test_system_journal_event_from_entry_normalizes_iso_datetime():
     )
 
     assert event.timestamp.startswith("2026-08-23 10:30:45")
+
+
+def test_ledger_mutations_stage_audit_events_with_state_and_trade_log(temp_vault_portfolio):
+    """Ledger note/edit/delete events share the repository's durable mutation unit."""
+    repo, pid = temp_vault_portfolio
+    transaction_id = "tx_ledger_audit"
+    ledger_row = {
+        "Transaction_ID": transaction_id,
+        "Timestamp": "2026-08-23 11:00:00",
+        "Symbol": "PTT",
+        "Action": "BUY",
+        "Units": "10",
+        "Price": "100.0",
+        "Currency": "THB",
+        "FX_Rate": "",
+        "Cost_THB": "1000.0",
+        "Realized_PnL_THB": "0.0",
+        "Notes": "Initial note",
+    }
+    with repo.unit_of_work(pid) as uow:
+        uow.commit(uow.load_state(), LedgerChange(kind="append", row=ledger_row, tx_id=transaction_id))
+
+    service = PortfolioLedgerService(repo)
+    service.update_trade_note(transaction_id, "Updated note", portfolio_id=pid)
+    service.edit_transaction(transaction_id, price=110.0, adjust_cash=False, portfolio_id=pid)
+    service.delete_transaction(transaction_id, adjust_cash=False, portfolio_id=pid)
+
+    assert repo.read_trade_log(pid) == []
+    journal_text = get_journal_filepath(pid).read_text(encoding="utf-8")
+    assert "[TRADE NOTE UPDATED]" in journal_text
+    assert "[TRANSACTION EDITED]" in journal_text
+    assert "[TRANSACTION DELETED]" in journal_text
 
 
 @pytest.fixture

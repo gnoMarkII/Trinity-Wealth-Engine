@@ -40,17 +40,33 @@ Domain models/calculations  <---  outbound ports
 | Jobs | `application/jobs/service.py` | `JobRepositoryPort` | SQLite job adapter |
 | Kanban | `application/kanban/service.py` | `KanbanRepositoryPort` | SQLite Kanban adapter |
 | NotebookLM | `application/notebooklm/service.py` | job/card/dispatch/binary ports | SQLite, queue, CLI adapter |
+| Earnings Call | `application/earnings_call/service.py` | LLM, note writer, Kanban, workflow/outbox ports | Gemini/LLM, injectable Obsidian vault, SQLite run/outbox, Kanban service |
 
 ## Transaction ownership
 
 `api/db/repositories/*` execute SQL only. `api/db/adapters.py` supports both
 standalone legacy calls and connection-bound adapters. A `DbUnitOfWork` exposes
-bound `jobs`, `kanban`, `notebooklm`, and notification `outbox` repositories;
-successful exit commits the whole unit and exceptions roll it back.
+bound `jobs`, `kanban`, `notebooklm`, notification `outbox`, and the typed
+`earnings_call_workflow` adapter; each is cached for the lifetime of the UoW
+and no dynamic DAO proxy is exposed. Successful exit commits the whole unit
+and exceptions roll it back. Raw repositories do not import or construct the
+connection factory; connection ownership stays with the UoW or compatibility
+facade.
 `notification_outbox` stores durable, idempotent external delivery events and
 is marked sent only after Discord acknowledges delivery. `api/state_db.py` remains a
 compatibility facade and is the only place where legacy connection functions
 perform their historical commits.
+
+Earnings Call uses a separate Saga run (`earnings_call_runs`) and transactional
+outbox (`earnings_call_outbox`).  The application service owns the state
+machine and canonical source key; SQLite owns execution leases and outbox
+fencing tokens.  LLM and vault writes are performed only by the execution-lease
+owner, while Kanban delivery is idempotent by `source_key` and may be retried
+by the worker.  `api/main.py` constructs the worker with an injected service;
+set `ENABLE_BACKGROUND_WORKERS=false` (and `SCHEDULER_ENABLED=false`) for
+tests or one-shot deployments.  `ENABLE_JOB_WORKERS` is an independent
+override for the durable agent queue, so disabling the Earnings Call outbox
+does not silently leave API-dispatched jobs queued forever.
 
 Portfolio ledger mutations use the repository UoW and staged `LedgerChange`; a
 filesystem/ledger side effect must not happen before UoW commit.
@@ -64,7 +80,9 @@ filesystem/ledger side effect must not happen before UoW commit.
   their SQLite/provider work is behind ports and driven adapters.
 - Insider synchronization now uses a normalized history provider plus a
   connection-bound SQLite adapter; the provider fetch and ledger transaction
-  are no longer coupled in the API route path.
+  are no longer coupled in the API route path. The concrete yfinance provider
+  is assembled only by `api/dependencies.py`; `SqliteInsiderSyncAdapter`
+  requires an injected `InsiderHistoryProviderPort`.
 - Agent and NotebookLM HTTP endpoints are inbound adapters in
   `api/routers/agents_router.py` and `api/routers/notebooklm_router.py`.
 - Macro news-funnel card creation is an application use case; its SQLite
@@ -86,6 +104,9 @@ filesystem/ledger side effect must not happen before UoW commit.
 - OHLCV application query services require injected providers/resolver; the
   yfinance adapter is constructed by the bootstrap and the cache is process
   scoped so the old endpoint behavior remains intact.
+- Earnings Call summarization, note persistence, and Kanban delivery are
+  orchestrated by `EarningsCallApplicationService`; retries use execution and
+  outbox leases and never bypass the note-written state.
 - Architecture tests cover domain isolation, application/router infrastructure
   imports, raw DAO transaction rules, lower-layer API imports, and dynamic
   `sys.modules` lookups.

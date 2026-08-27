@@ -171,3 +171,38 @@ def test_standalone_claim_resume_is_persisted(test_db_path: str):
     conn = get_connection(test_db_path)
     assert get_job(conn, "job_claim_persisted")["status"] == "queued"
     conn.close()
+
+
+def test_uow_exposes_connection_bound_earnings_call_daos(test_db_path: str):
+    """Earnings Call workflow adapter composes through the same UoW transaction."""
+    with DbUnitOfWork(db_path=test_db_path) as uow:
+        workflow = uow.earnings_call_workflow
+        assert workflow is uow.earnings_call_workflow
+        claim = workflow.claim_or_resume(
+            source_key="uow-earnings-source",
+            ticker="TSM",
+            period="Q4 2024",
+            transcript_hash="hash-uow",
+            prompt_version="v1",
+            lease_seconds=60,
+        )
+        assert claim.owns_execution is True
+        assert workflow.get_run(claim.run.run_id).run_id == claim.run.run_id
+
+        # The typed workflow boundary owns both run and outbox DAOs.  A run
+        # with a leased event is not returned as pending until its lease ends.
+        run = workflow.record_note_and_enqueue(
+            run_id=claim.run.run_id,
+            execution_token=claim.execution_token,
+            vault_path="note.md",
+            outbox_lease_seconds=60,
+        )
+        assert run[1].event_id
+        assert run[2].lease_token
+        assert workflow.list_pending_outbox(limit=10) == []
+
+    conn = get_connection(test_db_path)
+    assert conn.execute(
+        "SELECT 1 FROM earnings_call_outbox WHERE event_id = ?", (run[1].event_id,)
+    ).fetchone()
+    conn.close()

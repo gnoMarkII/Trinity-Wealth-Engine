@@ -18,6 +18,8 @@ from application.earnings_call.errors import (
     EarningsCallProviderUnavailableError,
     EarningsCallRunNotFoundError,
     EarningsCallTickerMismatchError,
+    EarningsCallRunNotReadyError,
+    EarningsCallRunInProgressError,
 )
 from application.earnings_call.service import EarningsCallApplicationService
 from application.earnings_call.workflow import EarningsCallRunStatus
@@ -88,6 +90,16 @@ def summarize_earnings_call(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="LLM provider is currently unavailable or timed out. Please try again shortly.",
         ) from exc
+    except EarningsCallRunInProgressError as exc:
+        try:
+            run = service.get_run_for_ticker(ticker=ticker, run_id=exc.run_id)
+        except Exception as read_exc:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="An unexpected error occurred while reading the earnings call run.",
+            ) from read_exc
+        response.status_code = status.HTTP_202_ACCEPTED
+        return _to_summarize_response(run)
     except Exception as exc:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -148,6 +160,21 @@ def retry_earnings_call_run(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=str(exc),
         ) from exc
+    except EarningsCallRunNotReadyError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=str(exc),
+        ) from exc
+    except EarningsCallRunInProgressError as exc:
+        try:
+            run = service.get_run_for_ticker(ticker=ticker, run_id=exc.run_id)
+        except Exception as read_exc:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="An unexpected error occurred while reading the earnings call run.",
+            ) from read_exc
+        response.status_code = status.HTTP_202_ACCEPTED
+        return _to_run_response(run)
     except Exception as exc:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
