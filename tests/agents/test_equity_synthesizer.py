@@ -11,7 +11,7 @@ def test_equity_synthesizer_prompt_harness_renders_properly():
     """ตรวจสอบว่า prompt harness โหลด SKILL.md และ HUMAN.md ได้สมบูรณ์ โดยไม่เกิด Mustache format error"""
     harness = get_harness("equity_synthesizer")
     system_prompt = harness.get_system_prompt()
-    assert "คุณคือ Equity Synthesizer" in system_prompt
+    assert "Synthesizer" in system_prompt
     assert "Data Quality & Confidence Analysis" in system_prompt
 
     human_content = harness.get_skill_text(

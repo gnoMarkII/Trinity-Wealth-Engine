@@ -9,6 +9,7 @@ import yfinance as yf
 from pydantic import BaseModel, model_validator
 from langchain_core.tools import tool
 from core.logger import get_logger
+from schemas.micro_quant_schemas import PiotroskiFScoreBreakdown, DataStatus
 from tools.market.asset_resolver import ResolvedAsset, resolve_asset, AssetClass
 
 log = get_logger(__name__)
@@ -58,6 +59,16 @@ class FinancialAutopsyPeriod(BaseModel):
     interest_expense: Optional[float] = None
     tax_expense: Optional[float] = None
     income_before_tax: Optional[float] = None
+    # Additive fields for Piotroski 9 Criteria & Quality of Earnings
+    gross_profit: Optional[float] = None
+    total_assets: Optional[float] = None
+    current_assets: Optional[float] = None
+    current_liabilities: Optional[float] = None
+    long_term_debt: Optional[float] = None
+    stockholders_equity: Optional[float] = None
+    shares_outstanding: Optional[float] = None
+    source_tier: Optional[Literal["filing_authoritative", "primary_best_effort", "fallback", "unknown"]] = None
+    period_type: Optional[Literal["annual", "quarterly", "ttm", "unknown"]] = None
 
 
 class FinancialAutopsySnapshot(BaseModel):
@@ -67,6 +78,7 @@ class FinancialAutopsySnapshot(BaseModel):
     currency: str
     unit: str = "raw"
     source: str = "Yahoo Finance (yfinance)"
+    source_tier: Optional[Literal["filing_authoritative", "primary_best_effort", "fallback", "unknown"]] = None
     retrieval_timestamp: str
     periods: List[FinancialAutopsyPeriod]
     current_pe: Optional[float] = None
@@ -342,14 +354,23 @@ def get_financial_autopsy(resolved_asset: ResolvedAsset) -> FinancialAutopsyFetc
             ["Total Debt", "Total Debt And Capital Lease Obligation"]
         )
         if total_debt is None:
-            lt_debt = _extract_df_val_aligned(balance_sheet, col, ["Long Term Debt And Capital Lease Obligation", "Long Term Debt"])
-            st_debt = _extract_df_val_aligned(balance_sheet, col, ["Short Term Debt And Capital Lease Obligation", "Short Term Debt", "Current Debt"])
+            lt_debt = _extract_df_val_aligned(balance_sheet, col, ["Long Term Debt And Capital Lease Obligation", "Long Term Debt", "Long Term Debt Noncurrent"])
+            st_debt = _extract_df_val_aligned(balance_sheet, col, ["Short Term Debt And Capital Lease Obligation", "Short Term Debt", "Current Debt", "Short Term Borrowings"])
             if lt_debt is not None or st_debt is not None:
                 total_debt = (lt_debt or 0.0) + (st_debt or 0.0)
 
+        # Expanded Balance Sheet Items for Piotroski F-Score
+        tot_assets = _extract_df_val_aligned(balance_sheet, col, ["Total Assets", "Assets"])
+        curr_assets = _extract_df_val_aligned(balance_sheet, col, ["Current Assets", "Total Current Assets", "Assets Current"])
+        curr_liab = _extract_df_val_aligned(balance_sheet, col, ["Current Liabilities", "Total Current Liabilities", "Liabilities Current"])
+        lt_debt_val = _extract_df_val_aligned(balance_sheet, col, ["Long Term Debt And Capital Lease Obligation", "Long Term Debt", "Long Term Debt Noncurrent"])
+        stock_equity = _extract_df_val_aligned(balance_sheet, col, ["Stockholders Equity", "Total Stockholder Equity", "Common Stock Equity", "Total Equity Gross Minority Interest"])
+        shares_out = _extract_df_val_aligned(balance_sheet, col, ["Share Issued", "Ordinary Shares Number", "Common Stock"])
+
         # Financials / Income statement items
-        rev = _extract_df_val_aligned(financials, col, ["Total Revenue", "Operating Revenue"])
-        net_inc = _extract_df_val_aligned(financials, col, ["Net Income", "Net Income Common Stockholders"])
+        rev = _extract_df_val_aligned(financials, col, ["Total Revenue", "Operating Revenue", "Revenue"])
+        gross_prof = _extract_df_val_aligned(financials, col, ["Gross Profit"])
+        net_inc = _extract_df_val_aligned(financials, col, ["Net Income", "Net Income Common Stockholders", "Net Income Loss"])
         ebit_val = _extract_df_val_aligned(financials, col, ["EBIT", "Total Operating Income As Reported", "Operating Income"])
         op_income_val = _extract_df_val_aligned(financials, col, ["Operating Income", "Total Operating Income As Reported", "EBIT"])
         interest_exp = _extract_df_val_aligned(financials, col, ["Interest Expense", "Interest Expense Non Operating"])
@@ -362,7 +383,7 @@ def get_financial_autopsy(resolved_asset: ResolvedAsset) -> FinancialAutopsyFetc
             payout_pct = round((abs(div_paid) / net_inc) * 100.0, 2)
 
         # Only add period if at least one quantitative metric exists
-        if any(v is not None for v in (fcf, ocf, capex, total_debt, rev, net_inc, div_paid, ebit_val, op_income_val)):
+        if any(v is not None for v in (fcf, ocf, capex, total_debt, rev, net_inc, div_paid, ebit_val, op_income_val, tot_assets)):
             periods.append(
                 FinancialAutopsyPeriod(
                     fiscal_period_end=dt_str,
@@ -379,6 +400,15 @@ def get_financial_autopsy(resolved_asset: ResolvedAsset) -> FinancialAutopsyFetc
                     interest_expense=interest_exp,
                     tax_expense=tax_exp,
                     income_before_tax=pretax_inc,
+                    gross_profit=gross_prof,
+                    total_assets=tot_assets,
+                    current_assets=curr_assets,
+                    current_liabilities=curr_liab,
+                    long_term_debt=lt_debt_val,
+                    stockholders_equity=stock_equity,
+                    shares_outstanding=shares_out,
+                    source_tier="primary_best_effort",
+                    period_type="annual",
                 )
             )
 
@@ -418,6 +448,7 @@ def get_financial_autopsy(resolved_asset: ResolvedAsset) -> FinancialAutopsyFetc
         currency=str(currency),
         unit="raw",
         source="Yahoo Finance (yfinance)",
+        source_tier="primary_best_effort",
         retrieval_timestamp=datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         periods=periods,
         current_pe=current_pe,
@@ -433,6 +464,130 @@ def get_financial_autopsy(resolved_asset: ResolvedAsset) -> FinancialAutopsyFetc
     )
     _AUTOPSY_SUCCESS_CACHE[prov_sym] = (succ_res, now)
     return succ_res
+
+
+def calculate_piotroski_f_score(
+    periods: List[FinancialAutopsyPeriod],
+    sector: Optional[str] = None,
+) -> PiotroskiFScoreBreakdown:
+    """คำนวณ Piotroski F-Score 9 ข้อเต็มรูปแบบ (0-9) พร้อมกฎ Sector Exclusion และ Data Status ชัดเจน"""
+    excluded_sectors = ["financials", "financial services", "real estate", "banks", "insurance", "reit"]
+    if sector and sector.strip().lower() in excluded_sectors:
+        return PiotroskiFScoreBreakdown(
+            f_score=None,
+            status="not_applicable",
+            is_eligible=False,
+            exclusion_reason=f"Sector '{sector}' is excluded from standard Piotroski F-Score (bank/financial/REIT structure)",
+        )
+
+    if not periods or len(periods) < 2:
+        return PiotroskiFScoreBreakdown(
+            f_score=None,
+            status="unavailable" if not periods else "partial",
+            is_eligible=True,
+            exclusion_reason="At least 2 historical periods are required to compute Piotroski F-Score",
+        )
+
+    t0 = periods[0]
+    t1 = periods[1]
+
+    roa_pos = (t0.net_income > 0) if (t0.net_income is not None) else None
+
+    cfo_pos = (t0.operating_cash_flow > 0) if (t0.operating_cash_flow is not None) else None
+
+    delta_roa = None
+    if (t0.net_income is not None and t0.total_assets and t0.total_assets > 0 and
+        t1.net_income is not None and t1.total_assets and t1.total_assets > 0):
+        roa0 = t0.net_income / t0.total_assets
+        roa1 = t1.net_income / t1.total_assets
+        delta_roa = roa0 > roa1
+    elif t0.net_income is not None and t1.net_income is not None:
+        delta_roa = t0.net_income > t1.net_income
+
+    accrual = None
+    if t0.operating_cash_flow is not None and t0.net_income is not None:
+        accrual = t0.operating_cash_flow > t0.net_income
+
+    delta_lev = None
+    lt_debt0 = t0.long_term_debt if t0.long_term_debt is not None else t0.total_debt
+    lt_debt1 = t1.long_term_debt if t1.long_term_debt is not None else t1.total_debt
+    if lt_debt0 is not None and lt_debt1 is not None:
+        if t0.total_assets and t0.total_assets > 0 and t1.total_assets and t1.total_assets > 0:
+            lev0 = lt_debt0 / t0.total_assets
+            lev1 = lt_debt1 / t1.total_assets
+            delta_lev = lev0 <= lev1
+        else:
+            delta_lev = lt_debt0 <= lt_debt1
+
+    delta_liq = None
+    if (t0.current_assets is not None and t0.current_liabilities and t0.current_liabilities > 0 and
+        t1.current_assets is not None and t1.current_liabilities and t1.current_liabilities > 0):
+        cr0 = t0.current_assets / t0.current_liabilities
+        cr1 = t1.current_assets / t1.current_liabilities
+        delta_liq = cr0 > cr1
+
+    no_dilution = None
+    if t0.shares_outstanding is not None and t1.shares_outstanding is not None and t1.shares_outstanding > 0:
+        no_dilution = t0.shares_outstanding <= (t1.shares_outstanding * 1.01)
+
+    delta_gm = None
+    if (t0.gross_profit is not None and t0.total_revenue and t0.total_revenue > 0 and
+        t1.gross_profit is not None and t1.total_revenue and t1.total_revenue > 0):
+        gm0 = t0.gross_profit / t0.total_revenue
+        gm1 = t1.gross_profit / t1.total_revenue
+        delta_gm = gm0 > gm1
+    elif (t0.ebit is not None and t0.total_revenue and t0.total_revenue > 0 and
+          t1.ebit is not None and t1.total_revenue and t1.total_revenue > 0):
+        delta_gm = (t0.ebit / t0.total_revenue) > (t1.ebit / t1.total_revenue)
+
+    delta_at = None
+    if (t0.total_revenue is not None and t0.total_assets and t0.total_assets > 0 and
+        t1.total_revenue is not None and t1.total_assets and t1.total_assets > 0):
+        at0 = t0.total_revenue / t0.total_assets
+        at1 = t1.total_revenue / t1.total_assets
+        delta_at = at0 > at1
+    elif t0.total_revenue is not None and t1.total_revenue is not None:
+        delta_at = t0.total_revenue > t1.total_revenue
+
+    criteria_list = [
+        roa_pos, cfo_pos, delta_roa, accrual,
+        delta_lev, delta_liq, no_dilution,
+        delta_gm, delta_at
+    ]
+
+    valid_count = sum(1 for c in criteria_list if c is not None)
+    if valid_count < 5:
+        return PiotroskiFScoreBreakdown(
+            roa_positive=roa_pos,
+            cfo_positive=cfo_pos,
+            delta_roa_positive=delta_roa,
+            accrual_quality=accrual,
+            delta_leverage_improved=delta_lev,
+            delta_liquidity_improved=delta_liq,
+            no_share_dilution=no_dilution,
+            delta_gross_margin_improved=delta_gm,
+            delta_asset_turnover_improved=delta_at,
+            f_score=None,
+            status="partial",
+            is_eligible=True,
+            exclusion_reason=f"Insufficient data to score F-Score (only {valid_count}/9 criteria available)",
+        )
+
+    score = sum(1 for c in criteria_list if c is True)
+    return PiotroskiFScoreBreakdown(
+        roa_positive=roa_pos,
+        cfo_positive=cfo_pos,
+        delta_roa_positive=delta_roa,
+        accrual_quality=accrual,
+        delta_leverage_improved=delta_lev,
+        delta_liquidity_improved=delta_liq,
+        no_share_dilution=no_dilution,
+        delta_gross_margin_improved=delta_gm,
+        delta_asset_turnover_improved=delta_at,
+        f_score=score,
+        status="available" if valid_count == 9 else "partial",
+        is_eligible=True,
+    )
 
 
 @tool

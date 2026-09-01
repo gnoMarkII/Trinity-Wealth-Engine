@@ -82,6 +82,31 @@ def run_job_workflow(
     with SqliteSaver.from_conn_string(checkpoint_path) as checkpointer:
         terminal_status: Optional[str] = None
         terminal_error: Optional[str] = None
+
+        if flow == "equity_refresh":
+            from application.equity.refresh_workflow import EquityRefreshPayload, execute_equity_refresh_workflow
+            try:
+                if instruction.strip().startswith("{"):
+                    payload_dict = json.loads(instruction)
+                    refresh_payload = EquityRefreshPayload.model_validate(payload_dict)
+                else:
+                    ticker = instruction.strip().upper()
+                    market = "TH" if ticker.endswith(".BK") else "US"
+                    refresh_payload = EquityRefreshPayload(ticker=ticker, market=market)
+            except Exception:
+                ticker = instruction.strip().upper()
+                market = "TH" if ticker.endswith(".BK") else "US"
+                refresh_payload = EquityRefreshPayload(ticker=ticker, market=market)
+
+            terminal_status, terminal_error = execute_equity_refresh_workflow(
+                payload=refresh_payload,
+                job_repo=state,
+                job_id=job_id,
+            )
+            if terminal_status:
+                state.update_job_status(job_id, terminal_status, error_message=terminal_error)
+            return
+
         if flow == "news_youtube":
             from agents.news_youtube_flow import build_news_youtube_graph
             graph = build_news_youtube_graph(checkpointer=checkpointer)
@@ -119,6 +144,13 @@ def run_job_workflow(
                     state.set_job_awaiting_approval(job_id, json.dumps(payload, ensure_ascii=False))
                     return
                 _log_manager_messages(state, job_id, event)
+                if flow == "manager":
+                    synth_event = event.get("equity_synthesizer")
+                    if isinstance(synth_event, dict):
+                        synth_out = synth_event.get("equity_output") or {}
+                        if "LLM_UNAVAILABLE" in synth_out.get("narrative_analysis", "") or synth_out.get("narrative_status") == "unavailable":
+                            terminal_status = "done_with_warnings"
+                            terminal_error = "Numbers refreshed; narrative unavailable"
                 if flow == "youtube_pitch":
                     for node_name in ("synthesize_notebooklm", "persist_parking_lot"):
                         node_update = event.get(node_name)

@@ -16,13 +16,8 @@ def _fetch_rss_with_retry(url: str) -> bytes:
 
 TARGET_CHANNELS = {
     "@PiSecurities": "UCwhGe4-luVrfHN1bPDqBakQ",
-    "@Finnomena": "UC_EgP5CYTAwJwU2wbnfN37w",
     "@bualuangsec": "UCLpPa3UthE1VlMlZ8Thm93w",
     "@pingprakit6949": "UCf2qSf_iiUuSPEHzme0g79w",
-    "@TheStandardWealth": "UCcDjvLn1-qwPWL36erYwyUg",
-    "@ksecuritieschannel": "UCgjKjt3dUjHCn2EskjjJYBg",
-    "@Tam-Eig": "UCnj8uUh6SHdZi3FvWJj9Dyw",
-    "@Wealthion": "UCKMeK-HGHfUFFArZ91rzv5A",
 }
 
 _SAVE_DIR = Path(__file__).resolve().parents[2] / "memories" / "30_Knowledge_Base" / "YouTube_Summaries" / "Inbox"

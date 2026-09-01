@@ -21,6 +21,7 @@ from api import auth, jobs, notebooklm_worker, routes_debug, routes_kanban
 from api.db import get_connection, init_schema
 from api.routers.agents_router import router as agents_router
 from api.routers.notebooklm_router import router as notebooklm_router
+from api.routers.health_router import router as health_router
 from api.routers.portfolio import router as portfolio_router
 from api.routers.equity import router as equity_router
 from api.routers.equity.router_ohlcv import router as ohlcv_router
@@ -58,7 +59,7 @@ async def lifespan(app: FastAPI):
     # ของคิวหนึ่งไปกวาดงานอีก flow เข้าคิวตัวเอง (list_jobs_by_status ไม่ filter ตาม flow เอง)
     app.state.job_queue = jobs.JobQueue(
         run_fn=jobs.default_run_fn,
-        flows={"manager", "news_youtube", "news_funnel", "youtube_pitch"},
+        flows={"manager", "news_youtube", "news_funnel", "youtube_pitch", "equity_refresh"},
     )
 
     app.state.notebooklm_job_queue = jobs.JobQueue(
@@ -118,6 +119,7 @@ app.include_router(routes_debug.router)
 app.include_router(notebooklm_router)
 app.include_router(equity_router)
 app.include_router(ohlcv_router)
+app.include_router(health_router)
 
 
 @app.get("/health")

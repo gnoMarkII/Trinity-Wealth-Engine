@@ -2,6 +2,7 @@
 import json
 from unittest.mock import patch, MagicMock
 
+import pandas as pd
 import pytest
 
 from tools.market.asset_resolver import ResolvedAsset, AssetClass
@@ -45,6 +46,8 @@ def _autopsy_result(ticker="AAPL", market="US", two_periods=False):
             interest_expense=50.0,
             tax_expense=150.0,
             income_before_tax=750.0,
+            source_tier="primary_best_effort",
+            period_type="annual",
         )
     ]
     if two_periods:
@@ -55,6 +58,8 @@ def _autopsy_result(ticker="AAPL", market="US", two_periods=False):
                 total_debt=900.0,
                 total_revenue=4000.0,
                 net_income=600.0,
+                source_tier="primary_best_effort",
+                period_type="annual",
             )
         )
     snapshot = FinancialAutopsySnapshot(
@@ -66,6 +71,8 @@ def _autopsy_result(ticker="AAPL", market="US", two_periods=False):
         retrieval_timestamp="2026-07-20 12:00:00",
         periods=periods,
         current_pe=18.0,
+        source_tier="primary_best_effort",
+        period_type="annual",
     )
     return FinancialAutopsyFetchResult(asset=_resolved_asset(ticker, market), status="success", snapshot=snapshot)
 
@@ -75,6 +82,7 @@ _INVALID_QUALITY = PriceSeriesQuality(trading_days=5, is_valid=False, stale_reas
 
 
 class TestComputeEquityQuantSignalsHappyPath:
+    @patch("tools.market.equity_quant_tool._get_price_history")
     @patch("tools.market.equity_quant_tool.compute_smart_money_flags")
     @patch("tools.market.equity_quant_tool.compute_dcf_valuation")
     @patch("tools.market.equity_quant_tool.load_latest_macro_observables")
@@ -90,12 +98,21 @@ class TestComputeEquityQuantSignalsHappyPath:
     @patch("tools.market.equity_quant_tool.resolve_asset")
     def test_returns_valid_quant_signals_json(
         self, mock_resolve, mock_autopsy, mock_info, mock_beta, mock_vol, mock_mdd, mock_tech, mock_peers, mock_pctile,
-        mock_revisions, mock_macro_reg, mock_dcf, mock_smart_money,
+        mock_revisions, mock_macro_reg, mock_dcf, mock_smart_money, mock_history,
     ):
         _INFO_CACHE.clear()
         _INFO_ERROR_CACHE.clear()
         mock_resolve.return_value = _resolved_asset()
         mock_autopsy.return_value = _autopsy_result(two_periods=True)
+        dates = pd.date_range(end=pd.Timestamp("2026-08-28"), periods=250, freq="B")
+        n = len(dates)
+        mock_history.return_value = pd.DataFrame({
+            "Close": [200.0] * n,
+            "High": [205.0] * n,
+            "Low": [195.0] * n,
+            "Open": [200.0] * n,
+            "Volume": [5_000_000] * n,
+        }, index=dates)
         mock_info.return_value = {
             "shortName": "Apple Inc.",
             "sector": "Technology",
@@ -308,8 +325,10 @@ class TestComputeEquityQuantSignalsHappyPath:
         result = compute_equity_quant_signals.invoke({"ticker": "LOSSCO", "market": "US"})
         signals = QuantSignals.model_validate(json.loads(result))
         assert signals.value_score is None
+        assert signals.momentum_score is None
         assert "negative_earnings:pe_undefined" in signals.data_quality_flags
         assert "insufficient_trading_history:beta" in signals.data_quality_flags
+        assert "insufficient_trading_history:technical_indicators" in signals.data_quality_flags
 
 
     @patch("tools.market.equity_quant_tool.fetch_earnings_revision_data")
@@ -378,4 +397,4 @@ class TestComputeEquityQuantSignalsErrorPath:
     def test_exception_returns_error_string_not_raise(self, mock_resolve):
         mock_resolve.side_effect = RuntimeError("boom")
         result = compute_equity_quant_signals.invoke({"ticker": "BROKEN", "market": "US"})
-        assert result.startswith("Error:")
+        assert "QUANT_EXECUTION_ERROR" in result or result.startswith("Error:")

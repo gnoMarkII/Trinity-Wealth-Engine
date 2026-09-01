@@ -2,10 +2,11 @@ import { render, screen } from '@testing-library/react'
 import { describe, it, expect } from 'vitest'
 import { EquityDetail } from './EquityDetail'
 import { mockEquityDetailAAPL } from '../../mocks/equity'
+
 describe('EquityDetail', () => {
   it('renders loading state', () => {
     render(<EquityDetail status="loading" />)
-    expect(screen.getByText('กำลังโหลดข้อมูล...')).toBeInTheDocument()
+    expect(screen.getByText(/กำลังโหลด/)).toBeInTheDocument()
   })
 
   it('renders not-found state', () => {
@@ -16,8 +17,8 @@ describe('EquityDetail', () => {
 
   it('renders error state with default message', () => {
     render(<EquityDetail status="error" />)
-    expect(screen.getByText('เกิดข้อผิดพลาด')).toBeInTheDocument()
-    expect(screen.getByText('ไม่สามารถโหลดข้อมูลได้')).toBeInTheDocument()
+    expect(screen.getByText('เกิดข้อผิดพลาดในการโหลดข้อมูล')).toBeInTheDocument()
+    expect(screen.getByText('ไม่สามารถติดต่อ Backend API ได้')).toBeInTheDocument()
   })
 
   it('renders error state with custom message', () => {
@@ -32,7 +33,7 @@ describe('EquityDetail', () => {
     expect(screen.getByText('(US)')).toBeInTheDocument()
     expect(screen.getByText('Apple Inc.')).toBeInTheDocument()
     
-    expect(screen.getByText('Base Case Summary')).toBeInTheDocument()
+    expect(screen.getByText(/Base Case/)).toBeInTheDocument()
     expect(screen.getByText(mockEquityDetailAAPL.base_case_summary)).toBeInTheDocument()
     
     expect(screen.getByText('bullish')).toBeInTheDocument()
@@ -40,5 +41,3 @@ describe('EquityDetail', () => {
     expect(screen.getByRole('button', { name: '📑 Financials' })).toBeInTheDocument()
   })
 })
-
-

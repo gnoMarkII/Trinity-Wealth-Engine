@@ -1,0 +1,79 @@
+{
+  "ticker": "FTNT",
+  "market": "US",
+  "as_of_date": "2026-08-27",
+  "legacy_snapshot": {
+    "analysis_price": 166.00,
+    "analysis_price_as_of": "2026-08-20",
+    "price_source": "verified_live_quote",
+    "shares_outstanding": 733713653,
+    "market_cap": 121796466398.0,
+    "price_sync_status": "quote_ohlcv_mismatch"
+  },
+  "fresh_snapshot": {
+    "analysis_price": 172.78,
+    "analysis_price_as_of": "2026-08-27",
+    "price_source": "ohlcv_close",
+    "latest_ohlcv_close": 172.78,
+    "latest_ohlcv_date": "2026-08-27",
+    "shares_outstanding": 733713653,
+    "market_cap": 126771044965.34,
+    "price_sync_status": "synced"
+  },
+  "raw_financials": {
+    "totalRevenue": 6799600000.0,
+    "ebit": 2302400000.0,
+    "freeCashFlow": 2185000000.0,
+    "operatingCashFlow": 2400000000.0,
+    "totalCash": 3000000000.0,
+    "totalDebt": 1000000000.0,
+    "sharesOutstanding": 733713653,
+    "beta": 1.15
+  },
+  "macro_observables": {
+    "risk_free_rate_pct": 4.25,
+    "erp_pct": -0.22,
+    "cost_of_equity_pct": 4.01,
+    "is_macro_anomaly": true
+  },
+  "technical_parameters": {
+    "key_support_level": 154.46,
+    "key_resistance_level": 169.91,
+    "atr_14": 6.14,
+    "sma_50": 162.50,
+    "sma_200": 152.10,
+    "price_stage": "STAGE_2_MARKUP"
+  },
+  "expected_metrics": {
+    "ebit_margin_pct": 33.86,
+    "fcf_margin_pct": 32.13,
+    "fcf_yield_pct": 1.72,
+    "pullback": {
+      "tactical_target_price": 169.91,
+      "invalidation_stop_loss": 149.855,
+      "current_rr_ratio_at_172_78": null,
+      "current_rr_ratio_at_166_00": 0.24
+    },
+    "breakout": {
+      "breakout_trigger_price": 170.524,
+      "breakout_target_price": 184.032,
+      "breakout_stop_loss": 163.770,
+      "max_breakout_chase_price": 173.594,
+      "breakout_planned_rr": 2.00,
+      "breakout_current_rr_at_172_78": 1.25,
+      "breakout_entry_status_at_172_78": "chased",
+      "breakout_entry_eligible_at_172_78": false
+    },
+    "reverse_dcf": {
+      "target_price_12m": 157.66,
+      "upside_12m_pct": -8.75,
+      "is_actionable": false,
+      "actionability_reason_contains": "ERP"
+    },
+    "scorecard": {
+      "action_stance": "ACCUMULATE_ON_DIP",
+      "valuation_margin_score": null,
+      "valuation_not_actionable": true
+    }
+  }
+}

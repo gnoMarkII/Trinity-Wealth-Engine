@@ -32,13 +32,14 @@ def write_equity_sidecar(output: MicroQuantOutput) -> None:
     
     sidecar_path = sidecar_dir / f"{ticker} Equity Analysis {date_str}.json"
     
-    # Ensure ticker is uppercase in the JSON payload
-    output.ticker = ticker
-    if output.quant_signals:
-        output.quant_signals.ticker = ticker
+    # Serialize to dict without mutating input output object
+    payload = output.model_dump(mode="json")
+    payload["ticker"] = ticker
+    if "quant_signals" in payload and payload["quant_signals"]:
+        payload["quant_signals"]["ticker"] = ticker
     
     # Serialize to JSON string
-    json_data = json.dumps(output.model_dump(mode="json"), ensure_ascii=False, indent=2)
+    json_data = json.dumps(payload, ensure_ascii=False, indent=2)
     
     # Atomic write
     _atomic_write_to(sidecar_path, json_data)

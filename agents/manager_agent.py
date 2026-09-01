@@ -800,6 +800,23 @@ def build_graph(checkpointer=None) -> StateGraph:
                 save_equity_quant_snapshot(validated)
             except Exception as hist_err:
                 log.warning("save_equity_quant_snapshot failed (non-fatal): %s", hist_err)
+
+            # Provisional sidecar persistence: quant signals exist on disk even before narrative LLM call
+            try:
+                from tools.market.equity_sidecar import write_equity_sidecar
+                partial_output = MicroQuantOutput(
+                    ticker=validated.ticker,
+                    market=validated.market,
+                    analysis_date=datetime.now().strftime("%Y-%m-%d"),
+                    quant_signals=validated,
+                    sentiment_context=None,
+                    narrative_analysis="รอการประมวลผล Narrative จาก LLM",
+                    base_case_summary="ตัวเลขรีเฟรชแล้ว กำลังสร้าง narrative",
+                )
+                write_equity_sidecar(partial_output)
+            except Exception as sidecar_err:
+                log.warning("Provisional equity sidecar write failed (non-fatal): %s", sidecar_err)
+
             validated_json = validated.model_dump(mode="json")
             turn_id = state.get("turn_id", "unknown")
             elapsed = _get_elapsed(state.get("route_meta") or {})
@@ -882,7 +899,35 @@ def build_graph(checkpointer=None) -> StateGraph:
                 }
             )
         except Exception as e:
-            log_worker_result(state.get("turn_id", "unknown"), "equity_synthesizer", f"Error: {e}", status="failure")
+            log_worker_result(state.get("turn_id", "unknown"), "equity_synthesizer", f"LLM Warning/Fallback: {e}", status="warning")
+            quant_data = state.get("equity_quant_score", {}) or {}
+            narrative_data = state.get("equity_narrative_context", {}) or {}
+            if quant_data and "ticker" in quant_data:
+                # Quant succeeded -> preserve full quant signals and build partial revision
+                fallback_sentiment = EquitySentimentContext(
+                    evaluated_at=datetime.now(timezone.utc).isoformat(),
+                    market_sentiment="neutral",
+                    key_themes=[],
+                    tail_risks=[],
+                    sources_summary=f"LLM synthesis pending/unavailable: {str(e)}",
+                )
+                output = MicroQuantOutput(
+                    ticker=quant_data["ticker"],
+                    market=quant_data.get("market", "US"),
+                    analysis_date=datetime.now().strftime("%Y-%m-%d"),
+                    quant_signals=QuantSignals.model_validate(quant_data),
+                    sentiment_context=EquitySentimentContext.model_validate(narrative_data) if narrative_data else fallback_sentiment,
+                    narrative_analysis=f"ตัวเลขรีเฟรชแล้ว แต่ narrative ยังสร้างไม่ได้ (LLM_UNAVAILABLE: {str(e)})",
+                    base_case_summary="ตัวเลขรีเฟรชแล้ว แต่ narrative ยังสร้างไม่ได้",
+                )
+                report = format_equity_analysis_report(output)
+                return Command(
+                    goto="post_equity_intel",
+                    update={
+                        "messages": [AIMessage(content=report)],
+                        "equity_output": output.model_dump(mode="json"),
+                    }
+                )
             return Command(
                 goto="supervisor",
                 update={"messages": [AIMessage(content=f"Error: (Equity Synthesizer) {str(e)}")]}

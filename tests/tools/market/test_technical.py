@@ -110,3 +110,51 @@ class TestSummarizeInsiderTransactions:
         
         res = _summarize_insider_transactions(mock_tk)
         assert "ไม่มีรายการใน 6 เดือนล่าสุด" in res
+
+
+class TestComputeTacticalSetup:
+    @patch("tools.market.technical.yf.Ticker")
+    def test_tactical_setup_dual_rr_and_breakout_ftnt_fixtures(self, mock_ticker):
+        from tools.market.technical import compute_tactical_setup
+        import pandas as pd
+        import numpy as np
+
+        # Create mock 1y history
+        dates = pd.date_range(end=datetime.now(), periods=250, freq="B")
+        df = pd.DataFrame(index=dates)
+        # Create prices fluctuating between 150 and 170
+        df["Close"] = 160.0 + 5.0 * np.sin(np.linspace(0, 20, len(dates)))
+        df["High"] = df["Close"] + 3.0
+        df["Low"] = df["Close"] - 3.0
+        df["Open"] = df["Close"]
+        df["Volume"] = 1_000_000
+
+        mock_instance = MagicMock()
+        mock_instance.history.return_value = df
+        mock_ticker.return_value = mock_instance
+
+        # Test at P = 166.0
+        res_166, flags = compute_tactical_setup(
+            "FTNT", market="US", current_price=166.0, price_history_df=df
+        )
+        assert res_166 is not None
+        assert res_166.status == "available"
+        assert res_166.breakout_trigger_price is not None
+        assert res_166.breakout_target_price is not None
+        assert res_166.breakout_stop_loss is not None
+        assert res_166.breakout_planned_rr == 2.00
+        assert res_166.is_in_buy_zone is False  # 166 is above buy zone
+
+        # Test breakout current R:R at P = 172.78
+        # Using exact FTNT values: R = 169.91, ATR = 6.14
+        # Trigger = 170.524, Target = 184.032, Stop = 163.77
+        # At P = 172.78: Breakout Current RR = (184.032 - 172.78) / (172.78 - 163.77) = 11.252 / 9.010 = 1.25
+        trigger = 169.91 + 0.1 * 6.14
+        target = 169.91 + 2.3 * 6.14
+        stop = 169.91 - 1.0 * 6.14
+        planned_rr = round((target - trigger) / (trigger - stop), 2)
+        current_rr_172 = round((target - 172.78) / (172.78 - stop), 2)
+
+        assert planned_rr == 2.00
+        assert current_rr_172 == 1.25
+

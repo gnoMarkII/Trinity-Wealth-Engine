@@ -141,6 +141,7 @@ DATA_QUALITY_FLAG_TRANSLATIONS: dict[str, tuple[str, str]] = {
 
 _STALE_REASON_LABELS = {
     "insufficient_trading_history": "ประวัติราคาซื้อขายไม่เพียงพอ",
+    "latest_close_unavailable": "ราคาปิดล่าสุดไม่สมบูรณ์หรือไม่พร้อมใช้งาน (NaN/Non-finite)",
     "fetch_error": "ดึงข้อมูลย้อนหลังไม่สำเร็จ",
     "zero_benchmark_variance": "ความผันผวนของดัชนีอ้างอิงเป็นศูนย์",
 }
@@ -196,40 +197,188 @@ def format_equity_analysis_report(output: MicroQuantOutput) -> str:
         f"tags: [stock_analysis, {output.ticker.lower()}, market_{output.market.lower()}, equity_quant]",
         "---\n",
         f"# 📊 บทวิเคราะห์เชิงปริมาณ: {display_name} ({output.market}) — {today}\n",
+    ]
+
+    if q.atomic_market_snapshot:
+        snap = q.atomic_market_snapshot
+        lines.extend([
+            f"> **Analysis Price:** **${_fmt(snap.analysis_price)}** (as of {snap.analysis_price_as_of}, Source: `{snap.price_source}` | Sync: `{snap.price_sync_status}`)",
+            f"> **Market Cap:** ${_fmt_large(snap.market_cap, '$')} | **Shares Outstanding:** {_fmt_large(snap.shares_outstanding, '')}",
+        ])
+        if snap.price_sync_status == "quote_ohlcv_mismatch":
+            lines.append(f"> ⚠️ **Price Synchronization Warning:** Live quote mismatch detected. Analysis strictly bound to EOD unadjusted Close (${snap.latest_ohlcv_close:.2f} as of {snap.latest_ohlcv_date}).")
+    lines.extend([
         f"> **Market Sentiment:** {_SENTIMENT_LABELS.get(s.market_sentiment, s.market_sentiment)}",
         f"> **ประเมินเมื่อ (Evaluated At):** {q.evaluated_at}\n",
+    ])
+
+    # -------------------------------------------------------------
+    # 🏆 Institutional 4-Pillar Scorecard & Action Stance
+    # -------------------------------------------------------------
+    if q.deterministic_scorecard:
+        sc = q.deterministic_scorecard
+        usable_cov = getattr(sc, "usable_coverage_pct", sc.coverage_pct)
+        verified_cov = getattr(sc, "verified_coverage_pct", sc.coverage_pct)
+        lines.extend([
+            f"## 🏛️ Institutional Investment Committee Scorecard\n",
+            f"- **Action Stance:** `{sc.action_stance}`",
+        ])
+        if sc.action_stance_reason:
+            lines.append(f"- **Stance Reason:** {sc.action_stance_reason}")
+        lines.extend([
+            f"- **Core Conviction Score:** **{sc.core_conviction_score} / 10.0** (Fundamental + Guidance + Valuation)",
+            f"- **Execution Readiness Score:** **{sc.execution_readiness_score} / 10.0** (Technicals + Liquidity + Form 4)",
+            f"- **Coverage:** Usable {usable_cov}% | Verified {verified_cov}% ({sc.applicable_pillars_count} Applicable Pillars)",
+            "",
+            "| Pillar | Score | Weight | หมายเหตุ |",
+            "|---|---|---|---|",
+            f"| **Pillar 1: Fundamental Quality** | {sc.fundamental_quality_score} / 100 | 40% | งบการเงิน, Piotroski F-Score, OCF/NI |",
+            f"| **Pillar 2: Guidance & Expectation Gap** | {sc.guidance_expectation_score} / 100 | 30% | สรุป Guidance & EPS Revisions |",
+            f"| **Pillar 3: Valuation Margin of Safety** | {sc.valuation_margin_score} / 100 | 30% | 12M DCF Upside & Implied Growth Gap |",
+            "",
+        ])
+
+    if q.dcf_discrepancy_warning:
+        lines.extend([
+            f"> ⚠️ **คำเตือน Valuation Discrepancy:** {q.dcf_discrepancy_warning}\n",
+        ])
+
+    lines.extend([
         f"## 🏆 Composite Score: {_fmt(q.composite_score)} / 100\n",
-        "> Weighted: Value 25% + Quality 25% + Growth 25% + Momentum 15% + Dividend 10% "
-        "(ข้ามมิติที่ไม่มีข้อมูลแล้ว re-normalize weight ที่เหลือ — **ไม่รวม Solvency, Peer/Sector, "
-        "Historical Price, Earnings Momentum** ดูตัวชี้วัด Contextual ด้านล่างประกอบ)\n",
+        "> Weighted: Value 25% + Quality 25% + Growth 25% + Momentum 15% + Dividend 10%\n",
         "## 🔢 Quant Signals (Deterministic — คำนวณจาก Python ล้วน)\n",
         "| Metric | Value | หมายเหตุ |",
         "|---|---|---|",
         f"| **Value Score** | {_fmt(q.value_score)} | 0-100, ยิ่งสูงยิ่งถูก (Valuation) |",
         f"| **Quality Score** | {_fmt(q.quality_score)} | 0-100, ยิ่งสูงยิ่งมีคุณภาพกิจการดี |",
         f"| **Growth Score** | {_fmt(q.growth_score)} | 0-100, จาก Revenue/Net Income Growth YoY |",
-        f"| **Momentum Score** | {_fmt(q.momentum_score)} | 0-100, วัดความแรงขาขึ้นเชิงเทคนิค (ไม่ใช่คำแนะนำซื้อ — RSI สูงอาจหมายถึง Overbought) |",
-        f"| **Dividend Score** | {_fmt(q.dividend_score)} | 0-100 — ⚠️ Yield สูงผิดปกติอาจเป็น Value Trap ดู Payout Ratio ประกอบ |",
+        f"| **Momentum Score** | {_fmt(q.momentum_score)} | 0-100, วัดความแรงขาขึ้นเชิงเทคนิค |",
+        f"| **Dividend Score** | {_fmt(q.dividend_score)} | 0-100 |",
         f"| **Beta** | {_fmt(q.beta)} | เทียบ {benchmark_label} |",
         f"| **Volatility (Annualized)** | {_fmt(q.volatility_pct)}% | |",
         f"| **Max Drawdown** | {_fmt(q.mdd_pct)}% | |",
-        f"| **Upside (Target High)** | {_fmt(q.upside_pct)}% | |",
-        f"| **Downside (Target Low)** | {_fmt(q.downside_pct)}% | |",
+        f"| **Price Percentile (5Y)** | {_fmt(q.price_percentile_5y)}{'%' if q.price_percentile_5y is not None else ''} | เทียบการกระจายราคา 5 ปี |",
+        f"| **Price Z-Score (5Y)** | {_fmt(q.price_zscore_5y)} | |",
         "",
+        "### 🎯 Price Target Outlook (Consensus)\n",
+        f"- Target Upside: {_fmt(q.upside_pct)}%",
+        f"- Target Downside: {_fmt(q.downside_pct)}%",
+        "",
+    ])
+
+    # -------------------------------------------------------------
+    # 🩺 Piotroski F-Score Breakdown
+    # -------------------------------------------------------------
+    if q.piotroski_breakdown:
+        p = q.piotroski_breakdown
+        lines.extend([
+            "### 🩺 Piotroski F-Score Forensics\n",
+            f"- **F-Score:** **{_fmt(p.f_score)} / 9** (Status: `{p.status.upper()}`)",
+            f"- Profitability Points: {p.profitability_points} / 4 (ROA > 0, CFO > 0, $\\Delta$ROA > 0, CFO > Net Income)",
+            f"- Leverage & Liquidity Points: {p.leverage_liquidity_points} / 3 ($\\Delta$Leverage, $\\Delta$Current Ratio, Dilution)",
+            f"- Operating Efficiency Points: {p.operating_efficiency_points} / 2 ($\\Delta$Gross Margin, $\\Delta$Asset Turnover)",
+            f"- Exclusion Reason: {_fmt(p.exclusion_reason)}",
+            "",
+        ])
+
+    # -------------------------------------------------------------
+    # 🎯 5-Year Explicit DCF & Reverse DCF
+    # -------------------------------------------------------------
+    if q.reverse_dcf_result:
+        rd = q.reverse_dcf_result
+        ebit_label = "Audited EBIT Margin" if rd.ebit_margin_source_tier == "filing_authoritative" else "Reported EBIT Margin"
+        ebit_meta = f"{rd.ebit_margin_fiscal_period or 'FY'}"
+        if rd.ebit_margin_period_type:
+            ebit_meta += f", {rd.ebit_margin_period_type}"
+        if rd.ebit_margin_source_tier:
+            ebit_meta += f", Source: {rd.ebit_margin_source_tier}"
+        actionable_note = f" (⚠️ Informational Only: {rd.actionability_reason})" if not rd.is_actionable else ""
+        lines.extend([
+            "### 🎯 5-Year Explicit DCF & Reverse DCF Expectation Gap\n",
+            f"- **12-Month Target Price:** **${_fmt(rd.target_price_12m)}** (Upside: {_fmt(rd.upside_12m_pct)}%){actionable_note}",
+            f"- **Reverse DCF Verdict:** `{rd.valuation_verdict.upper()}`",
+            f"- **Intrinsic Value Today:** ${_fmt(rd.intrinsic_value_today)}",
+            f"- **{ebit_label}:** **{_fmt(rd.reported_ebit_margin_pct)}%** ({ebit_meta})",
+            f"- **Market Implied Revenue Growth:** **{_fmt(rd.market_implied_growth_pct)}%** (Solver Status: `{rd.solver_status}`)",
+            f"- **Market Implied Operating Margin:** {_fmt(rd.market_implied_margin_pct)}%",
+            f"- Enterprise Value: ${_fmt_large(rd.enterprise_value, '$')} | Equity Value: ${_fmt_large(rd.equity_value, '$')}",
+            f"- PV of 5Y FCF: ${_fmt_large(rd.sum_pv_5y_fcf, '$')} | PV of Terminal Value: ${_fmt_large(rd.terminal_value_pv, '$')}",
+            "",
+        ])
+    elif q.dcf_result:
+        d = q.dcf_result
+        lines.extend([
+            "### 🎯 DCF Target Price & Fair Value Engine (Legacy Proxy)\n",
+            f"- **Real WACC:** {d.wacc_pct}%",
+            f"- **Valuation Verdict:** `{d.valuation_verdict.upper()}`",
+            f"- Base Case Target Price: ${d.scenarios['base'].target_price} (Upside: {d.scenarios['base'].upside_pct}%)",
+            "",
+        ])
+
+    # -------------------------------------------------------------
+    # 📊 Tactical Setup & S/R Plan
+    # -------------------------------------------------------------
+    if q.tactical_setup:
+        ts = q.tactical_setup
+        bz_rr_str = f"{_fmt(ts.buy_zone_rr_min)} - {_fmt(ts.buy_zone_rr_max)} : 1" if (ts.buy_zone_rr_min is not None and ts.buy_zone_rr_max is not None) else "N/A"
+        lines.extend([
+            "### 📊 Tactical Setup & Execution Timing (1-3M Horizon)\n",
+            f"- **Price Stage:** `{ts.price_stage}`",
+            f"- **ATR (14D):** ${_fmt(ts.atr_14)}",
+            f"- **Key Support Level:** ${_fmt(ts.key_support_level)} | **Key Resistance Level:** ${_fmt(ts.key_resistance_level)}",
+            f"- **Optimal Buy Zone:** **${_fmt(ts.buy_zone_min)} - ${_fmt(ts.buy_zone_max)}** (In Zone: {ts.is_in_buy_zone})",
+            f"- **Invalidation Stop Loss:** **${_fmt(ts.invalidation_stop_loss)}**",
+            f"- **Tactical Target (1-3M):** **${_fmt(ts.tactical_target_price)}**",
+            f"- **Current R:R Ratio:** **{_fmt(ts.current_rr_ratio)} : 1** | **Buy Zone R:R Range:** **{bz_rr_str}**",
+        ])
+        if ts.breakout_trigger_price:
+            curr_rr_str = f"{_fmt(ts.breakout_current_rr)} : 1" if ts.breakout_current_rr is not None else "Pre-trigger (ยังไม่ถึงจุด Trigger)"
+            lines.append(f"- **Breakout Setup:** Trigger ${_fmt(ts.breakout_trigger_price)} | Target ${_fmt(ts.breakout_target_price)} | Stop ${_fmt(ts.breakout_stop_loss)} | Status: `{ts.breakout_entry_status}` (Planned R:R: {_fmt(ts.breakout_planned_rr)} : 1 | Current R:R: {curr_rr_str})")
+        lines.append("")
+
+    # -------------------------------------------------------------
+    # 🕵️ SEC Form 4 Insider Conviction
+    # -------------------------------------------------------------
+    if q.insider_conviction:
+        ic = q.insider_conviction
+        lines.extend([
+            "### 🕵️ Canonical SEC Form 4 Insider Conviction (90 Days)\n",
+            f"- **Insider Status:** `{ic.status.upper()}` (Data Status: `{ic.data_status}`)",
+            f"- Open-Market Purchases (Code P): {ic.open_market_p_count_90d} transactions (${_fmt_large(ic.open_market_p_value_usd, '$')})",
+            f"- C-Suite Purchases (CEO/CFO/COO): {ic.c_suite_p_count} transactions",
+            f"- Contextual Selling (Code S): {ic.open_market_s_count_90d} transactions (${_fmt_large(ic.open_market_s_value_usd, '$')})",
+            f"- Insider Purchase Range: ${_fmt(ic.insider_buy_range_min)} - ${_fmt(ic.insider_buy_range_max)}",
+            "",
+        ])
+
+    # -------------------------------------------------------------
+    # 🛑 Thesis Falsifiers (Kill-Switches)
+    # -------------------------------------------------------------
+    if q.thesis_falsifiers:
+        lines.extend([
+            "### 🛑 Thesis Falsifiers & Invalidation Criteria (Kill-Switches)\n",
+            "| ID | Metric / Condition | Threshold | Source Reference | คำอธิบาย |",
+            "|---|---|---|---|---|",
+        ])
+        for tf in q.thesis_falsifiers:
+            th_str = f"{tf.threshold_value}" if tf.threshold_value is not None else "N/A"
+            ref_str = f"`{tf.source_ref}`" if tf.source_ref else "N/A"
+            lines.append(f"| `{tf.falsifier_id}` | {tf.metric_name}: {tf.condition} | {th_str} | {ref_str} | {tf.narrative_explanation} |")
+        lines.append("")
+
+    lines.extend([
         "### 📈 Growth Signals\n",
         f"- Revenue Growth YoY: {_fmt(q.revenue_growth_yoy_pct)}%",
         f"- Net Income Growth YoY: {_fmt(q.net_income_growth_yoy_pct)}%",
         "",
-        "### 💰 Dividend\n",
+        "### 🎁 Dividend Quality\n",
         f"- Dividend Yield: {_fmt(q.dividend_yield_pct)}%",
         f"- Payout Ratio: {_fmt(q.payout_ratio_pct)}%",
+        "> ข้อควรระวัง: หุ้นที่มี Payout Ratio สูงเกิน 100% อาจเป็น Value Trap หรือมีความเสี่ยงในการลดการจ่ายปันผล\n",
         "",
         "### 💵 Cash Flow & Capital Quality\n",
         f"- FCF Yield: {_fmt(q.fcf_yield_pct)}%",
         f"- FCF Margin: {_fmt(q.fcf_margin_pct)}%",
-        f"- FCF CAGR (3Y): {_fmt(q.fcf_cagr_3y)}%",
-        f"- Interest Coverage: {_fmt(q.interest_coverage)}x",
-        f"- Net Debt / EBITDA: {_fmt(q.net_debt_ebitda)}x",
         f"- ROIC: {_fmt(q.roic_pct)}%",
         f"- OCF / Net Income: {_fmt(q.ocf_to_net_income)}",
         f"- FCF Quality Score: {_fmt(q.fcf_quality_score)} / 100",
@@ -240,55 +389,23 @@ def format_equity_analysis_report(output: MicroQuantOutput) -> str:
         f"- D/E Ratio: {_fmt(q.de_ratio_pct)}%",
         f"- Current Ratio: {_fmt(q.current_ratio)}x",
         "",
+        "### 👥 Peer/Sector Comparison (Contextual — ไม่รวมใน Composite Score)\n",
+        f"- Peer Sector: {_fmt(q.peer_sector)}",
+        f"- Peer Relative Score: {_fmt(q.peer_relative_score)} / 100",
+        f"- P/E vs Peer Avg: {_fmt(q.pe_vs_peer_avg_pct)}%",
+        f"- Peer Count: {_fmt(q.peer_count)}",
+        "",
+        "### ⏳ Historical Price Context (ไม่ใช่ Valuation Multiple — ไม่รวมใน Composite Score)\n",
+        f"- Price Percentile (5Y): {_fmt(q.price_percentile_5y) + ('%' if q.price_percentile_5y is not None else '')}",
+        f"- Price Z-Score (5Y): {_fmt(q.price_zscore_5y)}",
+        "",
+        "### 🚀 Earnings Momentum & Revisions (Contextual — ไม่รวมใน Composite Score)\n",
+        f"- Earnings Momentum Score: {_fmt(q.earnings_momentum_score)} / 100",
+        f"- EPS Revision Net (30D): {_fmt(q.eps_revision_net_30d)}",
+        f"- EPS Estimate Change (30D): {_fmt(q.eps_estimate_change_30d_pct)}%",
+        "",
         "### 💧 Trading Liquidity\n",
         f"- ADTV (Average Daily Trading Value): {_fmt_large(q.adtv_local_currency, currency_label)}",
-        "",
-    ]
-
-    if q.dcf_result:
-        d = q.dcf_result
-        lines.extend([
-            "### 🎯 DCF Target Price & Fair Value Engine\n",
-            f"- **Real WACC:** {d.wacc_pct}% (Cost of Equity Ke: {d.cost_of_equity_pct}%, Cost of Debt Kd: {d.cost_of_debt_pct}%)",
-            f"- **Macro Parameters:** Risk-Free Rate: {d.risk_free_rate_pct}%, ERP: {d.erp_pct}%",
-            f"- **Observable References:** {', '.join(d.observable_refs) if d.observable_refs else 'None (Fallback)'}",
-            f"- **Valuation Verdict:** `{d.valuation_verdict.upper()}`",
-            "",
-            "| Scenario | Target Price | Upside % | Margin of Safety % |",
-            "|---|---|---|---|",
-            f"| **Bull Case** | ${d.scenarios['bull'].target_price} | {d.scenarios['bull'].upside_pct}% | {d.scenarios['bull'].margin_of_safety_pct}% |",
-            f"| **Base Case** | ${d.scenarios['base'].target_price} | {d.scenarios['base'].upside_pct}% | {d.scenarios['base'].margin_of_safety_pct}% |",
-            f"| **Bear Case** | ${d.scenarios['bear'].target_price} | {d.scenarios['bear'].upside_pct}% | {d.scenarios['bear'].margin_of_safety_pct}% |",
-            "",
-        ])
-
-    if q.smart_money_flags:
-        sm = q.smart_money_flags
-        lines.extend([
-            "### 🕵️ Smart Money & Ownership Signals\n",
-            f"- Insider Signal: `{sm.insider_signal.upper()}` (Buys: {sm.insider_buy_count_90d}, Sells: {sm.insider_sell_count_90d})",
-            f"- Institutional Ownership: {_fmt(sm.institutional_ownership_pct)}%",
-            f"- Insider Ownership: {_fmt(sm.insider_ownership_pct)}%",
-            f"- Short Interest: {_fmt(sm.short_interest_pct)}% (Short Squeeze Risk: {sm.short_squeeze_risk})",
-            f"- Overall Smart Money Flag: `{sm.overall_smart_money_flag.upper()}`",
-            "",
-        ])
-
-    lines.extend([
-        "### 🏢 Peer/Sector Comparison (Contextual — ไม่รวมใน Composite Score)\n",
-        f"- Sector: {_fmt(q.peer_sector)}",
-        f"- Peer Count: {_fmt(q.peer_count)}",
-        f"- P/E vs Peer Average: {_fmt(q.pe_vs_peer_avg_pct)}% (บวก=แพงกว่ากลุ่ม, ลบ=ถูกกว่ากลุ่ม)",
-        f"- Peer Relative Score: {_fmt(q.peer_relative_score)} / 100",
-        "",
-        "### 📅 Historical Price Context (Contextual — ไม่รวมใน Composite Score)\n",
-        f"- Price Percentile (5Y): {_fmt(q.price_percentile_5y)}% — ⚠️ เป็น Percentile ของ**ราคา** ไม่ใช่ Valuation Multiple (P/E)",
-        f"- Price Z-score (5Y): {_fmt(q.price_zscore_5y)}",
-        "",
-        "### 🎯 Earnings Momentum (Contextual — ไม่รวมใน Composite Score)\n",
-        f"- EPS Revisions (Net, 30 วัน): {_fmt(q.eps_revision_net_30d)}",
-        f"- EPS Estimate Change (30 วัน): {_fmt(q.eps_estimate_change_30d_pct)}%",
-        f"- Earnings Momentum Score: {_fmt(q.earnings_momentum_score)} / 100",
         "",
     ])
 
@@ -306,7 +423,13 @@ def format_equity_analysis_report(output: MicroQuantOutput) -> str:
     if s.tail_risks:
         lines.append("**ความเสี่ยงแฝง (Tail Risks):**")
         for risk in s.tail_risks:
-            lines.append(f"- {risk}")
+            sanitized_risk = risk
+            if q.price_percentile_5y is None:
+                import re
+                sanitized_risk = re.sub(r"\(Price Percentile \d+(\.\d+)?%?\)", "", sanitized_risk)
+                sanitized_risk = re.sub(r"Price Percentile \d+(\.\d+)?%?", "สถิติราคาในอดีต (ไม่ผ่าน Quality Check)", sanitized_risk)
+                sanitized_risk = re.sub(r"\s+", " ", sanitized_risk).strip()
+            lines.append(f"- {sanitized_risk}")
         lines.append("")
     lines.append(f"> {s.sources_summary}\n")
 

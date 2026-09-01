@@ -85,6 +85,18 @@ def get_llm(
     return primary
 
 
+def get_chat_model(
+    env_var_or_model: str,
+    default: str = "gemini-3.1-flash-lite-preview",
+    temperature: float = 0.0,
+    max_output_tokens: Optional[int] = None,
+) -> BaseChatModel:
+    """Helper สำหรับสร้าง BaseChatModel จากชื่อ env var หรือ model name ตรงๆ"""
+    model_name = os.getenv(env_var_or_model, env_var_or_model if ("/" in env_var_or_model or "gemini" in env_var_or_model or "claude" in env_var_or_model) else default)
+    provider = detect_provider(model_name)
+    return get_llm(provider=provider, model_name=model_name, temperature=temperature, max_output_tokens=max_output_tokens)
+
+
 def invoke_structured_llm(
     schema: Any,
     model_env: str,
@@ -171,3 +183,100 @@ def list_available_models(provider: str | None = None) -> list[str] | dict[str, 
             "openrouter": _fetch_openrouter_models(),
         }
     raise ValueError(f"Unknown provider '{provider}'. Choose 'google', 'anthropic', 'openrouter', or None.")
+
+
+# Cache for preflight probe (model -> (timestamp, is_ready, message))
+_PREFLIGHT_CACHE: dict[str, tuple[float, bool, str]] = {}
+_PREFLIGHT_CACHE_TTL = 45.0  # 45 seconds cache
+
+
+def classify_llm_exception(exc: Exception) -> tuple[str, str]:
+    """แยกประเภทข้อผิดพลาดของ LLM เป็น Typed Error Taxonomy
+
+    Codes:
+    - LLM_MISSING_KEY
+    - LLM_CONNECT_REFUSED
+    - LLM_TIMEOUT
+    - LLM_AUTH_FAILED
+    - LLM_RATE_LIMITED
+    - LLM_MODEL_NOT_FOUND
+    - LLM_UNAVAILABLE
+    """
+    err_str = str(exc).lower()
+    err_type = type(exc).__name__.lower()
+
+    if "api key" in err_str or "apikey" in err_str or "api_key" in err_str:
+        if "missing" in err_str or "not set" in err_str:
+            return "LLM_MISSING_KEY", "LLM API key is missing"
+        return "LLM_AUTH_FAILED", "Authentication failed: invalid or unauthorized API key"
+
+    if "10061" in err_str or "connection refused" in err_str or "connecterror" in err_type or "failed to connect" in err_str:
+        return "LLM_CONNECT_REFUSED", "LLM host connection refused (WinError 10061 / ConnectError)"
+
+    if "timeout" in err_str or "timed out" in err_str or "timeouterror" in err_type:
+        return "LLM_TIMEOUT", "LLM request timed out"
+
+    if "rate limit" in err_str or "ratelimit" in err_str or "429" in err_str or "quota" in err_str:
+        return "LLM_RATE_LIMITED", "LLM rate limit or quota exceeded"
+
+    if "404" in err_str or "not found" in err_str or "unknown model" in err_str or "model not found" in err_str:
+        return "LLM_MODEL_NOT_FOUND", "Specified LLM model was not found"
+
+    if "auth" in err_str or "401" in err_str or "403" in err_str:
+        return "LLM_AUTH_FAILED", "LLM authentication or permission denied"
+
+    return "LLM_UNAVAILABLE", f"LLM execution error: {type(exc).__name__}"
+
+
+def check_llm_preflight(model_name: Optional[str] = None) -> tuple[bool, str]:
+    """ตรวจสอบความพร้อมของการเชื่อมต่อ LLM endpoint ก่อนเริ่ม dispatch งาน พร้อม TTL cache 45s
+    
+    Log endpoint alias และ connection class โดยไม่เปิดเผย Secret API Key
+    """
+    now = time.time()
+    target_model = model_name or os.getenv("EQUITY_SYNTHESIZER_MODEL", "gemini-3.1-flash-lite-preview")
+
+    if target_model in _PREFLIGHT_CACHE:
+        ts, cached_ready, cached_msg = _PREFLIGHT_CACHE[target_model]
+        if now - ts < _PREFLIGHT_CACHE_TTL:
+            return cached_ready, cached_msg
+
+    provider = detect_provider(target_model)
+    
+    if provider == "google":
+        key = os.getenv("GOOGLE_API_KEY") or os.getenv("GEMINI_API_KEY")
+        if not key:
+            log.warning("LLM Preflight Failed | provider=%s model=%s reason=missing_api_key", provider, target_model)
+            res = (False, "Google Gemini API key is missing (set GOOGLE_API_KEY or GEMINI_API_KEY)")
+        else:
+            log.info("LLM Preflight Ready | provider=%s model=%s endpoint_class=GoogleGenerativeAI", provider, target_model)
+            res = (True, f"Google Gemini endpoint ready (model: {target_model})")
+        _PREFLIGHT_CACHE[target_model] = (now, res[0], res[1])
+        return res
+        
+    if provider == "anthropic":
+        key = os.getenv("ANTHROPIC_API_KEY")
+        if not key:
+            log.warning("LLM Preflight Failed | provider=%s model=%s reason=missing_api_key", provider, target_model)
+            res = (False, "Anthropic API key is missing (set ANTHROPIC_API_KEY)")
+        else:
+            log.info("LLM Preflight Ready | provider=%s model=%s endpoint_class=AnthropicMessages", provider, target_model)
+            res = (True, f"Anthropic endpoint ready (model: {target_model})")
+        _PREFLIGHT_CACHE[target_model] = (now, res[0], res[1])
+        return res
+        
+    if provider == "openrouter":
+        key = os.getenv("OPENROUTER_API_KEY")
+        if not key:
+            log.warning("LLM Preflight Failed | provider=%s model=%s reason=missing_api_key", provider, target_model)
+            res = (False, "OpenRouter API key is missing (set OPENROUTER_API_KEY)")
+        else:
+            log.info("LLM Preflight Ready | provider=%s model=%s endpoint_class=OpenRouterOpenAICompat", provider, target_model)
+            res = (True, f"OpenRouter endpoint ready (model: {target_model})")
+        _PREFLIGHT_CACHE[target_model] = (now, res[0], res[1])
+        return res
+        
+    res = (True, f"Provider {provider} ready")
+    _PREFLIGHT_CACHE[target_model] = (now, res[0], res[1])
+    return res
+

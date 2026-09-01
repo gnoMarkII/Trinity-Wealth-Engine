@@ -268,3 +268,40 @@ class TestComputePricePercentile:
         assert percentile is None
         assert zscore is None
         assert q.stale_reason == "fetch_error"
+
+    @patch("tools.market.quant_engine._get_price_history")
+    def test_trailing_nan_latest_close_unavailable(self, mock_hist):
+        df = _make_close_series(260, start=100.0, daily_return=0.001)
+        df.iloc[-1, df.columns.get_loc("Close")] = float("nan")
+        mock_hist.return_value = df
+        percentile, zscore, q = compute_price_percentile("NANCO")
+        assert percentile is None
+        assert zscore is None
+        assert q.is_valid is False
+        assert q.stale_reason == "latest_close_unavailable"
+
+    @patch("tools.market.quant_engine._get_price_history")
+    def test_internal_nan_handled_correctly(self, mock_hist):
+        df = _make_close_series(265, start=100.0, daily_return=0.001)
+        # Introduce 5 internal NaNs (not latest)
+        df.iloc[10:15, df.columns.get_loc("Close")] = float("nan")
+        mock_hist.return_value = df
+        percentile, zscore, q = compute_price_percentile("INTERNALNANCO")
+        assert q.is_valid is True
+        assert percentile is not None
+        assert zscore is not None
+        assert q.trading_days == 260
+
+    @patch("tools.market.quant_engine._get_price_history")
+    def test_cleanup_drops_below_min_days_returns_insufficient_history(self, mock_hist):
+        df = _make_close_series(260, start=100.0, daily_return=0.001)
+        # Introduce 20 internal NaNs -> 240 valid (< 250)
+        df.iloc[10:30, df.columns.get_loc("Close")] = float("nan")
+        mock_hist.return_value = df
+        percentile, zscore, q = compute_price_percentile("TOOMANYNANCO")
+        assert percentile is None
+        assert zscore is None
+        assert q.is_valid is False
+        assert q.stale_reason == "insufficient_trading_history"
+
+

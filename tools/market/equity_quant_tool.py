@@ -13,7 +13,7 @@ from langchain_core.tools import tool
 from core.logger import get_logger
 from schemas.micro_quant_schemas import QuantSignals
 from tools.market.asset_resolver import resolve_asset
-from tools.market.financial_autopsy import get_financial_autopsy
+from tools.market.financial_autopsy import get_financial_autopsy, calculate_piotroski_f_score
 from tools.market.quant_engine import (
     compute_beta,
     compute_volatility,
@@ -21,6 +21,8 @@ from tools.market.quant_engine import (
     compute_technical_indicators,
     compute_growth_rates,
     compute_price_percentile,
+    create_atomic_market_snapshot,
+    _get_price_history,
 )
 from tools.market.quant_scoring import (
     compute_value_score,
@@ -38,8 +40,10 @@ from tools.market.quant_scoring import (
 from tools.market.peer_valuation import fetch_peer_metrics, compute_peer_relative_score
 from tools.market.earnings_momentum import fetch_earnings_revision_data, compute_earnings_revision_score
 from tools.macro.evaluation import load_latest_macro_observables
-from tools.market.dcf_valuation import compute_dcf_valuation
-from tools.market.ownership import compute_smart_money_flags
+from tools.market.dcf_valuation import compute_dcf_valuation, compute_institutional_reverse_dcf
+from tools.market.ownership import compute_smart_money_flags, compute_canonical_insider_conviction
+from tools.market.technical import compute_tactical_setup
+from tools.market.equity_rules_engine import compute_deterministic_scorecard
 from .core import _yf_info
 
 log = get_logger(__name__)
@@ -127,6 +131,23 @@ def compute_equity_quant_signals(ticker: str, market: Literal["TH", "US"] = "US"
             log.warning("compute_equity_quant_signals: _yf_info failed for %s: %s", provider_symbol, e)
             info = {}
 
+        # 0. Atomic Market Snapshot — Single Source of Truth for Price & Market Cap
+        df_1y = None
+        try:
+            df_1y = _get_price_history(provider_symbol, "1y")
+        except Exception as e:
+            log.warning("compute_equity_quant_signals: _get_price_history failed for %s: %s", provider_symbol, e)
+
+        atomic_snapshot, snapshot_flags = create_atomic_market_snapshot(
+            provider_symbol=provider_symbol,
+            df_1y=df_1y,
+            info=info,
+            market=market,
+        )
+        analysis_price = atomic_snapshot.analysis_price
+        analysis_mcap = atomic_snapshot.market_cap
+        shares_out = atomic_snapshot.shares_outstanding or info.get("sharesOutstanding")
+
         benchmark = "^SET.BK" if market == "TH" else "^GSPC"
         beta, beta_q = compute_beta(provider_symbol, benchmark=benchmark)
         volatility_pct, vol_q = compute_volatility(provider_symbol)
@@ -156,9 +177,14 @@ def compute_equity_quant_signals(ticker: str, market: Literal["TH", "US"] = "US"
             growth_rates["revenue_growth_yoy_pct"], growth_rates["net_income_growth_yoy_pct"]
         )
 
-        rsi_14 = tech.get("rsi_14") if tech else None
-        macd_signal = tech.get("macd_signal") if tech else None
-        ma_cross = _ma_cross_label(info.get("fiftyDayAverage"), info.get("twoHundredDayAverage"))
+        if tech_q is not None and not tech_q.is_valid:
+            rsi_14 = None
+            macd_signal = None
+            ma_cross = None
+        else:
+            rsi_14 = tech.get("rsi_14") if tech else None
+            macd_signal = tech.get("macd_signal") if tech else None
+            ma_cross = _ma_cross_label(info.get("fiftyDayAverage"), info.get("twoHundredDayAverage"))
         momentum_score, momentum_flag = compute_momentum_score(rsi_14, macd_signal, ma_cross)
 
         # trailingAnnualDividendYield ต้อง *100 (decimal จริง) — ต่างจาก dividendYield ที่ percent-scaled
@@ -173,16 +199,15 @@ def compute_equity_quant_signals(ticker: str, market: Literal["TH", "US"] = "US"
         current_ratio = info.get("currentRatio")
         solvency_score, solvency_flag = compute_solvency_score(de_ratio_pct, current_ratio)
 
-        current_price = info.get("currentPrice")
         upside_pct, downside_pct = compute_price_target_outlook(
-            current_price,
+            analysis_price,
             target_mean=info.get("targetMeanPrice"),
             target_high=info.get("targetHighPrice"),
             target_low=info.get("targetLowPrice"),
         )
 
         adtv_local_currency, liquidity_flag = compute_trading_liquidity(
-            info.get("averageVolume"), info.get("averageVolume10Day"), current_price, market
+            info.get("averageVolume"), info.get("averageVolume10Day"), analysis_price, market
         )
 
         composite_score, composite_flag = compute_composite_score(
@@ -205,12 +230,15 @@ def compute_equity_quant_signals(ticker: str, market: Literal["TH", "US"] = "US"
         )
 
         # Cash Flow & Capital Quality
+        latest_p = autopsy.periods[0] if (autopsy and autopsy.periods) else None
+
         fcf_raw = info.get("freeCashflow")
-        mcap_raw = info.get("marketCap")
-        fcf_yield_pct = round((fcf_raw / mcap_raw) * 100.0, 2) if (fcf_raw is not None and mcap_raw is not None and mcap_raw > 0) else None
+        fcf_yield_pct = round((fcf_raw / analysis_mcap) * 100.0, 2) if (fcf_raw is not None and analysis_mcap is not None and analysis_mcap > 0) else None
         
-        rev_raw = autopsy.periods[0].total_revenue if (autopsy and autopsy.periods) else None
-        fcf_margin_pct = round((fcf_raw / rev_raw) * 100.0, 2) if (fcf_raw is not None and rev_raw is not None and rev_raw > 0) else None
+        # FCF Margin & OCF/NI: Prioritize consistent audited fiscal period from autopsy
+        fcf_period_val = latest_p.free_cash_flow if (latest_p and latest_p.free_cash_flow is not None) else fcf_raw
+        rev_period_val = latest_p.total_revenue if (latest_p and latest_p.total_revenue is not None) else info.get("totalRevenue")
+        fcf_margin_pct = round((fcf_period_val / rev_period_val) * 100.0, 2) if (fcf_period_val is not None and rev_period_val is not None and rev_period_val > 0) else None
 
         # FCF CAGR 3Y
         fcf_cagr_3y = None
@@ -221,15 +249,15 @@ def compute_equity_quant_signals(ticker: str, market: Literal["TH", "US"] = "US"
                 fcf_cagr_3y = round((((fcf_latest / fcf_3y_ago) ** (1.0 / 3.0)) - 1.0) * 100.0, 2)
 
         ocf_raw = info.get("operatingCashflow")
-        net_inc_raw = autopsy.periods[0].net_income if (autopsy and autopsy.periods) else None
-        ocf_to_net_income = round(ocf_raw / net_inc_raw, 2) if (ocf_raw is not None and net_inc_raw is not None and net_inc_raw > 0) else None
+        ocf_period_val = latest_p.operating_cash_flow if (latest_p and latest_p.operating_cash_flow is not None) else ocf_raw
+        net_inc_period_val = latest_p.net_income if (latest_p and latest_p.net_income is not None) else None
+        ocf_to_net_income = round(ocf_period_val / net_inc_period_val, 2) if (ocf_period_val is not None and net_inc_period_val is not None and net_inc_period_val > 0) else None
 
         ebitda_raw = info.get("ebitda")
         total_debt_raw = info.get("totalDebt") or (autopsy.periods[0].total_debt if (autopsy and autopsy.periods) else None)
         cash_raw = info.get("totalCash")
         net_debt_ebitda = round((total_debt_raw - cash_raw) / ebitda_raw, 2) if (total_debt_raw is not None and cash_raw is not None and ebitda_raw is not None and ebitda_raw > 0) else None
 
-        latest_p = autopsy.periods[0] if (autopsy and autopsy.periods) else None
         ebit_val = latest_p.ebit if latest_p else None
         interest_exp = latest_p.interest_expense if latest_p else info.get("interestExpense")
         tax_exp = latest_p.tax_expense if latest_p else None
@@ -256,17 +284,16 @@ def compute_equity_quant_signals(ticker: str, market: Literal["TH", "US"] = "US"
         debt_quality_score, debt_q_flag = compute_debt_quality_score(interest_coverage, net_debt_ebitda)
 
         # DCF Valuation Engine
-        shares_out = info.get("sharesOutstanding")
         fcf_per_share = (fcf_raw / shares_out) if (fcf_raw is not None and shares_out is not None and shares_out > 0) else 0.0
         macro_registry = load_latest_macro_observables()
 
         dcf_result, dcf_flags = compute_dcf_valuation(
             ticker=resolved.raw_symbol.strip().upper(),
             market=market,
-            current_price=current_price or 0.0,
+            current_price=analysis_price or 0.0,
             beta=beta,
             fcf_per_share=fcf_per_share,
-            market_cap=mcap_raw or 0.0,
+            market_cap=analysis_mcap or 0.0,
             total_debt=total_debt_raw or 0.0,
             interest_expense=interest_exp,
             tax_rate=tax_rate,
@@ -279,12 +306,77 @@ def compute_equity_quant_signals(ticker: str, market: Literal["TH", "US"] = "US"
         # Smart Money & Ownership Flags
         smart_money_flags, ownership_flags = compute_smart_money_flags(provider_symbol, info)
 
+        # -------------------------------------------------------------
+        # Institutional 4-Pillar Integration
+        # -------------------------------------------------------------
+        # 1. Piotroski F-Score
+        sector_name = peer_sector or info.get("sector")
+        piotroski_breakdown = calculate_piotroski_f_score(autopsy.periods if autopsy else [], sector=sector_name)
+
+        # 2. Reported EBIT Margin Extraction & Provenance
+        margin_flags: List[str] = []
+        latest_p = autopsy.periods[0] if (autopsy and autopsy.periods) else None
+        if latest_p and latest_p.ebit is not None and latest_p.total_revenue and latest_p.total_revenue > 0:
+            reported_ebit_margin_pct = round((latest_p.ebit / latest_p.total_revenue) * 100.0, 2)
+            margin_source_tier = latest_p.source_tier or (autopsy.source_tier if autopsy else None) or "unknown"
+            margin_period_type = latest_p.period_type or "unknown"
+            margin_fiscal_period = latest_p.fiscal_period_end or "FY"
+            if margin_source_tier == "unknown":
+                margin_flags.append("unknown_financial_source_tier:dcf")
+            if margin_period_type == "unknown":
+                margin_flags.append("unknown_financial_period_type:dcf")
+        elif info.get("operatingMargins") is not None:
+            reported_ebit_margin_pct = round(info["operatingMargins"] * 100.0, 2)
+            margin_source_tier = "fallback"
+            margin_period_type = "ttm"
+            margin_fiscal_period = "TTM"
+            margin_flags.append("operating_margin_proxy:dcf")
+        else:
+            reported_ebit_margin_pct = None
+            margin_source_tier = None
+            margin_period_type = None
+            margin_fiscal_period = None
+            margin_flags.append("missing_operating_margin:dcf")
+
+        # 3. 5-Year Explicit DCF & True Reverse DCF Solver
+        rev_base = (autopsy.periods[0].total_revenue if (autopsy and autopsy.periods and autopsy.periods[0].total_revenue) else info.get("totalRevenue")) or 0.0
+        reinvest_pct = 10.0
+        reverse_dcf_result, rdcf_flags = compute_institutional_reverse_dcf(
+            ticker=resolved.raw_symbol.strip().upper(),
+            market=market,
+            current_price=analysis_price or 0.0,
+            shares_outstanding=shares_out or 0.0,
+            base_revenue=rev_base,
+            base_ebit_margin_pct=reported_ebit_margin_pct,
+            tax_rate=tax_rate,
+            reinvestment_rate_pct=reinvest_pct,
+            beta=beta,
+            total_debt=total_debt_raw or 0.0,
+            cash_and_equivalents=cash_raw or 0.0,
+            interest_expense=interest_exp,
+            macro_registry=macro_registry,
+            sector=sector_name,
+            forecast_revenue_growth_pct=growth_rates.get("revenue_growth_yoy_pct"),
+            expected_dividend_per_share=(dividend_yield_raw or 0.0) * (analysis_price or 0.0),
+            ebit_margin_fiscal_period=margin_fiscal_period,
+            ebit_margin_period_type=margin_period_type,
+            ebit_margin_source_tier=margin_source_tier,
+        )
+
+        # 4. Tactical Setup (S/R, ATR, Stage, Tactical R:R) with shared price history
+        tactical_setup, tac_flags = compute_tactical_setup(
+            provider_symbol, market=market, current_price=analysis_price, price_history_df=df_1y
+        )
+
+        # 5. Canonical SEC Form 4 Insider Conviction
+        insider_conviction, ins_flags = compute_canonical_insider_conviction(provider_symbol, market=market)
+
         flags = [
             f for f in [
-                value_flag, quality_flag, momentum_flag, *growth_flags, growth_score_flag,
+                *snapshot_flags, value_flag, quality_flag, momentum_flag, *growth_flags, growth_score_flag,
                 dividend_flag, solvency_flag, liquidity_flag, composite_flag, peer_flag,
                 revision_fetch_flag or revision_score_flag, fcf_q_flag, debt_q_flag,
-                *dcf_flags, *ownership_flags,
+                *dcf_flags, *ownership_flags, *rdcf_flags, *tac_flags, *ins_flags, *margin_flags,
             ] if f
         ]
         for name, q in [
@@ -293,6 +385,16 @@ def compute_equity_quant_signals(ticker: str, market: Literal["TH", "US"] = "US"
         ]:
             if not q.is_valid:
                 flags.append(f"{q.stale_reason}:{name}")
+
+        # Metric Basis Attribution (Section 7)
+        ebit_basis = "annual_reported" if margin_period_type == "annual" else ("ttm" if margin_period_type == "ttm" else "fallback")
+        metric_basis = {
+            "de_ratio": "provider_point_in_time",
+            "current_ratio": "provider_point_in_time",
+            "fcf_margin": "annual_reported" if (latest_p and latest_p.free_cash_flow is not None) else ("ttm" if fcf_raw is not None else "fallback"),
+            "fcf_yield": "ttm" if fcf_raw is not None else "fallback",
+            "ebit_margin": ebit_basis,
+        }
 
         signals = QuantSignals(
             ticker=resolved.raw_symbol.strip().upper(),
@@ -339,8 +441,174 @@ def compute_equity_quant_signals(ticker: str, market: Literal["TH", "US"] = "US"
             smart_money_flags=smart_money_flags,
             evaluated_at=datetime.now(timezone.utc).isoformat(),
             data_quality_flags=flags,
+            piotroski_breakdown=piotroski_breakdown,
+            reverse_dcf_result=reverse_dcf_result,
+            tactical_setup=tactical_setup,
+            insider_conviction=insider_conviction,
+            atomic_market_snapshot=atomic_snapshot,
+            metric_basis=metric_basis,
         )
+
+        # 6. Guidance Extraction & Verification (Phase 1 & v3.1)
+        now_iso = datetime.now(timezone.utc).isoformat()
+        as_of_date = atomic_snapshot.latest_ohlcv_date
+        autopsy_periods = autopsy.periods if autopsy and autopsy.periods else []
+
+        from tools.market.guidance_engine import extract_verified_earnings_guidance
+        guidance_context, guidance_flags = extract_verified_earnings_guidance(
+            ticker=resolved.raw_symbol.strip().upper(),
+            target_fiscal_period=autopsy_periods[0].fiscal_period_end if autopsy_periods else None,
+        )
+        for gf in guidance_flags:
+            if gf not in flags:
+                flags.append(gf)
+        signals.earnings_guidance_context = guidance_context
+
+        # Assemble Evidence Snapshot Manifest (Modularized Builder)
+        from tools.market.evidence_manifest_builder import build_analysis_evidence_snapshot
+        raw_payloads_dict = {
+            "financials": {
+                **(autopsy.model_dump() if autopsy else {}),
+                "raw_inputs": {
+                    "freeCashflow": fcf_raw,
+                    "operatingCashflow": ocf_raw,
+                    "marketCap": analysis_mcap,
+                    "sharesOutstanding": shares_out,
+                    "forwardEps": info.get("forwardEps"),
+                    "trailingEps": info.get("trailingEps"),
+                    "totalDebt": total_debt_raw,
+                    "totalCash": cash_raw,
+                    "currentPrice": analysis_price,
+                    "fiscal_period_end": latest_p.fiscal_period_end if latest_p else None,
+                },
+            } if (autopsy or fcf_raw is not None) else None,
+            "market_data": atomic_snapshot.model_dump(),
+            "technical_ohlcv": {
+                "ticker": ticker,
+                "market": market,
+                "provider_symbol": provider_symbol,
+                "price_basis": "unadjusted_close",
+                "interval": "1d",
+                "timezone": "Asia/Bangkok" if market == "TH" else "America/New_York",
+                "count": len(df_1y) if df_1y is not None else 0,
+                "source_as_of": as_of_date,
+                "retrieved_at": now_iso,
+                "bars": df_1y.reset_index().to_dict(orient="records") if (df_1y is not None and not df_1y.empty) else [],
+            } if (df_1y is not None and not df_1y.empty) else None,
+            "technical_ohlcv_1y": {
+                "provider_symbol": provider_symbol,
+                "price_basis": "unadjusted_close",
+                "interval": "1d",
+                "timezone": "America/New_York",
+                "bars_count": len(df_1y) if df_1y is not None else 0,
+                "source_as_of": as_of_date,
+                "retrieved_at": now_iso,
+                "bars": df_1y.reset_index().to_dict(orient="records") if (df_1y is not None and not df_1y.empty) else [],
+            } if (df_1y is not None and not df_1y.empty) else None,
+            "price_context_5y": {
+                "price_percentile_5y": price_percentile_5y,
+                "price_zscore_5y": price_zscore_5y,
+                "is_valid": price_pctile_q.is_valid if price_pctile_q else False,
+            } if price_percentile_5y is not None else None,
+            "mdd_3y": {
+                "mdd_pct": mdd_pct,
+                "is_valid": mdd_q.is_valid if mdd_q else False,
+            } if mdd_pct is not None else None,
+            "beta_2y_stock": {
+                "beta": beta,
+                "volatility_pct": volatility_pct,
+                "is_valid": beta_q.is_valid if beta_q else False,
+            } if beta is not None else None,
+            "beta_2y_benchmark": {
+                "benchmark": benchmark,
+                "is_valid": beta_q.is_valid if beta_q else False,
+            } if beta is not None else None,
+            "analyst_targets": {
+                "targetMeanPrice": info.get("targetMeanPrice"),
+                "targetHighPrice": info.get("targetHighPrice"),
+                "targetLowPrice": info.get("targetLowPrice"),
+                "upside_pct": upside_pct,
+                "downside_pct": downside_pct,
+            } if (upside_pct is not None or info.get("targetMeanPrice") is not None) else None,
+            "peer_group": peer_metrics if peer_metrics and len(peer_metrics) >= 2 else None,
+            "consensus": revision_data if revision_data else None,
+            "ownership": {
+                "heldPercentInstitutions": info.get("heldPercentInstitutions"),
+                "heldPercentInsiders": info.get("heldPercentInsiders"),
+                "shortPercentOfFloat": info.get("shortPercentOfFloat"),
+                "sharesShort": info.get("sharesShort"),
+                "shortRatio": info.get("shortRatio"),
+                "insider_transactions": insider_conviction.model_dump() if insider_conviction else None,
+            },
+            "macro_valuation": {
+                "risk_free_rate_pct": (dcf_result.risk_free_rate_pct if dcf_result else (2.75 if market == "TH" else 4.25)),
+                "erp_pct": (dcf_result.erp_pct if dcf_result else 2.10),
+                "observable_refs": (dcf_result.observable_refs if dcf_result else []),
+                "source_uri": "macro:///registry",
+            },
+            "valuation_parameters": {
+                "methodology_version": "2.1.0",
+                "base_revenue": rev_base,
+                "base_ebit_margin_pct": reported_ebit_margin_pct or 0.0,
+                "shares_outstanding": shares_out,
+                "total_cash": cash_raw or 0.0,
+                "total_debt": total_debt_raw or 0.0,
+                "beta": beta or 1.0,
+                "reinvestment_rate_pct": 10.0,
+                "terminal_growth_cap_pct": 2.5,
+                "terminal_growth_effective_pct": round(min(0.025, (dcf_result.risk_free_rate_pct if dcf_result else 4.25) / 100.0) * 100.0, 2),
+                "valuation_thresholds": {
+                    "undervalued_upside_min": 15.0,
+                    "overvalued_upside_max": -15.0,
+                },
+            },
+            "guidance": guidance_context.model_dump() if guidance_context else None,
+        }
+
+        evidence_snapshot = build_analysis_evidence_snapshot(
+            ticker=resolved.raw_symbol.strip().upper(),
+            market=market,
+            as_of_date=as_of_date,
+            raw_payloads=raw_payloads_dict,
+            corporate_actions_info={"ticker": ticker, "market": market},
+            derived_features={
+                "atr_14": tactical_setup.atr_14 if tactical_setup else None,
+                "price_stage": tactical_setup.price_stage if tactical_setup else None,
+                "piotroski_f_score": piotroski_breakdown.f_score if piotroski_breakdown else None,
+                "reverse_dcf_implied_growth": reverse_dcf_result.market_implied_growth_pct if reverse_dcf_result else None,
+            },
+            data_quality_flags=flags,
+        )
+        signals.evidence_snapshot = evidence_snapshot
+
+        # 6. Deterministic Scorecard & Falsifiers
+        scorecard, falsifiers, sc_flags = compute_deterministic_scorecard(
+            ticker=resolved.raw_symbol.strip().upper(),
+            market=market,
+            quant_signals=signals,
+            piotroski=piotroski_breakdown,
+            dcf=reverse_dcf_result,
+            guidance=guidance_context,
+            tactical=tactical_setup,
+            insider=insider_conviction,
+        )
+        signals.deterministic_scorecard = scorecard
+        signals.thesis_falsifiers = falsifiers
+        for sc_flag in sc_flags:
+            if sc_flag not in signals.data_quality_flags:
+                signals.data_quality_flags.append(sc_flag)
+
         return signals.model_dump_json()
     except Exception as e:
         log.warning("compute_equity_quant_signals failed for %s (%s): %s", ticker, market, e)
-        return f"Error: ไม่สามารถคำนวณ Quant Signals ของ {ticker} ({market}) ได้: {e}"
+        from schemas.micro_quant_schemas import QuantSignalsFailureResult
+        failure_dto = QuantSignalsFailureResult(
+            run_status="error",
+            ticker=ticker,
+            market=market,
+            error_code="QUANT_EXECUTION_ERROR",
+            error_message=str(e),
+            data_quality_flags=["execution_exception"],
+            evaluated_at=datetime.now(timezone.utc).isoformat(),
+        )
+        return failure_dto.model_dump_json()

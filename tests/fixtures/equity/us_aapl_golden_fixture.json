@@ -1,0 +1,52 @@
+{
+  "ticker": "AAPL",
+  "market": "US",
+  "as_of_date": "2026-08-28",
+  "currency": "USD",
+  "current_price": 220.50,
+  "shares_outstanding": 15200000000.0,
+  "market_cap": 3351600000000.0,
+  "adtv_local_currency": 9500000000.0,
+  "financial_periods": [
+    {
+      "fiscal_period_end": "2024-09-30",
+      "total_revenue": 391035000000.0,
+      "net_income": 93736000000.0,
+      "ebit": 123216000000.0,
+      "operating_cash_flow": 118264000000.0,
+      "capital_expenditure": -9450000000.0,
+      "free_cash_flow": 108814000000.0,
+      "total_assets": 364980000000.0,
+      "total_debt": 106629000000.0,
+      "long_term_debt": 85750000000.0,
+      "current_assets": 152980000000.0,
+      "current_liabilities": 176390000000.0,
+      "gross_profit": 180683000000.0,
+      "shares_outstanding": 15200000000.0
+    },
+    {
+      "fiscal_period_end": "2023-09-30",
+      "total_revenue": 383285000000.0,
+      "net_income": 96995000000.0,
+      "ebit": 114301000000.0,
+      "operating_cash_flow": 110543000000.0,
+      "capital_expenditure": -10959000000.0,
+      "free_cash_flow": 99584000000.0,
+      "total_assets": 352583000000.0,
+      "total_debt": 111088000000.0,
+      "long_term_debt": 95281000000.0,
+      "current_assets": 143566000000.0,
+      "current_liabilities": 145308000000.0,
+      "gross_profit": 169148000000.0,
+      "shares_outstanding": 15550000000.0
+    }
+  ],
+  "guidance": {
+    "fiscal_period": "2024-Q4",
+    "revenue_growth_guidance_pct": 5.0,
+    "operating_margin_trajectory": "expanding",
+    "verified_quotes": [
+      "We expect our December quarter revenue to grow low to mid-single digits year over year."
+    ]
+  }
+}

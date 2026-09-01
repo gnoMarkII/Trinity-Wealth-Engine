@@ -1,0 +1,52 @@
+{
+  "ticker": "PTT.BK",
+  "market": "TH",
+  "as_of_date": "2026-08-28",
+  "currency": "THB",
+  "current_price": 34.25,
+  "shares_outstanding": 28562996250.0,
+  "market_cap": 978282621562.5,
+  "adtv_local_currency": 1200000000.0,
+  "financial_periods": [
+    {
+      "fiscal_period_end": "2024-12-31",
+      "total_revenue": 3150000000000.0,
+      "net_income": 95000000000.0,
+      "ebit": 165000000000.0,
+      "operating_cash_flow": 280000000000.0,
+      "capital_expenditure": -98000000000.0,
+      "free_cash_flow": 182000000000.0,
+      "total_assets": 3450000000000.0,
+      "total_debt": 1150000000000.0,
+      "long_term_debt": 920000000000.0,
+      "current_assets": 1100000000000.0,
+      "current_liabilities": 750000000000.0,
+      "gross_profit": 350000000000.0,
+      "shares_outstanding": 28562996250.0
+    },
+    {
+      "fiscal_period_end": "2023-12-31",
+      "total_revenue": 3144851000000.0,
+      "net_income": 89000000000.0,
+      "ebit": 158000000000.0,
+      "operating_cash_flow": 260000000000.0,
+      "capital_expenditure": -92000000000.0,
+      "free_cash_flow": 168000000000.0,
+      "total_assets": 3400000000000.0,
+      "total_debt": 1180000000000.0,
+      "long_term_debt": 950000000000.0,
+      "current_assets": 1050000000000.0,
+      "current_liabilities": 780000000000.0,
+      "gross_profit": 330000000000.0,
+      "shares_outstanding": 28562996250.0
+    }
+  ],
+  "guidance": {
+    "fiscal_period": "2024-FY",
+    "revenue_growth_guidance_pct": 2.5,
+    "operating_margin_trajectory": "stable",
+    "verified_quotes": [
+      "Targeting steady gas transmission volume and stable operating margin throughout FY2025."
+    ]
+  }
+}

@@ -563,6 +563,123 @@ export interface DCFResultDTO {
   observable_refs: string[]
   scenarios: Record<'bull' | 'base' | 'bear', DCFScenarioDTO>
   valuation_verdict: 'undervalued' | 'fairly_valued' | 'overvalued'
+  is_actionable?: boolean
+  actionability_reason?: string | null
+}
+
+export interface AtomicMarketSnapshotDTO {
+  analysis_price: number
+  analysis_price_as_of: string
+  price_source: 'ohlcv_close' | 'verified_live_quote'
+  latest_ohlcv_close: number
+  latest_ohlcv_date: string
+  shares_outstanding?: number | null
+  market_cap?: number | null
+  price_sync_status: 'synced' | 'quote_ohlcv_mismatch' | 'stale'
+  freshness_status?: 'fresh' | 'stale' | 'session_synced' | 'out_of_session'
+  market_session_status?: 'pre_market' | 'open' | 'after_hours' | 'closed'
+  data_freshness_status?: 'fresh' | 'stale_one_session' | 'stale_multiple_sessions' | 'unknown'
+  expected_latest_session_date?: string | null
+  actual_latest_session_date?: string | null
+  missing_trading_sessions?: number
+  retrieved_at: string
+}
+
+export interface ReverseDCFResultDTO {
+  explicit_forecast_5y?: any[]
+  sum_pv_5y_fcf?: number | null
+  terminal_value_undiscounted?: number | null
+  terminal_value_pv?: number | null
+  enterprise_value?: number | null
+  net_cash_debt?: number | null
+  equity_value?: number | null
+  intrinsic_value_today?: number | null
+  target_price_12m?: number | null
+  upside_12m_pct?: number | null
+  market_implied_growth_pct?: number | null
+  market_implied_margin_pct?: number | null
+  solver_status?: 'converged' | 'bounded_extreme' | 'no_solution' | 'not_applicable'
+  fixed_parameters?: Record<string, any>
+  valuation_horizon_months?: number
+  status?: string
+  is_eligible?: boolean
+  exclusion_reason?: string | null
+  valuation_verdict?: 'overvalued' | 'fairly_valued' | 'undervalued' | 'unavailable'
+  is_actionable?: boolean
+  actionability_reason?: string | null
+  raw_wacc_pct?: number | null
+  effective_wacc_pct?: number | null
+  wacc_adjustment_reason?: string | null
+  reported_ebit_margin_pct?: number | null
+  ebit_margin_fiscal_period?: string | null
+  ebit_margin_period_type?: 'annual' | 'quarterly' | 'ttm' | 'unknown' | null
+  ebit_margin_source_tier?: 'filing_authoritative' | 'primary_best_effort' | 'fallback' | 'unknown' | null
+}
+
+export interface TacticalSetupDTO {
+  price_stage: string
+  current_price?: number | null
+  sma_50?: number | null
+  sma_200?: number | null
+  atr_14?: number | null
+  key_support_level?: number | null
+  key_resistance_level?: number | null
+  buy_zone_min?: number | null
+  buy_zone_max?: number | null
+  invalidation_stop_loss?: number | null
+  tactical_target_price?: number | null
+  tactical_risk_reward_ratio?: number | null
+  current_rr_ratio?: number | null
+  buy_zone_rr_min?: number | null
+  buy_zone_rr_max?: number | null
+  is_in_buy_zone?: boolean | null
+  pullback_entry_status?: 'below_stop' | 'in_buy_zone' | 'between_zone_and_target' | 'at_or_above_target' | 'unavailable'
+  breakout_trigger_price?: number | null
+  breakout_target_price?: number | null
+  breakout_stop_loss?: number | null
+  breakout_planned_rr?: number | null
+  breakout_current_rr?: number | null
+  max_breakout_chase_price?: number | null
+  breakout_entry_status?: 'pre_trigger' | 'eligible' | 'chased' | 'expired'
+  breakout_entry_eligible?: boolean
+  breakout_volume_ratio?: number | null
+  breakout_volume_baseline?: number | null
+  breakout_volume_confirmed?: boolean | null
+  horizon_timeframe?: string
+  status?: string
+}
+
+export interface DeterministicScorecardDTO {
+  core_conviction_score: number
+  business_conviction_score?: number | null
+  investment_conviction_score?: number | null
+  execution_readiness_score: number
+  action_stance: 'ACCUMULATE_NOW' | 'ACCUMULATE_ON_DIP' | 'BREAKOUT_BUY' | 'HOLD_WAIT' | 'REDUCE' | 'INSUFFICIENT_DATA'
+  action_stance_reason?: string | null
+  stance_mode?: 'active' | 'conditional' | 'wait' | 'reduce'
+  setup_readiness_score?: number | null
+  execution_score_breakdown?: {
+    stage?: number
+    setup?: number | null
+    insider?: number
+    setup_reason?: string | null
+  } | null
+  fundamental_quality_score?: number | null
+  guidance_expectation_score?: number | null
+  analyst_expectations_score?: number | null
+  management_guidance_score?: number | null
+  valuation_margin_score?: number | null
+  coverage_pct: number
+  usable_coverage_pct?: number
+  verified_coverage_pct?: number
+  applicable_pillars_count?: number
+  methodology_version?: string
+  reweighting_metadata?: {
+    excluded_pillars?: string[]
+    weights_used?: Record<string, number>
+    reason?: string
+  } | null
+  data_quality_flags?: string[]
 }
 
 export interface SmartMoneyFlagsDTO {
@@ -617,10 +734,19 @@ export interface QuantSignalsDTO {
   eps_revision_net_30d: number | null
   eps_estimate_change_30d_pct: number | null
   earnings_momentum_score: number | null
-  dcf_result: DCFResultDTO | null
-  smart_money_flags: SmartMoneyFlagsDTO | null
+  dcf_result?: DCFResultDTO | null
+  smart_money_flags?: SmartMoneyFlagsDTO | null
   evaluated_at: string
   data_quality_flags: string[]
+  piotroski_breakdown?: any
+  reverse_dcf_result?: ReverseDCFResultDTO | null
+  tactical_setup?: TacticalSetupDTO | null
+  insider_conviction?: any
+  deterministic_scorecard?: DeterministicScorecardDTO | null
+  thesis_falsifiers?: any
+  dcf_discrepancy_warning?: string | null
+  atomic_market_snapshot?: AtomicMarketSnapshotDTO | null
+  metric_basis?: Record<string, string>
 }
 
 export interface EquityDetailDTO extends EquitySummaryDTO {
@@ -628,6 +754,8 @@ export interface EquityDetailDTO extends EquitySummaryDTO {
   sentiment_context: EquitySentimentContextDTO
   narrative_analysis: string
   base_case_summary: string
+  narrative_status?: 'available' | 'unavailable' | 'pending'
+  error_code?: string | null
   generated_by: string
 }
 

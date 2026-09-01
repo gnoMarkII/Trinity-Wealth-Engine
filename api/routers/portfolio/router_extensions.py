@@ -74,7 +74,7 @@ def get_actual_goals(
     service: PortfolioService = Depends(get_portfolio_service),
 ) -> ActualGoalsResponseDTO:
     with handle_portfolio_exceptions("Goals lock timeout"):
-        goals = service.get_structured_goals(portfolio_id=portfolio_id or "default")
+        goals = service.get_structured_goals(portfolio_id=portfolio_id)
         return ActualGoalsResponseDTO(
             n_goals=len(goals),
             goals=[ActualGoalItemDTO.model_validate(g) for g in goals],

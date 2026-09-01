@@ -4,9 +4,11 @@
 เท่านั้น เพื่อประกอบ QuantSignals แบบ deterministic ไม่มี LLM แทรกแซงค่าตัวเลข
 """
 import time
-from datetime import datetime
-from typing import Optional, Dict, List, Tuple
+from datetime import datetime, timezone, timedelta
+from typing import Optional, Dict, List, Tuple, Literal
 
+import math
+import numpy as np
 import pandas as pd
 import yfinance as yf
 from langsmith import traceable
@@ -14,6 +16,7 @@ from pydantic import BaseModel
 
 from core.logger import get_logger
 from core.retry import with_retry as _with_retry
+from schemas.micro_quant_schemas import AtomicMarketSnapshot
 from tools.market.financial_autopsy import FinancialAutopsyPeriod
 
 log = get_logger(__name__)
@@ -52,11 +55,14 @@ def _get_price_history(provider_symbol: str, period: str) -> pd.DataFrame:
         del _HISTORY_ERROR_CACHE[key]
 
     try:
-        df = _with_retry(lambda: yf.Ticker(provider_symbol).history(period=period))
+        df = _with_retry(lambda: yf.Ticker(provider_symbol).history(period=period, auto_adjust=False))
     except Exception as e:
         log.warning("_get_price_history failed | %s (%s): %s", provider_symbol, period, e)
         _HISTORY_ERROR_CACHE[key] = now
         raise
+
+    if df is not None and not df.empty and "Close" in df:
+        df = df.dropna(subset=["Close"])
 
     _HISTORY_CACHE[key] = (df, now)
     return df
@@ -257,22 +263,226 @@ def compute_price_percentile(provider_symbol: str, period: str = "5y") -> Tuple[
     point-in-time fundamentals ให้คำนวณ Valuation Percentile ย้อนหลังได้จริง (ข้อจำกัดเดียวกับที่
     ทำให้ต้องเป็น Forward-tracking แทน Backtest ใน tools/market/quant_history.py)
 
-    Guard: ต้องมี ≥250 trading days ไม่งั้น None + insufficient_trading_history
+    Atomic Pair Guard:
+    1. แปลง Close เป็น numeric และตรวจ NaN / non-finite
+    2. หาก latest close ใช้ไม่ได้ -> percentile=None, zscore=None, stale_reason="latest_close_unavailable"
+    3. กรองค่า non-finite ออก และตรวจว่าต้องมีข้อมูลเหลือ ≥250 วัน
+    4. ทั้ง percentile และ z-score ต้องได้ค่า finite พร้อมกัน หรือเป็น None พร้อมกันเสมอ
     """
     try:
         df = _get_price_history(provider_symbol, period)
     except Exception:
         return None, None, _fetch_error_quality()
 
-    trading_days = 0 if df is None else len(df)
-    if trading_days < _PRICE_PERCENTILE_MIN_DAYS or df is None or "Close" not in df or df["Close"].empty:
-        return None, None, PriceSeriesQuality(trading_days=trading_days, is_valid=False, stale_reason="insufficient_trading_history")
+    if df is None or "Close" not in df or df["Close"].empty:
+        return None, None, PriceSeriesQuality(trading_days=0, is_valid=False, stale_reason="insufficient_trading_history")
 
-    close = df["Close"]
-    current_price = float(close.iloc[-1])
-    percentile = float((close <= current_price).mean() * 100)
+    raw_close = pd.to_numeric(df["Close"], errors="coerce")
+    if raw_close.empty:
+        return None, None, PriceSeriesQuality(trading_days=0, is_valid=False, stale_reason="insufficient_trading_history")
 
-    std = float(close.std())
-    zscore = 0.0 if std == 0 else float((current_price - close.mean()) / std)
+    raw_latest = raw_close.iloc[-1]
+    if pd.isna(raw_latest) or not math.isfinite(float(raw_latest)):
+        return None, None, PriceSeriesQuality(
+            trading_days=len(raw_close),
+            is_valid=False,
+            stale_reason="latest_close_unavailable",
+        )
 
-    return round(percentile, 2), round(zscore, 2), PriceSeriesQuality(trading_days=trading_days, is_valid=True)
+    # Clean internal non-finite values
+    cleaned = raw_close.dropna()
+    cleaned = cleaned[np.isfinite(cleaned)]
+    trading_days = len(cleaned)
+
+    if trading_days < _PRICE_PERCENTILE_MIN_DAYS:
+        return None, None, PriceSeriesQuality(
+            trading_days=trading_days,
+            is_valid=False,
+            stale_reason="insufficient_trading_history",
+        )
+
+    current_price = float(raw_latest)
+    percentile_val = float((cleaned <= current_price).mean() * 100.0)
+
+    std_val = float(cleaned.std())
+    mean_val = float(cleaned.mean())
+    zscore_val = 0.0 if std_val == 0 else float((current_price - mean_val) / std_val)
+
+    if not (math.isfinite(percentile_val) and math.isfinite(zscore_val)):
+        return None, None, PriceSeriesQuality(
+            trading_days=trading_days,
+            is_valid=False,
+            stale_reason="calculation_failed",
+        )
+
+    return round(percentile_val, 2), round(zscore_val, 2), PriceSeriesQuality(trading_days=trading_days, is_valid=True)
+
+
+def is_us_trading_day(dt: datetime) -> bool:
+    """ตรวจสอบว่าเป็นวันทำการตลาดหุ้นสหรัฐ (NYSE/Nasdaq) หรือไม่ (จันทร์-ศุกร์ ยกเว้นวันหยุดราชการตลาดหลักทรัพย์)"""
+    if dt.weekday() >= 5:  # Saturday = 5, Sunday = 6
+        return False
+    m, d, w = dt.month, dt.day, dt.weekday()
+    # Fixed-date US market holidays
+    if (m == 1 and d == 1) or (m == 6 and d == 19) or (m == 7 and d == 4) or (m == 12 and d == 25):
+        return False
+    # Holiday observed on Friday or Monday if falls on weekend
+    if (m == 1 and d == 2 and w == 0) or (m == 7 and d == 5 and w == 0) or (m == 12 and d == 26 and w == 0):
+        return False
+    if (m == 7 and d == 3 and w == 4) or (m == 12 and d == 24 and w == 4):
+        return False
+    return True
+
+
+def get_us_market_session_info(as_of_dt: datetime, actual_ohlcv_date_str: str) -> dict:
+    """คำนวณ market session status, expected latest trading session date, และ missing trading sessions ตาม exchange calendar จริง"""
+    try:
+        if as_of_dt.tzinfo is not None:
+            utc_dt = as_of_dt.astimezone(timezone.utc)
+        else:
+            utc_dt = as_of_dt.replace(tzinfo=timezone.utc)
+    except Exception:
+        utc_dt = datetime.now(timezone.utc)
+
+    # US Eastern Time is UTC-4 (EDT) or UTC-5 (EST) - using EDT (-4h) as reference
+    et_dt = utc_dt - timedelta(hours=4)
+    et_hour = et_dt.hour + (et_dt.minute / 60.0)
+
+    # 1. Market session status
+    if et_dt.weekday() >= 5 or not is_us_trading_day(et_dt):
+        market_session_status = "closed"
+    elif 4.0 <= et_hour < 9.5:
+        market_session_status = "pre_market"
+    elif 9.5 <= et_hour < 16.0:
+        market_session_status = "open"
+    elif 16.0 <= et_hour < 20.0:
+        market_session_status = "after_hours"
+    else:
+        market_session_status = "closed"
+
+    # 2. Expected latest completed trading session
+    candidate = et_dt.date()
+    if not is_us_trading_day(et_dt) or et_hour < 16.0:
+        candidate = candidate - timedelta(days=1)
+
+    while not is_us_trading_day(datetime(candidate.year, candidate.month, candidate.day)):
+        candidate = candidate - timedelta(days=1)
+
+    expected_latest_session_date = candidate.strftime("%Y-%m-%d")
+
+    # 3. Missing trading sessions
+    missing_trading_sessions = 0
+    try:
+        actual_d = datetime.strptime(actual_ohlcv_date_str[:10], "%Y-%m-%d").date()
+        if actual_d < candidate:
+            cur = actual_d + timedelta(days=1)
+            while cur <= candidate:
+                if is_us_trading_day(datetime(cur.year, cur.month, cur.day)):
+                    missing_trading_sessions += 1
+                cur += timedelta(days=1)
+    except Exception:
+        missing_trading_sessions = 0
+
+    if missing_trading_sessions == 0:
+        data_freshness_status = "fresh"
+    elif missing_trading_sessions == 1:
+        data_freshness_status = "stale_one_session"
+    else:
+        data_freshness_status = "stale_multiple_sessions"
+
+    return {
+        "market_session_status": market_session_status,
+        "data_freshness_status": data_freshness_status,
+        "expected_latest_session_date": expected_latest_session_date,
+        "actual_latest_session_date": actual_ohlcv_date_str[:10],
+        "missing_trading_sessions": missing_trading_sessions,
+    }
+
+
+def create_atomic_market_snapshot(
+    provider_symbol: str,
+    df_1y: Optional[pd.DataFrame],
+    info: dict,
+    market: str = "US",
+) -> Tuple[AtomicMarketSnapshot, List[str]]:
+    """สร้าง Atomic Market Snapshot เป็นแหล่งข้อมูลราคาเดียว (Single Source of Truth) สำหรับ pipeline ทั้งหมด"""
+    flags: List[str] = []
+    now_dt = datetime.now(timezone.utc)
+    now_iso = now_dt.isoformat()
+
+    # 1. Latest OHLCV bar
+    if df_1y is not None and not df_1y.empty and "Close" in df_1y and len(df_1y["Close"].dropna()) > 0:
+        close_series = df_1y["Close"].dropna()
+        latest_ohlcv_close = float(close_series.iloc[-1])
+        last_idx = close_series.index[-1]
+        if hasattr(last_idx, "strftime"):
+            latest_ohlcv_date = last_idx.strftime("%Y-%m-%d")
+        else:
+            latest_ohlcv_date = str(last_idx)[:10]
+        price_source: Literal["ohlcv_close", "verified_live_quote"] = "ohlcv_close"
+    else:
+        latest_ohlcv_close = float(info.get("currentPrice") or info.get("regularMarketPrice") or 0.0)
+        latest_ohlcv_date = now_dt.strftime("%Y-%m-%d")
+        flags.append("ohlcv_unavailable_fallback:market_data")
+        price_source = "verified_live_quote"
+
+    quote_price = info.get("currentPrice") or info.get("regularMarketPrice")
+    shares_out = info.get("sharesOutstanding")
+
+    # EOD analysis strictly defaults to latest OHLCV close
+    analysis_price = latest_ohlcv_close
+    analysis_price_as_of = latest_ohlcv_date
+
+    # Calendar session analysis
+    session_info = get_us_market_session_info(now_dt, latest_ohlcv_date)
+    market_session_status = session_info["market_session_status"]
+    data_freshness_status = session_info["data_freshness_status"]
+    expected_session_date = session_info["expected_latest_session_date"]
+    actual_session_date = session_info["actual_latest_session_date"]
+    missing_sessions = session_info["missing_trading_sessions"]
+
+    # Check sync & stale status
+    price_sync_status: Literal["synced", "quote_ohlcv_mismatch", "stale"] = "synced"
+    if data_freshness_status in ("stale_one_session", "stale_multiple_sessions"):
+        flags.append(f"stale_ohlcv:{data_freshness_status}")
+        flags.append("stale_ohlcv:market_data")
+        if missing_sessions >= 2:
+            price_sync_status = "stale"
+
+    if price_sync_status != "stale" and quote_price is not None and latest_ohlcv_close > 0:
+        diff_pct = abs(float(quote_price) - latest_ohlcv_close) / latest_ohlcv_close
+        if diff_pct > 0.0005:  # > 0.05% difference between live quote and EOD close
+            price_sync_status = "quote_ohlcv_mismatch"
+            flags.append("quote_ohlcv_mismatch:market_data")
+
+    if shares_out is not None and shares_out > 0:
+        market_cap = round(analysis_price * shares_out, 2)
+    else:
+        market_cap = info.get("marketCap")
+
+    freshness_status: Literal["fresh", "stale", "session_synced", "out_of_session"] = "fresh"
+    if price_sync_status == "stale" or data_freshness_status == "stale_multiple_sessions":
+        freshness_status = "stale"
+    elif price_sync_status == "quote_ohlcv_mismatch":
+        freshness_status = "out_of_session"
+
+    snapshot = AtomicMarketSnapshot(
+        analysis_price=round(analysis_price, 4),
+        analysis_price_as_of=analysis_price_as_of,
+        price_source=price_source,
+        latest_ohlcv_close=round(latest_ohlcv_close, 4),
+        latest_ohlcv_date=latest_ohlcv_date,
+        shares_outstanding=shares_out,
+        market_cap=market_cap,
+        price_sync_status=price_sync_status,
+        freshness_status=freshness_status,
+        market_session_status=market_session_status,
+        data_freshness_status=data_freshness_status,
+        expected_latest_session_date=expected_session_date,
+        actual_latest_session_date=actual_session_date,
+        missing_trading_sessions=missing_sessions,
+        retrieved_at=now_iso,
+    )
+    return snapshot, flags
+
+

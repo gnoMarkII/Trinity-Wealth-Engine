@@ -75,7 +75,13 @@ class TestMomentumScore:
     def test_missing_all_inputs_returns_none(self):
         score, flag = compute_momentum_score(rsi_14=None, macd_signal=None, ma50_vs_ma200=None)
         assert score is None
-        assert flag == "missing_momentum_inputs"
+        assert flag == "insufficient_technical_data:momentum"
+
+    def test_momentum_score_none_when_only_ma_cross_available(self):
+        """MA cross alone without RSI or MACD must return None with insufficient data flag."""
+        score, flag = compute_momentum_score(rsi_14=None, macd_signal=None, ma50_vs_ma200="golden_cross")
+        assert score is None
+        assert flag == "insufficient_technical_data:momentum"
 
 
 class TestPriceTargetOutlook:
@@ -239,3 +245,17 @@ class TestCompositeScore:
         )
         assert flag is None
         assert score == 50.0
+
+    def test_composite_score_renormalization_when_momentum_none(self):
+        """FTNT profile: value=0, quality=100, growth=71.7, dividend=0, momentum=None -> composite=50.5."""
+        score, flag = compute_composite_score(
+            value_score=0.0,
+            quality_score=100.0,
+            growth_score=71.7,
+            momentum_score=None,
+            dividend_score=0.0,
+        )
+        assert flag is None
+        # weights: value 0.25, quality 0.25, growth 0.25, dividend 0.10 (sum=0.85)
+        # sum = (0*0.25) + (100*0.25) + (71.7*0.25) + (0*0.10) = 42.925 / 0.85 = 50.5
+        assert score == 50.5

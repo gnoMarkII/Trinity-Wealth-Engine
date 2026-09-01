@@ -9,6 +9,7 @@
 """
 import json
 import shutil
+import sys
 from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Any, AsyncIterator
@@ -29,6 +30,30 @@ logger = get_logger(__name__)
 _RETRYABLE_TOOLS = {"source_add", "studio_create", "download_artifact", "notebook_query"}
 
 
+def find_notebooklm_mcp_binary() -> str | None:
+    """ค้นหา path ของ notebooklm-mcp binary โดยค้นจาก PATH และ venv ของระบบ"""
+    # 1. ลองค้นหาผ่าน PATH ปกติ
+    found = shutil.which("notebooklm-mcp")
+    if found:
+        return found
+
+    # 2. ค้นหาในโฟลเดอร์ของ Python environment ที่กำลังรันอยู่ (e.g. .venv/Scripts หรือ .venv/bin)
+    venv_bin = Path(sys.executable).parent
+    for name in ("notebooklm-mcp.exe", "notebooklm-mcp", "notebooklm-mcp.cmd", "notebooklm-mcp.bat"):
+        candidate = venv_bin / name
+        if candidate.is_file():
+            return str(candidate)
+
+    # 3. ค้นหาใน workspace .venv
+    ws_bin = Path.cwd() / ".venv" / ("Scripts" if sys.platform == "win32" else "bin")
+    for name in ("notebooklm-mcp.exe", "notebooklm-mcp", "notebooklm-mcp.cmd", "notebooklm-mcp.bat"):
+        candidate = ws_bin / name
+        if candidate.is_file():
+            return str(candidate)
+
+    return None
+
+
 @asynccontextmanager
 async def open_session() -> AsyncIterator[ClientSession]:
     """เปิด stdio session กับ notebooklm-mcp — หนึ่ง process ต่อหนึ่ง pipeline run เท่านั้น
@@ -36,7 +61,8 @@ async def open_session() -> AsyncIterator[ClientSession]:
     ห้ามเปิดหลาย session ซ้อนกันในเวลาเดียวกัน (ดู Account Risk warning ในแผน — server ใช้
     active default profile เดียว รันพร้อมกันหลาย process เสี่ยงสร้าง Notebook ผิดบัญชี)
     """
-    params = StdioServerParameters(command="notebooklm-mcp")
+    cmd = find_notebooklm_mcp_binary() or "notebooklm-mcp"
+    params = StdioServerParameters(command=cmd)
     async with stdio_client(params) as (read, write):
         async with ClientSession(read, write) as session:
             await session.initialize()
@@ -85,8 +111,8 @@ async def call_tool(session: ClientSession, tool_name: str, arguments: dict[str,
 
 
 def check_binary_available() -> None:
-    """ตรวจว่าคำสั่ง notebooklm-mcp มีอยู่จริงใน PATH — เช็คแบบ local ไม่ต้องเปิด session"""
-    if shutil.which("notebooklm-mcp") is None:
+    """ตรวจว่าคำสั่ง notebooklm-mcp มีอยู่จริงใน PATH หรือ venv — เช็คแบบ local ไม่ต้องเปิด session"""
+    if find_notebooklm_mcp_binary() is None:
         raise PreflightError(
             "ไม่พบคำสั่ง 'notebooklm-mcp' ใน PATH — ติดตั้ง notebooklm-mcp-cli ก่อน (uv sync)"
         )

@@ -119,6 +119,11 @@ def compute_momentum_score(
     Threshold: RSI>=70 → 100, RSI<=30 → 0 (เชิงเส้น) | MACD bullish → 100, bearish → 0
     | MA50/MA200: golden_cross → 100, death_cross → 0, อื่นๆ → 50
     """
+    # Guard: หากไม่มีทั้ง RSI และ MACD (มีเพียง MA Cross โดดๆ จาก summary info ซึ่งไม่พอสะท้อน technical momentum)
+    # ให้ถือว่าข้อมูลไม่เพียงพอ เพื่อไม่ให้เกิดคะแนน false 100.0 หรือ false 0.0
+    if rsi_14 is None and macd_signal is None:
+        return None, "insufficient_technical_data:momentum"
+
     sub_scores = []
     if rsi_14 is not None:
         s = _linear_score(rsi_14, best=70, worst=30)
