@@ -34,6 +34,16 @@ export const RunEquityAnalysisModal: React.FC<RunEquityAnalysisModalProps> = ({
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
+  useEffect(() => {
+    if (initialTicker) {
+      setTicker(initialTicker)
+    }
+    if (initialMarket) {
+      setMarket(initialMarket)
+      setUserTouchedMarket(true)
+    }
+  }, [initialTicker, initialMarket])
+
   const [portfolioOptions, setPortfolioOptions] = useState<StockOption[]>(propPortfolioOptions || [])
   const [watchlistOptions, setWatchlistOptions] = useState<StockOption[]>(propWatchlistOptions || [])
   const [loadingStocks, setLoadingStocks] = useState(false)

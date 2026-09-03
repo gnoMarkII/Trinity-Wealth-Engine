@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { api } from '../api/client'
 import type { EquitySummaryDTO, EquityDetailDTO } from '../api/types'
@@ -51,7 +51,42 @@ export default function Equity() {
   const [modalTicker, setModalTicker] = useState<string | undefined>(undefined)
   const [modalMarket, setModalMarket] = useState<'US' | 'TH' | undefined>(undefined)
   const [isModalOpen, setIsModalOpen] = useState(false)
+  const [activeDispatchedJob, setActiveDispatchedJob] = useState<{ jobId: string; ticker: string } | null>(null)
   const [toastState, setToastState] = useState<{ message: string; actionLabel?: string; onAction?: () => void } | null>(null)
+
+  const refetchList = useCallback(async () => {
+    try {
+      if (isMockMode) {
+        const { mockEquitySummary } = await import('../mocks/equity')
+        setSummaries(mockEquitySummary)
+      } else {
+        const data = await api.getEquityLatest()
+        setSummaries(data)
+      }
+    } catch (err: any) {
+      console.error('Failed to refetch equity list:', err)
+    }
+  }, [])
+
+  const refetchDetail = useCallback(async (targetTicker?: string) => {
+    const t = targetTicker || ticker
+    if (!t) return
+    try {
+      if (isMockMode) {
+        const { mockEquityDetailAAPL } = await import('../mocks/equity')
+        if (t.toUpperCase() === 'AAPL') {
+          setDetailData(mockEquityDetailAAPL)
+          setDetailStatus('success')
+        }
+      } else {
+        const data = await api.getEquityDetail(t)
+        setDetailData(data)
+        setDetailStatus('success')
+      }
+    } catch (err: any) {
+      console.error('Failed to refetch equity detail:', err)
+    }
+  }, [ticker])
 
   // 1. Fetch analyzed equity summaries
   useEffect(() => {
@@ -75,6 +110,63 @@ export default function Equity() {
     }
     fetchList()
   }, [])
+
+  // Poll for completion of active dispatched job and automatically reload data
+  useEffect(() => {
+    if (!activeDispatchedJob) return
+    let cancelled = false
+
+    const checkJob = async () => {
+      try {
+        const job = await api.getJobStatus(activeDispatchedJob.jobId)
+        if (cancelled) return false
+
+        if (['done', 'done_with_warnings', 'done_with_errors'].includes(job.status)) {
+          const finishedTicker = activeDispatchedJob.ticker
+          setActiveDispatchedJob(null)
+
+          await refetchList()
+          if (ticker && normalizeTicker(ticker) === normalizeTicker(finishedTicker)) {
+            await refetchDetail(finishedTicker)
+          }
+
+          setToastState({
+            message: `อัปเดตบทวิเคราะห์หุ้น ${finishedTicker} เรียบร้อยแล้ว`,
+            actionLabel: 'ดูข้อมูลล่าสุด',
+            onAction: () => {
+              navigate(`/equity/${finishedTicker.toLowerCase()}`)
+            },
+          })
+          return true
+        } else if (job.status === 'error') {
+          const failedTicker = activeDispatchedJob.ticker
+          setActiveDispatchedJob(null)
+          setToastState({
+            message: `การวิเคราะห์หุ้น ${failedTicker} ล้มเหลว: ${job.error_message || 'เกิดข้อผิดพลาด'}`,
+            actionLabel: 'ดูสถานะใน Kanban',
+            onAction: () => navigate('/kanban'),
+          })
+          return true
+        }
+      } catch {
+        // Silently continue polling
+      }
+      return false
+    }
+
+    const interval = setInterval(async () => {
+      const finished = await checkJob()
+      if (finished) clearInterval(interval)
+    }, 2000)
+
+    const initialTimer = setTimeout(checkJob, 300)
+
+    return () => {
+      cancelled = true
+      clearTimeout(initialTimer)
+      clearInterval(interval)
+    }
+  }, [activeDispatchedJob, ticker, refetchDetail, refetchList, navigate])
 
   // 2. Fetch portfolio & watchlist stocks (fail-soft)
   useEffect(() => {
@@ -710,8 +802,9 @@ export default function Equity() {
               status={detailStatus}
               data={detailData}
               errorMessage={detailError}
-              onOpenAnalysisModal={(t) => {
-                openAnalysisModal(t)
+              isUpdating={Boolean(activeDispatchedJob && ticker && normalizeTicker(ticker) === normalizeTicker(activeDispatchedJob.ticker))}
+              onOpenAnalysisModal={(t, m) => {
+                openAnalysisModal(t, m || (detailData?.market as 'US' | 'TH'))
               }}
             />
           </div>
@@ -725,7 +818,8 @@ export default function Equity() {
           portfolioOptions={portfolioStocks}
           watchlistOptions={watchlistStocks}
           onClose={() => setIsModalOpen(false)}
-          onDispatched={(_jobId, _cardId, dispatchedTicker) => {
+          onDispatched={(jobId, _cardId, dispatchedTicker) => {
+            setActiveDispatchedJob({ jobId, ticker: dispatchedTicker })
             setToastState({
               message: `สั่งงานวิเคราะห์หุ้น ${dispatchedTicker} และดึงข่าวเรียบร้อย`,
               actionLabel: 'ดูสถานะใน Kanban',

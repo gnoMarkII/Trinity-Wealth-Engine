@@ -549,36 +549,58 @@ export interface EquitySentimentContextDTO {
 }
 
 export interface DCFScenarioDTO {
-  target_price: number
-  upside_pct: number
-  margin_of_safety_pct: number
+  target_price?: number | null
+  upside_pct?: number | null
+  margin_of_safety_pct?: number | null
 }
 
 export interface DCFResultDTO {
-  wacc_pct: number
-  cost_of_equity_pct: number
-  cost_of_debt_pct: number
-  risk_free_rate_pct: number
-  erp_pct: number
-  observable_refs: string[]
-  scenarios: Record<'bull' | 'base' | 'bear', DCFScenarioDTO>
-  valuation_verdict: 'undervalued' | 'fairly_valued' | 'overvalued'
+  wacc_pct?: number | null
+  cost_of_equity_pct?: number | null
+  cost_of_debt_pct?: number | null
+  risk_free_rate_pct?: number | null
+  erp_pct?: number | null
+  observable_refs?: string[]
+  scenarios?: Record<'bull' | 'base' | 'bear', DCFScenarioDTO>
+  valuation_verdict?: 'undervalued' | 'fairly_valued' | 'overvalued' | 'unavailable'
   is_actionable?: boolean
   actionability_reason?: string | null
+  invalidation_reasons?: string[]
+}
+
+export type PriceSource =
+  | 'ohlcv_close'
+  | 'verified_live_quote'
+  | 'intraday_snapshot'
+  | 'stale_eod'
+  | 'unavailable'
+
+export interface MarginMetricItemDTO {
+  value_pct?: number | null
+  period_end?: string | null
+  period_type?: 'TTM' | 'quarterly' | 'annual' | 'guidance_forward' | null
+  definition?: string
+  source_provenance?: string | null
 }
 
 export interface AtomicMarketSnapshotDTO {
-  analysis_price: number
-  analysis_price_as_of: string
-  price_source: 'ohlcv_close' | 'verified_live_quote'
-  latest_ohlcv_close: number
-  latest_ohlcv_date: string
+  analysis_price?: number | null
+  analysis_price_as_of?: string | null
+  price_source: PriceSource
+  latest_ohlcv_close?: number | null
+  latest_ohlcv_date?: string | null
   shares_outstanding?: number | null
   market_cap?: number | null
-  price_sync_status: 'synced' | 'quote_ohlcv_mismatch' | 'stale'
-  freshness_status?: 'fresh' | 'stale' | 'session_synced' | 'out_of_session'
-  market_session_status?: 'pre_market' | 'open' | 'after_hours' | 'closed'
-  data_freshness_status?: 'fresh' | 'stale_one_session' | 'stale_multiple_sessions' | 'unknown'
+  raw_analysis_price?: string | null
+  raw_analysis_price_str?: string | null
+  market_cap_str?: string | null
+  market_cap_cents?: number | null
+  is_provisional?: boolean
+  volume_confirmation?: 'confirmed' | 'provisional' | 'unavailable'
+  price_sync_status?: 'synced' | 'quote_ohlcv_mismatch' | 'stale' | 'unavailable'
+  freshness_status?: 'fresh' | 'stale' | 'session_synced' | 'out_of_session' | 'unavailable'
+  market_session_status?: 'pre_market' | 'open' | 'after_hours' | 'closed' | 'unavailable'
+  data_freshness_status?: 'fresh' | 'stale' | 'stale_one_session' | 'stale_multiple_sessions' | 'unavailable' | 'unknown'
   expected_latest_session_date?: string | null
   actual_latest_session_date?: string | null
   missing_trading_sessions?: number
@@ -614,6 +636,15 @@ export interface ReverseDCFResultDTO {
   ebit_margin_fiscal_period?: string | null
   ebit_margin_period_type?: 'annual' | 'quarterly' | 'ttm' | 'unknown' | null
   ebit_margin_source_tier?: 'filing_authoritative' | 'primary_best_effort' | 'fallback' | 'unknown' | null
+  target_price_exit_multiple_12m?: number | null
+  exit_multiple_used?: number | null
+  intrinsic_value_exit_multiple?: number | null
+  consensus_target_price?: number | null
+  consensus_target_high?: number | null
+  consensus_target_low?: number | null
+  analyst_count?: number | null
+  base_revenue?: number | null
+  base_revenue_period_type?: 'annual' | 'quarterly' | 'ttm' | 'unknown' | null
 }
 
 export interface TacticalSetupDTO {
@@ -705,6 +736,8 @@ export interface QuantSignalsDTO {
   mdd_pct: number | null
   upside_pct: number | null
   downside_pct: number | null
+  raw_analysis_price?: number | null
+  raw_analysis_price_str?: string | null
   revenue_growth_yoy_pct: number | null
   net_income_growth_yoy_pct: number | null
   growth_score: number | null
@@ -747,6 +780,11 @@ export interface QuantSignalsDTO {
   dcf_discrepancy_warning?: string | null
   atomic_market_snapshot?: AtomicMarketSnapshotDTO | null
   metric_basis?: Record<string, string>
+  gaap_operating_margin?: MarginMetricItemDTO | null
+  non_gaap_operating_margin?: MarginMetricItemDTO | null
+  historical_gaap_operating_margin?: MarginMetricItemDTO | null
+  provider_ebit_margin?: MarginMetricItemDTO | null
+  valuation_margin_source_used?: string
 }
 
 export interface EquityDetailDTO extends EquitySummaryDTO {

@@ -15,6 +15,7 @@ vi.mock('../api/client', () => ({
     dispatchJob: vi.fn(),
     getActualPortfolioState: vi.fn(),
     getActualWatchlist: vi.fn(),
+    getJobStatus: vi.fn(),
   },
 }))
 
@@ -340,5 +341,37 @@ describe('Equity Page & normalizeTicker', () => {
     // Click expand button to restore full view
     await userEvent.click(expandBtn)
     expect(screen.getByText('Equity Analysis')).toBeInTheDocument()
+  })
+
+  it('เมื่อ dispatch งานอัปเดตหุ้นปัจจุบัน สำเร็จแล้วจะเข้าสถานะ updating และ auto-refresh เมื่อ job สถานะ done', async () => {
+    vi.mocked(api.getEquityLatest).mockResolvedValue(mockEquitySummary)
+    vi.mocked(api.getEquityDetail).mockResolvedValue(mockEquityDetailAAPL)
+    vi.mocked(api.createKanbanCard).mockResolvedValue({
+      created: true,
+      card: {
+        card_id: 'card-aapl-1', title: 'วิเคราะห์หุ้น AAPL (US)', prompt: 'p', column_name: 'backlog',
+        job_id: null, flow: 'manager', scope: 'both', display_seq: 1, discord_notify: true,
+        is_verified: true, created_at: 1, updated_at: 1,
+      },
+    })
+    vi.mocked(api.dispatchJob).mockResolvedValue({
+      job_id: 'job-aapl-1', status: 'running', card_id: 'card-aapl-1', error_message: null,
+      current_node: null, interrupt_payload: null, log_count: 0, created_at: 1, updated_at: 1,
+    })
+    vi.mocked(api.getJobStatus).mockResolvedValue({
+      job_id: 'job-aapl-1', status: 'done', card_id: 'card-aapl-1', error_message: null,
+      current_node: null, interrupt_payload: null, log_count: 5,
+    })
+
+    await renderComponent('/equity/aapl')
+    await waitFor(() => expect(screen.getByText('Base Case Summary')).toBeInTheDocument())
+
+    await userEvent.click(screen.getByTitle('วิเคราะห์ใหม่และดึงข่าวล่าสุด'))
+    await userEvent.click(screen.getByRole('button', { name: '🚀 สร้างการ์ดและเริ่มวิเคราะห์' }))
+
+    await waitFor(() => {
+      expect(screen.getByText('อัปเดตบทวิเคราะห์หุ้น AAPL เรียบร้อยแล้ว')).toBeInTheDocument()
+    })
+    expect(api.getEquityDetail).toHaveBeenCalledWith('aapl')
   })
 })

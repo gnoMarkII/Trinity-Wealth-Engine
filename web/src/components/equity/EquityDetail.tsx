@@ -19,13 +19,14 @@ interface EquityDetailProps {
   status: 'loading' | 'error' | 'not-found' | 'success' | 'idle'
   data?: EquityDetailDTO
   errorMessage?: string
-  onOpenAnalysisModal?: (ticker: string) => void
+  onOpenAnalysisModal?: (ticker: string, market?: 'US' | 'TH') => void
+  isUpdating?: boolean
 }
 
 const eyebrowClass = 'text-xs font-bold uppercase tracking-wider text-sky-700/80'
 const QUANT_STAGGER_STEP_MS = 50
 
-export const EquityDetail: React.FC<EquityDetailProps> = ({ status, data, errorMessage, onOpenAnalysisModal }) => {
+export const EquityDetail: React.FC<EquityDetailProps> = ({ status, data, errorMessage, onOpenAnalysisModal, isUpdating }) => {
   const [activeTab, setActiveTab] = useState<'overview' | 'chart' | 'financials' | 'news' | 'notes' | 'earnings-call'>('overview')
   const [latestEarningsCall, setLatestEarningsCall] = useState<EarningsCallNoteItem | null>(null)
   const [isFactorsExpanded, setIsFactorsExpanded] = useState(false)
@@ -104,14 +105,25 @@ export const EquityDetail: React.FC<EquityDetailProps> = ({ status, data, errorM
               {data.ticker} <span className="text-zinc-500 font-normal text-lg">({data.market})</span>
             </h2>
             <button
-              onClick={() => onOpenAnalysisModal?.(data.ticker)}
-              className="px-3 py-1 rounded-xl border border-sky-200 bg-sky-50 text-sky-700 hover:bg-sky-100 text-xs font-semibold flex items-center gap-1.5 transition-colors shadow-2xs"
-              title="วิเคราะห์ใหม่และดึงข่าวล่าสุด"
+              onClick={() => onOpenAnalysisModal?.(data.ticker, (data.market || 'US') as 'US' | 'TH')}
+              disabled={isUpdating}
+              className={`px-3 py-1 rounded-xl border text-xs font-semibold flex items-center gap-1.5 transition-colors shadow-2xs ${
+                isUpdating
+                  ? 'border-amber-200 bg-amber-50 text-amber-700 opacity-80 cursor-not-allowed'
+                  : 'border-sky-200 bg-sky-50 text-sky-700 hover:bg-sky-100'
+              }`}
+              title={isUpdating ? 'กำลังประมวลผลการวิเคราะห์...' : 'วิเคราะห์ใหม่และดึงข่าวล่าสุด'}
             >
-              <span>🔄</span>
-              <span>อัปเดตบทวิเคราะห์</span>
+              <span className={isUpdating ? 'inline-block animate-spin' : ''}>🔄</span>
+              <span>{isUpdating ? 'กำลังวิเคราะห์...' : 'อัปเดตบทวิเคราะห์'}</span>
             </button>
           </div>
+          {isUpdating && (
+            <div className="flex items-center gap-2 rounded-xl border border-amber-200 bg-amber-50/80 px-3 py-1.5 text-xs text-amber-900 font-medium">
+              <span className="inline-block animate-spin">⚙️</span>
+              <span>กำลังวิเคราะห์และดึงข่าวล่าสุดสำหรับ {data.ticker} ({data.market})... ระบบจะรีเฟรชข้อมูลอัตโนมัติเมื่อเสร็จสิ้น</span>
+            </div>
+          )}
           {data.company_name && <p className="text-zinc-600 font-medium text-sm sm:text-base">{data.company_name}</p>}
           <div className="flex flex-wrap items-center gap-2 pt-1">
             <span className={`px-2.5 py-0.5 rounded-full border text-xs font-semibold uppercase tracking-wider ${sentimentClass(data.market_sentiment)}`}>

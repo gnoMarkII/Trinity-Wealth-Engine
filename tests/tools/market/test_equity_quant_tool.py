@@ -104,7 +104,7 @@ class TestComputeEquityQuantSignalsHappyPath:
         _INFO_ERROR_CACHE.clear()
         mock_resolve.return_value = _resolved_asset()
         mock_autopsy.return_value = _autopsy_result(two_periods=True)
-        dates = pd.date_range(end=pd.Timestamp("2026-08-28"), periods=250, freq="B")
+        dates = pd.date_range(end=pd.Timestamp.now(tz="UTC"), periods=250, freq="B")
         n = len(dates)
         mock_history.return_value = pd.DataFrame({
             "Close": [200.0] * n,

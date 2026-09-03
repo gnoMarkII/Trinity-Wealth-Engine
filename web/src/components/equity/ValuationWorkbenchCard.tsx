@@ -1,4 +1,4 @@
-import type { DCFResultDTO, ReverseDCFResultDTO } from '../../api/types'
+import type { DCFResultDTO, MarginMetricItemDTO, ReverseDCFResultDTO, DCFScenarioDTO } from '../../api/types'
 
 export interface ReverseDcfProps extends Partial<ReverseDCFResultDTO> {}
 
@@ -24,6 +24,10 @@ interface Props {
   dcf?: DCFResultDTO | null
   piotroski?: PiotroskiProps | null
   qualityMetrics?: CapitalQualityProps | null
+  gaapOperatingMargin?: MarginMetricItemDTO | null
+  nonGaapOperatingMargin?: MarginMetricItemDTO | null
+  providerEbitMargin?: MarginMetricItemDTO | null
+  valuationMarginSourceUsed?: string | null
   dcfDiscrepancyWarning?: string | null
   currency?: string
 }
@@ -42,6 +46,10 @@ export default function ValuationWorkbenchCard({
   dcf,
   piotroski,
   qualityMetrics,
+  gaapOperatingMargin,
+  nonGaapOperatingMargin,
+  providerEbitMargin,
+  valuationMarginSourceUsed,
   dcfDiscrepancyWarning,
   currency = '$',
 }: Props) {
@@ -59,15 +67,17 @@ export default function ValuationWorkbenchCard({
         { key: 'bear', label: 'Bear Case', color: 'bg-rose-500', textCol: 'text-rose-700', bgCol: 'bg-rose-50 border-rose-200', data: dcf.scenarios.bear },
         { key: 'base', label: 'Base Case', color: 'bg-sky-500', textCol: 'text-sky-700', bgCol: 'bg-sky-50 border-sky-200', data: dcf.scenarios.base },
         { key: 'bull', label: 'Bull Case', color: 'bg-emerald-500', textCol: 'text-emerald-700', bgCol: 'bg-emerald-50 border-emerald-200', data: dcf.scenarios.bull },
-      ]
+      ].filter((s): s is { key: string; label: string; color: string; textCol: string; bgCol: string; data: DCFScenarioDTO & { target_price: number; upside_pct: number } } => s.data != null && s.data.target_price != null && s.data.upside_pct != null)
     : []
 
   const maxScenarioPrice = scenarios.length > 0 ? Math.max(...scenarios.map(s => s.data.target_price), 1) : 100
 
-  const ebitLabel = reverseDcf?.ebit_margin_source_tier === 'filing_authoritative' ? 'Audited EBIT Margin' : 'Reported EBIT Margin'
+  const ebitLabel = reverseDcf?.ebit_margin_source_tier === 'filing_authoritative' ? 'GAAP Operating Margin' : 'Reported EBIT Margin'
   const ebitMeta = reverseDcf?.ebit_margin_fiscal_period
     ? `${reverseDcf.ebit_margin_fiscal_period}${reverseDcf.ebit_margin_period_type ? `, ${reverseDcf.ebit_margin_period_type}` : ''}`
     : ''
+
+  const invalidationReasons = dcf?.invalidation_reasons || (reverseDcf?.actionability_reason ? [reverseDcf.actionability_reason] : [])
 
   return (
     <div className="flow-panel rounded-2xl border border-edge/80 p-6 shadow-sm transition-all animate-card-in space-y-6">
@@ -82,10 +92,39 @@ export default function ValuationWorkbenchCard({
           </h3>
         </div>
 
-        <div className="flex items-center gap-2.5">
+        <div className="flex items-center gap-3">
+          {/* Wall Street Consensus Target */}
+          {reverseDcf?.consensus_target_price != null && (
+            <div className="text-right border-r border-edge/60 pr-3 hidden sm:block">
+              <div className="text-xs text-zinc-400">Wall Street Consensus</div>
+              <div className="flex items-center gap-1 font-bold text-sky-700 text-sm justify-end">
+                <span>{currency}{reverseDcf.consensus_target_price.toFixed(2)}</span>
+                {reverseDcf.analyst_count != null && (
+                  <span className="text-[10px] text-zinc-400 font-normal">({reverseDcf.analyst_count} analysts)</span>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* DCF Fair Value (Base Case or Exit Multiple) */}
           <div className="text-right">
-            <div className="text-xs text-zinc-400">Reverse DCF (12M Outlook)</div>
-            {targetPrice != null ? (
+            <div className="text-xs text-zinc-400">
+              {dcf?.scenarios?.base?.target_price != null ? 'DCF Fair Value (Base)' : 'DCF 12M Outlook'}
+            </div>
+            {dcf?.scenarios?.base?.target_price != null ? (
+              <div className="flex items-center gap-1.5 font-bold text-zinc-900 text-sm justify-end">
+                <span>{currency}{dcf.scenarios.base.target_price.toFixed(2)}</span>
+                <span
+                  className={`text-xs px-2 py-0.5 rounded-full font-bold border ${
+                    dcf.scenarios.base.upside_pct >= 0
+                      ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                      : 'bg-rose-50 text-rose-700 border-rose-200'
+                  }`}
+                >
+                  {dcf.scenarios.base.upside_pct >= 0 ? '+' : ''}{dcf.scenarios.base.upside_pct.toFixed(1)}%
+                </span>
+              </div>
+            ) : targetPrice != null ? (
               <div className="flex items-center gap-1.5 font-bold text-zinc-900 text-sm justify-end">
                 <span>{currency}{targetPrice.toFixed(2)}</span>
                 {upside != null && (
@@ -138,15 +177,57 @@ export default function ValuationWorkbenchCard({
         </div>
       )}
 
-      {/* Non-Actionable Valuation Model Banner */}
-      {reverseDcf?.is_actionable === false && (
+      {/* Non-Actionable Valuation Model Banner with Dynamic Reason List */}
+      {(reverseDcf?.is_actionable === false || dcf?.is_actionable === false) && (
         <div className="rounded-xl border border-amber-300 bg-amber-50/90 p-3.5 text-xs text-amber-900 flex items-start gap-2.5 shadow-xs">
           <span className="text-base">ℹ️</span>
-          <div>
-            <div className="font-bold">Informational-Only Valuation Model</div>
-            <p className="mt-0.5 leading-relaxed">
-              {reverseDcf.actionability_reason || 'สมมติฐานทางเศรษฐศาสตร์มหภาค (Macro ERP/Rf) อยู่ในสภาวะผิดปกติ จึงไม่นำผลลัพธ์นี้ไปเป็นสัญญาณซื้อขายโดยตรง'}
+          <div className="space-y-1">
+            <div className="font-bold">Informational-Only Valuation Model (Non-Actionable)</div>
+            <p className="leading-relaxed">
+              แบบจำลองถูกระงับการออกเป้าหมายราคาเนื่องจากความผิดปกติของสภาวะตลาดหรือสมมติฐานทางเศรษฐศาสตร์มหภาค:
             </p>
+            {invalidationReasons.length > 0 && (
+              <ul className="list-disc list-inside space-y-0.5 text-amber-950 font-medium">
+                {invalidationReasons.map((r, i) => (
+                  <li key={i}>{r}</li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* 3-Tier Margin Provenance Strip */}
+      {(gaapOperatingMargin || nonGaapOperatingMargin || providerEbitMargin) && (
+        <div className="rounded-xl border border-edge/60 bg-surface/50 p-3.5 space-y-2">
+          <div className="flex items-center justify-between text-xs text-zinc-500 font-semibold">
+            <span>🏷️ 3-Tier Operating Margin Provenance</span>
+            {valuationMarginSourceUsed && (
+              <span className="text-sky-700 text-[11px] font-bold">Used in DCF: {valuationMarginSourceUsed}</span>
+            )}
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 text-xs">
+            {gaapOperatingMargin && (
+              <div className="rounded-lg border border-edge/50 bg-white/70 p-2 space-y-0.5">
+                <span className="text-[10px] text-zinc-400 font-bold uppercase block">1. GAAP Operating Margin</span>
+                <span className="text-sm font-extrabold text-zinc-900">{gaapOperatingMargin.value_pct != null ? `${gaapOperatingMargin.value_pct.toFixed(1)}%` : 'N/A'}</span>
+                <p className="text-[10px] text-zinc-500">{gaapOperatingMargin.period_end} ({gaapOperatingMargin.source_provenance})</p>
+              </div>
+            )}
+            {nonGaapOperatingMargin && (
+              <div className="rounded-lg border border-edge/50 bg-white/70 p-2 space-y-0.5">
+                <span className="text-[10px] text-zinc-400 font-bold uppercase block">2. Non-GAAP Margin (Guidance)</span>
+                <span className="text-sm font-extrabold text-indigo-700">{nonGaapOperatingMargin.value_pct != null ? `${nonGaapOperatingMargin.value_pct.toFixed(1)}%` : 'N/A'}</span>
+                <p className="text-[10px] text-zinc-500">{nonGaapOperatingMargin.period_end} ({nonGaapOperatingMargin.source_provenance})</p>
+              </div>
+            )}
+            {providerEbitMargin && (
+              <div className="rounded-lg border border-edge/50 bg-white/70 p-2 space-y-0.5">
+                <span className="text-[10px] text-zinc-400 font-bold uppercase block">3. Provider EBIT Proxy</span>
+                <span className="text-sm font-extrabold text-zinc-700">{providerEbitMargin.value_pct != null ? `${providerEbitMargin.value_pct.toFixed(1)}%` : 'N/A'}</span>
+                <p className="text-[10px] text-zinc-500">{providerEbitMargin.source_provenance}</p>
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -162,7 +243,17 @@ export default function ValuationWorkbenchCard({
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
             {/* Market Implied Growth */}
             <div className="rounded-xl border border-edge/60 bg-surface/70 p-4 transition-all hover:bg-surface hover:border-sky-300/80">
-              <span className="text-xs text-zinc-500 font-medium block">Market Implied 5Y Growth</span>
+              <div className="flex items-center justify-between">
+                <span className="text-xs text-zinc-500 font-medium block">Market Implied 5Y Growth</span>
+                {reverseDcf?.base_revenue != null && (
+                  <span
+                    className="text-[10px] px-1.5 py-0.5 rounded bg-sky-50 font-semibold text-sky-700 border border-sky-200"
+                    title={`Base Revenue: ${formatLargeNum(reverseDcf.base_revenue, currency)} (${reverseDcf.base_revenue_period_type ? reverseDcf.base_revenue_period_type.toUpperCase() : 'TTM'})`}
+                  >
+                    Base: {formatLargeNum(reverseDcf.base_revenue, currency)} ({reverseDcf.base_revenue_period_type ? reverseDcf.base_revenue_period_type.toUpperCase() : 'TTM'})
+                  </span>
+                )}
+              </div>
               <div className="flex items-baseline gap-1 mt-1">
                 <span className="text-2xl font-bold text-zinc-900">
                   {reverseDcf?.market_implied_growth_pct != null
@@ -172,7 +263,7 @@ export default function ValuationWorkbenchCard({
                 <span className="text-xs text-zinc-400">CAGR</span>
               </div>
               <p className="text-[11px] text-zinc-500 mt-1.5 leading-tight">
-                อัตราเติบโตรายได้ที่ราคาปัจจุบัน Price-in ไว้
+                อัตราเติบโตกระแสเงินสดแฝงที่ราคาตลาดปัจจุบัน Price-in ไว้
               </p>
             </div>
 
@@ -193,9 +284,11 @@ export default function ValuationWorkbenchCard({
                 <span className="text-2xl font-bold text-zinc-900">
                   {reverseDcf?.market_implied_margin_pct != null
                     ? `${reverseDcf.market_implied_margin_pct.toFixed(1)}%`
-                    : 'N/A'}
+                    : (reverseDcf?.reported_ebit_margin_pct != null ? `${reverseDcf.reported_ebit_margin_pct.toFixed(1)}%` : 'N/A')}
                 </span>
-                <span className="text-xs text-zinc-400">Margin</span>
+                <span className="text-xs text-zinc-400">
+                  {reverseDcf?.market_implied_margin_pct != null ? 'Margin' : 'Base Margin'}
+                </span>
               </div>
               <p className="text-[11px] text-zinc-500 mt-1.5 leading-tight">
                 {ebitMeta ? `${ebitLabel} ${reverseDcf?.reported_ebit_margin_pct?.toFixed(1)}% (${ebitMeta})` : 'อัตรากำไรจากการดำเนินงานที่ตลาดคาดหวัง'}
@@ -207,15 +300,40 @@ export default function ValuationWorkbenchCard({
           {reverseDcf && (
             <div className="rounded-xl border border-edge/50 bg-surface-strong/40 p-3.5 space-y-2 text-xs">
               <div className="flex justify-between text-zinc-600 border-b border-edge/30 pb-1.5">
-                <span>มูลค่าพื้นฐาน ณ วันนี้ (Intrinsic Value):</span>
+                <span>มูลค่าพื้นฐาน ณ วันนี้ (Gordon Growth):</span>
                 <span className="font-semibold text-zinc-900">
                   {reverseDcf.intrinsic_value_today != null ? `${currency}${reverseDcf.intrinsic_value_today.toFixed(2)}` : 'N/A'}
+                  {reverseDcf.target_price_12m != null && (
+                    <span className="text-zinc-500 font-normal ml-1">
+                      (12M: {currency}{reverseDcf.target_price_12m.toFixed(2)})
+                    </span>
+                  )}
                 </span>
               </div>
+              {reverseDcf.intrinsic_value_exit_multiple != null && (
+                <div className="flex justify-between text-zinc-600 border-b border-edge/30 pb-1.5">
+                  <span>มูลค่าพื้นฐาน ณ วันนี้ ({reverseDcf.exit_multiple_used || 25}x Exit Multiple):</span>
+                  <span className="font-semibold text-sky-800">
+                    {currency}{reverseDcf.intrinsic_value_exit_multiple.toFixed(2)}
+                    {reverseDcf.target_price_exit_multiple_12m != null && (
+                      <span className="text-zinc-500 font-normal ml-1">
+                        (12M: {currency}{reverseDcf.target_price_exit_multiple_12m.toFixed(2)})
+                      </span>
+                    )}
+                  </span>
+                </div>
+              )}
               <div className="flex justify-between text-zinc-600 border-b border-edge/30 pb-1.5">
                 <span>Enterprise Value / Equity Value:</span>
                 <span className="font-semibold text-zinc-900">
                   {formatLargeNum(reverseDcf.enterprise_value, currency)} / {formatLargeNum(reverseDcf.equity_value, currency)}
+                </span>
+              </div>
+              <div className="flex justify-between text-zinc-600 border-b border-edge/30 pb-1.5">
+                <span>Net Cash (เงินสดหักหนี้สินสุทธิ):</span>
+                <span className={`font-semibold ${reverseDcf.net_cash_debt != null && reverseDcf.net_cash_debt >= 0 ? 'text-emerald-700' : 'text-zinc-900'}`}>
+                  {reverseDcf.net_cash_debt != null && reverseDcf.net_cash_debt >= 0 ? '+' : ''}
+                  {formatLargeNum(reverseDcf.net_cash_debt, currency)}
                 </span>
               </div>
               <div className="flex justify-between text-zinc-600">

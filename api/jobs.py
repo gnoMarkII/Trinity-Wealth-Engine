@@ -76,6 +76,8 @@ class JobQueue:
                 flow=flow,
                 scope=scope,
             )
+            if card_id:
+                uow.kanban.move_kanban_card(card_id, "executing", job_id)
 
         self.enqueue(job_id)
         return job_id
@@ -96,12 +98,25 @@ class JobQueue:
             job_id = await self._queue.get()
             try:
                 await self._run_job(job_id)
-            except Exception:
+            except Exception as exc:
                 # _run_job เองมี try/except ครอบ run_fn ไว้แล้ว (เขียน status='error' ให้เสมอ) —
                 # เผื่อพังนอกเหนือจากนั้น (เช่น sqlite error ระหว่าง update status) ต้องไม่ให้
                 # worker loop ตายเงียบทั้งกระบวนการ ไม่งั้นงานถัดไปในคิวจะไม่ถูกประมวลผลเลย
                 import logging
                 logging.getLogger(__name__).exception("Unexpected error processing job %s", job_id)
+                try:
+                    with DbUnitOfWork(db_path=self._db_path) as uow:
+                        job = uow.jobs.get_job(job_id)
+                        if job is not None and job["status"] in ("queued", "running"):
+                            uow.jobs.update_job_status(
+                                job_id, "error", error_message=f"Unexpected worker error: {exc}"
+                            )
+                            if job["card_id"]:
+                                uow.kanban.move_kanban_card(job["card_id"], "backlog")
+                except Exception:
+                    logging.getLogger(__name__).exception(
+                        "Failed fallback recovery for job %s", job_id
+                    )
 
     async def _run_job(self, job_id: str) -> None:
         with DbUnitOfWork(db_path=self._db_path) as uow:
@@ -273,14 +288,14 @@ def default_run_fn(
 ) -> None:
     """Compatibility entry point delegating graph execution to the agent driver."""
     from agents.job_runner import run_job_workflow
+    from api.db.adapters import SqliteJobRepositoryAdapter
 
-    with DbUnitOfWork() as uow:
-        run_job_workflow(
-            state=uow.jobs,
-            job_id=job_id,
-            thread_id=thread_id,
-            instruction=instruction,
-            flow=flow,
-            scope=scope,
-            resume_value=resume_value,
-        )
+    run_job_workflow(
+        state=SqliteJobRepositoryAdapter(),
+        job_id=job_id,
+        thread_id=thread_id,
+        instruction=instruction,
+        flow=flow,
+        scope=scope,
+        resume_value=resume_value,
+    )

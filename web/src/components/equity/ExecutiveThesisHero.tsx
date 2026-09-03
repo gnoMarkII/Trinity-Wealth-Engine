@@ -118,7 +118,7 @@ export default function ExecutiveThesisHero({
           {atomicSnapshot && (
             <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-sky-50/60 border border-sky-200 text-xs font-medium text-sky-800" title={`Price Source: ${atomicSnapshot.price_source} | Session: ${atomicSnapshot.market_session_status || 'closed'}`}>
               <span className="text-sky-600 font-normal">Analysis close:</span>
-              <span className="font-bold">${atomicSnapshot.analysis_price.toFixed(2)}</span>
+              <span className="font-bold">{atomicSnapshot.analysis_price != null ? `$${atomicSnapshot.analysis_price.toFixed(2)}` : 'N/A'}</span>
               <span className="text-[10px] text-sky-500">({atomicSnapshot.analysis_price_as_of})</span>
             </div>
           )}
@@ -147,7 +147,7 @@ export default function ExecutiveThesisHero({
         <div className="mt-4 rounded-xl border border-amber-300 bg-amber-50/90 p-3 text-xs text-amber-900 flex items-start gap-2 shadow-xs">
           <span className="text-base">⚠️</span>
           <div>
-            <span className="font-bold">Price Synchronization Alert:</span> Live quote differs from unadjusted OHLCV Close. Analysis is strictly anchored to EOD Close (${atomicSnapshot.latest_ohlcv_close.toFixed(2)} as of {atomicSnapshot.latest_ohlcv_date}).
+            <span className="font-bold">Price Synchronization Alert:</span> Live quote differs from unadjusted OHLCV Close. Analysis is strictly anchored to EOD Close ({atomicSnapshot.latest_ohlcv_close != null ? `$${atomicSnapshot.latest_ohlcv_close.toFixed(2)}` : 'N/A'} as of {atomicSnapshot.latest_ohlcv_date}).
           </div>
         </div>
       )}

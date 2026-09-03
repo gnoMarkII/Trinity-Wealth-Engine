@@ -34,7 +34,7 @@ class DbUnitOfWork:
         # Start an explicit transaction so a read followed by several writes
         # is part of the same unit even before the first INSERT/UPDATE.
         if not self._conn.in_transaction:
-            self._conn.execute("BEGIN")
+            self._conn.execute("BEGIN IMMEDIATE")
             self._owns_transaction = True
         return self
 

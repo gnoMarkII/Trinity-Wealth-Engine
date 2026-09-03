@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta, timezone
+from decimal import Decimal
 from typing import Any, List, Optional, Tuple
 import pandas as pd
 import yfinance as yf
@@ -100,6 +101,7 @@ def compute_canonical_insider_conviction(
     ticker: str,
     market: str = "US",
     canonical_transactions: Optional[List[dict[str, Any]]] = None,
+    quarantine_meta: Optional[dict[str, Any]] = None,
 ) -> Tuple[InsiderConviction, List[str]]:
     """คำนวณ Insider Conviction จาก Canonical SEC Form 4 Ledger
     - Code P (Open Market Purchase) สำหรับ Insider Timing
@@ -129,8 +131,15 @@ def compute_canonical_insider_conviction(
                     tx_type = str(r.get("Transaction", "")).strip().lower()
                     code = "P" if ("buy" in tx_type or "purchase" in tx_type) else ("S" if ("sale" in tx_type or "sell" in tx_type) else "O")
                     dt_val = str(r.get(date_col, "")) if date_col else ""
-                    shares = float(r.get("Shares", 0) or 0)
-                    price = float(r.get("Value", 0) or 0) / shares if shares > 0 else float(r.get("Price", 0) or 0)
+                    shares_val = r.get("Shares")
+                    shares = float(shares_val) if (shares_val is not None and pd.notna(shares_val)) else 0.0
+                    val = r.get("Value")
+                    value = float(val) if (val is not None and pd.notna(val)) else 0.0
+                    pr = r.get("Price")
+                    price_direct = float(pr) if (pr is not None and pd.notna(pr)) else 0.0
+                    price = (value / shares) if (shares > 0 and value > 0) else price_direct
+                    if pd.isna(price):
+                        price = 0.0
                     text_title = str(r.get("Position", "") or r.get("Insider", "")).lower()
                     is_c_suite = any(t in text_title for t in ["ceo", "cfo", "coo", "chief", "president"])
                     txs.append({
@@ -149,10 +158,25 @@ def compute_canonical_insider_conviction(
         return InsiderConviction(status="unavailable", data_status="unavailable"), ["form4_data_unavailable:insider"]
 
     cutoff = datetime.now(timezone.utc) - timedelta(days=_INSIDER_WINDOW_DAYS)
-    p_count = 0
-    p_value = 0.0
-    s_count = 0
-    s_value = 0.0
+    p_filing_accs = set()
+    p_lot_count = 0
+    p_cents = 0
+
+    s_filing_accs = set()
+    s_lot_count = 0
+    s_cents = 0
+
+    s_10b51_filing_accs = set()
+    s_10b51_lot_count = 0
+    s_10b51_cents = 0
+
+    s_unflagged_filing_accs = set()
+    s_unflagged_lot_count = 0
+    s_unflagged_cents = 0
+
+    tax_withhold_count = 0
+    tax_withhold_cents = 0
+    exercise_count = 0
     c_suite_count = 0
     buy_prices: List[float] = []
 
@@ -165,43 +189,115 @@ def compute_canonical_insider_conviction(
         except Exception:
             pass  # If date parsing fails, include transaction within scope
 
+        acc = tx.get("accession_number") or ""
         code = str(tx.get("transaction_code", "")).upper()
-        shares = float(tx.get("shares", 0) or 0)
-        price = float(tx.get("price_per_share", 0) or 0)
-        val = shares * price
+        tx_type = str(tx.get("transaction_type", code)).upper()
+        is_10b51 = bool(tx.get("is_10b5_1_plan", False)) or tx_type == "S_10B5_1_FLAGGED"
+        price_raw = tx.get("price_per_share")
+        price = float(price_raw) if (price_raw is not None and pd.notna(price_raw)) else 0.0
 
-        if code == "P":
-            p_count += 1
-            p_value += val
+        # Exact cents calculation
+        lot_cents_raw = tx.get("lot_value_cents")
+        if lot_cents_raw is None or pd.isna(lot_cents_raw):
+            shares_raw = tx.get("shares")
+            shares = float(shares_raw) if (shares_raw is not None and pd.notna(shares_raw)) else 0.0
+            lot_cents = int(round(shares * price * 100))
+        else:
+            try:
+                lot_cents = int(lot_cents_raw)
+            except (ValueError, TypeError):
+                lot_cents = 0
+
+        if code == "P" or tx_type == "P":
+            if acc:
+                p_filing_accs.add(acc)
+            p_lot_count += 1
+            p_cents += lot_cents
             if price > 0:
                 buy_prices.append(price)
             if tx.get("is_c_suite") or any(t in str(tx.get("officer_title", "")).lower() for t in ["ceo", "cfo", "coo", "chief", "president"]):
                 c_suite_count += 1
-        elif code == "S":
-            s_count += 1
-            s_value += val
+        elif code == "S" or tx_type.startswith("S"):
+            if acc:
+                s_filing_accs.add(acc)
+            s_lot_count += 1
+            s_cents += lot_cents
+            if is_10b51:
+                if acc:
+                    s_10b51_filing_accs.add(acc)
+                s_10b51_lot_count += 1
+                s_10b51_cents += lot_cents
+            else:
+                if acc:
+                    s_unflagged_filing_accs.add(acc)
+                s_unflagged_lot_count += 1
+                s_unflagged_cents += lot_cents
+        elif code == "F" or tx_type == "F_TAX_WITHHOLDING":
+            tax_withhold_count += 1
+            tax_withhold_cents += lot_cents
+        elif code == "M" or tx_type == "M_EXERCISE":
+            exercise_count += 1
 
     buy_min = min(buy_prices) if buy_prices else None
     buy_max = max(buy_prices) if buy_prices else None
 
+    # Determine quarantine metadata
+    q_meta = quarantine_meta or (getattr(canonical_transactions, "quarantine_meta", None) if canonical_transactions is not None else None)
+    requires_review = q_meta.get("requires_review", False) if isinstance(q_meta, dict) else False
+    quarantined_filings = q_meta.get("quarantined_filing_count_90d", 0) if isinstance(q_meta, dict) else 0
+    quarantined_lots = q_meta.get("quarantined_lot_count_90d", 0) if isinstance(q_meta, dict) else 0
+
     # Status Determination
-    if c_suite_count >= 2 or (p_count >= 3 and p_value >= 100_000.0):
+    if requires_review:
+        status = "requires_review"
+        signal_conf = "unavailable"
+    elif c_suite_count >= 2 or (p_lot_count >= 3 and p_cents >= 100_000_00):
         status = "bullish_cluster"
-    elif p_count >= 1:
+        signal_conf = "high" if canonical_transactions is not None else "moderate"
+    elif p_lot_count >= 1:
         status = "moderate_buying"
-    elif s_count > 0:
+        signal_conf = "high" if canonical_transactions is not None else "moderate"
+    elif s_lot_count > 0:
         status = "selling_activity"
+        signal_conf = "high" if canonical_transactions is not None else "moderate"
     else:
         status = "neutral_no_signal"
+        signal_conf = "high" if canonical_transactions is not None else "moderate"
+
+    def _to_usd_str(cents: int) -> str:
+        return f"{Decimal(cents) / Decimal(100):.2f}"
 
     return InsiderConviction(
-        open_market_p_count_90d=p_count,
-        open_market_p_value_usd=round(p_value, 2),
-        open_market_s_count_90d=s_count,
-        open_market_s_value_usd=round(s_value, 2),
+        open_market_p_count_90d=p_lot_count,
+        open_market_p_value_usd=float(Decimal(p_cents) / Decimal(100)),
+        open_market_p_value_cents=p_cents,
+        open_market_p_value_usd_str=_to_usd_str(p_cents),
+        open_market_s_count_90d=s_lot_count,
+        open_market_s_value_usd=float(Decimal(s_cents) / Decimal(100)),
+        open_market_s_value_cents=s_cents,
+        open_market_s_value_usd_str=_to_usd_str(s_cents),
+        rule_10b5_1_s_count_90d=s_10b51_lot_count,
+        rule_10b5_1_s_value_usd=float(Decimal(s_10b51_cents) / Decimal(100)),
+        rule_10b5_1_s_value_cents=s_10b51_cents,
+        rule_10b5_1_s_value_usd_str=_to_usd_str(s_10b51_cents),
+        unflagged_s_count_90d=s_unflagged_lot_count,
+        unflagged_s_value_usd=float(Decimal(s_unflagged_cents) / Decimal(100)),
+        unflagged_s_value_cents=s_unflagged_cents,
+        unflagged_s_value_usd_str=_to_usd_str(s_unflagged_cents),
+        tax_withholding_count_90d=tax_withhold_count,
+        tax_withholding_value_usd=float(Decimal(tax_withhold_cents) / Decimal(100)),
+        exercise_count_90d=exercise_count,
         c_suite_p_count=c_suite_count,
+        filing_count_90d=len(p_filing_accs | s_filing_accs),
+        transaction_lot_count_90d=p_lot_count + s_lot_count,
+        rule_10b5_1_filing_count_90d=len(s_10b51_filing_accs),
+        rule_10b5_1_lot_count_90d=s_10b51_lot_count,
+        quarantined_filing_count_90d=quarantined_filings,
+        quarantined_lot_count_90d=quarantined_lots,
         insider_buy_range_min=round(buy_min, 2) if buy_min is not None else None,
         insider_buy_range_max=round(buy_max, 2) if buy_max is not None else None,
+        signal_confidence=signal_conf,
+        amendment_unresolved=requires_review,
         status=status,
-        data_status="available",
+        data_status="available" if not requires_review else "partial",
     ), flags

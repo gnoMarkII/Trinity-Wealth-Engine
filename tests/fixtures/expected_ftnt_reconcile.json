@@ -1,0 +1,56 @@
+{
+  "ticker": "FTNT",
+  "market": "US",
+  "pipeline_version": "v17.0.0",
+  "analysis_date": "2026-08-27",
+  "analysis_price": 161.85,
+  "raw_analysis_price_str": "161.8500",
+  "analysis_price_source": "ohlcv_close",
+  "shares_outstanding_str": "733713653",
+  "market_cap_cents": 11875155473805,
+  "expected_market_cap_usd": 118751554738.05,
+  "ttm_accounting": {
+    "raw_ttm_revenue_usd_str": "7527400000.00",
+    "raw_ttm_operating_income_usd_str": "2442200000.00",
+    "standardized_ttm_gaap_operating_margin_pct": 32.44,
+    "raw_ttm_operating_cash_flow_usd_str": "3396100000.00",
+    "raw_ttm_net_income_usd_str": "2120700000.00",
+    "raw_ttm_capex_usd_str": "279100000.00",
+    "raw_ttm_fcf_usd_str": "3117000000.00",
+    "fcf_margin_pct": 41.41,
+    "fcf_yield_pct": 2.62,
+    "ocf_to_net_income": 1.60,
+    "contiguous_duration_days": 365,
+    "duration_status": "complete"
+  },
+  "margin_taxonomy": {
+    "gaap_operating_margin_pct": 32.44,
+    "non_gaap_operating_margin_pct": 36.0,
+    "historical_gaap_operating_margin_pct": 30.66,
+    "provider_ebit_margin_pct": 30.66,
+    "valuation_margin_source_used": "Standardized TTM GAAP Operating Margin"
+  },
+  "guidance": {
+    "management_tone": "bullish",
+    "operating_margin_trajectory": "expanding",
+    "revenue_guidance_range_usd_b": [8.020, 8.180],
+    "billings_guidance_range_usd_b": [9.350, 9.550],
+    "non_gaap_operating_margin_range_pct": [35.0, 37.0],
+    "diluted_non_gaap_eps_range_usd": [3.41, 3.47],
+    "computed_revenue_growth_yoy_pct": 19.1,
+    "computed_billings_growth_yoy_pct": 25.1,
+    "non_gaap_operating_margin_midpoint_pct": 36.0
+  },
+  "insider_conviction": {
+    "filing_count_90d": 1,
+    "transaction_lot_count_90d": 6,
+    "rule_10b5_1_filing_count_90d": 1,
+    "rule_10b5_1_lot_count_90d": 6,
+    "rule_10b5_1_s_value_cents": 2626687822,
+    "rule_10b5_1_s_value_usd_str": "26266878.22",
+    "status": "selling_activity",
+    "signal_confidence": "high",
+    "quarantined_filing_count_90d": 0,
+    "quarantined_lot_count_90d": 0
+  }
+}

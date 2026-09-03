@@ -9,24 +9,41 @@ from pydantic import BaseModel, Field, model_validator
 
 DataStatus = Literal["available", "partial", "unavailable", "not_applicable"]
 
+PriceSource = Literal[
+    "ohlcv_close",
+    "verified_live_quote",
+    "intraday_snapshot",
+    "stale_eod",
+    "unavailable",
+]
+
 
 class DCFScenario(BaseModel):
-    target_price: float
-    upside_pct: float
-    margin_of_safety_pct: float
+    target_price: Optional[float] = None
+    upside_pct: Optional[float] = None
+    margin_of_safety_pct: Optional[float] = None
 
 
 class DCFResult(BaseModel):
-    wacc_pct: float
-    cost_of_equity_pct: float
-    cost_of_debt_pct: float
-    risk_free_rate_pct: float
-    erp_pct: float
+    wacc_pct: Optional[float] = None
+    cost_of_equity_pct: Optional[float] = None
+    cost_of_debt_pct: Optional[float] = None
+    risk_free_rate_pct: Optional[float] = None
+    erp_pct: Optional[float] = None
     observable_refs: list[str] = Field(default_factory=list)
-    scenarios: dict[str, DCFScenario]
-    valuation_verdict: Literal["undervalued", "fairly_valued", "overvalued"]
+    scenarios: dict[str, DCFScenario] = Field(default_factory=dict)
+    valuation_verdict: Literal["undervalued", "fairly_valued", "overvalued", "unavailable"] = "unavailable"
     is_actionable: bool = True
     actionability_reason: Optional[str] = None
+    invalidation_reasons: list[str] = Field(default_factory=list)
+
+
+class MarginMetricItem(BaseModel):
+    value_pct: Optional[float] = None
+    period_end: Optional[str] = None
+    period_type: Optional[str] = None  # "TTM", "quarterly", "annual", "guidance_forward"
+    definition: str = ""
+    source_provenance: Optional[str] = None
 
 
 class ExplicitFCFProjection(BaseModel):
@@ -42,17 +59,23 @@ class ExplicitFCFProjection(BaseModel):
 
 
 class AtomicMarketSnapshot(BaseModel):
-    analysis_price: float
-    analysis_price_as_of: str
-    price_source: Literal["ohlcv_close", "verified_live_quote"] = "ohlcv_close"
-    latest_ohlcv_close: float
-    latest_ohlcv_date: str
+    analysis_price: Optional[float] = None
+    analysis_price_as_of: Optional[str] = None
+    price_source: PriceSource = "ohlcv_close"
+    latest_ohlcv_close: Optional[float] = None
+    latest_ohlcv_date: Optional[str] = None
     shares_outstanding: Optional[float] = None
     market_cap: Optional[float] = None
-    price_sync_status: Literal["synced", "quote_ohlcv_mismatch", "stale"] = "synced"
-    freshness_status: Literal["fresh", "stale", "session_synced", "out_of_session"] = "fresh"
-    market_session_status: Literal["pre_market", "open", "after_hours", "closed"] = "closed"
-    data_freshness_status: Literal["fresh", "stale_one_session", "stale_multiple_sessions", "unknown"] = "fresh"
+    raw_analysis_price: Optional[str] = None
+    raw_analysis_price_str: Optional[str] = None
+    market_cap_str: Optional[str] = None
+    market_cap_cents: Optional[int] = None
+    is_provisional: bool = False
+    volume_confirmation: Literal["confirmed", "provisional", "unavailable"] = "confirmed"
+    price_sync_status: Literal["synced", "quote_ohlcv_mismatch", "stale", "unavailable"] = "synced"
+    freshness_status: Literal["fresh", "stale", "session_synced", "out_of_session", "unavailable"] = "fresh"
+    market_session_status: Literal["pre_market", "open", "after_hours", "closed", "unavailable"] = "closed"
+    data_freshness_status: Literal["fresh", "stale", "stale_one_session", "stale_multiple_sessions", "unavailable", "unknown"] = "fresh"
     expected_latest_session_date: Optional[str] = None
     actual_latest_session_date: Optional[str] = None
     missing_trading_sessions: int = 0
@@ -88,6 +111,15 @@ class ReverseDCFResult(BaseModel):
     ebit_margin_fiscal_period: Optional[str] = None
     ebit_margin_period_type: Optional[Literal["annual", "quarterly", "ttm", "unknown"]] = None
     ebit_margin_source_tier: Optional[Literal["filing_authoritative", "primary_best_effort", "fallback", "unknown"]] = None
+    target_price_exit_multiple_12m: Optional[float] = None
+    exit_multiple_used: Optional[float] = None
+    intrinsic_value_exit_multiple: Optional[float] = None
+    consensus_target_price: Optional[float] = None
+    consensus_target_high: Optional[float] = None
+    consensus_target_low: Optional[float] = None
+    analyst_count: Optional[int] = None
+    base_revenue: Optional[float] = None
+    base_revenue_period_type: Optional[Literal["annual", "quarterly", "ttm", "unknown"]] = None
 
 
 class SmartMoneyFlags(BaseModel):
@@ -102,16 +134,22 @@ class SmartMoneyFlags(BaseModel):
 
 
 class PiotroskiFScoreBreakdown(BaseModel):
-    roa_positive: Optional[bool] = None
-    cfo_positive: Optional[bool] = None
-    delta_roa_positive: Optional[bool] = None
-    accrual_quality: Optional[bool] = None  # CFO > Net Income
-    delta_leverage_improved: Optional[bool] = None
-    delta_liquidity_improved: Optional[bool] = None
-    no_share_dilution: Optional[bool] = None
-    delta_gross_margin_improved: Optional[bool] = None
-    delta_asset_turnover_improved: Optional[bool] = None
-    f_score: Optional[int] = Field(default=None, description="0-9 Piotroski F-Score")
+    # Profitability (0-4)
+    roa_positive: Optional[bool] = False
+    cfo_positive: Optional[bool] = False
+    delta_roa_positive: Optional[bool] = False
+    accrual_quality: Optional[bool] = False
+    
+    # Leverage, Liquidity and Source of Funds (0-3)
+    delta_leverage_improved: Optional[bool] = False
+    delta_liquidity_improved: Optional[bool] = False
+    no_share_dilution: Optional[bool] = False
+    
+    # Operating Efficiency (0-2)
+    delta_gross_margin_improved: Optional[bool] = False
+    delta_asset_turnover_improved: Optional[bool] = False
+    
+    f_score: Optional[int] = None
     status: DataStatus = "available"
     is_eligible: bool = True
     exclusion_reason: Optional[str] = None
@@ -165,12 +203,37 @@ class TacticalSetup(BaseModel):
 class InsiderConviction(BaseModel):
     open_market_p_count_90d: int = 0
     open_market_p_value_usd: float = 0.0
+    open_market_p_value_cents: int = 0
+    open_market_p_value_usd_str: str = "0.00"
     open_market_s_count_90d: int = 0
     open_market_s_value_usd: float = 0.0
+    open_market_s_value_cents: int = 0
+    open_market_s_value_usd_str: str = "0.00"
+    rule_10b5_1_s_count_90d: int = 0
+    rule_10b5_1_s_value_usd: float = 0.0
+    rule_10b5_1_s_value_cents: int = 0
+    rule_10b5_1_s_value_usd_str: str = "0.00"
+    unflagged_s_count_90d: int = 0
+    unflagged_s_value_usd: float = 0.0
+    unflagged_s_value_cents: int = 0
+    unflagged_s_value_usd_str: str = "0.00"
+    tax_withholding_count_90d: int = 0
+    tax_withholding_value_usd: float = 0.0
+    tax_withholding_value_cents: int = 0
+    tax_withholding_value_usd_str: str = "0.00"
+    exercise_count_90d: int = 0
     c_suite_p_count: int = 0
+    filing_count_90d: int = 0
+    transaction_lot_count_90d: int = 0
+    rule_10b5_1_filing_count_90d: int = 0
+    rule_10b5_1_lot_count_90d: int = 0
+    quarantined_filing_count_90d: int = 0
+    quarantined_lot_count_90d: int = 0
     insider_buy_range_min: Optional[float] = None
     insider_buy_range_max: Optional[float] = None
-    status: Literal["bullish_cluster", "moderate_buying", "neutral_no_signal", "selling_activity", "unavailable", "not_applicable"] = "neutral_no_signal"
+    signal_confidence: Literal["high", "moderate", "neutral", "unavailable"] = "neutral"
+    amendment_unresolved: bool = False
+    status: Literal["bullish_cluster", "moderate_buying", "neutral_no_signal", "selling_activity", "requires_review", "unavailable", "not_applicable"] = "neutral_no_signal"
     data_status: DataStatus = "available"
 
 
@@ -274,6 +337,8 @@ class QuantSignals(BaseModel):
     mdd_pct: Optional[float] = None
     upside_pct: Optional[float] = None
     downside_pct: Optional[float] = None
+    raw_analysis_price: Optional[float] = None
+    raw_analysis_price_str: Optional[str] = None
     # Growth
     revenue_growth_yoy_pct: Optional[float] = None
     net_income_growth_yoy_pct: Optional[float] = None
@@ -340,11 +405,16 @@ class QuantSignals(BaseModel):
     evidence_snapshot: Optional['AnalysisEvidenceSnapshot'] = None
     atomic_market_snapshot: Optional[AtomicMarketSnapshot] = None
     metric_basis: dict[str, str] = Field(default_factory=dict)
+    gaap_operating_margin: Optional[MarginMetricItem] = None
+    non_gaap_operating_margin: Optional[MarginMetricItem] = None
+    historical_gaap_operating_margin: Optional[MarginMetricItem] = None
+    provider_ebit_margin: Optional[MarginMetricItem] = None
+    valuation_margin_source_used: str = "Standardized TTM GAAP Operating Margin"
 
 
 class EvidenceItemMetadata(BaseModel):
     """Item-Level Temporal Provenance & Source Metadata (v3.1)"""
-    source_as_of: str = Field(..., description="Timestamp of data state at source (ISO 8601)")
+    source_as_of: Optional[str] = Field(None, description="Timestamp of data state at source (ISO 8601)")
     retrieved_at: str = Field(..., description="Timestamp when engine fetched data (ISO 8601)")
     fiscal_period_end: Optional[str] = Field(None, description="Period end date e.g. 2024-09-30")
     reported_at: Optional[str] = Field(None, description="Official filing disclosure timestamp")

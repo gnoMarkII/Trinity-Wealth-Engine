@@ -26,11 +26,10 @@ def write_equity_sidecar(output: MicroQuantOutput) -> None:
     if not ticker.isalnum() and not all(c in "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789.-_" for c in ticker):
         raise ValueError(f"Invalid ticker format for path: {ticker}")
         
+    import hashlib
     vault_path = Path(os.getenv("OBSIDIAN_VAULT_PATH", "./memories"))
     sidecar_dir = vault_path / "30_Knowledge_Base" / "Stocks" / ticker
     sidecar_dir.mkdir(parents=True, exist_ok=True)
-    
-    sidecar_path = sidecar_dir / f"{ticker} Equity Analysis {date_str}.json"
     
     # Serialize to dict without mutating input output object
     payload = output.model_dump(mode="json")
@@ -40,6 +39,16 @@ def write_equity_sidecar(output: MicroQuantOutput) -> None:
     
     # Serialize to JSON string
     json_data = json.dumps(payload, ensure_ascii=False, indent=2)
-    
-    # Atomic write
-    _atomic_write_to(sidecar_path, json_data)
+    content_hash = hashlib.sha256(json_data.encode("utf-8")).hexdigest()[:6]
+
+    # Primary date path
+    primary_path = sidecar_dir / f"{ticker} Equity Analysis {date_str}.json"
+    _atomic_write_to(primary_path, json_data)
+
+    # Collision-free revision path
+    revision_path = sidecar_dir / f"{ticker} Equity Analysis {date_str}_{content_hash}.json"
+    _atomic_write_to(revision_path, json_data)
+
+    # Atomic latest pointer
+    latest_path = sidecar_dir / f"{ticker} Equity Analysis latest.json"
+    _atomic_write_to(latest_path, json_data)

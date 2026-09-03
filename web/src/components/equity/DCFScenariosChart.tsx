@@ -1,16 +1,26 @@
 import React from 'react'
-import type { DCFResultDTO } from '../../api/types'
+import type { DCFResultDTO, DCFScenarioDTO } from '../../api/types'
 
 interface DCFScenariosChartProps {
   dcf: DCFResultDTO
 }
 
 export const DCFScenariosChart: React.FC<DCFScenariosChartProps> = ({ dcf }) => {
-  const scenarios = [
-    { key: 'bear', label: 'Bear Case', barColor: 'bg-rose-500', data: dcf.scenarios.bear },
-    { key: 'base', label: 'Base Case', barColor: 'bg-amber-500', data: dcf.scenarios.base },
-    { key: 'bull', label: 'Bull Case', barColor: 'bg-emerald-500', data: dcf.scenarios.bull },
-  ]
+  const scenarios = dcf.scenarios
+    ? [
+        { key: 'bear', label: 'Bear Case', barColor: 'bg-rose-500', data: dcf.scenarios.bear },
+        { key: 'base', label: 'Base Case', barColor: 'bg-amber-500', data: dcf.scenarios.base },
+        { key: 'bull', label: 'Bull Case', barColor: 'bg-emerald-500', data: dcf.scenarios.bull },
+      ].filter((s): s is { key: string; label: string; barColor: string; data: DCFScenarioDTO & { target_price: number; upside_pct: number } } => s.data != null && s.data.target_price != null && s.data.upside_pct != null)
+    : []
+
+  if (scenarios.length === 0) {
+    return (
+      <div className="my-3 rounded-lg border border-edge/60 bg-surface/50 p-4 text-xs text-zinc-500">
+        Targets unavailable or suppressed due to non-actionable valuation model.
+      </div>
+    )
+  }
 
   const maxPrice = Math.max(...scenarios.map(s => s.data.target_price), 1)
 
@@ -19,7 +29,7 @@ export const DCFScenariosChart: React.FC<DCFScenariosChartProps> = ({ dcf }) => 
       <div className="flex items-center justify-between text-xs text-zinc-500">
         <span>Scenarios Target Price</span>
         <span>
-          WACC: <strong className="text-zinc-900 font-semibold">{dcf.wacc_pct}%</strong> (Ke: {dcf.cost_of_equity_pct}%, Kd: {dcf.cost_of_debt_pct}%)
+          WACC: <strong className="text-zinc-900 font-semibold">{dcf.wacc_pct ?? 'N/A'}%</strong> (Ke: {dcf.cost_of_equity_pct ?? 'N/A'}%, Kd: {dcf.cost_of_debt_pct ?? 'N/A'}%)
         </span>
       </div>
 

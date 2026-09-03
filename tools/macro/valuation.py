@@ -37,6 +37,7 @@ def _parse_val_to_float(val_str: Any) -> Optional[float]:
 
 
 def _find_dgs10_in_observables(observables: list[MarketObservable]) -> tuple[Optional[float], Optional[str]]:
+    valid_cands = []
     for obs in observables:
         if not obs.is_valid:
             continue
@@ -48,8 +49,11 @@ def _find_dgs10_in_observables(observables: list[MarketObservable]) -> tuple[Opt
                 continue
             val = _parse_val_to_float(obs.value)
             if val is not None and val > 0:
-                # If from ^TNX, Yahoo usually gives yield directly, e.g. 4.35
-                return val, obs.observable_id
+                obs_date_str = getattr(obs, "observed_at", None) or getattr(obs, "as_of_date", None) or ""
+                valid_cands.append((obs_date_str, val, obs.observable_id))
+    if valid_cands:
+        valid_cands.sort(key=lambda x: x[0], reverse=True)
+        return valid_cands[0][1], valid_cands[0][2]
     return None, None
 
 

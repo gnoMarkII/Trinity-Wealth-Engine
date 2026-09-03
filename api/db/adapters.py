@@ -78,6 +78,8 @@ class _SqliteAdapterBase:
 
         with closing(get_connection(self._db_path)) as conn:
             try:
+                if write and not conn.in_transaction:
+                    conn.execute("BEGIN IMMEDIATE")
                 yield conn
                 if write:
                     conn.commit()

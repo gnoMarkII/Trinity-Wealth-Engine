@@ -5,7 +5,7 @@
 """
 import time
 from datetime import datetime, timezone, timedelta
-from typing import Optional, Dict, List, Tuple, Literal
+from typing import Optional, Dict, List, Tuple, Literal, Any
 
 import math
 import numpy as np
@@ -18,6 +18,7 @@ from core.logger import get_logger
 from core.retry import with_retry as _with_retry
 from schemas.micro_quant_schemas import AtomicMarketSnapshot
 from tools.market.financial_autopsy import FinancialAutopsyPeriod
+from tools.market.market_calendar import get_last_completed_regular_session, get_us_market_session_info
 
 log = get_logger(__name__)
 
@@ -318,57 +319,46 @@ def compute_price_percentile(provider_symbol: str, period: str = "5y") -> Tuple[
     return round(percentile_val, 2), round(zscore_val, 2), PriceSeriesQuality(trading_days=trading_days, is_valid=True)
 
 
-def is_us_trading_day(dt: datetime) -> bool:
-    """ตรวจสอบว่าเป็นวันทำการตลาดหุ้นสหรัฐ (NYSE/Nasdaq) หรือไม่ (จันทร์-ศุกร์ ยกเว้นวันหยุดราชการตลาดหลักทรัพย์)"""
-    if dt.weekday() >= 5:  # Saturday = 5, Sunday = 6
-        return False
-    m, d, w = dt.month, dt.day, dt.weekday()
-    # Fixed-date US market holidays
-    if (m == 1 and d == 1) or (m == 6 and d == 19) or (m == 7 and d == 4) or (m == 12 and d == 25):
-        return False
-    # Holiday observed on Friday or Monday if falls on weekend
-    if (m == 1 and d == 2 and w == 0) or (m == 7 and d == 5 and w == 0) or (m == 12 and d == 26 and w == 0):
-        return False
-    if (m == 7 and d == 3 and w == 4) or (m == 12 and d == 24 and w == 4):
-        return False
-    return True
+from decimal import Decimal, ROUND_HALF_UP
+from tools.market.market_calendar import (
+    get_last_completed_regular_session,
+    get_us_market_session_state,
+    is_us_trading_day,
+    NY_TZ,
+)
 
 
 def get_us_market_session_info(as_of_dt: datetime, actual_ohlcv_date_str: str) -> dict:
     """คำนวณ market session status, expected latest trading session date, และ missing trading sessions ตาม exchange calendar จริง"""
     try:
         if as_of_dt.tzinfo is not None:
-            utc_dt = as_of_dt.astimezone(timezone.utc)
+            ny_dt = as_of_dt.astimezone(NY_TZ)
         else:
-            utc_dt = as_of_dt.replace(tzinfo=timezone.utc)
+            ny_dt = as_of_dt.replace(tzinfo=timezone.utc).astimezone(NY_TZ)
     except Exception:
-        utc_dt = datetime.now(timezone.utc)
-
-    # US Eastern Time is UTC-4 (EDT) or UTC-5 (EST) - using EDT (-4h) as reference
-    et_dt = utc_dt - timedelta(hours=4)
-    et_hour = et_dt.hour + (et_dt.minute / 60.0)
+        ny_dt = datetime.now(NY_TZ)
 
     # 1. Market session status
-    if et_dt.weekday() >= 5 or not is_us_trading_day(et_dt):
-        market_session_status = "closed"
-    elif 4.0 <= et_hour < 9.5:
-        market_session_status = "pre_market"
-    elif 9.5 <= et_hour < 16.0:
+    raw_session_state = get_us_market_session_state(ny_dt)
+    if raw_session_state == "regular_open":
         market_session_status = "open"
-    elif 16.0 <= et_hour < 20.0:
-        market_session_status = "after_hours"
+    elif raw_session_state in ("pre_market", "after_hours", "closed"):
+        market_session_status = raw_session_state
     else:
         market_session_status = "closed"
 
-    # 2. Expected latest completed trading session
-    candidate = et_dt.date()
-    if not is_us_trading_day(et_dt) or et_hour < 16.0:
-        candidate = candidate - timedelta(days=1)
-
-    while not is_us_trading_day(datetime(candidate.year, candidate.month, candidate.day)):
-        candidate = candidate - timedelta(days=1)
-
+    # 2. Expected latest completed regular trading session
+    candidate = get_last_completed_regular_session(ny_dt)
     expected_latest_session_date = candidate.strftime("%Y-%m-%d")
+
+    if not actual_ohlcv_date_str:
+        return {
+            "market_session_status": market_session_status,
+            "data_freshness_status": "unavailable",
+            "expected_latest_session_date": expected_latest_session_date,
+            "actual_latest_session_date": None,
+            "missing_trading_sessions": 999,
+        }
 
     # 3. Missing trading sessions
     missing_trading_sessions = 0
@@ -377,7 +367,7 @@ def get_us_market_session_info(as_of_dt: datetime, actual_ohlcv_date_str: str) -
         if actual_d < candidate:
             cur = actual_d + timedelta(days=1)
             while cur <= candidate:
-                if is_us_trading_day(datetime(cur.year, cur.month, cur.day)):
+                if is_us_trading_day(cur):
                     missing_trading_sessions += 1
                 cur += timedelta(days=1)
     except Exception:
@@ -399,39 +389,91 @@ def get_us_market_session_info(as_of_dt: datetime, actual_ohlcv_date_str: str) -
     }
 
 
+@traceable(run_type="tool")
 def create_atomic_market_snapshot(
     provider_symbol: str,
     df_1y: Optional[pd.DataFrame],
-    info: dict,
+    info: Dict[str, Any],
+    force_intraday_mode: bool = False,
     market: str = "US",
+    **kwargs: Any,
 ) -> Tuple[AtomicMarketSnapshot, List[str]]:
-    """สร้าง Atomic Market Snapshot เป็นแหล่งข้อมูลราคาเดียว (Single Source of Truth) สำหรับ pipeline ทั้งหมด"""
+    """สร้าง Point-in-Time Market Snapshot พร้อม Session Calibration และ Data Quality Guard"""
+    from decimal import Decimal, ROUND_HALF_UP
+    from schemas.micro_quant_schemas import PriceSource
+
     flags: List[str] = []
     now_dt = datetime.now(timezone.utc)
     now_iso = now_dt.isoformat()
 
-    # 1. Latest OHLCV bar
-    if df_1y is not None and not df_1y.empty and "Close" in df_1y and len(df_1y["Close"].dropna()) > 0:
+    target_eod_date = get_last_completed_regular_session(now_dt)
+    target_eod_str = target_eod_date.strftime("%Y-%m-%d")
+
+    price_source: PriceSource = "ohlcv_close"
+    is_provisional = False
+    volume_confirmation: Literal["confirmed", "provisional", "unavailable"] = "confirmed"
+
+    latest_ohlcv_close: Optional[float] = None
+    latest_ohlcv_date: Optional[str] = None
+
+    if df_1y is not None and not df_1y.empty and "Close" in df_1y:
         close_series = df_1y["Close"].dropna()
-        latest_ohlcv_close = float(close_series.iloc[-1])
-        last_idx = close_series.index[-1]
-        if hasattr(last_idx, "strftime"):
-            latest_ohlcv_date = last_idx.strftime("%Y-%m-%d")
-        else:
-            latest_ohlcv_date = str(last_idx)[:10]
-        price_source: Literal["ohlcv_close", "verified_live_quote"] = "ohlcv_close"
-    else:
-        latest_ohlcv_close = float(info.get("currentPrice") or info.get("regularMarketPrice") or 0.0)
-        latest_ohlcv_date = now_dt.strftime("%Y-%m-%d")
-        flags.append("ohlcv_unavailable_fallback:market_data")
-        price_source = "verified_live_quote"
+        if not close_series.empty:
+            # Map index dates
+            date_map = {}
+            for idx, val in close_series.items():
+                d_str = idx.strftime("%Y-%m-%d") if hasattr(idx, "strftime") else str(idx)[:10]
+                date_map[d_str] = float(val)
+
+            if target_eod_str in date_map:
+                latest_ohlcv_close = date_map[target_eod_str]
+                latest_ohlcv_date = target_eod_str
+                price_source = "ohlcv_close"
+            else:
+                # Target EOD bar missing from vendor -> pick most recent completed date <= target_eod_str
+                past_dates = sorted([d for d in date_map.keys() if d <= target_eod_str])
+                if past_dates:
+                    latest_ohlcv_date = past_dates[-1]
+                    latest_ohlcv_close = date_map[latest_ohlcv_date]
+                    price_source = "stale_eod"
+                    flags.append("stale_ohlcv:target_eod_missing")
+                else:
+                    latest_ohlcv_close = float(close_series.iloc[-1])
+                    last_idx = close_series.index[-1]
+                    latest_ohlcv_date = last_idx.strftime("%Y-%m-%d") if hasattr(last_idx, "strftime") else str(last_idx)[:10]
+                    price_source = "stale_eod"
+                    flags.append("stale_ohlcv:target_eod_missing")
 
     quote_price = info.get("currentPrice") or info.get("regularMarketPrice")
     shares_out = info.get("sharesOutstanding")
 
-    # EOD analysis strictly defaults to latest OHLCV close
-    analysis_price = latest_ohlcv_close
-    analysis_price_as_of = latest_ohlcv_date
+    if latest_ohlcv_close is None or latest_ohlcv_close <= 0.0:
+        if quote_price is not None and float(quote_price) > 0.0:
+            latest_ohlcv_close = float(quote_price)
+            latest_ohlcv_date = target_eod_str
+            flags.append("ohlcv_unavailable_fallback:market_data")
+            price_source = "verified_live_quote"
+        else:
+            latest_ohlcv_close = None
+            latest_ohlcv_date = None
+            price_source = "unavailable"
+
+    if force_intraday_mode:
+        price_source = "intraday_snapshot"
+        is_provisional = True
+        volume_confirmation = "unavailable"
+        analysis_price = float(quote_price or latest_ohlcv_close) if (quote_price or latest_ohlcv_close) else None
+        analysis_price_as_of = now_dt.strftime("%Y-%m-%d")
+    elif price_source == "unavailable":
+        analysis_price = None
+        analysis_price_as_of = None
+        is_provisional = False
+        volume_confirmation = "unavailable"
+    else:
+        # Strict EOD Anchor
+        analysis_price = latest_ohlcv_close
+        analysis_price_as_of = latest_ohlcv_date
+        is_provisional = False
 
     # Calendar session analysis
     session_info = get_us_market_session_info(now_dt, latest_ohlcv_date)
@@ -441,39 +483,74 @@ def create_atomic_market_snapshot(
     actual_session_date = session_info["actual_latest_session_date"]
     missing_sessions = session_info["missing_trading_sessions"]
 
+    if price_source == "unavailable":
+        data_freshness_status = "unavailable"
+        market_session_status = "unavailable"
+
     # Check sync & stale status
-    price_sync_status: Literal["synced", "quote_ohlcv_mismatch", "stale"] = "synced"
-    if data_freshness_status in ("stale_one_session", "stale_multiple_sessions"):
+    price_sync_status: Literal["synced", "quote_ohlcv_mismatch", "stale", "unavailable"] = "synced"
+    if price_source == "unavailable":
+        price_sync_status = "unavailable"
+    elif data_freshness_status in ("stale_one_session", "stale_multiple_sessions") or price_source == "stale_eod":
         flags.append(f"stale_ohlcv:{data_freshness_status}")
         flags.append("stale_ohlcv:market_data")
-        if missing_sessions >= 2:
+        if missing_sessions >= 1 or price_source == "stale_eod":
             price_sync_status = "stale"
 
-    if price_sync_status != "stale" and quote_price is not None and latest_ohlcv_close > 0:
+    if price_sync_status != "stale" and price_sync_status != "unavailable" and quote_price is not None and latest_ohlcv_close is not None and latest_ohlcv_close > 0:
         diff_pct = abs(float(quote_price) - latest_ohlcv_close) / latest_ohlcv_close
         if diff_pct > 0.0005:  # > 0.05% difference between live quote and EOD close
             price_sync_status = "quote_ohlcv_mismatch"
             flags.append("quote_ohlcv_mismatch:market_data")
-
-    if shares_out is not None and shares_out > 0:
-        market_cap = round(analysis_price * shares_out, 2)
+    # Decimal-exact Market Cap calculation & raw price string
+    if analysis_price is not None and analysis_price > 0:
+        raw_analysis_price_str = f"{analysis_price:.4f}"
+        if shares_out is not None and shares_out > 0:
+            price_dec = Decimal(str(analysis_price))
+            shares_dec = Decimal(str(shares_out))
+            mcap_dec = (price_dec * shares_dec).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+            market_cap = float(mcap_dec)
+            market_cap_str = str(mcap_dec)
+            market_cap_cents = int((mcap_dec * Decimal("100")).to_integral_value())
+        else:
+            raw_mcap = info.get("marketCap")
+            if raw_mcap is not None:
+                mcap_dec = Decimal(str(raw_mcap)).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+                market_cap = float(mcap_dec)
+                market_cap_str = str(mcap_dec)
+                market_cap_cents = int((mcap_dec * Decimal("100")).to_integral_value())
+            else:
+                market_cap = None
+                market_cap_str = None
+                market_cap_cents = None
     else:
-        market_cap = info.get("marketCap")
+        raw_analysis_price_str = None
+        market_cap = None
+        market_cap_str = None
+        market_cap_cents = None
 
-    freshness_status: Literal["fresh", "stale", "session_synced", "out_of_session"] = "fresh"
-    if price_sync_status == "stale" or data_freshness_status == "stale_multiple_sessions":
+    freshness_status: Literal["fresh", "stale", "session_synced", "out_of_session", "unavailable"] = "fresh"
+    if price_source == "unavailable":
+        freshness_status = "unavailable"
+    elif price_sync_status == "stale" or data_freshness_status in ("stale_one_session", "stale_multiple_sessions") or price_source == "stale_eod":
         freshness_status = "stale"
     elif price_sync_status == "quote_ohlcv_mismatch":
         freshness_status = "out_of_session"
 
     snapshot = AtomicMarketSnapshot(
-        analysis_price=round(analysis_price, 4),
+        analysis_price=round(analysis_price, 4) if analysis_price is not None else None,
         analysis_price_as_of=analysis_price_as_of,
         price_source=price_source,
-        latest_ohlcv_close=round(latest_ohlcv_close, 4),
+        latest_ohlcv_close=round(latest_ohlcv_close, 4) if latest_ohlcv_close is not None else None,
         latest_ohlcv_date=latest_ohlcv_date,
         shares_outstanding=shares_out,
         market_cap=market_cap,
+        raw_analysis_price=raw_analysis_price_str,
+        raw_analysis_price_str=raw_analysis_price_str,
+        market_cap_str=market_cap_str,
+        market_cap_cents=market_cap_cents,
+        is_provisional=is_provisional,
+        volume_confirmation=volume_confirmation,
         price_sync_status=price_sync_status,
         freshness_status=freshness_status,
         market_session_status=market_session_status,
