@@ -1,6 +1,6 @@
 """FastAPI Sub-router for Portfolio Transactions and Ledger Replay."""
 from typing import Optional
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Response
 
 from api.auth import require_session
 from api.dependencies import get_portfolio_service
@@ -85,17 +85,35 @@ def edit_transaction_endpoint(
         return ActualPortfolioStateDTO.model_validate(state.model_dump(exclude_none=True))
 
 
-@router.delete("/api/portfolio/actual/transactions/{tx_id}", response_model=ActualPortfolioStateDTO)
-def delete_transaction_endpoint(
+@router.post("/api/portfolio/actual/transactions/{tx_id}/void", response_model=ActualPortfolioStateDTO)
+def void_transaction_endpoint(
     tx_id: str,
-    adjust_cash: bool = True,
     portfolio_id: str = "default",
     service: PortfolioService = Depends(get_portfolio_service),
 ) -> ActualPortfolioStateDTO:
     with handle_portfolio_exceptions("Transactions lock timeout"):
-        state = service.delete_transaction(
+        state = service.void_transaction(
             tx_id=tx_id,
-            adjust_cash=adjust_cash,
+            portfolio_id=portfolio_id,
+        )
+        return ActualPortfolioStateDTO.model_validate(state.model_dump(exclude_none=True))
+
+
+@router.delete("/api/portfolio/actual/transactions/{tx_id}", response_model=ActualPortfolioStateDTO)
+def delete_transaction_endpoint(
+    tx_id: str,
+    response: Response,
+    adjust_cash: bool = True,
+    portfolio_id: str = "default",
+    service: PortfolioService = Depends(get_portfolio_service),
+) -> ActualPortfolioStateDTO:
+    response.headers["X-Deprecation-Warning"] = (
+        "DELETE /api/portfolio/actual/transactions/{tx_id} is deprecated and will be removed in v2.0; "
+        "use POST /api/portfolio/actual/transactions/{tx_id}/void instead"
+    )
+    with handle_portfolio_exceptions("Transactions lock timeout"):
+        state = service.void_transaction(
+            tx_id=tx_id,
             portfolio_id=portfolio_id,
         )
         return ActualPortfolioStateDTO.model_validate(state.model_dump(exclude_none=True))

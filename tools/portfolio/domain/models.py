@@ -1,8 +1,66 @@
 from datetime import datetime
-from typing import Literal, Optional, List, Dict
+from decimal import Decimal, ROUND_HALF_UP
+from typing import Literal, Optional, List, Dict, Union, Tuple
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from .constants import CASH_THB_SYMBOL, CASH_USD_SYMBOL, CASH_SYMBOL
+
+UNITS_QUANTUM = Decimal("0.000001")   # 6 decimal places for fractional shares
+PRICE_QUANTUM = Decimal("0.0001")     # 4 decimal places for share prices
+MONEY_QUANTUM = Decimal("0.01")       # 2 decimal places for gross, fees, net, cash
+FX_QUANTUM = Decimal("0.0001")        # 4 decimal places for FX rate
+
+
+def quantize_decimal(val: Union[Decimal, float, str, int], quantum: Decimal = MONEY_QUANTUM) -> Decimal:
+    """Quantize a value to standard financial decimal precision."""
+    if val is None:
+        return Decimal("0.00").quantize(quantum, rounding=ROUND_HALF_UP)
+    d = Decimal(str(val)) if not isinstance(val, Decimal) else val
+    return d.quantize(quantum, rounding=ROUND_HALF_UP)
+
+
+class TradeFeeBreakdown(BaseModel):
+    model_config = ConfigDict(extra="allow")
+
+    commission: Decimal = Decimal("0.00")
+    vat: Decimal = Decimal("0.00")
+    other_fees: Decimal = Decimal("0.00")
+    fee_currency: str = "THB"
+
+    @property
+    def total_fees(self) -> Decimal:
+        return quantize_decimal(self.commission + self.vat + self.other_fees, MONEY_QUANTUM)
+
+
+class TradeImportItem(BaseModel):
+    model_config = ConfigDict(extra="allow")
+
+    item_id: str
+    trade_date: str
+    settlement_date: Optional[str] = None
+    symbol: str
+    action: Literal["BUY", "SELL"]
+    units: Decimal
+    price: Decimal
+    gross_amount: Decimal
+    fees: TradeFeeBreakdown = Field(default_factory=TradeFeeBreakdown)
+    net_amount: Decimal
+    currency: str = "THB"
+    exchange_rate: Optional[Decimal] = None
+    confirmation_no: str
+    order_id: Optional[str] = None
+    source: str = "DIME"
+    fingerprint: str
+    line_index: int = 0
+    cash_adjusted: bool = True
+    asset_type: str = "Stock"
+
+    @property
+    def transaction_identity(self) -> Tuple[str, str]:
+        """Unique identity across Dime trades: (confirmation_no, order_id)."""
+        if not self.order_id:
+            raise ValueError(f"รายการ {self.symbol} ขาด order_id ไม่สามารถระบุตัวตนของธุรกรรมได้")
+        return (self.confirmation_no.strip(), self.order_id.strip())
 
 
 def _coerce_iso_string(v):
@@ -85,6 +143,23 @@ class Holding(BaseModel):
     market_cap_value: Optional[float] = None
     dividend_per_share: Optional[float] = None
     dividend_yield: Optional[float] = None
+
+    @property
+    def units_decimal(self) -> Decimal:
+        return quantize_decimal(Decimal(str(self.units)), UNITS_QUANTUM)
+
+    @property
+    def units_str(self) -> str:
+        d = Decimal(str(self.units))
+        return f"{d:f}".rstrip("0").rstrip(".") if "." in f"{d:f}" else f"{d:f}"
+
+    @property
+    def avg_cost_thb_decimal(self) -> Optional[Decimal]:
+        return quantize_decimal(Decimal(str(self.avg_cost_thb)), PRICE_QUANTUM) if self.avg_cost_thb is not None else None
+
+    @property
+    def avg_cost_usd_decimal(self) -> Optional[Decimal]:
+        return quantize_decimal(Decimal(str(self.avg_cost_usd)), PRICE_QUANTUM) if self.avg_cost_usd is not None else None
 
 
 class Summary(BaseModel):

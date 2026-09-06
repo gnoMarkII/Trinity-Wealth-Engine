@@ -23,6 +23,9 @@ from api.routers.agents_router import router as agents_router
 from api.routers.notebooklm_router import router as notebooklm_router
 from api.routers.health_router import router as health_router
 from api.routers.portfolio import router as portfolio_router
+from api.routers.dime_sync import router as dime_sync_router
+from api.routers.wealthx_sync import router as wealthx_sync_router
+from api.routers.scb_sync import router as scb_sync_router
 from api.routers.equity import router as equity_router
 from api.routers.equity.router_ohlcv import router as ohlcv_router
 
@@ -104,7 +107,18 @@ async def security_and_cache_headers(request, call_next):
     # (โหลด script จาก s3.tradingview.com) กับ YouTube embed ซึ่งต้อง allowlist ละเอียด
     # และพังเงียบง่ายถ้าตั้งพลาด (ดู docs ของ widget ก่อนถ้าจะเพิ่มภายหลัง)
     response.headers.setdefault("X-Content-Type-Options", "nosniff")
-    response.headers.setdefault("X-Frame-Options", "DENY")
+    if (
+        request.url.path.startswith("/api/portfolio/dime/pdf")
+        or request.url.path.startswith("/api/portfolio/wealthx/pdf")
+        or request.url.path.startswith("/api/portfolio/scb/emails")
+    ):
+        response.headers.setdefault("X-Frame-Options", "SAMEORIGIN")
+        response.headers.setdefault(
+            "Content-Security-Policy",
+            "frame-ancestors 'self' http://localhost:5173 http://localhost:8000 http://127.0.0.1:5173 http://127.0.0.1:8000",
+        )
+    else:
+        response.headers.setdefault("X-Frame-Options", "DENY")
     response.headers.setdefault("Referrer-Policy", "same-origin")
     # ไฟล์ใน /assets มี content hash ในชื่อ (vite) — cache ยาวได้แบบ immutable
     if request.url.path.startswith("/assets/"):
@@ -113,6 +127,9 @@ async def security_and_cache_headers(request, call_next):
 
 app.include_router(auth.router)
 app.include_router(portfolio_router)
+app.include_router(dime_sync_router)
+app.include_router(wealthx_sync_router)
+app.include_router(scb_sync_router)
 app.include_router(agents_router)
 app.include_router(routes_kanban.router)
 app.include_router(routes_debug.router)

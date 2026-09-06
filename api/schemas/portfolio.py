@@ -198,12 +198,26 @@ class TransactionItemDTO(BaseModel):
     cost_thb: float = 0.0
     realized_pnl_thb: Optional[float] = None
     notes: str = ""
+    gross_amount: Optional[str] = None
+    commission: Optional[str] = None
+    vat: Optional[str] = None
+    other_fees: Optional[str] = None
+    net_amount: Optional[str] = None
+    fee_currency: Optional[str] = None
+    confirmation_no: Optional[str] = None
+    settlement_date: Optional[str] = None
+    source: Optional[str] = None
+    fingerprint: Optional[str] = None
+    cash_adjusted: Optional[str] = None
+    related_transaction_id: Optional[str] = None
 
     @field_validator("fx_rate", "realized_pnl_thb", mode="before")
     @classmethod
     def _coerce_opt_float(cls, v):
         if v is None or v == "":
             return None
+        if isinstance(v, str) and v.startswith("'"):
+            v = v[1:]
         return float(v)
 
     @field_validator("cost_thb", "units", "price", mode="before")
@@ -211,6 +225,8 @@ class TransactionItemDTO(BaseModel):
     def _coerce_req_float(cls, v):
         if v is None or v == "":
             return 0.0
+        if isinstance(v, str) and v.startswith("'"):
+            v = v[1:]
         return float(v)
 
 

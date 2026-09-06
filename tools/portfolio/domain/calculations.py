@@ -1,4 +1,5 @@
-from typing import Literal, Optional, List, Dict, Tuple
+from decimal import Decimal, ROUND_HALF_UP
+from typing import Literal, Optional, List, Dict, Tuple, Union
 from core.logger import get_logger
 from .constants import (
     CASH_THB_SYMBOL,
@@ -11,24 +12,161 @@ from .constants import (
     MARKET_CAP_LARGE_USD,
     MARKET_CAP_MID_USD,
 )
-from .models import Holding, PortfolioState, Summary
+from .models import (
+    Holding,
+    PortfolioState,
+    Summary,
+    TradeFeeBreakdown,
+    TradeImportItem,
+    UNITS_QUANTUM,
+    PRICE_QUANTUM,
+    MONEY_QUANTUM,
+    quantize_decimal,
+)
 
 log = get_logger(__name__)
 
 
-def calc_weighted_avg_cost(prev_units: float, prev_cost: float, new_units: float, new_price: float) -> float:
-    """คำนวณ Weighted-Average Cost Basis."""
-    total_units = prev_units + new_units
-    if total_units <= _FLOAT_EPS:
+def validate_reconciliation_invariant(
+    units: Union[Decimal, float, str],
+    price: Union[Decimal, float, str],
+    gross_amount: Union[Decimal, float, str],
+    fees: Union[TradeFeeBreakdown, Dict, Decimal, float, str],
+    net_amount: Union[Decimal, float, str],
+    action: str,
+) -> Tuple[bool, str]:
+    """Pure two-stage reconciliation for financial trade records.
+
+    Stage 1 (Line-item level): Units * Price ~= Gross Amount within +/- 0.01
+    Stage 2 (Statement level): Gross +/- Fees == Net Amount within +/- 0.01
+    """
+    try:
+        u = quantize_decimal(units, UNITS_QUANTUM)
+        p = quantize_decimal(price, PRICE_QUANTUM)
+        gross = quantize_decimal(gross_amount, MONEY_QUANTUM)
+        net = quantize_decimal(net_amount, MONEY_QUANTUM)
+
+        if isinstance(fees, TradeFeeBreakdown):
+            total_fees = fees.total_fees
+        elif isinstance(fees, dict):
+            total_fees = quantize_decimal(
+                Decimal(str(fees.get("commission", "0.00") or "0.00"))
+                + Decimal(str(fees.get("vat", "0.00") or "0.00"))
+                + Decimal(str(fees.get("other_fees", "0.00") or "0.00")),
+                MONEY_QUANTUM,
+            )
+        else:
+            total_fees = quantize_decimal(fees, MONEY_QUANTUM)
+
+        # Stage 2: Statement level Gross +/- Fees == Net
+        act = action.strip().upper()
+        if act == "BUY":
+            expected_net = quantize_decimal(gross + total_fees, MONEY_QUANTUM)
+        elif act == "SELL":
+            expected_net = quantize_decimal(gross - total_fees, MONEY_QUANTUM)
+        else:
+            return False, f"Unsupported action '{action}' for reconciliation"
+
+        stmt_diff = abs(expected_net - net)
+        if stmt_diff > Decimal("0.01"):
+            return False, f"Statement mismatch: Gross ({gross}) {'+' if act == 'BUY' else '-'} Fees ({total_fees}) = {expected_net} != Net ({net}), diff={stmt_diff}"
+
+        # Stage 1: Line-item Units * Price vs Gross
+        computed_gross = quantize_decimal(u * p, MONEY_QUANTUM)
+        line_diff = abs(computed_gross - gross)
+
+        # In fractional share trading (e.g. US fractional shares on Dime/DriveWealth), brokers
+        # round the displayed execution unit price on confirmation notes to 2 decimal places
+        # (e.g. $7.23 instead of $7.2325), causing a small rounding discrepancy between
+        # Units * DisplayPrice and the exact Gross.
+        # If the statement balance (Gross +/- Fees == Net) holds exactly (stmt_diff <= 0.01),
+        # we allow the line-item rounding discrepancy up to the theoretical maximum rounding
+        # bound from a 2-decimal rounded price: Units * 0.005 + 0.01
+        is_fractional = (u % Decimal("1")) != Decimal("0")
+        max_allowed_line_diff = Decimal("0.01")
+        if is_fractional and stmt_diff <= Decimal("0.01"):
+            fractional_bound = quantize_decimal(u * Decimal("0.005") + Decimal("0.01"), MONEY_QUANTUM)
+            max_allowed_line_diff = max(Decimal("0.01"), fractional_bound)
+
+        if line_diff > max_allowed_line_diff:
+            return False, f"Line-item mismatch: Units ({u}) * Price ({p}) = {computed_gross} != Gross ({gross}), diff={line_diff}"
+
+        return True, "OK"
+    except Exception as e:
+        return False, f"Reconciliation calculation error: {e}"
+
+
+def allocate_document_fees_pro_rata(
+    line_gross_amounts: List[Union[Decimal, float, str]],
+    total_fee: Union[Decimal, float, str],
+) -> List[Decimal]:
+    """Allocate lump-sum document fee proportionally across lines by gross amount.
+
+    Tie-breaker: Residual pennies are allocated to the line with the largest gross amount.
+    """
+    fee = quantize_decimal(total_fee, MONEY_QUANTUM)
+    grosses = [quantize_decimal(g, MONEY_QUANTUM) for g in line_gross_amounts]
+    total_gross = sum(grosses)
+
+    if not grosses:
+        return []
+    if total_gross <= Decimal("0.00") or fee == Decimal("0.00"):
+        n = Decimal(len(grosses))
+        base = quantize_decimal(fee / n, MONEY_QUANTUM)
+        allocated = [base for _ in grosses]
+        residual = fee - sum(allocated)
+        if residual > Decimal("0.00"):
+            allocated[0] += residual
+        return allocated
+
+    allocated = []
+    for g in grosses:
+        line_fee = quantize_decimal((g / total_gross) * fee, MONEY_QUANTUM)
+        allocated.append(line_fee)
+
+    residual = fee - sum(allocated)
+    if residual != Decimal("0.00"):
+        max_idx = max(range(len(grosses)), key=lambda i: grosses[i])
+        allocated[max_idx] += residual
+
+    return allocated
+
+
+def calc_weighted_avg_cost(
+    prev_units: Union[Decimal, float],
+    prev_cost: Union[Decimal, float],
+    new_units: Union[Decimal, float],
+    new_price: Union[Decimal, float],
+) -> float:
+    """คำนวณ Weighted-Average Cost Basis ด้วย Decimal Precision."""
+    u_prev = Decimal(str(prev_units))
+    c_prev = Decimal(str(prev_cost))
+    u_new = Decimal(str(new_units))
+    p_new = Decimal(str(new_price))
+
+    total_units = u_prev + u_new
+    if total_units <= Decimal("0.0000001"):
         return 0.0
-    total_cost = (prev_units * prev_cost) + (new_units * new_price)
-    return round(total_cost / total_units, _COST_DP)
+    total_cost = (u_prev * c_prev) + (u_new * p_new)
+    res = total_cost / total_units
+    return float(quantize_decimal(res, Decimal("0.000001")))
 
 
-def calc_realized_pnl(avg_cost: float, sell_units: float, sell_price: float, fx_rate: float = 1.0) -> float:
-    """คำนวณ Realized P&L ในสกุลเงิน THB."""
-    pnl_native = (sell_price - avg_cost) * sell_units
-    return round(pnl_native * fx_rate, _MONEY_DP)
+def calc_realized_pnl(
+    avg_cost: Union[Decimal, float],
+    sell_units: Union[Decimal, float],
+    sell_price: Union[Decimal, float],
+    fx_rate: Union[Decimal, float] = 1.0,
+) -> float:
+    """คำนวณ Realized P&L ในสกุลเงิน THB ด้วย Decimal Precision."""
+    c_avg = Decimal(str(avg_cost))
+    u_sell = Decimal(str(sell_units))
+    p_sell = Decimal(str(sell_price))
+    fx = Decimal(str(fx_rate))
+
+    pnl_native = (p_sell - c_avg) * u_sell
+    pnl_thb = quantize_decimal(pnl_native * fx, MONEY_QUANTUM)
+    return float(pnl_thb)
 
 
 def calc_holding_currency(h: Holding) -> str:
@@ -269,61 +407,108 @@ def _replay_symbol_trades(
         ValueError: If cumulative units held drop below zero at any point.
     """
     sorted_rows = sorted(trades_rows, key=lambda r: str(r.get("Timestamp") or ""))
-    units_held = 0.0
-    cumulative_cost_native = 0.0
-    avg_cost_native = 0.0
-    total_realized_pnl_thb = 0.0
+    voided_tx_ids = {
+        str(r.get("Related_Transaction_ID") or "").strip()
+        for r in sorted_rows
+        if r.get("Related_Transaction_ID") and str(r.get("Action") or "").strip().upper().startswith("VOID_")
+    }
+
+    units_held_dec = Decimal("0.0")
+    cumulative_cost_native_dec = Decimal("0.0")
+    avg_cost_native_dec = Decimal("0.0")
+    total_realized_pnl_thb_dec = Decimal("0.0")
     updated_rows: list[dict] = []
 
     for row in sorted_rows:
         r = dict(row)
+        tx_id = str(r.get("Transaction_ID") or "").strip()
         action = str(r.get("Action") or "BUY").strip().upper()
+
+        # Handle non-destructive void/reversal pairing:
+        # Rows that were voided or are reversal records have 0 economic impact on holdings
+        is_reversal = action.startswith("VOID_") or action == "REVERSAL"
+        is_voided = bool(tx_id and tx_id in voided_tx_ids)
+        if is_reversal or is_voided:
+            r["Cost_THB"] = "0.00"
+            r["Realized_PnL_THB"] = "0.00"
+            updated_rows.append(r)
+            continue
+
         try:
-            units = float(r.get("Units") or 0.0)
+            units = Decimal(str(r.get("Units") or 0.0))
         except (ValueError, TypeError):
-            units = 0.0
+            units = Decimal("0.0")
         try:
-            price = float(r.get("Price") or 0.0)
+            price = Decimal(str(r.get("Price") or 0.0))
         except (ValueError, TypeError):
-            price = 0.0
+            price = Decimal("0.0")
 
         fx_raw = r.get("FX_Rate")
-        fx_rate = float(fx_raw) if fx_raw is not None and str(fx_raw).strip() != "" else None
+        fx_rate = Decimal(str(fx_raw)) if fx_raw is not None and str(fx_raw).strip() != "" else None
 
         if action == "BUY":
-            amount_native = units * price
-            cumulative_cost_native += amount_native
-            units_held += units
-            avg_cost_native = (cumulative_cost_native / units_held) if units_held > _FLOAT_EPS else 0.0
+            # If Net_Amount is recorded (e.g. Dime imports with fees), use it for cost basis
+            net_amt_raw = r.get("Net_Amount")
+            if net_amt_raw is not None and str(net_amt_raw).strip() != "":
+                try:
+                    amount_native = Decimal(str(net_amt_raw))
+                except (ValueError, TypeError):
+                    amount_native = units * price
+            else:
+                amount_native = units * price
+
+            cumulative_cost_native_dec += amount_native
+            units_held_dec += units
+            avg_cost_native_dec = (
+                (cumulative_cost_native_dec / units_held_dec)
+                if units_held_dec > Decimal("1e-7")
+                else Decimal("0.0")
+            )
             cost_thb = amount_native * fx_rate if currency == "USD" and fx_rate is not None else amount_native
 
             r["Cost_THB"] = f"{cost_thb:.2f}"
             r["Realized_PnL_THB"] = ""
             r["Units"] = f"{units:g}"
-            r["Price"] = f"{price:.2f}"
+            # Preserve full precision price string if available
+            r["Price"] = str(r.get("Price") or f"{price:.2f}")
             updated_rows.append(r)
 
         elif action == "SELL":
-            if units > units_held + _FLOAT_EPS:
+            if units > units_held_dec + Decimal("1e-6"):
                 raise ValueError(
                     f"Replay failed for {symbol}: Insufficient units to sell at {r.get('Timestamp')} "
-                    f"(held: {units_held:g}, tried to sell: {units:g})"
+                    f"(held: {units_held_dec:g}, tried to sell: {units:g})"
                 )
-            realized_native = (price - avg_cost_native) * units
-            realized_thb = realized_native * fx_rate if currency == "USD" and fx_rate is not None else realized_native
-            cost_thb = avg_cost_native * units * (fx_rate if currency == "USD" and fx_rate is not None else 1.0)
 
-            units_held = max(0.0, units_held - units)
-            cumulative_cost_native = units_held * avg_cost_native
-            total_realized_pnl_thb += realized_thb
+            net_amt_raw = r.get("Net_Amount")
+            if net_amt_raw is not None and str(net_amt_raw).strip() != "":
+                try:
+                    net_proceeds = Decimal(str(net_amt_raw))
+                    realized_native = net_proceeds - (avg_cost_native_dec * units)
+                except (ValueError, TypeError):
+                    realized_native = (price - avg_cost_native_dec) * units
+            else:
+                realized_native = (price - avg_cost_native_dec) * units
+
+            realized_thb = realized_native * fx_rate if currency == "USD" and fx_rate is not None else realized_native
+            cost_thb = avg_cost_native_dec * units * (fx_rate if currency == "USD" and fx_rate is not None else Decimal("1.0"))
+
+            units_held_dec = max(Decimal("0.0"), units_held_dec - units)
+            cumulative_cost_native_dec = units_held_dec * avg_cost_native_dec
+            total_realized_pnl_thb_dec += realized_thb
 
             r["Cost_THB"] = f"{cost_thb:.2f}"
             r["Realized_PnL_THB"] = f"{realized_thb:.2f}"
             r["Units"] = f"{units:g}"
-            r["Price"] = f"{price:.2f}"
+            r["Price"] = str(r.get("Price") or f"{price:.2f}")
             updated_rows.append(r)
 
         else:
             updated_rows.append(r)
 
-    return updated_rows, units_held, avg_cost_native, total_realized_pnl_thb
+    return (
+        updated_rows,
+        float(units_held_dec),
+        float(quantize_decimal(avg_cost_native_dec, PRICE_QUANTUM)),
+        float(quantize_decimal(total_realized_pnl_thb_dec, MONEY_QUANTUM)),
+    )

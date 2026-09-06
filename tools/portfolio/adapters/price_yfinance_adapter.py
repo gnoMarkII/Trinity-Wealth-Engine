@@ -121,7 +121,7 @@ class PriceYFinanceAdapter(MarketPricePort):
 
         targets = []
         for h in state.holdings:
-            if h.asset_type == "Cash":
+            if h.asset_type in ("Cash", "Fund"):
                 continue
             if h.avg_cost_usd is not None:
                 targets.append((h, h.symbol, "USD"))
@@ -177,7 +177,7 @@ class PriceYFinanceAdapter(MarketPricePort):
         results: Dict[str, str] = {}
 
         def _process_one(h: Holding):
-            if h.asset_type == "Cash":
+            if h.asset_type in ("Cash", "Fund"):
                 return
             if not force and h.fundamentals_updated_at is not None:
                 if now - h.fundamentals_updated_at < FUNDAMENTALS_TTL_SECONDS:

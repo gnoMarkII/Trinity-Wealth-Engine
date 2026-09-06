@@ -5,6 +5,7 @@ import { api } from '../../api/client'
 import { formatTHB } from '../../utils/formatters'
 import { TradeIcon, EditIcon, PlusIcon, DeleteIcon } from './icons/PortfolioIcons'
 import EditTransactionModal from './Modals/EditTransactionModal'
+import DimeSyncModal from './Modals/DimeSyncModal'
 import Modal from '../ui/Modal'
 
 interface Props {
@@ -45,9 +46,11 @@ export default function PortfolioTransactionsTab({
   // Full Edit Modal State
   const [editingTx, setEditingTx] = useState<TransactionItemDTO | null>(null)
 
-  // Delete Dialog State
+  // Dime Sync Modal State
+  const [dimeModalOpen, setDimeModalOpen] = useState<boolean>(false)
+
+  // Void Dialog State
   const [deletingTx, setDeletingTx] = useState<TransactionItemDTO | null>(null)
-  const [deleteAdjustCash, setDeleteAdjustCash] = useState<boolean>(true)
   const [deletingLoading, setDeletingLoading] = useState<boolean>(false)
   const [deletingError, setDeletingError] = useState<string | null>(null)
 
@@ -205,16 +208,15 @@ export default function PortfolioTransactionsTab({
     setDeletingLoading(true)
     setDeletingError(null)
     try {
-      const updatedState = await api.deleteTransaction(
+      const updatedState = await api.voidTransaction(
         deletingTx.transaction_id,
-        { adjust_cash: deleteAdjustCash },
         portfolioId
       )
       onSuccess?.(updatedState)
       setDeletingTx(null)
       loadTransactions()
     } catch (err: any) {
-      setDeletingError(err?.message || 'ลบรายการ Transaction ไม่สำเร็จ')
+      setDeletingError(err?.message || 'Void รายการ Transaction ไม่สำเร็จ')
     } finally {
       setDeletingLoading(false)
     }
@@ -291,6 +293,15 @@ export default function PortfolioTransactionsTab({
               <span>Add</span>
             </button>
           )}
+
+          <button
+            type="button"
+            onClick={() => setDimeModalOpen(true)}
+            className="inline-flex items-center gap-1.5 rounded-xl border border-sky-200 bg-sky-50/80 px-3.5 py-2 text-xs sm:text-sm font-bold text-sky-800 shadow-2xs hover:bg-sky-100 hover:border-sky-300 active:scale-95 transition-all cursor-pointer"
+            title="นำเข้ารายการธุรกรรม (Transaction Ingestion / Sync) จากโบรกเกอร์ เช่น Dime"
+          >
+            <span>📥 นำเข้ารายการ (Sync)</span>
+          </button>
 
           {/* Stat Pills */}
           {summary && (
@@ -480,14 +491,17 @@ export default function PortfolioTransactionsTab({
             </thead>
             <tbody className="divide-y divide-sky-50">
               {paginatedItems.map((tx, idx) => {
-                const isBuy = tx.action.toUpperCase() === 'BUY'
+                const isVoid = tx.action.startsWith('VOID_')
+                const isBuy = tx.action.includes('BUY')
+                const isDime = (tx.source || '').toUpperCase() === 'DIME'
+                const isVoidedOrReversal = isVoid || Boolean(tx.related_transaction_id && tx.related_transaction_id.trim().length > 0)
                 const isEditing = editingTxId === tx.transaction_id
                 const rowNum = (currentPage - 1) * pageSize + idx + 1
 
                 return (
                   <tr
                     key={tx.transaction_id || `${tx.timestamp}-${idx}`}
-                    className="hover:bg-sky-50/40 transition-colors group"
+                    className={`hover:bg-sky-50/40 transition-colors group ${isVoid ? 'opacity-60 bg-zinc-50/40' : ''}`}
                   >
                     <td className="py-3.5 px-4 text-center text-zinc-400 font-mono text-xs">
                       {rowNum}
@@ -497,24 +511,35 @@ export default function PortfolioTransactionsTab({
                     <td className="py-3.5 px-4">
                       <span
                         className={`inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-bold ${
-                          isBuy
+                          isVoid
+                            ? 'bg-zinc-100 text-zinc-600 border border-zinc-300 line-through'
+                            : isBuy
                             ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
                             : 'bg-rose-50 text-rose-700 border border-rose-200'
                         }`}
                       >
                         <span
-                          className={`h-2 w-2 rounded-full ${isBuy ? 'bg-emerald-500' : 'bg-rose-500'}`}
+                          className={`h-2 w-2 rounded-full ${
+                            isVoid ? 'bg-zinc-400' : isBuy ? 'bg-emerald-500' : 'bg-rose-500'
+                          }`}
                         ></span>
-                        {isBuy ? 'Buy' : 'Sell'}
+                        {tx.action}
                       </span>
                     </td>
 
                     {/* Holding Symbol */}
                     <td className="py-3.5 px-4">
                       <div className="flex flex-col">
-                        <span className="font-extrabold text-zinc-900 font-mono text-base tracking-tight">
-                          {tx.symbol}
-                        </span>
+                        <div className="flex items-center gap-1.5">
+                          <span className={`font-extrabold font-mono text-base tracking-tight ${isVoid ? 'text-zinc-400 line-through' : 'text-zinc-900'}`}>
+                            {tx.symbol}
+                          </span>
+                          {isDime && (
+                            <span className="rounded bg-sky-100 px-1.5 py-0.5 text-[10px] font-bold text-sky-700 dark:bg-sky-950 dark:text-sky-300">
+                              Dime
+                            </span>
+                          )}
+                        </div>
                         <span className="text-xs text-zinc-400 font-medium">
                           {tx.currency} {tx.fx_rate ? `@ ${tx.fx_rate.toFixed(2)}` : ''}
                         </span>
@@ -527,7 +552,7 @@ export default function PortfolioTransactionsTab({
                     </td>
 
                     {/* Shares */}
-                    <td className="py-3.5 px-4 text-right font-mono tabular-nums font-bold text-zinc-900 text-sm sm:text-base">
+                    <td className={`py-3.5 px-4 text-right font-mono tabular-nums font-bold text-sm sm:text-base ${isVoid ? 'text-zinc-400 line-through' : 'text-zinc-900'}`}>
                       {tx.units.toLocaleString(undefined, { maximumFractionDigits: 6 })}
                     </td>
 
@@ -537,26 +562,32 @@ export default function PortfolioTransactionsTab({
                     </td>
 
                     {/* Fee / Tax */}
-                    <td className="py-3.5 px-4 text-right font-mono tabular-nums text-zinc-400 text-xs">
-                      {tx.currency === 'USD' ? '$0.00' : '฿0.00'}
+                    <td className="py-3.5 px-4 text-right font-mono tabular-nums text-zinc-500 text-xs">
+                      {tx.commission
+                        ? `${tx.fee_currency === 'USD' || tx.currency === 'USD' ? '$' : '฿'}${parseFloat(tx.commission).toFixed(2)}`
+                        : (tx.currency === 'USD' ? '$0.00' : '฿0.00')}
                     </td>
 
                     {/* Summ */}
                     <td className="py-3.5 px-4 text-right font-mono tabular-nums font-extrabold text-sm sm:text-base">
-                      <span className={isBuy ? 'text-zinc-900' : 'text-emerald-700'}>
+                      <span className={isVoid ? 'text-zinc-400 line-through' : isBuy ? 'text-zinc-900' : 'text-emerald-700'}>
                         {formatSumm(tx)}
                       </span>
                     </td>
 
                     {/* Realized PnL */}
-                    <td className="py-3.5 px-4 text-right font-mono tabular-nums text-sm sm:text-base">
+                    <td className="py-3.5 px-4 text-right font-mono tabular-nums text-sm sm:text-base font-semibold">
                       {tx.realized_pnl_thb !== null && tx.realized_pnl_thb !== undefined ? (
                         <span
-                          className={`font-bold ${
-                            tx.realized_pnl_thb >= 0 ? 'text-emerald-600' : 'text-rose-600'
-                          }`}
+                          className={
+                            tx.realized_pnl_thb > 0
+                              ? 'text-emerald-600'
+                              : tx.realized_pnl_thb < 0
+                              ? 'text-rose-600'
+                              : 'text-zinc-400'
+                          }
                         >
-                          {tx.realized_pnl_thb >= 0 ? '+' : ''}
+                          {tx.realized_pnl_thb > 0 ? '+' : ''}
                           {formatTHB(tx.realized_pnl_thb)}
                         </span>
                       ) : (
@@ -564,10 +595,10 @@ export default function PortfolioTransactionsTab({
                       )}
                     </td>
 
-                    {/* Note (with inline edit) */}
+                    {/* Notes (Inline Editable) */}
                     <td className="py-3.5 px-4">
                       {isEditing ? (
-                        <div className="flex items-center gap-1.5">
+                        <div className="flex items-center gap-1.5 animate-fade-in">
                           <input
                             type="text"
                             value={editingNote}
@@ -576,16 +607,16 @@ export default function PortfolioTransactionsTab({
                               if (e.key === 'Enter') saveNote(tx.transaction_id)
                               if (e.key === 'Escape') cancelEditNote()
                             }}
-                            autoFocus
                             disabled={savingNote}
-                            className="w-full rounded-lg border border-flow-blue bg-white px-2.5 py-1 text-xs sm:text-sm text-zinc-800 focus:outline-none shadow-2xs"
                             placeholder="ระบุบันทึกช่วยจำ..."
+                            className="flex-1 rounded-lg border border-flow-blue px-2.5 py-1 text-xs sm:text-sm focus:outline-hidden focus:ring-1 focus:ring-flow-blue bg-white shadow-inner"
+                            autoFocus
                           />
                           <button
                             type="button"
                             onClick={() => saveNote(tx.transaction_id)}
                             disabled={savingNote}
-                            className="rounded-md bg-emerald-600 p-1 text-white hover:bg-emerald-700 transition-colors"
+                            className="rounded-md bg-flow-blue p-1 text-white hover:bg-sky-600 transition-colors disabled:opacity-50"
                             title="บันทึก (Enter)"
                           >
                             ✓
@@ -627,20 +658,29 @@ export default function PortfolioTransactionsTab({
                           <button
                             type="button"
                             onClick={() => setEditingTx(tx)}
-                            className="text-zinc-400 hover:text-flow-blue transition-colors p-2 rounded-lg hover:bg-sky-100 shadow-2xs"
-                            title="แก้ไขข้อมูล Transaction (วัน, จำนวนหุ้น, ราคา, Note)"
+                            className="text-zinc-400 hover:text-flow-blue transition-colors p-2 rounded-lg hover:bg-sky-100 shadow-2xs cursor-pointer"
+                            title={isDime ? 'แก้ไข Note (ตัวเลขเศรษฐศาสตร์ถูกล็อค)' : 'แก้ไขข้อมูล Transaction (วัน, จำนวนหุ้น, ราคา, Note)'}
                           >
                             <EditIcon className="w-4 h-4" />
                           </button>
                           <button
                             type="button"
+                            disabled={isVoidedOrReversal}
                             onClick={() => {
+                              if (isVoidedOrReversal) return
                               setDeletingTx(tx)
-                              setDeleteAdjustCash(true)
                               setDeletingError(null)
                             }}
-                            className="text-zinc-400 hover:text-rose-600 transition-colors p-2 rounded-lg hover:bg-rose-50 shadow-2xs"
-                            title="ลบรายการ Transaction"
+                            className={`p-2 rounded-lg transition-colors shadow-2xs ${
+                              isVoidedOrReversal
+                                ? 'text-zinc-300 cursor-not-allowed opacity-30'
+                                : 'text-zinc-400 hover:text-rose-600 hover:bg-rose-50 cursor-pointer'
+                            }`}
+                            title={
+                              isVoidedOrReversal
+                                ? 'รายการนี้ถูก Void เรียบร้อยแล้ว (ไม่สามารถ Void ซ้ำได้)'
+                                : 'Void รายการ (ยกเลิกและสร้าง Reversal)'
+                            }
                           >
                             <DeleteIcon className="w-4 h-4" />
                           </button>
@@ -795,17 +835,17 @@ export default function PortfolioTransactionsTab({
         />
       )}
 
-      {/* Delete Confirmation Modal */}
+      {/* Void Confirmation Modal */}
       {deletingTx && (
         <Modal
-          titleId="delete-tx-title"
+          titleId="void-tx-title"
           onClose={() => setDeletingTx(null)}
-          panelClassName="max-w-md rounded-2xl border border-rose-100 bg-white p-6 shadow-2xl"
+          panelClassName="max-w-md rounded-2xl border border-rose-100 bg-white p-6 shadow-2xl dark:border-rose-950 dark:bg-zinc-900"
         >
-          <div className="flex items-center justify-between border-b border-zinc-100 pb-3">
-            <h3 id="delete-tx-title" className="flex items-center gap-2 text-base font-bold text-zinc-900">
+          <div className="flex items-center justify-between border-b border-zinc-100 pb-3 dark:border-zinc-800">
+            <h3 id="void-tx-title" className="flex items-center gap-2 text-base font-bold text-zinc-900 dark:text-white">
               <DeleteIcon className="w-5 h-5 text-rose-500" />
-              <span>ยืนยันการลบรายการ</span>
+              <span>ยืนยันการ Void รายการ (Non-destructive Reversal)</span>
             </h3>
             <button
               type="button"
@@ -818,60 +858,44 @@ export default function PortfolioTransactionsTab({
 
           <div className="mt-4 space-y-4 text-xs">
             {deletingError && (
-              <div className="rounded-xl border border-rose-200 bg-rose-50 p-3 font-semibold text-rose-800">
+              <div className="rounded-xl border border-rose-200 bg-rose-50 p-3 font-semibold text-rose-800 dark:border-rose-900 dark:bg-rose-950/50 dark:text-rose-300">
                 ⚠️ {deletingError}
               </div>
             )}
 
-            <div className="rounded-xl border border-zinc-200 bg-zinc-50/70 p-3 space-y-1.5">
+            <div className="rounded-xl border border-zinc-200 bg-zinc-50/70 p-3 space-y-1.5 dark:border-zinc-800 dark:bg-zinc-800/40">
               <div className="flex justify-between">
                 <span className="text-zinc-500">สินทรัพย์:</span>
-                <span className="font-bold text-zinc-900">{deletingTx.symbol} ({deletingTx.action})</span>
+                <span className="font-bold text-zinc-900 dark:text-white">{deletingTx.symbol} ({deletingTx.action})</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-zinc-500">จำนวน:</span>
-                <span className="font-mono font-semibold text-zinc-900">{deletingTx.units} units</span>
+                <span className="font-mono font-semibold text-zinc-900 dark:text-white">{deletingTx.units} units</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-zinc-500">ราคา:</span>
-                <span className="font-mono text-zinc-900">{formatPrice(deletingTx.price, deletingTx.currency)}</span>
+                <span className="font-mono text-zinc-900 dark:text-white">{formatPrice(deletingTx.price, deletingTx.currency)}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-zinc-500">วันที่:</span>
-                <span className="font-mono text-zinc-600">{deletingTx.timestamp}</span>
+                <span className="font-mono text-zinc-600 dark:text-zinc-400">{deletingTx.timestamp}</span>
               </div>
             </div>
 
-            <div className="rounded-xl border border-amber-200 bg-amber-50/80 p-3 text-amber-900 text-[11px] leading-relaxed">
-              ⚠️ <strong>ข้อควรระวัง:</strong> การลบรายการนี้จะทำให้ระบบทำการคำนวณย้อนหลัง (Replay) ต้นทุนถัวเฉลี่ยและกำไร/ขาดทุนสะสมของ {deletingTx.symbol} ใหม่ทั้งหมด
+            <div className="rounded-xl border border-amber-200 bg-amber-50/80 p-3 text-amber-900 text-[11px] leading-relaxed dark:border-amber-900/60 dark:bg-amber-950/40 dark:text-amber-300">
+              ⚠️ <strong>ข้อควรระวัง:</strong> การ Void รายการนี้จะทำให้ระบบทำการ Replay ต้นทุนถัวเฉลี่ยและกำไร/ขาดทุนสะสมของ {deletingTx.symbol} ใหม่ทั้งหมด
             </div>
 
-            <div className="flex items-start gap-2 select-none">
-              <input
-                id="delete-tx-adjust-cash"
-                type="checkbox"
-                checked={deleteAdjustCash}
-                onChange={(e) => setDeleteAdjustCash(e.target.checked)}
-                className="mt-0.5 h-4 w-4 rounded border-zinc-300 text-flow-blue focus:ring-flow-blue cursor-pointer"
-              />
-              <div className="space-y-0.5">
-                <label htmlFor="delete-tx-adjust-cash" className="text-xs font-semibold text-zinc-900 cursor-pointer block">
-                  ปรับปรุงยอดเงินสด (CASH_{deletingTx.currency}) คืนกลับ/หักออก อัตโนมัติ
-                </label>
-                <p className="text-[11px] text-zinc-500">
-                  {deletingTx.action.toUpperCase() === 'BUY'
-                    ? 'คืนเงินสดที่เคยใช้ซื้อกลับเข้าพอร์ต'
-                    : 'หักเงินสดที่เคยได้รับจากการขายออกจากพอร์ต'}
-                </p>
-              </div>
+            <div className="rounded-xl border border-sky-200 bg-sky-50/80 p-3 text-sky-950 text-[11px] leading-relaxed dark:border-sky-800 dark:bg-sky-950/40 dark:text-sky-200">
+              ℹ️ <strong>Audit Trail Policy (Strict Mirror):</strong> การยกเลิกรายการจะเป็นแบบ Non-destructive โดยสร้างแถว Reversal คู่กันในสมุดบัญชีเสมอ {deletingTx.cash_adjusted === 'NO' ? 'โดยไม่กระทบยอดเงินสดตามรายการต้นฉบับ' : 'และจะทำการย้อนคืนเงินสดอัตโนมัติตามยอดสุทธิ (Net Amount)'}
             </div>
 
-            <div className="flex justify-end gap-2 border-t border-zinc-100 pt-4">
+            <div className="flex justify-end gap-2 border-t border-zinc-100 pt-4 dark:border-zinc-800">
               <button
                 type="button"
                 onClick={() => setDeletingTx(null)}
                 disabled={deletingLoading}
-                className="rounded-xl border border-zinc-300 bg-white px-4 py-2 font-semibold text-zinc-700 hover:bg-zinc-50 transition-colors"
+                className="rounded-xl border border-zinc-300 bg-white px-4 py-2 font-semibold text-zinc-700 hover:bg-zinc-50 transition-colors dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300"
               >
                 ยกเลิก
               </button>
@@ -879,13 +903,25 @@ export default function PortfolioTransactionsTab({
                 type="button"
                 onClick={handleDeleteTransaction}
                 disabled={deletingLoading}
-                className="rounded-xl bg-rose-600 px-5 py-2 font-bold text-white shadow-md hover:bg-rose-700 transition-colors disabled:opacity-50"
+                className="rounded-xl bg-rose-600 px-5 py-2 font-bold text-white shadow-md hover:bg-rose-700 transition-colors disabled:opacity-50 cursor-pointer"
               >
-                {deletingLoading ? 'กำลังลบและ Replay...' : 'ยืนยันการลบ'}
+                {deletingLoading ? 'กำลัง Void และ Replay...' : 'ยืนยันการ Void (Reversal)'}
               </button>
             </div>
           </div>
         </Modal>
+      )}
+
+      {/* Dime Sync Modal */}
+      {dimeModalOpen && (
+        <DimeSyncModal
+          portfolioId={portfolioId}
+          onClose={() => setDimeModalOpen(false)}
+          onSuccess={(newState) => {
+            onSuccess?.(newState)
+            loadTransactions()
+          }}
+        />
       )}
     </div>
   )

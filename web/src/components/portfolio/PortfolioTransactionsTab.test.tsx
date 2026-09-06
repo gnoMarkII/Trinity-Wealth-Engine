@@ -9,6 +9,7 @@ vi.mock('../../api/client', () => ({
     updateTransactionNote: vi.fn(),
     editTransaction: vi.fn(),
     deleteTransaction: vi.fn(),
+    voidTransaction: vi.fn(),
     getFxRate: vi.fn(),
   },
 }))
@@ -197,14 +198,14 @@ describe('PortfolioTransactionsTab', () => {
     })
   })
 
-  it('opens delete confirmation modal and confirms deletion', async () => {
+  it('opens void confirmation modal and confirms void', async () => {
     const mockState = {
       holdings: [],
       summary: { total_nav_thb: 100000, total_cost_thb: 90000, total_unrealized_pnl_thb: 10000, total_realized_profit_ytd: 0, passive_income_ytd: 0, cash_balance_thb: 50000, total_accumulated_dividend: 0 },
       allocation_targets: [],
       fx_rates: {},
     } as any
-    vi.mocked(api.deleteTransaction).mockResolvedValue(mockState)
+    vi.mocked(api.voidTransaction).mockResolvedValue(mockState)
     const onSuccess = vi.fn()
 
     render(<PortfolioTransactionsTab portfolioId="default" onSuccess={onSuccess} />)
@@ -213,20 +214,20 @@ describe('PortfolioTransactionsTab', () => {
       expect(screen.getByText('Take profit PTT')).toBeInTheDocument()
     })
 
-    // Click delete icon for PTT transaction (1st row in descending order)
-    const deleteButtons = screen.getAllByTitle('ลบรายการ Transaction')
-    fireEvent.click(deleteButtons[0]!)
+    // Click void icon for PTT transaction (1st row in descending order)
+    const voidButtons = screen.getAllByTitle('Void รายการ (ยกเลิกและสร้าง Reversal)')
+    fireEvent.click(voidButtons[0]!)
 
-    // Delete confirmation modal should open
-    expect(screen.getByText('ยืนยันการลบรายการ')).toBeInTheDocument()
+    // Void confirmation modal should open
+    expect(screen.getByText('ยืนยันการ Void รายการ (Non-destructive Reversal)')).toBeInTheDocument()
     expect(screen.getByText('PTT (SELL)')).toBeInTheDocument()
 
-    // Confirm deletion
-    const confirmBtn = screen.getByRole('button', { name: 'ยืนยันการลบ' })
+    // Confirm void
+    const confirmBtn = screen.getByRole('button', { name: 'ยืนยันการ Void (Reversal)' })
     fireEvent.click(confirmBtn)
 
     await waitFor(() => {
-      expect(api.deleteTransaction).toHaveBeenCalledWith('tx_3', { adjust_cash: true }, 'default')
+      expect(api.voidTransaction).toHaveBeenCalledWith('tx_3', 'default')
       expect(onSuccess).toHaveBeenCalledWith(mockState)
     })
   })

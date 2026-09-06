@@ -47,6 +47,7 @@ export default function EditTransactionModal({
 
   const isUSD = transaction.currency === 'USD'
   const isBuy = transaction.action.toUpperCase() === 'BUY'
+  const isDime = (transaction.source || '').toUpperCase() === 'DIME'
   const holding = holdings?.find((h) => h.symbol.toUpperCase() === transaction.symbol.toUpperCase())
   const hasSyncedDividends = holding?.dividend_source === 'synced'
 
@@ -65,12 +66,14 @@ export default function EditTransactionModal({
   }
 
   const handleSetToday = () => {
+    if (isDime) return
     const today = getLocalDateString()
     setDate(today)
     if (isUSD) fetchFxForDate(today)
   }
 
   const handleSetYesterday = () => {
+    if (isDime) return
     const yest = new Date()
     yest.setDate(yest.getDate() - 1)
     const yestStr = getLocalDateString(yest)
@@ -79,6 +82,7 @@ export default function EditTransactionModal({
   }
 
   const handleSetCurrentTime = () => {
+    if (isDime) return
     setTime(getLocalTimeString())
   }
 
@@ -90,13 +94,13 @@ export default function EditTransactionModal({
   const deltaNative = newNativeAmount - originalNativeAmount
 
   const fetchFxForDate = async (targetDate: string) => {
-    if (!isUSD || !targetDate) return
+    if (!targetDate || isDime) return
     setFetchingFx(true)
     try {
       const dateOnly = targetDate.includes('T') ? targetDate.split('T')[0] : targetDate.split(' ')[0]
       const res = await api.getFxRate(dateOnly, selectedPortfolioId)
       if (res?.rate) {
-        setFxRate(res.rate.toFixed(4))
+        setFxRate(String(res.rate))
       }
     } catch {
       // fallback smoothly
@@ -107,31 +111,39 @@ export default function EditTransactionModal({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!date) {
-      setError('กรุณาระบุวันที่ทำรายการ')
-      return
-    }
-    if (!units || newUnitsNum <= 0) {
-      setError('กรุณาระบุจำนวนหน่วยที่มากกว่า 0')
-      return
-    }
-    if (!price || newPriceNum <= 0) {
-      setError('กรุณาระบุราคาต่อหน่วยที่มากกว่า 0')
-      return
-    }
 
     setLoading(true)
     setError(null)
 
     try {
-      const formattedTimestamp = date ? (time ? `${date}T${time}` : date) : null
-      const payload = {
-        timestamp: formattedTimestamp,
-        units: newUnitsNum,
-        price: newPriceNum,
-        fx_rate: isUSD && fxRate ? parseFloat(fxRate) : null,
-        notes: notes.trim(),
-        adjust_cash: adjustCash,
+      let payload: any
+      if (isDime) {
+        payload = { notes: notes.trim() }
+      } else {
+        if (!date) {
+          setError('กรุณาระบุวันที่ทำรายการ')
+          setLoading(false)
+          return
+        }
+        if (!units || newUnitsNum <= 0) {
+          setError('กรุณาระบุจำนวนหน่วยที่มากกว่า 0')
+          setLoading(false)
+          return
+        }
+        if (!price || newPriceNum <= 0) {
+          setError('กรุณาระบุราคาต่อหน่วยที่มากกว่า 0')
+          setLoading(false)
+          return
+        }
+        const formattedTimestamp = date ? (time ? `${date}T${time}` : date) : null
+        payload = {
+          timestamp: formattedTimestamp,
+          units: newUnitsNum,
+          price: newPriceNum,
+          fx_rate: isUSD && fxRate ? parseFloat(fxRate) : null,
+          notes: notes.trim(),
+          adjust_cash: adjustCash,
+        }
       }
 
       const updatedState = await api.editTransaction(
@@ -177,36 +189,53 @@ export default function EditTransactionModal({
         </div>
       )}
 
+      {/* Informative banner for Dime imports */}
+      {isDime && (
+        <div className="rounded-xl border border-sky-300 bg-sky-50/90 p-3 text-xs text-sky-950 dark:border-sky-800 dark:bg-sky-950/40 dark:text-sky-200">
+          <div className="flex items-start gap-2">
+            <span className="text-sm">ℹ️</span>
+            <div className="space-y-1">
+              <p className="font-semibold">รายการนำเข้าอัตโนมัติจาก Dime {transaction.confirmation_no ? `(${transaction.confirmation_no})` : ''}</p>
+              <p className="text-[11px] leading-relaxed opacity-90">
+                ตัวเลขเศรษฐศาสตร์ (จำนวนหุ้น, ราคา, วันที่, FX) ถูกล็อคเพื่อรักษาความถูกต้องทางบัญชี หากต้องการแก้ไขตัวเลข ให้ทำการ Void รายการนี้แล้วนำเข้าใหม่ (สามารถแก้ไข Notes ได้)
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Date & Time Selection with Quick Presets */}
       <div className="space-y-1.5">
         <div className="flex items-center justify-between">
           <span className="text-xs font-semibold text-zinc-700">
             วันและเวลาที่ทำรายการ (Date & Time) <span className="text-rose-500">*</span>
           </span>
-          <div className="flex items-center gap-1.5">
-            <button
-              type="button"
-              onClick={handleSetToday}
-              className="rounded-lg border border-sky-200 bg-sky-50 px-2.5 py-0.5 text-[11px] font-semibold text-flow-blue hover:bg-sky-100 transition-colors cursor-pointer"
-            >
-              📅 วันนี้
-            </button>
-            <button
-              type="button"
-              onClick={handleSetYesterday}
-              className="rounded-lg border border-zinc-200 bg-zinc-50 px-2.5 py-0.5 text-[11px] font-semibold text-zinc-600 hover:bg-zinc-100 transition-colors cursor-pointer"
-            >
-              ⏮️ เมื่อวาน
-            </button>
-            <button
-              type="button"
-              onClick={handleSetCurrentTime}
-              className="rounded-lg border border-zinc-200 bg-zinc-50 px-2 py-0.5 text-[11px] font-semibold text-zinc-500 hover:bg-zinc-100 transition-colors cursor-pointer"
-              title="ตั้งเวลาเป็นเวลาปัจจุบัน"
-            >
-              🕒 ตอนนี้
-            </button>
-          </div>
+          {!isDime && (
+            <div className="flex items-center gap-1.5">
+              <button
+                type="button"
+                onClick={handleSetToday}
+                className="rounded-lg border border-sky-200 bg-sky-50 px-2.5 py-0.5 text-[11px] font-semibold text-flow-blue hover:bg-sky-100 transition-colors cursor-pointer"
+              >
+                📅 วันนี้
+              </button>
+              <button
+                type="button"
+                onClick={handleSetYesterday}
+                className="rounded-lg border border-zinc-200 bg-zinc-50 px-2.5 py-0.5 text-[11px] font-semibold text-zinc-600 hover:bg-zinc-100 transition-colors cursor-pointer"
+              >
+                ⏮️ เมื่อวาน
+              </button>
+              <button
+                type="button"
+                onClick={handleSetCurrentTime}
+                className="rounded-lg border border-zinc-200 bg-zinc-50 px-2 py-0.5 text-[11px] font-semibold text-zinc-500 hover:bg-zinc-100 transition-colors cursor-pointer"
+                title="ตั้งเวลาเป็นเวลาปัจจุบัน"
+              >
+                🕒 ตอนนี้
+              </button>
+            </div>
+          )}
         </div>
 
         <div className="grid grid-cols-12 gap-2">
@@ -215,6 +244,7 @@ export default function EditTransactionModal({
             <FormInput
               type="date"
               value={date}
+              disabled={isDime}
               onChange={(e) => {
                 const newDate = e.target.value
                 setDate(newDate)
@@ -222,8 +252,8 @@ export default function EditTransactionModal({
                   fetchFxForDate(newDate)
                 }
               }}
-              required
-              className="font-medium text-xs w-full cursor-pointer"
+              required={!isDime}
+              className={`font-medium text-xs w-full ${isDime ? 'opacity-60 cursor-not-allowed bg-zinc-100' : 'cursor-pointer'}`}
             />
           </div>
 
@@ -233,13 +263,14 @@ export default function EditTransactionModal({
               type="time"
               step="1"
               value={time}
+              disabled={isDime}
               onChange={(e) => setTime(e.target.value)}
-              className="font-mono text-xs w-full"
+              className={`font-mono text-xs w-full ${isDime ? 'opacity-60 cursor-not-allowed bg-zinc-100' : ''}`}
             />
           </div>
 
           {/* Fetch FX Button (for USD) */}
-          {isUSD && (
+          {isUSD && !isDime && (
             <div className="col-span-3 sm:col-span-2 flex items-center">
               <button
                 type="button"
@@ -257,29 +288,31 @@ export default function EditTransactionModal({
 
       {/* Units & Price */}
       <div className="grid grid-cols-2 gap-3">
-        <FormField label="จำนวนหุ้น (Units)" required>
+        <FormField label="จำนวนหุ้น (Units)" required={!isDime}>
           <FormInput
             type="number"
             step="any"
             min="0.000001"
             value={units}
+            disabled={isDime}
             onChange={(e) => setUnits(e.target.value)}
             placeholder="0.00"
-            className="font-mono"
-            required
+            className={`font-mono ${isDime ? 'opacity-60 cursor-not-allowed bg-zinc-100' : ''}`}
+            required={!isDime}
           />
         </FormField>
 
-        <FormField label={`ราคาต่อหน่วย (${transaction.currency})`} required>
+        <FormField label={`ราคาต่อหน่วย (${transaction.currency})`} required={!isDime}>
           <FormInput
             type="number"
             step="any"
             min="0.0001"
             value={price}
+            disabled={isDime}
             onChange={(e) => setPrice(e.target.value)}
             placeholder="0.00"
-            className="font-mono"
-            required
+            className={`font-mono ${isDime ? 'opacity-60 cursor-not-allowed bg-zinc-100' : ''}`}
+            required={!isDime}
           />
         </FormField>
       </div>
@@ -291,9 +324,10 @@ export default function EditTransactionModal({
             type="number"
             step="0.0001"
             value={fxRate}
+            disabled={isDime}
             onChange={(e) => setFxRate(e.target.value)}
             placeholder="เช่น 36.5000"
-            className="font-mono"
+            className={`font-mono ${isDime ? 'opacity-60 cursor-not-allowed bg-zinc-100' : ''}`}
           />
         </FormField>
       )}
@@ -315,6 +349,7 @@ export default function EditTransactionModal({
             id="edit-tx-adjust-cash"
             type="checkbox"
             checked={adjustCash}
+            disabled={isDime}
             onChange={(e) => setAdjustCash(e.target.checked)}
             className="mt-0.5 h-4 w-4 rounded border-sky-300 text-flow-blue focus:ring-flow-blue cursor-pointer"
           />

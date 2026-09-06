@@ -5,3 +5,4 @@ from .markdown.performance_adapter import MarkdownPerformanceAdapter
 from .markdown.journal_vault_adapter import JournalVaultAdapter
 from .sqlite_mirror_decorator import SqliteMirroredPortfolioRepository
 from .price_yfinance_adapter import PriceYFinanceAdapter
+from .composite_price_adapter import CompositeMarketPriceAdapter

@@ -360,7 +360,7 @@ describe('Equity Page & normalizeTicker', () => {
     })
     vi.mocked(api.getJobStatus).mockResolvedValue({
       job_id: 'job-aapl-1', status: 'done', card_id: 'card-aapl-1', error_message: null,
-      current_node: null, interrupt_payload: null, log_count: 5,
+      current_node: null, interrupt_payload: null, log_count: 5, created_at: 1, updated_at: 1,
     })
 
     await renderComponent('/equity/aapl')

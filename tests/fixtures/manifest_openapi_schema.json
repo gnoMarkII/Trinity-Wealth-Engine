@@ -605,6 +605,20 @@
         ]
       }
     },
+    "/api/health/components": {
+      "get": {
+        "operationId": "get_component_health_api_health_components_get",
+        "tags": [
+          "Health"
+        ],
+        "summary": "Get Component Health",
+        "parameters": [],
+        "has_request_body": false,
+        "responses": [
+          "200"
+        ]
+      }
+    },
     "/api/kanban/cards": {
       "get": {
         "operationId": "list_cards_api_kanban_cards_get",
@@ -1640,6 +1654,39 @@
         ]
       }
     },
+    "/api/portfolio/actual/transactions/{tx_id}/void": {
+      "post": {
+        "operationId": "void_transaction_endpoint_api_portfolio_actual_transactions__tx_id__void_post",
+        "tags": [],
+        "summary": "Void Transaction Endpoint",
+        "parameters": [
+          {
+            "name": "tx_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Tx Id"
+            }
+          },
+          {
+            "name": "portfolio_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "default",
+              "title": "Portfolio Id"
+            }
+          }
+        ],
+        "has_request_body": false,
+        "responses": [
+          "200",
+          "422"
+        ]
+      }
+    },
     "/api/portfolio/actual/watchlist": {
       "get": {
         "operationId": "get_actual_watchlist_api_portfolio_actual_watchlist_get",
@@ -1759,6 +1806,122 @@
         "summary": "Create Portfolio Endpoint",
         "parameters": [],
         "has_request_body": true,
+        "responses": [
+          "200",
+          "422"
+        ]
+      }
+    },
+    "/api/portfolio/dime/commit/{scan_id}": {
+      "post": {
+        "operationId": "commit_staged_endpoint_api_portfolio_dime_commit__scan_id__post",
+        "tags": [
+          "Dime Sync"
+        ],
+        "summary": "Commit Staged Endpoint",
+        "parameters": [
+          {
+            "name": "scan_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Scan Id"
+            }
+          }
+        ],
+        "has_request_body": true,
+        "responses": [
+          "200",
+          "422"
+        ]
+      }
+    },
+    "/api/portfolio/dime/emails": {
+      "get": {
+        "operationId": "search_dime_emails_endpoint_api_portfolio_dime_emails_get",
+        "tags": [
+          "Dime Sync"
+        ],
+        "summary": "Search Dime Emails Endpoint",
+        "parameters": [
+          {
+            "name": "query",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "Query"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 20,
+              "title": "Limit"
+            }
+          }
+        ],
+        "has_request_body": false,
+        "responses": [
+          "200",
+          "422"
+        ]
+      }
+    },
+    "/api/portfolio/dime/scan/email": {
+      "post": {
+        "operationId": "scan_email_attachment_endpoint_api_portfolio_dime_scan_email_post",
+        "tags": [
+          "Dime Sync"
+        ],
+        "summary": "Scan Email Attachment Endpoint",
+        "parameters": [],
+        "has_request_body": true,
+        "responses": [
+          "200",
+          "422"
+        ]
+      }
+    },
+    "/api/portfolio/dime/scan/upload": {
+      "post": {
+        "operationId": "scan_upload_pdf_endpoint_api_portfolio_dime_scan_upload_post",
+        "tags": [
+          "Dime Sync"
+        ],
+        "summary": "Scan Upload Pdf Endpoint",
+        "parameters": [],
+        "has_request_body": true,
+        "responses": [
+          "200",
+          "422"
+        ]
+      }
+    },
+    "/api/portfolio/dime/staged/{scan_id}": {
+      "get": {
+        "operationId": "get_staged_endpoint_api_portfolio_dime_staged__scan_id__get",
+        "tags": [
+          "Dime Sync"
+        ],
+        "summary": "Get Staged Endpoint",
+        "parameters": [
+          {
+            "name": "scan_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Scan Id"
+            }
+          }
+        ],
+        "has_request_body": false,
         "responses": [
           "200",
           "422"

@@ -31,6 +31,19 @@ _TRADES_LOG_HEADER = [
     "Cost_THB",
     "Realized_PnL_THB",
     "Notes",
+    "Gross_Amount",
+    "Commission",
+    "VAT",
+    "Other_Fees",
+    "Net_Amount",
+    "Fee_Currency",
+    "Confirmation_No",
+    "Order_ID",
+    "Settlement_Date",
+    "Source",
+    "Fingerprint",
+    "Cash_Adjusted",
+    "Related_Transaction_ID",
 ]
 
 _LOCK_TIMEOUT = 15.0  # seconds

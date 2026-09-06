@@ -77,10 +77,18 @@ def fetch_fx_rate(
 def fetch_latest_price(symbol: str, currency: Literal["THB", "USD"] = "THB") -> Optional[float]:
     if currency not in ("THB", "USD"):
         raise ValueError("currency ต้องเป็น 'THB' หรือ 'USD'")
+    if currency == "THB":
+        try:
+            svc = get_default_service()
+            if svc and hasattr(svc, "price_provider") and hasattr(svc.price_provider, "fund_provider"):
+                if svc.price_provider.fund_provider.has_fund(symbol):
+                    return svc.price_provider.fetch_price(symbol, currency)
+        except Exception:
+            pass
     yf_sym = _yf_symbol(symbol, currency)
     return _fetch_last_price(yf_sym)
 
-def _refresh_prices(state: PortfolioState) -> Dict[str, str]:
+def _legacy_refresh_prices(state: PortfolioState) -> Dict[str, str]:
     from concurrent.futures import ThreadPoolExecutor, as_completed, TimeoutError
     results: Dict[str, str] = {}
     tasks = {}
@@ -114,6 +122,22 @@ def _refresh_prices(state: PortfolioState) -> Dict[str, str]:
 
     return results
 
+
+def _refresh_prices(state: PortfolioState) -> Dict[str, str]:
+    if _fetch_last_price != _yf_fetch_last_price:
+        return _legacy_refresh_prices(state)
+
+    try:
+        svc = get_default_service()
+        if svc and hasattr(svc, "price_provider") and svc.price_provider:
+            provider = svc.price_provider
+            while hasattr(provider, "_delegate"):
+                provider = provider._delegate
+            return provider.refresh_portfolio_prices(state)
+    except Exception:
+        pass
+    return _legacy_refresh_prices(state)
+
 def _fetch_fundamentals(state: PortfolioState, force: bool = False) -> Dict[str, str]:
     return get_default_service().price_provider.fetch_fundamentals(state, force=force)
 
@@ -121,32 +145,13 @@ def _sync_market_prices_impl(portfolio_id: str = "default") -> str:
     from filelock import Timeout
     from tools.tool_errors import LOCK_TIMEOUT
     from tools.portfolio.domain.validator import validate_portfolio_id
-    from tools.portfolio.domain.ledger_change import LedgerChange
-    from tools.portfolio.domain.calculations import recalc_all
-    from tools.portfolio.domain.constants import _FLOAT_EPS
 
     pid = validate_portfolio_id(portfolio_id)
     try:
         lock = _get_portfolio_lock(pid)
         with lock:
             service = get_default_service()
-            with service.repo.unit_of_work(pid) as uow:
-                state = uow.load_state()
-                has_non_cash = any(h.asset_type != "Cash" and h.status == "active" and h.units > _FLOAT_EPS for h in state.holdings)
-                results = _refresh_prices(state)
-                if not results and not has_non_cash:
-                    return f"[SYNC] {pid}: no non-cash holdings to update"
-
-                total_count = len(results)
-                success_count = sum(1 for v in results.values() if v == "ok")
-                failed_items = [f"{k}={v}" for k, v in results.items() if v != "ok"]
-
-                recalc_all(state)
-                uow.commit(state, LedgerChange(kind="unchanged"))
-
-                if failed_items:
-                    return f"[SYNC] updated prices: refreshed {success_count}/{total_count} ({', '.join(failed_items)})"
-                return f"[SYNC] updated prices: refreshed {success_count}/{total_count}"
+            return service.sync_market_prices(portfolio_id=pid)
     except Timeout:
         return LOCK_TIMEOUT.format(detail=f"portfolio lock '{pid}'")
     except Exception as e:

@@ -12,6 +12,32 @@ interface Props {
 }
 import { formatTHB } from '../../utils/formatters'
 
+/**
+ * ตรวจสอบว่าผลการอัปเดตราคาของสินทรัพย์/FX สำเร็จหรือไม่
+ * สำเร็จ: มีราคาตัวเลข (เช่น "146.92 USD", "32.9100 (live)"), "ok", "updated", "cached"
+ * ล้มเหลว: มีคำว่า "fail", "error", "timeout", "no_data"
+ */
+export function isPriceRefreshSuccess(status: string | undefined | null): boolean {
+  if (!status) return false
+  const lower = status.toLowerCase()
+  if (
+    lower.includes('fail') ||
+    lower.includes('error') ||
+    lower.includes('timeout') ||
+    lower.includes('no_data')
+  ) {
+    return false
+  }
+  return (
+    lower.includes('ok') ||
+    lower.includes('updated') ||
+    lower.includes('cached') ||
+    lower.includes('live') ||
+    lower.includes('fallback') ||
+    /\d+(\.\d+)?/.test(status)
+  )
+}
+
 
 export default function PortfolioSummaryCards({
   summary,
@@ -210,7 +236,7 @@ export default function PortfolioSummaryCards({
           if (totalRefreshCount === 0) return null
 
           const failedRefreshEntries = refreshEntries.filter(
-            ([_, status]) => !status.toLowerCase().includes('ok') && !status.toLowerCase().includes('updated')
+            ([_, status]) => !isPriceRefreshSuccess(status)
           )
           const isAllRefreshOk = failedRefreshEntries.length === 0
 
@@ -251,7 +277,7 @@ export default function PortfolioSummaryCards({
               {showDetails && (
                 <div className="mt-1.5 max-h-28 overflow-y-auto space-y-0.5 border-t border-zinc-200/60 pt-1.5 text-[10px] font-mono tabular-nums">
                   {refreshEntries.map(([sym, status]) => {
-                    const isOk = status.toLowerCase().includes('ok') || status.toLowerCase().includes('updated')
+                    const isOk = isPriceRefreshSuccess(status)
                     return (
                       <div key={sym} className="flex justify-between items-center">
                         <span className="font-bold text-zinc-700">{sym}:</span>

@@ -52,6 +52,7 @@ code_review.txt
 gen_code_review.py
 scripts/
 scratch/
+docs/plans/
 
 # =========================================
 # 7. OS & IDE

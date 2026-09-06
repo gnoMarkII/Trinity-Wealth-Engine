@@ -407,12 +407,409 @@ export const api = {
       body: JSON.stringify(payload),
     }),
 
-  deleteTransaction: (txId: string, payload?: import('./types').DeleteTransactionPayload, portfolioId: string = 'default') => {
-    const adjustCash = payload?.adjust_cash ?? true
-    return request<import('./types').ActualPortfolioStateDTO>(`/api/portfolio/actual/transactions/${encodeURIComponent(txId)}?adjust_cash=${adjustCash}&portfolio_id=${encodeURIComponent(portfolioId)}`, {
-      method: 'DELETE',
+  voidTransaction: (txId: string, portfolioId: string = 'default') =>
+    request<import('./types').ActualPortfolioStateDTO>(`/api/portfolio/actual/transactions/${encodeURIComponent(txId)}/void?portfolio_id=${encodeURIComponent(portfolioId)}`, {
+      method: 'POST',
+    }),
+
+  deleteTransaction: (txId: string, _payload?: import('./types').DeleteTransactionPayload, portfolioId: string = 'default') => {
+    // Void strictly replaces delete
+    return request<import('./types').ActualPortfolioStateDTO>(`/api/portfolio/actual/transactions/${encodeURIComponent(txId)}/void?portfolio_id=${encodeURIComponent(portfolioId)}`, {
+      method: 'POST',
     })
   },
+
+  getDimeEmails: (query?: string, limit?: number) => {
+    const params = new URLSearchParams()
+    if (query) params.set('query', query)
+    if (limit) params.set('limit', String(limit))
+    return request<import('./types').DimeEmailListResponseDTO>(`/api/portfolio/dime/emails?${params.toString()}`)
+  },
+
+  scanDimeEmail: (messageId: string, attachmentId: string, password?: string) =>
+    request<import('./types').DimeScanResponseDTO>('/api/portfolio/dime/scan/email', {
+      method: 'POST',
+      body: JSON.stringify({ message_id: messageId, attachment_id: attachmentId, password }),
+    }),
+
+  scanDimeUpload: async (pdfFile: File, password?: string) => {
+    const formData = new FormData()
+    formData.append('pdf_file', pdfFile)
+    if (password) formData.append('password', password)
+    const res = await fetch('/api/portfolio/dime/scan/upload', {
+      method: 'POST',
+      body: formData,
+      credentials: 'same-origin',
+    })
+    if (!res.ok) {
+      let msg = 'Upload failed'
+      try {
+        const err = await res.json()
+        msg = err.detail || msg
+      } catch {}
+      throw new Error(msg)
+    }
+    return (await res.json()) as import('./types').DimeScanResponseDTO
+  },
+
+  getStagedDimeTrades: (scanId: string) =>
+    request<import('./types').DimeScanResponseDTO>(`/api/portfolio/dime/staged/${encodeURIComponent(scanId)}`),
+
+  commitDimeTrades: (scanId: string, portfolioId: string = 'default') =>
+    request<import('./types').DimeCommitResponseDTO>(`/api/portfolio/dime/commit/${encodeURIComponent(scanId)}`, {
+      method: 'POST',
+      body: JSON.stringify({ portfolio_id: portfolioId }),
+    }),
+
+  getDimePdfUrl: (messageId: string, attachmentId: string, password?: string, decrypt: boolean = true) => {
+    const params = new URLSearchParams()
+    params.set('message_id', messageId)
+    params.set('attachment_id', attachmentId)
+    if (password) params.set('password', password)
+    if (!decrypt) params.set('decrypt', 'false')
+    return `/api/portfolio/dime/pdf?${params.toString()}`
+  },
+
+  getDimePdfText: (messageId: string, attachmentId: string, password?: string) => {
+    const params = new URLSearchParams()
+    params.set('message_id', messageId)
+    params.set('attachment_id', attachmentId)
+    if (password) params.set('password', password)
+    return request<import('./types').DimePdfTextResponseDTO>(`/api/portfolio/dime/pdf-text?${params.toString()}`)
+  },
+
+  streamBatchDimeSync: async (
+    payload: { password?: string; force_rescan?: boolean; portfolio_id?: string },
+    callbacks: {
+      onProgress?: (data: import('./types').DimeBatchScanProgressEvent) => void
+      onWarning?: (data: import('./types').DimeBatchScanWarningEvent) => void
+      onComplete?: (data: import('./types').DimeBatchScanCompleteEvent) => void
+      onError?: (err: Error) => void
+    },
+    signal?: AbortSignal
+  ) => {
+    const res = await fetch('/api/portfolio/dime/scan/batch-stream', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(payload),
+      credentials: 'same-origin',
+      signal,
+    })
+
+    if (!res.ok) {
+      let msg = 'Sync failed'
+      try {
+        const err = await res.json()
+        msg = err.detail || msg
+      } catch {}
+      throw new Error(msg)
+    }
+
+    if (!res.body) {
+      throw new Error('ReadableStream not supported')
+    }
+
+    const reader = res.body.getReader()
+    const decoder = new TextDecoder()
+    let buffer = ''
+
+    try {
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+
+        buffer += decoder.decode(value, { stream: true })
+        const blocks = buffer.split('\n\n')
+        buffer = blocks.pop() || ''
+
+        for (const block of blocks) {
+          if (!block.trim() || block.startsWith(':')) continue // Ignore keep-alive heartbeats
+
+          let eventType = 'message'
+          let eventDataStr = ''
+
+          const lines = block.split('\n')
+          for (const line of lines) {
+            if (line.startsWith('event:')) {
+              eventType = line.replace('event:', '').trim()
+            } else if (line.startsWith('data:')) {
+              eventDataStr += line.replace('data:', '').trim()
+            }
+          }
+
+          if (!eventDataStr) continue
+
+          try {
+            const data = JSON.parse(eventDataStr)
+            if (eventType === 'progress') {
+              callbacks.onProgress?.(data)
+            } else if (eventType === 'warning') {
+              callbacks.onWarning?.(data)
+            } else if (eventType === 'complete') {
+              callbacks.onComplete?.(data)
+            } else if (eventType === 'error') {
+              callbacks.onError?.(new Error(data.detail || 'Sync encountered an error'))
+            }
+          } catch (err) {
+            console.error('Failed to parse SSE event:', err, block)
+          }
+        }
+      }
+    } finally {
+      reader.releaseLock()
+    }
+  },
+
+  getWealthXEmails: (query?: string, limit?: number) => {
+    const params = new URLSearchParams()
+    if (query) params.set('query', query)
+    if (limit) params.set('limit', String(limit))
+    return request<import('./types').WealthXEmailListResponseDTO>(`/api/portfolio/wealthx/emails?${params.toString()}`)
+  },
+
+  scanWealthXEmail: (messageId: string, attachmentId: string, password?: string) =>
+    request<import('./types').WealthXScanResponseDTO>('/api/portfolio/wealthx/scan/email', {
+      method: 'POST',
+      body: JSON.stringify({ message_id: messageId, attachment_id: attachmentId, password }),
+    }),
+
+  scanWealthXUpload: async (pdfFile: File, password?: string) => {
+    const formData = new FormData()
+    formData.append('pdf_file', pdfFile)
+    if (password) formData.append('password', password)
+    const res = await fetch('/api/portfolio/wealthx/scan/upload', {
+      method: 'POST',
+      body: formData,
+      credentials: 'same-origin',
+    })
+    if (!res.ok) {
+      let msg = 'Upload failed'
+      try {
+        const err = await res.json()
+        msg = err.detail || msg
+      } catch {}
+      throw new Error(msg)
+    }
+    return (await res.json()) as import('./types').WealthXScanResponseDTO
+  },
+
+  getStagedWealthXTrades: (scanId: string) =>
+    request<import('./types').WealthXScanResponseDTO>(`/api/portfolio/wealthx/staged/${encodeURIComponent(scanId)}`),
+
+  commitWealthXTrades: (scanId: string, portfolioId: string = 'default') =>
+    request<import('./types').WealthXCommitResponseDTO>(`/api/portfolio/wealthx/commit/${encodeURIComponent(scanId)}`, {
+      method: 'POST',
+      body: JSON.stringify({ portfolio_id: portfolioId }),
+    }),
+
+  getWealthXPdfUrl: (messageId: string, attachmentId: string, password?: string, decrypt: boolean = true) => {
+    const params = new URLSearchParams()
+    params.set('message_id', messageId)
+    params.set('attachment_id', attachmentId)
+    if (password) params.set('password', password)
+    if (!decrypt) params.set('decrypt', 'false')
+    return `/api/portfolio/wealthx/pdf?${params.toString()}`
+  },
+
+  getWealthXPdfText: (messageId: string, attachmentId: string, password?: string) => {
+    const params = new URLSearchParams()
+    params.set('message_id', messageId)
+    params.set('attachment_id', attachmentId)
+    if (password) params.set('password', password)
+    return request<import('./types').WealthXPdfTextResponseDTO>(`/api/portfolio/wealthx/pdf-text?${params.toString()}`)
+  },
+
+  streamBatchWealthXSync: async (
+    payload: { password?: string; force_rescan?: boolean; portfolio_id?: string },
+    callbacks: {
+      onProgress?: (data: import('./types').WealthXBatchScanProgressEvent) => void
+      onWarning?: (data: import('./types').WealthXBatchScanWarningEvent) => void
+      onComplete?: (data: import('./types').WealthXBatchScanCompleteEvent) => void
+      onError?: (err: Error) => void
+    },
+    signal?: AbortSignal
+  ) => {
+    const res = await fetch('/api/portfolio/wealthx/scan/batch-stream', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(payload),
+      credentials: 'same-origin',
+      signal,
+    })
+
+    if (!res.ok) {
+      let msg = 'Sync failed'
+      try {
+        const err = await res.json()
+        msg = err.detail || msg
+      } catch {}
+      throw new Error(msg)
+    }
+
+    if (!res.body) {
+      throw new Error('ReadableStream not supported')
+    }
+
+    const reader = res.body.getReader()
+    const decoder = new TextDecoder()
+    let buffer = ''
+
+    try {
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+
+        buffer += decoder.decode(value, { stream: true })
+        const lines = buffer.split('\n\n')
+        buffer = lines.pop() || ''
+
+        for (const block of lines) {
+          if (!block.trim()) continue
+          let eventType = 'message'
+          let dataStr = ''
+
+          for (const line of block.split('\n')) {
+            if (line.startsWith('event: ')) {
+              eventType = line.replace('event: ', '').trim()
+            } else if (line.startsWith('data: ')) {
+              dataStr = line.replace('data: ', '').trim()
+            }
+          }
+
+          if (!dataStr) continue
+          try {
+            const data = JSON.parse(dataStr)
+            if (eventType === 'progress') {
+              callbacks.onProgress?.(data)
+            } else if (eventType === 'warning') {
+              callbacks.onWarning?.(data)
+            } else if (eventType === 'complete') {
+              callbacks.onComplete?.(data)
+            } else if (eventType === 'error') {
+              callbacks.onError?.(new Error(data.detail || 'Sync encountered an error'))
+            }
+          } catch (err) {
+            console.error('Failed to parse SSE event:', err, block)
+          }
+        }
+      }
+    } finally {
+      reader.releaseLock()
+    }
+  },
+
+  getScbEmails: (query?: string, limit?: number) => {
+    const params = new URLSearchParams()
+    if (query) params.set('query', query)
+    if (limit) params.set('limit', String(limit))
+    return request<import('./types').SCBAMEmailListResponseDTO>(`/api/portfolio/scb/emails?${params.toString()}`)
+  },
+
+  scanScbEmail: (messageId: string, portfolioId: string = 'default') =>
+    request<import('./types').SCBAMScanResponseDTO>('/api/portfolio/scb/scan/email', {
+      method: 'POST',
+      body: JSON.stringify({ message_id: messageId, portfolio_id: portfolioId }),
+    }),
+
+  getStagedScbTrades: (scanId: string) =>
+    request<import('./types').SCBAMScanResponseDTO>(`/api/portfolio/scb/staged/${encodeURIComponent(scanId)}`),
+
+  commitScbTrades: (scanId: string, portfolioId: string = 'default', selectedItemIds?: string[]) =>
+    request<import('./types').SCBAMCommitResponseDTO>(`/api/portfolio/scb/commit/${encodeURIComponent(scanId)}`, {
+      method: 'POST',
+      body: JSON.stringify({ portfolio_id: portfolioId, selected_item_ids: selectedItemIds }),
+    }),
+
+  getScbEmailHtmlUrl: (messageId: string) => {
+    return `/api/portfolio/scb/emails/${encodeURIComponent(messageId)}/html`
+  },
+
+  streamBatchScbSync: async (
+    payload: { portfolio_id?: string; since_date?: string; limit?: number },
+    callbacks: {
+      onProgress?: (data: import('./types').SCBAMBatchScanProgressEvent) => void
+      onWarning?: (data: import('./types').SCBAMBatchScanWarningEvent) => void
+      onComplete?: (data: import('./types').SCBAMBatchScanCompleteEvent) => void
+      onError?: (err: Error) => void
+    },
+    signal?: AbortSignal
+  ) => {
+    const res = await fetch('/api/portfolio/scb/scan/batch-stream', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(payload),
+      credentials: 'same-origin',
+      signal,
+    })
+
+    if (!res.ok) {
+      let msg = 'Sync failed'
+      try {
+        const err = await res.json()
+        msg = err.detail || msg
+      } catch {}
+      throw new Error(msg)
+    }
+
+    if (!res.body) {
+      throw new Error('ReadableStream not supported')
+    }
+
+    const reader = res.body.getReader()
+    const decoder = new TextDecoder()
+    let buffer = ''
+
+    try {
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+
+        buffer += decoder.decode(value, { stream: true })
+        const lines = buffer.split('\n\n')
+        buffer = lines.pop() || ''
+
+        for (const block of lines) {
+          if (!block.trim() || block.startsWith(':')) continue
+          let eventType = 'message'
+          let dataStr = ''
+
+          for (const line of block.split('\n')) {
+            if (line.startsWith('event:')) {
+              eventType = line.replace('event:', '').trim()
+            } else if (line.startsWith('data:')) {
+              dataStr = line.replace('data:', '').trim()
+            }
+          }
+
+          if (!dataStr) continue
+          try {
+            const data = JSON.parse(dataStr)
+            if (eventType === 'progress') {
+              callbacks.onProgress?.(data)
+            } else if (eventType === 'warning') {
+              callbacks.onWarning?.(data)
+            } else if (eventType === 'complete') {
+              callbacks.onComplete?.(data)
+            } else if (eventType === 'error') {
+              callbacks.onError?.(new Error(data.message || data.detail || 'Sync encountered an error'))
+            }
+          } catch (err) {
+            console.error('Failed to parse SSE event:', err, block)
+          }
+        }
+      }
+    } finally {
+      reader.releaseLock()
+    }
+  },
+
+
 
   getFxRate: (date?: string, portfolioId: string = 'default') => {
     const params = new URLSearchParams()

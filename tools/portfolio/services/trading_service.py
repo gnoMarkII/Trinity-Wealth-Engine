@@ -4,6 +4,7 @@ import time
 import uuid
 from typing import Optional, List, Dict, Tuple, Literal, Union
 
+from decimal import Decimal
 from tools.portfolio.domain.constants import (
     CASH_THB_SYMBOL,
     CASH_USD_SYMBOL,
@@ -11,7 +12,13 @@ from tools.portfolio.domain.constants import (
     _FLOAT_EPS,
     _MONEY_DP,
 )
-from tools.portfolio.domain.models import PortfolioState, Holding, _now_iso
+from tools.portfolio.domain.models import (
+    PortfolioState,
+    Holding,
+    _now_iso,
+    MONEY_QUANTUM,
+    quantize_decimal,
+)
 from tools.portfolio.domain.ledger_change import LedgerChange
 from tools.portfolio.domain.events import SystemJournalEvent
 from tools.portfolio.domain.mutation import PortfolioMutation
@@ -174,18 +181,35 @@ class PortfolioTradingService:
             tx_id = f"tx_{int(time.time() * 1000)}_{uuid.uuid4().hex[:6]}"
             ts_str = f"{date.strip()} 12:00:00" if date and date.strip() else _now_iso().replace("T", " ")
 
+            cost_native = Decimal(str(units)) * Decimal(str(price))
+            gross_str = f"{quantize_decimal(cost_native, MONEY_QUANTUM):f}"
+            net_str = gross_str
+            price_str = f"{Decimal(str(price)):f}" if "." in str(price) else f"{price:.2f}"
+
             ledger_row: Dict = {
                 "Transaction_ID": tx_id,
                 "Timestamp": ts_str,
                 "Symbol": clean_sym,
                 "Action": action.upper(),
                 "Units": f"{units:g}",
-                "Price": f"{price:.2f}",
+                "Price": price_str,
                 "Currency": currency,
                 "FX_Rate": f"{trade_fx:.4f}" if currency == "USD" else "",
                 "Cost_THB": "",
                 "Realized_PnL_THB": "",
                 "Notes": notes or "",
+                "Gross_Amount": gross_str,
+                "Commission": "0.00",
+                "VAT": "0.00",
+                "Other_Fees": "0.00",
+                "Net_Amount": net_str,
+                "Fee_Currency": currency,
+                "Confirmation_No": "",
+                "Settlement_Date": "",
+                "Source": "MANUAL",
+                "Fingerprint": "",
+                "Cash_Adjusted": "YES",
+                "Related_Transaction_ID": "",
             }
 
             holding = _find_holding(state, clean_sym)
@@ -693,9 +717,22 @@ class PortfolioTradingService:
                 if not results and not has_non_cash:
                     return f"[SYNC] {pid}: no non-cash holdings to update"
 
-                total_count = len(results)
-                success_count = sum(1 for value in results.values() if value == "ok")
-                failed_items = [f"{key}={value}" for key, value in results.items() if value != "ok"]
+                # Filter out auxiliary rates like USDTHB when assessing holding refresh counts
+                holding_results = {k: v for k, v in results.items() if k != "USDTHB"}
+                target_items = holding_results if holding_results else results
+
+                def _is_failed(v: str) -> bool:
+                    v_lower = str(v).lower()
+                    return (
+                        v_lower.startswith("fetch failed")
+                        or v_lower.startswith("error")
+                        or v_lower.startswith("timeout")
+                        or v_lower == "no_data"
+                    )
+
+                total_count = len(target_items)
+                failed_items = [f"{key}={value}" for key, value in target_items.items() if _is_failed(value)]
+                success_count = total_count - len(failed_items)
                 recalc_all(state)
                 uow.commit(state, LedgerChange(kind="unchanged"))
 

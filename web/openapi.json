@@ -232,176 +232,6 @@
         }
       }
     },
-    "/api/portfolio/latest": {
-      "get": {
-        "summary": "Get Latest Portfolio",
-        "operationId": "get_latest_portfolio_api_portfolio_latest_get",
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/PortfolioDTO"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/macro/dashboard": {
-      "get": {
-        "summary": "Get Macro Dashboard",
-        "operationId": "get_macro_dashboard_api_macro_dashboard_get",
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/MacroDashboardDTO"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/macro/indicators/{indicator_id}/series": {
-      "get": {
-        "summary": "Get Macro Indicator Series",
-        "operationId": "get_macro_indicator_series_api_macro_indicators__indicator_id__series_get",
-        "parameters": [
-          {
-            "name": "indicator_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Indicator Id"
-            }
-          },
-          {
-            "name": "range",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "string",
-              "default": "3m",
-              "title": "Range"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/MacroIndicatorSeriesDTO"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/macro/news_funnel/pending": {
-      "get": {
-        "summary": "Get News Funnel Pending",
-        "operationId": "get_news_funnel_pending_api_macro_news_funnel_pending_get",
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "items": {
-                    "$ref": "#/components/schemas/NewsFunnelPendingItemDTO"
-                  },
-                  "type": "array",
-                  "title": "Response Get News Funnel Pending Api Macro News Funnel Pending Get"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/macro/news_funnel/filtered": {
-      "get": {
-        "summary": "Get News Funnel Filtered",
-        "operationId": "get_news_funnel_filtered_api_macro_news_funnel_filtered_get",
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "items": {
-                    "$ref": "#/components/schemas/NewsFunnelFilteredItemDTO"
-                  },
-                  "type": "array",
-                  "title": "Response Get News Funnel Filtered Api Macro News Funnel Filtered Get"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/macro/news_funnel/pending/{event_id}": {
-      "delete": {
-        "summary": "Delete News Funnel Pending",
-        "operationId": "delete_news_funnel_pending_api_macro_news_funnel_pending__event_id__delete",
-        "parameters": [
-          {
-            "name": "event_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Event Id"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "additionalProperties": true,
-                  "title": "Response Delete News Funnel Pending Api Macro News Funnel Pending  Event Id  Delete"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
     "/api/portfolio/actual/state": {
       "get": {
         "summary": "Get Actual Portfolio State",
@@ -485,705 +315,6 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/BucketAllocationResponseDTO"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/portfolio/actual/watchlist": {
-      "get": {
-        "summary": "Get Actual Watchlist",
-        "operationId": "get_actual_watchlist_api_portfolio_actual_watchlist_get",
-        "parameters": [
-          {
-            "name": "portfolio_id",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "string",
-              "default": "default",
-              "title": "Portfolio Id"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ActualWatchlistStateDTO"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/portfolio/actual/goals": {
-      "get": {
-        "summary": "Get Actual Goals",
-        "operationId": "get_actual_goals_api_portfolio_actual_goals_get",
-        "parameters": [
-          {
-            "name": "portfolio_id",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Portfolio Id"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ActualGoalsResponseDTO"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/portfolio/actual/performance": {
-      "get": {
-        "summary": "Get Actual Performance",
-        "operationId": "get_actual_performance_api_portfolio_actual_performance_get",
-        "parameters": [
-          {
-            "name": "days",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "integer",
-              "default": 30,
-              "title": "Days"
-            }
-          },
-          {
-            "name": "portfolio_id",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "string",
-              "default": "default",
-              "title": "Portfolio Id"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/PerformanceSnapshotDTO"
-                  },
-                  "title": "Response Get Actual Performance Api Portfolio Actual Performance Get"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/portfolio/calendar": {
-      "get": {
-        "summary": "Get Portfolio Calendar",
-        "operationId": "get_portfolio_calendar_api_portfolio_calendar_get",
-        "parameters": [
-          {
-            "name": "portfolio_id",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "string",
-              "default": "default",
-              "title": "Portfolio Id"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/PortfolioCalendarDTO"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/portfolio/actual/performance/snapshot": {
-      "post": {
-        "summary": "Trigger Performance Snapshot",
-        "operationId": "trigger_performance_snapshot_api_portfolio_actual_performance_snapshot_post",
-        "parameters": [
-          {
-            "name": "refresh_prices",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "boolean",
-              "default": false,
-              "title": "Refresh Prices"
-            }
-          },
-          {
-            "name": "portfolio_id",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "string",
-              "default": "default",
-              "title": "Portfolio Id"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/PerformanceSnapshotDTO"
-                  },
-                  "title": "Response Trigger Performance Snapshot Api Portfolio Actual Performance Snapshot Post"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/portfolio/actual/journal": {
-      "get": {
-        "summary": "Get Actual Journal",
-        "operationId": "get_actual_journal_api_portfolio_actual_journal_get",
-        "parameters": [
-          {
-            "name": "days",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "integer"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Days"
-            }
-          },
-          {
-            "name": "keyword",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Keyword"
-            }
-          },
-          {
-            "name": "limit",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "integer",
-              "default": 50,
-              "title": "Limit"
-            }
-          },
-          {
-            "name": "portfolio_id",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "string",
-              "default": "default",
-              "title": "Portfolio Id"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/JournalEntryDTO"
-                  },
-                  "title": "Response Get Actual Journal Api Portfolio Actual Journal Get"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      },
-      "post": {
-        "summary": "Append Journal Endpoint",
-        "operationId": "append_journal_endpoint_api_portfolio_actual_journal_post",
-        "parameters": [
-          {
-            "name": "portfolio_id",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "string",
-              "default": "default",
-              "title": "Portfolio Id"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/AppendJournalRequestDTO"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/JournalEntryDTO"
-                  },
-                  "title": "Response Append Journal Endpoint Api Portfolio Actual Journal Post"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/portfolio/actual/transactions": {
-      "get": {
-        "summary": "Get Actual Transactions",
-        "operationId": "get_actual_transactions_api_portfolio_actual_transactions_get",
-        "parameters": [
-          {
-            "name": "symbol",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Symbol"
-            }
-          },
-          {
-            "name": "portfolio_id",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "string",
-              "default": "default",
-              "title": "Portfolio Id"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/TransactionListResponseDTO"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/portfolio/actual/transactions/{tx_id}/note": {
-      "patch": {
-        "summary": "Update Transaction Note Endpoint",
-        "operationId": "update_transaction_note_endpoint_api_portfolio_actual_transactions__tx_id__note_patch",
-        "parameters": [
-          {
-            "name": "tx_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Tx Id"
-            }
-          },
-          {
-            "name": "portfolio_id",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "string",
-              "default": "default",
-              "title": "Portfolio Id"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/UpdateTransactionNoteRequestDTO"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/TransactionItemDTO"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/portfolio/actual/transactions/{tx_id}": {
-      "put": {
-        "summary": "Edit Transaction Endpoint",
-        "operationId": "edit_transaction_endpoint_api_portfolio_actual_transactions__tx_id__put",
-        "parameters": [
-          {
-            "name": "tx_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Tx Id"
-            }
-          },
-          {
-            "name": "portfolio_id",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "string",
-              "default": "default",
-              "title": "Portfolio Id"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/EditTransactionRequestDTO"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ActualPortfolioStateDTO"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      },
-      "delete": {
-        "summary": "Delete Transaction Endpoint",
-        "operationId": "delete_transaction_endpoint_api_portfolio_actual_transactions__tx_id__delete",
-        "parameters": [
-          {
-            "name": "tx_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Tx Id"
-            }
-          },
-          {
-            "name": "adjust_cash",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "boolean",
-              "default": true,
-              "title": "Adjust Cash"
-            }
-          },
-          {
-            "name": "portfolio_id",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "string",
-              "default": "default",
-              "title": "Portfolio Id"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ActualPortfolioStateDTO"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/portfolio/actual/fx-rate": {
-      "get": {
-        "summary": "Get Fx Rate Endpoint",
-        "operationId": "get_fx_rate_endpoint_api_portfolio_actual_fx_rate_get",
-        "parameters": [
-          {
-            "name": "date",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Date"
-            }
-          },
-          {
-            "name": "portfolio_id",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "string",
-              "default": "default",
-              "title": "Portfolio Id"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/FXRateResponseDTO"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/portfolio/actual/sync-dividends": {
-      "post": {
-        "summary": "Sync Dividends Endpoint",
-        "operationId": "sync_dividends_endpoint_api_portfolio_actual_sync_dividends_post",
-        "parameters": [
-          {
-            "name": "portfolio_id",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "string",
-              "default": "default",
-              "title": "Portfolio Id"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/SyncDividendsResponseDTO"
                 }
               }
             }
@@ -1708,6 +839,422 @@
         }
       }
     },
+    "/api/portfolio/actual/fx-rate": {
+      "get": {
+        "summary": "Get Fx Rate Endpoint",
+        "operationId": "get_fx_rate_endpoint_api_portfolio_actual_fx_rate_get",
+        "parameters": [
+          {
+            "name": "date",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Date"
+            }
+          },
+          {
+            "name": "portfolio_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "default",
+              "title": "Portfolio Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FXRateResponseDTO"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/portfolio/actual/sync-dividends": {
+      "post": {
+        "summary": "Sync Dividends Endpoint",
+        "operationId": "sync_dividends_endpoint_api_portfolio_actual_sync_dividends_post",
+        "parameters": [
+          {
+            "name": "portfolio_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "default",
+              "title": "Portfolio Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SyncDividendsResponseDTO"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/portfolio/actual/transactions": {
+      "get": {
+        "summary": "Get Actual Transactions",
+        "operationId": "get_actual_transactions_api_portfolio_actual_transactions_get",
+        "parameters": [
+          {
+            "name": "symbol",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Symbol"
+            }
+          },
+          {
+            "name": "portfolio_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "default",
+              "title": "Portfolio Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TransactionListResponseDTO"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/portfolio/actual/transactions/{tx_id}/note": {
+      "patch": {
+        "summary": "Update Transaction Note Endpoint",
+        "operationId": "update_transaction_note_endpoint_api_portfolio_actual_transactions__tx_id__note_patch",
+        "parameters": [
+          {
+            "name": "tx_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Tx Id"
+            }
+          },
+          {
+            "name": "portfolio_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "default",
+              "title": "Portfolio Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateTransactionNoteRequestDTO"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TransactionItemDTO"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/portfolio/actual/transactions/{tx_id}": {
+      "put": {
+        "summary": "Edit Transaction Endpoint",
+        "operationId": "edit_transaction_endpoint_api_portfolio_actual_transactions__tx_id__put",
+        "parameters": [
+          {
+            "name": "tx_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Tx Id"
+            }
+          },
+          {
+            "name": "portfolio_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "default",
+              "title": "Portfolio Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EditTransactionRequestDTO"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ActualPortfolioStateDTO"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "summary": "Delete Transaction Endpoint",
+        "operationId": "delete_transaction_endpoint_api_portfolio_actual_transactions__tx_id__delete",
+        "parameters": [
+          {
+            "name": "tx_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Tx Id"
+            }
+          },
+          {
+            "name": "adjust_cash",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": true,
+              "title": "Adjust Cash"
+            }
+          },
+          {
+            "name": "portfolio_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "default",
+              "title": "Portfolio Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ActualPortfolioStateDTO"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/portfolio/actual/transactions/{tx_id}/void": {
+      "post": {
+        "summary": "Void Transaction Endpoint",
+        "operationId": "void_transaction_endpoint_api_portfolio_actual_transactions__tx_id__void_post",
+        "parameters": [
+          {
+            "name": "tx_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Tx Id"
+            }
+          },
+          {
+            "name": "portfolio_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "default",
+              "title": "Portfolio Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ActualPortfolioStateDTO"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/portfolio/actual/watchlist": {
+      "get": {
+        "summary": "Get Actual Watchlist",
+        "operationId": "get_actual_watchlist_api_portfolio_actual_watchlist_get",
+        "parameters": [
+          {
+            "name": "portfolio_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "default",
+              "title": "Portfolio Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ActualWatchlistStateDTO"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/portfolio/actual/watchlist/{symbol}": {
       "put": {
         "summary": "Upsert Watchlist Item Endpoint",
@@ -1814,6 +1361,52 @@
         }
       }
     },
+    "/api/portfolio/actual/goals": {
+      "get": {
+        "summary": "Get Actual Goals",
+        "operationId": "get_actual_goals_api_portfolio_actual_goals_get",
+        "parameters": [
+          {
+            "name": "portfolio_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Portfolio Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ActualGoalsResponseDTO"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/portfolio/actual/goals/{name}": {
       "put": {
         "summary": "Upsert Goal Endpoint",
@@ -1899,6 +1492,691 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ActualGoalsResponseDTO"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/portfolio/actual/journal": {
+      "get": {
+        "summary": "Get Actual Journal",
+        "operationId": "get_actual_journal_api_portfolio_actual_journal_get",
+        "parameters": [
+          {
+            "name": "days",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Days"
+            }
+          },
+          {
+            "name": "keyword",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Keyword"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 50,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "portfolio_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "default",
+              "title": "Portfolio Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/JournalEntryDTO"
+                  },
+                  "title": "Response Get Actual Journal Api Portfolio Actual Journal Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Append Journal Endpoint",
+        "operationId": "append_journal_endpoint_api_portfolio_actual_journal_post",
+        "parameters": [
+          {
+            "name": "portfolio_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "default",
+              "title": "Portfolio Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AppendJournalRequestDTO"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/JournalEntryDTO"
+                  },
+                  "title": "Response Append Journal Endpoint Api Portfolio Actual Journal Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/portfolio/actual/performance": {
+      "get": {
+        "summary": "Get Actual Performance",
+        "operationId": "get_actual_performance_api_portfolio_actual_performance_get",
+        "parameters": [
+          {
+            "name": "days",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 30,
+              "title": "Days"
+            }
+          },
+          {
+            "name": "portfolio_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "default",
+              "title": "Portfolio Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PerformanceSnapshotDTO"
+                  },
+                  "title": "Response Get Actual Performance Api Portfolio Actual Performance Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/portfolio/actual/performance/snapshot": {
+      "post": {
+        "summary": "Trigger Performance Snapshot",
+        "operationId": "trigger_performance_snapshot_api_portfolio_actual_performance_snapshot_post",
+        "parameters": [
+          {
+            "name": "refresh_prices",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false,
+              "title": "Refresh Prices"
+            }
+          },
+          {
+            "name": "portfolio_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "default",
+              "title": "Portfolio Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PerformanceSnapshotDTO"
+                  },
+                  "title": "Response Trigger Performance Snapshot Api Portfolio Actual Performance Snapshot Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/portfolio/latest": {
+      "get": {
+        "summary": "Get Latest Portfolio",
+        "operationId": "get_latest_portfolio_api_portfolio_latest_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PortfolioDTO"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/macro/dashboard": {
+      "get": {
+        "summary": "Get Macro Dashboard",
+        "operationId": "get_macro_dashboard_api_macro_dashboard_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MacroDashboardDTO"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/macro/indicators/{indicator_id}/series": {
+      "get": {
+        "summary": "Get Macro Indicator Series",
+        "operationId": "get_macro_indicator_series_api_macro_indicators__indicator_id__series_get",
+        "parameters": [
+          {
+            "name": "indicator_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Indicator Id"
+            }
+          },
+          {
+            "name": "range",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "3m",
+              "title": "Range"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MacroIndicatorSeriesDTO"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/macro/news_funnel/pending": {
+      "get": {
+        "summary": "Get News Funnel Pending",
+        "operationId": "get_news_funnel_pending_api_macro_news_funnel_pending_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/NewsFunnelPendingItemDTO"
+                  },
+                  "type": "array",
+                  "title": "Response Get News Funnel Pending Api Macro News Funnel Pending Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/macro/news_funnel/filtered": {
+      "get": {
+        "summary": "Get News Funnel Filtered",
+        "operationId": "get_news_funnel_filtered_api_macro_news_funnel_filtered_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/NewsFunnelFilteredItemDTO"
+                  },
+                  "type": "array",
+                  "title": "Response Get News Funnel Filtered Api Macro News Funnel Filtered Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/macro/news_funnel/pending/{event_id}": {
+      "delete": {
+        "summary": "Delete News Funnel Pending",
+        "operationId": "delete_news_funnel_pending_api_macro_news_funnel_pending__event_id__delete",
+        "parameters": [
+          {
+            "name": "event_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Event Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Delete News Funnel Pending Api Macro News Funnel Pending  Event Id  Delete"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/portfolio/calendar": {
+      "get": {
+        "summary": "Get Portfolio Calendar",
+        "operationId": "get_portfolio_calendar_api_portfolio_calendar_get",
+        "parameters": [
+          {
+            "name": "portfolio_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "default",
+              "title": "Portfolio Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PortfolioCalendarDTO"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/portfolio/dime/emails": {
+      "get": {
+        "tags": [
+          "Dime Sync"
+        ],
+        "summary": "Search Dime Emails Endpoint",
+        "operationId": "search_dime_emails_endpoint_api_portfolio_dime_emails_get",
+        "parameters": [
+          {
+            "name": "query",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "Query"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 20,
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DimeEmailListResponseDTO"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/portfolio/dime/scan/email": {
+      "post": {
+        "tags": [
+          "Dime Sync"
+        ],
+        "summary": "Scan Email Attachment Endpoint",
+        "operationId": "scan_email_attachment_endpoint_api_portfolio_dime_scan_email_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DimeScanEmailRequestDTO"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DimeScanResponseDTO"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/portfolio/dime/scan/upload": {
+      "post": {
+        "tags": [
+          "Dime Sync"
+        ],
+        "summary": "Scan Upload Pdf Endpoint",
+        "operationId": "scan_upload_pdf_endpoint_api_portfolio_dime_scan_upload_post",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_scan_upload_pdf_endpoint_api_portfolio_dime_scan_upload_post"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DimeScanResponseDTO"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/portfolio/dime/staged/{scan_id}": {
+      "get": {
+        "tags": [
+          "Dime Sync"
+        ],
+        "summary": "Get Staged Endpoint",
+        "operationId": "get_staged_endpoint_api_portfolio_dime_staged__scan_id__get",
+        "parameters": [
+          {
+            "name": "scan_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Scan Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DimeScanResponseDTO"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/portfolio/dime/commit/{scan_id}": {
+      "post": {
+        "tags": [
+          "Dime Sync"
+        ],
+        "summary": "Commit Staged Endpoint",
+        "operationId": "commit_staged_endpoint_api_portfolio_dime_commit__scan_id__post",
+        "parameters": [
+          {
+            "name": "scan_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Scan Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DimeCommitRequestDTO"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DimeCommitResponseDTO"
                 }
               }
             }
@@ -2053,7 +2331,6 @@
     "/api/agents/jobs/{job_id}/resume": {
       "post": {
         "summary": "Resume Job",
-        "description": "Validate and atomically claim one human approval resume.",
         "operationId": "resume_job_api_agents_jobs__job_id__resume_post",
         "parameters": [
           {
@@ -2563,6 +2840,421 @@
         }
       }
     },
+    "/api/equity/{ticker}/valuation-targets": {
+      "get": {
+        "tags": [
+          "equity"
+        ],
+        "summary": "Get Equity Valuation Targets",
+        "operationId": "get_equity_valuation_targets_api_equity__ticker__valuation_targets_get",
+        "parameters": [
+          {
+            "name": "ticker",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Ticker"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValuationTargetsDTO"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/equity/{ticker}/insider-filings": {
+      "get": {
+        "tags": [
+          "equity"
+        ],
+        "summary": "Get Equity Insider Filings",
+        "operationId": "get_equity_insider_filings_api_equity__ticker__insider_filings_get",
+        "parameters": [
+          {
+            "name": "ticker",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Ticker"
+            }
+          },
+          {
+            "name": "range",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "1y",
+              "title": "Range"
+            }
+          },
+          {
+            "name": "interval",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "1d",
+              "title": "Interval"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InsiderFilingsResponseDTO"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/equity/{ticker}/analyst-context": {
+      "get": {
+        "tags": [
+          "equity"
+        ],
+        "summary": "Get Equity Analyst Context",
+        "operationId": "get_equity_analyst_context_api_equity__ticker__analyst_context_get",
+        "parameters": [
+          {
+            "name": "ticker",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Ticker"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AnalystContextDTO"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/equity/{ticker}/financials": {
+      "get": {
+        "tags": [
+          "equity"
+        ],
+        "summary": "Get Equity Financial Statements",
+        "description": "\u0e14\u0e36\u0e07\u0e02\u0e49\u0e2d\u0e21\u0e39\u0e25\u0e07\u0e1a\u0e01\u0e32\u0e23\u0e40\u0e07\u0e34\u0e19\u0e22\u0e49\u0e2d\u0e19\u0e2b\u0e25\u0e31\u0e07 (Income Statement, Balance Sheet, Cash Flow) \u0e1e\u0e23\u0e49\u0e2d\u0e21\u0e23\u0e30\u0e1a\u0e1a Dual-Provider (EDGAR/yfinance)",
+        "operationId": "get_equity_financial_statements_api_equity__ticker__financials_get",
+        "parameters": [
+          {
+            "name": "ticker",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Ticker"
+            }
+          },
+          {
+            "name": "market",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Market"
+            }
+          },
+          {
+            "name": "force_refresh",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false,
+              "title": "Force Refresh"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FinancialStatementsDTO"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/equity/{ticker}/earnings-call/summarize": {
+      "post": {
+        "tags": [
+          "equity"
+        ],
+        "summary": "Summarize Earnings Call Transcript",
+        "description": "Summarizes an earnings call transcript, writes highlights & raw text to Obsidian, and dispatches to Kanban via Outbox.",
+        "operationId": "summarize_earnings_call_api_equity__ticker__earnings_call_summarize_post",
+        "parameters": [
+          {
+            "name": "ticker",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Ticker"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EarningsCallSummarizeRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EarningsCallSummarizeResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/equity/{ticker}/earnings-call/runs/{run_id}": {
+      "get": {
+        "tags": [
+          "equity"
+        ],
+        "summary": "Get Earnings Call Run Status",
+        "description": "Fetches status and artifacts of a specific earnings call workflow run.",
+        "operationId": "get_earnings_call_run_api_equity__ticker__earnings_call_runs__run_id__get",
+        "parameters": [
+          {
+            "name": "ticker",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Ticker"
+            }
+          },
+          {
+            "name": "run_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Run Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EarningsCallRunResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/equity/{ticker}/earnings-call/runs/{run_id}/retry": {
+      "post": {
+        "tags": [
+          "equity"
+        ],
+        "summary": "Retry Earnings Call Kanban Delivery",
+        "description": "Manually retries Kanban card dispatch for an earnings call run.",
+        "operationId": "retry_earnings_call_run_api_equity__ticker__earnings_call_runs__run_id__retry_post",
+        "parameters": [
+          {
+            "name": "ticker",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Ticker"
+            }
+          },
+          {
+            "name": "run_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Run Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EarningsCallRunResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/equity/{ticker}/earnings-calls": {
+      "get": {
+        "tags": [
+          "equity"
+        ],
+        "summary": "List Existing Earnings Calls for Ticker",
+        "description": "Retrieves all existing earnings call notes and parsed AI highlights for a ticker.",
+        "operationId": "get_earnings_calls_api_equity__ticker__earnings_calls_get",
+        "parameters": [
+          {
+            "name": "ticker",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Ticker"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EarningsCallListResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/equity/{ticker}": {
       "get": {
         "tags": [
@@ -2699,222 +3391,6 @@
         }
       }
     },
-    "/api/equity/{ticker}/valuation-targets": {
-      "get": {
-        "tags": [
-          "equity"
-        ],
-        "summary": "Get Equity Valuation Targets",
-        "operationId": "get_equity_valuation_targets_api_equity__ticker__valuation_targets_get",
-        "parameters": [
-          {
-            "name": "ticker",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Ticker"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ValuationTargetsDTO"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/equity/{ticker}/insider-filings": {
-      "get": {
-        "tags": [
-          "equity"
-        ],
-        "summary": "Get Equity Insider Filings",
-        "operationId": "get_equity_insider_filings_api_equity__ticker__insider_filings_get",
-        "parameters": [
-          {
-            "name": "ticker",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Ticker"
-            }
-          },
-          {
-            "name": "range",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "string",
-              "default": "1y",
-              "title": "Range"
-            }
-          },
-          {
-            "name": "interval",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "string",
-              "default": "1d",
-              "title": "Interval"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/InsiderFilingsResponseDTO"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/equity/{ticker}/analyst-context": {
-      "get": {
-        "tags": [
-          "equity"
-        ],
-        "summary": "Get Equity Analyst Context",
-        "description": "\u0e14\u0e36\u0e07\u0e02\u0e49\u0e2d\u0e21\u0e39\u0e25 Consensus Target Price, Next Earnings Date Countdown, \u0e41\u0e25\u0e30 EPS History \u0e1e\u0e23\u0e49\u0e2d\u0e21 Cache 24h",
-        "operationId": "get_equity_analyst_context_api_equity__ticker__analyst_context_get",
-        "parameters": [
-          {
-            "name": "ticker",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Ticker"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/AnalystContextDTO"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/equity/{ticker}/financials": {
-      "get": {
-        "tags": [
-          "equity"
-        ],
-        "summary": "Get Equity Financial Statements",
-        "description": "\u0e14\u0e36\u0e07\u0e02\u0e49\u0e2d\u0e21\u0e39\u0e25\u0e07\u0e1a\u0e01\u0e32\u0e23\u0e40\u0e07\u0e34\u0e19\u0e22\u0e49\u0e2d\u0e19\u0e2b\u0e25\u0e31\u0e07 (Income Statement, Balance Sheet, Cash Flow) \u0e1e\u0e23\u0e49\u0e2d\u0e21\u0e23\u0e30\u0e1a\u0e1a Dual-Provider (EDGAR/yfinance)",
-        "operationId": "get_equity_financial_statements_api_equity__ticker__financials_get",
-        "parameters": [
-          {
-            "name": "ticker",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Ticker"
-            }
-          },
-          {
-            "name": "market",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Market"
-            }
-          },
-          {
-            "name": "force_refresh",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "boolean",
-              "default": false,
-              "title": "Force Refresh"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/FinancialStatementsDTO"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
     "/api/equity/{ticker}/ohlcv": {
       "get": {
         "tags": [
@@ -2974,6 +3450,32 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/health/components": {
+      "get": {
+        "tags": [
+          "Health"
+        ],
+        "summary": "Get Component Health",
+        "description": "\u0e15\u0e23\u0e27\u0e08\u0e2a\u0e2d\u0e1a\u0e2a\u0e38\u0e02\u0e20\u0e32\u0e1e\u0e02\u0e2d\u0e07 components \u0e15\u0e48\u0e32\u0e07\u0e46 \u0e43\u0e19\u0e23\u0e30\u0e1a\u0e1a (API, Database, Job Worker, Market Provider, LLM)",
+        "operationId": "get_component_health_api_health_components_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "type": "object",
+                  "title": "Response Get Component Health Api Health Components Get"
                 }
               }
             }
@@ -3988,6 +4490,31 @@
         "type": "object",
         "title": "BatchRemoveHoldingsRequestDTO"
       },
+      "Body_scan_upload_pdf_endpoint_api_portfolio_dime_scan_upload_post": {
+        "properties": {
+          "pdf_file": {
+            "type": "string",
+            "contentMediaType": "application/octet-stream",
+            "title": "Pdf File"
+          },
+          "password": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Password"
+          }
+        },
+        "type": "object",
+        "required": [
+          "pdf_file"
+        ],
+        "title": "Body_scan_upload_pdf_endpoint_api_portfolio_dime_scan_upload_post"
+      },
       "BucketAllocationResponseDTO": {
         "properties": {
           "warning": {
@@ -4609,6 +5136,280 @@
         ],
         "title": "DCFScenarioLevelDTO"
       },
+      "DimeCommitRequestDTO": {
+        "properties": {
+          "portfolio_id": {
+            "type": "string",
+            "title": "Portfolio Id",
+            "default": "default"
+          }
+        },
+        "type": "object",
+        "title": "DimeCommitRequestDTO"
+      },
+      "DimeCommitResponseDTO": {
+        "properties": {
+          "ok": {
+            "type": "boolean",
+            "title": "Ok",
+            "default": true
+          },
+          "imported_count": {
+            "type": "integer",
+            "title": "Imported Count"
+          },
+          "state": {
+            "$ref": "#/components/schemas/ActualPortfolioStateDTO"
+          }
+        },
+        "type": "object",
+        "required": [
+          "imported_count",
+          "state"
+        ],
+        "title": "DimeCommitResponseDTO"
+      },
+      "DimeEmailListResponseDTO": {
+        "properties": {
+          "emails": {
+            "items": {
+              "$ref": "#/components/schemas/DimeEmailMetadataDTO"
+            },
+            "type": "array",
+            "title": "Emails",
+            "default": []
+          }
+        },
+        "type": "object",
+        "title": "DimeEmailListResponseDTO"
+      },
+      "DimeEmailMetadataDTO": {
+        "properties": {
+          "message_id": {
+            "type": "string",
+            "title": "Message Id"
+          },
+          "attachment_id": {
+            "type": "string",
+            "title": "Attachment Id"
+          },
+          "subject": {
+            "type": "string",
+            "title": "Subject"
+          },
+          "sender": {
+            "type": "string",
+            "title": "Sender"
+          },
+          "received_at": {
+            "type": "string",
+            "title": "Received At"
+          },
+          "filename": {
+            "type": "string",
+            "title": "Filename"
+          },
+          "size_bytes": {
+            "type": "integer",
+            "title": "Size Bytes"
+          }
+        },
+        "type": "object",
+        "required": [
+          "message_id",
+          "attachment_id",
+          "subject",
+          "sender",
+          "received_at",
+          "filename",
+          "size_bytes"
+        ],
+        "title": "DimeEmailMetadataDTO"
+      },
+      "DimeScanEmailRequestDTO": {
+        "properties": {
+          "message_id": {
+            "type": "string",
+            "title": "Message Id"
+          },
+          "attachment_id": {
+            "type": "string",
+            "title": "Attachment Id"
+          },
+          "password": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Password"
+          }
+        },
+        "type": "object",
+        "required": [
+          "message_id",
+          "attachment_id"
+        ],
+        "title": "DimeScanEmailRequestDTO"
+      },
+      "DimeScanResponseDTO": {
+        "properties": {
+          "scan_id": {
+            "type": "string",
+            "title": "Scan Id"
+          },
+          "item_count": {
+            "type": "integer",
+            "title": "Item Count"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/DimeStagedItemDTO"
+            },
+            "type": "array",
+            "title": "Items",
+            "default": []
+          }
+        },
+        "type": "object",
+        "required": [
+          "scan_id",
+          "item_count"
+        ],
+        "title": "DimeScanResponseDTO"
+      },
+      "DimeStagedItemDTO": {
+        "properties": {
+          "item_id": {
+            "type": "string",
+            "title": "Item Id"
+          },
+          "trade_date": {
+            "type": "string",
+            "title": "Trade Date"
+          },
+          "settlement_date": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Settlement Date"
+          },
+          "symbol": {
+            "type": "string",
+            "title": "Symbol"
+          },
+          "action": {
+            "type": "string",
+            "title": "Action"
+          },
+          "units": {
+            "type": "string",
+            "title": "Units"
+          },
+          "price": {
+            "type": "string",
+            "title": "Price"
+          },
+          "gross_amount": {
+            "type": "string",
+            "title": "Gross Amount"
+          },
+          "fees": {
+            "$ref": "#/components/schemas/DimeStagedItemFeeDTO"
+          },
+          "net_amount": {
+            "type": "string",
+            "title": "Net Amount"
+          },
+          "currency": {
+            "type": "string",
+            "title": "Currency",
+            "default": "THB"
+          },
+          "exchange_rate": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Exchange Rate"
+          },
+          "confirmation_no": {
+            "type": "string",
+            "title": "Confirmation No"
+          },
+          "source": {
+            "type": "string",
+            "title": "Source",
+            "default": "DIME"
+          },
+          "fingerprint": {
+            "type": "string",
+            "title": "Fingerprint"
+          },
+          "line_index": {
+            "type": "integer",
+            "title": "Line Index",
+            "default": 0
+          },
+          "cash_adjusted": {
+            "type": "boolean",
+            "title": "Cash Adjusted",
+            "default": true
+          }
+        },
+        "type": "object",
+        "required": [
+          "item_id",
+          "trade_date",
+          "symbol",
+          "action",
+          "units",
+          "price",
+          "gross_amount",
+          "net_amount",
+          "confirmation_no",
+          "fingerprint"
+        ],
+        "title": "DimeStagedItemDTO"
+      },
+      "DimeStagedItemFeeDTO": {
+        "properties": {
+          "commission": {
+            "type": "string",
+            "title": "Commission",
+            "default": "0.00"
+          },
+          "vat": {
+            "type": "string",
+            "title": "Vat",
+            "default": "0.00"
+          },
+          "other_fees": {
+            "type": "string",
+            "title": "Other Fees",
+            "default": "0.00"
+          },
+          "fee_currency": {
+            "type": "string",
+            "title": "Fee Currency",
+            "default": "THB"
+          }
+        },
+        "type": "object",
+        "title": "DimeStagedItemFeeDTO"
+      },
       "DispatchRequest": {
         "properties": {
           "instruction": {
@@ -4725,6 +5526,277 @@
           "units_held"
         ],
         "title": "DividendRoundDTO"
+      },
+      "EarningsCallListResponse": {
+        "properties": {
+          "ticker": {
+            "type": "string",
+            "title": "Ticker"
+          },
+          "total_count": {
+            "type": "integer",
+            "title": "Total Count"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/EarningsCallNoteItem"
+            },
+            "type": "array",
+            "title": "Items"
+          }
+        },
+        "type": "object",
+        "required": [
+          "ticker",
+          "total_count",
+          "items"
+        ],
+        "title": "EarningsCallListResponse"
+      },
+      "EarningsCallNoteItem": {
+        "properties": {
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "ticker": {
+            "type": "string",
+            "title": "Ticker"
+          },
+          "period": {
+            "type": "string",
+            "title": "Period"
+          },
+          "vault_path": {
+            "type": "string",
+            "title": "Vault Path"
+          },
+          "highlights": {
+            "type": "string",
+            "title": "Highlights"
+          },
+          "date": {
+            "type": "string",
+            "title": "Date"
+          },
+          "last_updated": {
+            "type": "string",
+            "title": "Last Updated"
+          },
+          "has_full_transcript": {
+            "type": "boolean",
+            "title": "Has Full Transcript",
+            "default": true
+          }
+        },
+        "type": "object",
+        "required": [
+          "title",
+          "ticker",
+          "period",
+          "vault_path",
+          "highlights",
+          "date",
+          "last_updated"
+        ],
+        "title": "EarningsCallNoteItem"
+      },
+      "EarningsCallRunResponse": {
+        "properties": {
+          "run_id": {
+            "type": "string",
+            "title": "Run Id"
+          },
+          "ticker": {
+            "type": "string",
+            "title": "Ticker"
+          },
+          "period": {
+            "type": "string",
+            "title": "Period"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "kanban_status": {
+            "type": "string",
+            "title": "Kanban Status"
+          },
+          "highlights": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Highlights"
+          },
+          "vault_path": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Vault Path"
+          },
+          "kanban_card_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Kanban Card Id"
+          },
+          "reused_existing_run": {
+            "type": "boolean",
+            "title": "Reused Existing Run",
+            "default": false
+          },
+          "is_idempotent_replay": {
+            "type": "boolean",
+            "title": "Is Idempotent Replay",
+            "default": false
+          },
+          "last_error_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Error Code"
+          },
+          "created_at": {
+            "type": "number",
+            "title": "Created At"
+          },
+          "updated_at": {
+            "type": "number",
+            "title": "Updated At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "run_id",
+          "ticker",
+          "period",
+          "status",
+          "kanban_status",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "EarningsCallRunResponse"
+      },
+      "EarningsCallSummarizeRequest": {
+        "properties": {
+          "period": {
+            "type": "string",
+            "maxLength": 20,
+            "minLength": 2,
+            "title": "Period",
+            "description": "Earnings period, e.g. 'Q4 2024'"
+          },
+          "transcript": {
+            "type": "string",
+            "maxLength": 120000,
+            "minLength": 20,
+            "title": "Transcript",
+            "description": "Raw earnings call transcript text"
+          }
+        },
+        "type": "object",
+        "required": [
+          "period",
+          "transcript"
+        ],
+        "title": "EarningsCallSummarizeRequest"
+      },
+      "EarningsCallSummarizeResponse": {
+        "properties": {
+          "run_id": {
+            "type": "string",
+            "title": "Run Id"
+          },
+          "ticker": {
+            "type": "string",
+            "title": "Ticker"
+          },
+          "period": {
+            "type": "string",
+            "title": "Period"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "kanban_status": {
+            "type": "string",
+            "title": "Kanban Status"
+          },
+          "highlights": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Highlights"
+          },
+          "vault_path": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Vault Path"
+          },
+          "kanban_card_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Kanban Card Id"
+          },
+          "reused_existing_run": {
+            "type": "boolean",
+            "title": "Reused Existing Run",
+            "default": false
+          },
+          "is_idempotent_replay": {
+            "type": "boolean",
+            "title": "Is Idempotent Replay",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": [
+          "run_id",
+          "ticker",
+          "period",
+          "status",
+          "kanban_status"
+        ],
+        "title": "EarningsCallSummarizeResponse"
       },
       "EarningsHistoryEntryDTO": {
         "properties": {
@@ -8670,6 +9742,138 @@
             "type": "string",
             "title": "Notes",
             "default": ""
+          },
+          "gross_amount": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Gross Amount"
+          },
+          "commission": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Commission"
+          },
+          "vat": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Vat"
+          },
+          "other_fees": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Other Fees"
+          },
+          "net_amount": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Net Amount"
+          },
+          "fee_currency": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fee Currency"
+          },
+          "confirmation_no": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Confirmation No"
+          },
+          "settlement_date": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Settlement Date"
+          },
+          "source": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source"
+          },
+          "fingerprint": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fingerprint"
+          },
+          "cash_adjusted": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cash Adjusted"
+          },
+          "related_transaction_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Related Transaction Id"
           }
         },
         "type": "object",

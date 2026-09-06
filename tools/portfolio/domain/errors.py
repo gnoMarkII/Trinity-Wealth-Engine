@@ -26,3 +26,28 @@ class PortfolioNotFoundError(PortfolioDomainError):
 class RecoveryConflictError(PortfolioDomainError):
     """Raised when multi-file commit recovery encounters unresolvable hash divergence on disk."""
     pass
+
+
+class StagedScanExpiredError(PortfolioDomainError):
+    """Raised when access to a staged scan batch has expired (TTL exceeded)."""
+    pass
+
+
+class StagedScanForbiddenError(PortfolioDomainError):
+    """Raised when a session attempts to access staged data belonging to another session."""
+    pass
+
+
+class StagedScanNotFoundError(PortfolioDomainError):
+    """Raised when a requested staged scan batch ID is not found."""
+    pass
+
+
+class TradeDuplicateError(PortfolioDomainError):
+    """Raised when a trade matches an existing ledger row or duplicate within batch."""
+    pass
+
+
+class TradeReconciliationError(PortfolioDomainError):
+    """Raised when a trade confirmation violates reconciliation invariants."""
+    pass

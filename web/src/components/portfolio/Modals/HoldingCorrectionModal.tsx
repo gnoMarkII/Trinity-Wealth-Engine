@@ -103,7 +103,8 @@ export default function HoldingCorrectionModal({ portfolioId, holding, targets, 
             onChange={(e) => setAssetType(e.target.value)}
           >
             <option value="Stock">หุ้น (Stock)</option>
-            <option value="ETF">กองทุนรวม / ETF</option>
+            <option value="Fund">กองทุนรวม (Fund)</option>
+            <option value="ETF">ETF</option>
             <option value="REIT">อสังหาฯ / REIT</option>
             <option value="Crypto">คริปโต (Crypto)</option>
             <option value="Bond">ตราสารหนี้ (Bond)</option>

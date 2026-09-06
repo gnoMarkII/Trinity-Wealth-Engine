@@ -64,11 +64,13 @@ def test_ledger_mutations_stage_audit_events_with_state_and_trade_log(temp_vault
     service.edit_transaction(transaction_id, price=110.0, adjust_cash=False, portfolio_id=pid)
     service.delete_transaction(transaction_id, adjust_cash=False, portfolio_id=pid)
 
-    assert repo.read_trade_log(pid) == []
+    rows = repo.read_trade_log(pid)
+    assert len(rows) == 2  # Original row + VOID reversal row
     journal_text = get_journal_filepath(pid).read_text(encoding="utf-8")
     assert "[TRADE NOTE UPDATED]" in journal_text
     assert "[TRANSACTION EDITED]" in journal_text
-    assert "[TRANSACTION DELETED]" in journal_text
+    assert "[TRANSACTION VOIDED]" in journal_text
+
 
 
 @pytest.fixture

@@ -55,8 +55,12 @@ class LoginRequest(BaseModel):
     password: str
 
 
-def _set_session_cookie(response: Response) -> None:
-    token = _serializer().dumps({"authenticated": True})
+import uuid
+
+
+def _set_session_cookie(response: Response) -> str:
+    sid = uuid.uuid4().hex
+    token = _serializer().dumps({"authenticated": True, "sid": sid})
     response.set_cookie(
         key=SESSION_COOKIE_NAME,
         value=token,
@@ -65,6 +69,7 @@ def _set_session_cookie(response: Response) -> None:
         samesite="lax",
         secure=get_cookie_secure(),
     )
+    return sid
 
 
 @router.post("/api/auth/login")
@@ -105,6 +110,23 @@ def require_session(request: Request) -> None:
         raise HTTPException(status_code=401, detail="ไม่พบ session — กรุณา login ก่อน")
     try:
         _serializer().loads(token, max_age=SESSION_MAX_AGE_SECONDS)
+    except SignatureExpired:
+        raise HTTPException(status_code=401, detail="session หมดอายุ — กรุณา login ใหม่")
+    except BadSignature:
+        raise HTTPException(status_code=401, detail="session ไม่ถูกต้อง")
+
+
+def get_session_id(request: Request) -> str:
+    """Extract authenticated session ID for session-bound operations."""
+    token = request.cookies.get(SESSION_COOKIE_NAME)
+    if not token:
+        raise HTTPException(status_code=401, detail="ไม่พบ session — กรุณา login ก่อน")
+    try:
+        data = _serializer().loads(token, max_age=SESSION_MAX_AGE_SECONDS)
+        sid = data.get("sid")
+        if not sid:
+            return "legacy_default_session"
+        return str(sid)
     except SignatureExpired:
         raise HTTPException(status_code=401, detail="session หมดอายุ — กรุณา login ใหม่")
     except BadSignature:

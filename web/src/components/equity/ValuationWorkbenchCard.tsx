@@ -111,7 +111,7 @@ export default function ValuationWorkbenchCard({
             <div className="text-xs text-zinc-400">
               {dcf?.scenarios?.base?.target_price != null ? 'DCF Fair Value (Base)' : 'DCF 12M Outlook'}
             </div>
-            {dcf?.scenarios?.base?.target_price != null ? (
+            {dcf?.scenarios?.base?.target_price != null && dcf?.scenarios?.base?.upside_pct != null ? (
               <div className="flex items-center gap-1.5 font-bold text-zinc-900 text-sm justify-end">
                 <span>{currency}{dcf.scenarios.base.target_price.toFixed(2)}</span>
                 <span

@@ -78,6 +78,10 @@ class PortfolioService:
         self._perf_service = self._app.performance_service
         self._watchlist_service = self._app.watchlist_service
         self._journal_service = self._app.journal_service
+        self._batch_import_service = self._app.batch_import_service
+        self._dime_sync_service = self._app.dime_sync_service
+        self._wealthx_sync_service = self._app.wealthx_sync_service
+        self._scbam_sync_service = self._app.scbam_sync_service
 
     # =========================================================================
     # 0. Portfolio Lifecycle & Management
@@ -449,12 +453,17 @@ class PortfolioService:
             portfolio_id=portfolio_id,
         )
 
+    def void_transaction(
+        self, tx_id: str, portfolio_id: str = "default", adjust_cash: Optional[bool] = None
+    ) -> PortfolioState:
+        return self._ledger_service.void_transaction(
+            tx_id=tx_id, portfolio_id=portfolio_id, adjust_cash=adjust_cash
+        )
+
     def delete_transaction(
         self, tx_id: str, adjust_cash: bool = True, portfolio_id: str = "default"
     ) -> PortfolioState:
-        return self._ledger_service.delete_transaction(
-            tx_id=tx_id, adjust_cash=adjust_cash, portfolio_id=portfolio_id
-        )
+        return self.void_transaction(tx_id=tx_id, portfolio_id=portfolio_id)
 
     # =========================================================================
     # 5. Watchlist Operations

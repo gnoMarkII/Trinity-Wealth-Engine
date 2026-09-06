@@ -126,108 +126,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/portfolio/latest": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Get Latest Portfolio */
-        get: operations["get_latest_portfolio_api_portfolio_latest_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/macro/dashboard": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Get Macro Dashboard */
-        get: operations["get_macro_dashboard_api_macro_dashboard_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/macro/indicators/{indicator_id}/series": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Get Macro Indicator Series */
-        get: operations["get_macro_indicator_series_api_macro_indicators__indicator_id__series_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/macro/news_funnel/pending": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Get News Funnel Pending */
-        get: operations["get_news_funnel_pending_api_macro_news_funnel_pending_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/macro/news_funnel/filtered": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Get News Funnel Filtered */
-        get: operations["get_news_funnel_filtered_api_macro_news_funnel_filtered_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/macro/news_funnel/pending/{event_id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post?: never;
-        /** Delete News Funnel Pending */
-        delete: operations["delete_news_funnel_pending_api_macro_news_funnel_pending__event_id__delete"];
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/portfolio/actual/state": {
         parameters: {
             query?: never;
@@ -256,195 +154,6 @@ export interface paths {
         get: operations["get_actual_bucket_allocations_api_portfolio_actual_allocations_get"];
         put?: never;
         post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/portfolio/actual/watchlist": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Get Actual Watchlist */
-        get: operations["get_actual_watchlist_api_portfolio_actual_watchlist_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/portfolio/actual/goals": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Get Actual Goals */
-        get: operations["get_actual_goals_api_portfolio_actual_goals_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/portfolio/actual/performance": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Get Actual Performance */
-        get: operations["get_actual_performance_api_portfolio_actual_performance_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/portfolio/calendar": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Get Portfolio Calendar */
-        get: operations["get_portfolio_calendar_api_portfolio_calendar_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/portfolio/actual/performance/snapshot": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Trigger Performance Snapshot */
-        post: operations["trigger_performance_snapshot_api_portfolio_actual_performance_snapshot_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/portfolio/actual/journal": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Get Actual Journal */
-        get: operations["get_actual_journal_api_portfolio_actual_journal_get"];
-        put?: never;
-        /** Append Journal Endpoint */
-        post: operations["append_journal_endpoint_api_portfolio_actual_journal_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/portfolio/actual/transactions": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Get Actual Transactions */
-        get: operations["get_actual_transactions_api_portfolio_actual_transactions_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/portfolio/actual/transactions/{tx_id}/note": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        /** Update Transaction Note Endpoint */
-        patch: operations["update_transaction_note_endpoint_api_portfolio_actual_transactions__tx_id__note_patch"];
-        trace?: never;
-    };
-    "/api/portfolio/actual/transactions/{tx_id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        /** Edit Transaction Endpoint */
-        put: operations["edit_transaction_endpoint_api_portfolio_actual_transactions__tx_id__put"];
-        post?: never;
-        /** Delete Transaction Endpoint */
-        delete: operations["delete_transaction_endpoint_api_portfolio_actual_transactions__tx_id__delete"];
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/portfolio/actual/fx-rate": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Get Fx Rate Endpoint */
-        get: operations["get_fx_rate_endpoint_api_portfolio_actual_fx_rate_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/portfolio/actual/sync-dividends": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Sync Dividends Endpoint */
-        post: operations["sync_dividends_endpoint_api_portfolio_actual_sync_dividends_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -621,6 +330,126 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/portfolio/actual/fx-rate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Fx Rate Endpoint */
+        get: operations["get_fx_rate_endpoint_api_portfolio_actual_fx_rate_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/portfolio/actual/sync-dividends": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Sync Dividends Endpoint */
+        post: operations["sync_dividends_endpoint_api_portfolio_actual_sync_dividends_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/portfolio/actual/transactions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Actual Transactions */
+        get: operations["get_actual_transactions_api_portfolio_actual_transactions_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/portfolio/actual/transactions/{tx_id}/note": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Update Transaction Note Endpoint */
+        patch: operations["update_transaction_note_endpoint_api_portfolio_actual_transactions__tx_id__note_patch"];
+        trace?: never;
+    };
+    "/api/portfolio/actual/transactions/{tx_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Edit Transaction Endpoint */
+        put: operations["edit_transaction_endpoint_api_portfolio_actual_transactions__tx_id__put"];
+        post?: never;
+        /** Delete Transaction Endpoint */
+        delete: operations["delete_transaction_endpoint_api_portfolio_actual_transactions__tx_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/portfolio/actual/transactions/{tx_id}/void": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Void Transaction Endpoint */
+        post: operations["void_transaction_endpoint_api_portfolio_actual_transactions__tx_id__void_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/portfolio/actual/watchlist": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Actual Watchlist */
+        get: operations["get_actual_watchlist_api_portfolio_actual_watchlist_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/portfolio/actual/watchlist/{symbol}": {
         parameters: {
             query?: never;
@@ -639,6 +468,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/portfolio/actual/goals": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Actual Goals */
+        get: operations["get_actual_goals_api_portfolio_actual_goals_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/portfolio/actual/goals/{name}": {
         parameters: {
             query?: never;
@@ -652,6 +498,262 @@ export interface paths {
         post?: never;
         /** Remove Goal Endpoint */
         delete: operations["remove_goal_endpoint_api_portfolio_actual_goals__name__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/portfolio/actual/journal": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Actual Journal */
+        get: operations["get_actual_journal_api_portfolio_actual_journal_get"];
+        put?: never;
+        /** Append Journal Endpoint */
+        post: operations["append_journal_endpoint_api_portfolio_actual_journal_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/portfolio/actual/performance": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Actual Performance */
+        get: operations["get_actual_performance_api_portfolio_actual_performance_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/portfolio/actual/performance/snapshot": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Trigger Performance Snapshot */
+        post: operations["trigger_performance_snapshot_api_portfolio_actual_performance_snapshot_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/portfolio/latest": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Latest Portfolio */
+        get: operations["get_latest_portfolio_api_portfolio_latest_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/macro/dashboard": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Macro Dashboard */
+        get: operations["get_macro_dashboard_api_macro_dashboard_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/macro/indicators/{indicator_id}/series": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Macro Indicator Series */
+        get: operations["get_macro_indicator_series_api_macro_indicators__indicator_id__series_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/macro/news_funnel/pending": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get News Funnel Pending */
+        get: operations["get_news_funnel_pending_api_macro_news_funnel_pending_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/macro/news_funnel/filtered": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get News Funnel Filtered */
+        get: operations["get_news_funnel_filtered_api_macro_news_funnel_filtered_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/macro/news_funnel/pending/{event_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Delete News Funnel Pending */
+        delete: operations["delete_news_funnel_pending_api_macro_news_funnel_pending__event_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/portfolio/calendar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Portfolio Calendar */
+        get: operations["get_portfolio_calendar_api_portfolio_calendar_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/portfolio/dime/emails": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Search Dime Emails Endpoint */
+        get: operations["search_dime_emails_endpoint_api_portfolio_dime_emails_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/portfolio/dime/scan/email": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Scan Email Attachment Endpoint */
+        post: operations["scan_email_attachment_endpoint_api_portfolio_dime_scan_email_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/portfolio/dime/scan/upload": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Scan Upload Pdf Endpoint */
+        post: operations["scan_upload_pdf_endpoint_api_portfolio_dime_scan_upload_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/portfolio/dime/staged/{scan_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Staged Endpoint */
+        get: operations["get_staged_endpoint_api_portfolio_dime_staged__scan_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/portfolio/dime/commit/{scan_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Commit Staged Endpoint */
+        post: operations["commit_staged_endpoint_api_portfolio_dime_commit__scan_id__post"];
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -734,10 +836,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /**
-         * Resume Job
-         * @description Validate and atomically claim one human approval resume.
-         */
+        /** Resume Job */
         post: operations["resume_job_api_agents_jobs__job_id__resume_post"];
         delete?: never;
         options?: never;
@@ -937,6 +1036,157 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/equity/{ticker}/valuation-targets": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Equity Valuation Targets */
+        get: operations["get_equity_valuation_targets_api_equity__ticker__valuation_targets_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/equity/{ticker}/insider-filings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Equity Insider Filings */
+        get: operations["get_equity_insider_filings_api_equity__ticker__insider_filings_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/equity/{ticker}/analyst-context": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Equity Analyst Context */
+        get: operations["get_equity_analyst_context_api_equity__ticker__analyst_context_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/equity/{ticker}/financials": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Equity Financial Statements
+         * @description ดึงข้อมูลงบการเงินย้อนหลัง (Income Statement, Balance Sheet, Cash Flow) พร้อมระบบ Dual-Provider (EDGAR/yfinance)
+         */
+        get: operations["get_equity_financial_statements_api_equity__ticker__financials_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/equity/{ticker}/earnings-call/summarize": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Summarize Earnings Call Transcript
+         * @description Summarizes an earnings call transcript, writes highlights & raw text to Obsidian, and dispatches to Kanban via Outbox.
+         */
+        post: operations["summarize_earnings_call_api_equity__ticker__earnings_call_summarize_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/equity/{ticker}/earnings-call/runs/{run_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Earnings Call Run Status
+         * @description Fetches status and artifacts of a specific earnings call workflow run.
+         */
+        get: operations["get_earnings_call_run_api_equity__ticker__earnings_call_runs__run_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/equity/{ticker}/earnings-call/runs/{run_id}/retry": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Retry Earnings Call Kanban Delivery
+         * @description Manually retries Kanban card dispatch for an earnings call run.
+         */
+        post: operations["retry_earnings_call_run_api_equity__ticker__earnings_call_runs__run_id__retry_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/equity/{ticker}/earnings-calls": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Existing Earnings Calls for Ticker
+         * @description Retrieves all existing earnings call notes and parsed AI highlights for a ticker.
+         */
+        get: operations["get_earnings_calls_api_equity__ticker__earnings_calls_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/equity/{ticker}": {
         parameters: {
             query?: never;
@@ -988,80 +1238,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/equity/{ticker}/valuation-targets": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Get Equity Valuation Targets */
-        get: operations["get_equity_valuation_targets_api_equity__ticker__valuation_targets_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/equity/{ticker}/insider-filings": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Get Equity Insider Filings */
-        get: operations["get_equity_insider_filings_api_equity__ticker__insider_filings_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/equity/{ticker}/analyst-context": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Get Equity Analyst Context
-         * @description ดึงข้อมูล Consensus Target Price, Next Earnings Date Countdown, และ EPS History พร้อม Cache 24h
-         */
-        get: operations["get_equity_analyst_context_api_equity__ticker__analyst_context_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/equity/{ticker}/financials": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Get Equity Financial Statements
-         * @description ดึงข้อมูลงบการเงินย้อนหลัง (Income Statement, Balance Sheet, Cash Flow) พร้อมระบบ Dual-Provider (EDGAR/yfinance)
-         */
-        get: operations["get_equity_financial_statements_api_equity__ticker__financials_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/equity/{ticker}/ohlcv": {
         parameters: {
             query?: never;
@@ -1071,6 +1247,26 @@ export interface paths {
         };
         /** Get Equity Ohlcv */
         get: operations["get_equity_ohlcv_api_equity__ticker__ohlcv_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/health/components": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Component Health
+         * @description ตรวจสอบสุขภาพของ components ต่างๆ ในระบบ (API, Database, Job Worker, Market Provider, LLM)
+         */
+        get: operations["get_component_health_api_health_components_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1446,6 +1642,13 @@ export interface components {
              */
             symbols: string[];
         };
+        /** Body_scan_upload_pdf_endpoint_api_portfolio_dime_scan_upload_post */
+        Body_scan_upload_pdf_endpoint_api_portfolio_dime_scan_upload_post: {
+            /** Pdf File */
+            pdf_file: string;
+            /** Password */
+            password?: string | null;
+        };
         /** BucketAllocationResponseDTO */
         BucketAllocationResponseDTO: {
             /** Warning */
@@ -1669,6 +1872,142 @@ export interface components {
              */
             color: "emerald" | "green" | "rose" | "zinc";
         };
+        /** DimeCommitRequestDTO */
+        DimeCommitRequestDTO: {
+            /**
+             * Portfolio Id
+             * @default default
+             */
+            portfolio_id: string;
+        };
+        /** DimeCommitResponseDTO */
+        DimeCommitResponseDTO: {
+            /**
+             * Ok
+             * @default true
+             */
+            ok: boolean;
+            /** Imported Count */
+            imported_count: number;
+            state: components["schemas"]["ActualPortfolioStateDTO"];
+        };
+        /** DimeEmailListResponseDTO */
+        DimeEmailListResponseDTO: {
+            /**
+             * Emails
+             * @default []
+             */
+            emails: components["schemas"]["DimeEmailMetadataDTO"][];
+        };
+        /** DimeEmailMetadataDTO */
+        DimeEmailMetadataDTO: {
+            /** Message Id */
+            message_id: string;
+            /** Attachment Id */
+            attachment_id: string;
+            /** Subject */
+            subject: string;
+            /** Sender */
+            sender: string;
+            /** Received At */
+            received_at: string;
+            /** Filename */
+            filename: string;
+            /** Size Bytes */
+            size_bytes: number;
+        };
+        /** DimeScanEmailRequestDTO */
+        DimeScanEmailRequestDTO: {
+            /** Message Id */
+            message_id: string;
+            /** Attachment Id */
+            attachment_id: string;
+            /** Password */
+            password?: string | null;
+        };
+        /** DimeScanResponseDTO */
+        DimeScanResponseDTO: {
+            /** Scan Id */
+            scan_id: string;
+            /** Item Count */
+            item_count: number;
+            /**
+             * Items
+             * @default []
+             */
+            items: components["schemas"]["DimeStagedItemDTO"][];
+        };
+        /** DimeStagedItemDTO */
+        DimeStagedItemDTO: {
+            /** Item Id */
+            item_id: string;
+            /** Trade Date */
+            trade_date: string;
+            /** Settlement Date */
+            settlement_date?: string | null;
+            /** Symbol */
+            symbol: string;
+            /** Action */
+            action: string;
+            /** Units */
+            units: string;
+            /** Price */
+            price: string;
+            /** Gross Amount */
+            gross_amount: string;
+            fees?: components["schemas"]["DimeStagedItemFeeDTO"];
+            /** Net Amount */
+            net_amount: string;
+            /**
+             * Currency
+             * @default THB
+             */
+            currency: string;
+            /** Exchange Rate */
+            exchange_rate?: string | null;
+            /** Confirmation No */
+            confirmation_no: string;
+            /**
+             * Source
+             * @default DIME
+             */
+            source: string;
+            /** Fingerprint */
+            fingerprint: string;
+            /**
+             * Line Index
+             * @default 0
+             */
+            line_index: number;
+            /**
+             * Cash Adjusted
+             * @default true
+             */
+            cash_adjusted: boolean;
+        };
+        /** DimeStagedItemFeeDTO */
+        DimeStagedItemFeeDTO: {
+            /**
+             * Commission
+             * @default 0.00
+             */
+            commission: string;
+            /**
+             * Vat
+             * @default 0.00
+             */
+            vat: string;
+            /**
+             * Other Fees
+             * @default 0.00
+             */
+            other_fees: string;
+            /**
+             * Fee Currency
+             * @default THB
+             */
+            fee_currency: string;
+        };
         /** DispatchRequest */
         DispatchRequest: {
             /** Instruction */
@@ -1736,6 +2075,114 @@ export interface components {
              * @default 1
              */
             fx_rate: number;
+        };
+        /** EarningsCallListResponse */
+        EarningsCallListResponse: {
+            /** Ticker */
+            ticker: string;
+            /** Total Count */
+            total_count: number;
+            /** Items */
+            items: components["schemas"]["EarningsCallNoteItem"][];
+        };
+        /** EarningsCallNoteItem */
+        EarningsCallNoteItem: {
+            /** Title */
+            title: string;
+            /** Ticker */
+            ticker: string;
+            /** Period */
+            period: string;
+            /** Vault Path */
+            vault_path: string;
+            /** Highlights */
+            highlights: string;
+            /** Date */
+            date: string;
+            /** Last Updated */
+            last_updated: string;
+            /**
+             * Has Full Transcript
+             * @default true
+             */
+            has_full_transcript: boolean;
+        };
+        /** EarningsCallRunResponse */
+        EarningsCallRunResponse: {
+            /** Run Id */
+            run_id: string;
+            /** Ticker */
+            ticker: string;
+            /** Period */
+            period: string;
+            /** Status */
+            status: string;
+            /** Kanban Status */
+            kanban_status: string;
+            /** Highlights */
+            highlights?: string | null;
+            /** Vault Path */
+            vault_path?: string | null;
+            /** Kanban Card Id */
+            kanban_card_id?: string | null;
+            /**
+             * Reused Existing Run
+             * @default false
+             */
+            reused_existing_run: boolean;
+            /**
+             * Is Idempotent Replay
+             * @default false
+             */
+            is_idempotent_replay: boolean;
+            /** Last Error Code */
+            last_error_code?: string | null;
+            /** Created At */
+            created_at: number;
+            /** Updated At */
+            updated_at: number;
+        };
+        /** EarningsCallSummarizeRequest */
+        EarningsCallSummarizeRequest: {
+            /**
+             * Period
+             * @description Earnings period, e.g. 'Q4 2024'
+             */
+            period: string;
+            /**
+             * Transcript
+             * @description Raw earnings call transcript text
+             */
+            transcript: string;
+        };
+        /** EarningsCallSummarizeResponse */
+        EarningsCallSummarizeResponse: {
+            /** Run Id */
+            run_id: string;
+            /** Ticker */
+            ticker: string;
+            /** Period */
+            period: string;
+            /** Status */
+            status: string;
+            /** Kanban Status */
+            kanban_status: string;
+            /** Highlights */
+            highlights?: string | null;
+            /** Vault Path */
+            vault_path?: string | null;
+            /** Kanban Card Id */
+            kanban_card_id?: string | null;
+            /**
+             * Reused Existing Run
+             * @default false
+             */
+            reused_existing_run: boolean;
+            /**
+             * Is Idempotent Replay
+             * @default false
+             */
+            is_idempotent_replay: boolean;
         };
         /** EarningsHistoryEntryDTO */
         EarningsHistoryEntryDTO: {
@@ -3456,6 +3903,30 @@ export interface components {
              * @default
              */
             notes: string;
+            /** Gross Amount */
+            gross_amount?: string | null;
+            /** Commission */
+            commission?: string | null;
+            /** Vat */
+            vat?: string | null;
+            /** Other Fees */
+            other_fees?: string | null;
+            /** Net Amount */
+            net_amount?: string | null;
+            /** Fee Currency */
+            fee_currency?: string | null;
+            /** Confirmation No */
+            confirmation_no?: string | null;
+            /** Settlement Date */
+            settlement_date?: string | null;
+            /** Source */
+            source?: string | null;
+            /** Fingerprint */
+            fingerprint?: string | null;
+            /** Cash Adjusted */
+            cash_adjusted?: string | null;
+            /** Related Transaction Id */
+            related_transaction_id?: string | null;
         };
         /** TransactionListResponseDTO */
         TransactionListResponseDTO: {
@@ -3874,152 +4345,6 @@ export interface operations {
             };
         };
     };
-    get_latest_portfolio_api_portfolio_latest_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["PortfolioDTO"];
-                };
-            };
-        };
-    };
-    get_macro_dashboard_api_macro_dashboard_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["MacroDashboardDTO"];
-                };
-            };
-        };
-    };
-    get_macro_indicator_series_api_macro_indicators__indicator_id__series_get: {
-        parameters: {
-            query?: {
-                range?: string;
-            };
-            header?: never;
-            path: {
-                indicator_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["MacroIndicatorSeriesDTO"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    get_news_funnel_pending_api_macro_news_funnel_pending_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["NewsFunnelPendingItemDTO"][];
-                };
-            };
-        };
-    };
-    get_news_funnel_filtered_api_macro_news_funnel_filtered_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["NewsFunnelFilteredItemDTO"][];
-                };
-            };
-        };
-    };
-    delete_news_funnel_pending_api_macro_news_funnel_pending__event_id__delete: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                event_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
     get_actual_portfolio_state_api_portfolio_actual_state_get: {
         parameters: {
             query?: {
@@ -4071,435 +4396,6 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["BucketAllocationResponseDTO"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    get_actual_watchlist_api_portfolio_actual_watchlist_get: {
-        parameters: {
-            query?: {
-                portfolio_id?: string;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ActualWatchlistStateDTO"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    get_actual_goals_api_portfolio_actual_goals_get: {
-        parameters: {
-            query?: {
-                portfolio_id?: string | null;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ActualGoalsResponseDTO"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    get_actual_performance_api_portfolio_actual_performance_get: {
-        parameters: {
-            query?: {
-                days?: number;
-                portfolio_id?: string;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["PerformanceSnapshotDTO"][];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    get_portfolio_calendar_api_portfolio_calendar_get: {
-        parameters: {
-            query?: {
-                portfolio_id?: string;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["PortfolioCalendarDTO"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    trigger_performance_snapshot_api_portfolio_actual_performance_snapshot_post: {
-        parameters: {
-            query?: {
-                refresh_prices?: boolean;
-                portfolio_id?: string;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["PerformanceSnapshotDTO"][];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    get_actual_journal_api_portfolio_actual_journal_get: {
-        parameters: {
-            query?: {
-                days?: number | null;
-                keyword?: string | null;
-                limit?: number;
-                portfolio_id?: string;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["JournalEntryDTO"][];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    append_journal_endpoint_api_portfolio_actual_journal_post: {
-        parameters: {
-            query?: {
-                portfolio_id?: string;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["AppendJournalRequestDTO"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["JournalEntryDTO"][];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    get_actual_transactions_api_portfolio_actual_transactions_get: {
-        parameters: {
-            query?: {
-                symbol?: string | null;
-                portfolio_id?: string;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["TransactionListResponseDTO"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    update_transaction_note_endpoint_api_portfolio_actual_transactions__tx_id__note_patch: {
-        parameters: {
-            query?: {
-                portfolio_id?: string;
-            };
-            header?: never;
-            path: {
-                tx_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["UpdateTransactionNoteRequestDTO"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["TransactionItemDTO"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    edit_transaction_endpoint_api_portfolio_actual_transactions__tx_id__put: {
-        parameters: {
-            query?: {
-                portfolio_id?: string;
-            };
-            header?: never;
-            path: {
-                tx_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["EditTransactionRequestDTO"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ActualPortfolioStateDTO"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    delete_transaction_endpoint_api_portfolio_actual_transactions__tx_id__delete: {
-        parameters: {
-            query?: {
-                adjust_cash?: boolean;
-                portfolio_id?: string;
-            };
-            header?: never;
-            path: {
-                tx_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ActualPortfolioStateDTO"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    get_fx_rate_endpoint_api_portfolio_actual_fx_rate_get: {
-        parameters: {
-            query?: {
-                date?: string | null;
-                portfolio_id?: string;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["FXRateResponseDTO"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    sync_dividends_endpoint_api_portfolio_actual_sync_dividends_post: {
-        parameters: {
-            query?: {
-                portfolio_id?: string;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["SyncDividendsResponseDTO"];
                 };
             };
             /** @description Validation Error */
@@ -4861,6 +4757,273 @@ export interface operations {
             };
         };
     };
+    get_fx_rate_endpoint_api_portfolio_actual_fx_rate_get: {
+        parameters: {
+            query?: {
+                date?: string | null;
+                portfolio_id?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FXRateResponseDTO"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    sync_dividends_endpoint_api_portfolio_actual_sync_dividends_post: {
+        parameters: {
+            query?: {
+                portfolio_id?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SyncDividendsResponseDTO"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_actual_transactions_api_portfolio_actual_transactions_get: {
+        parameters: {
+            query?: {
+                symbol?: string | null;
+                portfolio_id?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TransactionListResponseDTO"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_transaction_note_endpoint_api_portfolio_actual_transactions__tx_id__note_patch: {
+        parameters: {
+            query?: {
+                portfolio_id?: string;
+            };
+            header?: never;
+            path: {
+                tx_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateTransactionNoteRequestDTO"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TransactionItemDTO"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    edit_transaction_endpoint_api_portfolio_actual_transactions__tx_id__put: {
+        parameters: {
+            query?: {
+                portfolio_id?: string;
+            };
+            header?: never;
+            path: {
+                tx_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["EditTransactionRequestDTO"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ActualPortfolioStateDTO"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_transaction_endpoint_api_portfolio_actual_transactions__tx_id__delete: {
+        parameters: {
+            query?: {
+                adjust_cash?: boolean;
+                portfolio_id?: string;
+            };
+            header?: never;
+            path: {
+                tx_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ActualPortfolioStateDTO"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    void_transaction_endpoint_api_portfolio_actual_transactions__tx_id__void_post: {
+        parameters: {
+            query?: {
+                portfolio_id?: string;
+            };
+            header?: never;
+            path: {
+                tx_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ActualPortfolioStateDTO"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_actual_watchlist_api_portfolio_actual_watchlist_get: {
+        parameters: {
+            query?: {
+                portfolio_id?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ActualWatchlistStateDTO"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     upsert_watchlist_item_endpoint_api_portfolio_actual_watchlist__symbol__put: {
         parameters: {
             query?: {
@@ -4931,6 +5094,37 @@ export interface operations {
             };
         };
     };
+    get_actual_goals_api_portfolio_actual_goals_get: {
+        parameters: {
+            query?: {
+                portfolio_id?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ActualGoalsResponseDTO"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     upsert_goal_endpoint_api_portfolio_actual_goals__name__put: {
         parameters: {
             query?: never;
@@ -4986,6 +5180,480 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ActualGoalsResponseDTO"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_actual_journal_api_portfolio_actual_journal_get: {
+        parameters: {
+            query?: {
+                days?: number | null;
+                keyword?: string | null;
+                limit?: number;
+                portfolio_id?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JournalEntryDTO"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    append_journal_endpoint_api_portfolio_actual_journal_post: {
+        parameters: {
+            query?: {
+                portfolio_id?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AppendJournalRequestDTO"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JournalEntryDTO"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_actual_performance_api_portfolio_actual_performance_get: {
+        parameters: {
+            query?: {
+                days?: number;
+                portfolio_id?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PerformanceSnapshotDTO"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    trigger_performance_snapshot_api_portfolio_actual_performance_snapshot_post: {
+        parameters: {
+            query?: {
+                refresh_prices?: boolean;
+                portfolio_id?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PerformanceSnapshotDTO"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_latest_portfolio_api_portfolio_latest_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PortfolioDTO"];
+                };
+            };
+        };
+    };
+    get_macro_dashboard_api_macro_dashboard_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MacroDashboardDTO"];
+                };
+            };
+        };
+    };
+    get_macro_indicator_series_api_macro_indicators__indicator_id__series_get: {
+        parameters: {
+            query?: {
+                range?: string;
+            };
+            header?: never;
+            path: {
+                indicator_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MacroIndicatorSeriesDTO"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_news_funnel_pending_api_macro_news_funnel_pending_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NewsFunnelPendingItemDTO"][];
+                };
+            };
+        };
+    };
+    get_news_funnel_filtered_api_macro_news_funnel_filtered_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NewsFunnelFilteredItemDTO"][];
+                };
+            };
+        };
+    };
+    delete_news_funnel_pending_api_macro_news_funnel_pending__event_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                event_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_portfolio_calendar_api_portfolio_calendar_get: {
+        parameters: {
+            query?: {
+                portfolio_id?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PortfolioCalendarDTO"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    search_dime_emails_endpoint_api_portfolio_dime_emails_get: {
+        parameters: {
+            query?: {
+                query?: string;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DimeEmailListResponseDTO"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    scan_email_attachment_endpoint_api_portfolio_dime_scan_email_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DimeScanEmailRequestDTO"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DimeScanResponseDTO"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    scan_upload_pdf_endpoint_api_portfolio_dime_scan_upload_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["Body_scan_upload_pdf_endpoint_api_portfolio_dime_scan_upload_post"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DimeScanResponseDTO"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_staged_endpoint_api_portfolio_dime_staged__scan_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                scan_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DimeScanResponseDTO"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    commit_staged_endpoint_api_portfolio_dime_commit__scan_id__post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                scan_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DimeCommitRequestDTO"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DimeCommitResponseDTO"];
                 };
             };
             /** @description Validation Error */
@@ -5526,101 +6194,6 @@ export interface operations {
             };
         };
     };
-    get_equity_detail_api_equity__ticker__get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                ticker: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["EquityDetailDTO"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    get_equity_news_api_equity__ticker__news_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                ticker: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["EquityNewsDTO"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    get_equity_notes_api_equity__ticker__notes_get: {
-        parameters: {
-            query?: {
-                days?: number;
-            };
-            header?: never;
-            path: {
-                ticker: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["EquityNotesDTO"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
     get_equity_valuation_targets_api_equity__ticker__valuation_targets_get: {
         parameters: {
             query?: never;
@@ -5751,6 +6324,231 @@ export interface operations {
             };
         };
     };
+    summarize_earnings_call_api_equity__ticker__earnings_call_summarize_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                ticker: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["EarningsCallSummarizeRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EarningsCallSummarizeResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_earnings_call_run_api_equity__ticker__earnings_call_runs__run_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                ticker: string;
+                run_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EarningsCallRunResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    retry_earnings_call_run_api_equity__ticker__earnings_call_runs__run_id__retry_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                ticker: string;
+                run_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EarningsCallRunResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_earnings_calls_api_equity__ticker__earnings_calls_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                ticker: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EarningsCallListResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_equity_detail_api_equity__ticker__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                ticker: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EquityDetailDTO"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_equity_news_api_equity__ticker__news_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                ticker: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EquityNewsDTO"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_equity_notes_api_equity__ticker__notes_get: {
+        parameters: {
+            query?: {
+                days?: number;
+            };
+            header?: never;
+            path: {
+                ticker: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EquityNotesDTO"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     get_equity_ohlcv_api_equity__ticker__ohlcv_get: {
         parameters: {
             query?: {
@@ -5783,6 +6581,28 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_component_health_api_health_components_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: string;
+                    };
                 };
             };
         };

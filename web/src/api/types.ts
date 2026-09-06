@@ -871,7 +871,296 @@ export interface TransactionItemDTO {
   cost_thb: number
   realized_pnl_thb?: number | null
   notes: string
+  gross_amount?: string | null
+  commission?: string | null
+  vat?: string | null
+  other_fees?: string | null
+  net_amount?: string | null
+  fee_currency?: string | null
+  confirmation_no?: string | null
+  settlement_date?: string | null
+  source?: string | null
+  fingerprint?: string | null
+  cash_adjusted?: string | null
+  related_transaction_id?: string | null
 }
+
+export interface DimeEmailMetadataDTO {
+  message_id: string
+  attachment_id: string
+  subject: string
+  sender: string
+  received_at: string
+  filename: string
+  size_bytes: number
+}
+
+export interface DimeEmailListResponseDTO {
+  emails: DimeEmailMetadataDTO[]
+}
+
+export interface DimeStagedItemFeeDTO {
+  commission: string
+  vat: string
+  other_fees: string
+  fee_currency: string
+}
+
+export interface DimeStagedItemDTO {
+  item_id: string
+  trade_date: string
+  settlement_date?: string | null
+  symbol: string
+  action: string
+  units: string
+  price: string
+  gross_amount: string
+  fees: DimeStagedItemFeeDTO
+  net_amount: string
+  currency: string
+  exchange_rate?: string | null
+  confirmation_no: string
+  order_id?: string | null
+  source: string
+  fingerprint: string
+  line_index: number
+  cash_adjusted: boolean
+  asset_type?: string
+}
+
+export interface DimeScanResponseDTO {
+  scan_id: string
+  item_count: number
+  items: DimeStagedItemDTO[]
+}
+
+export interface DimeCommitResponseDTO {
+  ok: boolean
+  imported_count: number
+  state: ActualPortfolioStateDTO
+}
+
+export interface DimeBatchScanProgressEvent {
+  current: number
+  total: number
+  percent: number
+  items_found: number
+  subject?: string
+  message_id?: string
+}
+
+export interface DimeBatchScanWarningEvent {
+  subject?: string
+  message_id?: string
+  attachment_id?: string
+  filename?: string
+  received_at?: string
+  reason: string
+  can_preview?: boolean
+}
+
+export interface DimePdfTextPageDTO {
+  page_number: number
+  text: string
+}
+
+export interface DimePdfTextResponseDTO {
+  message_id: string
+  attachment_id: string
+  filename: string
+  page_count: number
+  pages: DimePdfTextPageDTO[]
+}
+
+export interface DimeBatchScanCompleteEvent {
+  scan_id: string
+  item_count: number
+  items: DimeStagedItemDTO[]
+  warnings: DimeBatchScanWarningEvent[]
+  skipped_synced_count: number
+  message?: string
+}
+
+
+export interface WealthXEmailMetadataDTO {
+  message_id: string
+  attachment_id: string
+  subject: string
+  sender: string
+  received_at: string
+  filename: string
+  size_bytes: number
+}
+
+export interface WealthXEmailListResponseDTO {
+  emails: WealthXEmailMetadataDTO[]
+}
+
+export interface WealthXStagedItemFeeDTO {
+  commission: string
+  vat: string
+  other_fees: string
+  fee_currency: string
+}
+
+export interface WealthXStagedItemDTO {
+  item_id: string
+  trade_date: string
+  settlement_date?: string | null
+  symbol: string
+  action: string
+  units: string
+  price: string
+  gross_amount: string
+  fees: WealthXStagedItemFeeDTO
+  net_amount: string
+  currency: string
+  exchange_rate?: string | null
+  confirmation_no: string
+  order_id?: string | null
+  source: string
+  fingerprint: string
+  line_index: number
+  cash_adjusted: boolean
+  asset_type?: string
+}
+
+export interface WealthXScanResponseDTO {
+  scan_id: string
+  item_count: number
+  items: WealthXStagedItemDTO[]
+}
+
+export interface WealthXCommitResponseDTO {
+  ok: boolean
+  imported_count: number
+  state: ActualPortfolioStateDTO
+}
+
+export interface WealthXBatchScanProgressEvent {
+  current: number
+  total: number
+  percent: number
+  items_found: number
+  subject?: string
+  message_id?: string
+}
+
+export interface WealthXBatchScanWarningEvent {
+  subject?: string
+  message_id?: string
+  attachment_id?: string
+  filename?: string
+  received_at?: string
+  reason: string
+  can_preview?: boolean
+}
+
+export interface WealthXPdfTextPageDTO {
+  page_number: number
+  text: string
+}
+
+export interface WealthXPdfTextResponseDTO {
+  message_id: string
+  attachment_id: string
+  filename: string
+  page_count: number
+  pages: WealthXPdfTextPageDTO[]
+}
+
+export interface WealthXBatchScanCompleteEvent {
+  scan_id: string
+  item_count: number
+  items: WealthXStagedItemDTO[]
+  warnings: WealthXBatchScanWarningEvent[]
+  skipped_synced_count: number
+  message?: string
+}
+
+export interface SCBAMEmailMetadataDTO {
+  message_id: string
+  attachment_id: string
+  subject: string
+  sender: string
+  received_at: string
+  filename: string
+  size_bytes: number
+}
+
+export interface SCBAMEmailListResponseDTO {
+  emails: SCBAMEmailMetadataDTO[]
+}
+
+export interface SCBAMStagedItemFeeDTO {
+  commission: string
+  vat: string
+  other_fees: string
+  fee_currency: string
+}
+
+export interface SCBAMStagedItemDTO {
+  item_id: string
+  trade_date: string
+  settlement_date?: string | null
+  symbol: string
+  action: string
+  units: string
+  price: string
+  gross_amount: string
+  fees: SCBAMStagedItemFeeDTO
+  net_amount: string
+  currency: string
+  exchange_rate?: string | null
+  confirmation_no: string
+  order_id?: string | null
+  source: string
+  fingerprint: string
+  line_index: number
+  cash_adjusted: boolean
+  asset_type?: string
+}
+
+export interface SCBAMScanResponseDTO {
+  scan_id: string
+  item_count: number
+  items: SCBAMStagedItemDTO[]
+}
+
+export interface SCBAMCommitResponseDTO {
+  ok: boolean
+  imported_count: number
+  state: ActualPortfolioStateDTO
+}
+
+export interface SCBAMBatchScanProgressEvent {
+  current: number
+  total: number
+  percent: number
+  items_found: number
+  subject?: string
+  message_id?: string
+}
+
+export interface SCBAMBatchScanWarningEvent {
+  subject?: string
+  message_id?: string
+  attachment_id?: string
+  filename?: string
+  received_at?: string
+  reason: string
+  can_preview?: boolean
+}
+
+export interface SCBAMBatchScanCompleteEvent {
+  scan_id: string
+  item_count: number
+  items: SCBAMStagedItemDTO[]
+  warnings: SCBAMBatchScanWarningEvent[]
+  skipped_synced_count: number
+  message?: string
+}
+
 
 export interface TransactionSummaryDTO {
   total_buy_count: number

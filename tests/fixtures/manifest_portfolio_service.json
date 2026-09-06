@@ -1947,6 +1947,37 @@
         }
       ],
       "return_annotation": "Dict"
+    },
+    "void_transaction": {
+      "name": "void_transaction",
+      "docstring": null,
+      "parameters": [
+        {
+          "name": "self",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "<EMPTY>",
+          "annotation": "empty"
+        },
+        {
+          "name": "tx_id",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "<EMPTY>",
+          "annotation": "str"
+        },
+        {
+          "name": "portfolio_id",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "default",
+          "annotation": "str"
+        },
+        {
+          "name": "adjust_cash",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": null,
+          "annotation": "Optional"
+        }
+      ],
+      "return_annotation": "PortfolioState"
     }
   }
 }

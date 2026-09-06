@@ -14,6 +14,7 @@ from filelock import FileLock, Timeout
 
 from core.logger import get_logger
 from tools._atomic_io import _atomic_write_to
+from decimal import Decimal
 from tools.portfolio.domain.constants import (
     CASH_THB_SYMBOL,
     CASH_USD_SYMBOL,
@@ -27,6 +28,8 @@ from tools.portfolio.domain.models import (
     PortfolioMeta,
     _now_iso,
     default_allocation_targets,
+    MONEY_QUANTUM,
+    quantize_decimal,
 )
 from tools.portfolio.domain.ledger_change import LedgerChange
 from tools.portfolio.domain.mutation import PortfolioMutation
@@ -81,9 +84,23 @@ def _compute_sha256(filepath: Path) -> str:
 
 
 def _sanitize_csv_field(value: str) -> str:
-    """Sanitize CSV/Formula injection."""
-    if value and value[0] in ("=", "+", "-", "@", "\t", "\r"):
+    """Sanitize CSV/Formula injection, preserving valid numbers."""
+    if not value:
+        return value
+    try:
+        float(value)
+        return value
+    except ValueError:
+        pass
+    if value[0] in ("=", "+", "-", "@", "\t", "\r"):
         return "'" + value
+    return value
+
+
+def _desanitize_csv_field(value: str) -> str:
+    """Reverse CSV/Formula injection escaping on read."""
+    if value and value.startswith("'") and len(value) > 1 and value[1] in ("=", "+", "-", "@", "\t", "\r"):
+        return value[1:]
     return value
 
 
@@ -214,44 +231,77 @@ def _read_and_migrate_trade_log_locked(fpath: Path) -> List[Dict[str, str]]:
         return []
 
     header = [h.strip() for h in all_rows[0]]
-    raw_data_rows = all_rows[1:]
     needs_rewrite = False
     migrated_rows: List[Dict[str, str]] = []
 
-    OLD_HEADER = ["Timestamp", "Symbol", "Action", "Units", "Price", "Currency", "FX_Rate", "Cost_THB", "Realized_PnL_THB", "Notes"]
-
-    if header == OLD_HEADER:
+    if header != _TRADES_LOG_HEADER:
         needs_rewrite = True
-        for row in raw_data_rows:
-            if not row or not any(row):
+
+    # Read rows into dicts
+    with fpath.open("r", encoding="utf-8", newline="") as f:
+        dreader = csv.DictReader(f)
+        for r in dreader:
+            if not r or not any(r.values()):
                 continue
-            tx_id = f"tx_{int(time.time() * 1000)}_{uuid.uuid4().hex[:6]}"
-            row_dict = {
-                "Transaction_ID": tx_id,
-                "Timestamp": row[0] if len(row) > 0 else "",
-                "Symbol": row[1] if len(row) > 1 else "",
-                "Action": row[2] if len(row) > 2 else "",
-                "Units": row[3] if len(row) > 3 else "",
-                "Price": row[4] if len(row) > 4 else "",
-                "Currency": row[5] if len(row) > 5 else "",
-                "FX_Rate": row[6] if len(row) > 6 else "",
-                "Cost_THB": row[7] if len(row) > 7 else "",
-                "Realized_PnL_THB": row[8] if len(row) > 8 else "",
-                "Notes": row[9] if len(row) > 9 else "",
-            }
-            migrated_rows.append(row_dict)
-    elif header == _TRADES_LOG_HEADER:
-        for row in raw_data_rows:
-            if not row or not any(row):
-                continue
-            row_dict = {}
-            for col_idx, col_name in enumerate(_TRADES_LOG_HEADER):
-                row_dict[col_name] = row[col_idx] if col_idx < len(row) else ""
-            migrated_rows.append(row_dict)
-    else:
-        with fpath.open("r", encoding="utf-8", newline="") as f:
-            dreader = csv.DictReader(f)
-            migrated_rows = [dict(r) for r in dreader]
+            row_dict = dict(r)
+
+            # Check Transaction_ID
+            if not row_dict.get("Transaction_ID"):
+                row_dict["Transaction_ID"] = f"tx_{int(time.time() * 1000)}_{uuid.uuid4().hex[:6]}"
+                needs_rewrite = True
+
+            # Calculate Gross_Amount and Net_Amount in Trade Currency if missing
+            units_raw = row_dict.get("Units") or "0"
+            price_raw = row_dict.get("Price") or "0"
+            try:
+                u_dec = Decimal(str(units_raw))
+                p_dec = Decimal(str(price_raw))
+                computed_amt = str(quantize_decimal(u_dec * p_dec, MONEY_QUANTUM))
+            except Exception:
+                computed_amt = "0.00"
+
+            if not row_dict.get("Gross_Amount"):
+                row_dict["Gross_Amount"] = computed_amt
+                needs_rewrite = True
+
+            if not row_dict.get("Net_Amount"):
+                row_dict["Net_Amount"] = computed_amt
+                needs_rewrite = True
+
+            if not row_dict.get("Commission"):
+                row_dict["Commission"] = "0.00"
+                needs_rewrite = True
+            if not row_dict.get("VAT"):
+                row_dict["VAT"] = "0.00"
+                needs_rewrite = True
+            if not row_dict.get("Other_Fees"):
+                row_dict["Other_Fees"] = "0.00"
+                needs_rewrite = True
+
+            curr = row_dict.get("Currency") or "THB"
+            if not row_dict.get("Fee_Currency"):
+                row_dict["Fee_Currency"] = curr
+                needs_rewrite = True
+
+            if not row_dict.get("Confirmation_No"):
+                row_dict["Confirmation_No"] = ""
+            if not row_dict.get("Settlement_Date"):
+                row_dict["Settlement_Date"] = ""
+            if not row_dict.get("Fingerprint"):
+                row_dict["Fingerprint"] = ""
+
+            # Critical: Legacy rows were cash adjusted and manual
+            if not row_dict.get("Cash_Adjusted"):
+                row_dict["Cash_Adjusted"] = "YES"
+                needs_rewrite = True
+            if not row_dict.get("Source"):
+                row_dict["Source"] = "MANUAL"
+                needs_rewrite = True
+            if not row_dict.get("Related_Transaction_ID"):
+                row_dict["Related_Transaction_ID"] = ""
+
+            canonical_row = {col: _desanitize_csv_field(str(row_dict.get(col, "") or "")) for col in _TRADES_LOG_HEADER}
+            migrated_rows.append(canonical_row)
 
     if needs_rewrite:
         with fpath.open("w", encoding="utf-8", newline="") as f:

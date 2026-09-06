@@ -30,10 +30,18 @@ class LegacyPriceCompatibilityAdapter(MarketPricePort):
 
         return trading
 
+    @property
+    def fund_provider(self):
+        return getattr(self._delegate, "fund_provider", None)
+
+    @property
+    def equity_provider(self):
+        return getattr(self._delegate, "equity_provider", None)
+
     def fetch_price(self, symbol: str, currency: Literal["THB", "USD"]) -> Optional[float]:
         trading = self._legacy_trading()
         legacy = getattr(trading, "fetch_latest_price", None)
-        if callable(legacy):
+        if callable(legacy) and getattr(legacy, "__module__", "") != "tools.portfolio.trading":
             timeout = float(getattr(trading, "_PRICE_FETCH_TIMEOUT", 6.0) or 6.0)
             with ThreadPoolExecutor(max_workers=1) as executor:
                 future = executor.submit(legacy, symbol, currency)
@@ -65,13 +73,14 @@ class LegacyPriceCompatibilityAdapter(MarketPricePort):
             return float(raw_rate), "live"
 
         legacy = getattr(trading, "fetch_fx_rate", None)
-        if callable(legacy):
+        if callable(legacy) and getattr(legacy, "__module__", "") != "tools.portfolio.trading":
             return legacy(date_str=date_str, fallback_rate=fallback_rate)
         return self._delegate.fetch_fx_rate(date_str=date_str, fallback_rate=fallback_rate)
 
     def refresh_portfolio_prices(self, state: PortfolioState) -> Dict[str, str]:
-        legacy = getattr(self._legacy_prices(), "_refresh_prices", None)
-        if callable(legacy):
+        prices = self._legacy_prices()
+        legacy = getattr(prices, "_refresh_prices", None)
+        if callable(legacy) and getattr(legacy, "__module__", "") != "tools.portfolio.prices":
             return legacy(state)
         return self._delegate.refresh_portfolio_prices(state)
 
