@@ -1,6 +1,6 @@
 """Portfolio, Positions, Transactions, and Goals API Schemas."""
 from typing import Any, Literal, Optional
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 class DividendRoundDTO(BaseModel):
     symbol: str
@@ -210,6 +210,22 @@ class TransactionItemDTO(BaseModel):
     fingerprint: Optional[str] = None
     cash_adjusted: Optional[str] = None
     related_transaction_id: Optional[str] = None
+
+    @model_validator(mode="before")
+    @classmethod
+    def _normalize_keys(cls, data: Any) -> Any:
+        if isinstance(data, dict):
+            normalized = {k.lower(): v for k, v in data.items()}
+            normalized.update(data)
+            return normalized
+        return data
+
+    @field_validator("action", mode="before")
+    @classmethod
+    def _coerce_action(cls, v):
+        if isinstance(v, str):
+            return v.upper()
+        return v
 
     @field_validator("fx_rate", "realized_pnl_thb", mode="before")
     @classmethod

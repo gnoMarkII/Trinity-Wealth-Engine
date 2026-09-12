@@ -722,6 +722,46 @@
         ]
       }
     },
+    "/api/knowledge/writes": {
+      "post": {
+        "operationId": "submit_knowledge_write_api_knowledge_writes_post",
+        "tags": [
+          "Knowledge Writes"
+        ],
+        "summary": "Submit Knowledge Write",
+        "parameters": [],
+        "has_request_body": true,
+        "responses": [
+          "200",
+          "422"
+        ]
+      }
+    },
+    "/api/knowledge/writes/{command_id}": {
+      "get": {
+        "operationId": "get_knowledge_write_api_knowledge_writes__command_id__get",
+        "tags": [
+          "Knowledge Writes"
+        ],
+        "summary": "Get Knowledge Write",
+        "parameters": [
+          {
+            "name": "command_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Command Id"
+            }
+          }
+        ],
+        "has_request_body": false,
+        "responses": [
+          "200",
+          "422"
+        ]
+      }
+    },
     "/api/macro/dashboard": {
       "get": {
         "operationId": "get_macro_dashboard_api_macro_dashboard_get",
@@ -1861,12 +1901,137 @@
             "required": false,
             "schema": {
               "type": "integer",
-              "default": 20,
+              "default": 500,
               "title": "Limit"
             }
           }
         ],
         "has_request_body": false,
+        "responses": [
+          "200",
+          "422"
+        ]
+      }
+    },
+    "/api/portfolio/dime/pdf": {
+      "get": {
+        "operationId": "get_dime_pdf_endpoint_api_portfolio_dime_pdf_get",
+        "tags": [
+          "Dime Sync"
+        ],
+        "summary": "Get Dime Pdf Endpoint",
+        "parameters": [
+          {
+            "name": "message_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Message Id"
+            }
+          },
+          {
+            "name": "attachment_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Attachment Id"
+            }
+          },
+          {
+            "name": "password",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Password"
+            }
+          },
+          {
+            "name": "decrypt",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": true,
+              "title": "Decrypt"
+            }
+          }
+        ],
+        "has_request_body": false,
+        "responses": [
+          "200",
+          "422"
+        ]
+      }
+    },
+    "/api/portfolio/dime/pdf-text": {
+      "get": {
+        "operationId": "get_dime_pdf_text_endpoint_api_portfolio_dime_pdf_text_get",
+        "tags": [
+          "Dime Sync"
+        ],
+        "summary": "Get Dime Pdf Text Endpoint",
+        "parameters": [
+          {
+            "name": "message_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Message Id"
+            }
+          },
+          {
+            "name": "attachment_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Attachment Id"
+            }
+          },
+          {
+            "name": "password",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Password"
+            }
+          }
+        ],
+        "has_request_body": false,
+        "responses": [
+          "200",
+          "422"
+        ]
+      }
+    },
+    "/api/portfolio/dime/scan/batch-stream": {
+      "post": {
+        "operationId": "scan_batch_stream_endpoint_api_portfolio_dime_scan_batch_stream_post",
+        "tags": [
+          "Dime Sync"
+        ],
+        "summary": "Scan Batch Stream Endpoint",
+        "parameters": [],
+        "has_request_body": true,
         "responses": [
           "200",
           "422"
@@ -1949,6 +2114,388 @@
         "has_request_body": false,
         "responses": [
           "200"
+        ]
+      }
+    },
+    "/api/portfolio/scb/commit/{scan_id}": {
+      "post": {
+        "operationId": "commit_staged_endpoint_api_portfolio_scb_commit__scan_id__post",
+        "tags": [
+          "SCBAM Sync"
+        ],
+        "summary": "Commit Staged Endpoint",
+        "parameters": [
+          {
+            "name": "scan_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Scan Id"
+            }
+          }
+        ],
+        "has_request_body": true,
+        "responses": [
+          "200",
+          "422"
+        ]
+      }
+    },
+    "/api/portfolio/scb/emails": {
+      "get": {
+        "operationId": "search_scbam_emails_endpoint_api_portfolio_scb_emails_get",
+        "tags": [
+          "SCBAM Sync"
+        ],
+        "summary": "Search Scbam Emails Endpoint",
+        "parameters": [
+          {
+            "name": "query",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "Query"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 500,
+              "title": "Limit"
+            }
+          }
+        ],
+        "has_request_body": false,
+        "responses": [
+          "200",
+          "422"
+        ]
+      }
+    },
+    "/api/portfolio/scb/emails/{email_id}/html": {
+      "get": {
+        "operationId": "get_email_html_endpoint_api_portfolio_scb_emails__email_id__html_get",
+        "tags": [
+          "SCBAM Sync"
+        ],
+        "summary": "Get Email Html Endpoint",
+        "parameters": [
+          {
+            "name": "email_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Email Id"
+            }
+          }
+        ],
+        "has_request_body": false,
+        "responses": [
+          "200",
+          "422"
+        ]
+      }
+    },
+    "/api/portfolio/scb/scan/batch-stream": {
+      "post": {
+        "operationId": "scan_batch_stream_endpoint_api_portfolio_scb_scan_batch_stream_post",
+        "tags": [
+          "SCBAM Sync"
+        ],
+        "summary": "Scan Batch Stream Endpoint",
+        "parameters": [],
+        "has_request_body": true,
+        "responses": [
+          "200",
+          "422"
+        ]
+      }
+    },
+    "/api/portfolio/scb/scan/email": {
+      "post": {
+        "operationId": "scan_email_endpoint_api_portfolio_scb_scan_email_post",
+        "tags": [
+          "SCBAM Sync"
+        ],
+        "summary": "Scan Email Endpoint",
+        "parameters": [],
+        "has_request_body": true,
+        "responses": [
+          "200",
+          "422"
+        ]
+      }
+    },
+    "/api/portfolio/scb/staged/{scan_id}": {
+      "get": {
+        "operationId": "get_staged_endpoint_api_portfolio_scb_staged__scan_id__get",
+        "tags": [
+          "SCBAM Sync"
+        ],
+        "summary": "Get Staged Endpoint",
+        "parameters": [
+          {
+            "name": "scan_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Scan Id"
+            }
+          }
+        ],
+        "has_request_body": false,
+        "responses": [
+          "200",
+          "422"
+        ]
+      }
+    },
+    "/api/portfolio/wealthx/commit/{scan_id}": {
+      "post": {
+        "operationId": "commit_staged_endpoint_api_portfolio_wealthx_commit__scan_id__post",
+        "tags": [
+          "WealthX Sync"
+        ],
+        "summary": "Commit Staged Endpoint",
+        "parameters": [
+          {
+            "name": "scan_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Scan Id"
+            }
+          }
+        ],
+        "has_request_body": true,
+        "responses": [
+          "200",
+          "422"
+        ]
+      }
+    },
+    "/api/portfolio/wealthx/emails": {
+      "get": {
+        "operationId": "search_wealthx_emails_endpoint_api_portfolio_wealthx_emails_get",
+        "tags": [
+          "WealthX Sync"
+        ],
+        "summary": "Search Wealthx Emails Endpoint",
+        "parameters": [
+          {
+            "name": "query",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "Query"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 500,
+              "title": "Limit"
+            }
+          }
+        ],
+        "has_request_body": false,
+        "responses": [
+          "200",
+          "422"
+        ]
+      }
+    },
+    "/api/portfolio/wealthx/pdf": {
+      "get": {
+        "operationId": "get_wealthx_pdf_endpoint_api_portfolio_wealthx_pdf_get",
+        "tags": [
+          "WealthX Sync"
+        ],
+        "summary": "Get Wealthx Pdf Endpoint",
+        "parameters": [
+          {
+            "name": "message_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Message Id"
+            }
+          },
+          {
+            "name": "attachment_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Attachment Id"
+            }
+          },
+          {
+            "name": "password",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Password"
+            }
+          },
+          {
+            "name": "decrypt",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": true,
+              "title": "Decrypt"
+            }
+          }
+        ],
+        "has_request_body": false,
+        "responses": [
+          "200",
+          "422"
+        ]
+      }
+    },
+    "/api/portfolio/wealthx/pdf-text": {
+      "get": {
+        "operationId": "get_wealthx_pdf_text_endpoint_api_portfolio_wealthx_pdf_text_get",
+        "tags": [
+          "WealthX Sync"
+        ],
+        "summary": "Get Wealthx Pdf Text Endpoint",
+        "parameters": [
+          {
+            "name": "message_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Message Id"
+            }
+          },
+          {
+            "name": "attachment_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Attachment Id"
+            }
+          },
+          {
+            "name": "password",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Password"
+            }
+          }
+        ],
+        "has_request_body": false,
+        "responses": [
+          "200",
+          "422"
+        ]
+      }
+    },
+    "/api/portfolio/wealthx/scan/batch-stream": {
+      "post": {
+        "operationId": "scan_batch_stream_endpoint_api_portfolio_wealthx_scan_batch_stream_post",
+        "tags": [
+          "WealthX Sync"
+        ],
+        "summary": "Scan Batch Stream Endpoint",
+        "parameters": [],
+        "has_request_body": true,
+        "responses": [
+          "200",
+          "422"
+        ]
+      }
+    },
+    "/api/portfolio/wealthx/scan/email": {
+      "post": {
+        "operationId": "scan_email_attachment_endpoint_api_portfolio_wealthx_scan_email_post",
+        "tags": [
+          "WealthX Sync"
+        ],
+        "summary": "Scan Email Attachment Endpoint",
+        "parameters": [],
+        "has_request_body": true,
+        "responses": [
+          "200",
+          "422"
+        ]
+      }
+    },
+    "/api/portfolio/wealthx/scan/upload": {
+      "post": {
+        "operationId": "scan_upload_pdf_endpoint_api_portfolio_wealthx_scan_upload_post",
+        "tags": [
+          "WealthX Sync"
+        ],
+        "summary": "Scan Upload Pdf Endpoint",
+        "parameters": [],
+        "has_request_body": true,
+        "responses": [
+          "200",
+          "422"
+        ]
+      }
+    },
+    "/api/portfolio/wealthx/staged/{scan_id}": {
+      "get": {
+        "operationId": "get_staged_endpoint_api_portfolio_wealthx_staged__scan_id__get",
+        "tags": [
+          "WealthX Sync"
+        ],
+        "summary": "Get Staged Endpoint",
+        "parameters": [
+          {
+            "name": "scan_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Scan Id"
+            }
+          }
+        ],
+        "has_request_body": false,
+        "responses": [
+          "200",
+          "422"
         ]
       }
     },

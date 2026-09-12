@@ -127,7 +127,7 @@ class TransactionalPortfolioRepository(PortfolioRepositoryPort):
         rows = self.store.replay_ledger(pid) if self.store.events(pid) else self.underlying_repo.read_trade_log(pid)
         if symbol:
             wanted = symbol.strip().upper()
-            rows = [row for row in rows if str(row.get("Symbol") or row.get("symbol") or "").upper() == wanted]
+            rows = [row for row in rows if str(row.get("symbol") or row.get("Symbol") or "").upper() == wanted]
         return rows
 
     def backup_and_reset_clean_slate(self, portfolio_id: str = "default") -> PortfolioState:

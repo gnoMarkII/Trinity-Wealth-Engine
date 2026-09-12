@@ -327,9 +327,75 @@ def derive_canonical_transactions(parsed_filings: List[Dict[str, Any]]) -> Tuple
     return canonical_lots, meta
 
 
+def ingest_form4_data(conn: sqlite3.Connection, parsed_data: dict) -> None:
+    """บันทึก parsed form 4 เข้า raw ledger และ transactions"""
+    now = time.time()
+    is_amendment = parsed_data.get("is_amendment", False)
+    amends_accession = parsed_data.get("amends_accession_number")
+    if is_amendment and amends_accession:
+        conn.execute("DELETE FROM sec_insider_transactions WHERE accession_number = ?", (amends_accession,))
+
+    conn.execute(
+        """
+        INSERT OR REPLACE INTO sec_form4_raw_ledger (
+            accession_number, issuer_cik, ticker, filing_url, filed_at,
+            reporting_owner_cik, reporting_owner_name, is_director,
+            is_officer, is_ten_percent_owner, officer_title, raw_xml_payload,
+            is_amendment, amends_accession_number, created_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """,
+        (
+            parsed_data["accession_number"],
+            parsed_data["issuer_cik"],
+            parsed_data["ticker"].upper(),
+            parsed_data["filing_url"],
+            parsed_data["filed_at"],
+            parsed_data.get("reporting_owner_cik"),
+            parsed_data.get("reporting_owner_name"),
+            1 if parsed_data.get("is_director", False) else 0,
+            1 if parsed_data.get("is_officer", False) else 0,
+            1 if parsed_data.get("is_ten_percent_owner", False) else 0,
+            parsed_data.get("officer_title"),
+            parsed_data.get("raw_xml_payload"),
+            1 if is_amendment else 0,
+            amends_accession,
+            now,
+        ),
+    )
+
+    for tx in parsed_data.get("transactions", []):
+        conn.execute(
+            """
+            INSERT OR REPLACE INTO sec_insider_transactions (
+                transaction_id, accession_number, ticker, transaction_date,
+                transaction_code, shares, price_per_share, acquired_or_disposed,
+                shares_owned_following, ownership_nature, is_derivative,
+                normalized_weight, created_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                tx["transaction_id"],
+                parsed_data["accession_number"],
+                parsed_data["ticker"].upper(),
+                tx["transaction_date"],
+                tx["transaction_code"].upper(),
+                tx["shares"],
+                tx["price_per_share"],
+                tx["acquired_or_disposed"].upper(),
+                tx.get("shares_owned_following"),
+                tx.get("ownership_nature"),
+                1 if tx.get("is_derivative", False) else 0,
+                tx.get("normalized_weight", 1.0),
+                now,
+            ),
+        )
+    conn.commit()
+
+
 def sync_insider_filings_from_yfinance(conn: sqlite3.Connection, ticker: str) -> None:
     """Deprecated compatibility wrapper; production uses SqliteInsiderSyncAdapter."""
     from tools.market.adapters.insider_provider import YFinanceInsiderHistoryAdapter
 
     for parsed in YFinanceInsiderHistoryAdapter().fetch(ticker):
         ingest_form4_data(conn, parsed)
+
