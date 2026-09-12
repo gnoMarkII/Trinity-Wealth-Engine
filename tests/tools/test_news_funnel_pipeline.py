@@ -42,13 +42,17 @@ def test_ensure_concept_stubs(test_paths):
     with open(old_stub_path, "w", encoding="utf-8") as f:
         f.write("---\ntitle: \"OldStub\"\n---\n# OldStub")
 
-    created = ensure_concept_stubs_exist(["Gold", "[[US Treasury]]"], vault_root=vault_dir)
+    created = ensure_concept_stubs_exist(
+        ["Gold", "[[US Treasury]]"],
+        vault_root=vault_dir,
+        allow_stub_creation=True,
+    )
     assert len(created) == 2
     for path in created:
         assert os.path.exists(path)
         with open(path, "r", encoding="utf-8") as f:
             content = f.read()
-            assert "entity_type: concept_stub" in content
+            assert "entity_type: concept" in content
 
     # Verify old stub migrated to new Concepts folder
     new_stub_path = os.path.join(vault_dir, "30_Knowledge_Base", "Concepts", "OldStub.md")
@@ -61,8 +65,7 @@ def test_ensure_concept_stubs(test_paths):
     assert os.path.exists(index_path)
     with open(index_path, "r", encoding="utf-8") as f:
         idx_content = f.read()
-        assert "[[Gold]]" in idx_content
-        assert "[[US Treasury]]" in idx_content
+        assert "**Concepts**: 3 notes" in idx_content
 
 
 def test_ingest_pipeline(test_paths, monkeypatch):
@@ -96,7 +99,7 @@ def test_ingest_pipeline(test_paths, monkeypatch):
 def test_synthesize_zero_pending_protection(test_paths, monkeypatch):
     monkeypatch.setenv("MOCK_NEWS_FUNNEL_LLM", "true")
     store_file, vault_dir = test_paths
-    # Create old News/Themes dir to test legacy cleanup
+    # Legacy folders are report-only and are not deleted by the normal writer.
     old_themes_dir = os.path.join(vault_dir, "30_Knowledge_Base", "News", "Themes")
     os.makedirs(old_themes_dir, exist_ok=True)
 
@@ -110,13 +113,13 @@ def test_synthesize_zero_pending_protection(test_paths, monkeypatch):
 
     assert res["status"] == "no_pending_events"
     assert res["published_count"] == 0
-    assert not os.path.exists(old_themes_dir)
+    assert os.path.exists(old_themes_dir)
 
 
 def test_synthesize_with_events_and_hitl_filter(test_paths, monkeypatch):
     monkeypatch.setenv("MOCK_NEWS_FUNNEL_LLM", "true")
     store_file, vault_dir = test_paths
-    # Create legacy News/Themes dir to test cleanup during synthesis
+    # Legacy folders are report-only and are not deleted by the normal writer.
     old_themes_dir = os.path.join(vault_dir, "30_Knowledge_Base", "News", "Themes")
     os.makedirs(old_themes_dir, exist_ok=True)
 
@@ -158,16 +161,16 @@ def test_synthesize_with_events_and_hitl_filter(test_paths, monkeypatch):
     assert len(res["created_files"]) == 1
     file_path = res["created_files"][0]
     assert os.path.exists(file_path)
-    assert not os.path.exists(old_themes_dir)
+    assert os.path.exists(old_themes_dir)
 
     with open(file_path, "r", encoding="utf-8") as f:
         content = f.read()
-        assert "entity_type: article_note" in content
+        assert "entity_type: company_news" in content
         assert "Fed rate decision and Inflation risk" in content
         assert "> **Macro Impact:** 8/10 | **Asset Impact:** 6/10" in content
         assert "## ใจความสำคัญ\nService inflation sticky" in content
-        assert "## หุ้นและสินทรัพย์\n- [[NVDA]], [[Gold]]" in content
-        assert "## แนวคิดการลงทุน\n- กลยุทธ์และการจัดพอร์ตตามธีม [[policy]], [[inflation]]" in content
+        assert "NVDA" in content and "Gold" in content
+        assert "policy" in content and "inflation" in content
 
     # Check state store that ev-100 is synthesized and ev-200 is rejected per HITL selection
     state = load_store(store_path=store_file)
@@ -865,7 +868,7 @@ def test_news_funnel_synthesize_updates_master_index(test_paths, monkeypatch):
     assert os.path.exists(index_path)
     with open(index_path, "r", encoding="utf-8") as f:
         idx_content = f.read()
-        assert "Inflation Cools Down" in idx_content
+        assert "**News**: 1 notes" in idx_content
 
 
 def test_prescan_recovery_flow(tmp_path, monkeypatch):

@@ -11,8 +11,8 @@ class EquitySummaryDTO(BaseModel):
     market_sentiment: Literal["bullish", "neutral", "bearish"]
     composite_score: Optional[float] = None
     data_quality_flags: list[str] = []
-    source_file: str
-    sidecar_file: str
+    source_file: Optional[str] = None
+    sidecar_file: Optional[str] = None
 
 
 class EquitySentimentContextDTO(BaseModel):

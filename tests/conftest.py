@@ -190,6 +190,36 @@ def _pin_portfolio_vault_baseline(monkeypatch):
     yield
 
 
+@pytest.fixture(autouse=True)
+def _bind_test_knowledge_note_writer():
+    """Bind the application note port for legacy-shaped test calls.
+
+    Tests may still call function-shaped producers without threading a port
+    argument.  The provider keeps those calls isolated in a temp runtime;
+    production code has no equivalent implicit provider.
+    """
+    from application.knowledge.write_context import bind_note_writer_provider, reset_note_writer_provider
+    from tools.archivist.composition import build_knowledge_note_writer
+    from tools.archivist.vault_paths import VaultPaths
+
+    production_vault = (_PROJECT_ROOT / "memories").resolve()
+
+    def provider(vault_root: Path):
+        root = Path(vault_root).resolve()
+        if root == production_vault:
+            raise RuntimeError("tests may not bind a write port for the production Vault")
+        return build_knowledge_note_writer(
+            vault_paths=VaultPaths(root),
+            runtime_base=root.parent / "r9-test-runtime",
+        )
+
+    token = bind_note_writer_provider(provider)
+    try:
+        yield
+    finally:
+        reset_note_writer_provider(token)
+
+
 def _reset_portfolio_modules(tmp_vault, monkeypatch):
     """Reset and reimport all tools.portfolio.* submodules, patch paths, and reattach to api.routes_portfolio."""
     from types import SimpleNamespace
@@ -397,6 +427,7 @@ def isolated_archivist(tmp_vault, monkeypatch):
     at.write_raw_markdown = writer.write_raw_markdown
     at.update_master_index = indexer.update_master_index
     at.search_all_memories = search.search_all_memories
+    at.search_memories_with_evidence = search.search_memories_with_evidence
     at.search_graph_context = search.search_graph_context
     at.lint_structural_health = linter.lint_structural_health
     at.lint_semantic_conflict = linter.lint_semantic_conflict

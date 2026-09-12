@@ -43,8 +43,14 @@ def _fetch_stock_news(ticker: str, market: str) -> str:
 
 def _search_vault_memories(keyword: str) -> str:
     try:
-        from tools.archivist.search import search_all_memories
-        return search_all_memories.invoke({"keyword": keyword})
+        from tools.archivist.search import search_memories_with_evidence
+        return search_memories_with_evidence.invoke(
+            {
+                "keyword": keyword,
+                "retrieval_namespace": "primary",
+                "production_mode": False,
+            }
+        )
     except Exception as e:
         return f"Error searching vault: {e}"
 

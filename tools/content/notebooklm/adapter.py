@@ -20,6 +20,7 @@ from mcp.client.stdio import stdio_client
 
 from core.logger import get_logger
 from core.retry import with_retry_async
+from tools.archivist.maintenance_guard import assert_write_allowed
 from tools.content.notebooklm.models import PreflightError
 
 logger = get_logger(__name__)
@@ -120,6 +121,7 @@ def check_binary_available() -> None:
 
 def check_output_dir_writable(output_dir: Path) -> None:
     """ตรวจว่า output directory เขียนไฟล์ได้จริง — เช็คแบบ local ไม่ต้องเปิด session"""
+    assert_write_allowed(output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
     probe = output_dir / ".write_probe"
     try:

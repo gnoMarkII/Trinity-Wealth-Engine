@@ -1,0 +1,51 @@
+{
+  "policy_id": "vault-field-ownership",
+  "policy_version": 1,
+  "classes": {
+    "system_owned": [
+      "schema_version",
+      "note_id",
+      "document_key",
+      "revision",
+      "revision_id",
+      "content_sha256",
+      "artifact_set_hash",
+      "current_revision_id",
+      "registry_digest"
+    ],
+    "policy_owned": [
+      "entity_type",
+      "document_role",
+      "search_scope",
+      "sensitivity",
+      "retention_class",
+      "content_status",
+      "verification_status"
+    ],
+    "producer_owned": [
+      "generated_at",
+      "generated_by",
+      "input_revision_ids",
+      "source_content_hashes",
+      "projection_version",
+      "source_checkpoint"
+    ],
+    "human_owned": [
+      "title",
+      "aliases",
+      "tags",
+      "summary",
+      "notes",
+      "human_notes",
+      "review_comment"
+    ],
+    "mergeable": [
+      "title",
+      "aliases",
+      "tags",
+      "content_status",
+      "review_comment"
+    ]
+  },
+  "unknown_fields": "preserve_and_classify_on_reconciliation"
+}

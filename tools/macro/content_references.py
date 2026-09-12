@@ -57,10 +57,12 @@ def recent_youtube_references(lookback_days: int = 14, max_items: int = 5) -> li
 
     cutoff_date = datetime.now(timezone.utc).date() - timedelta(days=lookback_days)
     collected: list[tuple[datetime, dict]] = []
-    for markdown_file in summaries_dir.glob("*.md"):
+    for markdown_file in summaries_dir.rglob("*.md"):
+        if "Inbox" in markdown_file.parts or "Revisions" in markdown_file.parts:
+            continue
         try:
             content = markdown_file.read_text(encoding="utf-8")
-            if extract_yaml_frontmatter_value(content, "entity_type") != "youtube_insight":
+            if extract_yaml_frontmatter_value(content, "entity_type") not in {"youtube_insight", "youtube_summary"}:
                 continue
             published = extract_yaml_frontmatter_value(content, "date")
             published_at = datetime.strptime(published[:10], "%Y-%m-%d") if published else None

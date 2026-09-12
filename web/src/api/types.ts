@@ -524,6 +524,7 @@ export interface NotebookLMStatusDTO {
   audio_path: string | null
   notebook_id: string | null
   error: string | null
+  recovery_status?: string | null
 }
 
 export interface EquitySummaryDTO {

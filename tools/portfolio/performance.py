@@ -12,6 +12,7 @@ from langchain_core.tools import tool
 
 from core.logger import get_logger
 from tools._atomic_io import _atomic_write_to
+from tools.archivist.maintenance_guard import assert_write_allowed
 from tools.tool_errors import LOCK_TIMEOUT, validation_error
 from .models import _now_iso, PortfolioState, Holding, Summary
 from .core import _load_or_init, _save, _recalc_all, _compute_total_cost, _require_fx, _get_portfolio_lock
@@ -64,6 +65,7 @@ def record_performance_snapshot(refresh_prices: bool = True, portfolio_id: str =
             ]
 
             perf_path = _get_performance_filepath(portfolio_id)
+            assert_write_allowed(perf_path)
             perf_path.parent.mkdir(parents=True, exist_ok=True)
             existing_rows: list[list[str]] = []
             if perf_path.exists() and perf_path.stat().st_size > 0:

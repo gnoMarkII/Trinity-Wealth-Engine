@@ -1,4 +1,3 @@
-import os
 import json
 import hashlib
 from datetime import datetime
@@ -11,8 +10,12 @@ from core.logger import get_logger
 logger = get_logger(__name__)
 
 from schemas.briefing_book_schemas import PublishableBriefingResult, UnverifiedBriefingDraftResult, SavedBriefingArtifact
+from application.knowledge.identity import build_document_key
+from application.knowledge.note_write_ports import KnowledgeNoteWritePort
+from application.knowledge.write_context import current_note_writer
 from tools.archivist.core import _sanitize_filename
-from tools._atomic_io import _stage_text
+from tools.archivist.maintenance_guard import assert_write_allowed
+from tools.archivist.vault_paths import VaultPaths
 
 def save_briefing_artifact(
     synthesis: Union[PublishableBriefingResult, UnverifiedBriefingDraftResult],
@@ -20,6 +23,7 @@ def save_briefing_artifact(
     *,
     vault_root: Path,
     date_str: Optional[str] = None,
+    note_writer: Optional[KnowledgeNoteWritePort] = None,
 ) -> SavedBriefingArtifact:
     """
     Save content and quality report together atomically, then invoke indexer (if publishable).
@@ -59,13 +63,23 @@ def save_briefing_artifact(
     if getattr(synthesis, "evidence_bundle", None) and getattr(synthesis.evidence_bundle, "pitch_id", None):
         pitch_id = synthesis.evidence_bundle.pitch_id
 
-    target_vault = vault_root
-    target_dir = target_vault / "30_Knowledge_Base" / "NotebookLM_Sources"
+    vp = VaultPaths(vault_root)
+    note_writer = note_writer or current_note_writer(vp.root)
+    d_str = date_str or datetime.now().strftime("%Y-%m-%d")
+
+    # R9 freezes V2 routing for every new canonical write.  The writer owns
+    # the final path; this directory is only used for the local lock and for
+    # constructing the stable filename passed as write intent.
+    try:
+        year, month = d_str.split("-")[0], d_str.split("-")[1]
+    except Exception:
+        year, month = datetime.now().strftime("%Y"), datetime.now().strftime("%m")
+    target_dir = vp.root / "30_Knowledge_Base" / "NotebookLM_Sources" / year / month
+    assert_write_allowed(vp.root)
     target_dir.mkdir(parents=True, exist_ok=True)
     
     lock = FileLock(target_dir / ".lock", timeout=30)
     with lock:
-        d_str = date_str or datetime.now().strftime("%Y-%m-%d")
         safe_title = _sanitize_filename(title.strip()[:80])
         
         content_hash = hashlib.sha256(content.encode("utf-8")).hexdigest()
@@ -104,18 +118,44 @@ def save_briefing_artifact(
             else:
                 report_data["override_audit"] = synthesis.override_audit
     
-        content_temp = _stage_text(file_path, content)
-        quality_temp = _stage_text(quality_path, json.dumps(report_data, ensure_ascii=False, indent=2))
-    
-        try:
-            os.replace(quality_temp, quality_path)
-            os.replace(content_temp, file_path)
-        except Exception:
-            content_temp.unlink(missing_ok=True)
-            quality_temp.unlink(missing_ok=True)
-            if not file_path.exists():
-                quality_path.unlink(missing_ok=True)
-            raise
+        source_identity = pitch_id if pitch_id != "unknown" else content_hash
+        metadata = {
+            "schema_version": 2,
+            "title": title.strip() or "NotebookLM Briefing Book",
+            "entity_type": "briefing_book",
+            "document_key": build_document_key(
+                kind="briefing_book",
+                source_identity=source_identity,
+                role="primary",
+                as_of=d_str,
+            ),
+            "date": d_str,
+            "authored_date": d_str,
+            "source_count": len(getattr(getattr(synthesis, "evidence_bundle", None), "sources", []) or []),
+            "pitch_id": pitch_id,
+            "artifact_status": getattr(synthesis, "artifact_status", "unknown"),
+            "trust_tier": getattr(synthesis, "trust_tier", "T2" if not is_draft else "unverified"),
+            "production_eligible": not is_draft,
+            "tags": ["briefing", "notebooklm", "unverified" if is_draft else "publishable"],
+        }
+        evidence_bundle = getattr(synthesis, "evidence_bundle", None)
+        if evidence_bundle:
+            metadata["evidence_refs"] = [
+                str(getattr(source, "source_id", ""))
+                for source in (getattr(evidence_bundle, "sources", []) or [])
+                if getattr(source, "source_id", None)
+            ]
+
+        committed = note_writer.write_note(
+            metadata=metadata,
+            body=content,
+            filename=file_path.name,
+            companion_artifacts={
+                quality_path.name: json.dumps(report_data, ensure_ascii=False, indent=2) + "\n"
+            },
+        )
+        file_path = committed.primary_file
+        quality_path = file_path.parent / quality_path.name
 
     # Index into the provided vault
     index_status: Literal["indexed", "pending", "failed"] = "pending"

@@ -31,6 +31,8 @@ from tools.macro.news_funnel_store import (
     get_raw_candidates,
     resolve_store_path,
 )
+from tools.archivist.composition import build_knowledge_note_writer
+from tools.archivist.vault_paths import VaultPaths
 
 logger = get_logger("run_news_funnel")
 
@@ -74,6 +76,7 @@ def _run_synthesize_with_recovery(args, period: str) -> dict:
         store_path=args.store_path,
         vault_root=args.vault_root,
         allow_autonomous=args.force_autonomous,
+        note_writer=build_knowledge_note_writer(vault_paths=VaultPaths(args.vault_root)),
     )
     _handle_synthesize_result(result)
     return result
@@ -167,4 +170,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-

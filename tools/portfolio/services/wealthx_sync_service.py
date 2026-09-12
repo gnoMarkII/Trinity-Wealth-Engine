@@ -37,6 +37,8 @@ def _sanitize_email_for_filename(email: str) -> str:
 
 def _get_sync_history_file(portfolio_id: str, account_email: str) -> Path:
     sync_dir = get_vault_path() / ".sync_history"
+    from tools.archivist.maintenance_guard import assert_write_allowed
+    assert_write_allowed(sync_dir)
     sync_dir.mkdir(parents=True, exist_ok=True)
     sanitized = _sanitize_email_for_filename(account_email)
     return sync_dir / f"wealthx_{sanitized}_{portfolio_id}.json"

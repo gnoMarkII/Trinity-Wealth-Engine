@@ -15,6 +15,7 @@ from core.logger import get_logger
 from core.nlp_utils import _jaccard_similarity
 from schemas.news_funnel_schemas import HIGH_IMPACT_THRESHOLD
 from tools._atomic_io import _atomic_write_to
+from tools.archivist.maintenance_guard import assert_write_allowed
 
 logger = get_logger(__name__)
 
@@ -63,8 +64,9 @@ def _load_unlocked(s_path: str) -> Dict[str, Any]:
         try:
             _save_unlocked(initial, s_path)
         except Exception:
-            with open(s_path, "w", encoding="utf-8") as f:
-                json.dump(initial, f, ensure_ascii=False, indent=2)
+            # Do not bypass the shared atomic/lease-guarded write path on
+            # fallback; a custom store path may still point inside the Vault.
+            _atomic_write_to(Path(s_path), json.dumps(initial, ensure_ascii=False, indent=2) + "\n")
         return initial
 
     try:
@@ -146,6 +148,7 @@ def _save_unlocked(state: Dict[str, Any], s_path: str) -> None:
 def load_store(store_path: Optional[str] = None) -> Dict[str, Any]:
     """โหลดข้อมูล Persistent State ภายใต้ FileLock ป้องกัน Race Condition"""
     s_path, l_path = _get_paths(store_path)
+    assert_write_allowed(Path(s_path))
     os.makedirs(os.path.dirname(s_path) if os.path.dirname(s_path) else ".", exist_ok=True)
 
     lock = FileLock(l_path, timeout=10, is_singleton=True)
@@ -156,6 +159,7 @@ def load_store(store_path: Optional[str] = None) -> Dict[str, Any]:
 def save_store(state: Dict[str, Any], store_path: Optional[str] = None) -> None:
     """บันทึกข้อมูล Persistent State ลงไฟล์ภายใต้ FileLock"""
     s_path, l_path = _get_paths(store_path)
+    assert_write_allowed(Path(s_path))
     os.makedirs(os.path.dirname(s_path) if os.path.dirname(s_path) else ".", exist_ok=True)
 
     lock = FileLock(l_path, timeout=10, is_singleton=True)

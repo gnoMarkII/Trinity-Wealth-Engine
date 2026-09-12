@@ -12,6 +12,10 @@ from langchain_core.tools import tool
 
 from core.logger import get_logger
 from tools._atomic_io import _atomic_write_to
+from tools.archivist.metadata import dump_note
+from tools.archivist.maintenance_guard import assert_write_allowed
+from tools.portfolio.adapters.markdown.identity import portfolio_note_identity
+from tools.portfolio.adapters.markdown.paths import get_vault_path
 from tools.tool_errors import LOCK_TIMEOUT, validation_error
 from .core import _load_or_init, _recalc_all, _get_portfolio_lock
 from .models import _now_iso, GoalItem, GoalsState, PortfolioState
@@ -38,6 +42,7 @@ def _get_goals_filepath() -> Path:
 
 
 def _atomic_write_goals(serialized: str) -> None:
+    assert_write_allowed(GOALS_PATH)
     parent = GOALS_PATH.parent
     parent.mkdir(parents=True, exist_ok=True)
     fd, tmp_name = tempfile.mkstemp(prefix=".goals_", suffix=".md.tmp", dir=str(parent))
@@ -52,27 +57,36 @@ def _atomic_write_goals(serialized: str) -> None:
 
 
 def _goal_item_to_md(goal: GoalItem) -> str:
-    lines = [
-        "---",
-        f"schema_version: {goal.schema_version}",
-        "entity_type: goal",
-        "derived: true",
-        f"name: {goal.name}",
-        f"goal_type: {goal.goal_type}",
-        f"target_amount_thb: {goal.target_amount_thb}",
-        f"created_date: {goal.created_date}",
-    ]
+    item_key = f"{goal.name}:{goal.goal_type}:{goal.created_date}"
+    note_id, document_key = portfolio_note_identity(
+        get_vault_path(), goal.portfolio_id, "goal_item", item_key
+    )
+    metadata = {
+        "schema_version": 2,
+        "note_id": note_id,
+        "document_key": document_key,
+        "title": goal.name,
+        "entity_type": "goal",
+        "document_role": "portfolio_item",
+        "portfolio_id": goal.portfolio_id,
+        "search_scope": "excluded",
+        "derived": True,
+        "name": goal.name,
+        "goal_type": goal.goal_type,
+        "target_amount_thb": goal.target_amount_thb,
+        "created_date": goal.created_date,
+    }
     if goal.deadline is not None:
-        lines.append(f"deadline: {goal.deadline}")
+        metadata["deadline"] = goal.deadline
     if goal.notes is not None:
-        notes_escaped = goal.notes.replace('"', '\\"')
-        lines.append(f'notes: "{notes_escaped}"')
-    lines.append("---")
-    lines.append("")
-    return "\n".join(lines)
+        metadata["notes"] = goal.notes
+    if goal.bucket_id is not None:
+        metadata["bucket_id"] = goal.bucket_id
+    return dump_note(metadata, "")
 
 
 def _sync_goals_sidecars(state: GoalsState) -> None:
+    assert_write_allowed(GOALS_ITEMS_DIR)
     GOALS_ITEMS_DIR.mkdir(parents=True, exist_ok=True)
     live: set[str] = set()
 
@@ -99,6 +113,19 @@ def _save_goals(post: frontmatter.Post, state: GoalsState) -> None:
 
     post.metadata.clear()
     post.metadata.update(ordered)
+    note_id, document_key = portfolio_note_identity(get_vault_path(), "default", "goals")
+    post.metadata.update(
+        {
+            "schema_version": 2,
+            "note_id": note_id,
+            "document_key": document_key,
+            "title": "Portfolio Goals",
+            "entity_type": "portfolio_state",
+            "document_role": "goals",
+            "portfolio_id": "default",
+            "search_scope": "excluded",
+        }
+    )
     post.content = ""
 
     _atomic_write_goals(frontmatter.dumps(post, sort_keys=False))
@@ -107,6 +134,7 @@ def _save_goals(post: frontmatter.Post, state: GoalsState) -> None:
 
 def _load_or_init_goals() -> tuple[frontmatter.Post, GoalsState]:
     if not GOALS_PATH.exists():
+        assert_write_allowed(GOALS_PATH)
         GOALS_PATH.parent.mkdir(parents=True, exist_ok=True)
         post = frontmatter.Post(content="")
         state = GoalsState(last_updated=_now_iso())

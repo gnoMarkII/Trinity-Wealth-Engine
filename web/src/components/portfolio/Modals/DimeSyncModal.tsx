@@ -288,10 +288,10 @@ export default function DimeSyncModal({ portfolioId, onClose, onSuccess }: Props
         {!stagedResult && (
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <label className="text-xs font-bold text-zinc-700 flex items-center gap-1.5">
+              <div className="text-xs font-bold text-zinc-700 flex items-center gap-1.5">
                 <span>🏛️</span>
                 <span>เลือกโบรกเกอร์ / ผู้ให้บริการ (Select Broker Source)</span>
-              </label>
+              </div>
               <span className="text-[11px] text-purple-700 font-semibold flex items-center gap-1">
                 <span className="inline-block h-1.5 w-1.5 rounded-full bg-purple-600"></span>
                 <span>
@@ -308,6 +308,16 @@ export default function DimeSyncModal({ portfolioId, onClose, onSuccess }: Props
               {/* Dime Card */}
               <div
                 onClick={() => handleSourceChange('dime')}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter' || event.key === ' ') {
+                    event.preventDefault()
+                    handleSourceChange('dime')
+                  }
+                }}
+                role="button"
+                tabIndex={0}
+                aria-pressed={activeSource === 'dime'}
+                aria-label="Select Dime broker source"
                 className={`p-3.5 rounded-2xl border transition-all cursor-pointer ${
                   activeSource === 'dime'
                     ? 'border-violet-300 bg-violet-50/70 shadow-sm ring-2 ring-violet-400/30'
@@ -341,6 +351,16 @@ export default function DimeSyncModal({ portfolioId, onClose, onSuccess }: Props
               {/* WealthX Card */}
               <div
                 onClick={() => handleSourceChange('wealthx')}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter' || event.key === ' ') {
+                    event.preventDefault()
+                    handleSourceChange('wealthx')
+                  }
+                }}
+                role="button"
+                tabIndex={0}
+                aria-pressed={activeSource === 'wealthx'}
+                aria-label="Select WealthX broker source"
                 className={`p-3.5 rounded-2xl border transition-all cursor-pointer ${
                   activeSource === 'wealthx'
                     ? 'border-emerald-300 bg-emerald-50/70 shadow-sm ring-2 ring-emerald-400/30'
@@ -374,6 +394,16 @@ export default function DimeSyncModal({ portfolioId, onClose, onSuccess }: Props
               {/* SCB Card */}
               <div
                 onClick={() => handleSourceChange('scb')}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter' || event.key === ' ') {
+                    event.preventDefault()
+                    handleSourceChange('scb')
+                  }
+                }}
+                role="button"
+                tabIndex={0}
+                aria-pressed={activeSource === 'scb'}
+                aria-label="Select SCB broker source"
                 className={`p-3.5 rounded-2xl border transition-all cursor-pointer ${
                   activeSource === 'scb'
                     ? 'border-purple-300 bg-purple-50/70 shadow-sm ring-2 ring-purple-400/30'
@@ -557,6 +587,7 @@ export default function DimeSyncModal({ portfolioId, onClose, onSuccess }: Props
                         checked={stagedResult.items.length > 0 && selectedItemIds.length === stagedResult.items.length}
                         onChange={toggleSelectAll}
                         className="rounded border-sky-300 text-flow-blue focus:ring-sky-500 cursor-pointer"
+                        aria-label="Select all staged trades"
                         title="เลือกทั้งหมด"
                       />
                     </th>
@@ -583,6 +614,7 @@ export default function DimeSyncModal({ portfolioId, onClose, onSuccess }: Props
                             checked={isSelected}
                             onChange={() => toggleSelectItem(it.item_id)}
                             className="rounded border-sky-300 text-flow-blue focus:ring-sky-500 cursor-pointer"
+                            aria-label={`Select ${it.symbol} ${it.trade_date}`}
                           />
                         </td>
                         <td className="py-2.5 px-3 font-mono text-zinc-600">{it.trade_date}</td>
@@ -683,7 +715,7 @@ export default function DimeSyncModal({ portfolioId, onClose, onSuccess }: Props
             {activeSource !== 'scb' ? (
               <div className="rounded-2xl border border-sky-100 bg-sky-50/40 p-3.5">
                 <div className="flex items-center justify-between mb-1.5">
-                  <label className="block text-xs font-bold text-sky-950">
+                  <label htmlFor="dime-pdf-password" className="block text-xs font-bold text-sky-950">
                     🔑 รหัสผ่านเปิดไฟล์ PDF (PDF Password)
                   </label>
                   <span className="text-[11px] text-sky-700">
@@ -693,6 +725,7 @@ export default function DimeSyncModal({ portfolioId, onClose, onSuccess }: Props
                 </div>
                 <div className="relative">
                   <input
+                    id="dime-pdf-password"
                     type={showPassword ? 'text' : 'password'}
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
@@ -726,6 +759,15 @@ export default function DimeSyncModal({ portfolioId, onClose, onSuccess }: Props
               <div className="space-y-3 animate-fade-in">
                 <div
                   onClick={() => fileInputRef.current?.click()}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter' || event.key === ' ') {
+                      event.preventDefault()
+                      fileInputRef.current?.click()
+                    }
+                  }}
+                  role="button"
+                  tabIndex={0}
+                  aria-label="Choose a PDF file to upload"
                   className="flex flex-col items-center justify-center p-7 border-2 border-dashed border-sky-200 rounded-3xl cursor-pointer hover:border-flow-blue hover:bg-sky-50/70 transition-all bg-sky-50/30 text-center"
                 >
                   <input

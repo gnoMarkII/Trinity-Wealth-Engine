@@ -5,6 +5,7 @@ from typing import Optional, List, Dict
 
 from core.logger import get_logger
 from tools._atomic_io import _atomic_write_to
+from tools.archivist.maintenance_guard import assert_write_allowed
 from tools.portfolio.domain.validator import validate_portfolio_id
 from tools.portfolio.ports.performance_port import PerformanceRepositoryPort
 from .paths import get_performance_filepath, _PERFORMANCE_LOG_HEADER
@@ -21,6 +22,7 @@ class MarkdownPerformanceAdapter(PerformanceRepositoryPort):
         lock = _get_portfolio_lock(pid)
         with lock:
             perf_path = get_performance_filepath(pid)
+            assert_write_allowed(perf_path)
             perf_path.parent.mkdir(parents=True, exist_ok=True)
 
             date_val = str(row.get("Date") or datetime.now().strftime("%Y-%m-%d"))

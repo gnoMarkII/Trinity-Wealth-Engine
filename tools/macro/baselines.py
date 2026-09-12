@@ -5,6 +5,8 @@ from pathlib import Path
 from typing import Dict, Any
 
 from langchain_core.tools import tool
+from application.knowledge.note_write_ports import KnowledgeNoteWritePort
+from application.knowledge.write_context import current_note_writer
 
 import os
 
@@ -47,9 +49,6 @@ def get_macro_baselines() -> str:
 
 def _get_snapshot(target_date: datetime) -> Dict[str, Any]:
     baselines_dir = _get_baselines_dir()
-    if not baselines_dir.exists():
-        baselines_dir.mkdir(parents=True, exist_ok=True)
-        
     files = list(baselines_dir.glob("*.md"))
     
     closest_file = None
@@ -91,12 +90,12 @@ def _get_snapshot(target_date: datetime) -> Dict[str, Any]:
         "note": "No historical baseline found for this period."
     }
 
-def save_macro_baseline(data: Dict[str, Any]) -> None:
+def save_macro_baseline(data: Dict[str, Any], *, note_writer: KnowledgeNoteWritePort | None = None) -> None:
     """บันทึกข้อมูล NarrativeContext เป็น Baseline สำหรับการเปรียบเทียบในอนาคต"""
     try:
         baselines_dir = _get_baselines_dir()
-        if not baselines_dir.exists():
-            baselines_dir.mkdir(parents=True, exist_ok=True)
+        note_writer = note_writer or current_note_writer(baselines_dir.parents[2])
+        # The shared writer owns directory creation and maintenance-lease fencing.
             
         evaluated_at_str = data.get("evaluated_at", datetime.now(timezone.utc).isoformat())
         # Parse it to a date string YYYY-MM-DD
@@ -124,8 +123,18 @@ tags: [macro, baseline]
 ```
 """
         
-        with open(file_path, "w", encoding="utf-8") as f:
-            f.write(markdown_content)
+        note_writer.write_note(
+            metadata={
+                "schema_version": 2,
+                "title": f"Macro Baseline {evaluated_date}",
+                "entity_type": "macro_snapshot",
+                "date": evaluated_date,
+                "tags": ["macro", "baseline"],
+                "document_role": "baseline",
+            },
+            body=markdown_content.split("---", 2)[-1].strip(),
+            filename=file_path.name,
+        )
             
         log.info(f"Successfully saved macro baseline to {file_path}")
     except Exception as e:

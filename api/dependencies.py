@@ -57,6 +57,9 @@ from tools.content.notebooklm.adapters.filesystem import (
 )
 from tools.content.notebooklm.adapter import check_binary_available
 from tools.archivist import core as archivist_core
+from application.knowledge.write_service import KnowledgeWriteService
+from tools.archivist.vault_paths import VaultPaths
+from tools.archivist.composition import build_knowledge_note_writer, build_knowledge_write_port
 from tools.market.calendar import get_asset_calendar
 from tools.market.earnings import fetch_earnings_dates
 from tools.market.adapters.equity_research import (
@@ -90,6 +93,12 @@ def _get_vault_path() -> Path:
     if VAULT_PATH != _INITIAL_VAULT_PATH:
         return Path(VAULT_PATH)
     return Path(archivist_core.VAULT_PATH)
+
+
+def get_knowledge_write_service() -> KnowledgeWriteService:
+    """Compose the local durable write broker for multi-app callers."""
+    vault_paths = VaultPaths(_get_vault_path())
+    return KnowledgeWriteService(build_knowledge_write_port(vault_paths=vault_paths))
 
 # Process-scoped query service: the cache is application state, not a new
 # object per request.  Tests and compatibility callers can clear the exposed
@@ -255,7 +264,10 @@ def get_earnings_call_service() -> EarningsCallApplicationService:
     kanban_service = get_kanban_service()
     return build_earnings_call_service(
         llm_port=LlmEarningsCallSummarizerAdapter(),
-        writer_port=ObsidianEarningsCallAdapter(vault_path=_get_vault_path()),
+        writer_port=ObsidianEarningsCallAdapter(
+            vault_path=_get_vault_path(),
+            note_writer=build_knowledge_note_writer(vault_paths=VaultPaths(_get_vault_path())),
+        ),
         workflow_port=SqliteEarningsCallWorkflowAdapter(),
         kanban_port=KanbanEarningsCallAdapter(kanban_service=kanban_service),
     )

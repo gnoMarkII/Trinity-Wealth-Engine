@@ -5,9 +5,11 @@ from filelock import FileLock
 
 from core.logger import get_logger
 from tools._atomic_io import _atomic_write_to
+from tools.archivist.maintenance_guard import assert_write_allowed
 from tools.portfolio.domain.models import GoalsState, GoalItem, _now_iso
 from tools.portfolio.ports.goals_port import GoalsRepositoryPort
-from .paths import GOALS_PATH, GOALS_ITEMS_DIR, _LOCK_TIMEOUT
+from .paths import GOALS_PATH, GOALS_ITEMS_DIR, _LOCK_TIMEOUT, get_vault_path
+from .identity import portfolio_note_identity
 
 log = get_logger(__name__)
 
@@ -24,11 +26,21 @@ def _initial_goals() -> GoalsState:
     )
 
 
-def _goal_item_to_md(goal: GoalItem) -> str:
+def _goal_item_to_md(goal: GoalItem, vault_root: Path) -> str:
+    item_key = f"{goal.name}:{goal.goal_type}:{goal.created_date}"
+    note_id, document_key = portfolio_note_identity(
+        vault_root, goal.portfolio_id, "goal_item", item_key
+    )
     lines = [
         "---",
-        f"schema_version: {goal.schema_version}",
+        "schema_version: 2",
+        f"note_id: {note_id}",
+        f"document_key: {document_key}",
+        f"title: {goal.name}",
         "entity_type: goal",
+        "document_role: portfolio_item",
+        f"portfolio_id: {goal.portfolio_id}",
+        "search_scope: excluded",
         "derived: true",
         f"name: {goal.name}",
         f"goal_type: {goal.goal_type}",
@@ -90,18 +102,32 @@ class MarkdownGoalsAdapter(GoalsRepositoryPort):
             if key in dump:
                 ordered[key] = dump.pop(key)
         ordered.update(dump)
+        note_id, document_key = portfolio_note_identity(
+            get_vault_path(), "default", "goals"
+        )
+        ordered.update({
+            "schema_version": 2,
+            "note_id": note_id,
+            "document_key": document_key,
+            "title": "Portfolio Goals",
+            "entity_type": "portfolio_state",
+            "document_role": "goals",
+            "portfolio_id": "default",
+            "search_scope": "excluded",
+        })
 
         post = frontmatter.Post(content="", **ordered)
         serialized = frontmatter.dumps(post, sort_keys=False)
         _atomic_write_to(GOALS_PATH, serialized)
 
         # Sync items sidecars
+        assert_write_allowed(GOALS_ITEMS_DIR)
         GOALS_ITEMS_DIR.mkdir(parents=True, exist_ok=True)
         live: set[str] = set()
 
         for goal in state.goals:
             safe = goal.name.replace("/", "_").replace(" ", "_")
-            _atomic_write_to(GOALS_ITEMS_DIR / f"{safe}.md", _goal_item_to_md(goal))
+            _atomic_write_to(GOALS_ITEMS_DIR / f"{safe}.md", _goal_item_to_md(goal, get_vault_path()))
             live.add(safe)
 
         for old in GOALS_ITEMS_DIR.glob("*.md"):

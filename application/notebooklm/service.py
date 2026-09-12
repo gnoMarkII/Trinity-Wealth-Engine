@@ -72,13 +72,32 @@ class NotebookLMApplicationService:
         job = self._repo.get_job(job_id)
         if job is None:
             return None
-        manifest = self._manifest_port.get_for_source(job["instruction"]) if self._manifest_port else None
+        manifest_res = self._manifest_port.get_for_source(job["instruction"]) if self._manifest_port else None
+        audio_path = None
+        notebook_id = None
+        recovery_status = None
+        error_msg = job.get("error_message")
+
+        if manifest_res is not None:
+            # Handle both ManifestLoadResult and raw NotebookLMManifest
+            if hasattr(manifest_res, "load_status"):
+                recovery_status = manifest_res.load_status.value
+                if manifest_res.manifest is not None:
+                    audio_path = manifest_res.manifest.audio_path
+                    notebook_id = manifest_res.manifest.notebook_id
+                if manifest_res.error_message:
+                    error_msg = f"Recovery blocker: {manifest_res.error_message}"
+            else:
+                audio_path = getattr(manifest_res, "audio_path", None)
+                notebook_id = getattr(manifest_res, "notebook_id", None)
+
         return NotebookLMStatusDTO(
             job_id=job_id,
             status=job["status"],
-            audio_path=manifest.audio_path if manifest else None,
-            notebook_id=manifest.notebook_id if manifest else None,
-            error=job.get("error_message"),
+            audio_path=audio_path,
+            notebook_id=notebook_id,
+            error=error_msg,
+            recovery_status=recovery_status,
         )
 
     def generate(self, card_id: str, briefing_file_path: Optional[str] = None) -> dict[str, Any]:
@@ -94,6 +113,26 @@ class NotebookLMApplicationService:
             raise ValueError("ต้องเลือกไฟล์ Briefing Book ก่อนสร้าง Audio")
         source = self._resolve_source(reference)
         source_path = source["file_path"]
+
+        # Preflight manifest status before any dispatch (fail-closed guard).
+        # Only RESOLVED manifests are allowed through — all error/unknown states
+        # must block dispatch to prevent duplicate external provider calls.
+        if self._manifest_port:
+            manifest_res = self._manifest_port.get_for_source(source_path)
+            if manifest_res is not None and hasattr(manifest_res, "load_status"):
+                from tools.content.notebooklm.manifest import ManifestStatus
+                blocked_statuses = (
+                    ManifestStatus.CORRUPT,
+                    ManifestStatus.UNSUPPORTED_VERSION,
+                    ManifestStatus.CONFLICT,
+                    ManifestStatus.MISSING_HISTORY,
+                )
+                if manifest_res.load_status in blocked_statuses:
+                    raise RuntimeError(
+                        f"NotebookLM dispatch blocked: source manifest is "
+                        f"{manifest_res.load_status.value}: {manifest_res.error_message}"
+                    )
+
         if card.get("prompt") != source_path:
             self._card_repo.set_source(card_id, source_path, bool(source.get("is_verified", True)))
         self._binary.check_available()

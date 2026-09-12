@@ -482,6 +482,8 @@ class SqliteEarningsCallWorkflowAdapter(_SqliteAdapterBase, EarningsCallWorkflow
         run_id: str,
         execution_token: str,
         vault_path: str,
+        revision_ref: Optional[str] = None,
+        content_sha256: Optional[str] = None,
         outbox_lease_seconds: int = 60,
     ) -> tuple[EarningsCallRunDTO, EarningsCallOutboxEventDTO, LeaseDTO]:
         with self._connection(write=True) as conn:
@@ -490,6 +492,8 @@ class SqliteEarningsCallWorkflowAdapter(_SqliteAdapterBase, EarningsCallWorkflow
                 run_id=run_id,
                 execution_token=execution_token,
                 vault_path=vault_path,
+                revision_ref=revision_ref,
+                content_sha256=content_sha256,
             )
             event_dto, lease_dto = earnings_call_outbox_repo_dao.enqueue_event(
                 conn=conn,

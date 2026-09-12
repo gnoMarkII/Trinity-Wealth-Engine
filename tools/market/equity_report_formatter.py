@@ -187,6 +187,7 @@ def format_equity_analysis_report(output: MicroQuantOutput) -> str:
 
     lines = [
         "---",
+        "schema_version: 2",
         f"title: {output.ticker} Equity Analysis {today}",
         "entity_type: equity_analysis",
         f"ticker: {output.ticker}",
@@ -441,7 +442,7 @@ def format_equity_analysis_report(output: MicroQuantOutput) -> str:
         output.base_case_summary,
         "",
         "## Related\n",
-        f"- [[{output.ticker}]]",
+        f"- {output.ticker}",
         "",
         "## หมายเหตุ\n",
         "> ตัวเลข Quant Signals ทั้งหมดคำนวณแบบ Deterministic จาก Yahoo Finance — LLM ไม่มีส่วนในการคำนวณตัวเลข",

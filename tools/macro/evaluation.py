@@ -275,13 +275,19 @@ def evaluate_macro_matrix() -> str:
     for key, f in files_to_check_map.items():
         path = snapshots_dir / f
         if not path.exists():
-            # Fallback 1: check old nested folder path (pre-migration)
-            fallback_nested = snapshots_dir / today_str / f
-            if fallback_nested.exists():
-                path = fallback_nested
-            else:
-                # Fallback 2: names without date suffix for test mocks
-                fallback_path = snapshots_dir / f"{key}.md"
+            # V2 YYYY/MM path
+            if len(today_str) >= 7:
+                v2_nested = snapshots_dir / today_str[:4] / today_str[5:7] / f
+                if v2_nested.exists():
+                    path = v2_nested
+            if not path.exists():
+                # Fallback 1: check old nested folder path (pre-migration)
+                fallback_nested = snapshots_dir / today_str / f
+                if fallback_nested.exists():
+                    path = fallback_nested
+                else:
+                    # Fallback 2: names without date suffix for test mocks
+                    fallback_path = snapshots_dir / f"{key}.md"
                 if fallback_path.exists():
                     path = fallback_path
                     f = f"{key}.md"
@@ -386,6 +392,8 @@ def _write_macro_observables_json_sidecar(observables: list[MarketObservable], t
     """บันทึก list[MarketObservable] เป็น JSON Sidecar ป้องกันการ regex parse จาก prose Markdown"""
     from tools._atomic_io import _atomic_write_to
     sidecar_path = snapshots_dir / f"Macro_Observables_Snapshot_{today_str}.json"
+    from tools.archivist.maintenance_guard import assert_write_allowed
+    assert_write_allowed(sidecar_path)
     snapshots_dir.mkdir(parents=True, exist_ok=True)
     payload = [o.model_dump(mode="json") for o in observables]
     _atomic_write_to(sidecar_path, json.dumps(payload, ensure_ascii=False, indent=2))
@@ -402,7 +410,10 @@ def load_latest_macro_observables(vault_path: Optional[Path] = None) -> dict[str
     snapshots_dir = vault_path / "30_Knowledge_Base" / "Macroeconomics" / "Daily_Snapshots"
 
     if snapshots_dir.exists():
-        json_files = sorted(list(snapshots_dir.glob("Macro_Observables_Snapshot_*.json")), reverse=True)
+        json_files = sorted(
+            [p for p in snapshots_dir.rglob("Macro_Observables_Snapshot_*.json") if "Revisions" not in p.parts],
+            reverse=True,
+        )
         if json_files:
             try:
                 latest_json = json_files[0]

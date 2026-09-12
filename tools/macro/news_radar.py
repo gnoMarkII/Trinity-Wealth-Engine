@@ -27,7 +27,8 @@ def _fetch_rss_with_retry(url: str):
     return with_retry(_fetch)
 
 _SAVE_DIR = Path(__file__).resolve().parents[2] / "memories" / "30_Knowledge_Base" / "News" / "Inbox"
-_NEWS_DIR = Path(__file__).resolve().parents[2] / "memories" / "30_Knowledge_Base" / "News"
+def _get_news_dir() -> Path:
+    return Path(os.getenv("OBSIDIAN_VAULT_PATH", "./memories")).resolve() / "30_Knowledge_Base" / "News"
 
 FEEDS = [
     {"name": "Investing.com (Economic News)", "url": "https://www.investing.com/rss/news_285.rss"},
@@ -37,12 +38,13 @@ FEEDS = [
 
 def _is_url_fetched(url: str) -> bool:
     """ตรวจสอบว่า URL นี้เคยถูก fetch และ save ไว้ใน 30_Knowledge_Base/News แล้วหรือไม่"""
-    if not _NEWS_DIR.exists():
+    news_dir = _get_news_dir()
+    if not news_dir.exists():
         return False
         
-    for md_file in _NEWS_DIR.rglob("*.md"):
-        # ไม่เช็คไฟล์ใน Inbox
-        if "Inbox" in md_file.parts:
+    for md_file in news_dir.rglob("*.md"):
+        # ไม่เช็คไฟล์ใน Inbox และ Revisions
+        if "Inbox" in md_file.parts or "Revisions" in md_file.parts:
             continue
         try:
             content = md_file.read_text(encoding="utf-8")
@@ -154,7 +156,6 @@ def generate_news_radar_daily() -> str:
         str: รายงาน News Radar รายวันในรูปแบบ Markdown พร้อม YAML Frontmatter
     """
     try:
-        _SAVE_DIR.mkdir(parents=True, exist_ok=True)
         today = datetime.now()
     
         md_lines = [

@@ -171,6 +171,8 @@ CREATE TABLE IF NOT EXISTS earnings_call_runs (
     execution_expires_at REAL,
     attempt_count INTEGER NOT NULL DEFAULT 0,
     last_error_code TEXT,
+    revision_ref TEXT,
+    content_sha256 TEXT,
     created_at REAL NOT NULL,
     updated_at REAL NOT NULL
 );
@@ -229,6 +231,8 @@ _COLUMN_MIGRATIONS: dict[str, dict[str, str]] = {
         "execution_expires_at": "execution_expires_at REAL",
         "attempt_count": "attempt_count INTEGER NOT NULL DEFAULT 0",
         "last_error_code": "last_error_code TEXT",
+        "revision_ref": "revision_ref TEXT",
+        "content_sha256": "content_sha256 TEXT",
     },
     "earnings_call_outbox": {
         "source_key": "source_key TEXT NOT NULL DEFAULT ''",

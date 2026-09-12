@@ -20,6 +20,7 @@ from core.logger import get_logger
 from schemas.briefing_book_schemas import NotebookLMPromptRecord
 from tools.content.notebooklm import adapter
 from tools.content.notebooklm.manifest import (
+    ManifestStatus,
     NotebookLMManifest,
     compute_content_hash,
     load_manifest,
@@ -34,6 +35,7 @@ from tools.content.notebooklm.models import (
     StudioTimeoutError,
 )
 from tools.content.notebooklm.prompts import build_notebook_query, build_research_query
+from tools.archivist.maintenance_guard import assert_write_allowed
 
 logger = get_logger(__name__)
 
@@ -305,6 +307,7 @@ async def _download_audio(
     dest_name = f"{briefing_file_path.stem}_{manifest.content_hash[:8]}{ext}"
     dest_path = OUTPUT_DIR / dest_name
     tmp_path = OUTPUT_DIR / f".tmp_{dest_name}"
+    assert_write_allowed(dest_path)
 
     for attempt in range(60):
         try:
@@ -330,6 +333,7 @@ async def _download_audio(
         tmp_path.unlink(missing_ok=True)
         raise RuntimeError(f"ดาวน์โหลด audio artifact ไม่สำเร็จหรือไฟล์ว่างเปล่า: {tmp_path}")
 
+    assert_write_allowed(dest_path)
     os.replace(tmp_path, dest_path)
     return dest_path
 
@@ -390,7 +394,21 @@ async def run_notebooklm_post_production_pipeline(
     resolved_path = _validate_input(briefing_file_path)
     content_hash = compute_content_hash(resolved_path)
     manifest_path = manifest_path_for(content_hash)
-    manifest = load_manifest(manifest_path) or new_manifest(content_hash=content_hash, briefing_path=resolved_path)
+    manifest_res = load_manifest(manifest_path)
+    if manifest_res.load_status == ManifestStatus.NEVER_SEEN:
+        manifest = new_manifest(content_hash=content_hash, briefing_path=resolved_path)
+    elif manifest_res.load_status == ManifestStatus.RESOLVED and manifest_res.manifest is not None:
+        manifest = manifest_res.manifest
+    else:
+        logger.error(
+            "[NotebookLM Pipeline] BLOCKED | load_status: %s | error: %s | path: %s",
+            manifest_res.load_status,
+            manifest_res.error_message,
+            manifest_path,
+        )
+        raise RuntimeError(
+            f"NotebookLM pipeline stopped (fail-closed): manifest at {manifest_path} is {manifest_res.load_status.value}: {manifest_res.error_message}"
+        )
 
     if manifest.status == "completed" and manifest.audio_path:
         logger.info("[NotebookLM Pipeline] SKIP | reason: already completed | hash %s", content_hash[:8])

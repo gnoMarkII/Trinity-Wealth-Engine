@@ -122,6 +122,7 @@ def ingest_stock_momentum(ticker: str, market: Market = "US") -> str:
 
     md_lines = [
         "---",
+        "schema_version: 2",
         f"title: {display_sym} Momentum Insider {today}",
         "entity_type: Stock_Momentum",
         f"ticker: {display_sym}",
@@ -162,7 +163,7 @@ def ingest_stock_momentum(ticker: str, market: Market = "US") -> str:
         "",
         "## Related",
         "",
-        f"- [[{display_sym}]]",
+        f"- {display_sym}",
         "",
         "## หมายเหตุ",
         "",

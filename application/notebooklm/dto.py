@@ -18,3 +18,4 @@ class NotebookLMStatusDTO:
     audio_path: Optional[str] = None
     notebook_id: Optional[str] = None
     error: Optional[str] = None
+    recovery_status: Optional[str] = None

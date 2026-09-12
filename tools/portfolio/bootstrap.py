@@ -1,5 +1,6 @@
 """Composition Root & Dependency Injection Bootstrap for Portfolio Bounded Context."""
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Optional
 
 from tools.portfolio.ports.repository_port import PortfolioRepositoryPort
@@ -114,6 +115,10 @@ def build_default_portfolio_dependencies(db_path: Optional[str] = None) -> Portf
     """Construct concrete adapters and bundle them as default dependencies."""
     from tools.portfolio.adapters.markdown.repository_adapter import MarkdownVaultRepositoryAdapter
     from tools.portfolio.adapters.sqlite_mirror_decorator import SqliteMirroredPortfolioRepository
+    from tools.portfolio.transactional_repository import TransactionalPortfolioRepository
+    from tools.portfolio.transaction_store import PortfolioTransactionStore
+    from tools.archivist.vault_paths import VaultPaths
+    from tools.archivist.runtime_layout import runtime_root_for
     from tools.portfolio.adapters.markdown.watchlist_adapter import MarkdownWatchlistAdapter
     from tools.portfolio.adapters.markdown.goals_adapter import MarkdownGoalsAdapter
     from tools.portfolio.adapters.markdown.performance_adapter import MarkdownPerformanceAdapter
@@ -124,7 +129,11 @@ def build_default_portfolio_dependencies(db_path: Optional[str] = None) -> Portf
     from tools.portfolio.adapters.dividend_yfinance_adapter import DividendYFinanceAdapter
 
     md_repo = MarkdownVaultRepositoryAdapter()
-    repo = SqliteMirroredPortfolioRepository(underlying_repo=md_repo, db_path=db_path)
+    mirror_repo = SqliteMirroredPortfolioRepository(underlying_repo=md_repo, db_path=db_path)
+    portfolio_vault_paths = VaultPaths()
+    transaction_runtime = runtime_root_for(portfolio_vault_paths.root, create=True)
+    transaction_store = PortfolioTransactionStore(vault_paths=portfolio_vault_paths, runtime_root=transaction_runtime)
+    repo = TransactionalPortfolioRepository(underlying_repo=mirror_repo, store=transaction_store)
     watchlist_repo = MarkdownWatchlistAdapter()
     goals_repo = MarkdownGoalsAdapter()
     perf_repo = MarkdownPerformanceAdapter()

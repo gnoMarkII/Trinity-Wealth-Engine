@@ -160,12 +160,15 @@ def fetch_news_for_pitching(
     except Exception as e:
         logger.warning("Failed loading Layer 1 candidates: %s", e)
 
-    # 2. ดึงจาก Layer 2: Synthesized Notes (30_Knowledge_Base/News/*.md) เมื่อเป็น Fallback หรือต้องการข้อมูลเพิ่ม
+    # 2. ดึงจาก Layer 2: Synthesized Notes (30_Knowledge_Base/News/**/*.md) เมื่อเป็น Fallback หรือต้องการข้อมูลเพิ่ม
     if is_layer2_fallback or len(candidates) < 10:
         try:
-            news_notes_dir = Path(VAULT_PATH) / "30_Knowledge_Base" / "News"
+            vault_base = Path(os.getenv("OBSIDIAN_VAULT_PATH", VAULT_PATH))
+            news_notes_dir = vault_base / "30_Knowledge_Base" / "News"
             if news_notes_dir.exists():
-                for md_file in news_notes_dir.glob("*.md"):
+                for md_file in news_notes_dir.rglob("*.md"):
+                    if "Inbox" in md_file.parts or "Revisions" in md_file.parts:
+                        continue
                     try:
                         content = md_file.read_text(encoding="utf-8")
                         # Parse Frontmatter
@@ -209,9 +212,12 @@ def fetch_news_for_pitching(
 
     # 2.5 ดึงจาก Layer 2: YouTube Summaries (Always Include)
     try:
-        yt_summaries_dir = Path(VAULT_PATH) / "30_Knowledge_Base" / "YouTube_Summaries"
+        vault_base = Path(os.getenv("OBSIDIAN_VAULT_PATH", VAULT_PATH))
+        yt_summaries_dir = vault_base / "30_Knowledge_Base" / "YouTube_Summaries"
         if yt_summaries_dir.exists():
-            for md_file in yt_summaries_dir.glob("*.md"):
+            for md_file in yt_summaries_dir.rglob("*.md"):
+                if "Inbox" in md_file.parts or "Revisions" in md_file.parts:
+                    continue
                 try:
                     content = md_file.read_text(encoding="utf-8")
                     entity_type = extract_yaml_frontmatter_value(content, "entity_type")

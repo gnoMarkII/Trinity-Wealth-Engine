@@ -12,6 +12,8 @@ from langchain_core.runnables.config import RunnableConfig
 from langgraph.graph import END, START, MessagesState, StateGraph
 from langgraph.types import Command
 from pydantic import BaseModel, Field
+from application.knowledge.note_write_ports import KnowledgeNoteWritePort
+from tools.archivist.composition import build_knowledge_note_writer
 
 from agents.archivist_agent import create_archivist
 from agents.bookkeeper_agent import create_bookkeeper
@@ -268,7 +270,8 @@ def _get_elapsed(meta: dict) -> float | None:
     return elapsed if elapsed >= 0 else None
 
 
-def build_graph(checkpointer=None) -> StateGraph:
+def build_graph(checkpointer=None, note_writer: Optional[KnowledgeNoteWritePort] = None) -> StateGraph:
+    note_writer = note_writer or build_knowledge_note_writer()
     archivist_graph = _get_archivist_graph()
     bookkeeper_graph = _get_bookkeeper_graph()
     macro_quant_graph = _get_macro_quant_graph()
@@ -585,7 +588,7 @@ def build_graph(checkpointer=None) -> StateGraph:
 
             # Save deterministic baseline for future pivot comparisons
             from tools.macro.baselines import save_macro_baseline
-            save_macro_baseline(validated_json)
+            save_macro_baseline(validated_json, note_writer=note_writer)
 
             turn_id = state.get("turn_id", "unknown")
             elapsed = _get_elapsed(state.get("route_meta") or {})
@@ -797,7 +800,7 @@ def build_graph(checkpointer=None) -> StateGraph:
         try:
             validated = QuantSignals.model_validate(json.loads(reply))
             try:
-                save_equity_quant_snapshot(validated)
+                save_equity_quant_snapshot(validated, note_writer=note_writer)
             except Exception as hist_err:
                 log.warning("save_equity_quant_snapshot failed (non-fatal): %s", hist_err)
 
@@ -988,4 +991,3 @@ def build_graph(checkpointer=None) -> StateGraph:
     builder.add_edge("equity_narrative", "post_equity_narrative")
 
     return builder.compile(checkpointer=checkpointer)
-

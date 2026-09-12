@@ -738,20 +738,29 @@ def test_decode_result_raises_on_is_error():
 
 # ── Manifest validation ───────────────────────────────────────────────────
 
-def test_load_manifest_returns_none_for_missing_file(tmp_path):
-    assert manifest_mod.load_manifest(tmp_path / "does_not_exist.json") is None
+def test_load_manifest_returns_never_seen_for_missing_file(tmp_path):
+    res = manifest_mod.load_manifest(tmp_path / "does_not_exist.json")
+    assert res.load_status == manifest_mod.ManifestStatus.NEVER_SEEN
+    assert res.manifest is None
+    assert res.is_resolved is False
 
 
-def test_load_manifest_returns_none_for_corrupt_json(tmp_path):
+def test_load_manifest_returns_corrupt_for_corrupt_json(tmp_path):
     bad = tmp_path / "corrupt.json"
     bad.write_text("{not valid json", encoding="utf-8")
-    assert manifest_mod.load_manifest(bad) is None
+    res = manifest_mod.load_manifest(bad)
+    assert res.load_status == manifest_mod.ManifestStatus.CORRUPT
+    assert res.manifest is None
+    assert res.is_corrupt is True
 
 
-def test_load_manifest_returns_none_for_schema_mismatch(tmp_path):
+def test_load_manifest_returns_unsupported_version_for_schema_mismatch(tmp_path):
     bad = tmp_path / "schema_mismatch.json"
     bad.write_text('{"unexpected_field_only": true}', encoding="utf-8")  # ขาด required fields
-    assert manifest_mod.load_manifest(bad) is None
+    res = manifest_mod.load_manifest(bad)
+    assert res.load_status == manifest_mod.ManifestStatus.UNSUPPORTED_VERSION
+    assert res.manifest is None
+    assert res.is_corrupt is True
 
 
 # ── on_step callback: ให้ caller (api/notebooklm_worker.py) เขียน job_logs ได้เอง ──────

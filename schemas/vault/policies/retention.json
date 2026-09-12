@@ -1,0 +1,33 @@
+{
+  "policy_id": "vault-retention-policy",
+  "policy_version": 1,
+  "classes": {
+    "permanent": {
+      "canonical": true,
+      "archive_after_days": null,
+      "delete_requires_tombstone": true
+    },
+    "long_term": {
+      "canonical": true,
+      "archive_after_days": 3650,
+      "delete_requires_tombstone": true
+    },
+    "operational": {
+      "canonical": false,
+      "archive_after_days": 365,
+      "delete_requires_tombstone": false
+    },
+    "ephemeral": {
+      "canonical": false,
+      "archive_after_days": 30,
+      "delete_requires_tombstone": false
+    }
+  },
+  "default_by_profile": {
+    "published": "permanent",
+    "capture": "operational",
+    "portfolio_projection": "operational",
+    "navigation": "ephemeral",
+    "derived_artifact": "ephemeral"
+  }
+}

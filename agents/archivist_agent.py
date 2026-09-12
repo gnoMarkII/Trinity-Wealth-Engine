@@ -2,10 +2,14 @@ from langchain_core.language_models import BaseChatModel
 from langchain_core.runnables import Runnable
 from langchain.agents import create_agent
 
-from tools.archivist.core import read_file
+from tools.archivist.core import read_file, read_note_chunk
 from tools.archivist.writer import save_memory, write_raw_markdown
 from tools.archivist.indexer import update_master_index
-from tools.archivist.search import search_all_memories, search_graph_context
+from tools.archivist.search import (
+    search_all_memories,
+    search_graph_context,
+    search_memories_with_evidence,
+)
 from tools.archivist.linter import lint_structural_health, lint_semantic_conflict
 from core.prompt_harness import get_harness
 
@@ -15,8 +19,10 @@ _archivist_tools = [
     write_raw_markdown,
     save_memory,
     search_all_memories,
+    search_memories_with_evidence,
     search_graph_context,
     read_file,
+    read_note_chunk,
     update_master_index,
     lint_structural_health,
     lint_semantic_conflict,

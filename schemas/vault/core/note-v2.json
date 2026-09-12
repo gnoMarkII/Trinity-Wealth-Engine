@@ -1,0 +1,20 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:invest-agents:vault:note:v2",
+  "title": "Portable Vault Note v2",
+  "type": "object",
+  "required": ["schema_version", "note_id", "document_key", "entity_type", "title"],
+  "properties": {
+    "schema_version": {"const": 2},
+    "note_id": {"type": "string", "minLength": 1},
+    "document_key": {"type": "string", "minLength": 1},
+    "entity_type": {"type": "string", "minLength": 1},
+    "title": {"type": "string", "minLength": 1},
+    "search_scope": {"enum": ["included", "excluded"]},
+    "content_status": {"type": "string"},
+    "sensitivity": {"enum": ["public", "internal", "confidential", "restricted"]},
+    "retention_class": {"type": "string"},
+    "verification_status": {"type": ["string", "null"]}
+  },
+  "additionalProperties": true
+}

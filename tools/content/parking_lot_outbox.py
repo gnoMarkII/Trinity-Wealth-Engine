@@ -29,7 +29,10 @@ def set_sync_handler(handler: Optional[Callable[[List[str], str, Optional[str]],
 
 def _get_outbox_dir(vault_root: Path) -> Path:
     """Return the canonical outbox directory in Vault."""
-    outbox_dir = vault_root / "NotebookLM_Sources" / "outbox"
+    root = Path(vault_root)
+    if (root / "30_Knowledge_Base").is_dir():
+        root = root / "30_Knowledge_Base"
+    outbox_dir = root / "NotebookLM_Sources" / "outbox"
     outbox_dir.mkdir(parents=True, exist_ok=True)
     return outbox_dir
 

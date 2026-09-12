@@ -4,6 +4,7 @@ from typing import Optional, Protocol
 from application.earnings_call.dto import (
     ClaimDTO,
     EarningsCallNoteDTO,
+    EarningsCallWriteResultDTO,
     EarningsCallOutboxEventDTO,
     EarningsCallRunDTO,
     KanbanCardResultDTO,
@@ -25,6 +26,12 @@ class EarningsCallNoteWriterPort(Protocol):
         self, ticker: str, period: str, transcript: str, highlights: str
     ) -> str:
         """Writes note containing both highlights and raw transcript; returns vault-relative path."""
+        ...
+
+    def write_note_result(
+        self, ticker: str, period: str, transcript: str, highlights: str
+    ) -> EarningsCallWriteResultDTO:
+        """Optional richer boundary carrying the committed revision reference."""
         ...
 
     def list_notes_for_ticker(self, ticker: str) -> list[EarningsCallNoteDTO]:
@@ -74,6 +81,8 @@ class EarningsCallWorkflowPort(Protocol):
         run_id: str,
         execution_token: str,
         vault_path: str,
+        revision_ref: Optional[str] = None,
+        content_sha256: Optional[str] = None,
         outbox_lease_seconds: int = 60,
     ) -> tuple[EarningsCallRunDTO, EarningsCallOutboxEventDTO, LeaseDTO]:
         """Marks note written and enqueues transactional outbox event with initial lease."""

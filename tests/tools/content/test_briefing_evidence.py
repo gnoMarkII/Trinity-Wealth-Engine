@@ -281,7 +281,8 @@ def test_save_verifies_persisted_content_and_quality_hash(tmp_path, monkeypatch)
     ).path
     sidecar = saved.with_suffix(".quality.json")
 
-    assert saved.read_text(encoding="utf-8") == content
+    from tools.archivist.parser import _strip_frontmatter
+    assert _strip_frontmatter(saved.read_text(encoding="utf-8")) == content
     saved_report = json.loads(sidecar.read_text(encoding="utf-8"))
     import hashlib
     assert saved_report["content_sha256"] == hashlib.sha256(content.encode("utf-8")).hexdigest()

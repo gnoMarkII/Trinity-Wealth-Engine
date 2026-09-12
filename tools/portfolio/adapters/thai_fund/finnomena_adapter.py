@@ -71,6 +71,8 @@ class FinnomenaFundAdapter(ThaiFundPricePort):
     def _save_catalog_to_cache(self) -> None:
         """Save fund catalog to disk cache."""
         try:
+            from tools.archivist.maintenance_guard import assert_write_allowed
+            assert_write_allowed(self._cache_dir)
             self._cache_dir.mkdir(parents=True, exist_ok=True)
             temp_file = self._cache_file.with_suffix(".tmp")
             with open(temp_file, "w", encoding="utf-8") as f:
@@ -259,4 +261,3 @@ class FinnomenaFundAdapter(ThaiFundPricePort):
             return round(history[closest_date], 4)
 
         return None
-

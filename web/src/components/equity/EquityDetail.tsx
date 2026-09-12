@@ -397,6 +397,7 @@ export const EquityDetail: React.FC<EquityDetailProps> = ({ status, data, errorM
                 onClick={() => setIsFactorsExpanded(prev => !prev)}
                 className="w-full flex items-center justify-between text-left transition-colors"
                 aria-expanded={isFactorsExpanded}
+                aria-label="Toggle factor breakdown"
               >
                 <div className="flex items-center gap-2">
                   <span className="text-base">💎</span>

@@ -1,4 +1,5 @@
 import json
+import os
 import re
 from datetime import datetime
 from pathlib import Path
@@ -313,13 +314,24 @@ def write_strategy_json_sidecar(
     ไฟล์นี้คือ source of truth สำหรับ Web API, ไม่ใช่สำหรับแสดงใน Obsidian
     """
     from tools.macro.dashboard import build_dashboard_indicators, persist_indicator_series
+    vault_base = Path(os.getenv("OBSIDIAN_VAULT_PATH", str(VAULT_PATH))).resolve()
 
     dashboard_indicators = build_dashboard_indicators(direction, observable_registry)
-    persist_indicator_series(VAULT_PATH, dashboard_indicators)
+    persist_indicator_series(vault_base, dashboard_indicators)
 
     payload = direction.model_dump(mode="json")
     payload["dashboard_indicators"] = dashboard_indicators
     payload["report_references"] = report_references or []
-    json_path = VAULT_PATH / _STRATEGY_SUBDIR / f"Macro_Strategy_Direction_{evaluated_date}.json"
+
+    from tools.archivist.vault_paths import VaultPaths
+    vp = VaultPaths(vault_base)
+    if vp.layout_version >= 2 and len(evaluated_date) >= 7:
+        target_dir = vault_base / "30_Knowledge_Base" / "Macroeconomics" / "Strategies" / evaluated_date[:4] / evaluated_date[5:7]
+    else:
+        target_dir = vault_base / _STRATEGY_SUBDIR
+    json_path = target_dir / f"Macro_Strategy_Direction_{evaluated_date}.json"
+    from tools.archivist.maintenance_guard import assert_write_allowed
+    assert_write_allowed(json_path)
+    target_dir.mkdir(parents=True, exist_ok=True)
     _atomic_write_text(json_path, json.dumps(payload, ensure_ascii=False, indent=2))
     return json_path

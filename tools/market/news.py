@@ -102,6 +102,7 @@ def ingest_stock_news(ticker: str, market: Market = "US") -> str:
 
     md_lines = [
         "---",
+        "schema_version: 2",
         f"title: {display_sym} Latest News {today}",
         "entity_type: Company_News",
         f"ticker: {display_sym}",
@@ -139,7 +140,7 @@ def ingest_stock_news(ticker: str, market: Market = "US") -> str:
     md_lines += [
         "## Related",
         "",
-        f"- [[{display_sym}]]",
+        f"- {display_sym}",
         "",
         "## หมายเหตุ",
         "",

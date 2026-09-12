@@ -10,14 +10,15 @@ Single Source of Truth ตามกฎ 5.3) แต่ต่างจาก basel
 import json
 import os
 import re
-import tempfile
-import time
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
 from core.logger import get_logger
 from schemas.micro_quant_schemas import QuantSignals
+from application.knowledge.note_write_ports import KnowledgeNoteWritePort
+from application.knowledge.write_context import current_note_writer
+from tools._atomic_io import _atomic_write_to as _shared_atomic_write_to
 
 log = get_logger(__name__)
 
@@ -25,48 +26,29 @@ _JSON_BLOCK_RE = re.compile(r"```(?:json)?\s*(.*?)\s*```", re.DOTALL)
 
 
 def _history_dir(ticker: str) -> Path:
-    vault_path = os.getenv("OBSIDIAN_VAULT_PATH", str(Path(__file__).resolve().parents[2] / "memories"))
-    return Path(vault_path) / "30_Knowledge_Base" / "Equities" / "QuantHistory" / ticker.upper()
+    from tools.archivist.vault_paths import VaultPaths
+    vp = VaultPaths()
+    t = ticker.upper()
+    v2_dir = vp.root / "30_Knowledge_Base" / "Stocks" / t / "Quant"
+    if vp.layout_version >= 2 or v2_dir.exists():
+        return v2_dir
+    legacy_dir = vp.root / "30_Knowledge_Base" / "Equities" / "QuantHistory" / t
+    return legacy_dir
 
 
 def _atomic_write_text(path: Path, content: str, max_retries: int = 8, backoff: float = 0.05) -> None:
-    """เขียนไฟล์แบบ atomic (temp file ไดเรกทอรีเดียวกัน + os.replace) ตามกฎ 5.1"""
-    path.parent.mkdir(parents=True, exist_ok=True)
-    fd, tmp_path_str = tempfile.mkstemp(dir=str(path.parent), suffix=".tmp")
-    tmp_path = Path(tmp_path_str)
-    try:
-        with os.fdopen(fd, "w", encoding="utf-8") as f:
-            f.write(content)
-            f.flush()
-        
-        last_err: Exception | None = None
-        for attempt in range(max_retries):
-            try:
-                os.replace(tmp_path, path)
-                last_err = None
-                break
-            except (PermissionError, OSError) as e:
-                last_err = e
-                winerror = getattr(e, "winerror", None)
-                if winerror in (5, 32) or isinstance(e, PermissionError):
-                    time.sleep(backoff * (1.5 ** attempt))
-                else:
-                    break
-        if last_err is not None:
-            raise last_err
-    except Exception:
-        if tmp_path.exists():
-            tmp_path.unlink(missing_ok=True)
-        raise
+    """Compatibility alias; delegate to the shared atomic writer."""
+    _shared_atomic_write_to(path, content)
 
 
-def save_equity_quant_snapshot(signals: QuantSignals) -> None:
+def save_equity_quant_snapshot(signals: QuantSignals, *, note_writer: KnowledgeNoteWritePort | None = None) -> None:
     """บันทึก QuantSignals เป็นไฟล์ Markdown แยกต่อ ticker+วัน (re-run วันเดียวกัน = overwrite ไฟล์เดิม)
 
     ไม่ raise exception ออกไป — เป็น side-effect เสริมของ equity_intel pipeline เท่านั้น
     ถ้าเขียนไม่สำเร็จให้ log แล้วปล่อยให้ pipeline หลักทำงานต่อได้ตามปกติ (ไม่ block การวิเคราะห์)
     """
     try:
+        note_writer = note_writer or current_note_writer(Path(os.getenv("OBSIDIAN_VAULT_PATH", "./memories")).resolve())
         date_str = signals.evaluated_at[:10]
         ticker_upper = signals.ticker.upper()
         file_path = _history_dir(ticker_upper) / f"{ticker_upper}_{date_str}.md"
@@ -76,16 +58,7 @@ def save_equity_quant_snapshot(signals: QuantSignals) -> None:
         def _fmt(v: Any) -> str:
             return "N/A" if v is None else str(v)
 
-        markdown_content = f"""---
-title: {ticker_upper} Quant Signals {date_str}
-entity_type: equity_quant_snapshot
-ticker: {ticker_upper}
-market: {signals.market}
-date: {date_str}
-tags: [equity_quant, {signals.ticker.lower()}, market_{signals.market.lower()}]
----
-
-# Quant Signals: {ticker_upper} ({date_str})
+        body_content = f"""# Quant Signals: {ticker_upper} ({date_str})
 
 | Metric | Value |
 |---|---|
@@ -104,7 +77,18 @@ tags: [equity_quant, {signals.ticker.lower()}, market_{signals.market.lower()}]
 {json_content}
 ```
 """
-        _atomic_write_text(file_path, markdown_content)
+        note_writer.write_note(
+            metadata={
+                "title": f"{ticker_upper} Quant Signals {date_str}",
+                "entity_type": "equity_quant_snapshot",
+                "ticker": ticker_upper,
+                "market": signals.market,
+                "date": date_str,
+                "tags": ["equity_quant", signals.ticker.lower(), f"market_{signals.market.lower()}"],
+            },
+            body=body_content,
+            filename=f"{ticker_upper}_{date_str}.md",
+        )
     except Exception as e:
         log.warning("save_equity_quant_snapshot failed for %s (non-fatal): %s", signals.ticker, e)
 
@@ -120,8 +104,17 @@ def get_equity_score_trend(ticker: str, days: int = 90) -> list[dict[str, Any]]:
         return []
 
     cutoff_date = datetime.now(timezone.utc).date()
+    t_up = ticker.upper()
+    candidate_files = list(history_dir.glob(f"{t_up}_*.md")) + list(history_dir.glob(f"*{t_up}*.md"))
+    seen_paths: set[Path] = set()
+    sorted_files = []
+    for p in sorted(candidate_files, key=lambda x: x.name):
+        if p not in seen_paths and p.is_file():
+            seen_paths.add(p)
+            sorted_files.append(p)
+
     results: list[dict[str, Any]] = []
-    for f in sorted(history_dir.glob(f"{ticker.upper()}_*.md")):
+    for f in sorted_files:
         try:
             content = f.read_text(encoding="utf-8")
             match = _JSON_BLOCK_RE.search(content)

@@ -15,6 +15,7 @@ from core.logger import get_logger
 from schemas.micro_quant_schemas import DataStatus
 from tools._atomic_io import _atomic_write_to
 from tools.archivist.core import VAULT_PATH
+from tools.archivist.maintenance_guard import assert_write_allowed
 
 log = get_logger(__name__)
 
@@ -50,6 +51,7 @@ def append_pit_entry(
 ) -> Path:
     """Appends an immutable PIT snapshot to the ticker's ledger file."""
     target_dir = base_dir or _DEFAULT_PIT_DIR
+    assert_write_allowed(target_dir)
     target_dir.mkdir(parents=True, exist_ok=True)
     
     file_path = target_dir / f"{entry.ticker.upper()}.json"

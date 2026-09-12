@@ -54,8 +54,13 @@ class EquitySidecarValuationAdapter:
         self._vault_path = vault_path or VAULT_PATH
 
     def latest(self, ticker: str) -> Any:
-        pattern = f"30_Knowledge_Base/Stocks/{ticker}/{ticker} Equity Analysis *.json"
-        files = sorted(self._vault_path.glob(pattern), key=self._date_key, reverse=True)
+        sys_pattern = f".system/sidecars/{ticker}/* Equity Analysis *.json"
+        v2_pattern = f"30_Knowledge_Base/Stocks/{ticker}/Analysis/* Equity Analysis *.json"
+        v1_pattern = f"30_Knowledge_Base/Stocks/{ticker}/{ticker} Equity Analysis *.json"
+        all_files = list(self._vault_path.glob(sys_pattern)) + list(self._vault_path.glob(v2_pattern)) + list(self._vault_path.glob(v1_pattern))
+        non_latest = [f for f in all_files if not f.name.endswith("latest.json")]
+        candidate_files = non_latest if non_latest else all_files
+        files = sorted(candidate_files, key=self._date_key, reverse=True)
         if not files:
             return None
         try:

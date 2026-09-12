@@ -19,7 +19,7 @@ def _is_url_already_processed(url: str) -> bool:
     if not news_dir.exists():
         return False
     for md_file in news_dir.rglob("*.md"):
-        if "Inbox" in md_file.parts:
+        if "Inbox" in md_file.parts or "Revisions" in md_file.parts:
             continue
         try:
             content = md_file.read_text(encoding="utf-8")

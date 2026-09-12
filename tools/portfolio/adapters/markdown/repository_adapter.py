@@ -14,6 +14,7 @@ from filelock import FileLock, Timeout
 
 from core.logger import get_logger
 from tools._atomic_io import _atomic_write_to
+from tools.archivist.maintenance_guard import assert_write_allowed
 from decimal import Decimal
 from tools.portfolio.domain.constants import (
     CASH_THB_SYMBOL,
@@ -46,10 +47,12 @@ from .paths import (
     get_pending_manifest_path,
     get_holdings_dir,
     get_journal_filepath,
+    get_vault_path,
     _TRADES_LOG_HEADER,
     _LOCK_TIMEOUT,
 )
-from .journal_format import inject_journal_wikilinks
+from .journal_format import inject_journal_wikilinks, serialize_journal
+from .identity import portfolio_note_identity
 
 log = get_logger(__name__)
 
@@ -116,8 +119,11 @@ def _initial_state() -> PortfolioState:
     )
 
 
-def _holding_to_md(h: Holding) -> str:
+def _holding_to_md(h: Holding, portfolio_id: str, vault_root: Path) -> str:
     """Generate YAML frontmatter markdown for holding sidecar note."""
+    note_id, document_key = portfolio_note_identity(
+        vault_root, portfolio_id, "holding_item", h.symbol
+    )
     if h.avg_cost_usd is not None:
         currency = "USD"
         avg_cost = h.avg_cost_usd
@@ -129,8 +135,14 @@ def _holding_to_md(h: Holding) -> str:
 
     lines = [
         "---",
-        f"schema_version: {h.schema_version}",
+        "schema_version: 2",
+        f"note_id: {note_id}",
+        f"document_key: {document_key}",
+        f"title: {h.symbol}",
         "entity_type: holding",
+        "document_role: portfolio_item",
+        f"portfolio_id: {portfolio_id}",
+        "search_scope: excluded",
         "derived: true",
         f"symbol: {h.symbol}",
         f"asset_type: {h.asset_type}",
@@ -348,6 +360,7 @@ class MarkdownVaultRepositoryAdapter(PortfolioRepositoryPort):
 
     def backup_and_reset_clean_slate(self, portfolio_id: str = "default") -> PortfolioState:
         pid = validate_portfolio_id(portfolio_id)
+        assert_write_allowed(get_vault_path())
         with self.unit_of_work(pid) as uow:
             state = uow.load_state()
 
@@ -427,6 +440,7 @@ class MarkdownVaultRepositoryAdapter(PortfolioRepositoryPort):
         return results
 
     def create_portfolio(self, name: str, portfolio_id: Optional[str] = None) -> PortfolioMeta:
+        assert_write_allowed(get_vault_path())
         clean_name = (name or "").strip()
         if not clean_name:
             raise ValueError("ชื่อพอร์ตต้องไม่ว่างเปล่า")
@@ -454,6 +468,7 @@ class MarkdownVaultRepositoryAdapter(PortfolioRepositoryPort):
         return PortfolioMeta(id=pid, name=clean_name, is_default=False)
 
     def delete_portfolio(self, portfolio_id: str) -> None:
+        assert_write_allowed(get_vault_path())
         pid = validate_portfolio_id(portfolio_id)
         if pid == "default":
             raise ValueError("ไม่สามารถลบพอร์ตหลัก (default) ได้")
@@ -463,6 +478,7 @@ class MarkdownVaultRepositoryAdapter(PortfolioRepositoryPort):
         shutil.rmtree(pdir, ignore_errors=True)
 
     def rename_portfolio(self, portfolio_id: str, new_name: str) -> PortfolioMeta:
+        assert_write_allowed(get_vault_path())
         pid = validate_portfolio_id(portfolio_id)
         clean_name = (new_name or "").strip()
         if not clean_name:
@@ -504,7 +520,7 @@ class MarkdownVaultRepositoryAdapter(PortfolioRepositoryPort):
             state.name = post.metadata.get("name")
         return post, state
 
-    def _serialize_state_to_md(self, state: PortfolioState) -> str:
+    def _serialize_state_to_md(self, state: PortfolioState, portfolio_id: str = "default") -> str:
         recalc_all(state)
         state.last_updated = _now_iso()
         dump = state.model_dump(exclude_none=True)
@@ -516,6 +532,19 @@ class MarkdownVaultRepositoryAdapter(PortfolioRepositoryPort):
             if key in dump:
                 ordered[key] = dump.pop(key)
         ordered.update(dump)
+        note_id, document_key = portfolio_note_identity(
+            get_vault_path(), portfolio_id, "holdings"
+        )
+        ordered.update({
+            "schema_version": 2,
+            "note_id": note_id,
+            "document_key": document_key,
+            "title": state.name or f"Portfolio {portfolio_id}",
+            "entity_type": "portfolio_state",
+            "document_role": "portfolio_state",
+            "portfolio_id": portfolio_id,
+            "search_scope": "excluded",
+        })
 
         post = frontmatter.Post(content="", **ordered)
         return frontmatter.dumps(post, sort_keys=False)
@@ -523,6 +552,7 @@ class MarkdownVaultRepositoryAdapter(PortfolioRepositoryPort):
     def _sync_sidecars(self, state: PortfolioState, portfolio_id: str = "default") -> None:
         """Sync derived sidecars Holdings/*.md atomically."""
         holdings_dir = get_holdings_dir(portfolio_id)
+        assert_write_allowed(holdings_dir)
         holdings_dir.mkdir(parents=True, exist_ok=True)
         live: set[str] = set()
 
@@ -530,7 +560,10 @@ class MarkdownVaultRepositoryAdapter(PortfolioRepositoryPort):
             if h.asset_type == "Cash":
                 continue
             safe = h.symbol.replace("/", "_")
-            _atomic_write_to(holdings_dir / f"{safe}.md", _holding_to_md(h))
+            _atomic_write_to(
+                holdings_dir / f"{safe}.md",
+                _holding_to_md(h, portfolio_id, get_vault_path()),
+            )
             live.add(safe)
 
         for old in holdings_dir.glob("*.md"):
@@ -644,6 +677,7 @@ class MarkdownVaultRepositoryAdapter(PortfolioRepositoryPort):
         ledger_change: Optional[Union[LedgerChange, PortfolioMutation]] = None,
     ) -> None:
         """Durable staged commit with crash-consistent recovery sequencing."""
+        assert_write_allowed(get_vault_path())
         pdir = get_portfolio_dir(portfolio_id)
         master_file = get_portfolio_filepath(portfolio_id)
         ledger_file = get_trades_log_filepath(portfolio_id)
@@ -660,7 +694,7 @@ class MarkdownVaultRepositoryAdapter(PortfolioRepositoryPort):
 
         # 1. Stage Master File
         staged_master = pdir / f".master_{tx_id}.staged"
-        serialized_master = self._serialize_state_to_md(state)
+        serialized_master = self._serialize_state_to_md(state, portfolio_id)
         with staged_master.open("w", encoding="utf-8") as f:
             f.write(serialized_master)
             f.flush()
@@ -705,10 +739,21 @@ class MarkdownVaultRepositoryAdapter(PortfolioRepositoryPort):
             existing_journal = journal_file.read_text(encoding="utf-8") if journal_file.exists() else ""
             journal_blocks = []
             for event in mutation.system_journal_events:
-                rendered_message = inject_journal_wikilinks(event.message)
+                rendered_message = inject_journal_wikilinks(
+                    event.message,
+                    vault_root=get_vault_path(),
+                    source_path=journal_file,
+                )
                 journal_blocks.append(f"\n## [{event.timestamp}]\n\n{rendered_message}\n")
             with staged_journal.open("w", encoding="utf-8") as f:
-                f.write(existing_journal + "".join(journal_blocks))
+                f.write(
+                    serialize_journal(
+                        existing_journal,
+                        "\n".join(journal_blocks),
+                        portfolio_id=portfolio_id,
+                        vault_root=get_vault_path(),
+                    )
+                )
                 f.flush()
                 os.fsync(f.fileno())
             staged_journal_sha = _compute_sha256(staged_journal)

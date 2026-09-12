@@ -1,0 +1,18 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:invest-agents:vault:capture:v2",
+  "title": "Portable Vault Capture v2",
+  "type": "object",
+  "required": ["schema_version", "title", "entity_type", "capture_status", "search_scope", "captured_at", "capture_source"],
+  "properties": {
+    "schema_version": {"const": 2},
+    "entity_type": {"const": "capture"},
+    "capture_status": {"const": "pending_normalization"},
+    "search_scope": {"const": "excluded"},
+    "title": {"type": "string", "minLength": 1},
+    "captured_at": {"type": "string", "minLength": 1},
+    "capture_source": {"type": "string", "minLength": 1}
+  },
+  "not": {"anyOf": [{"required": ["note_id"]}, {"required": ["document_key"]}]},
+  "additionalProperties": true
+}

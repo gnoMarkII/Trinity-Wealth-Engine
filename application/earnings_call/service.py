@@ -10,6 +10,7 @@ from application.earnings_call.dto import (
     EarningsCallRunDTO,
     EarningsCallOutboxEventDTO,
     EarningsCallNoteDTO,
+    EarningsCallWriteResultDTO,
     LeaseDTO,
 )
 from application.earnings_call.errors import (
@@ -136,23 +137,48 @@ class EarningsCallApplicationService:
         vault_path = run.vault_path
         if not vault_path:
             self._renew_or_raise(run.run_id, execution_token, extension_seconds=90)
-            vault_path = self._writer.write_note(
+            # Keep the historical string-path writer contract at the boundary,
+            # while allowing the V2 adapter to expose the immutable revision
+            # reference created by ArtifactWriter.
+            vault_write = self._writer.write_note(
                 ticker=ticker,
                 period=period,
                 transcript=transcript,
                 highlights=highlights,
             )
+            write_result = (
+                vault_write
+                if isinstance(vault_write, EarningsCallWriteResultDTO)
+                else getattr(self._writer, "last_write_result", None)
+            )
+            if isinstance(write_result, EarningsCallWriteResultDTO):
+                vault_path = write_result.vault_path
+                revision_ref = (
+                    f"{write_result.note_id}:{write_result.revision_id}"
+                    if write_result.note_id and write_result.revision_id
+                    else None
+                )
+                content_sha256 = write_result.content_sha256
+            else:
+                vault_path = str(vault_write)
+                revision_ref = None
+                content_sha256 = None
             # The filesystem call is outside SQLite; renew immediately before
             # recording its result so a slow write cannot cross the execution
             # lease boundary and then mutate state with a stale token.
             self._renew_or_raise(run.run_id, execution_token, extension_seconds=90)
             try:
-                run, event, outbox_lease = self._workflow.record_note_and_enqueue(
-                    run_id=run.run_id,
-                    execution_token=execution_token,
-                    vault_path=vault_path,
-                    outbox_lease_seconds=60,
-                )
+                record_kwargs = {
+                    "run_id": run.run_id,
+                    "execution_token": execution_token,
+                    "vault_path": vault_path,
+                    "outbox_lease_seconds": 60,
+                }
+                if revision_ref is not None:
+                    record_kwargs["revision_ref"] = revision_ref
+                if content_sha256 is not None:
+                    record_kwargs["content_sha256"] = content_sha256
+                run, event, outbox_lease = self._workflow.record_note_and_enqueue(**record_kwargs)
             except EarningsCallLeaseExpiredError as exc:
                 raise EarningsCallRunInProgressError(run.run_id) from exc
         else:

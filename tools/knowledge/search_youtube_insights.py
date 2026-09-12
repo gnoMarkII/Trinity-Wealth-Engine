@@ -102,18 +102,21 @@ def search_youtube_insights(
     Returns:
         str: รายงานสรุปข้อมูลคลิปที่ตรงเงื่อนไข พร้อม Section สำคัญ (ใจความสำคัญ, แนวคิดการลงทุน, หุ้นและสินทรัพย์)
     """
-    summaries_dir = VAULT_PATH / "30_Knowledge_Base" / "YouTube_Summaries"
+    vault_base = Path(os.getenv("OBSIDIAN_VAULT_PATH", VAULT_PATH))
+    summaries_dir = vault_base / "30_Knowledge_Base" / "YouTube_Summaries"
     if not summaries_dir.exists():
         return f"ไม่พบโฟลเดอร์คลังข้อมูล YouTube Summaries ที่: {summaries_dir}"
 
     cutoff_date = datetime.now(timezone.utc).date() - timedelta(days=lookback_days)
     candidates: List[Tuple[datetime, str, str, str, Dict[str, str]]] = []
 
-    for md_file in summaries_dir.glob("*.md"):
+    for md_file in summaries_dir.rglob("*.md"):
+        if "Inbox" in md_file.parts or "Revisions" in md_file.parts:
+            continue
         try:
             content = md_file.read_text(encoding="utf-8")
             entity_type = extract_yaml_frontmatter_value(content, "entity_type")
-            if entity_type and entity_type != "youtube_insight":
+            if entity_type and entity_type not in {"youtube_insight", "youtube_summary"}:
                 continue
 
             # วันที่

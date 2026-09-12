@@ -76,9 +76,11 @@ def _build_article_md(
     canonical_publisher: str | None = None,
     canonical_url: str | None = None,
     verification_status: str | None = None,
+    related_entities: list[dict[str, str]] | None = None,
 ) -> str:
     safe_title = title.replace(":", " -").replace("/", "-")[:80]
     meta_dict = {
+        "schema_version": 2,
         "title": safe_title,
         "entity_type": "article_note",
         "source_url": source_url,
@@ -103,6 +105,8 @@ def _build_article_md(
         meta_dict["canonical_url"] = canonical_url
     if verification_status is not None:
         meta_dict["verification_status"] = verification_status
+    if related_entities is not None:
+        meta_dict["related_entities"] = related_entities
 
     yaml_block = yaml.safe_dump(meta_dict, allow_unicode=True, sort_keys=False).strip()
     return "\n".join([

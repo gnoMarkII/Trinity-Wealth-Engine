@@ -20,6 +20,8 @@ from .constants import (
     PORTFOLIOS_DIR,
     get_journal_filepath as _get_journal_filepath,
 )
+from tools.portfolio.adapters.markdown.journal_format import inject_journal_links, serialize_journal
+from tools.archivist.portable_links import default_vault_root
 
 log = get_logger(__name__)
 
@@ -30,13 +32,17 @@ _JOURNAL_BLOCK_RE = re.compile(
 )
 
 
-def _inject_journal_wikilinks(content: str) -> str:
-    def _replace(m: re.Match) -> str:
-        symbol = m.group(2)
-        if symbol in _CASH_SYMBOLS:
-            return m.group(0)
-        return f"{m.group(1)}{symbol}{m.group(3)} — [[{symbol}]]"
-    return _TRADE_TITLE_RE.sub(_replace, content)
+def _inject_journal_wikilinks(
+    content: str,
+    *,
+    source_path: str | Path | None = None,
+) -> str:
+    """Backward-compatible wrapper for the portable journal renderer."""
+    return inject_journal_links(
+        content,
+        vault_root=default_vault_root(),
+        source_path=source_path,
+    )
 
 
 def _write_journal_entry(content: str, date_str: str | None = None, portfolio_id: str = "default") -> str:
@@ -44,6 +50,8 @@ def _write_journal_entry(content: str, date_str: str | None = None, portfolio_id
     if pid != "default" and not _portfolio_exists(pid):
         raise ValueError(f"ไม่พบพอร์ตไอดี '{pid}' ในระบบ — ใช้ tool_create_portfolio ก่อน")
     jpath = _get_journal_filepath(pid)
+    from tools.archivist.maintenance_guard import assert_write_allowed
+    assert_write_allowed(jpath)
     jpath.parent.mkdir(parents=True, exist_ok=True)
     if date_str and date_str.strip():
         val = date_str.strip()
@@ -53,10 +61,18 @@ def _write_journal_entry(content: str, date_str: str | None = None, portfolio_id
             timestamp = val
     else:
         timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    linked = _inject_journal_wikilinks(content)
+    linked = _inject_journal_wikilinks(content, source_path=jpath)
     block = f"\n## [{timestamp}]\n\n{linked}\n"
     existing = jpath.read_text(encoding="utf-8") if jpath.exists() else ""
-    _atomic_write_to(jpath, existing + block)
+    _atomic_write_to(
+        jpath,
+        serialize_journal(
+            existing,
+            block,
+            portfolio_id=pid,
+            vault_root=default_vault_root(),
+        ),
+    )
     return timestamp
 
 

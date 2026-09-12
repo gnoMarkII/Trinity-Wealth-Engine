@@ -62,6 +62,7 @@ def ingest_stock_consensus(ticker: str, market: Market = "US") -> str:
 
     md_lines = [
         "---",
+        "schema_version: 2",
         f"title: {display_sym} Analyst Consensus {today}",
         "entity_type: Analyst_Consensus",
         f"ticker: {display_sym}",
@@ -87,7 +88,7 @@ def ingest_stock_consensus(ticker: str, market: Market = "US") -> str:
         "",
         "## Related",
         "",
-        f"- [[{display_sym}]]",
+        f"- {display_sym}",
         "",
         "## หมายเหตุ",
         "",

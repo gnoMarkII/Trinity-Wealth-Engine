@@ -11,6 +11,7 @@ import tools.archivist.writer as writer_module
 def test_vault(tmp_path, monkeypatch):
     vault_dir = tmp_path / "memories"
     vault_dir.mkdir(exist_ok=True)
+    monkeypatch.setenv("OBSIDIAN_VAULT_PATH", str(vault_dir))
     import tools.archivist.core as core_m
     import tools.archivist.writer as writer_m
     import tools.archivist.indexer as indexer_m

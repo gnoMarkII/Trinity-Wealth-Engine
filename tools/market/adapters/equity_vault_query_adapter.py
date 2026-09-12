@@ -93,10 +93,53 @@ class EquityVaultQueryAdapter:
         return path.stem.split(" ")[-1], path.name
 
     def _sidecar_files(self, ticker: Optional[str] = None) -> list[Path]:
-        pattern = "30_Knowledge_Base/Stocks/*/* Equity Analysis *.json"
-        if ticker:
-            pattern = f"30_Knowledge_Base/Stocks/{ticker}/{ticker} Equity Analysis *.json"
-        return list(self.vault_path.glob(pattern))
+        all_files: list[Path] = []
+
+        # 1. Fast indexed path via SQLite catalog
+        try:
+            from tools.archivist.catalog_adapter import SqliteNoteCatalogAdapter
+            from tools.archivist.catalog_runtime import resolve_catalog_path
+            cat_db = resolve_catalog_path(self.vault_path, require_exists=True)
+            if cat_db.exists():
+                cat = SqliteNoteCatalogAdapter(db_path=cat_db, vault_root=self.vault_path)
+                rel_paths = cat.get_sidecars(ticker)
+                for rp in rel_paths:
+                    p = self.vault_path / rp
+                    if p.exists() and p.is_file():
+                        all_files.append(p)
+        except Exception:
+            all_files.clear()
+
+        # 2. Fallback to filesystem globbing if catalog returned no files
+        if not all_files:
+            if ticker:
+                # V2 path: Stocks/{ticker}/Analysis/*.json
+                all_files.extend(self.vault_path.glob(f"30_Knowledge_Base/Stocks/{ticker}/Analysis/* Equity Analysis *.json"))
+                # V1 path: Stocks/{ticker}/*.json
+                all_files.extend(self.vault_path.glob(f"30_Knowledge_Base/Stocks/{ticker}/{ticker} Equity Analysis *.json"))
+                # System sidecar path (.system/sidecars/{ticker}/)
+                all_files.extend(self.vault_path.glob(f".system/sidecars/{ticker}/* Equity Analysis *.json"))
+            else:
+                # V2 path: Stocks/*/Analysis/*.json
+                all_files.extend(self.vault_path.glob("30_Knowledge_Base/Stocks/*/Analysis/* Equity Analysis *.json"))
+                # V1 path: Stocks/*/*.json
+                all_files.extend(self.vault_path.glob("30_Knowledge_Base/Stocks/*/* Equity Analysis *.json"))
+                # System sidecar path
+                all_files.extend(self.vault_path.glob(".system/sidecars/*/* Equity Analysis *.json"))
+
+        # Deduplicate and exclude 'latest.json' pointer when date-stamped files exist
+        seen: set[str] = set()
+        result: list[Path] = []
+        for p in all_files:
+            p_res = p.resolve()
+            p_str = str(p_res)
+            if p_str not in seen and p.is_file():
+                # Avoid duplicate latest pointer if date-specific files exist
+                if p.name.endswith("latest.json") and len(all_files) > 1:
+                    continue
+                seen.add(p_str)
+                result.append(p)
+        return result
 
     def _latest_sidecar(
         self, files: list[Path], expected_ticker: str, *, strict: bool
@@ -125,7 +168,14 @@ class EquityVaultQueryAdapter:
                 log.warning("Skipping malformed Equity sidecar: %s", path)
         if not valid:
             return None
-        valid.sort(key=lambda item: (item[0].quant_signals.evaluated_at, item[1].name), reverse=True)
+        valid.sort(
+            key=lambda item: (
+                item[0].quant_signals.evaluated_at,
+                not bool(re.search(r"_[a-f0-9]{6}\.json$", item[1].name)),
+                item[1].name,
+            ),
+            reverse=True,
+        )
         return valid[0]
 
     @staticmethod
@@ -133,6 +183,21 @@ class EquityVaultQueryAdapter:
         relative = str(sidecar.relative_to(vault_path)).replace("\\", "/")
         quant = model.quant_signals.model_dump()
         sentiment = model.sentiment_context.model_dump()
+
+        # Check if companion markdown report actually exists on disk
+        companion_md = sidecar.with_suffix(".md")
+        if not companion_md.exists():
+            clean_name = re.sub(r"_[a-f0-9]{6}\.md$", ".md", companion_md.name)
+            candidate = companion_md.parent / clean_name
+            if candidate.exists():
+                companion_md = candidate
+            elif ".system" in sidecar.parts:
+                kb_candidate = vault_path / "30_Knowledge_Base" / "Stocks" / model.ticker / "Analysis" / clean_name
+                if kb_candidate.exists():
+                    companion_md = kb_candidate
+
+        source_file_rel = str(companion_md.relative_to(vault_path)).replace("\\", "/") if companion_md.exists() else None
+
         return {
             "ticker": model.ticker,
             "market": model.market,
@@ -142,7 +207,7 @@ class EquityVaultQueryAdapter:
             "market_sentiment": model.sentiment_context.market_sentiment,
             "composite_score": model.quant_signals.composite_score,
             "data_quality_flags": getattr(model.quant_signals, "data_quality_flags", []),
-            "source_file": relative.replace(".json", ".md"),
+            "source_file": source_file_rel,
             "sidecar_file": relative,
             "quant_signals": quant,
             "sentiment_context": sentiment,
@@ -154,7 +219,13 @@ class EquityVaultQueryAdapter:
     def list_latest(self) -> list[dict[str, Any]]:
         grouped: dict[str, list[Path]] = {}
         for path in self._sidecar_files():
-            grouped.setdefault(path.parent.name, []).append(path)
+            # In V2, parent may be 'Analysis', so ticker is parent.parent.name
+            if path.parent.name.lower() == "analysis":
+                ticker_candidate = path.parent.parent.name.upper()
+            else:
+                ticker_candidate = path.parent.name.upper()
+            grouped.setdefault(ticker_candidate, []).append(path)
+
         result: list[dict[str, Any]] = []
         for ticker, paths in grouped.items():
             latest = self._latest_sidecar(paths, ticker, strict=False)
@@ -257,12 +328,20 @@ class EquityVaultQueryAdapter:
         vault_name = os.getenv("OBSIDIAN_VAULT_NAME", self.vault_path.name)
         notes: list[dict[str, Any]] = []
         seen: set[str] = set()
-        search_folders = ["News", "YouTube_Summaries", f"Earnings_Calls/{clean}"]
+        search_folders = [
+            "News",
+            "YouTube_Summaries",
+            f"Earnings_Calls/{clean}",
+            f"Stocks/{clean}/Earnings",
+            f"Stocks/{clean}/Analysis",
+        ]
         for folder_name in search_folders:
             target_dir = self.vault_path / "30_Knowledge_Base" / folder_name
             if not target_dir.exists():
                 continue
-            for path in target_dir.glob("*.md"):
+            for path in target_dir.rglob("*.md"):
+                if "Revisions" in path.parts:
+                    continue
                 relative = str(path.relative_to(self.vault_path)).replace("\\", "/")
                 if relative in seen or path.name.startswith(".") or path.name == "index.md":
                     continue

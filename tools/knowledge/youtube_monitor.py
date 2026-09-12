@@ -20,7 +20,8 @@ TARGET_CHANNELS = {
     "@pingprakit6949": "UCf2qSf_iiUuSPEHzme0g79w",
 }
 
-_SAVE_DIR = Path(__file__).resolve().parents[2] / "memories" / "30_Knowledge_Base" / "YouTube_Summaries" / "Inbox"
+def _get_save_dir() -> Path:
+    return Path(os.getenv("OBSIDIAN_VAULT_PATH", "./memories")).resolve() / "30_Knowledge_Base" / "YouTube_Summaries" / "Inbox"
 
 _YT_NS = {
     'ns0': 'http://www.w3.org/2005/Atom',
@@ -80,8 +81,8 @@ def get_youtube_candidates(lookback_days: int = 30) -> list[dict]:
                 video_id = video_id_element.text if video_id_element is not None else None
                 is_fetched = False
                 if video_id:
-                    summaries_dir = _SAVE_DIR.parent
-                    if list(summaries_dir.rglob(f"YouTube_Insight_{video_id}_*.md")):
+                    summaries_dir = _get_save_dir().parent
+                    if any("Inbox" not in p.parts and "Revisions" not in p.parts for p in summaries_dir.rglob(f"*{video_id}*.md")):
                         is_fetched = True
 
                 candidates.append({
@@ -192,11 +193,13 @@ def load_recent_youtube_insights(
 
     collected_clips = []
 
-    for md_file in summaries_dir.glob("*.md"):
+    for md_file in summaries_dir.rglob("*.md"):
+        if "Inbox" in md_file.parts or "Revisions" in md_file.parts:
+            continue
         try:
             content = md_file.read_text(encoding="utf-8")
             entity_type = extract_yaml_frontmatter_value(content, "entity_type")
-            if entity_type != "youtube_insight":
+            if entity_type not in {"youtube_insight", "youtube_summary"}:
                 continue
 
             date_str = extract_yaml_frontmatter_value(content, "date")

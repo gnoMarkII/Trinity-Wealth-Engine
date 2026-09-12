@@ -7,6 +7,7 @@ import tempfile
 from datetime import datetime
 from functools import lru_cache
 from pathlib import Path
+from urllib.parse import unquote
 
 import frontmatter as fm
 from filelock import FileLock
@@ -69,6 +70,16 @@ def lint_structural_health() -> str:
             if target in stem_to_path:
                 inbound[target].add(file_path.stem)
 
+        for raw_destination in re.findall(r'(?<!!)\[[^\]]+\]\(([^)]+)\)', content):
+            destination = unquote(raw_destination.split("#", 1)[0].strip())
+            if not destination or re.match(r"(?:[a-z][a-z0-9+.-]*:|//)", destination, re.I):
+                continue
+            target_path = (file_path.parent / destination).resolve()
+            if target_path.suffix.lower() != ".md":
+                target_path = target_path.with_suffix(".md")
+            if target_path in file_contents:
+                inbound[target_path.stem].add(file_path.stem)
+
         stripped = content.strip()
         parts = stripped.split("---", 2) if stripped.startswith("---") else ["", "", stripped]
         body = parts[2].strip() if len(parts) >= 3 else stripped
@@ -87,11 +98,11 @@ def lint_structural_health() -> str:
     ]
     if orphans:
         lines += ["## Orphan Notes (ไม่มี Link เชื่อมโยง)"]
-        lines += [f"- [[{s}]] ({stem_to_path[s].relative_to(VAULT_PATH).parent})" for s in orphans]
+        lines += [f"- {s} ({stem_to_path[s].relative_to(VAULT_PATH).parent})" for s in orphans]
         lines.append("")
     if empty_files:
         lines += ["## Empty Files (ไม่มีเนื้อหา)"]
-        lines += [f"- [[{s}]] ({stem_to_path[s].relative_to(VAULT_PATH).parent})" for s in sorted(empty_files)]
+        lines += [f"- {s} ({stem_to_path[s].relative_to(VAULT_PATH).parent})" for s in sorted(empty_files)]
         lines.append("")
     if not orphans and not empty_files:
         lines.append("Vault อยู่ในสุขภาพดี ไม่พบปัญหาใดๆ")

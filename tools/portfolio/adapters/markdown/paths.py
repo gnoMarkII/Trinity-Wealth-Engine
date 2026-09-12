@@ -1,6 +1,7 @@
 import os
 from pathlib import Path
 from tools.portfolio.domain.validator import validate_portfolio_id
+from tools.archivist.maintenance_guard import assert_write_allowed
 
 VAULT_PATH = Path(os.getenv("OBSIDIAN_VAULT_PATH", "./memories"))
 PORTFOLIOS_DIR = VAULT_PATH / "20_Portfolio_Management/Current_Holdings/Portfolios"
@@ -60,7 +61,9 @@ def get_portfolios_dir() -> Path:
 def get_portfolio_dir(portfolio_id: str = "default") -> Path:
     pid = validate_portfolio_id(portfolio_id)
     pdir = get_portfolios_dir() / pid
-    pdir.mkdir(parents=True, exist_ok=True)
+    if not pdir.exists():
+        assert_write_allowed(pdir)
+        pdir.mkdir(parents=True, exist_ok=True)
     return pdir
 
 
@@ -82,7 +85,9 @@ def get_pending_manifest_path(portfolio_id: str = "default") -> Path:
 
 def get_holdings_dir(portfolio_id: str = "default") -> Path:
     hdir = get_portfolio_dir(portfolio_id) / "Holdings"
-    hdir.mkdir(parents=True, exist_ok=True)
+    if not hdir.exists():
+        assert_write_allowed(hdir)
+        hdir.mkdir(parents=True, exist_ok=True)
     return hdir
 
 
@@ -92,7 +97,9 @@ def get_watchlist_filepath(portfolio_id: str = "default") -> Path:
 
 def get_watchlist_items_dir(portfolio_id: str = "default") -> Path:
     wdir = get_portfolio_dir(portfolio_id) / "Watchlist_Items"
-    wdir.mkdir(parents=True, exist_ok=True)
+    if not wdir.exists():
+        assert_write_allowed(wdir)
+        wdir.mkdir(parents=True, exist_ok=True)
     return wdir
 
 

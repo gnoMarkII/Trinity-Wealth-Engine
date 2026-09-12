@@ -10,7 +10,6 @@ from datetime import datetime
 import os
 from pathlib import Path
 import re
-import shutil
 import threading
 from typing import Any, Dict, List, Optional, Union
 from urllib.parse import urlsplit
@@ -26,6 +25,8 @@ from schemas.news_funnel_schemas import (
     TriageBatchResult,
     strip_wikilink,
 )
+from application.knowledge.note_write_ports import KnowledgeNoteWritePort
+from application.knowledge.write_context import current_note_writer
 from tools._atomic_io import _atomic_write_to
 from tools.archivist.core import _sanitize_filename
 from tools.archivist.indexer import _index_upsert, flush_index_if_dirty
@@ -134,9 +135,36 @@ def canonicalize_ticker_names(tickers: List[str]) -> List[str]:
 def ensure_concept_stubs_exist(
     concepts: List[str],
     vault_root: Optional[str] = None,
+    note_writer: Optional[KnowledgeNoteWritePort] = None,
+    *,
+    allow_stub_creation: bool = False,
 ) -> List[str]:
-    """สร้าง Concept Stub ใน 30_Knowledge_Base/Concepts/ สำหรับคำที่ไม่ใช่รหัสหุ้นมาตรฐาน หากยังไม่มี"""
+    """Report concept candidates; production never creates empty notes.
+
+    The explicit opt-in exists only for legacy migration fixtures. Normal
+    News Funnel execution keeps the candidates in structured
+    ``related_entities`` metadata on the published note.
+    """
     root = vault_root or os.getenv("OBSIDIAN_VAULT_PATH", "./memories")
+    if not allow_stub_creation:
+        candidates = [
+            strip_wikilink(str(item)).strip()
+            for item in concepts
+            if strip_wikilink(str(item)).strip()
+        ]
+        if candidates:
+            logger.info(
+                "Concept admission candidates recorded without stub creation: %d (vault=%s)",
+                len(candidates),
+                root,
+            )
+        return []
+
+    note_writer = note_writer or current_note_writer(root)
+    from tools.archivist.maintenance_guard import assert_write_allowed
+    assert_write_allowed(root)
+    from tools.archivist.metadata import normalize_legacy_metadata, parse_note
+    from tools.archivist.vault_paths import VaultPaths
     concepts_dir = Path(root) / "30_Knowledge_Base" / "Concepts"
     concepts_dir.mkdir(parents=True, exist_ok=True)
 
@@ -148,10 +176,29 @@ def ensure_concept_stubs_exist(
             if not new_file.exists():
                 try:
                     content = old_file.read_text(encoding="utf-8")
-                    _atomic_write_to(new_file, content)
-                    _index_upsert(new_file, vault_root=vault_root)
+                    old_meta, old_body, parse_issues = parse_note(content)
+                    if parse_issues:
+                        raise ValueError(f"malformed concept stub frontmatter: {parse_issues}")
+                    old_meta, _ = normalize_legacy_metadata(old_meta, producer="news_funnel")
+                    old_meta.update(
+                        {
+                            "schema_version": 2,
+                            "title": old_meta.get("title") or old_file.stem,
+                            "entity_type": "concept",
+                            "search_scope": "excluded",
+                        }
+                    )
+                    committed = note_writer.write_note(
+                        metadata=old_meta,
+                        body=old_body,
+                        target_path=new_file,
+                    )
+                    _index_upsert(committed.primary_file, vault_root=vault_root)
                 except Exception as e:
                     logger.error("Failed to migrate concept stub %s: %s", old_file, e)
+        # This branch is explicit legacy migration only. Production callers
+        # return above and never mutate or delete this folder.
+        import shutil
         shutil.rmtree(old_concepts_dir, ignore_errors=True)
 
     created = []
@@ -163,20 +210,25 @@ def ensure_concept_stubs_exist(
         safe_name = _sanitize_filename(clean)
         file_path = concepts_dir / f"{safe_name}.md"
         if not file_path.exists():
-            md_content = (
-                f"---\n"
-                f'title: "{clean}"\n'
-                f"created: {today_str}\n"
-                f"entity_type: concept_stub\n"
-                f"---\n\n"
-                f"# {clean}\n\n"
-                f"<!-- Concept Stub created automatically by News Funnel linking key -->\n"
-            )
             try:
-                _atomic_write_to(file_path, md_content)
-                _index_upsert(file_path, vault_root=vault_root)
-                created.append(str(file_path))
-                logger.info("Created concept stub: %s", file_path)
+                committed = note_writer.write_note(
+                    metadata={
+                        "schema_version": 2,
+                        "title": clean,
+                        "entity_type": "concept",
+                        "date": today_str,
+                        "tags": ["concept", "auto_stub"],
+                        "created": today_str,
+                    },
+                    body=(
+                        f"# {clean}\n\n"
+                        "<!-- Concept stub created automatically by News Funnel -->\n"
+                    ),
+                    filename=safe_name,
+                )
+                _index_upsert(committed.primary_file, vault_root=vault_root)
+                created.append(str(committed.primary_file))
+                logger.info("Created concept stub: %s", committed.primary_file)
             except Exception as e:
                 logger.error("Failed to create concept stub %s: %s", file_path, e)
 
@@ -547,16 +599,16 @@ _SYNTH_FILE_LOCK = threading.Lock()
 
 
 def _format_6_sections(summary: str, tickers: List[str], themes: List[str]) -> str:
-    def _to_wikilink(tag: str) -> str:
+    def _to_portable_reference(tag: str) -> str:
         clean = strip_wikilink(tag)
-        return f"[[{clean}]]" if clean else ""
+        return clean if clean else ""
 
-    tickers_formatted = [_to_wikilink(t) for t in tickers if strip_wikilink(t)]
-    themes_formatted = [_to_wikilink(th) for th in themes if strip_wikilink(th)]
+    tickers_formatted = [_to_portable_reference(t) for t in tickers if strip_wikilink(t)]
+    themes_formatted = [_to_portable_reference(th) for th in themes if strip_wikilink(th)]
     if not tickers_formatted:
-        tickers_formatted = ["[[NVDA]]", "[[Gold]]", "[[Bitcoin]]"]
+        tickers_formatted = ["NVDA", "Gold", "Bitcoin"]
     if not themes_formatted:
-        themes_formatted = ["[[AI Infrastructure]]", "[[Monetary Policy]]"]
+        themes_formatted = ["AI Infrastructure", "Monetary Policy"]
 
     tickers_str = ", ".join(tickers_formatted)
     themes_str = ", ".join(themes_formatted)
@@ -585,6 +637,7 @@ def _synthesize_single_event(
     news_dir: Path,
     vault_root: Optional[Union[str, Path]] = None,
     existing_notes_by_event_id: Optional[Dict[str, Path]] = None,
+    note_writer: Optional[KnowledgeNoteWritePort] = None,
 ) -> tuple[Dict[str, Any], Optional[str], Optional[str], set[str], Optional[str]]:
     """ประมวลผลดึงและสกัดเนื้อหา 6 หัวข้อเชิงลึกของ 1 เหตุการณ์ (สำหรับรัน concurrent ใน ThreadPoolExecutor)"""
     links = ev.get("links") or []
@@ -650,6 +703,24 @@ def _synthesize_single_event(
     impact_banner = f"> **Macro Impact:** {macro_score}/10 | **Asset Impact:** {asset_score}/10\n\n"
     extracted_body = impact_banner + extracted_raw
 
+    related_entities = [
+        {
+            "entity_type": "security",
+            "key": strip_wikilink(str(ticker)),
+            "relation": "mentioned",
+        }
+        for ticker in tickers
+        if strip_wikilink(str(ticker))
+    ] + [
+        {
+            "entity_type": "theme",
+            "key": strip_wikilink(str(theme)),
+            "relation": "mentioned",
+        }
+        for theme in themes
+        if strip_wikilink(str(theme))
+    ]
+
     published_at_val = ev.get("published_at")
     md_content = _build_article_md(
         extracted=extracted_body,
@@ -665,17 +736,65 @@ def _synthesize_single_event(
         canonical_publisher=ev.get("canonical_publisher") or ev.get("publisher"),
         canonical_url=ev.get("canonical_url") or link or None,
         verification_status=ev.get("verification_status"),
+        related_entities=related_entities,
     )
 
     safe_title = _sanitize_filename(canonical_title)
+    from tools.archivist.metadata import normalize_legacy_metadata, parse_note
+    from tools.archivist.portable_links import render_resolved_markdown_link
+    from tools.archivist.vault_paths import VaultPaths
+    from tools.archivist.writer import _portableize_wikilinks, _sync_to_catalog
+
+    root = Path(vault_root or news_dir.parents[1]).resolve()
+    vp = VaultPaths(root)
+    note_meta, note_body, parse_issues = parse_note(md_content)
+    if parse_issues:
+        raise ValueError(f"News article frontmatter is invalid: {parse_issues}")
+    note_meta, _ = normalize_legacy_metadata(note_meta, producer="news_funnel")
+    note_meta["entity_type"] = "company_news"
+    note_meta["schema_version"] = 2
+    note_meta["title"] = canonical_title
+    filename = f"{date_str}_{safe_title}"
+
     with _SYNTH_FILE_LOCK:
-        out_file = news_dir / f"{date_str}_{safe_title}.md"
         counter = 2
-        while out_file.exists():
-            out_file = news_dir / f"{date_str}_{safe_title}_{counter}.md"
+        while True:
+            candidate = vp.note_path(note_meta, filename=filename)
+            if not candidate.exists():
+                break
+            try:
+                existing_meta, _, _ = parse_note(candidate.read_text(encoding="utf-8"))
+            except OSError:
+                existing_meta = {}
+            # Reuse an existing projection only when the durable source
+            # identity is actually the same. Mock/offline events often have
+            # no URL; two empty URLs must not import the first note_id into a
+            # different event/document_key.
+            same_event = bool(
+                existing_meta.get("event_id")
+                and note_meta.get("event_id")
+                and str(existing_meta.get("event_id")) == str(note_meta.get("event_id"))
+            )
+            same_source = bool(
+                existing_meta.get("source_url")
+                and note_meta.get("source_url")
+                and str(existing_meta.get("source_url")) == str(note_meta.get("source_url"))
+            )
+            if same_event or same_source:
+                break
+            filename = f"{date_str}_{safe_title}_{counter}"
             counter += 1
-        _atomic_write_to(out_file, md_content)
-        _index_upsert(out_file, vault_root=vault_root)
+
+        target_path = vp.note_path(note_meta, filename=filename)
+        note_body = _portableize_wikilinks(note_body, root, target_path)
+        committed = (note_writer or current_note_writer(root)).write_note(
+            metadata=note_meta,
+            body=note_body,
+            filename=filename,
+        )
+        out_file = committed.primary_file
+        _index_upsert(out_file, vault_root=str(root))
+        _sync_to_catalog(out_file)
 
 
     # Union Wikilinks: ดึงจาก regex [[...]] ใน extracted_body มารวมกับ tickers และ themes เดิม
@@ -767,6 +886,7 @@ def run_news_funnel_synthesize(
     vault_root: Optional[str] = None,
     custom_date: Optional[str] = None,
     allow_autonomous: bool = False,
+    note_writer: Optional[KnowledgeNoteWritePort] = None,
 ) -> Dict[str, Any]:
     """สร้างโน้ตข่าวเดี่ยวสำคัญลงใน 30_Knowledge_Base/News/ พร้อม Zero-Pending Protection และ Strict HITL
 
@@ -777,11 +897,12 @@ def run_news_funnel_synthesize(
     if not period or period == "auto":
         period = get_synthesis_period()
     root = vault_root or os.getenv("OBSIDIAN_VAULT_PATH", "./memories")
+    note_writer = note_writer or current_note_writer(root)
+    from tools.archivist.maintenance_guard import assert_write_allowed
+    assert_write_allowed(root)
 
-    # Complete Legacy Cleanup: ลบโฟลเดอร์ News/Themes ทิ้งทั้งหมดหากพบ
-    old_themes_dir = Path(root) / "30_Knowledge_Base" / "News" / "Themes"
-    if old_themes_dir.exists() and old_themes_dir.is_dir():
-        shutil.rmtree(old_themes_dir, ignore_errors=True)
+    # Legacy folders are handled by an explicit migration command. A normal
+    # synthesis run must never silently delete user content as a side effect.
 
     pending = get_pending_high_impact_events(store_path=store_path)
 
@@ -849,7 +970,9 @@ def run_news_funnel_synthesize(
     # Pre-scan Recovery Flow: สแกน news_dir หนึ่งครั้งก่อนเปิด executor เพื่อหาไฟล์ที่มี event_id ตรงกันหรือหัวข้อตรงกัน
     existing_notes_by_event_id: Dict[str, Path] = {}
     from tools.archivist.parser import parse_frontmatter_metadata
-    for existing_file in news_dir.glob("*.md"):
+    for existing_file in news_dir.rglob("*.md"):
+        if "Inbox" in existing_file.parts or "Revisions" in existing_file.parts:
+            continue
         try:
             content = existing_file.read_text(encoding="utf-8")
             meta = parse_frontmatter_metadata(content)
@@ -869,7 +992,7 @@ def run_news_funnel_synthesize(
     import concurrent.futures
     with concurrent.futures.ThreadPoolExecutor(max_workers=min(3, len(events_to_synthesize))) as executor:
         futures_map = {
-            executor.submit(_synthesize_single_event, ev, date_str, now_time, news_dir, vault_root, existing_notes_by_event_id): ev
+            executor.submit(_synthesize_single_event, ev, date_str, now_time, news_dir, vault_root, existing_notes_by_event_id, note_writer): ev
             for ev in events_to_synthesize
         }
         results = []
@@ -916,7 +1039,7 @@ def run_news_funnel_synthesize(
             if raw_name and raw_name not in TICKER_ALIAS_MAP and raw_name not in TICKER_ALIAS_MAP.values():
                 concept_candidates.append(raw_name)
         if concept_candidates:
-            ensure_concept_stubs_exist(concept_candidates, vault_root=vault_root)
+            ensure_concept_stubs_exist(concept_candidates, vault_root=vault_root, note_writer=note_writer)
 
     # บันทึกสถานะใน JSON Store และ Layer 2 payloads ทั้งหมดใน Transaction เดียวภายใต้ FileLock
     commit_event_synthesis_results(

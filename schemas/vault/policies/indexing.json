@@ -1,0 +1,49 @@
+{
+  "policy_id": "vault-indexing-policy",
+  "policy_version": 1,
+  "default": {
+    "catalog": "active_profile_valid",
+    "vector": "search_scope_included_and_lifecycle_eligible"
+  },
+  "lifecycle_allowed_for_vector": [
+    "reviewed",
+    "published"
+  ],
+  "lifecycle_excluded_for_vector": [
+    "draft",
+    "superseded",
+    "retired",
+    "generated"
+  ],
+  "verification_excluded_for_vector": [
+    "disputed"
+  ],
+  "sensitivity_excluded_for_vector": [
+    "confidential",
+    "restricted"
+  ],
+  "sensitivity_namespaces": {
+    "public": "public",
+    "internal": "internal",
+    "confidential": "confidential",
+    "restricted": "restricted"
+  },
+  "profile_overrides": {
+    "capture": {
+      "catalog": false,
+      "vector": false
+    },
+    "portfolio_projection": {
+      "catalog": false,
+      "vector": false
+    },
+    "navigation": {
+      "catalog": false,
+      "vector": false
+    },
+    "generated_artifact": {
+      "catalog": false,
+      "vector": false
+    }
+  }
+}

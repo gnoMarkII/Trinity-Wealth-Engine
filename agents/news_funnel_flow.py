@@ -12,6 +12,8 @@ from langgraph.types import Command, interrupt
 
 from tools.macro.news_funnel import run_news_funnel_synthesize
 from tools.macro.news_funnel_store import get_pending_high_impact_events
+from tools.archivist.composition import build_knowledge_note_writer
+from tools.archivist.vault_paths import VaultPaths
 
 
 class NewsFunnelState(TypedDict, total=False):
@@ -78,6 +80,7 @@ def synthesize_node(state: NewsFunnelState) -> Dict[str, Any]:
         candidate_event_ids=candidate_ids,
         store_path=store_path,
         vault_root=vault_root,
+        note_writer=build_knowledge_note_writer(vault_paths=VaultPaths(vault_root)),
     )
 
     # หมายเหตุ: node นี้ได้ approved_ids เป็น list เสมอ (gate fail-closed) ดังนั้น status

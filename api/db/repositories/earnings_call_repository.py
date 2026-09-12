@@ -10,6 +10,7 @@ from application.earnings_call.workflow import EarningsCallRunStatus, EarningsCa
 
 
 def _row_to_run_dto(row: sqlite3.Row) -> EarningsCallRunDTO:
+    keys = row.keys() if hasattr(row, "keys") else []
     return EarningsCallRunDTO(
         run_id=row["run_id"],
         source_key=row["source_key"],
@@ -26,6 +27,8 @@ def _row_to_run_dto(row: sqlite3.Row) -> EarningsCallRunDTO:
         execution_expires_at=row["execution_expires_at"],
         attempt_count=row["attempt_count"],
         last_error_code=row["last_error_code"],
+        revision_ref=row["revision_ref"] if "revision_ref" in keys else None,
+        content_sha256=row["content_sha256"] if "content_sha256" in keys else None,
         created_at=row["created_at"],
         updated_at=row["updated_at"],
     )
@@ -145,12 +148,15 @@ def mark_note_written(
     run_id: str,
     execution_token: str,
     vault_path: str,
+    revision_ref: Optional[str] = None,
+    content_sha256: Optional[str] = None,
 ) -> EarningsCallRunDTO:
     now = time.time()
     cur = conn.execute(
-        "UPDATE earnings_call_runs SET status = 'note_written', vault_path = ?, updated_at = ? "
+        "UPDATE earnings_call_runs SET status = 'note_written', vault_path = ?, "
+        "  revision_ref = COALESCE(?, revision_ref), content_sha256 = COALESCE(?, content_sha256), updated_at = ? "
         "WHERE run_id = ? AND execution_token = ? AND (execution_expires_at IS NULL OR execution_expires_at > ?)",
-        (vault_path, now, run_id, execution_token, now),
+        (vault_path, revision_ref, content_sha256, now, run_id, execution_token, now),
     )
     if cur.rowcount == 0:
         raise EarningsCallLeaseExpiredError(f"Execution lease for run '{run_id}' has expired or is invalid")

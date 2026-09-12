@@ -4,8 +4,10 @@ import time
 from pathlib import Path
 from typing import Any
 from core.utils import normalize_content
+from tools.archivist.maintenance_guard import assert_write_allowed
 
 def _atomic_write_to(path: Path, content: Any, max_retries: int = 8, backoff: float = 0.05) -> None:
+    assert_write_allowed(path)
     """Generic atomic write: temp file → os.replace() — ใช้ได้กับไฟล์ใดก็ได้"""
     if not isinstance(content, str):
         content = normalize_content(content) if isinstance(content, list) else str(content)
@@ -39,6 +41,7 @@ def _atomic_write_to(path: Path, content: Any, max_retries: int = 8, backoff: fl
 
 def _stage_text(path: Path, content: Any) -> Path:
     """Write text to a temporary file in the same directory and return its Path."""
+    assert_write_allowed(path)
     if not isinstance(content, str):
         content = normalize_content(content) if isinstance(content, list) else str(content)
     parent = path.parent

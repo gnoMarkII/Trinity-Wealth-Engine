@@ -26,6 +26,13 @@ _TICKER_FRONTMATTER_RE = re.compile(r"^tickers?:\s*\[?[\"']?([A-Z0-9.-]+)[\"']?"
 _VIDEO_ID_FRONTMATTER_RE = re.compile(r"^video_id:\s*[\"']?([a-zA-Z0-9_-]+)[\"']?", re.MULTILINE | re.IGNORECASE)
 _SOURCE_URL_FRONTMATTER_RE = re.compile(r"^source_url:\s*[\"']?(https?://[^\s\"']+)[\"']?", re.MULTILINE | re.IGNORECASE)
 
+from tools.archivist.metadata import (
+    parse_note,
+    normalize_legacy_metadata,
+    validate_note,
+    dump_note,
+)
+
 
 
 

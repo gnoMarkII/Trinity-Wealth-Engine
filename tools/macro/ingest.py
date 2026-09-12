@@ -82,6 +82,7 @@ def ingest_global_macro() -> str:
 
     md_lines = [
         "---",
+        "schema_version: 2",
         f"title: Global Macro Snapshot {today}",
         "entity_type: macro_global",
         f"date: {today}",
@@ -149,6 +150,7 @@ def ingest_regional_macro() -> str:
 
     md_lines = [
         "---",
+        "schema_version: 2",
         f"title: Regional Macro Snapshot {today}",
         "entity_type: macro_regional",
         f"date: {today}",
@@ -264,6 +266,7 @@ def ingest_country_macro() -> str:
 
     md_lines = [
         "---",
+        "schema_version: 2",
         f"title: Country Macro Snapshot {today}",
         "entity_type: macro_country",
         f"date: {today}",
@@ -362,7 +365,9 @@ def ingest_us_sectors() -> str:
             except Exception: pass
     rows.sort(key=lambda r: r["change_pct"], reverse=True)
     md_lines = [
-        "---", f"title: US Sectors Pulse {today}", "---", "",
+        "---", "schema_version: 2", f"title: US Sectors Pulse {today}",
+        "entity_type: us_sectors_pulse", f"date: {today}", "tags: [macro, sectors, snapshot]",
+        "---", "",
         f"# กระแสเงินไหลเวียนกลุ่มอุตสาหกรรมสหรัฐฯ — {today}", "",
         "| อันดับ | Sector | ETF | ราคา (USD) | เปลี่ยนแปลง | ลักษณะ |",
         "|--------|--------|-----|-----------|------------|--------|"
@@ -376,20 +381,17 @@ def ingest_us_sectors() -> str:
 @traceable(run_type="chain")
 def fetch_and_save_macro_snapshots() -> None:
     """ดึงข้อมูล Snapshots 3 ระดับ (Global, Regional, Country) และบันทึกลง Daily_Snapshots โดยตรง"""
-    from pathlib import Path
-    from tools._atomic_io import _atomic_write_to
-
     today_str = os.environ.get("EVAL_DATE", datetime.now().strftime("%Y-%m-%d"))
-    vault_path = Path(os.environ.get("OBSIDIAN_VAULT_PATH", "./memories")).resolve()
-    snapshots_dir = vault_path / "30_Knowledge_Base" / "Macroeconomics" / "Daily_Snapshots"
-    snapshots_dir.mkdir(parents=True, exist_ok=True)
+    from tools.archivist.writer import write_raw_markdown
 
-    g_content = ingest_global_macro.invoke({})
-    _atomic_write_to(snapshots_dir / f"Global_Macro_Snapshot_{today_str}.md", g_content)
-
-    r_content = ingest_regional_macro.invoke({})
-    _atomic_write_to(snapshots_dir / f"Regional_Macro_Snapshot_{today_str}.md", r_content)
-
-    c_content = ingest_country_macro.invoke({})
-    _atomic_write_to(snapshots_dir / f"Country_Macro_Snapshot_{today_str}.md", c_content)
-
+    folder = "30_Knowledge_Base/Macroeconomics/Daily_Snapshots"
+    for content, filename in (
+        (ingest_global_macro.invoke({}), f"Global_Macro_Snapshot_{today_str}"),
+        (ingest_regional_macro.invoke({}), f"Regional_Macro_Snapshot_{today_str}"),
+        (ingest_country_macro.invoke({}), f"Country_Macro_Snapshot_{today_str}"),
+    ):
+        write_raw_markdown.invoke({
+            "content": content,
+            "folder_path": folder,
+            "filename": filename,
+        })

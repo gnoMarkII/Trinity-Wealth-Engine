@@ -27,10 +27,16 @@ class StrategyVaultAdapter:
         return self._vault_path.resolve() if self._vault_path else _vault_path()
 
     def latest(self) -> dict[str, Any]:
-        strategy_dir = self.vault_path / "30_Knowledge_Base" / "Strategies"
-        candidates = sorted(strategy_dir.glob("Macro_Strategy_Direction_*.json"))
+        candidates: list[Path] = []
+        v2_dir = self.vault_path / "30_Knowledge_Base" / "Macroeconomics" / "Strategies"
+        if v2_dir.exists():
+            candidates.extend(p for p in v2_dir.rglob("Macro_Strategy_Direction_*.json") if "Revisions" not in p.parts)
+        v1_dir = self.vault_path / "30_Knowledge_Base" / "Strategies"
+        if v1_dir.exists():
+            candidates.extend(p for p in v1_dir.glob("Macro_Strategy_Direction_*.json") if "Revisions" not in p.parts)
         if not candidates:
             raise FileNotFoundError("No Macro Strategy sidecar is available")
+        candidates.sort(key=lambda p: p.name)
         return json.loads(candidates[-1].read_text(encoding="utf-8"))
 
 

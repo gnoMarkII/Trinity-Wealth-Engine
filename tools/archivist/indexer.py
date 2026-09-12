@@ -24,6 +24,7 @@ log = get_logger(__name__)
 
 from .core import _atomic_write_text, read_file, VAULT_PATH, INDEX_PATH, INDEX_LOCK, _VAULT_SYSTEM_FILES, _INDEX_EXCLUDE
 from .parser import _extract_asset_tickers, _strip_frontmatter, extract_yaml_frontmatter_value
+from .portable_links import render_resolved_markdown_link
 
 
 
@@ -33,6 +34,7 @@ from .parser import _extract_asset_tickers, _strip_frontmatter, extract_yaml_fro
 _index_cache: dict[str, list[tuple[str, str]]] = {}
 _index_cache_built = False
 _index_dirty = False
+_index_cache_root: Optional[Path] = None
 _LAYER1_ENTITY_TYPES = {"stock_entity"}
 _LAYER1_ENTITY_TYPES = {"stock_entity"}
 
@@ -71,17 +73,25 @@ def _file_folder_label(file_path: Path, vault_root: Optional[Path | str] = None)
 
 
 def _is_indexable(file_path: Path) -> bool:
-    return (
-        file_path.name not in _VAULT_SYSTEM_FILES
-        and not any(excl in file_path.parts for excl in _INDEX_EXCLUDE)
-    )
+    if file_path.name in _VAULT_SYSTEM_FILES:
+        return False
+    if any(excl in file_path.parts for excl in _INDEX_EXCLUDE):
+        return False
+    parts = file_path.parts
+    # Exclude backup, trash, system, template, archive folders
+    for p in parts:
+        if p.startswith(".") or "backup" in p.lower() or p in ("40_Archive", "99_Templates", "quarantine", "outbox"):
+            return False
+    return True
 
 
 def _build_cache_from_disk(vault_root: Optional[Path | str] = None) -> None:
     """Full scan: เรียกครั้งแรกหรือเมื่อ tool update_master_index ถูกเรียก"""
-    global _index_cache_built
+    global _index_cache_built, _index_cache_root, _index_dirty
     _index_cache.clear()
-    root = Path(vault_root) if vault_root else VAULT_PATH
+    root = (Path(vault_root) if vault_root else VAULT_PATH).resolve()
+    _index_cache_root = root
+    _index_dirty = False
     if not root.exists():
         _index_cache_built = True
         return
@@ -112,13 +122,22 @@ def _write_index_from_cache(vault_root: Optional[Path | str] = None) -> str:
 
     for folder, entries in _index_cache.items():
         for stem, etype in entries:
-            if etype in _LAYER1_ENTITY_TYPES:
+            if etype in _LAYER1_ENTITY_TYPES or etype in ("stock_hub", "holding"):
                 entities_by_category.setdefault(_entity_category(folder), []).append(stem)
             else:
                 knowledge_by_folder.setdefault(folder, []).append((stem, etype))
 
+    target_root = (Path(vault_root) if vault_root else VAULT_PATH).resolve()
+    index_source = target_root / "index.md"
+
     lines = [
         "---",
+        "schema_version: 2",
+        "note_id: nav_master_index_v2",
+        "document_key: navigation:v2:master",
+        "entity_type: concept",
+        "document_role: navigation",
+        "search_scope: excluded",
         "title: Master Index",
         f"date: {datetime.now().strftime('%Y-%m-%d')}",
         "---",
@@ -126,38 +145,101 @@ def _write_index_from_cache(vault_root: Optional[Path | str] = None) -> str:
         "# Master Index",
         "",
         "> ระบบ 3-Layer Graph View: **Entities** เป็น hub (Layer 1), **Knowledge** เป็น snapshot/news (Layer 2),",
-        "> Portfolio (Layer 3) ดูใน [[Portfolio_Dashboard]] และ [[Trading_Journal]]",
+        "> Portfolio (Layer 3) ดูใน Portfolio Dashboard และ Trading Journal",
         "",
     ]
 
-    # Layer 1 — Entities (อยู่บนสุดเพื่อให้ scan หาเร็ว)
+    # Keep the small Layer-3 bridge explicit.  The historical master index
+    # carried these relationships, and a regenerated index must not silently
+    # erase them just because portfolio files are not part of the knowledge
+    # category cache.
+    portfolio_targets = [
+        ("20_Portfolio_Management/Portfolio_Dashboard.md", "Portfolio Dashboard"),
+        ("20_Portfolio_Management/Current_Holdings/Portfolios/default/Trading_Journal.md", "Trading Journal"),
+        ("00_Index/Home.md", "Open V2 Home"),
+    ]
+    holding_root = target_root / "20_Portfolio_Management" / "Current_Holdings" / "Portfolios"
+    if holding_root.is_dir():
+        for holding in sorted(holding_root.glob("*/Holdings/*.md")):
+            portfolio_targets.append(
+                (_file_folder_label(holding, vault_root=target_root) + "/" + holding.name, holding.stem)
+            )
+    lines += ["## Portfolio (Layer 3)", ""]
+    for target, label in portfolio_targets:
+        lines.append(
+            "- "
+            + render_resolved_markdown_link(
+                target_root,
+                index_source,
+                target,
+                label=label,
+            )
+        )
+    lines.append("")
+
+    # Layer 1 — Entities
     if entities_by_category:
         lines += ["## 📍 Entities (Layer 1 Hubs)", ""]
         for category in sorted(entities_by_category):
-            stems = sorted(entities_by_category[category])
-            wikilinks = " · ".join(f"[[{s}]]" for s in stems)
-            lines += [f"### {category} ({len(stems)})", "", wikilinks, ""]
+            stems = sorted(dict.fromkeys(entities_by_category[category]))
+            links: list[str] = []
+            for stem in stems:
+                target_hint = stem
+                for folder, entries in _index_cache.items():
+                    if stem in {entry_stem for entry_stem, _ in entries} and _entity_category(folder) == category:
+                        target_hint = f"{folder}/{stem}" if folder != "Root" else stem
+                        break
+                links.append(
+                    render_resolved_markdown_link(
+                        target_root,
+                        index_source,
+                        target_hint,
+                        label=stem,
+                    )
+                )
+            rendered_links = " · ".join(links)
+            lines += [f"### {category} ({len(stems)})", "", rendered_links, ""]
 
-    # Layer 2 — Knowledge snapshots (folder-grouped, newest first)
-    if knowledge_by_folder:
-        lines += ["## 📚 Knowledge (Layer 2 Snapshots)", ""]
-        for folder in sorted(knowledge_by_folder):
-            lines += [f"### {folder}", "", "| File | Entity Type |", "|------|-------------|"]
-            # reverse sort: ถ้า filename ลงท้ายด้วยวันที่ จะได้ใหม่สุดบนสุด
-            for stem, etype in sorted(knowledge_by_folder[folder], reverse=True):
-                lines.append(f"| [[{stem}]] | {etype} |")
-            lines.append("")
+    # Layer 2 — Knowledge Hubs summary
+    lines += ["## 📚 Knowledge Base (Layer 2 Categories)", ""]
+    category_counts: dict[str, int] = {}
+    for folder, entries in knowledge_by_folder.items():
+        cat = _entity_category(folder)
+        category_counts[cat] = category_counts.get(cat, 0) + len(entries)
 
-    target_root = Path(vault_root) if vault_root else VAULT_PATH
-    _atomic_write_text(target_root / "index.md", "\n".join(lines))
+    for cat in sorted(category_counts):
+        lines.append(f"- **{cat}**: {category_counts[cat]:,} notes")
+    lines.append("")
+
+    # Recent / Key Knowledge Hubs (bounded to keep total chars <= 4,000)
+    lines += ["### 🗂️ Major Knowledge Sections", ""]
+    hub_targets = (
+        ("00_Index/Stocks_Hub.md", "📈 Stocks & Equity Analysis"),
+        ("00_Index/Macro_Hub.md", "🌐 Macroeconomics & Strategy"),
+        ("00_Index/News_Hub.md", "📰 News & Articles"),
+        ("00_Index/YouTube_Hub.md", "📺 Video Summaries"),
+        ("00_Index/NotebookLM_Sources_Hub.md", "🎙️ NotebookLM Sources"),
+        ("00_Index/Concepts_Hub.md", "💡 Research Concepts"),
+    )
+    for target, label in hub_targets:
+        lines.append(
+            "- "
+            + render_resolved_markdown_link(
+                target_root,
+                index_source,
+                target,
+                label=label,
+            )
+        )
+    lines.append("")
+
+    output_text = "\n".join(lines)
+    _atomic_write_text(target_root / "index.md", output_text)
 
     entity_count = sum(len(v) for v in entities_by_category.values())
     knowledge_count = sum(len(v) for v in knowledge_by_folder.values())
     total = entity_count + knowledge_count
-    return (
-        f"อัปเดต index.md สำเร็จ: {total} ไฟล์ "
-        f"({entity_count} entities, {knowledge_count} snapshots)"
-    )
+    return f"อัปเดต index.md สำเร็จ: {total} ไฟล์ ({len(output_text)} ตัวอักษร)"
 
 
 def _index_upsert(file_path: Path, vault_root: Optional[Path | str] = None) -> None:
@@ -166,8 +248,9 @@ def _index_upsert(file_path: Path, vault_root: Optional[Path | str] = None) -> N
     if not _is_indexable(file_path):
         return
 
-    if not _index_cache_built:
-        _build_cache_from_disk(vault_root=vault_root)
+    root = (Path(vault_root) if vault_root else VAULT_PATH).resolve()
+    if not _index_cache_built or _index_cache_root != root:
+        _build_cache_from_disk(vault_root=root)
 
     folder = _file_folder_label(file_path, vault_root=vault_root)
     entity_type = _read_entity_type(file_path)

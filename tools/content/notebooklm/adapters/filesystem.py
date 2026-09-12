@@ -16,7 +16,10 @@ class FilesystemSourceCatalogAdapter:
         if not self._sources_dir.is_dir():
             return []
         result = []
-        for path in self._sources_dir.glob("*.md"):
+        for path in self._sources_dir.rglob("*.md"):
+            # Exclude hidden files, temp files, revisions, outbox, quarantine, inbox
+            if any(p.startswith(".") or p in ("Inbox", "Revisions", "quarantine", "outbox") for p in path.parts):
+                continue
             title, date_part, is_verified = parse_source_filename(path.stem)
             result.append({
                 "file_path": str(path.resolve()),
@@ -49,8 +52,16 @@ class FilesystemBriefingContentAdapter:
 
 class FilesystemManifestAdapter:
     def get_for_source(self, source_path: str) -> Any:
+        from tools.content.notebooklm.manifest import ManifestLoadResult, ManifestStatus
         try:
             content_hash = manifest.compute_content_hash(Path(source_path))
             return manifest.load_manifest(manifest.manifest_path_for(content_hash))
-        except (OSError, ValueError, TypeError):
-            return None
+        except (OSError, ValueError, TypeError) as exc:
+            # History store is unreadable — return typed MISSING_HISTORY rather than None.
+            # Returning None would make callers treat the source as never-seen and create
+            # a new run, silently losing existing history.
+            return ManifestLoadResult(
+                load_status=ManifestStatus.MISSING_HISTORY,
+                error_message=f"History store unreadable: {exc}",
+                path=source_path,
+            )

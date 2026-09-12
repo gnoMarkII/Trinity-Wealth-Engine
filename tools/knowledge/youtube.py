@@ -59,15 +59,23 @@ def _extract_video_id(url_or_id: str) -> str | None:
     return m.group(1) if m else None
 
 
+def _get_youtube_summaries_path() -> Path:
+    return Path(os.getenv("OBSIDIAN_VAULT_PATH", "./memories")).resolve() / "30_Knowledge_Base" / "YouTube_Summaries"
+
+
 def _find_existing_insight(video_id: str) -> Path | None:
     """คืน Path ของไฟล์ insight ที่มีอยู่แล้ว หรือ None ถ้ายังไม่เคย ingest"""
-    if not _YOUTUBE_SUMMARIES_PATH.exists():
+    summaries_path = _get_youtube_summaries_path()
+    if not summaries_path.exists():
         return None
-    matches = list(_YOUTUBE_SUMMARIES_PATH.rglob(f"YouTube_Insight_{video_id}_*.md"))
-    if matches:
-        return matches[0]
+    matches = list(summaries_path.rglob(f"*{video_id}*.md"))
+    for p in matches:
+        if "Inbox" not in p.parts and "Revisions" not in p.parts:
+            return p
 
-    for md_file in _YOUTUBE_SUMMARIES_PATH.rglob("*.md"):
+    for md_file in summaries_path.rglob("*.md"):
+        if "Inbox" in md_file.parts or "Revisions" in md_file.parts:
+            continue
         try:
             with open(md_file, "r", encoding="utf-8") as f:
                 head = f.read(1024)

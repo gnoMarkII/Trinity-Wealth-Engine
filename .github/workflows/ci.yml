@@ -38,3 +38,19 @@ jobs:
           enable-cache: true
       - run: uv sync --frozen
       - run: uv run pytest tests/api -q
+
+  architecture:
+    name: Vault architecture and write-boundary contracts
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+      - run: uv sync --frozen
+      - run: uv run pytest tests/architecture -q
+      - run: uv run pytest tests/application/knowledge tests/tools/archivist/test_vault_r8_*.py tests/tools/archivist/test_runtime_layout_r9.py tests/tools/archivist/test_runtime_migration_r9.py tests/tools/archivist/test_recovery_bundle_r9.py tests/api/test_knowledge_writes_r8.py tests/integration/test_portfolio_projection_rebuild.py -q --no-cov
+      - run: mkdir -p scratch/vault-r8 scratch/vault-r9
+      - run: uv run python scripts/scan_vault_writers_r8.py --root . --fail-on unresolved,review,expired > scratch/vault-r8/ci-writer-inventory.json
+      - run: uv run python scripts/scan_vault_writers_r9.py --root . --fail-on unresolved,review,expired,broad_allowlist > scratch/vault-r9/ci-writer-inventory.json
+      - run: uv run python -m compileall -q application tools api schemas scripts

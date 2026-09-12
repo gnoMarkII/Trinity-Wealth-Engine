@@ -3,17 +3,20 @@ import frontmatter
 
 from core.logger import get_logger
 from tools._atomic_io import _atomic_write_to
+from tools.archivist.maintenance_guard import assert_write_allowed
 from tools.portfolio.domain.models import WatchlistState, WatchlistItem, _now_iso
 from tools.portfolio.domain.validator import validate_portfolio_id
 from tools.portfolio.ports.watchlist_port import WatchlistRepositoryPort
 from .paths import (
     get_watchlist_filepath,
     get_watchlist_items_dir,
+    get_vault_path,
     get_portfolio_lock_path,
     _LOCK_TIMEOUT,
 )
 from tools.portfolio.domain.errors import PortfolioNotFoundError
 from .repository_adapter import _get_portfolio_lock, _portfolio_exists
+from .identity import portfolio_note_identity
 
 log = get_logger(__name__)
 
@@ -29,11 +32,20 @@ def _initial_watchlist() -> WatchlistState:
     )
 
 
-def _item_to_md(item: WatchlistItem) -> str:
+def _item_to_md(item: WatchlistItem, portfolio_id: str, vault_root: Path) -> str:
+    note_id, document_key = portfolio_note_identity(
+        vault_root, portfolio_id, "watchlist_item", item.symbol
+    )
     lines = [
         "---",
-        f"schema_version: {item.schema_version}",
+        "schema_version: 2",
+        f"note_id: {note_id}",
+        f"document_key: {document_key}",
+        f"title: {item.symbol} (Watchlist)",
         "entity_type: watchlist_item",
+        "document_role: portfolio_item",
+        f"portfolio_id: {portfolio_id}",
+        "search_scope: excluded",
         f"symbol: {item.symbol}",
         f"asset_type: {item.asset_type}",
         "derived: true",
@@ -91,6 +103,19 @@ class MarkdownWatchlistAdapter(WatchlistRepositoryPort):
             if key in dump:
                 ordered[key] = dump.pop(key)
         ordered.update(dump)
+        note_id, document_key = portfolio_note_identity(
+            get_vault_path(), portfolio_id, "watchlist"
+        )
+        ordered.update({
+            "schema_version": 2,
+            "note_id": note_id,
+            "document_key": document_key,
+            "title": f"Watchlist {portfolio_id}",
+            "entity_type": "portfolio_state",
+            "document_role": "watchlist",
+            "portfolio_id": portfolio_id,
+            "search_scope": "excluded",
+        })
 
         post = frontmatter.Post(content="", **ordered)
         serialized = frontmatter.dumps(post, sort_keys=False)
@@ -99,12 +124,16 @@ class MarkdownWatchlistAdapter(WatchlistRepositoryPort):
 
         # Sync items sidecars
         items_dir = get_watchlist_items_dir(portfolio_id)
+        assert_write_allowed(items_dir)
         items_dir.mkdir(parents=True, exist_ok=True)
         live: set[str] = set()
 
         for it in state.items:
             safe = it.symbol.replace("/", "_")
-            _atomic_write_to(items_dir / f"{safe}.md", _item_to_md(it))
+            _atomic_write_to(
+                items_dir / f"{safe}.md",
+                _item_to_md(it, portfolio_id, get_vault_path()),
+            )
             live.add(safe)
 
         for old in items_dir.glob("*.md"):

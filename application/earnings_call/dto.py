@@ -47,6 +47,8 @@ class EarningsCallRunDTO:
     attempt_count: int = 0
     last_error_code: Optional[str] = None
     reused_existing_run: bool = False
+    revision_ref: Optional[str] = None
+    content_sha256: Optional[str] = None
     created_at: float = 0.0
     updated_at: float = 0.0
 
@@ -90,3 +92,16 @@ class EarningsCallNoteDTO:
     date: str
     last_updated: str
     has_full_transcript: bool = True
+
+
+@dataclass(frozen=True)
+class EarningsCallWriteResultDTO:
+    """Durable reference returned by the note writer after a committed write."""
+
+    vault_path: str
+    note_id: Optional[str] = None
+    revision_id: Optional[str] = None
+    revision: Optional[int] = None
+    content_sha256: Optional[str] = None
+    artifact_set_hash: Optional[str] = None
+    manifest_path: Optional[str] = None

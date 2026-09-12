@@ -1,0 +1,210 @@
+{
+  "registry_id": "invest-agents-vault-profile-registry",
+  "registry_version": 1,
+  "note_schema_version": 2,
+  "global": {
+    "identity_fields": [
+      "note_id",
+      "document_key"
+    ],
+    "required_core_fields": [
+      "schema_version",
+      "note_id",
+      "document_key",
+      "entity_type",
+      "title"
+    ],
+    "portable_frontmatter_types": [
+      "string",
+      "number",
+      "boolean",
+      "date",
+      "list",
+      "mapping"
+    ],
+    "unknown_fields": "preserve",
+    "canonical_links": "relative-markdown",
+    "canonical_path_policy": "central_router",
+    "write_owner": "vault-write-broker",
+    "registry_digest_algorithm": "sha256:canonical-json"
+  },
+  "profiles": {
+    "published": {
+      "profile_version": 1,
+      "entity_types": [
+        "concept",
+        "company_news",
+        "equity_analysis",
+        "stock_hub",
+        "quant_snapshot",
+        "earnings_call",
+        "macro_strategy",
+        "macro_snapshot",
+        "briefing_book",
+        "book_note",
+        "youtube_summary"
+      ],
+      "required": [
+        "schema_version",
+        "note_id",
+        "document_key",
+        "entity_type",
+        "title"
+      ],
+      "forbidden": [],
+      "source_of_truth": "vault_markdown",
+      "manual_edit": "human_revision_with_ownership_checks",
+      "search_scope_default": "included",
+      "index_policy": "published_profile_policy",
+      "retention_class_default": "permanent",
+      "path_policy": "central_router",
+      "identity_policy": "central_allocator_only"
+    },
+    "capture": {
+      "profile_version": 1,
+      "entity_types": [
+        "capture"
+      ],
+      "required": [
+        "schema_version",
+        "title",
+        "entity_type",
+        "capture_status",
+        "search_scope",
+        "captured_at",
+        "capture_source"
+      ],
+      "forbidden": [
+        "note_id",
+        "document_key"
+      ],
+      "required_values": {
+        "schema_version": 2,
+        "entity_type": "capture",
+        "capture_status": "pending_normalization",
+        "search_scope": "excluded"
+      },
+      "source_of_truth": "vault_capture",
+      "manual_edit": "allowed_until_normalized",
+      "search_scope_default": "excluded",
+      "index_policy": "never_until_published",
+      "retention_class_default": "operational",
+      "path_policy": "00_Inbox",
+      "identity_policy": "forbidden_until_normalized"
+    },
+    "portfolio_projection": {
+      "profile_version": 1,
+      "entity_types": [
+        "portfolio_state",
+        "holding",
+        "watchlist_item",
+        "goal"
+      ],
+      "required": [
+        "schema_version",
+        "note_id",
+        "document_key",
+        "entity_type",
+        "title",
+        "document_role",
+        "portfolio_id",
+        "search_scope"
+      ],
+      "forbidden": [],
+      "required_values": {
+        "search_scope": "excluded"
+      },
+      "source_of_truth": "transactional_runtime_projection",
+      "manual_edit": "projection_fields_forbidden_annotation_fields_allowed",
+      "search_scope_default": "excluded",
+      "index_policy": "never",
+      "retention_class_default": "operational",
+      "path_policy": "portfolio_router",
+      "identity_policy": "portfolio_id_plus_component_or_stable_item_id"
+    },
+    "navigation": {
+      "profile_version": 1,
+      "entity_types": [
+        "navigation"
+      ],
+      "required": [
+        "schema_version",
+        "note_id",
+        "document_key",
+        "entity_type",
+        "title",
+        "document_role",
+        "search_scope"
+      ],
+      "forbidden": [],
+      "required_values": {
+        "entity_type": "navigation",
+        "document_role": "navigation",
+        "search_scope": "excluded"
+      },
+      "source_of_truth": "generated_view",
+      "manual_edit": "forbidden",
+      "search_scope_default": "excluded",
+      "index_policy": "never",
+      "retention_class_default": "ephemeral",
+      "path_policy": "navigation_router",
+      "identity_policy": "central_allocator_only"
+    },
+    "derived_artifact": {
+      "profile_version": 1,
+      "entity_types": [],
+      "required": [],
+      "forbidden": [],
+      "source_of_truth": "external_runtime",
+      "manual_edit": "forbidden",
+      "search_scope_default": "excluded",
+      "index_policy": "never",
+      "retention_class_default": "ephemeral",
+      "path_policy": "external_runtime",
+      "identity_policy": "owner_reference_or_content_hash"
+    }
+  },
+  "entity_aliases": {
+    "article": "company_news",
+    "article_note": "company_news",
+    "news_radar": "company_news",
+    "youtube_insight": "youtube_summary",
+    "company": "stock_hub",
+    "company_entity": "stock_hub",
+    "stock": "stock_hub",
+    "stock_entity": "stock_hub",
+    "book": "book_note",
+    "concept_stub": "concept",
+    "financial_trends": "equity_analysis",
+    "financial_health": "equity_analysis",
+    "stock_momentum": "equity_analysis",
+    "analyst_consensus": "equity_analysis",
+    "equity_quant_snapshot": "quant_snapshot",
+    "macro_daily": "macro_snapshot",
+    "macro_global": "macro_snapshot",
+    "regional_macro": "macro_snapshot",
+    "macro_regional": "macro_snapshot",
+    "macro_country": "macro_snapshot",
+    "us_sectors_pulse": "macro_snapshot",
+    "economic_fundamentals": "macro_snapshot"
+  },
+  "entity_profile": {
+    "concept": "published",
+    "company_news": "published",
+    "equity_analysis": "published",
+    "stock_hub": "published",
+    "quant_snapshot": "published",
+    "earnings_call": "published",
+    "macro_strategy": "published",
+    "macro_snapshot": "published",
+    "briefing_book": "published",
+    "book_note": "published",
+    "youtube_summary": "published",
+    "capture": "capture",
+    "portfolio_state": "portfolio_projection",
+    "holding": "portfolio_projection",
+    "watchlist_item": "portfolio_projection",
+    "goal": "portfolio_projection",
+    "navigation": "navigation"
+  }
+}

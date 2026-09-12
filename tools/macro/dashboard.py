@@ -112,6 +112,10 @@ def build_dashboard_indicators(
 def _series_path(vault_path: Path, series_key: str) -> Path:
     if not _SAFE_SERIES_KEY.fullmatch(series_key):
         raise ValueError("Invalid macro indicator series key")
+    from tools.archivist.vault_paths import VaultPaths
+    vp = VaultPaths(vault_path)
+    if vp.layout_version >= 2:
+        return vault_path / "30_Knowledge_Base" / "Macroeconomics" / "Indicator_Series" / f"{series_key}.json"
     return vault_path / _SERIES_SUBDIR / f"{series_key}.json"
 
 
@@ -135,9 +139,19 @@ def persist_indicator_series(vault_path: Path, indicators: list[dict[str, Any]])
             "unit": indicator.get("unit", ""),
             "points": [],
         }
-        if path.exists():
+        if not path.exists():
+            # Check legacy location as seed
+            legacy_path = vault_path / _SERIES_SUBDIR / f"{series_key}.json"
+            if legacy_path.exists():
+                path_to_read = legacy_path
+            else:
+                path_to_read = None
+        else:
+            path_to_read = path
+
+        if path_to_read and path_to_read.exists():
             try:
-                loaded = json.loads(path.read_text(encoding="utf-8"))
+                loaded = json.loads(path_to_read.read_text(encoding="utf-8"))
                 if isinstance(loaded, dict) and isinstance(loaded.get("points"), list):
                     series.update(loaded)
             except (OSError, json.JSONDecodeError):
@@ -163,7 +177,11 @@ def load_indicator_series(vault_path: Path, series_key: str, range_key: str) -> 
         raise ValueError("Unsupported macro indicator range")
     path = _series_path(vault_path, series_key)
     if not path.exists():
-        return []
+        legacy_path = vault_path / _SERIES_SUBDIR / f"{series_key}.json"
+        if legacy_path.exists():
+            path = legacy_path
+        else:
+            return []
     try:
         payload = json.loads(path.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError):
