@@ -8,7 +8,14 @@
 # =========================================
 # 2. Personal Data & State
 # =========================================
-memories/
+memories/*
+!memories/.system/
+memories/.system/*
+!memories/.system/storage_contract.json
+!memories/.system/vault_config.json
+!memories/.system/ai_retrieval_policy.json
+!memories/.system/catalog_generation_active.json
+!memories/.system/vector_generation_active.json
 logs/
 data/
 *.sqlite

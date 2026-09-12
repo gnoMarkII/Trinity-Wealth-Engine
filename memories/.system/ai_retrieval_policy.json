@@ -1,0 +1,11 @@
+{
+  "policy_version": 1,
+  "embedding_backend": "huggingface",
+  "model_identifier": "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2",
+  "model_revision": "e8f8c211226b894fcb81acc59f3b34ba3efd5f42",
+  "dimension": 384,
+  "local_files_only": true,
+  "hybrid_retrieval": true,
+  "answer_contract": "citation_required_trust_gated_v1",
+  "offline_hash_fallback": "explicit-test-only"
+}

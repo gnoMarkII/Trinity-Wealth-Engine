@@ -1,0 +1,189 @@
+{
+  "contract_id": "multi-app-vault-storage",
+  "schema_version": 2,
+  "status": "active",
+  "registry": {
+    "path": "schemas/vault/registry.json",
+    "policy_path": "schemas/vault/policies",
+    "registry_version": 1,
+    "current_note_schema_version": 2,
+    "unknown_fields": "preserve",
+    "registry_digest": "6129738659145909400f2b060a79d9978feeb688f910afb70e66074595eddc1b",
+    "policy_digest": "e84469c85e31024f7ec67ed9e9fdc2811d0b1cef1053ba31915c3984d8e0bec1"
+  },
+  "source_of_truth": {
+    "knowledge_markdown": "vault_markdown",
+    "capture_markdown": "vault_capture_until_normalized",
+    "portfolio_transactions": "transactional_runtime",
+    "portfolio_markdown": "transactional_runtime_projection",
+    "catalog": "external_derived_read_model",
+    "vectors": "external_derived_read_model",
+    "broker_commands_and_receipts": "external_runtime"
+  },
+  "write_boundary": {
+    "port": "application.knowledge.write_ports.KnowledgeWritePort",
+    "broker": "tools.archivist.write_broker.KnowledgeWriteBroker",
+    "executor": "tools.archivist.write_adapter.ArtifactWriterKnowledgeAdapter",
+    "direct_path_writes_from_applications": false,
+    "idempotency": "command_fingerprint_by_idempotency_key",
+    "optimistic_concurrency": "expected_content_hash_or_expected_revision_id"
+  },
+  "broker_runtime": {
+    "location": "data/vault_runtime/<vault-id>/broker/knowledge_write.sqlite3",
+    "inside_vault": false,
+    "states": ["accepted", "leased", "committing", "committed", "duplicate_reused", "conflict", "rejected", "retry_wait", "dead_letter"],
+    "lease_fencing": "monotonic_token",
+    "recovery": "reclaim_expired_leases_and_replay_same_command"
+  },
+  "ai_governance": {
+    "catalog_policy": "schemas/vault/policies/indexing.json",
+    "vector_policy": "schemas/vault/policies/indexing.json",
+    "vector_excludes": ["capture", "portfolio_projection", "navigation", "draft", "superseded", "retired", "generated", "disputed", "confidential", "restricted"],
+    "answer_gate": "tools/archivist/ai_answer_contract.py"
+  },
+  "canonical": {
+    "content": ["**/*.md", "90_Attachments/**"],
+    "control_metadata": [
+      ".system/identity_allocations.json",
+      ".system/retired_notes.jsonl"
+    ],
+    "encoding": "utf-8",
+    "new_line_ending": "lf",
+    "reader_line_endings": ["lf", "crlf"]
+  },
+  "adapters": {
+    "obsidian": [".obsidian/**", "00_Index/App_Views/Obsidian/**"],
+    "allowlisted_app_view": [
+      "20_Portfolio_Management/Portfolio_Dashboard.md"
+    ]
+  },
+  "derived_external": ["data/**", "scratch/**"],
+  "derived_pointer_scope": [
+    ".system/catalog_generation_active.json",
+    ".system/vector_generation_active.json"
+  ],
+  "capture": {
+    "path": "00_Inbox",
+    "capture_status": "pending_normalization",
+    "search_scope": "excluded",
+    "identity_policy": "central_allocator_only"
+  },
+  "writer_profiles": {
+    "published": {
+      "required": ["schema_version", "note_id", "document_key", "entity_type", "title"],
+      "schema_version": 2,
+      "identity": "central_allocator_only",
+      "path": "central_router",
+      "links": "relative-markdown"
+    },
+    "portfolio_state": {
+      "required": ["schema_version", "note_id", "document_key", "entity_type", "title", "document_role", "portfolio_id", "search_scope"],
+      "schema_version": 2,
+      "search_scope": "excluded",
+      "identity": "portfolio_id_plus_component_or_stable_item_id"
+    },
+    "navigation": {
+      "required": ["schema_version", "note_id", "document_key", "entity_type", "title", "document_role", "search_scope"],
+      "schema_version": 2,
+      "document_role": "navigation",
+      "search_scope": "excluded",
+      "writer": "tools/archivist/navigation_builder.py"
+    },
+    "capture": {
+      "required": ["schema_version", "title", "entity_type", "capture_status", "search_scope", "captured_at", "capture_source"],
+      "schema_version": 2,
+      "identity": "forbidden_until_normalized"
+    },
+    "derived_artifact": {
+      "identity": "owner_reference_or_content_hash",
+      "search_scope": "excluded",
+      "canonical_markdown": false
+    }
+  },
+  "allowlist_policy": {
+    "required_fields": ["source", "profile", "owner", "reason", "target_pattern", "test_id", "expires_on"],
+    "date_format": "iso-8601",
+    "default_expires_on": "2027-09-30",
+    "expired_disposition": "expired",
+    "renewal_owner": "vault-contract"
+  },
+  "direct_writer_allowlist": [
+    {"source": "tools/archivist/navigation_builder.py", "profile": "navigation", "owner": "vault-contract", "reason": "deterministic generated navigation with full metadata", "target_pattern": "00_Index/**", "test_id": "test_vault_v2_navigation"},
+    {"source": "tools/portfolio/adapters/markdown/repository_adapter.py", "profile": "portfolio_state", "owner": "portfolio-adapter", "reason": "multi-file state transaction", "target_pattern": "20_Portfolio_Management/**", "test_id": "test_vault_v2_portfolio"},
+    {"source": "tools/portfolio/adapters/markdown/journal_vault_adapter.py", "profile": "portfolio_state", "owner": "portfolio-adapter", "reason": "locked journal read-modify-write", "target_pattern": "20_Portfolio_Management/**/Trading_Journal.md", "test_id": "test_vault_v2_portfolio"},
+    {"source": "tools/portfolio/adapters/markdown/goals_adapter.py", "profile": "portfolio_state", "owner": "portfolio-adapter", "reason": "authoritative portfolio state adapter", "target_pattern": "20_Portfolio_Management/**/Goals/**", "test_id": "test_vault_v2_portfolio"},
+    {"source": "tools/portfolio/adapters/markdown/watchlist_adapter.py", "profile": "portfolio_state", "owner": "portfolio-adapter", "reason": "authoritative portfolio state adapter", "target_pattern": "20_Portfolio_Management/**/Watchlist*", "test_id": "test_vault_v2_portfolio"},
+    {"source": "tools/portfolio/goals.py", "profile": "portfolio_state", "owner": "portfolio-adapter", "reason": "compatibility wrapper delegates contract fields", "target_pattern": "20_Portfolio_Management/**/Goals/**", "test_id": "test_vault_v2_portfolio"},
+    {"source": "tools/portfolio/journal.py", "profile": "portfolio_state", "owner": "portfolio-adapter", "reason": "compatibility wrapper delegates contract fields", "target_pattern": "20_Portfolio_Management/**/Trading_Journal.md", "test_id": "test_vault_v2_portfolio"},
+    {"source": "tools/portfolio/performance.py", "profile": "derived_artifact", "owner": "portfolio-adapter", "reason": "CSV performance projection is rebuildable derived state", "target_pattern": "20_Portfolio_Management/**/Performance_Log.csv", "test_id": "test_vault_v2_portfolio"},
+    {"source": "tools/archivist/vault_migration.py", "profile": "migration", "owner": "vault-maintenance", "reason": "reversible migration journal and leased relocation", "target_pattern": "40_Archive/**|.system/**", "test_id": "test_vault_v2_migration"},
+    {"source": "tools/archivist/vault_metadata_backfill.py", "profile": "migration", "owner": "vault-maintenance", "reason": "leased reversible metadata repair through ArtifactWriter", "target_pattern": "30_Knowledge_Base/**", "test_id": "test_live_file_repair_r3"},
+    {"source": "tools/archivist/vault_link_healer.py", "profile": "migration", "owner": "vault-maintenance", "reason": "leased link normalization and evidence only", "target_pattern": "30_Knowledge_Base/**|scratch/**", "test_id": "test_portable_links"},
+    {"source": "tools/archivist/identity_store.py", "profile": "control_metadata", "owner": "vault-contract", "reason": "durable central identity allocator", "target_pattern": ".system/identity_allocations.json|.system/*.corrupt", "test_id": "test_vault_v2_identity"},
+    {"source": "tools/archivist/entity_registry.py", "profile": "control_metadata", "owner": "vault-contract", "reason": "durable entity registry", "target_pattern": ".system/identities/**", "test_id": "test_vault_v2_identity"},
+    {"source": "tools/archivist/maintenance_guard.py", "profile": "control_metadata", "owner": "vault-maintenance", "reason": "atomic maintenance lease control document", "target_pattern": ".system/maintenance.json", "test_id": "test_maintenance_guard"},
+    {"source": "tools/archivist/vault_archival_policy.py", "profile": "migration", "owner": "vault-maintenance", "reason": "leased lifecycle relocation into archive", "target_pattern": "40_Archive/News/**", "test_id": "test_vault_lifecycle_phase2"},
+    {"source": "tools/archivist/vault_audit.py", "profile": "evidence_report", "owner": "vault-maintenance", "reason": "audit evidence outside canonical content", "target_pattern": "scratch/**|reports/**", "test_id": "test_vault_v2_audit"},
+    {"source": "tools/archivist/vault_benchmark.py", "profile": "scratch_evidence", "owner": "vault-maintenance", "reason": "synthetic benchmark corpus and reports", "target_pattern": "scratch/**", "test_id": "test_vault_v2_audit"},
+    {"source": "tools/content/briefing_artifacts.py", "profile": "published_plus_companion", "owner": "content-adapter", "reason": "Markdown is committed by ArtifactWriter; quality JSON is declared companion", "target_pattern": "30_Knowledge_Base/NotebookLM_Sources/**", "test_id": "test_notebooklm_vault_migration"},
+    {"source": "tools/content/earnings_call/adapters/obsidian_adapter.py", "profile": "published", "owner": "content-adapter", "reason": "earnings notes commit through ArtifactWriter", "target_pattern": "30_Knowledge_Base/Stocks/**/Earnings/**", "test_id": "test_vault_v2_regression_probes"},
+    {"source": "tools/content/notebooklm/audio_utils.py", "profile": "external_runtime", "owner": "notebooklm", "reason": "temporary audio files are not canonical notes", "target_pattern": "data/**|temp/**", "test_id": "test_notebooklm_pipeline"},
+    {"source": "tools/content/notebooklm/manifest.py", "profile": "external_runtime", "owner": "notebooklm", "reason": "operational manifest and history state", "target_pattern": "data/**", "test_id": "test_notebooklm_vault_migration"},
+    {"source": "tools/content/notebooklm/pipeline.py", "profile": "external_runtime", "owner": "notebooklm", "reason": "downloaded audio attachment staging", "target_pattern": "data/**|90_Attachments/**", "test_id": "test_notebooklm_pipeline"},
+    {"source": "tools/macro/baselines.py", "profile": "derived_artifact", "owner": "macro-adapter", "reason": "rebuildable baseline projection", "target_pattern": "30_Knowledge_Base/Macroeconomics/**", "test_id": "test_vault_v2_macro"},
+    {"source": "tools/macro/dashboard.py", "profile": "derived_artifact", "owner": "macro-adapter", "reason": "indicator series JSON projection", "target_pattern": "30_Knowledge_Base/Macroeconomics/Indicator_Series/**", "test_id": "test_vault_v2_macro"},
+    {"source": "tools/macro/evaluation.py", "profile": "derived_artifact", "owner": "macro-adapter", "reason": "observable JSON sidecar projection", "target_pattern": "30_Knowledge_Base/Macroeconomics/Daily_Snapshots/**", "test_id": "test_vault_v2_macro"},
+    {"source": "tools/macro/news_funnel.py", "profile": "published_plus_migration", "owner": "news-funnel", "reason": "concept/news commits use ArtifactWriter; cleanup is leased", "target_pattern": "30_Knowledge_Base/Concepts/**|30_Knowledge_Base/News/**", "test_id": "test_vault_v2_macro"},
+    {"source": "tools/macro/report_formatter.py", "profile": "derived_artifact", "owner": "macro-adapter", "reason": "strategy JSON companion projection", "target_pattern": "30_Knowledge_Base/Macroeconomics/Strategies/**", "test_id": "test_vault_v2_macro"},
+    {"source": "tools/macro/news_funnel_store.py", "profile": "external_runtime", "owner": "news-funnel", "reason": "event store persistence is operational state", "target_pattern": "data/**|.system/**", "test_id": "test_vault_v2_macro"},
+    {"source": "tools/market/quant_history.py", "profile": "published", "owner": "market-adapter", "reason": "compatibility alias delegates to shared atomic helper; note commits use ArtifactWriter", "target_pattern": "30_Knowledge_Base/Stocks/**/Quant/**", "test_id": "test_equity_vault_v2"},
+    {"source": "tools/market/pit_fundamentals_ledger.py", "profile": "derived_artifact", "owner": "market-adapter", "reason": "point-in-time evidence JSON ledger, not canonical Markdown", "target_pattern": "data/**|30_Knowledge_Base/**/Evidence/**", "test_id": "test_equity_vault_v2"},
+    {"source": "tools/portfolio/adapters/markdown/paths.py", "profile": "portfolio_state", "owner": "portfolio-adapter", "reason": "canonical directory resolver with lease guard before mkdir", "target_pattern": "20_Portfolio_Management/**", "test_id": "test_vault_v2_portfolio"},
+    {"source": "tools/portfolio/adapters/sqlite_mirror_decorator.py", "profile": "external_runtime", "owner": "portfolio-adapter", "reason": "rebuildable SQLite mirror outside canonical Markdown", "target_pattern": "data/**|.system/*.db", "test_id": "test_vault_v2_portfolio"},
+    {"source": "tools/portfolio/services/dime_sync_service.py", "profile": "external_runtime", "owner": "portfolio-import", "reason": "provider sync history, not canonical note content", "target_pattern": ".sync_history/**", "test_id": "test_vault_v2_portfolio"},
+    {"source": "tools/portfolio/services/scbam_sync_service.py", "profile": "external_runtime", "owner": "portfolio-import", "reason": "provider sync history, not canonical note content", "target_pattern": ".sync_history/**", "test_id": "test_vault_v2_portfolio"},
+    {"source": "tools/portfolio/services/wealthx_sync_service.py", "profile": "external_runtime", "owner": "portfolio-import", "reason": "provider sync history, not canonical note content", "target_pattern": ".sync_history/**", "test_id": "test_vault_v2_portfolio"}
+  ],
+  "source_prefix_rules": [
+    {"prefix": "tools/archivist/", "profile": "infrastructure", "owner": "vault-contract", "reason": "classification only; approval is file/sink based", "classification_only": true},
+    {"prefix": "tools/portfolio/", "profile": "portfolio_adapter", "owner": "portfolio-adapter", "reason": "classification only; approval is file/sink based", "classification_only": true},
+    {"prefix": "tools/market/", "profile": "market_adapter", "owner": "market-adapter", "reason": "classification only; approval is file/sink based", "classification_only": true},
+    {"prefix": "tools/macro/", "profile": "macro_adapter", "owner": "macro-adapter", "reason": "classification only; approval is file/sink based", "classification_only": true},
+    {"prefix": "tools/content/", "profile": "content_adapter", "owner": "content-adapter", "reason": "classification only; approval is file/sink based", "classification_only": true},
+    {"prefix": "tools/knowledge/", "profile": "knowledge_adapter", "owner": "knowledge-adapter", "reason": "classification only; approval is file/sink based", "classification_only": true},
+    {"prefix": "application/", "profile": "application_runtime", "owner": "application-boundary", "reason": "classification only; approval is file/sink based", "classification_only": true},
+    {"prefix": "api/", "profile": "api_runtime", "owner": "api-boundary", "reason": "classification only; approval is file/sink based", "classification_only": true}
+  ],
+  "frontmatter": {
+    "format": "yaml",
+    "portable_types": ["string", "number", "boolean", "date", "list", "mapping"],
+    "date_format": "iso-8601",
+    "unknown_fields": "preserve"
+  },
+  "links": {
+    "internal": "relative-markdown",
+    "external": ["http", "https"],
+    "wikilinks_in_canonical": false,
+    "embeds_in_canonical": false,
+    "absolute_internal_links": false,
+    "unresolved_or_ambiguous": "fail_closed"
+  },
+  "paths": {
+    "separator": "/",
+    "markdown_max_length": 180,
+    "unicode_normalization": "NFC",
+    "windows_reserved_names": "forbidden",
+    "content_hash": "sha256:utf8-decoded-universal-newline"
+  },
+  "identity": {
+    "fields": ["note_id", "document_key"],
+    "path_independent": true,
+    "template_placeholder_ids": false
+  },
+  "compatibility": {
+    "current_schema": 2,
+    "reader_min_schema": 1,
+    "migration": "monotonic-and-reversible",
+    "legacy_reader": "read-only-compatibility-mode"
+  }
+}
