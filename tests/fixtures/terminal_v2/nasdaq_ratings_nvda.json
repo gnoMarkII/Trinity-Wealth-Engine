@@ -1,0 +1,19 @@
+{
+  "data": {
+    "symbol": "NVDA",
+    "meanRatingType": "Strong Buy",
+    "ratingsSummary": "Based on 42 analysts offering recommendations for 'NVDA'.",
+    "brokerNames": [
+      "GOLDMAN SACHS",
+      "MORGAN STANLEY",
+      "JPMORGAN",
+      "BANK OF AMERICA"
+    ]
+  },
+  "message": null,
+  "status": {
+    "rCode": 200,
+    "bCodeMessage": null,
+    "developerMessage": null
+  }
+}

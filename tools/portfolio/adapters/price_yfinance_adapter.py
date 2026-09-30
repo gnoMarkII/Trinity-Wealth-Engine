@@ -68,6 +68,15 @@ class PriceYFinanceAdapter(MarketPricePort):
     def fetch_fx_rate(
         self, date_str: Optional[str] = None, fallback_rate: Optional[float] = None
     ) -> Tuple[float, Literal["historical", "live", "fallback"]]:
+        """Fetch USDTHB exchange rate.
+
+        Date-matching policy for historical lookups:
+        - When date_str is provided and earlier than today, look back up to 5 days using close.asof(target_dt).
+        - This automatically matches weekend queries (e.g. Saturday/Sunday) to the previous trading day's close.
+        - If historical or live fetch fails, returns (fallback_rate or 36.5, "fallback").
+        - ISOLATION INVARIANT: Fallback rate is strictly for portfolio currency conversions and MUST NEVER
+          be registered as a verified macro market observable.
+        """
         default_fallback = fallback_rate if fallback_rate is not None and fallback_rate > 0 else 36.5
         today_str = datetime.now().strftime("%Y-%m-%d")
 
@@ -106,6 +115,7 @@ class PriceYFinanceAdapter(MarketPricePort):
                     return rate, "historical"
             except Exception:
                 pass
+            log.warning("Historical USDTHB FX rate lookup for %s failed; using fallback %.4f", clean_date, default_fallback)
             return default_fallback, "fallback"
 
         try:
@@ -115,6 +125,7 @@ class PriceYFinanceAdapter(MarketPricePort):
         except Exception:
             pass
 
+        log.warning("Live USDTHB FX rate fetch failed; using fallback %.4f (source=fallback)", default_fallback)
         return default_fallback, "fallback"
 
     def refresh_portfolio_prices(self, state: PortfolioState) -> Dict[str, str]:

@@ -691,6 +691,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/portfolio/dime/scan/batch-stream": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Scan Batch Stream Endpoint */
+        post: operations["scan_batch_stream_endpoint_api_portfolio_dime_scan_batch_stream_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/portfolio/dime/scan/email": {
         parameters: {
             query?: never;
@@ -753,6 +770,278 @@ export interface paths {
         put?: never;
         /** Commit Staged Endpoint */
         post: operations["commit_staged_endpoint_api_portfolio_dime_commit__scan_id__post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/portfolio/dime/pdf": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Dime Pdf Endpoint */
+        get: operations["get_dime_pdf_endpoint_api_portfolio_dime_pdf_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/portfolio/dime/pdf-text": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Dime Pdf Text Endpoint */
+        get: operations["get_dime_pdf_text_endpoint_api_portfolio_dime_pdf_text_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/portfolio/wealthx/emails": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Search Wealthx Emails Endpoint */
+        get: operations["search_wealthx_emails_endpoint_api_portfolio_wealthx_emails_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/portfolio/wealthx/scan/batch-stream": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Scan Batch Stream Endpoint */
+        post: operations["scan_batch_stream_endpoint_api_portfolio_wealthx_scan_batch_stream_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/portfolio/wealthx/scan/email": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Scan Email Attachment Endpoint */
+        post: operations["scan_email_attachment_endpoint_api_portfolio_wealthx_scan_email_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/portfolio/wealthx/scan/upload": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Scan Upload Pdf Endpoint */
+        post: operations["scan_upload_pdf_endpoint_api_portfolio_wealthx_scan_upload_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/portfolio/wealthx/staged/{scan_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Staged Endpoint */
+        get: operations["get_staged_endpoint_api_portfolio_wealthx_staged__scan_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/portfolio/wealthx/commit/{scan_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Commit Staged Endpoint */
+        post: operations["commit_staged_endpoint_api_portfolio_wealthx_commit__scan_id__post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/portfolio/wealthx/pdf": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Wealthx Pdf Endpoint */
+        get: operations["get_wealthx_pdf_endpoint_api_portfolio_wealthx_pdf_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/portfolio/wealthx/pdf-text": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Wealthx Pdf Text Endpoint */
+        get: operations["get_wealthx_pdf_text_endpoint_api_portfolio_wealthx_pdf_text_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/portfolio/scb/emails": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Search Scbam Emails Endpoint */
+        get: operations["search_scbam_emails_endpoint_api_portfolio_scb_emails_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/portfolio/scb/scan/email": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Scan Email Endpoint */
+        post: operations["scan_email_endpoint_api_portfolio_scb_scan_email_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/portfolio/scb/scan/batch-stream": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Scan Batch Stream Endpoint */
+        post: operations["scan_batch_stream_endpoint_api_portfolio_scb_scan_batch_stream_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/portfolio/scb/staged/{scan_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Staged Endpoint */
+        get: operations["get_staged_endpoint_api_portfolio_scb_staged__scan_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/portfolio/scb/commit/{scan_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Commit Staged Endpoint */
+        post: operations["commit_staged_endpoint_api_portfolio_scb_commit__scan_id__post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/portfolio/scb/emails/{email_id}/html": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Email Html Endpoint */
+        get: operations["get_email_html_endpoint_api_portfolio_scb_emails__email_id__html_get"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -1275,6 +1564,533 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/knowledge/writes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Submit Knowledge Write */
+        post: operations["submit_knowledge_write_api_knowledge_writes_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/knowledge/writes/{command_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Knowledge Write */
+        get: operations["get_knowledge_write_api_knowledge_writes__command_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/market/thailand/flow": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Fetch 4-investor-type daily net trading flow on SET/mai */
+        get: operations["get_thai_investor_flow_api_v2_market_thailand_flow_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/market/thailand/gold": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Fetch official Thai retail gold prices from Gold Traders Association */
+        get: operations["get_thai_retail_gold_api_v2_market_thailand_gold_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/market/macro/series/{series_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Fetch macroeconomic time series from keyless FRED mirror */
+        get: operations["get_macro_series_api_v2_market_macro_series__series_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/market/perps/quote/{symbol}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Fetch synthetic perpetuals quote from Hyperliquid L1 clearinghouse */
+        get: operations["get_perps_quote_api_v2_market_perps_quote__symbol__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/market/thailand/valuation": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Fetch venue aggregate valuation multiples from Settrade */
+        get: operations["get_market_valuation_api_v2_market_thailand_valuation_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/market/thailand/breadth": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Fetch market breadth (gainers/losers/unchanged) from Settrade */
+        get: operations["get_market_breadth_api_v2_market_thailand_breadth_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/market/equity/short-volume/{symbol}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Fetch FINRA consolidated daily short sale volume */
+        get: operations["get_equity_short_volume_api_v2_market_equity_short_volume__symbol__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/market/equity/options/{symbol}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Fetch delayed listed equity options chain from Cboe */
+        get: operations["get_equity_options_chain_api_v2_market_equity_options__symbol__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/market/equity/max-pain/{symbol}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Calculate analytical Max Pain strike for a specific or nearest expiry */
+        get: operations["get_equity_max_pain_api_v2_market_equity_max_pain__symbol__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/market/equity/put-call-ratios/{symbol}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Calculate Put/Call volume and OI ratios for a specific or nearest expiry */
+        get: operations["get_equity_put_call_ratios_api_v2_market_equity_put_call_ratios__symbol__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/market/macro/nyfed/rates": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Fetch NY Fed overnight benchmark reference rates and pair spreads */
+        get: operations["get_nyfed_reference_rates_api_v2_market_macro_nyfed_rates_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/market/macro/treasury/yield-curve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Fetch US Treasury par yield curve and spreads from Treasury.gov */
+        get: operations["get_treasury_yield_curve_api_v2_market_macro_treasury_yield_curve_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/market/macro/treasury/auctions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Fetch completed US Treasury auctions from Fiscal Data API */
+        get: operations["get_treasury_auctions_api_v2_market_macro_treasury_auctions_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/market/macro/treasury/debt": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Fetch daily close Debt to the Penny snapshots from US Treasury */
+        get: operations["get_treasury_debt_api_v2_market_macro_treasury_debt_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/market/thailand/fund-asset-allocation": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Fetch Thai mutual fund industry asset class distribution from SEC Thailand */
+        get: operations["get_thai_fund_allocation_api_v2_market_thailand_fund_asset_allocation_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/market/thailand/bonds/market": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Fetch Thai domestic bond market overview statistics from SEC Thailand */
+        get: operations["get_thai_bonds_market_api_v2_market_thailand_bonds_market_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/market/thailand/bonds/issuance": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Fetch Thai corporate bond offering statistics from SEC Thailand */
+        get: operations["get_thai_bonds_issuance_api_v2_market_thailand_bonds_issuance_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/market/thailand/public-debt": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Fetch monthly Thai public debt to GDP ratio and components from MOF Thailand */
+        get: operations["get_thai_public_debt_api_v2_market_thailand_public_debt_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/market/signals/prediction-markets": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Fetch active prediction markets and implied odds from Polymarket */
+        get: operations["get_prediction_markets_api_v2_market_signals_prediction_markets_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/market/crypto/etf-flows/{asset}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Fetch US Spot ETF net flows and issuer breakdown for BTC or ETH */
+        get: operations["get_spot_etf_flows_api_v2_market_crypto_etf_flows__asset__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/market/macro/financial-stress": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Fetch US OFR Financial Stress Index with 5 categories and T-2 lag */
+        get: operations["get_financial_stress_api_v2_market_macro_financial_stress_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/market/commodities/metals/cot": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Fetch CFTC Disaggregated COT positioning for metals (gold, silver, etc.) */
+        get: operations["get_metals_cot_api_v2_market_commodities_metals_cot_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/market/macro/global-policy-rates": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Fetch BIS central bank policy rates across 12 countries with rate spreads */
+        get: operations["get_global_policy_rates_api_v2_market_macro_global_policy_rates_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/market/equity/consensus/{symbol}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Fetch Nasdaq earnings surprise history, upcoming date status, and analyst ratings */
+        get: operations["get_nasdaq_consensus_api_v2_market_equity_consensus__symbol__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/market/commodities/volatility": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Fetch Cboe 30-day commodity volatility indices (GVZ, VXSLV, OVX) with 52-week percentiles */
+        get: operations["get_commodity_volatility_api_v2_market_commodities_volatility_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/market/macro/treasury/auction-demand": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Fetch latest US Treasury auction demand metrics and moving average of prior 8 completed auctions */
+        get: operations["get_treasury_auction_demand_api_v2_market_macro_treasury_auction_demand_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/market/equity/sec/financials/{symbol}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Fetch SEC company-filed XBRL facts and calculated pure financial ratios */
+        get: operations["get_sec_financials_api_v2_market_equity_sec_financials__symbol__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/market/equity/sec/insider-trades/{symbol}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Fetch SEC Form 4 parsed insider transactions and 90-day net buying ratio */
+        get: operations["get_sec_insider_trades_api_v2_market_equity_sec_insider_trades__symbol__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/market/equity/news/{symbol}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Fetch normalized RSS news discovery candidates for equity symbol */
+        get: operations["get_equity_news_discovery_api_v2_market_equity_news__symbol__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/health": {
         parameters: {
             query?: never;
@@ -1566,6 +2382,17 @@ export interface components {
             /** Synced At */
             synced_at: string;
         };
+        /** AnalystRatingConsensusSchema */
+        AnalystRatingConsensusSchema: {
+            /** Symbol */
+            symbol: string;
+            /** Consensus */
+            consensus: string;
+            /** Analyst Count */
+            analyst_count: number;
+            /** Broker Names */
+            broker_names: string[];
+        };
         /** AppendJournalRequestDTO */
         AppendJournalRequestDTO: {
             /** Entry */
@@ -1624,6 +2451,78 @@ export interface components {
             /** Bucket Id */
             bucket_id?: string | null;
         };
+        /** AuctionDemandSnapshotSchema */
+        AuctionDemandSnapshotSchema: {
+            /**
+             * Security Type
+             * @description Security type (Note, Bill, Bond)
+             */
+            security_type: string;
+            /**
+             * Security Term
+             * @description Security term (10-Year, 13-Week, etc.)
+             */
+            security_term: string;
+            /** Latest Auction Date */
+            latest_auction_date: string;
+            /**
+             * Latest Bid To Cover Ratio
+             * @description Latest auction bid-to-cover ratio
+             */
+            latest_bid_to_cover_ratio?: number | null;
+            /**
+             * Latest High Yield
+             * @description Latest high yield awarded (Note/Bond)
+             */
+            latest_high_yield?: number | null;
+            /**
+             * Latest High Investment Rate
+             * @description Latest investment rate (Bill)
+             */
+            latest_high_investment_rate?: number | null;
+            /**
+             * Latest High Discount Rate
+             * @description Latest discount rate (Bill)
+             */
+            latest_high_discount_rate?: number | null;
+            /** Latest Offering Amount Usd */
+            latest_offering_amount_usd?: number | null;
+            /** Latest Total Accepted Usd */
+            latest_total_accepted_usd?: number | null;
+            /**
+             * Prior Mean Bid To Cover
+             * @description Moving average of prior 8 completed auctions of same type/term
+             */
+            prior_mean_bid_to_cover?: number | null;
+            /**
+             * Demand Delta
+             * @description latest_btc - prior_mean
+             */
+            demand_delta?: number | null;
+            /**
+             * Sample Count
+             * @description Sample count of prior completed auctions (min 3)
+             */
+            sample_count: number;
+            /**
+             * Source
+             * @default US Treasury Fiscal Data
+             */
+            source: string;
+            /** As Of Date */
+            as_of_date: string;
+            /** Fetched At */
+            fetched_at: number;
+            /**
+             * Is Stale
+             * @default false
+             */
+            is_stale: boolean;
+            /** Stale Reason */
+            stale_reason?: string | null;
+            /** Limitations */
+            limitations?: string[];
+        };
         /** BatchAssignBucketRequestDTO */
         BatchAssignBucketRequestDTO: {
             /**
@@ -1644,6 +2543,13 @@ export interface components {
         };
         /** Body_scan_upload_pdf_endpoint_api_portfolio_dime_scan_upload_post */
         Body_scan_upload_pdf_endpoint_api_portfolio_dime_scan_upload_post: {
+            /** Pdf File */
+            pdf_file: string;
+            /** Password */
+            password?: string | null;
+        };
+        /** Body_scan_upload_pdf_endpoint_api_portfolio_wealthx_scan_upload_post */
+        Body_scan_upload_pdf_endpoint_api_portfolio_wealthx_scan_upload_post: {
             /** Pdf File */
             pdf_file: string;
             /** Password */
@@ -1727,6 +2633,67 @@ export interface components {
              * @default
              */
             notes: string;
+        };
+        /** CommodityVolSnapshotSchema */
+        CommodityVolSnapshotSchema: {
+            /**
+             * Index Symbol
+             * @description Volatility index symbol (GVZ, VXSLV, OVX)
+             */
+            index_symbol: string;
+            /**
+             * Underlying Instrument
+             * @description Underlying ETF options instrument name
+             */
+            underlying_instrument: string;
+            /**
+             * Close Date
+             * @description Close date in YYYY-MM-DD
+             */
+            close_date: string;
+            /**
+             * Implied Volatility
+             * @description 30-day annualized implied volatility percentage
+             */
+            implied_volatility: number;
+            /**
+             * Change 1D Points
+             * @description 1-day change in index points
+             */
+            change_1d_points?: number | null;
+            /**
+             * Percentile 52W
+             * @description 52-week percentile (0-100) or null if < 100 samples
+             */
+            percentile_52w?: number | null;
+            /**
+             * Sample Count
+             * @description Sample count used for percentile
+             */
+            sample_count: number;
+            /**
+             * Regime Label
+             * @description Statistical regime heuristic (extreme_panic, elevated, normal, complacent)
+             */
+            regime_label?: string | null;
+            /**
+             * Source
+             * @default Cboe
+             */
+            source: string;
+            /** As Of Date */
+            as_of_date: string;
+            /** Fetched At */
+            fetched_at: number;
+            /**
+             * Is Stale
+             * @default false
+             */
+            is_stale: boolean;
+            /** Stale Reason */
+            stale_reason?: string | null;
+            /** Limitations */
+            limitations?: string[];
         };
         /** CorporateActionEventDTO */
         CorporateActionEventDTO: {
@@ -1872,6 +2839,21 @@ export interface components {
              */
             color: "emerald" | "green" | "rose" | "zinc";
         };
+        /** DimeBatchScanRequestDTO */
+        DimeBatchScanRequestDTO: {
+            /** Password */
+            password?: string | null;
+            /**
+             * Force Rescan
+             * @default false
+             */
+            force_rescan: boolean;
+            /**
+             * Portfolio Id
+             * @default default
+             */
+            portfolio_id: string;
+        };
         /** DimeCommitRequestDTO */
         DimeCommitRequestDTO: {
             /**
@@ -1915,6 +2897,29 @@ export interface components {
             filename: string;
             /** Size Bytes */
             size_bytes: number;
+        };
+        /** DimePdfTextPageDTO */
+        DimePdfTextPageDTO: {
+            /** Page Number */
+            page_number: number;
+            /** Text */
+            text: string;
+        };
+        /** DimePdfTextResponseDTO */
+        DimePdfTextResponseDTO: {
+            /** Message Id */
+            message_id: string;
+            /** Attachment Id */
+            attachment_id: string;
+            /** Filename */
+            filename: string;
+            /** Page Count */
+            page_count: number;
+            /**
+             * Pages
+             * @default []
+             */
+            pages: components["schemas"]["DimePdfTextPageDTO"][];
         };
         /** DimeScanEmailRequestDTO */
         DimeScanEmailRequestDTO: {
@@ -1967,6 +2972,8 @@ export interface components {
             exchange_rate?: string | null;
             /** Confirmation No */
             confirmation_no: string;
+            /** Order Id */
+            order_id?: string | null;
             /**
              * Source
              * @default DIME
@@ -1984,6 +2991,11 @@ export interface components {
              * @default true
              */
             cash_adjusted: boolean;
+            /**
+             * Asset Type
+             * @default Stock
+             */
+            asset_type: string;
         };
         /** DimeStagedItemFeeDTO */
         DimeStagedItemFeeDTO: {
@@ -2184,6 +3196,25 @@ export interface components {
              */
             is_idempotent_replay: boolean;
         };
+        /** EarningsDateItemSchema */
+        EarningsDateItemSchema: {
+            /** Earnings Date */
+            earnings_date: string;
+            /**
+             * Date Status
+             * @enum {string}
+             */
+            date_status: "confirmed" | "estimated" | "unspecified";
+            /**
+             * Report Time
+             * @enum {string}
+             */
+            report_time: "pre-market" | "after-hours" | "unknown";
+            /** Consensus Eps */
+            consensus_eps?: number | null;
+            /** Estimate Count */
+            estimate_count?: number | null;
+        };
         /** EarningsHistoryEntryDTO */
         EarningsHistoryEntryDTO: {
             /** Date Str */
@@ -2192,6 +3223,19 @@ export interface components {
             eps_actual?: number | null;
             /** Eps Estimate */
             eps_estimate?: number | null;
+        };
+        /** EarningsSurpriseItemSchema */
+        EarningsSurpriseItemSchema: {
+            /** Fiscal Quarter End */
+            fiscal_quarter_end: string;
+            /** Date Reported */
+            date_reported: string;
+            /** Eps */
+            eps: number;
+            /** Consensus Eps */
+            consensus_eps: number;
+            /** Surprise Pct */
+            surprise_pct: number;
         };
         /** EditHoldingRequestDTO */
         EditHoldingRequestDTO: {
@@ -2257,9 +3301,9 @@ export interface components {
              */
             data_quality_flags: string[];
             /** Source File */
-            source_file: string;
+            source_file?: string | null;
             /** Sidecar File */
-            sidecar_file: string;
+            sidecar_file?: string | null;
             /** Quant Signals */
             quant_signals: {
                 [key: string]: unknown;
@@ -2413,9 +3457,9 @@ export interface components {
              */
             data_quality_flags: string[];
             /** Source File */
-            source_file: string;
+            source_file?: string | null;
             /** Sidecar File */
-            sidecar_file: string;
+            sidecar_file?: string | null;
         };
         /** FXRateResponseDTO */
         FXRateResponseDTO: {
@@ -2619,6 +3663,68 @@ export interface components {
             /** Synced At */
             synced_at?: string | null;
         };
+        /** FinancialStressCategorySchema */
+        FinancialStressCategorySchema: {
+            /** Label */
+            label: string;
+            /** Value */
+            value: number;
+        };
+        /** FinancialStressPointSchema */
+        FinancialStressPointSchema: {
+            /** Time Ms */
+            time_ms: number;
+            /** Date */
+            date: string;
+            /** Value */
+            value: number;
+            /** Credit */
+            credit?: number | null;
+            /** Equity Valuation */
+            equity_valuation?: number | null;
+            /** Safe Assets */
+            safe_assets?: number | null;
+            /** Funding */
+            funding?: number | null;
+            /** Volatility */
+            volatility?: number | null;
+        };
+        /** FinancialStressResponse */
+        FinancialStressResponse: {
+            /**
+             * As Of Date
+             * @description T-2 business days lag observation date
+             */
+            as_of_date: string;
+            /** Published At */
+            published_at: string;
+            /** Fsi Value */
+            fsi_value: number;
+            /**
+             * Regime
+             * @description Systemic risk regime: calm, normal, elevated, severe
+             */
+            regime: string;
+            /** Categories */
+            categories: components["schemas"]["FinancialStressCategorySchema"][];
+            /** Trend 90D */
+            trend_90d: components["schemas"]["FinancialStressPointSchema"][];
+            /**
+             * Source
+             * @default OFR
+             */
+            source: string;
+            /**
+             * Data Lag Days
+             * @default 2
+             */
+            data_lag_days: number;
+            /**
+             * Is Stale
+             * @default false
+             */
+            is_stale: boolean;
+        };
         /** FinancialSummaryChartPointDTO */
         FinancialSummaryChartPointDTO: {
             /** Period Key */
@@ -2643,6 +3749,70 @@ export interface components {
             operating_margin_pct?: number | null;
             /** Net Margin Pct */
             net_margin_pct?: number | null;
+        };
+        /** FinraShortVolumeResponse */
+        FinraShortVolumeResponse: {
+            /** Symbol */
+            symbol: string;
+            /** Report Date */
+            report_date: string;
+            /** Short Volume */
+            short_volume: number;
+            /** Short Exempt Volume */
+            short_exempt_volume: number;
+            /** Finra Reported Total Volume */
+            finra_reported_total_volume: number;
+            /** Short Pct */
+            short_pct: number | null;
+            /** Coverage */
+            coverage: string;
+            /** Unit */
+            unit: string;
+            /** Source */
+            source: string;
+            /** Limitations */
+            limitations: string;
+            /** Is Stale */
+            is_stale: boolean;
+            /** Stale Reason */
+            stale_reason?: string | null;
+        };
+        /** GlobalPolicyRatesResponse */
+        GlobalPolicyRatesResponse: {
+            /** As Of Date */
+            as_of_date: string;
+            /** Rates */
+            rates: components["schemas"]["PolicyRateItemSchema"][];
+            /**
+             * Spreads Vs Bot Repo
+             * @description Spreads in basis points vs BOT 1-day repo
+             */
+            spreads_vs_bot_repo: {
+                [key: string]: number;
+            };
+            /**
+             * Source
+             * @default BIS
+             */
+            source: string;
+            /**
+             * Is Stale
+             * @default false
+             */
+            is_stale: boolean;
+        };
+        /** GoldPriceDetailSchema */
+        GoldPriceDetailSchema: {
+            /**
+             * Buy
+             * @description Buyback price in THB per baht-weight
+             */
+            buy: number;
+            /**
+             * Sell
+             * @description Selling price in THB per baht-weight
+             */
+            sell: number;
         };
         /** HTTPValidationError */
         HTTPValidationError: {
@@ -2858,6 +4028,63 @@ export interface components {
              */
             normalized_weight: number;
         };
+        /** InsiderTransactionSchema */
+        InsiderTransactionSchema: {
+            /** Transaction Date */
+            transaction_date: string;
+            /** Reporting Owner */
+            reporting_owner: string;
+            /** Officer Title */
+            officer_title?: string | null;
+            /** Is Officer */
+            is_officer: boolean;
+            /** Is Director */
+            is_director: boolean;
+            /** Is Ten Percent Owner */
+            is_ten_percent_owner: boolean;
+            /** Transaction Code */
+            transaction_code: string;
+            /** Shares */
+            shares?: number | null;
+            /** Price Per Share */
+            price_per_share?: number | null;
+            /** Notional Usd */
+            notional_usd?: number | null;
+            /** Direct Or Indirect */
+            direct_or_indirect: string;
+            /** Accession Number */
+            accession_number: string;
+            /** Is Amendment */
+            is_amendment: boolean;
+        };
+        /** InvestorTypeRowSchema */
+        InvestorTypeRowSchema: {
+            /**
+             * Investor Type
+             * @description Investor type code, e.g. Foreign, Institution
+             */
+            investor_type: string;
+            /**
+             * Name En
+             * @description English name of investor category
+             */
+            name_en: string;
+            /**
+             * Buy Value
+             * @description Buy value in THB
+             */
+            buy_value: number;
+            /**
+             * Sell Value
+             * @description Sell value in THB
+             */
+            sell_value: number;
+            /**
+             * Net Value
+             * @description Net trading value (buy - sell) in THB
+             */
+            net_value: number;
+        };
         /** JobOutputsDTO */
         JobOutputsDTO: {
             /** Job Id */
@@ -2959,6 +4186,97 @@ export interface components {
             /** Updated At */
             updated_at: number;
         };
+        /** KnowledgeWriteRequest */
+        KnowledgeWriteRequest: {
+            /**
+             * Protocol Version
+             * @default 1
+             */
+            protocol_version: number;
+            /** Command Id */
+            command_id?: string | null;
+            /** Idempotency Key */
+            idempotency_key: string;
+            /**
+             * Operation
+             * @enum {string}
+             */
+            operation: "upsert_note" | "publish_capture" | "append_journal_entry" | "retire_note" | "restore_note" | "register_attachment" | "regenerate_projection";
+            /** Producer */
+            producer: string;
+            /**
+             * Producer Version
+             * @default unknown
+             */
+            producer_version: string;
+            /** Document Key */
+            document_key?: string | null;
+            /** Entity Type */
+            entity_type?: string | null;
+            /** Payload */
+            payload: {
+                [key: string]: unknown;
+            };
+            /** Expected Revision Id */
+            expected_revision_id?: string | null;
+            /** Expected Content Hash */
+            expected_content_hash?: string | null;
+            /** Causation Id */
+            causation_id?: string | null;
+            /** Correlation Id */
+            correlation_id?: string | null;
+            /**
+             * Actor
+             * @default app
+             */
+            actor: string;
+        };
+        /** KnowledgeWriteResponse */
+        KnowledgeWriteResponse: {
+            /** Command Id */
+            command_id: string;
+            /** Idempotency Key */
+            idempotency_key: string;
+            /** Status */
+            status: string;
+            /** Operation */
+            operation: string;
+            /** Producer */
+            producer: string;
+            /** Document Key */
+            document_key?: string | null;
+            /** Note Id */
+            note_id?: string | null;
+            /** Revision Id */
+            revision_id?: string | null;
+            /** Relative Path */
+            relative_path?: string | null;
+            /** Content Hash */
+            content_hash?: string | null;
+            /** Artifact Set Hash */
+            artifact_set_hash?: string | null;
+            /** Committed At */
+            committed_at?: string | null;
+            /** Conflict Code */
+            conflict_code?: string | null;
+            /**
+             * Retryable
+             * @default false
+             */
+            retryable: boolean;
+            /** Warnings */
+            warnings?: string[];
+            /** Error Code */
+            error_code?: string | null;
+            /** Error Message */
+            error_message?: string | null;
+            /** Registry Digest */
+            registry_digest?: string | null;
+            /** Broker Fencing Token */
+            broker_fencing_token?: number | null;
+        } & {
+            [key: string]: unknown;
+        };
         /** LineItemMetaDTO */
         LineItemMetaDTO: {
             /** Canonical Key */
@@ -2976,6 +4294,43 @@ export interface components {
              * @default false
              */
             is_primary_highlight: boolean;
+        };
+        /** LivePerpsQuoteResponse */
+        LivePerpsQuoteResponse: {
+            /** Symbol */
+            symbol: string;
+            /** Mark Price */
+            mark_price: number;
+            /** Dex Namespace */
+            dex_namespace: string;
+            /**
+             * Asset Class
+             * @default synthetic_crypto_perp
+             */
+            asset_class: string;
+            /**
+             * Contract Type
+             * @default perpetual_future
+             */
+            contract_type: string;
+            /**
+             * Source
+             * @default Hyperliquid
+             */
+            source: string;
+            /** Open Interest */
+            open_interest?: number | null;
+            /** Funding Rate */
+            funding_rate?: number | null;
+            /** Day Ntl Vlm */
+            day_ntl_vlm?: number | null;
+            /**
+             * Is Stale
+             * @default false
+             */
+            is_stale: boolean;
+            /** Stale Reason */
+            stale_reason?: string | null;
         };
         /** LoginRequest */
         LoginRequest: {
@@ -3198,6 +4553,135 @@ export interface components {
             /** Value */
             value: number;
         };
+        /** MacroSeriesPointSchema */
+        MacroSeriesPointSchema: {
+            /** Date */
+            date: string;
+            /** Value */
+            value: number;
+        };
+        /** MacroSeriesResponse */
+        MacroSeriesResponse: {
+            /** Series Id */
+            series_id: string;
+            /** Label */
+            label: string;
+            /**
+             * Source
+             * @default FRED
+             */
+            source: string;
+            /** Frequency */
+            frequency: string;
+            /** Unit */
+            unit: string;
+            /** Points */
+            points: components["schemas"]["MacroSeriesPointSchema"][];
+            /**
+             * Is Stale
+             * @default false
+             */
+            is_stale: boolean;
+            /** Stale Reason */
+            stale_reason?: string | null;
+        };
+        /** MarketBreadthResponse */
+        MarketBreadthResponse: {
+            /** Market */
+            market: string;
+            /** As Of */
+            as_of: string;
+            /** Gainers */
+            gainers: number;
+            /** Losers */
+            losers: number;
+            /** Unchanged */
+            unchanged: number;
+            /**
+             * Source
+             * @default Settrade
+             */
+            source: string;
+            /**
+             * Is Stale
+             * @default false
+             */
+            is_stale: boolean;
+            /** Stale Reason */
+            stale_reason?: string | null;
+        };
+        /** MarketValuationResponse */
+        MarketValuationResponse: {
+            /** Market */
+            market: string;
+            /** As Of */
+            as_of: string;
+            /** Market Cap */
+            market_cap?: number | null;
+            /** Pe Ratio */
+            pe_ratio?: number | null;
+            /** Pbv Ratio */
+            pbv_ratio?: number | null;
+            /** Dividend Yield */
+            dividend_yield?: number | null;
+            /** Turnover Ratio */
+            turnover_ratio?: number | null;
+            /**
+             * Source
+             * @default Settrade
+             */
+            source: string;
+            /**
+             * Is Stale
+             * @default false
+             */
+            is_stale: boolean;
+            /** Stale Reason */
+            stale_reason?: string | null;
+        };
+        /** MetalsCotResponse */
+        MetalsCotResponse: {
+            /** Commodity */
+            commodity: string;
+            /** Commodity Code */
+            commodity_code: string;
+            /**
+             * As Of Date
+             * @description Tuesday market close
+             */
+            as_of_date: string;
+            /**
+             * Published At
+             * @description Friday afternoon release
+             */
+            published_at: string;
+            /**
+             * Report Type
+             * @default disaggregated
+             */
+            report_type: string;
+            /** Open Interest */
+            open_interest: number;
+            managed_money: components["schemas"]["TraderClassPositionSchema"];
+            swap_dealers: components["schemas"]["TraderClassPositionSchema"];
+            producer_merchant: components["schemas"]["TraderClassPositionSchema"];
+            other_reportables: components["schemas"]["TraderClassPositionSchema"];
+            non_reportables: components["schemas"]["TraderClassPositionSchema"];
+            /** Net Managed Money */
+            net_managed_money: number;
+            /** Percentile 52W */
+            percentile_52w: number;
+            /**
+             * Source
+             * @default CFTC
+             */
+            source: string;
+            /**
+             * Is Stale
+             * @default false
+             */
+            is_stale: boolean;
+        };
         /** MoveCardRequest */
         MoveCardRequest: {
             /** Card Id */
@@ -3206,6 +4690,79 @@ export interface components {
             column_name: string;
             /** Job Id */
             job_id?: string | null;
+        };
+        /** NasdaqConsensusResponse */
+        NasdaqConsensusResponse: {
+            /** Symbol */
+            symbol: string;
+            /**
+             * Coverage Status
+             * @enum {string}
+             */
+            coverage_status: "full" | "partial" | "no_coverage";
+            /** Has Earnings Surprise */
+            has_earnings_surprise: boolean;
+            /** Has Analyst Ratings */
+            has_analyst_ratings: boolean;
+            upcoming_earnings?: components["schemas"]["EarningsDateItemSchema"] | null;
+            /** Surprise History */
+            surprise_history: components["schemas"]["EarningsSurpriseItemSchema"][];
+            ratings?: components["schemas"]["AnalystRatingConsensusSchema"] | null;
+            /**
+             * Source
+             * @default Nasdaq
+             */
+            source: string;
+            /**
+             * Is Stale
+             * @default false
+             */
+            is_stale: boolean;
+        };
+        /** NewsCandidateSchema */
+        NewsCandidateSchema: {
+            /** Headline */
+            headline: string;
+            /** Publisher */
+            publisher: string;
+            /** Source Type */
+            source_type: string;
+            /** Article Url */
+            article_url: string;
+            /** Published At */
+            published_at: string;
+            /** Discovered At */
+            discovered_at: number;
+            /** Symbol */
+            symbol?: string | null;
+            /**
+             * Is Stale
+             * @default false
+             */
+            is_stale: boolean;
+        };
+        /** NewsDiscoverySnapshotSchema */
+        NewsDiscoverySnapshotSchema: {
+            /** Query Symbol */
+            query_symbol: string;
+            /** Items */
+            items?: components["schemas"]["NewsCandidateSchema"][];
+            /**
+             * Status
+             * @description ok, rate_limited, or feed_unavailable
+             */
+            status: string;
+            /**
+             * Source
+             * @default Google News RSS Discovery
+             */
+            source: string;
+            /** As Of Date */
+            as_of_date: string;
+            /** Fetched At */
+            fetched_at: number;
+            /** Limitations */
+            limitations?: string[];
         };
         /** NewsFunnelFilteredItemDTO */
         NewsFunnelFilteredItemDTO: {
@@ -3466,6 +5023,112 @@ export interface components {
              */
             week52_coverage_calendar_days: number;
         };
+        /** OptionContractSchema */
+        OptionContractSchema: {
+            /** Occ Symbol */
+            occ_symbol: string;
+            /** Underlying */
+            underlying: string;
+            /** Expiry */
+            expiry: string;
+            /** Strike */
+            strike: number;
+            /** Side */
+            side: string;
+            /** Open Interest */
+            open_interest: number;
+            /** Volume */
+            volume: number;
+            /** Bid */
+            bid?: number | null;
+            /** Ask */
+            ask?: number | null;
+            /** Last Price */
+            last_price?: number | null;
+            /** Implied Volatility */
+            implied_volatility?: number | null;
+            /** Delta */
+            delta?: number | null;
+            /** Gamma */
+            gamma?: number | null;
+            /** Vega */
+            vega?: number | null;
+            /** Theta */
+            theta?: number | null;
+            /** Rho */
+            rho?: number | null;
+            /** Multiplier */
+            multiplier: number;
+            /** Is Standard */
+            is_standard: boolean;
+        };
+        /** OptionsChainResponse */
+        OptionsChainResponse: {
+            /** Underlying */
+            underlying: string;
+            /** Underlying Price */
+            underlying_price: number | null;
+            /** Iv30 Decimal */
+            iv30_decimal: number | null;
+            /** Delay Minutes */
+            delay_minutes: number;
+            /** Contracts */
+            contracts: components["schemas"]["OptionContractSchema"][];
+            /** Fetched At */
+            fetched_at: number;
+            /** Source */
+            source: string;
+            /** Limitations */
+            limitations: string;
+            /** Is Stale */
+            is_stale: boolean;
+            /** Stale Reason */
+            stale_reason?: string | null;
+        };
+        /** OptionsMaxPainResponse */
+        OptionsMaxPainResponse: {
+            /** Underlying */
+            underlying: string;
+            /** Expiry */
+            expiry: string;
+            /** Strike */
+            strike: number;
+            /** Minimum Theoretical Payout */
+            minimum_theoretical_payout: number;
+            /** Candidate Count */
+            candidate_count: number;
+            /** Excluded Contract Count */
+            excluded_contract_count: number;
+            /** Spot Price */
+            spot_price?: number | null;
+            /** Distance From Spot */
+            distance_from_spot?: number | null;
+            /** Distance Pct */
+            distance_pct?: number | null;
+            /** Assumptions */
+            assumptions: string;
+            /** Limitations */
+            limitations: string;
+        };
+        /** OptionsPutCallRatiosResponse */
+        OptionsPutCallRatiosResponse: {
+            /** Underlying */
+            underlying: string;
+            /** Expiry */
+            expiry: string;
+            /** Put Volume */
+            put_volume: number;
+            /** Call Volume */
+            call_volume: number;
+            /** Volume Ratio */
+            volume_ratio: number | null;
+            /** Put Open Interest */
+            put_open_interest: number;
+            /** Call Open Interest */
+            call_open_interest: number;
+            /** Oi Ratio */
+            oi_ratio: number | null;
+        };
         /** PairTradeDTO */
         PairTradeDTO: {
             /** Long Leg */
@@ -3557,6 +5220,12 @@ export interface components {
             realized_pnl_ytd?: number | null;
             /** Passive Income Ytd */
             passive_income_ytd?: number | null;
+            /** Asset Class Values Thb */
+            Asset_Class_Values_THB?: {
+                [key: string]: number;
+            } | null;
+            /** Coverage Warning */
+            coverage_warning?: string | null;
         };
         /** PivotLevelsDTO */
         PivotLevelsDTO: {
@@ -3576,6 +5245,31 @@ export interface components {
             s3: number;
             /** S4 */
             s4: number;
+        };
+        /** PolicyRateItemSchema */
+        PolicyRateItemSchema: {
+            /** Country */
+            country: string;
+            /** Rate Value */
+            rate_value: number;
+            /**
+             * Rate Type
+             * @description Specific central bank rate instrument
+             */
+            rate_type: string;
+            /**
+             * Effective Date
+             * @description Date rate took effect
+             */
+            effective_date: string;
+            /** Currency */
+            currency: string;
+            /** Central Bank */
+            central_bank: string;
+            /** Previous Rate */
+            previous_rate?: number | null;
+            /** Last Change Date */
+            last_change_date?: string | null;
         };
         /** PortfolioCalendarDTO */
         PortfolioCalendarDTO: {
@@ -3655,6 +5349,80 @@ export interface components {
             is_default: boolean;
             /** Created At */
             created_at?: string | null;
+        };
+        /** PredictionMarketResponse */
+        PredictionMarketResponse: {
+            /** Market Id */
+            market_id: string;
+            /** Question */
+            question: string;
+            /** Outcomes */
+            outcomes: components["schemas"]["PredictionOutcomeSchema"][];
+            /** Volume 24H Usd */
+            volume_24h_usd?: number | null;
+            /** End Date */
+            end_date?: string | null;
+            /** Source Url */
+            source_url: string;
+            /** Fetched At */
+            fetched_at: number;
+            /** Source */
+            source: string;
+            /** Unit */
+            unit: string;
+            /** Limitations */
+            limitations: string;
+            /** Is Stale */
+            is_stale: boolean;
+            /** Stale Reason */
+            stale_reason?: string | null;
+        };
+        /** PredictionOutcomeSchema */
+        PredictionOutcomeSchema: {
+            /** Label */
+            label: string;
+            /** Price */
+            price: number;
+        };
+        /** ReferenceRatePointSchema */
+        ReferenceRatePointSchema: {
+            /** Code */
+            code: string;
+            /** Label */
+            label: string;
+            /** Effective Date */
+            effective_date: string;
+            /** Rate Percent */
+            rate_percent: number | null;
+            /** Volume In Billions */
+            volume_in_billions?: number | null;
+            /** Target Rate From */
+            target_rate_from?: number | null;
+            /** Target Rate To */
+            target_rate_to?: number | null;
+        };
+        /** ReferenceRatesResponse */
+        ReferenceRatesResponse: {
+            /** As Of */
+            as_of: string;
+            /** Rates */
+            rates: components["schemas"]["ReferenceRatePointSchema"][];
+            /** Spreads Bps */
+            spreads_bps: {
+                [key: string]: number;
+            };
+            /** Fetched At */
+            fetched_at: number;
+            /** Source */
+            source: string;
+            /** Unit */
+            unit: string;
+            /** Limitations */
+            limitations: string;
+            /** Is Stale */
+            is_stale: boolean;
+            /** Stale Reason */
+            stale_reason?: string | null;
         };
         /** RegimeEvidenceDTO */
         RegimeEvidenceDTO: {
@@ -3775,6 +5543,283 @@ export interface components {
              */
             warnings: components["schemas"]["WarningDTO"][];
         };
+        /** SCBAMBatchScanRequestDTO */
+        SCBAMBatchScanRequestDTO: {
+            /** Since Date */
+            since_date?: string | null;
+            /**
+             * Portfolio Id
+             * @default default
+             */
+            portfolio_id: string;
+            /** Limit */
+            limit?: number | null;
+        };
+        /** SCBAMCommitRequestDTO */
+        SCBAMCommitRequestDTO: {
+            /**
+             * Portfolio Id
+             * @default default
+             */
+            portfolio_id: string;
+            /** Selected Item Ids */
+            selected_item_ids?: string[] | null;
+        };
+        /** SCBAMCommitResponseDTO */
+        SCBAMCommitResponseDTO: {
+            /**
+             * Ok
+             * @default true
+             */
+            ok: boolean;
+            /** Imported Count */
+            imported_count: number;
+            state: components["schemas"]["ActualPortfolioStateDTO"];
+        };
+        /** SCBAMEmailListResponseDTO */
+        SCBAMEmailListResponseDTO: {
+            /**
+             * Emails
+             * @default []
+             */
+            emails: components["schemas"]["SCBAMEmailMetadataDTO"][];
+        };
+        /** SCBAMEmailMetadataDTO */
+        SCBAMEmailMetadataDTO: {
+            /** Message Id */
+            message_id: string;
+            /** Attachment Id */
+            attachment_id: string;
+            /** Subject */
+            subject: string;
+            /** Sender */
+            sender: string;
+            /** Received At */
+            received_at: string;
+            /** Filename */
+            filename: string;
+            /** Size Bytes */
+            size_bytes: number;
+        };
+        /** SCBAMScanResponseDTO */
+        SCBAMScanResponseDTO: {
+            /** Scan Id */
+            scan_id: string;
+            /** Item Count */
+            item_count: number;
+            /**
+             * Items
+             * @default []
+             */
+            items: components["schemas"]["SCBAMStagedItemDTO"][];
+        };
+        /** SCBAMSingleScanEmailRequestDTO */
+        SCBAMSingleScanEmailRequestDTO: {
+            /** Message Id */
+            message_id: string;
+            /**
+             * Portfolio Id
+             * @default default
+             */
+            portfolio_id: string;
+        };
+        /** SCBAMStagedItemDTO */
+        SCBAMStagedItemDTO: {
+            /** Item Id */
+            item_id: string;
+            /** Trade Date */
+            trade_date: string;
+            /** Settlement Date */
+            settlement_date?: string | null;
+            /** Symbol */
+            symbol: string;
+            /** Action */
+            action: string;
+            /** Units */
+            units: string;
+            /** Price */
+            price: string;
+            /** Gross Amount */
+            gross_amount: string;
+            fees?: components["schemas"]["SCBAMStagedItemFeeDTO"];
+            /** Net Amount */
+            net_amount: string;
+            /**
+             * Currency
+             * @default THB
+             */
+            currency: string;
+            /** Exchange Rate */
+            exchange_rate?: string | null;
+            /** Confirmation No */
+            confirmation_no: string;
+            /** Order Id */
+            order_id?: string | null;
+            /**
+             * Source
+             * @default SCB
+             */
+            source: string;
+            /** Fingerprint */
+            fingerprint: string;
+            /**
+             * Line Index
+             * @default 0
+             */
+            line_index: number;
+            /**
+             * Cash Adjusted
+             * @default true
+             */
+            cash_adjusted: boolean;
+            /**
+             * Asset Type
+             * @default Fund
+             */
+            asset_type: string;
+            /**
+             * Status
+             * @default NEW
+             */
+            status: string;
+        };
+        /** SCBAMStagedItemFeeDTO */
+        SCBAMStagedItemFeeDTO: {
+            /**
+             * Commission
+             * @default 0.00
+             */
+            commission: string;
+            /**
+             * Vat
+             * @default 0.00
+             */
+            vat: string;
+            /**
+             * Other Fees
+             * @default 0.00
+             */
+            other_fees: string;
+            /**
+             * Fee Currency
+             * @default THB
+             */
+            fee_currency: string;
+        };
+        /** SecCompanyFactsSnapshotSchema */
+        SecCompanyFactsSnapshotSchema: {
+            /** Symbol */
+            symbol: string;
+            /** Cik */
+            cik: string;
+            /** Entity Name */
+            entity_name: string;
+            /** Facts */
+            facts?: components["schemas"]["SecFactSchema"][];
+            /** Revenue Usd */
+            revenue_usd?: number | null;
+            /** Operating Cash Flow Usd */
+            operating_cash_flow_usd?: number | null;
+            /** Capex Usd */
+            capex_usd?: number | null;
+            /** Free Cash Flow Usd */
+            free_cash_flow_usd?: number | null;
+            /** Free Cash Flow Margin */
+            free_cash_flow_margin?: number | null;
+            /** Long Term Debt Usd */
+            long_term_debt_usd?: number | null;
+            /** Debt To Ocf Ratio */
+            debt_to_ocf_ratio?: number | null;
+            /** Shares Outstanding */
+            shares_outstanding?: number | null;
+            /**
+             * Source
+             * @default SEC EDGAR (companyfacts)
+             */
+            source: string;
+            /** As Of Date */
+            as_of_date: string;
+            /** Fetched At */
+            fetched_at: number;
+            /**
+             * Is Stale
+             * @default false
+             */
+            is_stale: boolean;
+            /** Stale Reason */
+            stale_reason?: string | null;
+            /** Limitations */
+            limitations?: string[];
+        };
+        /** SecFactSchema */
+        SecFactSchema: {
+            /** Concept Tag */
+            concept_tag: string;
+            /** Label */
+            label: string;
+            /** Val */
+            val?: number | null;
+            /** Unit */
+            unit: string;
+            /** Form */
+            form: string;
+            /** Fy */
+            fy?: number | null;
+            /** Fp */
+            fp?: string | null;
+            /** Start */
+            start?: string | null;
+            /** End */
+            end?: string | null;
+            /** Filed */
+            filed?: string | null;
+            /** Accn */
+            accn?: string | null;
+        };
+        /** SecInsiderTradeSnapshotSchema */
+        SecInsiderTradeSnapshotSchema: {
+            /** Symbol */
+            symbol: string;
+            /** Cik */
+            cik: string;
+            /** Transactions */
+            transactions?: components["schemas"]["InsiderTransactionSchema"][];
+            /** Net Buy Ratio 90D */
+            net_buy_ratio_90d?: number | null;
+            /**
+             * P Notional Sum 90D
+             * @default 0
+             */
+            p_notional_sum_90d: number;
+            /**
+             * S Notional Sum 90D
+             * @default 0
+             */
+            s_notional_sum_90d: number;
+            /**
+             * Eligible Transaction Count
+             * @default 0
+             */
+            eligible_transaction_count: number;
+            /**
+             * Source
+             * @default SEC EDGAR (Form 4 XML)
+             */
+            source: string;
+            /** As Of Date */
+            as_of_date: string;
+            /** Fetched At */
+            fetched_at: number;
+            /**
+             * Is Stale
+             * @default false
+             */
+            is_stale: boolean;
+            /** Stale Reason */
+            stale_reason?: string | null;
+            /** Limitations */
+            limitations?: string[];
+        };
         /** SourceOverrideAck */
         SourceOverrideAck: {
             /**
@@ -3805,6 +5850,48 @@ export interface components {
             /** Created At */
             created_at: number;
         };
+        /** SpotEtfFlowResponse */
+        SpotEtfFlowResponse: {
+            /** Asset */
+            asset: string;
+            /** Report Date */
+            report_date: string;
+            /** Daily Total Usd */
+            daily_total_usd?: number | null;
+            /** Cumulative Total Usd */
+            cumulative_total_usd?: number | null;
+            /** Issuers */
+            issuers: components["schemas"]["SpotEtfIssuerFlowSchema"][];
+            /** Is Partial */
+            is_partial: boolean;
+            /** Completeness Notes */
+            completeness_notes: string;
+            /** Fetched At */
+            fetched_at: number;
+            /** Source */
+            source: string;
+            /** Unit */
+            unit: string;
+            /** Limitations */
+            limitations: string;
+            /** Is Stale */
+            is_stale: boolean;
+            /** Stale Reason */
+            stale_reason?: string | null;
+        };
+        /** SpotEtfIssuerFlowSchema */
+        SpotEtfIssuerFlowSchema: {
+            /** Ticker */
+            ticker: string;
+            /** Institute */
+            institute: string;
+            /** Daily Net Inflow Usd */
+            daily_net_inflow_usd?: number | null;
+            /** Cumulative Net Inflow Usd */
+            cumulative_net_inflow_usd?: number | null;
+            /** Total Net Assets Usd */
+            total_net_assets_usd?: number | null;
+        };
         /** SyncDividendsResponseDTO */
         SyncDividendsResponseDTO: {
             /** Synced Symbols */
@@ -3834,6 +5921,169 @@ export interface components {
             details: {
                 [key: string]: components["schemas"]["DividendRoundDTO"][];
             };
+        };
+        /** ThaiBondMarketStatsResponse */
+        ThaiBondMarketStatsResponse: {
+            /** Reporting Period */
+            reporting_period: string;
+            /** Outstanding Thb */
+            outstanding_thb: number;
+            /** Trading Value Thb */
+            trading_value_thb: number;
+            /** Foreign Holding Thb */
+            foreign_holding_thb: number;
+            /** Foreign Holding Pct */
+            foreign_holding_pct: number | null;
+            /** Fetched At */
+            fetched_at: number;
+            /** Source */
+            source: string;
+            /** Unit */
+            unit: string;
+            /** Is Stale */
+            is_stale: boolean;
+            /** Stale Reason */
+            stale_reason?: string | null;
+        };
+        /** ThaiCorporateBondIssuanceResponse */
+        ThaiCorporateBondIssuanceResponse: {
+            /** Reporting Period */
+            reporting_period: string;
+            /** Total Offering Thb */
+            total_offering_thb: number;
+            /** Long Term Thb */
+            long_term_thb: number;
+            /** Short Term Thb */
+            short_term_thb: number;
+            /** Top Sectors */
+            top_sectors: unknown[][];
+            /** Fetched At */
+            fetched_at: number;
+            /** Source */
+            source: string;
+            /** Unit */
+            unit: string;
+            /** Is Stale */
+            is_stale: boolean;
+            /** Stale Reason */
+            stale_reason?: string | null;
+        };
+        /** ThaiFundAssetAllocationResponse */
+        ThaiFundAssetAllocationResponse: {
+            /** Reporting Period */
+            reporting_period: string;
+            /** Total Nav Thb */
+            total_nav_thb: number | null;
+            /** Allocations */
+            allocations: components["schemas"]["ThaiFundAssetAllocationRowSchema"][];
+            /** Fetched At */
+            fetched_at: number;
+            /** Source */
+            source: string;
+            /** Unit */
+            unit: string;
+            /** Limitations */
+            limitations: string;
+            /** Is Stale */
+            is_stale: boolean;
+            /** Stale Reason */
+            stale_reason?: string | null;
+        };
+        /** ThaiFundAssetAllocationRowSchema */
+        ThaiFundAssetAllocationRowSchema: {
+            /** Asset Class */
+            asset_class: string;
+            /** Domestic Or Foreign */
+            domestic_or_foreign: string;
+            /** Value Thb */
+            value_thb: number;
+            /** Share Of Nav Pct */
+            share_of_nav_pct?: number | null;
+        };
+        /** ThaiFundFlowResponse */
+        ThaiFundFlowResponse: {
+            /** Market */
+            market: string;
+            /** As Of */
+            as_of: string;
+            /** Total Value */
+            total_value: number;
+            /** Investors */
+            investors: components["schemas"]["InvestorTypeRowSchema"][];
+            /**
+             * Source
+             * @default Settrade
+             */
+            source: string;
+            /**
+             * Is Stale
+             * @default false
+             */
+            is_stale: boolean;
+            /** Stale Reason */
+            stale_reason?: string | null;
+        };
+        /** ThaiPublicDebtComponentSchema */
+        ThaiPublicDebtComponentSchema: {
+            /** Component Number */
+            component_number: number;
+            /** Label En */
+            label_en: string;
+            /** Label Th */
+            label_th: string;
+            /** Amount Thb */
+            amount_thb: number;
+        };
+        /** ThaiPublicDebtResponse */
+        ThaiPublicDebtResponse: {
+            /** Reporting Month */
+            reporting_month: string;
+            /** Total Debt Thb */
+            total_debt_thb: number;
+            /** Debt To Gdp Pct */
+            debt_to_gdp_pct: number | null;
+            /** Fx Rate Usd Thb */
+            fx_rate_usd_thb: number | null;
+            /** Components */
+            components: components["schemas"]["ThaiPublicDebtComponentSchema"][];
+            /** Fetched At */
+            fetched_at: number;
+            /** Source */
+            source: string;
+            /** Unit */
+            unit: string;
+            /** Limitations */
+            limitations: string;
+            /** Is Stale */
+            is_stale: boolean;
+            /** Stale Reason */
+            stale_reason?: string | null;
+        };
+        /** ThaiRetailGoldResponse */
+        ThaiRetailGoldResponse: {
+            /**
+             * Source
+             * @default Gold Traders Association
+             */
+            source: string;
+            /**
+             * Unit
+             * @default baht-weight (15.244 g, 96.5%)
+             */
+            unit: string;
+            bar: components["schemas"]["GoldPriceDetailSchema"];
+            ornament: components["schemas"]["GoldPriceDetailSchema"];
+            /** Announced At */
+            announced_at: string;
+            /** Revision */
+            revision?: number | null;
+            /**
+             * Is Stale
+             * @default false
+             */
+            is_stale: boolean;
+            /** Stale Reason */
+            stale_reason?: string | null;
         };
         /** ToggleDiscordRequest */
         ToggleDiscordRequest: {
@@ -3872,6 +6122,32 @@ export interface components {
             notes: string;
             /** Bucket Id */
             bucket_id?: string | null;
+        };
+        /** TraderClassPositionSchema */
+        TraderClassPositionSchema: {
+            /** Class Name */
+            class_name: string;
+            /** Long Contracts */
+            long_contracts: number;
+            /** Short Contracts */
+            short_contracts: number;
+            /** Net Contracts */
+            net_contracts: number;
+            /**
+             * Spread Contracts
+             * @default 0
+             */
+            spread_contracts: number;
+            /**
+             * Change Long
+             * @default 0
+             */
+            change_long: number;
+            /**
+             * Change Short
+             * @default 0
+             */
+            change_short: number;
         };
         /** TransactionItemDTO */
         TransactionItemDTO: {
@@ -3967,6 +6243,67 @@ export interface components {
              */
             total_realized_pnl_thb: number;
         };
+        /** TreasuryAuctionResponse */
+        TreasuryAuctionResponse: {
+            /** Auction Date */
+            auction_date: string;
+            /** Issue Date */
+            issue_date: string;
+            /** Security Type */
+            security_type: string;
+            /** Security Term */
+            security_term: string;
+            /** High Yield */
+            high_yield: number | null;
+            /** High Investment Rate */
+            high_investment_rate?: number | null;
+            /** High Discount Rate */
+            high_discount_rate?: number | null;
+            /** Bid To Cover Ratio */
+            bid_to_cover_ratio?: number | null;
+            /** Offering Amount Usd */
+            offering_amount_usd?: number | null;
+            /** Total Accepted Usd */
+            total_accepted_usd?: number | null;
+            /** Fetched At */
+            fetched_at: number;
+            /** Source */
+            source: string;
+            /** Unit */
+            unit: string;
+            /** Is Stale */
+            is_stale: boolean;
+            /** Stale Reason */
+            stale_reason?: string | null;
+        };
+        /** TreasuryYieldCurveResponse */
+        TreasuryYieldCurveResponse: {
+            /** Observation Date */
+            observation_date: string;
+            /** Yields */
+            yields: components["schemas"]["TreasuryYieldPointSchema"][];
+            /** Spread 10Y 2Y Bps */
+            spread_10y_2y_bps?: number | null;
+            /** Spread 10Y 3M Bps */
+            spread_10y_3m_bps?: number | null;
+            /** Fetched At */
+            fetched_at: number;
+            /** Source */
+            source: string;
+            /** Unit */
+            unit: string;
+            /** Is Stale */
+            is_stale: boolean;
+            /** Stale Reason */
+            stale_reason?: string | null;
+        };
+        /** TreasuryYieldPointSchema */
+        TreasuryYieldPointSchema: {
+            /** Maturity */
+            maturity: string;
+            /** Yield Percent */
+            yield_percent: number | null;
+        };
         /** UnverifiedDraftSelection */
         UnverifiedDraftSelection: {
             /** Pitch Id */
@@ -4037,6 +6374,31 @@ export interface components {
              * @default
              */
             notes: string;
+        };
+        /** UsNationalDebtResponse */
+        UsNationalDebtResponse: {
+            /** Record Date */
+            record_date: string;
+            /** Total Public Debt Usd */
+            total_public_debt_usd: number;
+            /** Debt Held By Public Usd */
+            debt_held_by_public_usd?: number | null;
+            /** Intragovernmental Holdings Usd */
+            intragovernmental_holdings_usd?: number | null;
+            /** Is Daily Close */
+            is_daily_close: boolean;
+            /** Fetched At */
+            fetched_at: number;
+            /** Source */
+            source: string;
+            /** Unit */
+            unit: string;
+            /** Limitations */
+            limitations: string;
+            /** Is Stale */
+            is_stale: boolean;
+            /** Stale Reason */
+            stale_reason?: string | null;
         };
         /** ValidationError */
         ValidationError: {
@@ -4137,6 +6499,187 @@ export interface components {
             code?: string | null;
             /** Message */
             message: string;
+        };
+        /** WealthXBatchScanRequestDTO */
+        WealthXBatchScanRequestDTO: {
+            /** Password */
+            password?: string | null;
+            /**
+             * Force Rescan
+             * @default false
+             */
+            force_rescan: boolean;
+            /**
+             * Portfolio Id
+             * @default default
+             */
+            portfolio_id: string;
+        };
+        /** WealthXCommitRequestDTO */
+        WealthXCommitRequestDTO: {
+            /**
+             * Portfolio Id
+             * @default default
+             */
+            portfolio_id: string;
+        };
+        /** WealthXCommitResponseDTO */
+        WealthXCommitResponseDTO: {
+            /**
+             * Ok
+             * @default true
+             */
+            ok: boolean;
+            /** Imported Count */
+            imported_count: number;
+            state: components["schemas"]["ActualPortfolioStateDTO"];
+        };
+        /** WealthXEmailListResponseDTO */
+        WealthXEmailListResponseDTO: {
+            /**
+             * Emails
+             * @default []
+             */
+            emails: components["schemas"]["WealthXEmailMetadataDTO"][];
+        };
+        /** WealthXEmailMetadataDTO */
+        WealthXEmailMetadataDTO: {
+            /** Message Id */
+            message_id: string;
+            /** Attachment Id */
+            attachment_id: string;
+            /** Subject */
+            subject: string;
+            /** Sender */
+            sender: string;
+            /** Received At */
+            received_at: string;
+            /** Filename */
+            filename: string;
+            /** Size Bytes */
+            size_bytes: number;
+        };
+        /** WealthXPdfTextPageDTO */
+        WealthXPdfTextPageDTO: {
+            /** Page Number */
+            page_number: number;
+            /** Text */
+            text: string;
+        };
+        /** WealthXPdfTextResponseDTO */
+        WealthXPdfTextResponseDTO: {
+            /** Message Id */
+            message_id: string;
+            /** Attachment Id */
+            attachment_id: string;
+            /** Filename */
+            filename: string;
+            /** Page Count */
+            page_count: number;
+            /**
+             * Pages
+             * @default []
+             */
+            pages: components["schemas"]["WealthXPdfTextPageDTO"][];
+        };
+        /** WealthXScanEmailRequestDTO */
+        WealthXScanEmailRequestDTO: {
+            /** Message Id */
+            message_id: string;
+            /** Attachment Id */
+            attachment_id: string;
+            /** Password */
+            password?: string | null;
+        };
+        /** WealthXScanResponseDTO */
+        WealthXScanResponseDTO: {
+            /** Scan Id */
+            scan_id: string;
+            /** Item Count */
+            item_count: number;
+            /**
+             * Items
+             * @default []
+             */
+            items: components["schemas"]["WealthXStagedItemDTO"][];
+        };
+        /** WealthXStagedItemDTO */
+        WealthXStagedItemDTO: {
+            /** Item Id */
+            item_id: string;
+            /** Trade Date */
+            trade_date: string;
+            /** Settlement Date */
+            settlement_date?: string | null;
+            /** Symbol */
+            symbol: string;
+            /** Action */
+            action: string;
+            /** Units */
+            units: string;
+            /** Price */
+            price: string;
+            /** Gross Amount */
+            gross_amount: string;
+            fees?: components["schemas"]["WealthXStagedItemFeeDTO"];
+            /** Net Amount */
+            net_amount: string;
+            /**
+             * Currency
+             * @default THB
+             */
+            currency: string;
+            /** Exchange Rate */
+            exchange_rate?: string | null;
+            /** Confirmation No */
+            confirmation_no: string;
+            /** Order Id */
+            order_id?: string | null;
+            /**
+             * Source
+             * @default WEALTHX
+             */
+            source: string;
+            /** Fingerprint */
+            fingerprint: string;
+            /**
+             * Line Index
+             * @default 0
+             */
+            line_index: number;
+            /**
+             * Cash Adjusted
+             * @default true
+             */
+            cash_adjusted: boolean;
+            /**
+             * Asset Type
+             * @default Fund
+             */
+            asset_type: string;
+        };
+        /** WealthXStagedItemFeeDTO */
+        WealthXStagedItemFeeDTO: {
+            /**
+             * Commission
+             * @default 0.00
+             */
+            commission: string;
+            /**
+             * Vat
+             * @default 0.00
+             */
+            vat: string;
+            /**
+             * Other Fees
+             * @default 0.00
+             */
+            other_fees: string;
+            /**
+             * Fee Currency
+             * @default THB
+             */
+            fee_currency: string;
         };
     };
     responses: never;
@@ -5535,6 +8078,39 @@ export interface operations {
             };
         };
     };
+    scan_batch_stream_endpoint_api_portfolio_dime_scan_batch_stream_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DimeBatchScanRequestDTO"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     scan_email_attachment_endpoint_api_portfolio_dime_scan_email_post: {
         parameters: {
             query?: never;
@@ -5654,6 +8230,532 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["DimeCommitResponseDTO"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_dime_pdf_endpoint_api_portfolio_dime_pdf_get: {
+        parameters: {
+            query: {
+                message_id: string;
+                attachment_id: string;
+                password?: string | null;
+                decrypt?: boolean;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_dime_pdf_text_endpoint_api_portfolio_dime_pdf_text_get: {
+        parameters: {
+            query: {
+                message_id: string;
+                attachment_id: string;
+                password?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DimePdfTextResponseDTO"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    search_wealthx_emails_endpoint_api_portfolio_wealthx_emails_get: {
+        parameters: {
+            query?: {
+                query?: string;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WealthXEmailListResponseDTO"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    scan_batch_stream_endpoint_api_portfolio_wealthx_scan_batch_stream_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WealthXBatchScanRequestDTO"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    scan_email_attachment_endpoint_api_portfolio_wealthx_scan_email_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WealthXScanEmailRequestDTO"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WealthXScanResponseDTO"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    scan_upload_pdf_endpoint_api_portfolio_wealthx_scan_upload_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["Body_scan_upload_pdf_endpoint_api_portfolio_wealthx_scan_upload_post"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WealthXScanResponseDTO"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_staged_endpoint_api_portfolio_wealthx_staged__scan_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                scan_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WealthXScanResponseDTO"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    commit_staged_endpoint_api_portfolio_wealthx_commit__scan_id__post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                scan_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WealthXCommitRequestDTO"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WealthXCommitResponseDTO"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_wealthx_pdf_endpoint_api_portfolio_wealthx_pdf_get: {
+        parameters: {
+            query: {
+                message_id: string;
+                attachment_id: string;
+                password?: string | null;
+                decrypt?: boolean;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_wealthx_pdf_text_endpoint_api_portfolio_wealthx_pdf_text_get: {
+        parameters: {
+            query: {
+                message_id: string;
+                attachment_id: string;
+                password?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WealthXPdfTextResponseDTO"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    search_scbam_emails_endpoint_api_portfolio_scb_emails_get: {
+        parameters: {
+            query?: {
+                query?: string;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SCBAMEmailListResponseDTO"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    scan_email_endpoint_api_portfolio_scb_scan_email_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SCBAMSingleScanEmailRequestDTO"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SCBAMScanResponseDTO"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    scan_batch_stream_endpoint_api_portfolio_scb_scan_batch_stream_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SCBAMBatchScanRequestDTO"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_staged_endpoint_api_portfolio_scb_staged__scan_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                scan_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SCBAMScanResponseDTO"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    commit_staged_endpoint_api_portfolio_scb_commit__scan_id__post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                scan_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SCBAMCommitRequestDTO"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SCBAMCommitResponseDTO"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_email_html_endpoint_api_portfolio_scb_emails__email_id__html_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                email_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/html": string;
                 };
             };
             /** @description Validation Error */
@@ -6603,6 +9705,907 @@ export interface operations {
                     "application/json": {
                         [key: string]: string;
                     };
+                };
+            };
+        };
+    };
+    submit_knowledge_write_api_knowledge_writes_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["KnowledgeWriteRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["KnowledgeWriteResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_knowledge_write_api_knowledge_writes__command_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                command_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["KnowledgeWriteResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_thai_investor_flow_api_v2_market_thailand_flow_get: {
+        parameters: {
+            query?: {
+                /** @description SET or mai */
+                market?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ThaiFundFlowResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_thai_retail_gold_api_v2_market_thailand_gold_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ThaiRetailGoldResponse"];
+                };
+            };
+        };
+    };
+    get_macro_series_api_v2_market_macro_series__series_id__get: {
+        parameters: {
+            query?: {
+                limit?: number;
+            };
+            header?: never;
+            path: {
+                series_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MacroSeriesResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_perps_quote_api_v2_market_perps_quote__symbol__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                symbol: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LivePerpsQuoteResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_market_valuation_api_v2_market_thailand_valuation_get: {
+        parameters: {
+            query?: {
+                /** @description SET or mai */
+                market?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MarketValuationResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_market_breadth_api_v2_market_thailand_breadth_get: {
+        parameters: {
+            query?: {
+                /** @description SET or mai */
+                market?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MarketBreadthResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_equity_short_volume_api_v2_market_equity_short_volume__symbol__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                symbol: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FinraShortVolumeResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_equity_options_chain_api_v2_market_equity_options__symbol__get: {
+        parameters: {
+            query?: {
+                /** @description Filter for specific expiry ISO YYYY-MM-DD */
+                expiry?: string | null;
+            };
+            header?: never;
+            path: {
+                symbol: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OptionsChainResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_equity_max_pain_api_v2_market_equity_max_pain__symbol__get: {
+        parameters: {
+            query?: {
+                /** @description Expiry ISO YYYY-MM-DD (defaults to nearest) */
+                expiry?: string | null;
+            };
+            header?: never;
+            path: {
+                symbol: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OptionsMaxPainResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_equity_put_call_ratios_api_v2_market_equity_put_call_ratios__symbol__get: {
+        parameters: {
+            query?: {
+                /** @description Expiry ISO YYYY-MM-DD (defaults to nearest) */
+                expiry?: string | null;
+            };
+            header?: never;
+            path: {
+                symbol: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OptionsPutCallRatiosResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_nyfed_reference_rates_api_v2_market_macro_nyfed_rates_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReferenceRatesResponse"];
+                };
+            };
+        };
+    };
+    get_treasury_yield_curve_api_v2_market_macro_treasury_yield_curve_get: {
+        parameters: {
+            query?: {
+                /** @description Observation month YYYYMM (defaults to current) */
+                month?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TreasuryYieldCurveResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_treasury_auctions_api_v2_market_macro_treasury_auctions_get: {
+        parameters: {
+            query?: {
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TreasuryAuctionResponse"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_treasury_debt_api_v2_market_macro_treasury_debt_get: {
+        parameters: {
+            query?: {
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UsNationalDebtResponse"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_thai_fund_allocation_api_v2_market_thailand_fund_asset_allocation_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ThaiFundAssetAllocationResponse"];
+                };
+            };
+        };
+    };
+    get_thai_bonds_market_api_v2_market_thailand_bonds_market_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ThaiBondMarketStatsResponse"];
+                };
+            };
+        };
+    };
+    get_thai_bonds_issuance_api_v2_market_thailand_bonds_issuance_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ThaiCorporateBondIssuanceResponse"];
+                };
+            };
+        };
+    };
+    get_thai_public_debt_api_v2_market_thailand_public_debt_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ThaiPublicDebtResponse"];
+                };
+            };
+        };
+    };
+    get_prediction_markets_api_v2_market_signals_prediction_markets_get: {
+        parameters: {
+            query?: {
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PredictionMarketResponse"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_spot_etf_flows_api_v2_market_crypto_etf_flows__asset__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                asset: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SpotEtfFlowResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_financial_stress_api_v2_market_macro_financial_stress_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FinancialStressResponse"];
+                };
+            };
+        };
+    };
+    get_metals_cot_api_v2_market_commodities_metals_cot_get: {
+        parameters: {
+            query?: {
+                /** @description Metal name: gold, silver, copper, platinum */
+                commodity?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MetalsCotResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_global_policy_rates_api_v2_market_macro_global_policy_rates_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GlobalPolicyRatesResponse"];
+                };
+            };
+        };
+    };
+    get_nasdaq_consensus_api_v2_market_equity_consensus__symbol__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                symbol: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NasdaqConsensusResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_commodity_volatility_api_v2_market_commodities_volatility_get: {
+        parameters: {
+            query?: {
+                /** @description Optional symbol filter: GVZ, VXSLV, OVX */
+                symbol?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommodityVolSnapshotSchema"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_treasury_auction_demand_api_v2_market_macro_treasury_auction_demand_get: {
+        parameters: {
+            query: {
+                /** @description Security type (e.g. Note, Bill, Bond) */
+                security_type: string;
+                /** @description Security term (e.g. 10-Year, 13-Week) */
+                security_term: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AuctionDemandSnapshotSchema"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_sec_financials_api_v2_market_equity_sec_financials__symbol__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                symbol: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SecCompanyFactsSnapshotSchema"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_sec_insider_trades_api_v2_market_equity_sec_insider_trades__symbol__get: {
+        parameters: {
+            query?: {
+                /** @description Max transactions to return */
+                limit?: number;
+            };
+            header?: never;
+            path: {
+                symbol: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SecInsiderTradeSnapshotSchema"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_equity_news_discovery_api_v2_market_equity_news__symbol__get: {
+        parameters: {
+            query?: {
+                /** @description Max news items to return */
+                limit?: number;
+            };
+            header?: never;
+            path: {
+                symbol: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NewsDiscoverySnapshotSchema"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

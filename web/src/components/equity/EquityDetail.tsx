@@ -1,6 +1,11 @@
 import React, { useState, useEffect } from 'react'
 import { api } from '../../api/client'
-import type { EquityDetailDTO, EarningsCallNoteItem } from '../../api/types'
+import type {
+  EquityDetailDTO,
+  EarningsCallNoteItem,
+  SecCompanyFactsSnapshotDTO,
+  SecInsiderTradeSnapshotDTO,
+} from '../../api/types'
 import { ScoreCard } from './ScoreCard'
 import ScoreRing from './ScoreRing'
 import { sentimentClass } from '../../lib/sentiment'
@@ -14,6 +19,11 @@ import ExecutiveThesisHero, { getStanceBadgeStyle } from './ExecutiveThesisHero'
 import ValuationWorkbenchCard from './ValuationWorkbenchCard'
 import TacticalFlowMatrixCard from './TacticalFlowMatrixCard'
 import { EvidenceProvenanceDrawer } from './EvidenceProvenanceDrawer'
+import { NasdaqConsensusCard } from './NasdaqConsensusCard'
+import { OptionsOiStrikeLadder } from '../charts/OptionsOiStrikeLadder'
+import { OptionsVolSmile } from '../charts/OptionsVolSmile'
+import { SecFinancialsCard } from './SecFinancialsCard'
+import { SecInsiderTradesCard } from './SecInsiderTradesCard'
 
 interface EquityDetailProps {
   status: 'loading' | 'error' | 'not-found' | 'success' | 'idle'
@@ -31,6 +41,11 @@ export const EquityDetail: React.FC<EquityDetailProps> = ({ status, data, errorM
   const [latestEarningsCall, setLatestEarningsCall] = useState<EarningsCallNoteItem | null>(null)
   const [isFactorsExpanded, setIsFactorsExpanded] = useState(false)
   const [isProvenanceDrawerOpen, setIsProvenanceDrawerOpen] = useState(false)
+  const [nasdaqConsensus, setNasdaqConsensus] = useState<any | null>(null)
+  const [optionsChain, setOptionsChain] = useState<any | null>(null)
+  const [maxPain, setMaxPain] = useState<any | null>(null)
+  const [secFinancials, setSecFinancials] = useState<SecCompanyFactsSnapshotDTO | null>(null)
+  const [secInsiderTrades, setSecInsiderTrades] = useState<SecInsiderTradeSnapshotDTO | null>(null)
 
   useEffect(() => {
     if (!data?.ticker) return
@@ -45,7 +60,41 @@ export const EquityDetail: React.FC<EquityDetailProps> = ({ status, data, errorM
       .catch(() => {
         setLatestEarningsCall(null)
       })
-  }, [data?.ticker])
+
+    const sym = data.ticker
+    // Keyless US Institutional Intelligence
+    if (data.market === 'US' || !sym.includes('.')) {
+      api.getNasdaqConsensus?.(sym)?.then(setNasdaqConsensus)?.catch(() => setNasdaqConsensus(null))
+      api.getOptionsChain?.(sym)?.then(setOptionsChain)?.catch(() => setOptionsChain(null))
+      api.getOptionsMaxPain?.(sym)?.then(setMaxPain)?.catch(() => setMaxPain(null))
+      api.getSecFinancials?.(sym)?.then(setSecFinancials)?.catch(() => setSecFinancials(null))
+      api.getSecInsiderTrades?.(sym)?.then(setSecInsiderTrades)?.catch(() => setSecInsiderTrades(null))
+    } else {
+      setNasdaqConsensus(null)
+      setOptionsChain(null)
+      setMaxPain(null)
+      setSecFinancials(null)
+      setSecInsiderTrades(null)
+    }
+  }, [data?.ticker, data?.market])
+
+  const strikeLadderData = React.useMemo(() => {
+    if (!optionsChain?.contracts || !Array.isArray(optionsChain.contracts)) return []
+    const map = new Map<number, { strike: number; callOi: number; putOi: number }>()
+    optionsChain.contracts.forEach((c: any) => {
+      const s = Number(c.strike)
+      if (isNaN(s)) return
+      if (!map.has(s)) map.set(s, { strike: s, callOi: 0, putOi: 0 })
+      const item = map.get(s)!
+      const oi = Number(c.open_interest || 0)
+      if (c.option_type?.toLowerCase() === 'call') {
+        item.callOi += oi
+      } else {
+        item.putOi += oi
+      }
+    })
+    return Array.from(map.values()).sort((a, b) => a.strike - b.strike)
+  }, [optionsChain])
 
   if (status === 'idle') {
     return null
@@ -330,6 +379,69 @@ export const EquityDetail: React.FC<EquityDetailProps> = ({ status, data, errorM
               currency={currencySymbol}
             />
           </div>
+
+          {/* =========================================================
+              TIER 2.5: Institutional Derivatives & Sell-Side Intelligence (Terminal V2)
+             ========================================================= */}
+          {(nasdaqConsensus || strikeLadderData.length > 0) && (
+            <div className="space-y-6">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
+                {/* Left Column: Nasdaq Consensus & Earnings Surprise */}
+                {nasdaqConsensus && (
+                  <NasdaqConsensusCard
+                    symbol={nasdaqConsensus.symbol}
+                    coverageStatus={nasdaqConsensus.coverage_status}
+                    hasEarningsSurprise={nasdaqConsensus.has_earnings_surprise}
+                    hasAnalystRatings={nasdaqConsensus.has_analyst_ratings}
+                    upcomingEarnings={nasdaqConsensus.upcoming_earnings}
+                    ratings={nasdaqConsensus.ratings}
+                    surpriseHistory={nasdaqConsensus.surprise_history}
+                  />
+                )}
+
+                {/* Right Column: Cboe Options Open Interest Ladder */}
+                {strikeLadderData.length > 0 && (
+                  <OptionsOiStrikeLadder
+                    symbol={data.ticker}
+                    strikes={strikeLadderData}
+                    currentPrice={(quant as any)?.current_price ?? undefined}
+                    maxPainStrike={maxPain?.max_pain_strike ?? undefined}
+                    expirationDate={optionsChain?.expiration_date ?? undefined}
+                    putCallRatio={optionsChain?.put_call_ratio ?? undefined}
+                  />
+                )}
+              </div>
+
+              {/* Options Volatility Smile */}
+              {optionsChain?.contracts && optionsChain.contracts.length > 0 && (
+                <div className="flow-panel rounded-2xl border border-edge/80 p-5 shadow-xs">
+                  <OptionsVolSmile
+                    symbol={data.ticker}
+                    expiry={optionsChain.expiration_date || 'Current Expiry'}
+                    currentPrice={(quant as any)?.current_price ?? undefined}
+                    contracts={optionsChain.contracts}
+                    asOfDate={optionsChain.as_of}
+                  />
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* =========================================================
+              TIER 2.6: SEC EDGAR Regulatory & Corporate Filings Intelligence
+             ========================================================= */}
+          {(secFinancials || secInsiderTrades || data.market === 'US') && (
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
+              <SecFinancialsCard
+                financials={secFinancials}
+                symbol={data.ticker}
+              />
+              <SecInsiderTradesCard
+                trades={secInsiderTrades}
+                symbol={data.ticker}
+              />
+            </div>
+          )}
 
           {/* Editorial Reading Section: Deep Narrative Analysis */}
           {data.narrative_analysis && (

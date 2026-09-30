@@ -1,0 +1,64 @@
+{
+  "finra": {
+    "status": 200,
+    "url": "https://cdn.finra.org/equity/regsho/daily/CNMSshvol20260925.txt",
+    "date": "20260925",
+    "total_lines": 12351,
+    "fixture_lines": 26
+  },
+  "cboe": {
+    "status": 200,
+    "current_price": 341.4603,
+    "iv30": 22.215,
+    "total_contracts": 3636
+  },
+  "nyfed": {
+    "status": 200,
+    "rates_count": 6,
+    "codes": [
+      "SOFRAI",
+      "EFFR",
+      "OBFR",
+      "TGCR",
+      "BGCR",
+      "SOFR"
+    ]
+  },
+  "treasury": {
+    "yield_curve": "success",
+    "auctions": "success",
+    "debt_to_penny": "success"
+  },
+  "sec_th": {
+    "mf_port": {
+      "status": 200,
+      "size": 3842
+    },
+    "stat_dept": {
+      "status": 200,
+      "size": 17977
+    },
+    "offer_debt": {
+      "status": 200,
+      "size": 40814
+    }
+  },
+  "mof_th": {
+    "status": 200,
+    "size": 2354
+  },
+  "polymarket": {
+    "status": 200,
+    "count": 10
+  },
+  "sosovalue": {
+    "history": {
+      "status": 200,
+      "code": 0
+    },
+    "metrics": {
+      "status": 200,
+      "code": 0
+    }
+  }
+}

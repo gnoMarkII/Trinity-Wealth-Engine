@@ -1989,7 +1989,7 @@
             "required": false,
             "schema": {
               "type": "integer",
-              "default": 20,
+              "default": 500,
               "title": "Limit"
             }
           }
@@ -2002,6 +2002,45 @@
                 "schema": {
                   "$ref": "#/components/schemas/DimeEmailListResponseDTO"
                 }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/portfolio/dime/scan/batch-stream": {
+      "post": {
+        "tags": [
+          "Dime Sync"
+        ],
+        "summary": "Scan Batch Stream Endpoint",
+        "operationId": "scan_batch_stream_endpoint_api_portfolio_dime_scan_batch_stream_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DimeBatchScanRequestDTO"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
               }
             }
           },
@@ -2177,6 +2216,827 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/DimeCommitResponseDTO"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/portfolio/dime/pdf": {
+      "get": {
+        "tags": [
+          "Dime Sync"
+        ],
+        "summary": "Get Dime Pdf Endpoint",
+        "operationId": "get_dime_pdf_endpoint_api_portfolio_dime_pdf_get",
+        "parameters": [
+          {
+            "name": "message_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Message Id"
+            }
+          },
+          {
+            "name": "attachment_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Attachment Id"
+            }
+          },
+          {
+            "name": "password",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Password"
+            }
+          },
+          {
+            "name": "decrypt",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": true,
+              "title": "Decrypt"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/portfolio/dime/pdf-text": {
+      "get": {
+        "tags": [
+          "Dime Sync"
+        ],
+        "summary": "Get Dime Pdf Text Endpoint",
+        "operationId": "get_dime_pdf_text_endpoint_api_portfolio_dime_pdf_text_get",
+        "parameters": [
+          {
+            "name": "message_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Message Id"
+            }
+          },
+          {
+            "name": "attachment_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Attachment Id"
+            }
+          },
+          {
+            "name": "password",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Password"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DimePdfTextResponseDTO"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/portfolio/wealthx/emails": {
+      "get": {
+        "tags": [
+          "WealthX Sync"
+        ],
+        "summary": "Search Wealthx Emails Endpoint",
+        "operationId": "search_wealthx_emails_endpoint_api_portfolio_wealthx_emails_get",
+        "parameters": [
+          {
+            "name": "query",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "Query"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 500,
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WealthXEmailListResponseDTO"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/portfolio/wealthx/scan/batch-stream": {
+      "post": {
+        "tags": [
+          "WealthX Sync"
+        ],
+        "summary": "Scan Batch Stream Endpoint",
+        "operationId": "scan_batch_stream_endpoint_api_portfolio_wealthx_scan_batch_stream_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WealthXBatchScanRequestDTO"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/portfolio/wealthx/scan/email": {
+      "post": {
+        "tags": [
+          "WealthX Sync"
+        ],
+        "summary": "Scan Email Attachment Endpoint",
+        "operationId": "scan_email_attachment_endpoint_api_portfolio_wealthx_scan_email_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WealthXScanEmailRequestDTO"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WealthXScanResponseDTO"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/portfolio/wealthx/scan/upload": {
+      "post": {
+        "tags": [
+          "WealthX Sync"
+        ],
+        "summary": "Scan Upload Pdf Endpoint",
+        "operationId": "scan_upload_pdf_endpoint_api_portfolio_wealthx_scan_upload_post",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_scan_upload_pdf_endpoint_api_portfolio_wealthx_scan_upload_post"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WealthXScanResponseDTO"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/portfolio/wealthx/staged/{scan_id}": {
+      "get": {
+        "tags": [
+          "WealthX Sync"
+        ],
+        "summary": "Get Staged Endpoint",
+        "operationId": "get_staged_endpoint_api_portfolio_wealthx_staged__scan_id__get",
+        "parameters": [
+          {
+            "name": "scan_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Scan Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WealthXScanResponseDTO"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/portfolio/wealthx/commit/{scan_id}": {
+      "post": {
+        "tags": [
+          "WealthX Sync"
+        ],
+        "summary": "Commit Staged Endpoint",
+        "operationId": "commit_staged_endpoint_api_portfolio_wealthx_commit__scan_id__post",
+        "parameters": [
+          {
+            "name": "scan_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Scan Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WealthXCommitRequestDTO"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WealthXCommitResponseDTO"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/portfolio/wealthx/pdf": {
+      "get": {
+        "tags": [
+          "WealthX Sync"
+        ],
+        "summary": "Get Wealthx Pdf Endpoint",
+        "operationId": "get_wealthx_pdf_endpoint_api_portfolio_wealthx_pdf_get",
+        "parameters": [
+          {
+            "name": "message_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Message Id"
+            }
+          },
+          {
+            "name": "attachment_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Attachment Id"
+            }
+          },
+          {
+            "name": "password",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Password"
+            }
+          },
+          {
+            "name": "decrypt",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": true,
+              "title": "Decrypt"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/portfolio/wealthx/pdf-text": {
+      "get": {
+        "tags": [
+          "WealthX Sync"
+        ],
+        "summary": "Get Wealthx Pdf Text Endpoint",
+        "operationId": "get_wealthx_pdf_text_endpoint_api_portfolio_wealthx_pdf_text_get",
+        "parameters": [
+          {
+            "name": "message_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Message Id"
+            }
+          },
+          {
+            "name": "attachment_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Attachment Id"
+            }
+          },
+          {
+            "name": "password",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Password"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WealthXPdfTextResponseDTO"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/portfolio/scb/emails": {
+      "get": {
+        "tags": [
+          "SCBAM Sync"
+        ],
+        "summary": "Search Scbam Emails Endpoint",
+        "operationId": "search_scbam_emails_endpoint_api_portfolio_scb_emails_get",
+        "parameters": [
+          {
+            "name": "query",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "Query"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 500,
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SCBAMEmailListResponseDTO"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/portfolio/scb/scan/email": {
+      "post": {
+        "tags": [
+          "SCBAM Sync"
+        ],
+        "summary": "Scan Email Endpoint",
+        "operationId": "scan_email_endpoint_api_portfolio_scb_scan_email_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SCBAMSingleScanEmailRequestDTO"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SCBAMScanResponseDTO"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/portfolio/scb/scan/batch-stream": {
+      "post": {
+        "tags": [
+          "SCBAM Sync"
+        ],
+        "summary": "Scan Batch Stream Endpoint",
+        "operationId": "scan_batch_stream_endpoint_api_portfolio_scb_scan_batch_stream_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SCBAMBatchScanRequestDTO"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/portfolio/scb/staged/{scan_id}": {
+      "get": {
+        "tags": [
+          "SCBAM Sync"
+        ],
+        "summary": "Get Staged Endpoint",
+        "operationId": "get_staged_endpoint_api_portfolio_scb_staged__scan_id__get",
+        "parameters": [
+          {
+            "name": "scan_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Scan Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SCBAMScanResponseDTO"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/portfolio/scb/commit/{scan_id}": {
+      "post": {
+        "tags": [
+          "SCBAM Sync"
+        ],
+        "summary": "Commit Staged Endpoint",
+        "operationId": "commit_staged_endpoint_api_portfolio_scb_commit__scan_id__post",
+        "parameters": [
+          {
+            "name": "scan_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Scan Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SCBAMCommitRequestDTO"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SCBAMCommitResponseDTO"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/portfolio/scb/emails/{email_id}/html": {
+      "get": {
+        "tags": [
+          "SCBAM Sync"
+        ],
+        "summary": "Get Email Html Endpoint",
+        "operationId": "get_email_html_endpoint_api_portfolio_scb_emails__email_id__html_get",
+        "parameters": [
+          {
+            "name": "email_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Email Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "text/html": {
+                "schema": {
+                  "type": "string"
                 }
               }
             }
@@ -3483,6 +4343,1301 @@
         }
       }
     },
+    "/api/knowledge/writes": {
+      "post": {
+        "tags": [
+          "Knowledge Writes"
+        ],
+        "summary": "Submit Knowledge Write",
+        "operationId": "submit_knowledge_write_api_knowledge_writes_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/KnowledgeWriteRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/KnowledgeWriteResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/knowledge/writes/{command_id}": {
+      "get": {
+        "tags": [
+          "Knowledge Writes"
+        ],
+        "summary": "Get Knowledge Write",
+        "operationId": "get_knowledge_write_api_knowledge_writes__command_id__get",
+        "parameters": [
+          {
+            "name": "command_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Command Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/KnowledgeWriteResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/market/thailand/flow": {
+      "get": {
+        "tags": [
+          "Terminal V2 Market Data"
+        ],
+        "summary": "Fetch 4-investor-type daily net trading flow on SET/mai",
+        "operationId": "get_thai_investor_flow_api_v2_market_thailand_flow_get",
+        "parameters": [
+          {
+            "name": "market",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "SET or mai",
+              "default": "SET",
+              "title": "Market"
+            },
+            "description": "SET or mai"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ThaiFundFlowResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/market/thailand/gold": {
+      "get": {
+        "tags": [
+          "Terminal V2 Market Data"
+        ],
+        "summary": "Fetch official Thai retail gold prices from Gold Traders Association",
+        "operationId": "get_thai_retail_gold_api_v2_market_thailand_gold_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ThaiRetailGoldResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/market/macro/series/{series_id}": {
+      "get": {
+        "tags": [
+          "Terminal V2 Market Data"
+        ],
+        "summary": "Fetch macroeconomic time series from keyless FRED mirror",
+        "operationId": "get_macro_series_api_v2_market_macro_series__series_id__get",
+        "parameters": [
+          {
+            "name": "series_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Series Id"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 500,
+              "minimum": 1,
+              "default": 30,
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MacroSeriesResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/market/perps/quote/{symbol}": {
+      "get": {
+        "tags": [
+          "Terminal V2 Market Data"
+        ],
+        "summary": "Fetch synthetic perpetuals quote from Hyperliquid L1 clearinghouse",
+        "operationId": "get_perps_quote_api_v2_market_perps_quote__symbol__get",
+        "parameters": [
+          {
+            "name": "symbol",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Symbol"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LivePerpsQuoteResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/market/thailand/valuation": {
+      "get": {
+        "tags": [
+          "Terminal V2 Market Data"
+        ],
+        "summary": "Fetch venue aggregate valuation multiples from Settrade",
+        "operationId": "get_market_valuation_api_v2_market_thailand_valuation_get",
+        "parameters": [
+          {
+            "name": "market",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "SET or mai",
+              "default": "SET",
+              "title": "Market"
+            },
+            "description": "SET or mai"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MarketValuationResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/market/thailand/breadth": {
+      "get": {
+        "tags": [
+          "Terminal V2 Market Data"
+        ],
+        "summary": "Fetch market breadth (gainers/losers/unchanged) from Settrade",
+        "operationId": "get_market_breadth_api_v2_market_thailand_breadth_get",
+        "parameters": [
+          {
+            "name": "market",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "SET or mai",
+              "default": "SET",
+              "title": "Market"
+            },
+            "description": "SET or mai"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MarketBreadthResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/market/equity/short-volume/{symbol}": {
+      "get": {
+        "tags": [
+          "Terminal V2 Market Data"
+        ],
+        "summary": "Fetch FINRA consolidated daily short sale volume",
+        "operationId": "get_equity_short_volume_api_v2_market_equity_short_volume__symbol__get",
+        "parameters": [
+          {
+            "name": "symbol",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Symbol"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FinraShortVolumeResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/market/equity/options/{symbol}": {
+      "get": {
+        "tags": [
+          "Terminal V2 Market Data"
+        ],
+        "summary": "Fetch delayed listed equity options chain from Cboe",
+        "operationId": "get_equity_options_chain_api_v2_market_equity_options__symbol__get",
+        "parameters": [
+          {
+            "name": "symbol",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Symbol"
+            }
+          },
+          {
+            "name": "expiry",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter for specific expiry ISO YYYY-MM-DD",
+              "title": "Expiry"
+            },
+            "description": "Filter for specific expiry ISO YYYY-MM-DD"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OptionsChainResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/market/equity/max-pain/{symbol}": {
+      "get": {
+        "tags": [
+          "Terminal V2 Market Data"
+        ],
+        "summary": "Calculate analytical Max Pain strike for a specific or nearest expiry",
+        "operationId": "get_equity_max_pain_api_v2_market_equity_max_pain__symbol__get",
+        "parameters": [
+          {
+            "name": "symbol",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Symbol"
+            }
+          },
+          {
+            "name": "expiry",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Expiry ISO YYYY-MM-DD (defaults to nearest)",
+              "title": "Expiry"
+            },
+            "description": "Expiry ISO YYYY-MM-DD (defaults to nearest)"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OptionsMaxPainResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/market/equity/put-call-ratios/{symbol}": {
+      "get": {
+        "tags": [
+          "Terminal V2 Market Data"
+        ],
+        "summary": "Calculate Put/Call volume and OI ratios for a specific or nearest expiry",
+        "operationId": "get_equity_put_call_ratios_api_v2_market_equity_put_call_ratios__symbol__get",
+        "parameters": [
+          {
+            "name": "symbol",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Symbol"
+            }
+          },
+          {
+            "name": "expiry",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Expiry ISO YYYY-MM-DD (defaults to nearest)",
+              "title": "Expiry"
+            },
+            "description": "Expiry ISO YYYY-MM-DD (defaults to nearest)"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OptionsPutCallRatiosResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/market/macro/nyfed/rates": {
+      "get": {
+        "tags": [
+          "Terminal V2 Market Data"
+        ],
+        "summary": "Fetch NY Fed overnight benchmark reference rates and pair spreads",
+        "operationId": "get_nyfed_reference_rates_api_v2_market_macro_nyfed_rates_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReferenceRatesResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/market/macro/treasury/yield-curve": {
+      "get": {
+        "tags": [
+          "Terminal V2 Market Data"
+        ],
+        "summary": "Fetch US Treasury par yield curve and spreads from Treasury.gov",
+        "operationId": "get_treasury_yield_curve_api_v2_market_macro_treasury_yield_curve_get",
+        "parameters": [
+          {
+            "name": "month",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Observation month YYYYMM (defaults to current)",
+              "title": "Month"
+            },
+            "description": "Observation month YYYYMM (defaults to current)"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TreasuryYieldCurveResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/market/macro/treasury/auctions": {
+      "get": {
+        "tags": [
+          "Terminal V2 Market Data"
+        ],
+        "summary": "Fetch completed US Treasury auctions from Fiscal Data API",
+        "operationId": "get_treasury_auctions_api_v2_market_macro_treasury_auctions_get",
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 50,
+              "minimum": 1,
+              "default": 10,
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/TreasuryAuctionResponse"
+                  },
+                  "title": "Response Get Treasury Auctions Api V2 Market Macro Treasury Auctions Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/market/macro/treasury/debt": {
+      "get": {
+        "tags": [
+          "Terminal V2 Market Data"
+        ],
+        "summary": "Fetch daily close Debt to the Penny snapshots from US Treasury",
+        "operationId": "get_treasury_debt_api_v2_market_macro_treasury_debt_get",
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 30,
+              "minimum": 1,
+              "default": 5,
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/UsNationalDebtResponse"
+                  },
+                  "title": "Response Get Treasury Debt Api V2 Market Macro Treasury Debt Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/market/thailand/fund-asset-allocation": {
+      "get": {
+        "tags": [
+          "Terminal V2 Market Data"
+        ],
+        "summary": "Fetch Thai mutual fund industry asset class distribution from SEC Thailand",
+        "operationId": "get_thai_fund_allocation_api_v2_market_thailand_fund_asset_allocation_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ThaiFundAssetAllocationResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/market/thailand/bonds/market": {
+      "get": {
+        "tags": [
+          "Terminal V2 Market Data"
+        ],
+        "summary": "Fetch Thai domestic bond market overview statistics from SEC Thailand",
+        "operationId": "get_thai_bonds_market_api_v2_market_thailand_bonds_market_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ThaiBondMarketStatsResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/market/thailand/bonds/issuance": {
+      "get": {
+        "tags": [
+          "Terminal V2 Market Data"
+        ],
+        "summary": "Fetch Thai corporate bond offering statistics from SEC Thailand",
+        "operationId": "get_thai_bonds_issuance_api_v2_market_thailand_bonds_issuance_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ThaiCorporateBondIssuanceResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/market/thailand/public-debt": {
+      "get": {
+        "tags": [
+          "Terminal V2 Market Data"
+        ],
+        "summary": "Fetch monthly Thai public debt to GDP ratio and components from MOF Thailand",
+        "operationId": "get_thai_public_debt_api_v2_market_thailand_public_debt_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ThaiPublicDebtResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/market/signals/prediction-markets": {
+      "get": {
+        "tags": [
+          "Terminal V2 Market Data"
+        ],
+        "summary": "Fetch active prediction markets and implied odds from Polymarket",
+        "operationId": "get_prediction_markets_api_v2_market_signals_prediction_markets_get",
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 50,
+              "minimum": 1,
+              "default": 12,
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PredictionMarketResponse"
+                  },
+                  "title": "Response Get Prediction Markets Api V2 Market Signals Prediction Markets Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/market/crypto/etf-flows/{asset}": {
+      "get": {
+        "tags": [
+          "Terminal V2 Market Data"
+        ],
+        "summary": "Fetch US Spot ETF net flows and issuer breakdown for BTC or ETH",
+        "operationId": "get_spot_etf_flows_api_v2_market_crypto_etf_flows__asset__get",
+        "parameters": [
+          {
+            "name": "asset",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Asset"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SpotEtfFlowResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/market/macro/financial-stress": {
+      "get": {
+        "tags": [
+          "Terminal V2 Market Data"
+        ],
+        "summary": "Fetch US OFR Financial Stress Index with 5 categories and T-2 lag",
+        "operationId": "get_financial_stress_api_v2_market_macro_financial_stress_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FinancialStressResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/market/commodities/metals/cot": {
+      "get": {
+        "tags": [
+          "Terminal V2 Market Data"
+        ],
+        "summary": "Fetch CFTC Disaggregated COT positioning for metals (gold, silver, etc.)",
+        "operationId": "get_metals_cot_api_v2_market_commodities_metals_cot_get",
+        "parameters": [
+          {
+            "name": "commodity",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "Metal name: gold, silver, copper, platinum",
+              "default": "gold",
+              "title": "Commodity"
+            },
+            "description": "Metal name: gold, silver, copper, platinum"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MetalsCotResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/market/macro/global-policy-rates": {
+      "get": {
+        "tags": [
+          "Terminal V2 Market Data"
+        ],
+        "summary": "Fetch BIS central bank policy rates across 12 countries with rate spreads",
+        "operationId": "get_global_policy_rates_api_v2_market_macro_global_policy_rates_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GlobalPolicyRatesResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/market/equity/consensus/{symbol}": {
+      "get": {
+        "tags": [
+          "Terminal V2 Market Data"
+        ],
+        "summary": "Fetch Nasdaq earnings surprise history, upcoming date status, and analyst ratings",
+        "operationId": "get_nasdaq_consensus_api_v2_market_equity_consensus__symbol__get",
+        "parameters": [
+          {
+            "name": "symbol",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Symbol"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NasdaqConsensusResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/market/commodities/volatility": {
+      "get": {
+        "tags": [
+          "Terminal V2 Market Data"
+        ],
+        "summary": "Fetch Cboe 30-day commodity volatility indices (GVZ, VXSLV, OVX) with 52-week percentiles",
+        "operationId": "get_commodity_volatility_api_v2_market_commodities_volatility_get",
+        "parameters": [
+          {
+            "name": "symbol",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Optional symbol filter: GVZ, VXSLV, OVX",
+              "title": "Symbol"
+            },
+            "description": "Optional symbol filter: GVZ, VXSLV, OVX"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/CommodityVolSnapshotSchema"
+                  },
+                  "title": "Response Get Commodity Volatility Api V2 Market Commodities Volatility Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/market/macro/treasury/auction-demand": {
+      "get": {
+        "tags": [
+          "Terminal V2 Market Data"
+        ],
+        "summary": "Fetch latest US Treasury auction demand metrics and moving average of prior 8 completed auctions",
+        "operationId": "get_treasury_auction_demand_api_v2_market_macro_treasury_auction_demand_get",
+        "parameters": [
+          {
+            "name": "security_type",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "Security type (e.g. Note, Bill, Bond)",
+              "title": "Security Type"
+            },
+            "description": "Security type (e.g. Note, Bill, Bond)"
+          },
+          {
+            "name": "security_term",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "Security term (e.g. 10-Year, 13-Week)",
+              "title": "Security Term"
+            },
+            "description": "Security term (e.g. 10-Year, 13-Week)"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuctionDemandSnapshotSchema"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/market/equity/sec/financials/{symbol}": {
+      "get": {
+        "tags": [
+          "Terminal V2 Market Data"
+        ],
+        "summary": "Fetch SEC company-filed XBRL facts and calculated pure financial ratios",
+        "operationId": "get_sec_financials_api_v2_market_equity_sec_financials__symbol__get",
+        "parameters": [
+          {
+            "name": "symbol",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Symbol"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SecCompanyFactsSnapshotSchema"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/market/equity/sec/insider-trades/{symbol}": {
+      "get": {
+        "tags": [
+          "Terminal V2 Market Data"
+        ],
+        "summary": "Fetch SEC Form 4 parsed insider transactions and 90-day net buying ratio",
+        "operationId": "get_sec_insider_trades_api_v2_market_equity_sec_insider_trades__symbol__get",
+        "parameters": [
+          {
+            "name": "symbol",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Symbol"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 50,
+              "minimum": 1,
+              "description": "Max transactions to return",
+              "default": 20,
+              "title": "Limit"
+            },
+            "description": "Max transactions to return"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SecInsiderTradeSnapshotSchema"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/market/equity/news/{symbol}": {
+      "get": {
+        "tags": [
+          "Terminal V2 Market Data"
+        ],
+        "summary": "Fetch normalized RSS news discovery candidates for equity symbol",
+        "operationId": "get_equity_news_discovery_api_v2_market_equity_news__symbol__get",
+        "parameters": [
+          {
+            "name": "symbol",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Symbol"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 30,
+              "minimum": 1,
+              "description": "Max news items to return",
+              "default": 15,
+              "title": "Limit"
+            },
+            "description": "Max news items to return"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NewsDiscoverySnapshotSchema"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/health": {
       "get": {
         "summary": "Health",
@@ -4332,6 +6487,37 @@
         ],
         "title": "AnalystContextDTO"
       },
+      "AnalystRatingConsensusSchema": {
+        "properties": {
+          "symbol": {
+            "type": "string",
+            "title": "Symbol"
+          },
+          "consensus": {
+            "type": "string",
+            "title": "Consensus"
+          },
+          "analyst_count": {
+            "type": "integer",
+            "title": "Analyst Count"
+          },
+          "broker_names": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Broker Names"
+          }
+        },
+        "type": "object",
+        "required": [
+          "symbol",
+          "consensus",
+          "analyst_count",
+          "broker_names"
+        ],
+        "title": "AnalystRatingConsensusSchema"
+      },
       "AppendJournalRequestDTO": {
         "properties": {
           "entry": {
@@ -4451,6 +6637,169 @@
         "type": "object",
         "title": "AssignBucketRequestDTO"
       },
+      "AuctionDemandSnapshotSchema": {
+        "properties": {
+          "security_type": {
+            "type": "string",
+            "title": "Security Type",
+            "description": "Security type (Note, Bill, Bond)"
+          },
+          "security_term": {
+            "type": "string",
+            "title": "Security Term",
+            "description": "Security term (10-Year, 13-Week, etc.)"
+          },
+          "latest_auction_date": {
+            "type": "string",
+            "title": "Latest Auction Date"
+          },
+          "latest_bid_to_cover_ratio": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Latest Bid To Cover Ratio",
+            "description": "Latest auction bid-to-cover ratio"
+          },
+          "latest_high_yield": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Latest High Yield",
+            "description": "Latest high yield awarded (Note/Bond)"
+          },
+          "latest_high_investment_rate": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Latest High Investment Rate",
+            "description": "Latest investment rate (Bill)"
+          },
+          "latest_high_discount_rate": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Latest High Discount Rate",
+            "description": "Latest discount rate (Bill)"
+          },
+          "latest_offering_amount_usd": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Latest Offering Amount Usd"
+          },
+          "latest_total_accepted_usd": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Latest Total Accepted Usd"
+          },
+          "prior_mean_bid_to_cover": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Prior Mean Bid To Cover",
+            "description": "Moving average of prior 8 completed auctions of same type/term"
+          },
+          "demand_delta": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Demand Delta",
+            "description": "latest_btc - prior_mean"
+          },
+          "sample_count": {
+            "type": "integer",
+            "title": "Sample Count",
+            "description": "Sample count of prior completed auctions (min 3)"
+          },
+          "source": {
+            "type": "string",
+            "title": "Source",
+            "default": "US Treasury Fiscal Data"
+          },
+          "as_of_date": {
+            "type": "string",
+            "title": "As Of Date"
+          },
+          "fetched_at": {
+            "type": "number",
+            "title": "Fetched At"
+          },
+          "is_stale": {
+            "type": "boolean",
+            "title": "Is Stale",
+            "default": false
+          },
+          "stale_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Stale Reason"
+          },
+          "limitations": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Limitations"
+          }
+        },
+        "type": "object",
+        "required": [
+          "security_type",
+          "security_term",
+          "latest_auction_date",
+          "sample_count",
+          "as_of_date",
+          "fetched_at"
+        ],
+        "title": "AuctionDemandSnapshotSchema"
+      },
       "BatchAssignBucketRequestDTO": {
         "properties": {
           "symbols": {
@@ -4514,6 +6863,31 @@
           "pdf_file"
         ],
         "title": "Body_scan_upload_pdf_endpoint_api_portfolio_dime_scan_upload_post"
+      },
+      "Body_scan_upload_pdf_endpoint_api_portfolio_wealthx_scan_upload_post": {
+        "properties": {
+          "pdf_file": {
+            "type": "string",
+            "contentMediaType": "application/octet-stream",
+            "title": "Pdf File"
+          },
+          "password": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Password"
+          }
+        },
+        "type": "object",
+        "required": [
+          "pdf_file"
+        ],
+        "title": "Body_scan_upload_pdf_endpoint_api_portfolio_wealthx_scan_upload_post"
       },
       "BucketAllocationResponseDTO": {
         "properties": {
@@ -4731,6 +7105,118 @@
           "action"
         ],
         "title": "CashFlowRequestDTO"
+      },
+      "CommodityVolSnapshotSchema": {
+        "properties": {
+          "index_symbol": {
+            "type": "string",
+            "title": "Index Symbol",
+            "description": "Volatility index symbol (GVZ, VXSLV, OVX)"
+          },
+          "underlying_instrument": {
+            "type": "string",
+            "title": "Underlying Instrument",
+            "description": "Underlying ETF options instrument name"
+          },
+          "close_date": {
+            "type": "string",
+            "title": "Close Date",
+            "description": "Close date in YYYY-MM-DD"
+          },
+          "implied_volatility": {
+            "type": "number",
+            "title": "Implied Volatility",
+            "description": "30-day annualized implied volatility percentage"
+          },
+          "change_1d_points": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Change 1D Points",
+            "description": "1-day change in index points"
+          },
+          "percentile_52w": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Percentile 52W",
+            "description": "52-week percentile (0-100) or null if < 100 samples"
+          },
+          "sample_count": {
+            "type": "integer",
+            "title": "Sample Count",
+            "description": "Sample count used for percentile"
+          },
+          "regime_label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Regime Label",
+            "description": "Statistical regime heuristic (extreme_panic, elevated, normal, complacent)"
+          },
+          "source": {
+            "type": "string",
+            "title": "Source",
+            "default": "Cboe"
+          },
+          "as_of_date": {
+            "type": "string",
+            "title": "As Of Date"
+          },
+          "fetched_at": {
+            "type": "number",
+            "title": "Fetched At"
+          },
+          "is_stale": {
+            "type": "boolean",
+            "title": "Is Stale",
+            "default": false
+          },
+          "stale_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Stale Reason"
+          },
+          "limitations": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Limitations"
+          }
+        },
+        "type": "object",
+        "required": [
+          "index_symbol",
+          "underlying_instrument",
+          "close_date",
+          "implied_volatility",
+          "sample_count",
+          "as_of_date",
+          "fetched_at"
+        ],
+        "title": "CommodityVolSnapshotSchema"
       },
       "CorporateActionEventDTO": {
         "properties": {
@@ -5136,6 +7622,33 @@
         ],
         "title": "DCFScenarioLevelDTO"
       },
+      "DimeBatchScanRequestDTO": {
+        "properties": {
+          "password": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Password"
+          },
+          "force_rescan": {
+            "type": "boolean",
+            "title": "Force Rescan",
+            "default": false
+          },
+          "portfolio_id": {
+            "type": "string",
+            "title": "Portfolio Id",
+            "default": "default"
+          }
+        },
+        "type": "object",
+        "title": "DimeBatchScanRequestDTO"
+      },
       "DimeCommitRequestDTO": {
         "properties": {
           "portfolio_id": {
@@ -5225,6 +7738,60 @@
           "size_bytes"
         ],
         "title": "DimeEmailMetadataDTO"
+      },
+      "DimePdfTextPageDTO": {
+        "properties": {
+          "page_number": {
+            "type": "integer",
+            "title": "Page Number"
+          },
+          "text": {
+            "type": "string",
+            "title": "Text"
+          }
+        },
+        "type": "object",
+        "required": [
+          "page_number",
+          "text"
+        ],
+        "title": "DimePdfTextPageDTO"
+      },
+      "DimePdfTextResponseDTO": {
+        "properties": {
+          "message_id": {
+            "type": "string",
+            "title": "Message Id"
+          },
+          "attachment_id": {
+            "type": "string",
+            "title": "Attachment Id"
+          },
+          "filename": {
+            "type": "string",
+            "title": "Filename"
+          },
+          "page_count": {
+            "type": "integer",
+            "title": "Page Count"
+          },
+          "pages": {
+            "items": {
+              "$ref": "#/components/schemas/DimePdfTextPageDTO"
+            },
+            "type": "array",
+            "title": "Pages",
+            "default": []
+          }
+        },
+        "type": "object",
+        "required": [
+          "message_id",
+          "attachment_id",
+          "filename",
+          "page_count"
+        ],
+        "title": "DimePdfTextResponseDTO"
       },
       "DimeScanEmailRequestDTO": {
         "properties": {
@@ -5349,6 +7916,17 @@
             "type": "string",
             "title": "Confirmation No"
           },
+          "order_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Order Id"
+          },
           "source": {
             "type": "string",
             "title": "Source",
@@ -5367,6 +7945,11 @@
             "type": "boolean",
             "title": "Cash Adjusted",
             "default": true
+          },
+          "asset_type": {
+            "type": "string",
+            "title": "Asset Type",
+            "default": "Stock"
           }
         },
         "type": "object",
@@ -5798,6 +8381,61 @@
         ],
         "title": "EarningsCallSummarizeResponse"
       },
+      "EarningsDateItemSchema": {
+        "properties": {
+          "earnings_date": {
+            "type": "string",
+            "title": "Earnings Date"
+          },
+          "date_status": {
+            "type": "string",
+            "enum": [
+              "confirmed",
+              "estimated",
+              "unspecified"
+            ],
+            "title": "Date Status"
+          },
+          "report_time": {
+            "type": "string",
+            "enum": [
+              "pre-market",
+              "after-hours",
+              "unknown"
+            ],
+            "title": "Report Time"
+          },
+          "consensus_eps": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Consensus Eps"
+          },
+          "estimate_count": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Estimate Count"
+          }
+        },
+        "type": "object",
+        "required": [
+          "earnings_date",
+          "date_status",
+          "report_time"
+        ],
+        "title": "EarningsDateItemSchema"
+      },
       "EarningsHistoryEntryDTO": {
         "properties": {
           "date_str": {
@@ -5832,6 +8470,39 @@
           "date_str"
         ],
         "title": "EarningsHistoryEntryDTO"
+      },
+      "EarningsSurpriseItemSchema": {
+        "properties": {
+          "fiscal_quarter_end": {
+            "type": "string",
+            "title": "Fiscal Quarter End"
+          },
+          "date_reported": {
+            "type": "string",
+            "title": "Date Reported"
+          },
+          "eps": {
+            "type": "number",
+            "title": "Eps"
+          },
+          "consensus_eps": {
+            "type": "number",
+            "title": "Consensus Eps"
+          },
+          "surprise_pct": {
+            "type": "number",
+            "title": "Surprise Pct"
+          }
+        },
+        "type": "object",
+        "required": [
+          "fiscal_quarter_end",
+          "date_reported",
+          "eps",
+          "consensus_eps",
+          "surprise_pct"
+        ],
+        "title": "EarningsSurpriseItemSchema"
       },
       "EditHoldingRequestDTO": {
         "properties": {
@@ -6027,11 +8698,25 @@
             "default": []
           },
           "source_file": {
-            "type": "string",
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Source File"
           },
           "sidecar_file": {
-            "type": "string",
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Sidecar File"
           },
           "quant_signals": {
@@ -6063,8 +8748,6 @@
           "analysis_date",
           "evaluated_at",
           "market_sentiment",
-          "source_file",
-          "sidecar_file",
           "quant_signals",
           "sentiment_context",
           "narrative_analysis",
@@ -6396,11 +9079,25 @@
             "default": []
           },
           "source_file": {
-            "type": "string",
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Source File"
           },
           "sidecar_file": {
-            "type": "string",
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Sidecar File"
           }
         },
@@ -6410,9 +9107,7 @@
           "market",
           "analysis_date",
           "evaluated_at",
-          "market_sentiment",
-          "source_file",
-          "sidecar_file"
+          "market_sentiment"
         ],
         "title": "EquitySummaryDTO"
       },
@@ -7007,6 +9702,163 @@
         ],
         "title": "FinancialStatementsDTO"
       },
+      "FinancialStressCategorySchema": {
+        "properties": {
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "value": {
+            "type": "number",
+            "title": "Value"
+          }
+        },
+        "type": "object",
+        "required": [
+          "label",
+          "value"
+        ],
+        "title": "FinancialStressCategorySchema"
+      },
+      "FinancialStressPointSchema": {
+        "properties": {
+          "time_ms": {
+            "type": "integer",
+            "title": "Time Ms"
+          },
+          "date": {
+            "type": "string",
+            "title": "Date"
+          },
+          "value": {
+            "type": "number",
+            "title": "Value"
+          },
+          "credit": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Credit"
+          },
+          "equity_valuation": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Equity Valuation"
+          },
+          "safe_assets": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Safe Assets"
+          },
+          "funding": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Funding"
+          },
+          "volatility": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Volatility"
+          }
+        },
+        "type": "object",
+        "required": [
+          "time_ms",
+          "date",
+          "value"
+        ],
+        "title": "FinancialStressPointSchema"
+      },
+      "FinancialStressResponse": {
+        "properties": {
+          "as_of_date": {
+            "type": "string",
+            "title": "As Of Date",
+            "description": "T-2 business days lag observation date"
+          },
+          "published_at": {
+            "type": "string",
+            "title": "Published At"
+          },
+          "fsi_value": {
+            "type": "number",
+            "title": "Fsi Value"
+          },
+          "regime": {
+            "type": "string",
+            "title": "Regime",
+            "description": "Systemic risk regime: calm, normal, elevated, severe"
+          },
+          "categories": {
+            "items": {
+              "$ref": "#/components/schemas/FinancialStressCategorySchema"
+            },
+            "type": "array",
+            "title": "Categories"
+          },
+          "trend_90d": {
+            "items": {
+              "$ref": "#/components/schemas/FinancialStressPointSchema"
+            },
+            "type": "array",
+            "title": "Trend 90D"
+          },
+          "source": {
+            "type": "string",
+            "title": "Source",
+            "default": "OFR"
+          },
+          "data_lag_days": {
+            "type": "integer",
+            "title": "Data Lag Days",
+            "default": 2
+          },
+          "is_stale": {
+            "type": "boolean",
+            "title": "Is Stale",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": [
+          "as_of_date",
+          "published_at",
+          "fsi_value",
+          "regime",
+          "categories",
+          "trend_90d"
+        ],
+        "title": "FinancialStressResponse"
+      },
       "FinancialSummaryChartPointDTO": {
         "properties": {
           "period_key": {
@@ -7123,6 +9975,147 @@
           "date"
         ],
         "title": "FinancialSummaryChartPointDTO"
+      },
+      "FinraShortVolumeResponse": {
+        "properties": {
+          "symbol": {
+            "type": "string",
+            "title": "Symbol"
+          },
+          "report_date": {
+            "type": "string",
+            "title": "Report Date"
+          },
+          "short_volume": {
+            "type": "integer",
+            "title": "Short Volume"
+          },
+          "short_exempt_volume": {
+            "type": "integer",
+            "title": "Short Exempt Volume"
+          },
+          "finra_reported_total_volume": {
+            "type": "integer",
+            "title": "Finra Reported Total Volume"
+          },
+          "short_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Short Pct"
+          },
+          "coverage": {
+            "type": "string",
+            "title": "Coverage"
+          },
+          "unit": {
+            "type": "string",
+            "title": "Unit"
+          },
+          "source": {
+            "type": "string",
+            "title": "Source"
+          },
+          "limitations": {
+            "type": "string",
+            "title": "Limitations"
+          },
+          "is_stale": {
+            "type": "boolean",
+            "title": "Is Stale"
+          },
+          "stale_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Stale Reason"
+          }
+        },
+        "type": "object",
+        "required": [
+          "symbol",
+          "report_date",
+          "short_volume",
+          "short_exempt_volume",
+          "finra_reported_total_volume",
+          "short_pct",
+          "coverage",
+          "unit",
+          "source",
+          "limitations",
+          "is_stale"
+        ],
+        "title": "FinraShortVolumeResponse"
+      },
+      "GlobalPolicyRatesResponse": {
+        "properties": {
+          "as_of_date": {
+            "type": "string",
+            "title": "As Of Date"
+          },
+          "rates": {
+            "items": {
+              "$ref": "#/components/schemas/PolicyRateItemSchema"
+            },
+            "type": "array",
+            "title": "Rates"
+          },
+          "spreads_vs_bot_repo": {
+            "additionalProperties": {
+              "type": "number"
+            },
+            "type": "object",
+            "title": "Spreads Vs Bot Repo",
+            "description": "Spreads in basis points vs BOT 1-day repo"
+          },
+          "source": {
+            "type": "string",
+            "title": "Source",
+            "default": "BIS"
+          },
+          "is_stale": {
+            "type": "boolean",
+            "title": "Is Stale",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": [
+          "as_of_date",
+          "rates",
+          "spreads_vs_bot_repo"
+        ],
+        "title": "GlobalPolicyRatesResponse"
+      },
+      "GoldPriceDetailSchema": {
+        "properties": {
+          "buy": {
+            "type": "number",
+            "title": "Buy",
+            "description": "Buyback price in THB per baht-weight"
+          },
+          "sell": {
+            "type": "number",
+            "title": "Sell",
+            "description": "Selling price in THB per baht-weight"
+          }
+        },
+        "type": "object",
+        "required": [
+          "buy",
+          "sell"
+        ],
+        "title": "GoldPriceDetailSchema"
       },
       "HTTPValidationError": {
         "properties": {
@@ -7556,6 +10549,141 @@
         ],
         "title": "InsiderTransactionDTO"
       },
+      "InsiderTransactionSchema": {
+        "properties": {
+          "transaction_date": {
+            "type": "string",
+            "title": "Transaction Date"
+          },
+          "reporting_owner": {
+            "type": "string",
+            "title": "Reporting Owner"
+          },
+          "officer_title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Officer Title"
+          },
+          "is_officer": {
+            "type": "boolean",
+            "title": "Is Officer"
+          },
+          "is_director": {
+            "type": "boolean",
+            "title": "Is Director"
+          },
+          "is_ten_percent_owner": {
+            "type": "boolean",
+            "title": "Is Ten Percent Owner"
+          },
+          "transaction_code": {
+            "type": "string",
+            "title": "Transaction Code"
+          },
+          "shares": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Shares"
+          },
+          "price_per_share": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Price Per Share"
+          },
+          "notional_usd": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notional Usd"
+          },
+          "direct_or_indirect": {
+            "type": "string",
+            "title": "Direct Or Indirect"
+          },
+          "accession_number": {
+            "type": "string",
+            "title": "Accession Number"
+          },
+          "is_amendment": {
+            "type": "boolean",
+            "title": "Is Amendment"
+          }
+        },
+        "type": "object",
+        "required": [
+          "transaction_date",
+          "reporting_owner",
+          "is_officer",
+          "is_director",
+          "is_ten_percent_owner",
+          "transaction_code",
+          "direct_or_indirect",
+          "accession_number",
+          "is_amendment"
+        ],
+        "title": "InsiderTransactionSchema"
+      },
+      "InvestorTypeRowSchema": {
+        "properties": {
+          "investor_type": {
+            "type": "string",
+            "title": "Investor Type",
+            "description": "Investor type code, e.g. Foreign, Institution"
+          },
+          "name_en": {
+            "type": "string",
+            "title": "Name En",
+            "description": "English name of investor category"
+          },
+          "buy_value": {
+            "type": "number",
+            "title": "Buy Value",
+            "description": "Buy value in THB"
+          },
+          "sell_value": {
+            "type": "number",
+            "title": "Sell Value",
+            "description": "Sell value in THB"
+          },
+          "net_value": {
+            "type": "number",
+            "title": "Net Value",
+            "description": "Net trading value (buy - sell) in THB"
+          }
+        },
+        "type": "object",
+        "required": [
+          "investor_type",
+          "name_en",
+          "buy_value",
+          "sell_value",
+          "net_value"
+        ],
+        "title": "InvestorTypeRowSchema"
+      },
       "JobOutputsDTO": {
         "properties": {
           "job_id": {
@@ -7802,6 +10930,322 @@
         ],
         "title": "KanbanCardDTO"
       },
+      "KnowledgeWriteRequest": {
+        "properties": {
+          "protocol_version": {
+            "type": "integer",
+            "title": "Protocol Version",
+            "default": 1
+          },
+          "command_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Command Id"
+          },
+          "idempotency_key": {
+            "type": "string",
+            "maxLength": 512,
+            "minLength": 1,
+            "title": "Idempotency Key"
+          },
+          "operation": {
+            "type": "string",
+            "enum": [
+              "upsert_note",
+              "publish_capture",
+              "append_journal_entry",
+              "retire_note",
+              "restore_note",
+              "register_attachment",
+              "regenerate_projection"
+            ],
+            "title": "Operation"
+          },
+          "producer": {
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Producer"
+          },
+          "producer_version": {
+            "type": "string",
+            "maxLength": 100,
+            "title": "Producer Version",
+            "default": "unknown"
+          },
+          "document_key": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 512
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Document Key"
+          },
+          "entity_type": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 100
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Entity Type"
+          },
+          "payload": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Payload"
+          },
+          "expected_revision_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expected Revision Id"
+          },
+          "expected_content_hash": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expected Content Hash"
+          },
+          "causation_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Causation Id"
+          },
+          "correlation_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Correlation Id"
+          },
+          "actor": {
+            "type": "string",
+            "maxLength": 100,
+            "title": "Actor",
+            "default": "app"
+          }
+        },
+        "type": "object",
+        "required": [
+          "idempotency_key",
+          "operation",
+          "producer",
+          "payload"
+        ],
+        "title": "KnowledgeWriteRequest"
+      },
+      "KnowledgeWriteResponse": {
+        "properties": {
+          "command_id": {
+            "type": "string",
+            "title": "Command Id"
+          },
+          "idempotency_key": {
+            "type": "string",
+            "title": "Idempotency Key"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "operation": {
+            "type": "string",
+            "title": "Operation"
+          },
+          "producer": {
+            "type": "string",
+            "title": "Producer"
+          },
+          "document_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Document Key"
+          },
+          "note_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note Id"
+          },
+          "revision_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Revision Id"
+          },
+          "relative_path": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Relative Path"
+          },
+          "content_hash": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Content Hash"
+          },
+          "artifact_set_hash": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Artifact Set Hash"
+          },
+          "committed_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Committed At"
+          },
+          "conflict_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Conflict Code"
+          },
+          "retryable": {
+            "type": "boolean",
+            "title": "Retryable",
+            "default": false
+          },
+          "warnings": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Warnings"
+          },
+          "error_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error Code"
+          },
+          "error_message": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error Message"
+          },
+          "registry_digest": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Registry Digest"
+          },
+          "broker_fencing_token": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Broker Fencing Token"
+          }
+        },
+        "additionalProperties": true,
+        "type": "object",
+        "required": [
+          "command_id",
+          "idempotency_key",
+          "status",
+          "operation",
+          "producer"
+        ],
+        "title": "KnowledgeWriteResponse"
+      },
       "LineItemMetaDTO": {
         "properties": {
           "canonical_key": {
@@ -7836,6 +11280,93 @@
           "display_label"
         ],
         "title": "LineItemMetaDTO"
+      },
+      "LivePerpsQuoteResponse": {
+        "properties": {
+          "symbol": {
+            "type": "string",
+            "title": "Symbol"
+          },
+          "mark_price": {
+            "type": "number",
+            "title": "Mark Price"
+          },
+          "dex_namespace": {
+            "type": "string",
+            "title": "Dex Namespace"
+          },
+          "asset_class": {
+            "type": "string",
+            "title": "Asset Class",
+            "default": "synthetic_crypto_perp"
+          },
+          "contract_type": {
+            "type": "string",
+            "title": "Contract Type",
+            "default": "perpetual_future"
+          },
+          "source": {
+            "type": "string",
+            "title": "Source",
+            "default": "Hyperliquid"
+          },
+          "open_interest": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Open Interest"
+          },
+          "funding_rate": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Funding Rate"
+          },
+          "day_ntl_vlm": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Day Ntl Vlm"
+          },
+          "is_stale": {
+            "type": "boolean",
+            "title": "Is Stale",
+            "default": false
+          },
+          "stale_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Stale Reason"
+          }
+        },
+        "type": "object",
+        "required": [
+          "symbol",
+          "mark_price",
+          "dex_namespace"
+        ],
+        "title": "LivePerpsQuoteResponse"
       },
       "LoginRequest": {
         "properties": {
@@ -8198,6 +11729,309 @@
         ],
         "title": "MacroSeriesPointDTO"
       },
+      "MacroSeriesPointSchema": {
+        "properties": {
+          "date": {
+            "type": "string",
+            "title": "Date"
+          },
+          "value": {
+            "type": "number",
+            "title": "Value"
+          }
+        },
+        "type": "object",
+        "required": [
+          "date",
+          "value"
+        ],
+        "title": "MacroSeriesPointSchema"
+      },
+      "MacroSeriesResponse": {
+        "properties": {
+          "series_id": {
+            "type": "string",
+            "title": "Series Id"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "source": {
+            "type": "string",
+            "title": "Source",
+            "default": "FRED"
+          },
+          "frequency": {
+            "type": "string",
+            "title": "Frequency"
+          },
+          "unit": {
+            "type": "string",
+            "title": "Unit"
+          },
+          "points": {
+            "items": {
+              "$ref": "#/components/schemas/MacroSeriesPointSchema"
+            },
+            "type": "array",
+            "title": "Points"
+          },
+          "is_stale": {
+            "type": "boolean",
+            "title": "Is Stale",
+            "default": false
+          },
+          "stale_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Stale Reason"
+          }
+        },
+        "type": "object",
+        "required": [
+          "series_id",
+          "label",
+          "frequency",
+          "unit",
+          "points"
+        ],
+        "title": "MacroSeriesResponse"
+      },
+      "MarketBreadthResponse": {
+        "properties": {
+          "market": {
+            "type": "string",
+            "title": "Market"
+          },
+          "as_of": {
+            "type": "string",
+            "title": "As Of"
+          },
+          "gainers": {
+            "type": "integer",
+            "title": "Gainers"
+          },
+          "losers": {
+            "type": "integer",
+            "title": "Losers"
+          },
+          "unchanged": {
+            "type": "integer",
+            "title": "Unchanged"
+          },
+          "source": {
+            "type": "string",
+            "title": "Source",
+            "default": "Settrade"
+          },
+          "is_stale": {
+            "type": "boolean",
+            "title": "Is Stale",
+            "default": false
+          },
+          "stale_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Stale Reason"
+          }
+        },
+        "type": "object",
+        "required": [
+          "market",
+          "as_of",
+          "gainers",
+          "losers",
+          "unchanged"
+        ],
+        "title": "MarketBreadthResponse"
+      },
+      "MarketValuationResponse": {
+        "properties": {
+          "market": {
+            "type": "string",
+            "title": "Market"
+          },
+          "as_of": {
+            "type": "string",
+            "title": "As Of"
+          },
+          "market_cap": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Market Cap"
+          },
+          "pe_ratio": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pe Ratio"
+          },
+          "pbv_ratio": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pbv Ratio"
+          },
+          "dividend_yield": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dividend Yield"
+          },
+          "turnover_ratio": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Turnover Ratio"
+          },
+          "source": {
+            "type": "string",
+            "title": "Source",
+            "default": "Settrade"
+          },
+          "is_stale": {
+            "type": "boolean",
+            "title": "Is Stale",
+            "default": false
+          },
+          "stale_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Stale Reason"
+          }
+        },
+        "type": "object",
+        "required": [
+          "market",
+          "as_of"
+        ],
+        "title": "MarketValuationResponse"
+      },
+      "MetalsCotResponse": {
+        "properties": {
+          "commodity": {
+            "type": "string",
+            "title": "Commodity"
+          },
+          "commodity_code": {
+            "type": "string",
+            "title": "Commodity Code"
+          },
+          "as_of_date": {
+            "type": "string",
+            "title": "As Of Date",
+            "description": "Tuesday market close"
+          },
+          "published_at": {
+            "type": "string",
+            "title": "Published At",
+            "description": "Friday afternoon release"
+          },
+          "report_type": {
+            "type": "string",
+            "title": "Report Type",
+            "default": "disaggregated"
+          },
+          "open_interest": {
+            "type": "integer",
+            "title": "Open Interest"
+          },
+          "managed_money": {
+            "$ref": "#/components/schemas/TraderClassPositionSchema"
+          },
+          "swap_dealers": {
+            "$ref": "#/components/schemas/TraderClassPositionSchema"
+          },
+          "producer_merchant": {
+            "$ref": "#/components/schemas/TraderClassPositionSchema"
+          },
+          "other_reportables": {
+            "$ref": "#/components/schemas/TraderClassPositionSchema"
+          },
+          "non_reportables": {
+            "$ref": "#/components/schemas/TraderClassPositionSchema"
+          },
+          "net_managed_money": {
+            "type": "integer",
+            "title": "Net Managed Money"
+          },
+          "percentile_52w": {
+            "type": "number",
+            "title": "Percentile 52W"
+          },
+          "source": {
+            "type": "string",
+            "title": "Source",
+            "default": "CFTC"
+          },
+          "is_stale": {
+            "type": "boolean",
+            "title": "Is Stale",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": [
+          "commodity",
+          "commodity_code",
+          "as_of_date",
+          "published_at",
+          "open_interest",
+          "managed_money",
+          "swap_dealers",
+          "producer_merchant",
+          "other_reportables",
+          "non_reportables",
+          "net_managed_money",
+          "percentile_52w"
+        ],
+        "title": "MetalsCotResponse"
+      },
       "MoveCardRequest": {
         "properties": {
           "card_id": {
@@ -8226,6 +12060,179 @@
           "column_name"
         ],
         "title": "MoveCardRequest"
+      },
+      "NasdaqConsensusResponse": {
+        "properties": {
+          "symbol": {
+            "type": "string",
+            "title": "Symbol"
+          },
+          "coverage_status": {
+            "type": "string",
+            "enum": [
+              "full",
+              "partial",
+              "no_coverage"
+            ],
+            "title": "Coverage Status"
+          },
+          "has_earnings_surprise": {
+            "type": "boolean",
+            "title": "Has Earnings Surprise"
+          },
+          "has_analyst_ratings": {
+            "type": "boolean",
+            "title": "Has Analyst Ratings"
+          },
+          "upcoming_earnings": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/EarningsDateItemSchema"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "surprise_history": {
+            "items": {
+              "$ref": "#/components/schemas/EarningsSurpriseItemSchema"
+            },
+            "type": "array",
+            "title": "Surprise History"
+          },
+          "ratings": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AnalystRatingConsensusSchema"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "source": {
+            "type": "string",
+            "title": "Source",
+            "default": "Nasdaq"
+          },
+          "is_stale": {
+            "type": "boolean",
+            "title": "Is Stale",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": [
+          "symbol",
+          "coverage_status",
+          "has_earnings_surprise",
+          "has_analyst_ratings",
+          "surprise_history"
+        ],
+        "title": "NasdaqConsensusResponse"
+      },
+      "NewsCandidateSchema": {
+        "properties": {
+          "headline": {
+            "type": "string",
+            "title": "Headline"
+          },
+          "publisher": {
+            "type": "string",
+            "title": "Publisher"
+          },
+          "source_type": {
+            "type": "string",
+            "title": "Source Type"
+          },
+          "article_url": {
+            "type": "string",
+            "title": "Article Url"
+          },
+          "published_at": {
+            "type": "string",
+            "title": "Published At"
+          },
+          "discovered_at": {
+            "type": "number",
+            "title": "Discovered At"
+          },
+          "symbol": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Symbol"
+          },
+          "is_stale": {
+            "type": "boolean",
+            "title": "Is Stale",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": [
+          "headline",
+          "publisher",
+          "source_type",
+          "article_url",
+          "published_at",
+          "discovered_at"
+        ],
+        "title": "NewsCandidateSchema"
+      },
+      "NewsDiscoverySnapshotSchema": {
+        "properties": {
+          "query_symbol": {
+            "type": "string",
+            "title": "Query Symbol"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/NewsCandidateSchema"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status",
+            "description": "ok, rate_limited, or feed_unavailable"
+          },
+          "source": {
+            "type": "string",
+            "title": "Source",
+            "default": "Google News RSS Discovery"
+          },
+          "as_of_date": {
+            "type": "string",
+            "title": "As Of Date"
+          },
+          "fetched_at": {
+            "type": "number",
+            "title": "Fetched At"
+          },
+          "limitations": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Limitations"
+          }
+        },
+        "type": "object",
+        "required": [
+          "query_symbol",
+          "status",
+          "as_of_date",
+          "fetched_at"
+        ],
+        "title": "NewsDiscoverySnapshotSchema"
       },
       "NewsFunnelFilteredItemDTO": {
         "properties": {
@@ -8867,6 +12874,382 @@
         ],
         "title": "OHLCVResponseDTO"
       },
+      "OptionContractSchema": {
+        "properties": {
+          "occ_symbol": {
+            "type": "string",
+            "title": "Occ Symbol"
+          },
+          "underlying": {
+            "type": "string",
+            "title": "Underlying"
+          },
+          "expiry": {
+            "type": "string",
+            "title": "Expiry"
+          },
+          "strike": {
+            "type": "number",
+            "title": "Strike"
+          },
+          "side": {
+            "type": "string",
+            "title": "Side"
+          },
+          "open_interest": {
+            "type": "integer",
+            "title": "Open Interest"
+          },
+          "volume": {
+            "type": "integer",
+            "title": "Volume"
+          },
+          "bid": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bid"
+          },
+          "ask": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ask"
+          },
+          "last_price": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Price"
+          },
+          "implied_volatility": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Implied Volatility"
+          },
+          "delta": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Delta"
+          },
+          "gamma": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Gamma"
+          },
+          "vega": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Vega"
+          },
+          "theta": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Theta"
+          },
+          "rho": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rho"
+          },
+          "multiplier": {
+            "type": "integer",
+            "title": "Multiplier"
+          },
+          "is_standard": {
+            "type": "boolean",
+            "title": "Is Standard"
+          }
+        },
+        "type": "object",
+        "required": [
+          "occ_symbol",
+          "underlying",
+          "expiry",
+          "strike",
+          "side",
+          "open_interest",
+          "volume",
+          "multiplier",
+          "is_standard"
+        ],
+        "title": "OptionContractSchema"
+      },
+      "OptionsChainResponse": {
+        "properties": {
+          "underlying": {
+            "type": "string",
+            "title": "Underlying"
+          },
+          "underlying_price": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Underlying Price"
+          },
+          "iv30_decimal": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Iv30 Decimal"
+          },
+          "delay_minutes": {
+            "type": "integer",
+            "title": "Delay Minutes"
+          },
+          "contracts": {
+            "items": {
+              "$ref": "#/components/schemas/OptionContractSchema"
+            },
+            "type": "array",
+            "title": "Contracts"
+          },
+          "fetched_at": {
+            "type": "number",
+            "title": "Fetched At"
+          },
+          "source": {
+            "type": "string",
+            "title": "Source"
+          },
+          "limitations": {
+            "type": "string",
+            "title": "Limitations"
+          },
+          "is_stale": {
+            "type": "boolean",
+            "title": "Is Stale"
+          },
+          "stale_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Stale Reason"
+          }
+        },
+        "type": "object",
+        "required": [
+          "underlying",
+          "underlying_price",
+          "iv30_decimal",
+          "delay_minutes",
+          "contracts",
+          "fetched_at",
+          "source",
+          "limitations",
+          "is_stale"
+        ],
+        "title": "OptionsChainResponse"
+      },
+      "OptionsMaxPainResponse": {
+        "properties": {
+          "underlying": {
+            "type": "string",
+            "title": "Underlying"
+          },
+          "expiry": {
+            "type": "string",
+            "title": "Expiry"
+          },
+          "strike": {
+            "type": "number",
+            "title": "Strike"
+          },
+          "minimum_theoretical_payout": {
+            "type": "number",
+            "title": "Minimum Theoretical Payout"
+          },
+          "candidate_count": {
+            "type": "integer",
+            "title": "Candidate Count"
+          },
+          "excluded_contract_count": {
+            "type": "integer",
+            "title": "Excluded Contract Count"
+          },
+          "spot_price": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Spot Price"
+          },
+          "distance_from_spot": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Distance From Spot"
+          },
+          "distance_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Distance Pct"
+          },
+          "assumptions": {
+            "type": "string",
+            "title": "Assumptions"
+          },
+          "limitations": {
+            "type": "string",
+            "title": "Limitations"
+          }
+        },
+        "type": "object",
+        "required": [
+          "underlying",
+          "expiry",
+          "strike",
+          "minimum_theoretical_payout",
+          "candidate_count",
+          "excluded_contract_count",
+          "assumptions",
+          "limitations"
+        ],
+        "title": "OptionsMaxPainResponse"
+      },
+      "OptionsPutCallRatiosResponse": {
+        "properties": {
+          "underlying": {
+            "type": "string",
+            "title": "Underlying"
+          },
+          "expiry": {
+            "type": "string",
+            "title": "Expiry"
+          },
+          "put_volume": {
+            "type": "integer",
+            "title": "Put Volume"
+          },
+          "call_volume": {
+            "type": "integer",
+            "title": "Call Volume"
+          },
+          "volume_ratio": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Volume Ratio"
+          },
+          "put_open_interest": {
+            "type": "integer",
+            "title": "Put Open Interest"
+          },
+          "call_open_interest": {
+            "type": "integer",
+            "title": "Call Open Interest"
+          },
+          "oi_ratio": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Oi Ratio"
+          }
+        },
+        "type": "object",
+        "required": [
+          "underlying",
+          "expiry",
+          "put_volume",
+          "call_volume",
+          "volume_ratio",
+          "put_open_interest",
+          "call_open_interest",
+          "oi_ratio"
+        ],
+        "title": "OptionsPutCallRatiosResponse"
+      },
       "PairTradeDTO": {
         "properties": {
           "long_leg": {
@@ -9020,6 +13403,31 @@
               }
             ],
             "title": "Passive Income Ytd"
+          },
+          "Asset_Class_Values_THB": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "type": "number"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Asset Class Values Thb"
+          },
+          "coverage_warning": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Coverage Warning"
           }
         },
         "type": "object",
@@ -9079,6 +13487,68 @@
           "s4"
         ],
         "title": "PivotLevelsDTO"
+      },
+      "PolicyRateItemSchema": {
+        "properties": {
+          "country": {
+            "type": "string",
+            "title": "Country"
+          },
+          "rate_value": {
+            "type": "number",
+            "title": "Rate Value"
+          },
+          "rate_type": {
+            "type": "string",
+            "title": "Rate Type",
+            "description": "Specific central bank rate instrument"
+          },
+          "effective_date": {
+            "type": "string",
+            "title": "Effective Date",
+            "description": "Date rate took effect"
+          },
+          "currency": {
+            "type": "string",
+            "title": "Currency"
+          },
+          "central_bank": {
+            "type": "string",
+            "title": "Central Bank"
+          },
+          "previous_rate": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Previous Rate"
+          },
+          "last_change_date": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Change Date"
+          }
+        },
+        "type": "object",
+        "required": [
+          "country",
+          "rate_value",
+          "rate_type",
+          "effective_date",
+          "currency",
+          "central_bank"
+        ],
+        "title": "PolicyRateItemSchema"
       },
       "PortfolioCalendarDTO": {
         "properties": {
@@ -9230,6 +13700,246 @@
           "name"
         ],
         "title": "PortfolioMetaDTO"
+      },
+      "PredictionMarketResponse": {
+        "properties": {
+          "market_id": {
+            "type": "string",
+            "title": "Market Id"
+          },
+          "question": {
+            "type": "string",
+            "title": "Question"
+          },
+          "outcomes": {
+            "items": {
+              "$ref": "#/components/schemas/PredictionOutcomeSchema"
+            },
+            "type": "array",
+            "title": "Outcomes"
+          },
+          "volume_24h_usd": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Volume 24H Usd"
+          },
+          "end_date": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "End Date"
+          },
+          "source_url": {
+            "type": "string",
+            "title": "Source Url"
+          },
+          "fetched_at": {
+            "type": "number",
+            "title": "Fetched At"
+          },
+          "source": {
+            "type": "string",
+            "title": "Source"
+          },
+          "unit": {
+            "type": "string",
+            "title": "Unit"
+          },
+          "limitations": {
+            "type": "string",
+            "title": "Limitations"
+          },
+          "is_stale": {
+            "type": "boolean",
+            "title": "Is Stale"
+          },
+          "stale_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Stale Reason"
+          }
+        },
+        "type": "object",
+        "required": [
+          "market_id",
+          "question",
+          "outcomes",
+          "source_url",
+          "fetched_at",
+          "source",
+          "unit",
+          "limitations",
+          "is_stale"
+        ],
+        "title": "PredictionMarketResponse"
+      },
+      "PredictionOutcomeSchema": {
+        "properties": {
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "price": {
+            "type": "number",
+            "title": "Price"
+          }
+        },
+        "type": "object",
+        "required": [
+          "label",
+          "price"
+        ],
+        "title": "PredictionOutcomeSchema"
+      },
+      "ReferenceRatePointSchema": {
+        "properties": {
+          "code": {
+            "type": "string",
+            "title": "Code"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "effective_date": {
+            "type": "string",
+            "title": "Effective Date"
+          },
+          "rate_percent": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rate Percent"
+          },
+          "volume_in_billions": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Volume In Billions"
+          },
+          "target_rate_from": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target Rate From"
+          },
+          "target_rate_to": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target Rate To"
+          }
+        },
+        "type": "object",
+        "required": [
+          "code",
+          "label",
+          "effective_date",
+          "rate_percent"
+        ],
+        "title": "ReferenceRatePointSchema"
+      },
+      "ReferenceRatesResponse": {
+        "properties": {
+          "as_of": {
+            "type": "string",
+            "title": "As Of"
+          },
+          "rates": {
+            "items": {
+              "$ref": "#/components/schemas/ReferenceRatePointSchema"
+            },
+            "type": "array",
+            "title": "Rates"
+          },
+          "spreads_bps": {
+            "additionalProperties": {
+              "type": "number"
+            },
+            "type": "object",
+            "title": "Spreads Bps"
+          },
+          "fetched_at": {
+            "type": "number",
+            "title": "Fetched At"
+          },
+          "source": {
+            "type": "string",
+            "title": "Source"
+          },
+          "unit": {
+            "type": "string",
+            "title": "Unit"
+          },
+          "limitations": {
+            "type": "string",
+            "title": "Limitations"
+          },
+          "is_stale": {
+            "type": "boolean",
+            "title": "Is Stale"
+          },
+          "stale_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Stale Reason"
+          }
+        },
+        "type": "object",
+        "required": [
+          "as_of",
+          "rates",
+          "spreads_bps",
+          "fetched_at",
+          "source",
+          "unit",
+          "limitations",
+          "is_stale"
+        ],
+        "title": "ReferenceRatesResponse"
       },
       "RegimeEvidenceDTO": {
         "properties": {
@@ -9459,6 +14169,687 @@
         ],
         "title": "RiskScenarioDTO"
       },
+      "SCBAMBatchScanRequestDTO": {
+        "properties": {
+          "since_date": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Since Date"
+          },
+          "portfolio_id": {
+            "type": "string",
+            "title": "Portfolio Id",
+            "default": "default"
+          },
+          "limit": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Limit"
+          }
+        },
+        "type": "object",
+        "title": "SCBAMBatchScanRequestDTO"
+      },
+      "SCBAMCommitRequestDTO": {
+        "properties": {
+          "portfolio_id": {
+            "type": "string",
+            "title": "Portfolio Id",
+            "default": "default"
+          },
+          "selected_item_ids": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Selected Item Ids"
+          }
+        },
+        "type": "object",
+        "title": "SCBAMCommitRequestDTO"
+      },
+      "SCBAMCommitResponseDTO": {
+        "properties": {
+          "ok": {
+            "type": "boolean",
+            "title": "Ok",
+            "default": true
+          },
+          "imported_count": {
+            "type": "integer",
+            "title": "Imported Count"
+          },
+          "state": {
+            "$ref": "#/components/schemas/ActualPortfolioStateDTO"
+          }
+        },
+        "type": "object",
+        "required": [
+          "imported_count",
+          "state"
+        ],
+        "title": "SCBAMCommitResponseDTO"
+      },
+      "SCBAMEmailListResponseDTO": {
+        "properties": {
+          "emails": {
+            "items": {
+              "$ref": "#/components/schemas/SCBAMEmailMetadataDTO"
+            },
+            "type": "array",
+            "title": "Emails",
+            "default": []
+          }
+        },
+        "type": "object",
+        "title": "SCBAMEmailListResponseDTO"
+      },
+      "SCBAMEmailMetadataDTO": {
+        "properties": {
+          "message_id": {
+            "type": "string",
+            "title": "Message Id"
+          },
+          "attachment_id": {
+            "type": "string",
+            "title": "Attachment Id"
+          },
+          "subject": {
+            "type": "string",
+            "title": "Subject"
+          },
+          "sender": {
+            "type": "string",
+            "title": "Sender"
+          },
+          "received_at": {
+            "type": "string",
+            "title": "Received At"
+          },
+          "filename": {
+            "type": "string",
+            "title": "Filename"
+          },
+          "size_bytes": {
+            "type": "integer",
+            "title": "Size Bytes"
+          }
+        },
+        "type": "object",
+        "required": [
+          "message_id",
+          "attachment_id",
+          "subject",
+          "sender",
+          "received_at",
+          "filename",
+          "size_bytes"
+        ],
+        "title": "SCBAMEmailMetadataDTO"
+      },
+      "SCBAMScanResponseDTO": {
+        "properties": {
+          "scan_id": {
+            "type": "string",
+            "title": "Scan Id"
+          },
+          "item_count": {
+            "type": "integer",
+            "title": "Item Count"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/SCBAMStagedItemDTO"
+            },
+            "type": "array",
+            "title": "Items",
+            "default": []
+          }
+        },
+        "type": "object",
+        "required": [
+          "scan_id",
+          "item_count"
+        ],
+        "title": "SCBAMScanResponseDTO"
+      },
+      "SCBAMSingleScanEmailRequestDTO": {
+        "properties": {
+          "message_id": {
+            "type": "string",
+            "title": "Message Id"
+          },
+          "portfolio_id": {
+            "type": "string",
+            "title": "Portfolio Id",
+            "default": "default"
+          }
+        },
+        "type": "object",
+        "required": [
+          "message_id"
+        ],
+        "title": "SCBAMSingleScanEmailRequestDTO"
+      },
+      "SCBAMStagedItemDTO": {
+        "properties": {
+          "item_id": {
+            "type": "string",
+            "title": "Item Id"
+          },
+          "trade_date": {
+            "type": "string",
+            "title": "Trade Date"
+          },
+          "settlement_date": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Settlement Date"
+          },
+          "symbol": {
+            "type": "string",
+            "title": "Symbol"
+          },
+          "action": {
+            "type": "string",
+            "title": "Action"
+          },
+          "units": {
+            "type": "string",
+            "title": "Units"
+          },
+          "price": {
+            "type": "string",
+            "title": "Price"
+          },
+          "gross_amount": {
+            "type": "string",
+            "title": "Gross Amount"
+          },
+          "fees": {
+            "$ref": "#/components/schemas/SCBAMStagedItemFeeDTO"
+          },
+          "net_amount": {
+            "type": "string",
+            "title": "Net Amount"
+          },
+          "currency": {
+            "type": "string",
+            "title": "Currency",
+            "default": "THB"
+          },
+          "exchange_rate": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Exchange Rate"
+          },
+          "confirmation_no": {
+            "type": "string",
+            "title": "Confirmation No"
+          },
+          "order_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Order Id"
+          },
+          "source": {
+            "type": "string",
+            "title": "Source",
+            "default": "SCB"
+          },
+          "fingerprint": {
+            "type": "string",
+            "title": "Fingerprint"
+          },
+          "line_index": {
+            "type": "integer",
+            "title": "Line Index",
+            "default": 0
+          },
+          "cash_adjusted": {
+            "type": "boolean",
+            "title": "Cash Adjusted",
+            "default": true
+          },
+          "asset_type": {
+            "type": "string",
+            "title": "Asset Type",
+            "default": "Fund"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status",
+            "default": "NEW"
+          }
+        },
+        "type": "object",
+        "required": [
+          "item_id",
+          "trade_date",
+          "symbol",
+          "action",
+          "units",
+          "price",
+          "gross_amount",
+          "net_amount",
+          "confirmation_no",
+          "fingerprint"
+        ],
+        "title": "SCBAMStagedItemDTO"
+      },
+      "SCBAMStagedItemFeeDTO": {
+        "properties": {
+          "commission": {
+            "type": "string",
+            "title": "Commission",
+            "default": "0.00"
+          },
+          "vat": {
+            "type": "string",
+            "title": "Vat",
+            "default": "0.00"
+          },
+          "other_fees": {
+            "type": "string",
+            "title": "Other Fees",
+            "default": "0.00"
+          },
+          "fee_currency": {
+            "type": "string",
+            "title": "Fee Currency",
+            "default": "THB"
+          }
+        },
+        "type": "object",
+        "title": "SCBAMStagedItemFeeDTO"
+      },
+      "SecCompanyFactsSnapshotSchema": {
+        "properties": {
+          "symbol": {
+            "type": "string",
+            "title": "Symbol"
+          },
+          "cik": {
+            "type": "string",
+            "title": "Cik"
+          },
+          "entity_name": {
+            "type": "string",
+            "title": "Entity Name"
+          },
+          "facts": {
+            "items": {
+              "$ref": "#/components/schemas/SecFactSchema"
+            },
+            "type": "array",
+            "title": "Facts"
+          },
+          "revenue_usd": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Revenue Usd"
+          },
+          "operating_cash_flow_usd": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Operating Cash Flow Usd"
+          },
+          "capex_usd": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Capex Usd"
+          },
+          "free_cash_flow_usd": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Free Cash Flow Usd"
+          },
+          "free_cash_flow_margin": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Free Cash Flow Margin"
+          },
+          "long_term_debt_usd": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Long Term Debt Usd"
+          },
+          "debt_to_ocf_ratio": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Debt To Ocf Ratio"
+          },
+          "shares_outstanding": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Shares Outstanding"
+          },
+          "source": {
+            "type": "string",
+            "title": "Source",
+            "default": "SEC EDGAR (companyfacts)"
+          },
+          "as_of_date": {
+            "type": "string",
+            "title": "As Of Date"
+          },
+          "fetched_at": {
+            "type": "number",
+            "title": "Fetched At"
+          },
+          "is_stale": {
+            "type": "boolean",
+            "title": "Is Stale",
+            "default": false
+          },
+          "stale_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Stale Reason"
+          },
+          "limitations": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Limitations"
+          }
+        },
+        "type": "object",
+        "required": [
+          "symbol",
+          "cik",
+          "entity_name",
+          "as_of_date",
+          "fetched_at"
+        ],
+        "title": "SecCompanyFactsSnapshotSchema"
+      },
+      "SecFactSchema": {
+        "properties": {
+          "concept_tag": {
+            "type": "string",
+            "title": "Concept Tag"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "val": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Val"
+          },
+          "unit": {
+            "type": "string",
+            "title": "Unit"
+          },
+          "form": {
+            "type": "string",
+            "title": "Form"
+          },
+          "fy": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fy"
+          },
+          "fp": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fp"
+          },
+          "start": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Start"
+          },
+          "end": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "End"
+          },
+          "filed": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Filed"
+          },
+          "accn": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Accn"
+          }
+        },
+        "type": "object",
+        "required": [
+          "concept_tag",
+          "label",
+          "unit",
+          "form"
+        ],
+        "title": "SecFactSchema"
+      },
+      "SecInsiderTradeSnapshotSchema": {
+        "properties": {
+          "symbol": {
+            "type": "string",
+            "title": "Symbol"
+          },
+          "cik": {
+            "type": "string",
+            "title": "Cik"
+          },
+          "transactions": {
+            "items": {
+              "$ref": "#/components/schemas/InsiderTransactionSchema"
+            },
+            "type": "array",
+            "title": "Transactions"
+          },
+          "net_buy_ratio_90d": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Net Buy Ratio 90D"
+          },
+          "p_notional_sum_90d": {
+            "type": "number",
+            "title": "P Notional Sum 90D",
+            "default": 0.0
+          },
+          "s_notional_sum_90d": {
+            "type": "number",
+            "title": "S Notional Sum 90D",
+            "default": 0.0
+          },
+          "eligible_transaction_count": {
+            "type": "integer",
+            "title": "Eligible Transaction Count",
+            "default": 0
+          },
+          "source": {
+            "type": "string",
+            "title": "Source",
+            "default": "SEC EDGAR (Form 4 XML)"
+          },
+          "as_of_date": {
+            "type": "string",
+            "title": "As Of Date"
+          },
+          "fetched_at": {
+            "type": "number",
+            "title": "Fetched At"
+          },
+          "is_stale": {
+            "type": "boolean",
+            "title": "Is Stale",
+            "default": false
+          },
+          "stale_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Stale Reason"
+          },
+          "limitations": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Limitations"
+          }
+        },
+        "type": "object",
+        "required": [
+          "symbol",
+          "cik",
+          "as_of_date",
+          "fetched_at"
+        ],
+        "title": "SecInsiderTradeSnapshotSchema"
+      },
       "SourceOverrideAck": {
         "properties": {
           "acknowledged": {
@@ -9528,6 +14919,151 @@
         ],
         "title": "SpecialistOutputDTO"
       },
+      "SpotEtfFlowResponse": {
+        "properties": {
+          "asset": {
+            "type": "string",
+            "title": "Asset"
+          },
+          "report_date": {
+            "type": "string",
+            "title": "Report Date"
+          },
+          "daily_total_usd": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Daily Total Usd"
+          },
+          "cumulative_total_usd": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cumulative Total Usd"
+          },
+          "issuers": {
+            "items": {
+              "$ref": "#/components/schemas/SpotEtfIssuerFlowSchema"
+            },
+            "type": "array",
+            "title": "Issuers"
+          },
+          "is_partial": {
+            "type": "boolean",
+            "title": "Is Partial"
+          },
+          "completeness_notes": {
+            "type": "string",
+            "title": "Completeness Notes"
+          },
+          "fetched_at": {
+            "type": "number",
+            "title": "Fetched At"
+          },
+          "source": {
+            "type": "string",
+            "title": "Source"
+          },
+          "unit": {
+            "type": "string",
+            "title": "Unit"
+          },
+          "limitations": {
+            "type": "string",
+            "title": "Limitations"
+          },
+          "is_stale": {
+            "type": "boolean",
+            "title": "Is Stale"
+          },
+          "stale_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Stale Reason"
+          }
+        },
+        "type": "object",
+        "required": [
+          "asset",
+          "report_date",
+          "issuers",
+          "is_partial",
+          "completeness_notes",
+          "fetched_at",
+          "source",
+          "unit",
+          "limitations",
+          "is_stale"
+        ],
+        "title": "SpotEtfFlowResponse"
+      },
+      "SpotEtfIssuerFlowSchema": {
+        "properties": {
+          "ticker": {
+            "type": "string",
+            "title": "Ticker"
+          },
+          "institute": {
+            "type": "string",
+            "title": "Institute"
+          },
+          "daily_net_inflow_usd": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Daily Net Inflow Usd"
+          },
+          "cumulative_net_inflow_usd": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cumulative Net Inflow Usd"
+          },
+          "total_net_assets_usd": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Total Net Assets Usd"
+          }
+        },
+        "type": "object",
+        "required": [
+          "ticker",
+          "institute"
+        ],
+        "title": "SpotEtfIssuerFlowSchema"
+      },
       "SyncDividendsResponseDTO": {
         "properties": {
           "synced_symbols": {
@@ -9583,6 +15119,472 @@
           "details"
         ],
         "title": "SyncDividendsResponseDTO"
+      },
+      "ThaiBondMarketStatsResponse": {
+        "properties": {
+          "reporting_period": {
+            "type": "string",
+            "title": "Reporting Period"
+          },
+          "outstanding_thb": {
+            "type": "number",
+            "title": "Outstanding Thb"
+          },
+          "trading_value_thb": {
+            "type": "number",
+            "title": "Trading Value Thb"
+          },
+          "foreign_holding_thb": {
+            "type": "number",
+            "title": "Foreign Holding Thb"
+          },
+          "foreign_holding_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Foreign Holding Pct"
+          },
+          "fetched_at": {
+            "type": "number",
+            "title": "Fetched At"
+          },
+          "source": {
+            "type": "string",
+            "title": "Source"
+          },
+          "unit": {
+            "type": "string",
+            "title": "Unit"
+          },
+          "is_stale": {
+            "type": "boolean",
+            "title": "Is Stale"
+          },
+          "stale_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Stale Reason"
+          }
+        },
+        "type": "object",
+        "required": [
+          "reporting_period",
+          "outstanding_thb",
+          "trading_value_thb",
+          "foreign_holding_thb",
+          "foreign_holding_pct",
+          "fetched_at",
+          "source",
+          "unit",
+          "is_stale"
+        ],
+        "title": "ThaiBondMarketStatsResponse"
+      },
+      "ThaiCorporateBondIssuanceResponse": {
+        "properties": {
+          "reporting_period": {
+            "type": "string",
+            "title": "Reporting Period"
+          },
+          "total_offering_thb": {
+            "type": "number",
+            "title": "Total Offering Thb"
+          },
+          "long_term_thb": {
+            "type": "number",
+            "title": "Long Term Thb"
+          },
+          "short_term_thb": {
+            "type": "number",
+            "title": "Short Term Thb"
+          },
+          "top_sectors": {
+            "items": {
+              "items": {},
+              "type": "array"
+            },
+            "type": "array",
+            "title": "Top Sectors"
+          },
+          "fetched_at": {
+            "type": "number",
+            "title": "Fetched At"
+          },
+          "source": {
+            "type": "string",
+            "title": "Source"
+          },
+          "unit": {
+            "type": "string",
+            "title": "Unit"
+          },
+          "is_stale": {
+            "type": "boolean",
+            "title": "Is Stale"
+          },
+          "stale_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Stale Reason"
+          }
+        },
+        "type": "object",
+        "required": [
+          "reporting_period",
+          "total_offering_thb",
+          "long_term_thb",
+          "short_term_thb",
+          "top_sectors",
+          "fetched_at",
+          "source",
+          "unit",
+          "is_stale"
+        ],
+        "title": "ThaiCorporateBondIssuanceResponse"
+      },
+      "ThaiFundAssetAllocationResponse": {
+        "properties": {
+          "reporting_period": {
+            "type": "string",
+            "title": "Reporting Period"
+          },
+          "total_nav_thb": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Total Nav Thb"
+          },
+          "allocations": {
+            "items": {
+              "$ref": "#/components/schemas/ThaiFundAssetAllocationRowSchema"
+            },
+            "type": "array",
+            "title": "Allocations"
+          },
+          "fetched_at": {
+            "type": "number",
+            "title": "Fetched At"
+          },
+          "source": {
+            "type": "string",
+            "title": "Source"
+          },
+          "unit": {
+            "type": "string",
+            "title": "Unit"
+          },
+          "limitations": {
+            "type": "string",
+            "title": "Limitations"
+          },
+          "is_stale": {
+            "type": "boolean",
+            "title": "Is Stale"
+          },
+          "stale_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Stale Reason"
+          }
+        },
+        "type": "object",
+        "required": [
+          "reporting_period",
+          "total_nav_thb",
+          "allocations",
+          "fetched_at",
+          "source",
+          "unit",
+          "limitations",
+          "is_stale"
+        ],
+        "title": "ThaiFundAssetAllocationResponse"
+      },
+      "ThaiFundAssetAllocationRowSchema": {
+        "properties": {
+          "asset_class": {
+            "type": "string",
+            "title": "Asset Class"
+          },
+          "domestic_or_foreign": {
+            "type": "string",
+            "title": "Domestic Or Foreign"
+          },
+          "value_thb": {
+            "type": "number",
+            "title": "Value Thb"
+          },
+          "share_of_nav_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Share Of Nav Pct"
+          }
+        },
+        "type": "object",
+        "required": [
+          "asset_class",
+          "domestic_or_foreign",
+          "value_thb"
+        ],
+        "title": "ThaiFundAssetAllocationRowSchema"
+      },
+      "ThaiFundFlowResponse": {
+        "properties": {
+          "market": {
+            "type": "string",
+            "title": "Market"
+          },
+          "as_of": {
+            "type": "string",
+            "title": "As Of"
+          },
+          "total_value": {
+            "type": "number",
+            "title": "Total Value"
+          },
+          "investors": {
+            "items": {
+              "$ref": "#/components/schemas/InvestorTypeRowSchema"
+            },
+            "type": "array",
+            "title": "Investors"
+          },
+          "source": {
+            "type": "string",
+            "title": "Source",
+            "default": "Settrade"
+          },
+          "is_stale": {
+            "type": "boolean",
+            "title": "Is Stale",
+            "default": false
+          },
+          "stale_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Stale Reason"
+          }
+        },
+        "type": "object",
+        "required": [
+          "market",
+          "as_of",
+          "total_value",
+          "investors"
+        ],
+        "title": "ThaiFundFlowResponse"
+      },
+      "ThaiPublicDebtComponentSchema": {
+        "properties": {
+          "component_number": {
+            "type": "integer",
+            "title": "Component Number"
+          },
+          "label_en": {
+            "type": "string",
+            "title": "Label En"
+          },
+          "label_th": {
+            "type": "string",
+            "title": "Label Th"
+          },
+          "amount_thb": {
+            "type": "number",
+            "title": "Amount Thb"
+          }
+        },
+        "type": "object",
+        "required": [
+          "component_number",
+          "label_en",
+          "label_th",
+          "amount_thb"
+        ],
+        "title": "ThaiPublicDebtComponentSchema"
+      },
+      "ThaiPublicDebtResponse": {
+        "properties": {
+          "reporting_month": {
+            "type": "string",
+            "title": "Reporting Month"
+          },
+          "total_debt_thb": {
+            "type": "number",
+            "title": "Total Debt Thb"
+          },
+          "debt_to_gdp_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Debt To Gdp Pct"
+          },
+          "fx_rate_usd_thb": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fx Rate Usd Thb"
+          },
+          "components": {
+            "items": {
+              "$ref": "#/components/schemas/ThaiPublicDebtComponentSchema"
+            },
+            "type": "array",
+            "title": "Components"
+          },
+          "fetched_at": {
+            "type": "number",
+            "title": "Fetched At"
+          },
+          "source": {
+            "type": "string",
+            "title": "Source"
+          },
+          "unit": {
+            "type": "string",
+            "title": "Unit"
+          },
+          "limitations": {
+            "type": "string",
+            "title": "Limitations"
+          },
+          "is_stale": {
+            "type": "boolean",
+            "title": "Is Stale"
+          },
+          "stale_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Stale Reason"
+          }
+        },
+        "type": "object",
+        "required": [
+          "reporting_month",
+          "total_debt_thb",
+          "debt_to_gdp_pct",
+          "fx_rate_usd_thb",
+          "components",
+          "fetched_at",
+          "source",
+          "unit",
+          "limitations",
+          "is_stale"
+        ],
+        "title": "ThaiPublicDebtResponse"
+      },
+      "ThaiRetailGoldResponse": {
+        "properties": {
+          "source": {
+            "type": "string",
+            "title": "Source",
+            "default": "Gold Traders Association"
+          },
+          "unit": {
+            "type": "string",
+            "title": "Unit",
+            "default": "baht-weight (15.244 g, 96.5%)"
+          },
+          "bar": {
+            "$ref": "#/components/schemas/GoldPriceDetailSchema"
+          },
+          "ornament": {
+            "$ref": "#/components/schemas/GoldPriceDetailSchema"
+          },
+          "announced_at": {
+            "type": "string",
+            "title": "Announced At"
+          },
+          "revision": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Revision"
+          },
+          "is_stale": {
+            "type": "boolean",
+            "title": "Is Stale",
+            "default": false
+          },
+          "stale_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Stale Reason"
+          }
+        },
+        "type": "object",
+        "required": [
+          "bar",
+          "ornament",
+          "announced_at"
+        ],
+        "title": "ThaiRetailGoldResponse"
       },
       "ToggleDiscordRequest": {
         "properties": {
@@ -9680,6 +15682,49 @@
           "price"
         ],
         "title": "TradeRequestDTO"
+      },
+      "TraderClassPositionSchema": {
+        "properties": {
+          "class_name": {
+            "type": "string",
+            "title": "Class Name"
+          },
+          "long_contracts": {
+            "type": "integer",
+            "title": "Long Contracts"
+          },
+          "short_contracts": {
+            "type": "integer",
+            "title": "Short Contracts"
+          },
+          "net_contracts": {
+            "type": "integer",
+            "title": "Net Contracts"
+          },
+          "spread_contracts": {
+            "type": "integer",
+            "title": "Spread Contracts",
+            "default": 0
+          },
+          "change_long": {
+            "type": "integer",
+            "title": "Change Long",
+            "default": 0
+          },
+          "change_short": {
+            "type": "integer",
+            "title": "Change Short",
+            "default": 0
+          }
+        },
+        "type": "object",
+        "required": [
+          "class_name",
+          "long_contracts",
+          "short_contracts",
+          "net_contracts"
+        ],
+        "title": "TraderClassPositionSchema"
       },
       "TransactionItemDTO": {
         "properties": {
@@ -9943,6 +15988,231 @@
         "type": "object",
         "title": "TransactionSummaryDTO"
       },
+      "TreasuryAuctionResponse": {
+        "properties": {
+          "auction_date": {
+            "type": "string",
+            "title": "Auction Date"
+          },
+          "issue_date": {
+            "type": "string",
+            "title": "Issue Date"
+          },
+          "security_type": {
+            "type": "string",
+            "title": "Security Type"
+          },
+          "security_term": {
+            "type": "string",
+            "title": "Security Term"
+          },
+          "high_yield": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "High Yield"
+          },
+          "high_investment_rate": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "High Investment Rate"
+          },
+          "high_discount_rate": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "High Discount Rate"
+          },
+          "bid_to_cover_ratio": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bid To Cover Ratio"
+          },
+          "offering_amount_usd": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Offering Amount Usd"
+          },
+          "total_accepted_usd": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Total Accepted Usd"
+          },
+          "fetched_at": {
+            "type": "number",
+            "title": "Fetched At"
+          },
+          "source": {
+            "type": "string",
+            "title": "Source"
+          },
+          "unit": {
+            "type": "string",
+            "title": "Unit"
+          },
+          "is_stale": {
+            "type": "boolean",
+            "title": "Is Stale"
+          },
+          "stale_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Stale Reason"
+          }
+        },
+        "type": "object",
+        "required": [
+          "auction_date",
+          "issue_date",
+          "security_type",
+          "security_term",
+          "high_yield",
+          "fetched_at",
+          "source",
+          "unit",
+          "is_stale"
+        ],
+        "title": "TreasuryAuctionResponse"
+      },
+      "TreasuryYieldCurveResponse": {
+        "properties": {
+          "observation_date": {
+            "type": "string",
+            "title": "Observation Date"
+          },
+          "yields": {
+            "items": {
+              "$ref": "#/components/schemas/TreasuryYieldPointSchema"
+            },
+            "type": "array",
+            "title": "Yields"
+          },
+          "spread_10y_2y_bps": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Spread 10Y 2Y Bps"
+          },
+          "spread_10y_3m_bps": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Spread 10Y 3M Bps"
+          },
+          "fetched_at": {
+            "type": "number",
+            "title": "Fetched At"
+          },
+          "source": {
+            "type": "string",
+            "title": "Source"
+          },
+          "unit": {
+            "type": "string",
+            "title": "Unit"
+          },
+          "is_stale": {
+            "type": "boolean",
+            "title": "Is Stale"
+          },
+          "stale_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Stale Reason"
+          }
+        },
+        "type": "object",
+        "required": [
+          "observation_date",
+          "yields",
+          "fetched_at",
+          "source",
+          "unit",
+          "is_stale"
+        ],
+        "title": "TreasuryYieldCurveResponse"
+      },
+      "TreasuryYieldPointSchema": {
+        "properties": {
+          "maturity": {
+            "type": "string",
+            "title": "Maturity"
+          },
+          "yield_percent": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Yield Percent"
+          }
+        },
+        "type": "object",
+        "required": [
+          "maturity",
+          "yield_percent"
+        ],
+        "title": "TreasuryYieldPointSchema"
+      },
       "UnverifiedDraftSelection": {
         "properties": {
           "pitch_id": {
@@ -10127,6 +16397,87 @@
           "asset_type"
         ],
         "title": "UpsertWatchlistItemRequestDTO"
+      },
+      "UsNationalDebtResponse": {
+        "properties": {
+          "record_date": {
+            "type": "string",
+            "title": "Record Date"
+          },
+          "total_public_debt_usd": {
+            "type": "number",
+            "title": "Total Public Debt Usd"
+          },
+          "debt_held_by_public_usd": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Debt Held By Public Usd"
+          },
+          "intragovernmental_holdings_usd": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Intragovernmental Holdings Usd"
+          },
+          "is_daily_close": {
+            "type": "boolean",
+            "title": "Is Daily Close"
+          },
+          "fetched_at": {
+            "type": "number",
+            "title": "Fetched At"
+          },
+          "source": {
+            "type": "string",
+            "title": "Source"
+          },
+          "unit": {
+            "type": "string",
+            "title": "Unit"
+          },
+          "limitations": {
+            "type": "string",
+            "title": "Limitations"
+          },
+          "is_stale": {
+            "type": "boolean",
+            "title": "Is Stale"
+          },
+          "stale_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Stale Reason"
+          }
+        },
+        "type": "object",
+        "required": [
+          "record_date",
+          "total_public_debt_usd",
+          "is_daily_close",
+          "fetched_at",
+          "source",
+          "unit",
+          "limitations",
+          "is_stale"
+        ],
+        "title": "UsNationalDebtResponse"
       },
       "ValidationError": {
         "properties": {
@@ -10346,6 +16697,377 @@
         ],
         "title": "WarningDTO",
         "description": "\u0e41\u0e2a\u0e14\u0e07 warning \u0e41\u0e1a\u0e1a generic \u2014 code \u0e2d\u0e32\u0e08\u0e40\u0e1b\u0e47\u0e19 ID \u0e17\u0e35\u0e48 registry \u0e22\u0e31\u0e07\u0e44\u0e21\u0e48\u0e21\u0e35 Thai template \u0e01\u0e47\u0e22\u0e31\u0e07\u0e42\u0e0a\u0e27\u0e4c\u0e44\u0e14\u0e49\n(\u0e44\u0e21\u0e48 hardcode switch-case \u0e15\u0e32\u0e21 warning_registry.py \u0e27\u0e31\u0e19\u0e19\u0e35\u0e49 \u0e14\u0e39 Rev.5 \u0e02\u0e49\u0e2d 7)"
+      },
+      "WealthXBatchScanRequestDTO": {
+        "properties": {
+          "password": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Password"
+          },
+          "force_rescan": {
+            "type": "boolean",
+            "title": "Force Rescan",
+            "default": false
+          },
+          "portfolio_id": {
+            "type": "string",
+            "title": "Portfolio Id",
+            "default": "default"
+          }
+        },
+        "type": "object",
+        "title": "WealthXBatchScanRequestDTO"
+      },
+      "WealthXCommitRequestDTO": {
+        "properties": {
+          "portfolio_id": {
+            "type": "string",
+            "title": "Portfolio Id",
+            "default": "default"
+          }
+        },
+        "type": "object",
+        "title": "WealthXCommitRequestDTO"
+      },
+      "WealthXCommitResponseDTO": {
+        "properties": {
+          "ok": {
+            "type": "boolean",
+            "title": "Ok",
+            "default": true
+          },
+          "imported_count": {
+            "type": "integer",
+            "title": "Imported Count"
+          },
+          "state": {
+            "$ref": "#/components/schemas/ActualPortfolioStateDTO"
+          }
+        },
+        "type": "object",
+        "required": [
+          "imported_count",
+          "state"
+        ],
+        "title": "WealthXCommitResponseDTO"
+      },
+      "WealthXEmailListResponseDTO": {
+        "properties": {
+          "emails": {
+            "items": {
+              "$ref": "#/components/schemas/WealthXEmailMetadataDTO"
+            },
+            "type": "array",
+            "title": "Emails",
+            "default": []
+          }
+        },
+        "type": "object",
+        "title": "WealthXEmailListResponseDTO"
+      },
+      "WealthXEmailMetadataDTO": {
+        "properties": {
+          "message_id": {
+            "type": "string",
+            "title": "Message Id"
+          },
+          "attachment_id": {
+            "type": "string",
+            "title": "Attachment Id"
+          },
+          "subject": {
+            "type": "string",
+            "title": "Subject"
+          },
+          "sender": {
+            "type": "string",
+            "title": "Sender"
+          },
+          "received_at": {
+            "type": "string",
+            "title": "Received At"
+          },
+          "filename": {
+            "type": "string",
+            "title": "Filename"
+          },
+          "size_bytes": {
+            "type": "integer",
+            "title": "Size Bytes"
+          }
+        },
+        "type": "object",
+        "required": [
+          "message_id",
+          "attachment_id",
+          "subject",
+          "sender",
+          "received_at",
+          "filename",
+          "size_bytes"
+        ],
+        "title": "WealthXEmailMetadataDTO"
+      },
+      "WealthXPdfTextPageDTO": {
+        "properties": {
+          "page_number": {
+            "type": "integer",
+            "title": "Page Number"
+          },
+          "text": {
+            "type": "string",
+            "title": "Text"
+          }
+        },
+        "type": "object",
+        "required": [
+          "page_number",
+          "text"
+        ],
+        "title": "WealthXPdfTextPageDTO"
+      },
+      "WealthXPdfTextResponseDTO": {
+        "properties": {
+          "message_id": {
+            "type": "string",
+            "title": "Message Id"
+          },
+          "attachment_id": {
+            "type": "string",
+            "title": "Attachment Id"
+          },
+          "filename": {
+            "type": "string",
+            "title": "Filename"
+          },
+          "page_count": {
+            "type": "integer",
+            "title": "Page Count"
+          },
+          "pages": {
+            "items": {
+              "$ref": "#/components/schemas/WealthXPdfTextPageDTO"
+            },
+            "type": "array",
+            "title": "Pages",
+            "default": []
+          }
+        },
+        "type": "object",
+        "required": [
+          "message_id",
+          "attachment_id",
+          "filename",
+          "page_count"
+        ],
+        "title": "WealthXPdfTextResponseDTO"
+      },
+      "WealthXScanEmailRequestDTO": {
+        "properties": {
+          "message_id": {
+            "type": "string",
+            "title": "Message Id"
+          },
+          "attachment_id": {
+            "type": "string",
+            "title": "Attachment Id"
+          },
+          "password": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Password"
+          }
+        },
+        "type": "object",
+        "required": [
+          "message_id",
+          "attachment_id"
+        ],
+        "title": "WealthXScanEmailRequestDTO"
+      },
+      "WealthXScanResponseDTO": {
+        "properties": {
+          "scan_id": {
+            "type": "string",
+            "title": "Scan Id"
+          },
+          "item_count": {
+            "type": "integer",
+            "title": "Item Count"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/WealthXStagedItemDTO"
+            },
+            "type": "array",
+            "title": "Items",
+            "default": []
+          }
+        },
+        "type": "object",
+        "required": [
+          "scan_id",
+          "item_count"
+        ],
+        "title": "WealthXScanResponseDTO"
+      },
+      "WealthXStagedItemDTO": {
+        "properties": {
+          "item_id": {
+            "type": "string",
+            "title": "Item Id"
+          },
+          "trade_date": {
+            "type": "string",
+            "title": "Trade Date"
+          },
+          "settlement_date": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Settlement Date"
+          },
+          "symbol": {
+            "type": "string",
+            "title": "Symbol"
+          },
+          "action": {
+            "type": "string",
+            "title": "Action"
+          },
+          "units": {
+            "type": "string",
+            "title": "Units"
+          },
+          "price": {
+            "type": "string",
+            "title": "Price"
+          },
+          "gross_amount": {
+            "type": "string",
+            "title": "Gross Amount"
+          },
+          "fees": {
+            "$ref": "#/components/schemas/WealthXStagedItemFeeDTO"
+          },
+          "net_amount": {
+            "type": "string",
+            "title": "Net Amount"
+          },
+          "currency": {
+            "type": "string",
+            "title": "Currency",
+            "default": "THB"
+          },
+          "exchange_rate": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Exchange Rate"
+          },
+          "confirmation_no": {
+            "type": "string",
+            "title": "Confirmation No"
+          },
+          "order_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Order Id"
+          },
+          "source": {
+            "type": "string",
+            "title": "Source",
+            "default": "WEALTHX"
+          },
+          "fingerprint": {
+            "type": "string",
+            "title": "Fingerprint"
+          },
+          "line_index": {
+            "type": "integer",
+            "title": "Line Index",
+            "default": 0
+          },
+          "cash_adjusted": {
+            "type": "boolean",
+            "title": "Cash Adjusted",
+            "default": true
+          },
+          "asset_type": {
+            "type": "string",
+            "title": "Asset Type",
+            "default": "Fund"
+          }
+        },
+        "type": "object",
+        "required": [
+          "item_id",
+          "trade_date",
+          "symbol",
+          "action",
+          "units",
+          "price",
+          "gross_amount",
+          "net_amount",
+          "confirmation_no",
+          "fingerprint"
+        ],
+        "title": "WealthXStagedItemDTO"
+      },
+      "WealthXStagedItemFeeDTO": {
+        "properties": {
+          "commission": {
+            "type": "string",
+            "title": "Commission",
+            "default": "0.00"
+          },
+          "vat": {
+            "type": "string",
+            "title": "Vat",
+            "default": "0.00"
+          },
+          "other_fees": {
+            "type": "string",
+            "title": "Other Fees",
+            "default": "0.00"
+          },
+          "fee_currency": {
+            "type": "string",
+            "title": "Fee Currency",
+            "default": "THB"
+          }
+        },
+        "type": "object",
+        "title": "WealthXStagedItemFeeDTO"
       }
     }
   }

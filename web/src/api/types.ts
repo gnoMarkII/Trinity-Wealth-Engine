@@ -8,6 +8,7 @@ export interface WarningDTO {
 export interface AssetAllocationDTO {
   asset_class: string
   asset_bucket: string | null
+  region?: 'Global' | 'US' | 'Thailand' | string
   stance: string
   confidence: string
   rationale: string
@@ -80,6 +81,9 @@ export interface MacroIndicatorDTO {
   is_valid: boolean
   stale_reason: string
   chart_available: boolean
+  region?: string
+  source_type?: 'provider' | 'deterministic'
+  status?: string
 }
 
 export interface MacroReferenceDTO {
@@ -129,7 +133,46 @@ export interface MacroDashboardDTO {
   generated_by?: string
   dashboard_indicators?: MacroIndicatorDTO[]
   report_references?: MacroReferenceDTO[]
+  thailand_market_stance?: {
+    investor_flow?: {
+      foreign_net_mb?: number
+      institution_net_mb?: number
+      prop_net_mb?: number
+      retail_net_mb?: number
+    }
+    market_breadth?: {
+      advance_decline_ratio?: number
+      sentiment?: 'bullish' | 'bearish' | 'neutral'
+    }
+    valuation?: {
+      pe_ratio?: number
+      pbv_ratio?: number
+      dividend_yield?: number
+    }
+    physical_gold?: {
+      bar_sell_thb?: number
+      unit?: string
+    }
+    policy_spread_bps?: number | null
+    rationale?: string | null
+    observable_refs?: string[]
+  } | null
   warnings: WarningDTO[]
+  run_id?: string
+  job_id?: string
+  snapshot_id?: string
+  regional_assessments?: Record<string, {
+    growth_score?: number | null
+    inflation_score?: number | null
+    monetary_score?: number | null
+    economic_state?: string
+    confidence?: number
+    coverage?: number
+    data_gaps?: string[]
+    market_stance?: any
+  }>
+  observable_registry?: Record<string, any>
+  evaluated_sources?: string[]
 }
 
 export interface NewsCandidate {
@@ -423,6 +466,8 @@ export interface PerformanceSnapshotDTO {
   Cash_Balance: number
   realized_pnl_ytd?: number | null
   passive_income_ytd?: number | null
+  Asset_Class_Values_THB?: Record<string, number> | null
+  coverage_warning?: string | null
 }
 
 export interface JournalEntryDTO {
@@ -1603,4 +1648,263 @@ export interface EarningsCallListResponse {
   total_count: number
   items: EarningsCallNoteItem[]
 }
+
+// ---------------------------------------------------------
+// Terminal V2 Phase 4 Types (Commodity Vol, Treasury Demand, SEC, News, Options)
+// ---------------------------------------------------------
+
+export interface CommodityVolSnapshotDTO {
+  index_symbol: string
+  underlying_instrument: string
+  close_date: string
+  implied_volatility: number
+  change_1d_points?: number | null
+  percentile_52w?: number | null
+  sample_count: number
+  regime_label?: string | null
+  source: string
+  as_of_date: string
+  fetched_at: number
+  is_stale: boolean
+  stale_reason?: string | null
+  limitations: string[]
+}
+
+export interface AuctionDemandSnapshotDTO {
+  security_type: string
+  security_term: string
+  latest_auction_date: string
+  latest_bid_to_cover_ratio?: number | null
+  latest_high_yield?: number | null
+  latest_high_investment_rate?: number | null
+  latest_high_discount_rate?: number | null
+  latest_offering_amount_usd?: number | null
+  latest_total_accepted_usd?: number | null
+  prior_mean_bid_to_cover?: number | null
+  demand_delta?: number | null
+  sample_count: number
+  source: string
+  as_of_date: string
+  fetched_at: number
+  is_stale: boolean
+  stale_reason?: string | null
+  limitations: string[]
+}
+
+export interface SecFactDTO {
+  concept_tag: string
+  label: string
+  val?: number | null
+  unit: string
+  form: string
+  fy?: number | null
+  fp?: string | null
+  start?: string | null
+  end?: string | null
+  filed?: string | null
+  accn?: string | null
+}
+
+export interface SecCompanyFactsSnapshotDTO {
+  symbol: string
+  cik: string
+  entity_name: string
+  facts: SecFactDTO[]
+  revenue_usd?: number | null
+  operating_cash_flow_usd?: number | null
+  capex_usd?: number | null
+  free_cash_flow_usd?: number | null
+  free_cash_flow_margin?: number | null
+  long_term_debt_usd?: number | null
+  debt_to_ocf_ratio?: number | null
+  shares_outstanding?: number | null
+  source: string
+  as_of_date: string
+  fetched_at: number
+  is_stale: boolean
+  stale_reason?: string | null
+  limitations: string[]
+}
+
+export interface SecInsiderTransactionDTO {
+  transaction_date: string
+  reporting_owner: string
+  officer_title?: string | null
+  is_officer: boolean
+  is_director: boolean
+  is_ten_percent_owner: boolean
+  transaction_code: string
+  shares?: number | null
+  price_per_share?: number | null
+  notional_usd?: number | null
+  direct_or_indirect: string
+  accession_number: string
+  is_amendment: boolean
+}
+
+export interface SecInsiderTradeSnapshotDTO {
+  symbol: string
+  cik: string
+  transactions: SecInsiderTransactionDTO[]
+  net_buy_ratio_90d?: number | null
+  p_notional_sum_90d: number
+  s_notional_sum_90d: number
+  eligible_transaction_count: number
+  source: string
+  as_of_date: string
+  fetched_at: number
+  is_stale: boolean
+  stale_reason?: string | null
+  limitations: string[]
+}
+
+export interface NewsCandidateDTO {
+  headline: string
+  publisher: string
+  source_type: string
+  article_url: string
+  published_at: string
+  discovered_at: number
+  symbol?: string | null
+  is_stale: boolean
+}
+
+export interface NewsDiscoverySnapshotDTO {
+  query_symbol: string
+  items: NewsCandidateDTO[]
+  status: 'ok' | 'rate_limited' | 'feed_unavailable'
+  source: string
+  as_of_date: string
+  fetched_at: number
+  limitations: string[]
+}
+
+export interface OptionContractDTO {
+  symbol: string
+  expiry: string
+  strike: number
+  option_type: 'call' | 'put'
+  bid?: number | null
+  ask?: number | null
+  last_price?: number | null
+  volume?: number | null
+  open_interest?: number | null
+  implied_volatility?: number | null
+  delta?: number | null
+  gamma?: number | null
+  theta?: number | null
+  vega?: number | null
+}
+
+export interface OptionsChainResponseDTO {
+  underlying: string
+  underlying_price?: number | null
+  iv30_decimal?: number | null
+  delay_minutes: number
+  contracts: OptionContractDTO[]
+  as_of_date: string
+  source: string
+  is_stale: boolean
+}
+
+export interface OptionsMaxPainResponseDTO {
+  symbol: string
+  expiry: string
+  max_pain_strike: number
+  current_price?: number | null
+  put_call_oi_ratio?: number | null
+  source: string
+  as_of_date: string
+}
+
+export interface UsNationalDebtDTO {
+  record_date: string
+  total_public_debt_usd: number
+  debt_held_by_public_usd?: number | null
+  intragovernmental_holdings_usd?: number | null
+  is_daily_close: boolean
+  fetched_at: number
+  source: string
+  unit: string
+  limitations: string
+  is_stale: boolean
+  stale_reason?: string | null
+}
+
+export interface InvestorTypeRowDTO {
+  investor_type: string
+  buy_value: number
+  sell_value: number
+  net_value: number
+}
+
+export interface ThaiFundFlowDTO {
+  market: string
+  as_of: string
+  total_value: number
+  investors: InvestorTypeRowDTO[]
+  source: string
+  is_stale: boolean
+  stale_reason?: string | null
+}
+
+export interface GoldPriceDetailDTO {
+  buy: number
+  sell: number
+}
+
+export interface ThaiRetailGoldDTO {
+  source: string
+  unit: string
+  bar: GoldPriceDetailDTO
+  ornament: GoldPriceDetailDTO
+  announced_at: string
+  revision?: number | null
+  is_stale: boolean
+  stale_reason?: string | null
+}
+
+export interface MarketValuationDTO {
+  market: string
+  as_of: string
+  market_cap?: number | null
+  pe_ratio?: number | null
+  pbv_ratio?: number | null
+  dividend_yield?: number | null
+  turnover_ratio?: number | null
+  source: string
+  is_stale: boolean
+  stale_reason?: string | null
+}
+
+export interface MarketBreadthDTO {
+  market: string
+  as_of: string
+  gainers: number
+  losers: number
+  unchanged: number
+  source: string
+  is_stale: boolean
+  stale_reason?: string | null
+}
+
+export interface TreasuryYieldPointDTO {
+  maturity: string
+  yield_percent?: number | null
+}
+
+export interface TreasuryYieldCurveDTO {
+  observation_date: string
+  yields: TreasuryYieldPointDTO[]
+  spread_10y_2y_bps?: number | null
+  spread_10y_3m_bps?: number | null
+  fetched_at: number
+  source: string
+  unit: string
+  is_stale: boolean
+  stale_reason?: string | null
+}
+
+
+
 

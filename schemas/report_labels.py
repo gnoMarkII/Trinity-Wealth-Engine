@@ -7,6 +7,7 @@ from schemas.warning_registry import (
     GOLD_RATIONALE_WARNING,
     SINGLE_SOURCE_PENALTY,
     SOURCE_REF_PENALTY,
+    FX_SPREAD_DATA_UNAVAILABLE,
 )
 
 
@@ -17,6 +18,7 @@ WHY_NOT_HIGH_MESSAGES: dict[str, str] = {
     "gold_schema": "ความมั่นใจถูกจำกัดไว้ที่ MEDIUM เพราะเหตุผลของทองคำยังต้องผูกกับ real yields เงินเฟ้อ หรือนโยบายการเงินให้ชัดขึ้น",
     "contradiction": "ความมั่นใจถูกจำกัดไว้ที่ MEDIUM เพราะพบสัญญาณมหภาคที่ขัดแย้งกับมุมมองเชิงรุก",
     "source_ref_inferred": "ความมั่นใจถูกจำกัดไว้ที่ MEDIUM เพราะแหล่งอ้างอิงถูกอนุมานจากระบบและยังต้องตรวจสอบซ้ำ",
+    "fx_spread": "ความมั่นใจถูกจำกัดไว้เพราะไม่มีข้อมูลส่วนต่างอัตราดอกเบี้ยนโยบาย (Fed-BoT) ที่ตรวจสอบได้ในระบบ",
     "low_confidence": "ข้อมูลตัวเลขและหลักฐานอ้างอิงยังไม่เพียงพอสำหรับความมั่นใจระดับ HIGH",
     "default": "ยังมีข้อจำกัดด้านข้อมูลหรือการนำไปปฏิบัติ จึงยังไม่เหมาะกับความมั่นใจระดับ HIGH",
 }
@@ -39,4 +41,6 @@ DOWNGRADE_WARNING_IDS: set[str] = {
     f"[{ACTIVE_ALLOC_GUARDRAIL}]",
     f"[{GOLD_CONTRADICTION}]",
     f"[{GOLD_RATIONALE_WARNING}]",
+    f"[{FX_SPREAD_DATA_UNAVAILABLE}]",
 }
+

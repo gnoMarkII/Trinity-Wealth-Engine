@@ -10,16 +10,16 @@ def test_evaluation_quant_valid_json(tmp_vault):
     snapshots_dir = tmp_vault / "30_Knowledge_Base" / "Macroeconomics" / "Daily_Snapshots" / today_str
     snapshots_dir.mkdir(parents=True, exist_ok=True)
 
-    us_content = """# 🇺🇸 United States
-| ดัชนี | ค่าล่าสุด |
-|-------|----------|
-| **Real GDP (YoY %)** | 3.0% |
-| **CPI (YoY %)** | 3.5% |
-| **Fed Funds Rate** | 5.25% |"""
+    us_content = f"""# 🇺🇸 United States
+| ดัชนี | ค่าล่าสุด | วันที่ |
+|-------|----------|----------|
+| **Real GDP (YoY %)** | 3.0% | {today_str} |
+| **CPI (YoY %)** | 3.5% | {today_str} |
+| **Fed Funds Rate** | 5.25% | {today_str} |"""
 
-    global_content = """| ดัชนี | ค่าล่าสุด |
-|-------|----------|
-| **VIX Index** | 15.00 |"""
+    global_content = f"""| ดัชนี | ค่าล่าสุด | วันที่ |
+|-------|----------|----------|
+| **VIX Index** | 15.00 | {today_str} |"""
 
     (snapshots_dir / f"Country_Macro_Snapshot_{today_str}.md").write_text(us_content, encoding="utf-8")
     (snapshots_dir / f"Global_Macro_Snapshot_{today_str}.md").write_text(global_content, encoding="utf-8")

@@ -1,0 +1,73 @@
+{
+  "investor_flow": {
+    "market": "SET",
+    "as_of": "2026-09-25",
+    "total_value": 45210340000.0,
+    "investors": [
+      {
+        "name_th": "นักลงทุนสถาบัน",
+        "name_en": "Local Institutions",
+        "buy_value": 4200000000.0,
+        "sell_value": 3800000000.0,
+        "net_value": 400000000.0
+      },
+      {
+        "name_th": "บัญชีบริษัทหลักทรัพย์",
+        "name_en": "Proprietary Trading",
+        "buy_value": 3100000000.0,
+        "sell_value": 3200000000.0,
+        "net_value": -100000000.0
+      },
+      {
+        "name_th": "นักลงทุนต่างประเทศ",
+        "name_en": "Foreign Investors",
+        "buy_value": 24500000000.0,
+        "sell_value": 23000000000.0,
+        "net_value": 1500000000.0
+      },
+      {
+        "name_th": "นักลงทุนในประเทศ",
+        "name_en": "Retail Investors",
+        "buy_value": 13410340000.0,
+        "sell_value": 15210340000.0,
+        "net_value": -1800000000.0
+      }
+    ],
+    "is_stale": false,
+    "source": "Settrade Open Data"
+  },
+  "market_breadth": {
+    "market": "SET",
+    "as_of": "2026-09-25",
+    "gainers": 285,
+    "losers": 190,
+    "unchanged": 160,
+    "total_issues": 635,
+    "is_stale": false,
+    "source": "Settrade Open Data"
+  },
+  "market_valuation": {
+    "market": "SET",
+    "as_of": "2026-09-25",
+    "pe_ratio": 15.2,
+    "pbv_ratio": 1.35,
+    "dividend_yield": 3.42,
+    "is_stale": false,
+    "source": "Settrade Open Data"
+  },
+  "retail_gold": {
+    "announced_at": "2026-09-26 09:20:00",
+    "revision": 2,
+    "unit": "THB per Baht-Weight (96.5% purity)",
+    "bar": {
+      "buy": 40500.0,
+      "sell": 40600.0
+    },
+    "ornament": {
+      "buy": 39769.76,
+      "sell": 41100.0
+    },
+    "is_stale": false,
+    "source": "Gold Traders Association of Thailand"
+  }
+}

@@ -13,7 +13,7 @@ interface Props {
   onClose: () => void
 }
 
-type TabKey = 'observables' | 'source_files' | 'items'
+type TabKey = 'observables' | 'registry' | 'source_files' | 'items'
 
 const CATEGORY_STYLES: Record<IndicatorCategory, { bg: string; text: string; border: string }> = {
   Volatility: {
@@ -43,15 +43,38 @@ const CATEGORY_STYLES: Record<IndicatorCategory, { bg: string; text: string; bor
   },
 }
 
+const STATUS_BADGES: Record<string, { bg: string; text: string; border: string; label: string }> = {
+  verified: { bg: 'bg-emerald-50', text: 'text-emerald-700', border: 'border-emerald-200', label: 'Verified' },
+  stale: { bg: 'bg-amber-50', text: 'text-amber-700', border: 'border-amber-200', label: 'Stale' },
+  mock: { bg: 'bg-purple-50', text: 'text-purple-700', border: 'border-purple-200', label: 'Mock/Synthetic' },
+  unavailable: { bg: 'bg-zinc-100', text: 'text-zinc-600', border: 'border-zinc-200', label: 'Unavailable' },
+}
+
+interface NormalizedObservable {
+  id: string
+  name: string
+  region: string
+  provider: string
+  source_type: string
+  status: string
+  value: string
+  unit: string
+  observed_at: string
+  stale_reason?: string | null
+  description?: string
+}
+
 export default function MacroReferenceDrawer({ data, isOpen, onClose }: Props) {
   const [activeTab, setActiveTab] = useState<TabKey>('observables')
+  const [regionFilter, setRegionFilter] = useState<string>('All')
+  const [statusFilter, setStatusFilter] = useState<string>('All')
   // focus trap ร่วมกับ Modal — เดิม drawer มีแค่ Escape + โฟกัสปุ่มปิด แต่ Tab ยังหลุด
   // ออกไปหน้า background ที่ถูก backdrop บังอยู่ได้
   const panelRef = useFocusTrap<HTMLDivElement>(isOpen, onClose)
 
   if (!isOpen) return null
 
-  // Collect all observable refs across items
+  // Collect all observable refs across items (including Thailand market stance)
   const observableSet = new Set<string>()
   data.asset_allocation?.forEach((a) => {
     a.observable_refs?.forEach((r) => observableSet.add(r))
@@ -62,6 +85,7 @@ export default function MacroReferenceDrawer({ data, isOpen, onClose }: Props) {
   data.regime_evidence?.forEach((re) => {
     re.observable_refs?.forEach((r) => observableSet.add(r))
   })
+  data.thailand_market_stance?.observable_refs?.forEach((r) => observableSet.add(r))
 
   const enrichedIndicators = Array.from(observableSet).map((id) =>
     enrichIndicator(id, data)
@@ -73,6 +97,49 @@ export default function MacroReferenceDrawer({ data, isOpen, onClose }: Props) {
 
   const reportSources = enrichedSources.filter((s) => s.type === 'report')
   const quantEngines = enrichedSources.filter((s) => s.type === 'quant_engine')
+
+  // Normalized observable registry list
+  const registryItems: NormalizedObservable[] = []
+  if (data.observable_registry && Object.keys(data.observable_registry).length > 0) {
+    Object.entries(data.observable_registry).forEach(([k, item]) => {
+      if (!item) return
+      registryItems.push({
+        id: item.observable_id || k,
+        name: item.canonical_name || k,
+        region: item.region || 'Global',
+        provider: item.provider || '—',
+        source_type: item.source_type || 'derived',
+        status: item.status || 'verified',
+        value: item.value !== undefined && item.value !== null ? String(item.value) : '—',
+        unit: item.unit || '',
+        observed_at: item.observed_at || '—',
+        stale_reason: item.stale_reason || null,
+        description: item.family,
+      })
+    })
+  } else if (data.dashboard_indicators && data.dashboard_indicators.length > 0) {
+    data.dashboard_indicators.forEach((ind) => {
+      registryItems.push({
+        id: ind.indicator_id,
+        name: ind.label,
+        region: ind.region || 'Global',
+        provider: ind.provider || '—',
+        source_type: ind.source_type || 'derived',
+        status: ind.status || 'verified',
+        value: ind.display_value,
+        unit: ind.unit || '',
+        observed_at: ind.observed_at || '—',
+        stale_reason: ind.status === 'stale' ? (ind.stale_reason || 'ข้อมูลขาดการอัปเดตเกินรอบสังเกตการณ์') : null,
+        description: ind.source_file,
+      })
+    })
+  }
+
+  const filteredRegistry = registryItems.filter((item) => {
+    const matchRegion = regionFilter === 'All' || item.region.toLowerCase() === regionFilter.toLowerCase()
+    const matchStatus = statusFilter === 'All' || item.status.toLowerCase() === statusFilter.toLowerCase()
+    return matchRegion && matchStatus
+  })
 
   return (
     <div className="fixed inset-0 z-50 overflow-hidden">
@@ -114,11 +181,11 @@ export default function MacroReferenceDrawer({ data, isOpen, onClose }: Props) {
           </div>
 
           {/* Sub-Tabs Selector */}
-          <div className="flex border-b border-edge bg-surface px-6 pt-3">
+          <div className="flex border-b border-edge bg-surface px-6 pt-3 overflow-x-auto">
             <button
               onClick={() => setActiveTab('observables')}
               aria-pressed={activeTab === 'observables'}
-              className={`mr-6 border-b-2 pb-3 text-xs font-semibold transition-colors ${
+              className={`mr-6 border-b-2 pb-3 text-xs font-semibold whitespace-nowrap transition-colors ${
                 activeTab === 'observables'
                   ? 'border-zinc-900 text-zinc-900'
                   : 'border-transparent text-zinc-500 hover:text-zinc-800'
@@ -127,9 +194,20 @@ export default function MacroReferenceDrawer({ data, isOpen, onClose }: Props) {
               📊 ตัวชี้วัดเศรษฐกิจ ({enrichedIndicators.length})
             </button>
             <button
+              onClick={() => setActiveTab('registry')}
+              aria-pressed={activeTab === 'registry'}
+              className={`mr-6 border-b-2 pb-3 text-xs font-semibold whitespace-nowrap transition-colors ${
+                activeTab === 'registry'
+                  ? 'border-zinc-900 text-zinc-900'
+                  : 'border-transparent text-zinc-500 hover:text-zinc-800'
+              }`}
+            >
+              🗂️ ทะเบียน Observables ({registryItems.length})
+            </button>
+            <button
               onClick={() => setActiveTab('source_files')}
               aria-pressed={activeTab === 'source_files'}
-              className={`mr-6 border-b-2 pb-3 text-xs font-semibold transition-colors ${
+              className={`mr-6 border-b-2 pb-3 text-xs font-semibold whitespace-nowrap transition-colors ${
                 activeTab === 'source_files'
                   ? 'border-zinc-900 text-zinc-900'
                   : 'border-transparent text-zinc-500 hover:text-zinc-800'
@@ -140,7 +218,7 @@ export default function MacroReferenceDrawer({ data, isOpen, onClose }: Props) {
             <button
               onClick={() => setActiveTab('items')}
               aria-pressed={activeTab === 'items'}
-              className={`border-b-2 pb-3 text-xs font-semibold transition-colors ${
+              className={`border-b-2 pb-3 text-xs font-semibold whitespace-nowrap transition-colors ${
                 activeTab === 'items'
                   ? 'border-zinc-900 text-zinc-900'
                   : 'border-transparent text-zinc-500 hover:text-zinc-800'
@@ -152,6 +230,124 @@ export default function MacroReferenceDrawer({ data, isOpen, onClose }: Props) {
 
           {/* Tab Contents */}
           <div className="custom-scrollbar flex-1 overflow-y-auto overscroll-contain p-6">
+            {/* TAB: Observable Registry (All Feeds with Metadata & Filters) */}
+            {activeTab === 'registry' && (
+              <div className="space-y-4">
+                <div className="rounded-xl border border-sky-200 bg-sky-50/70 p-3.5 text-xs leading-relaxed text-sky-950">
+                  <span className="font-bold text-sky-900">ทะเบียนข้อมูลสังเกตการณ์ (Observable Registry):</span>{' '}
+                  แสดงตัวแปรทั้งหมดในระบบ พร้อมระบุภูมิภาค ชนิดแหล่งข้อมูล วันสังเกตการณ์จริง และสถานะความสดใหม่
+                </div>
+
+                {/* Filter Controls: Region & Status */}
+                <div className="space-y-2 rounded-xl border border-edge bg-surface p-3 text-xs">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <span className="font-semibold text-zinc-600 mr-1">ภูมิภาค:</span>
+                      {['All', 'United States', 'Thailand', 'Global'].map((reg) => (
+                        <button
+                          key={reg}
+                          type="button"
+                          onClick={() => setRegionFilter(reg)}
+                          className={`rounded px-2 py-0.5 text-[11px] font-medium transition-colors ${
+                            regionFilter === reg
+                              ? 'bg-zinc-900 text-white'
+                              : 'border border-edge bg-panel text-zinc-600 hover:bg-slate-100'
+                          }`}
+                        >
+                          {reg}
+                        </button>
+                      ))}
+                    </div>
+
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <span className="font-semibold text-zinc-600 mr-1">สถานะ:</span>
+                      {['All', 'verified', 'stale', 'mock', 'unavailable'].map((st) => (
+                        <button
+                          key={st}
+                          type="button"
+                          onClick={() => setStatusFilter(st)}
+                          className={`rounded px-2 py-0.5 text-[11px] font-medium transition-colors ${
+                            statusFilter === st
+                              ? 'bg-zinc-900 text-white'
+                              : 'border border-edge bg-panel text-zinc-600 hover:bg-slate-100'
+                          }`}
+                        >
+                          {st}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                {filteredRegistry.length === 0 ? (
+                  <p className="text-xs italic text-zinc-400 py-4 text-center">
+                    ไม่พบตัวชี้วัดตามเงื่อนไขตัวกรอง ({regionFilter}, {statusFilter})
+                  </p>
+                ) : (
+                  <div className="space-y-3">
+                    {filteredRegistry.map((item) => {
+                      const badge = STATUS_BADGES[item.status] || {
+                        bg: 'bg-zinc-100',
+                        text: 'text-zinc-600',
+                        border: 'border-zinc-200',
+                        label: item.status,
+                      }
+                      return (
+                        <div
+                          key={item.id}
+                          className="rounded-xl border border-edge bg-panel p-4 shadow-sm space-y-2 transition-all hover:border-zinc-300"
+                        >
+                          <div className="flex flex-wrap items-start justify-between gap-2">
+                            <div className="space-y-1">
+                              <div className="flex items-center gap-1.5 flex-wrap">
+                                <span className="rounded-md border border-slate-200 bg-slate-100 px-2 py-0.5 text-[10px] font-bold text-zinc-700">
+                                  {item.region}
+                                </span>
+                                <span className="rounded-md border border-slate-200 bg-slate-50 px-2 py-0.5 text-[10px] font-medium text-zinc-500">
+                                  {item.source_type}
+                                </span>
+                                <span
+                                  className={`rounded-md border px-2 py-0.5 text-[10px] font-bold uppercase ${badge.bg} ${badge.text} ${badge.border}`}
+                                >
+                                  {badge.label}
+                                </span>
+                              </div>
+                              <h4 className="font-semibold text-zinc-900 text-xs">{item.name}</h4>
+                              <code className="text-[10px] font-mono text-zinc-400">{item.id}</code>
+                            </div>
+
+                            <div className="text-right">
+                              <div className="font-mono text-sm font-bold text-zinc-900">
+                                {item.value} {item.unit}
+                              </div>
+                              <div className="text-[10px] text-zinc-400">
+                                สังเกตการณ์: {item.observed_at}
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center justify-between text-[11px] text-zinc-500 pt-1 border-t border-slate-100">
+                            <span>
+                              ผู้ให้บริการ: <strong className="text-zinc-700">{item.provider}</strong>
+                            </span>
+                            {item.description && <span className="text-zinc-400">{item.description}</span>}
+                          </div>
+
+                          {item.stale_reason && (
+                            <div className="rounded-lg border border-amber-200 bg-amber-50/80 p-2 text-[11px] text-amber-900 flex items-center gap-1.5">
+                              <span>⚠️</span>
+                              <span>
+                                <strong>เหตุผลที่ stale:</strong> {item.stale_reason}
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      )
+                    })}
+                  </div>
+                )}
+              </div>
+            )}
             {/* TAB 1: Enriched Economic & Market Indicators */}
             {activeTab === 'observables' && (
               <div className="space-y-4">

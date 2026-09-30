@@ -70,6 +70,7 @@ def test_domain_layer_isolation():
         PROJECT_ROOT / "tools" / "portfolio" / "domain",
         PROJECT_ROOT / "tools" / "market" / "financials" / "domain",
         PROJECT_ROOT / "tools" / "market" / "ohlcv" / "domain",
+        PROJECT_ROOT / "tools" / "market" / "terminal_v2" / "domain",
     ]
 
     forbidden_patterns = [
@@ -81,6 +82,7 @@ def test_domain_layer_isolation():
         "tools.portfolio.adapters",
         "tools.market.financials.adapters",
         "tools.market.ohlcv.adapters",
+        "tools.market.terminal_v2.adapters",
     ]
 
     violations = []
@@ -130,6 +132,7 @@ def test_application_and_router_layers_do_not_import_infrastructure():
         [
             PROJECT_ROOT / "tools" / "market" / "ohlcv" / "application",
             PROJECT_ROOT / "tools" / "market" / "financials" / "application",
+            PROJECT_ROOT / "tools" / "market" / "terminal_v2" / "application",
         ]
     )
     application_files = [

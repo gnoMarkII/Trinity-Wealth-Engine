@@ -186,7 +186,11 @@ export default function MacroIndicatorPanel({ indicators }: Props) {
             {isLoading && <div className="animate-shimmer h-52 rounded-lg border border-edge" />}
             {!isLoading && error && <p className="rounded-lg bg-red-50 p-3 text-xs text-red-700">{error}</p>}
             {!isLoading && !error && !selected.chart_available && (
-              <p className="rounded-lg border border-edge bg-panel p-3 text-sm text-zinc-500">ตัวชี้วัดนี้ยังไม่มีข้อมูลเชิงตัวเลขสำหรับสร้างกราฟ</p>
+              <p className="rounded-lg border border-edge bg-panel p-3 text-sm text-zinc-500">
+                {selected.display_value && selected.display_value !== '—'
+                  ? `มีข้อมูล 1 จุด ณ วันสังเกตการณ์ (${selected.observed_at || 'ไม่ระบุวัน'}: ${selected.display_value}) — รอข้อมูลรอบถัดไปเพื่อแสดงแนวโน้มกราฟ`
+                  : 'ตัวชี้วัดนี้ยังไม่มีข้อมูลเชิงตัวเลขสำหรับสร้างกราฟ'}
+              </p>
             )}
             {!isLoading && !error && selected.chart_available && chartPoints.length < 2 && (
               <p className="rounded-lg border border-edge bg-panel p-3 text-sm text-zinc-500">เริ่มเก็บข้อมูลแล้ว จะสร้างกราฟได้เมื่อมี snapshot รายงานอย่างน้อย 2 จุด</p>

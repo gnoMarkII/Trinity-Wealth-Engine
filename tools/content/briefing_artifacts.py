@@ -64,7 +64,12 @@ def save_briefing_artifact(
         pitch_id = synthesis.evidence_bundle.pitch_id
 
     vp = VaultPaths(vault_root)
-    note_writer = note_writer or current_note_writer(vp.root)
+    if note_writer is None:
+        try:
+            note_writer = current_note_writer(vp.root)
+        except RuntimeError:
+            from tools.archivist.composition import build_knowledge_note_writer
+            note_writer = build_knowledge_note_writer(vault_paths=vp)
     d_str = date_str or datetime.now().strftime("%Y-%m-%d")
 
     # R9 freezes V2 routing for every new canonical write.  The writer owns
@@ -117,8 +122,15 @@ def save_briefing_artifact(
                 report_data["override_audit"] = synthesis.override_audit.dict()
             else:
                 report_data["override_audit"] = synthesis.override_audit
-    
         source_identity = pitch_id if pitch_id != "unknown" else content_hash
+        raw_trust_tier = getattr(synthesis, "trust_tier", None)
+        if raw_trust_tier in ("T1", "T2", "T3", "TX"):
+            metadata_trust_tier = raw_trust_tier
+        elif is_draft or raw_trust_tier == "unverified":
+            metadata_trust_tier = "T3"
+        else:
+            metadata_trust_tier = "T2"
+
         metadata = {
             "schema_version": 2,
             "title": title.strip() or "NotebookLM Briefing Book",
@@ -134,7 +146,7 @@ def save_briefing_artifact(
             "source_count": len(getattr(getattr(synthesis, "evidence_bundle", None), "sources", []) or []),
             "pitch_id": pitch_id,
             "artifact_status": getattr(synthesis, "artifact_status", "unknown"),
-            "trust_tier": getattr(synthesis, "trust_tier", "T2" if not is_draft else "unverified"),
+            "trust_tier": metadata_trust_tier,
             "production_eligible": not is_draft,
             "tags": ["briefing", "notebooklm", "unverified" if is_draft else "publishable"],
         }

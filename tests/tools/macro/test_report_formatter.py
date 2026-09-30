@@ -59,6 +59,7 @@ def test_format_macro_strategy_report_divergent():
 
 
 def test_write_strategy_json_sidecar(tmp_path, monkeypatch):
+    monkeypatch.setenv("OBSIDIAN_VAULT_PATH", str(tmp_path))
     monkeypatch.setattr(report_formatter_module, "VAULT_PATH", tmp_path)
 
     direction = MacroStrategyDirection(

@@ -18,6 +18,7 @@ _PERFORMANCE_LOG_HEADER = [
     "Cash_Balance",
     "Realized_PnL_YTD",
     "Passive_Income_YTD",
+    "Asset_Class_Values_THB",
 ]
 
 _TRADES_LOG_HEADER = [

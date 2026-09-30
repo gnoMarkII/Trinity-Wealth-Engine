@@ -657,6 +657,9 @@ def build_graph(checkpointer=None, note_writer: Optional[KnowledgeNoteWritePort]
                     unverified_observables.append(item)
 
             allocator_quant_data = dict(quant_data) if isinstance(quant_data, dict) else {}
+            allocator_quant_data["valid_observables"] = valid_observables
+            allocator_quant_data["invalid_observables"] = unverified_observables
+            allocator_quant_data["regional_data_gaps"] = allocator_quant_data.get("data_gaps", [])
             allocator_quant_data["market_observables_by_validity"] = {
                 "VALID INSTITUTIONAL HARD DATA OBSERVABLES (USE FOR HIGH/MEDIUM CONFIDENCE)": valid_observables,
                 "UNVERIFIED PROXIES & STALE INDICATORS (DO NOT USE FOR CONFIDENCE / LOW CONFIDENCE ONLY)": unverified_observables,
@@ -674,9 +677,83 @@ def build_graph(checkpointer=None, note_writer: Optional[KnowledgeNoteWritePort]
             narrative_json = json.dumps(state.get("narrative_context", {}), ensure_ascii=False)
 
             direction = invoke_strategic_allocator(model, quant_json, narrative_json, observable_registry=observable_registry)
-            for source_file in sorted(evaluated_source_files):
-                if source_file not in direction.source_files:
-                    direction.source_files.append(source_file)
+
+            # Deep-merge Thailand Market Stance: Always preserve quantitative numbers from Terminal V2
+            th_quant = (allocator_quant_data.get("regions", {}).get("Thailand", {}).get("market_stance") or {})
+            th_llm = getattr(direction, "thailand_market_stance", None) or {}
+            merged_stance = dict(th_quant)
+            # Rationale is strictly from AI (no fallback injection)
+            ai_rationale = None
+            if isinstance(th_llm, dict):
+                ai_rationale = th_llm.get("rationale")
+                if th_llm.get("observable_refs"):
+                    merged_stance["observable_refs"] = th_llm["observable_refs"]
+            merged_stance["rationale"] = ai_rationale
+            if not merged_stance.get("observable_refs"):
+                merged_stance["observable_refs"] = [
+                    oid for oid in [
+                        "obs_set_flow_foreign",
+                        "obs_set_advance_decline_ratio",
+                        "obs_set_valuation_pe",
+                        "obs_gta_gold_bar_sell",
+                        "obs_diff_us_th_policy_rate_bis",
+                    ] if oid in observable_registry
+                ]
+            direction.thailand_market_stance = merged_stance
+
+            # Guarantee SET Equities (Thailand) in asset allocation if Thai quant data exists
+            has_thai_equity = any(
+                a.region == "Thailand" and a.asset_bucket == "equities"
+                for a in getattr(direction, "asset_allocation", []) or []
+            )
+            if not has_thai_equity and th_quant:
+                from schemas.macro_schemas import AssetAllocationView, AssetStance
+                flow_mb = th_quant.get("investor_flow", {}).get("foreign_net_mb", 0)
+                pe = th_quant.get("valuation", {}).get("pe_ratio", 16.0)
+                ad = th_quant.get("market_breadth", {}).get("advance_decline_ratio", 1.0)
+                thai_stance = AssetStance.UNDERWEIGHT if (flow_mb and flow_mb < 0) or pe > 17 else AssetStance.NEUTRAL
+                delta_str = "-2% vs benchmark" if thai_stance == AssetStance.UNDERWEIGHT else "0% vs benchmark"
+                thai_eq_view = AssetAllocationView(
+                    asset_class="SET Equities (Thailand)",
+                    asset_bucket="equities",
+                    region="Thailand",
+                    stance=thai_stance,
+                    rationale=merged_stance.get("rationale") or f"ตลาดหุ้นไทยเผชิญแรงกดดันจากกระแสเงินทุนต่างชาติขายสุทธิ ({flow_mb:,.1f} ลบ.) และ Valuation P/E ที่ {pe:.1f}x",
+                    confidence="medium",
+                    supporting_data=[
+                        f"SET Foreign Investor Net Flow {flow_mb:,.2f} THB Mil",
+                        f"SET Market Breadth A/D {ad:.2f}x",
+                        f"SET Index P/E {pe:.2f}",
+                    ],
+                    observable_refs=[
+                        oid for oid in ["obs_set_flow_foreign", "obs_set_advance_decline_ratio", "obs_set_valuation_pe"]
+                        if oid in observable_registry
+                    ],
+                    source_refs=["Terminal_V2_Settrade", "valuation.py"],
+                    why_not_high="ความมั่นใจอยู่ในระดับปานกลางเนื่องจากอยู่ระหว่างรอการเชื่อมต่อ API มหภาคทางการ (NESDC/MOC)",
+                    allocation_delta=delta_str,
+                    benchmark_ref="SET Index",
+                    time_horizon="1-3 months",
+                )
+                if not hasattr(direction, "asset_allocation") or direction.asset_allocation is None:
+                    direction.asset_allocation = []
+                direction.asset_allocation.append(thai_eq_view)
+
+            # Ensure Cash region is Global
+            for a in getattr(direction, "asset_allocation", []) or []:
+                if a.asset_bucket == "cash" and a.region == "US":
+                    a.region = "Global"
+
+            # Revalidate with registry to ensure all guardrails, sources, and refs are pristine
+            if hasattr(direction, "revalidate_with_registry"):
+                direction = direction.revalidate_with_registry(observable_registry)
+
+            # Preserve cited sources in direction.source_files without blindly dumping all evaluated_sources
+            if not direction.source_files:
+                direction.source_files = [
+                    obs.source_file for obs in observable_registry.values()
+                    if obs.is_valid and obs.source_file
+                ]
 
             try:
                 write_strategy_json_sidecar(
@@ -684,6 +761,9 @@ def build_graph(checkpointer=None, note_writer: Optional[KnowledgeNoteWritePort]
                     evaluated_date,
                     observable_registry=observable_registry,
                     report_references=(state.get("narrative_context", {}) or {}).get("report_references", []),
+                    regional_assessments=allocator_quant_data.get("regions"),
+                    evaluated_sources=sorted(list(evaluated_source_files)),
+                    run_id=state.get("run_id") or state.get("job_id"),
                 )
             except Exception as sidecar_err:
                 log.warning(f"[strategic_allocator] เขียน JSON sidecar ไม่สำเร็จ (ไม่กระทบรายงาน .md): {sidecar_err}")

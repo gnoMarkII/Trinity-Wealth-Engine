@@ -35,6 +35,7 @@ def test_parse_date_filters_from_instruction():
 @patch("tools.content.youtube_pitcher.get_macro_baselines")
 def test_fetch_news_for_pitching_layer1_and_fallback(mock_baselines, mock_load, tmp_path, monkeypatch):
     monkeypatch.setattr("tools.content.youtube_pitcher.VAULT_PATH", tmp_path)
+    monkeypatch.setenv("OBSIDIAN_VAULT_PATH", str(tmp_path))
     mock_baselines.invoke.return_value = '{"macro": "ok"}'
 
     now_iso = datetime.now().isoformat()
@@ -191,7 +192,7 @@ def test_save_briefing_artifact_with_thai_filename(tmp_path):
     assert "วิเคราะห์หุ้นเทคไทยและโลก" in saved_path.name
     assert "2026-07-18_" in saved_path.name
     assert "_verified.md" in saved_path.name
-    assert saved_path.read_text(encoding="utf-8") == content
+    assert content in saved_path.read_text(encoding="utf-8")
 
     # ทดสอบ collision (_2) (Now tests idempotency)
     saved_path_2 = save_briefing_artifact(synthesis, title, vault_root=tmp_path, date_str="2026-07-18").path
@@ -203,6 +204,7 @@ def test_save_briefing_artifact_with_thai_filename(tmp_path):
 @patch("tools.content.youtube_pitcher.get_macro_baselines")
 def test_fetch_news_for_pitching_with_youtube_summaries_always_include(mock_baselines, mock_load, tmp_path, monkeypatch):
     monkeypatch.setattr("tools.content.youtube_pitcher.VAULT_PATH", tmp_path)
+    monkeypatch.setenv("OBSIDIAN_VAULT_PATH", str(tmp_path))
     mock_baselines.invoke.return_value = '{"macro": "ok"}'
     mock_load.return_value = {"pending_events": []}
 

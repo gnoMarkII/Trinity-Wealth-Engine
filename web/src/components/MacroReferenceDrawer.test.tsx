@@ -80,6 +80,56 @@ describe('MacroReferenceDrawer', () => {
     expect(screen.getByText('Overweight')).toBeInTheDocument()
   })
 
+  it('รวม observable_refs จาก thailand_market_stance ในการนับ dedupe', () => {
+    const data = makeDashboard({
+      asset_allocation: [makeAllocation({ observable_refs: ['obs_vix'] })],
+      thailand_market_stance: {
+        observable_refs: ['obs_th_pe_ratio', 'obs_vix'], // obs_vix ซ้ำ, obs_th_pe_ratio เพิ่มใหม่
+      },
+    })
+    render(<MacroReferenceDrawer data={data} isOpen onClose={() => {}} />)
+    expect(screen.getByRole('button', { name: /ตัวชี้วัดเศรษฐกิจ \(2\)/ })).toBeInTheDocument()
+  })
+
+  it('สลับแท็บไปทะเบียน Observables และกรองตามภูมิภาค', async () => {
+    const data = makeDashboard({
+      observable_registry: {
+        obs_us10y: {
+          observable_id: 'obs_us10y',
+          canonical_name: 'US 10Y Yield',
+          region: 'United States',
+          provider: 'US Treasury',
+          source_type: 'official',
+          status: 'verified',
+          value: 4.25,
+          unit: '%',
+          observed_at: '2026-07-10',
+        },
+        obs_th_pe: {
+          observable_id: 'obs_th_pe',
+          canonical_name: 'SET Trailing P/E',
+          region: 'Thailand',
+          provider: 'SET',
+          source_type: 'official',
+          status: 'verified',
+          value: 15.2,
+          unit: 'x',
+          observed_at: '2026-07-10',
+        },
+      },
+    })
+    render(<MacroReferenceDrawer data={data} isOpen onClose={() => {}} />)
+
+    await userEvent.click(screen.getByRole('button', { name: /ทะเบียน Observables \(2\)/ }))
+    expect(screen.getByText('US 10Y Yield')).toBeInTheDocument()
+    expect(screen.getByText('SET Trailing P/E')).toBeInTheDocument()
+
+    // Filter to Thailand
+    await userEvent.click(screen.getByRole('button', { name: 'Thailand' }))
+    expect(screen.queryByText('US 10Y Yield')).not.toBeInTheDocument()
+    expect(screen.getByText('SET Trailing P/E')).toBeInTheDocument()
+  })
+
   it('กด Escape → เรียก onClose (ผ่าน useFocusTrap)', async () => {
     const onClose = vi.fn()
     render(<MacroReferenceDrawer data={makeDashboard()} isOpen onClose={onClose} />)

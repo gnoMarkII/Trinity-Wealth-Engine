@@ -26,6 +26,15 @@ class MarkdownPerformanceAdapter(PerformanceRepositoryPort):
             perf_path.parent.mkdir(parents=True, exist_ok=True)
 
             date_val = str(row.get("Date") or datetime.now().strftime("%Y-%m-%d"))
+            ac_val = row.get("Asset_Class_Values_THB")
+            if isinstance(ac_val, dict):
+                import json
+                ac_str = json.dumps(ac_val, ensure_ascii=False)
+            elif isinstance(ac_val, str):
+                ac_str = ac_val
+            else:
+                ac_str = ""
+
             row_list = [
                 date_val,
                 f"{float(row.get('Total_NAV', 0.0)):.2f}",
@@ -34,6 +43,7 @@ class MarkdownPerformanceAdapter(PerformanceRepositoryPort):
                 f"{float(row.get('Cash_Balance', 0.0)):.2f}",
                 f"{float(row.get('Realized_PnL_YTD', 0.0)):.2f}",
                 f"{float(row.get('Passive_Income_YTD', 0.0)):.2f}",
+                ac_str,
             ]
 
             existing_rows: List[List[str]] = []
@@ -82,5 +92,15 @@ class MarkdownPerformanceAdapter(PerformanceRepositoryPort):
                     d = r.get("Date", "")
                     if cutoff_date and d < cutoff_date:
                         continue
-                    rows.append(dict(r))
+                    item = dict(r)
+                    raw_ac = item.get("Asset_Class_Values_THB")
+                    if raw_ac and raw_ac.strip():
+                        try:
+                            import json
+                            item["Asset_Class_Values_THB"] = json.loads(raw_ac)
+                        except Exception:
+                            item["Asset_Class_Values_THB"] = None
+                    else:
+                        item["Asset_Class_Values_THB"] = None
+                    rows.append(item)
             return rows

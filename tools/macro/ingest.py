@@ -247,22 +247,25 @@ def ingest_country_macro() -> str:
         except Exception:
             pass
 
-    # Mocks for tests
-    rows_by_id["Policy Rate"] = {"series_id": "Policy Rate", "name": "Policy Rate [Mock]", "description": "อัตราดอกเบี้ยนโยบาย (Mock)", "value": 2.50, "prev": 2.50, "ma": 2.50, "unit": "%", "date": today, "change": "-", "provider": "Mock", "is_valid": False, "confidence": "low"}
-    rows_by_id["TH10Y"] = {"series_id": "TH10Y", "name": "Thailand 10Y Gov Bond Yield [StaticProxy]", "description": "StaticProxy: Thailand 10-Year Government Bond Yield proxy", "value": 2.65, "prev": 2.65, "ma": 2.65, "unit": "%", "date": today, "change": "StaticProxy", "provider": "Mock", "is_valid": False, "confidence": "low"}
-    rows_by_id["CPI Inflation"] = {"series_id": "CPI Inflation", "name": "CPI Inflation [Mock]", "description": "อัตราเงินเฟ้อทั่วไป (Mock)", "value": 1.0, "prev": 1.0, "ma": 1.0, "unit": "%", "date": today, "change": "-", "provider": "Mock", "is_valid": False, "confidence": "low"}
-    rows_by_id["Exports Growth"] = {"series_id": "Exports Growth", "name": "Exports Growth [Mock]", "description": "การส่งออก (Mock)", "value": 2.0, "prev": 2.0, "ma": 2.0, "unit": "%", "date": today, "change": "-", "provider": "Mock", "is_valid": False, "confidence": "low"}
-    rows_by_id["Tourism Growth"] = {"series_id": "Tourism Growth", "name": "Tourism Growth [Mock]", "description": "การท่องเที่ยว (Mock)", "value": 5.0, "prev": 5.0, "ma": 5.0, "unit": "%", "date": today, "change": "-", "provider": "Mock", "is_valid": False, "confidence": "low"}
-    rows_by_id["Domestic Stimulus"] = {"series_id": "Domestic Stimulus", "name": "Domestic Stimulus [Mock]", "description": "นโยบายกระตุ้นเศรษฐกิจ (Mock)", "value": 1.0, "prev": 1.0, "ma": 1.0, "unit": "", "date": today, "change": "-", "provider": "Mock", "is_valid": False, "confidence": "low"}
-    rows_by_id["Current Account"] = {"series_id": "Current Account", "name": "Thailand Current Account [StaticProxy]", "description": "StaticProxy: ดุลบัญชีเดินสะพัดไทย proxy", "value": 1.2, "prev": 1.2, "ma": 1.2, "unit": "B USD", "date": today, "change": "StaticProxy", "provider": "Mock", "is_valid": False, "confidence": "low"}
-    rows_by_id["Tourist Arrivals"] = {"series_id": "Tourist Arrivals", "name": "Foreign Tourist Arrivals [StaticProxy]", "description": "StaticProxy: จำนวนนักท่องเที่ยวต่างชาติเข้าไทย proxy", "value": 2.85, "prev": 2.85, "ma": 2.85, "unit": "M persons", "date": today, "change": "StaticProxy", "provider": "Mock", "is_valid": False, "confidence": "low"}
-
-    _THAI_GROUPS_MOCK = [
-        ("🏦 Monetary Policy & Liquidity", ["THB=X", "Policy Rate", "TH10Y", "Current Account"]),
-        ("📈 Economic Growth", ["^SET.BK", "Exports Growth", "Tourism Growth", "Tourist Arrivals"]),
-        ("💰 Inflation", ["CPI Inflation"]),
-        ("🛡️ Geopolitics & Risk Sentiment", ["Domestic Stimulus"])
-    ]
+    # In production path, do not inject mock indicators.
+    # Offline test suites can enable mock injection explicitly via ALLOW_MOCK_MACRO_INGEST=true.
+    if os.getenv("ALLOW_MOCK_MACRO_INGEST", "false").lower() == "true":
+        rows_by_id["Policy Rate"] = {"series_id": "Policy Rate", "name": "Policy Rate [Mock]", "description": "อัตราดอกเบี้ยนโยบาย (Mock)", "value": 2.50, "prev": 2.50, "ma": 2.50, "unit": "%", "date": today, "change": "-", "provider": "Mock", "is_valid": False, "confidence": "low"}
+        rows_by_id["TH10Y"] = {"series_id": "TH10Y", "name": "Thailand 10Y Gov Bond Yield [StaticProxy]", "description": "StaticProxy: Thailand 10-Year Government Bond Yield proxy", "value": 2.65, "prev": 2.65, "ma": 2.65, "unit": "%", "date": today, "change": "StaticProxy", "provider": "Mock", "is_valid": False, "confidence": "low"}
+        rows_by_id["CPI Inflation"] = {"series_id": "CPI Inflation", "name": "CPI Inflation [Mock]", "description": "อัตราเงินเฟ้อทั่วไป (Mock)", "value": 1.0, "prev": 1.0, "ma": 1.0, "unit": "%", "date": today, "change": "-", "provider": "Mock", "is_valid": False, "confidence": "low"}
+        rows_by_id["Exports Growth"] = {"series_id": "Exports Growth", "name": "Exports Growth [Mock]", "description": "การส่งออก (Mock)", "value": 2.0, "prev": 2.0, "ma": 2.0, "unit": "%", "date": today, "change": "-", "provider": "Mock", "is_valid": False, "confidence": "low"}
+        rows_by_id["Tourism Growth"] = {"series_id": "Tourism Growth", "name": "Tourism Growth [Mock]", "description": "การท่องเที่ยว (Mock)", "value": 5.0, "prev": 5.0, "ma": 5.0, "unit": "%", "date": today, "change": "-", "provider": "Mock", "is_valid": False, "confidence": "low"}
+        rows_by_id["Domestic Stimulus"] = {"series_id": "Domestic Stimulus", "name": "Domestic Stimulus [Mock]", "description": "นโยบายกระตุ้นเศรษฐกิจ (Mock)", "value": 1.0, "prev": 1.0, "ma": 1.0, "unit": "", "date": today, "change": "-", "provider": "Mock", "is_valid": False, "confidence": "low"}
+        rows_by_id["Current Account"] = {"series_id": "Current Account", "name": "Thailand Current Account [StaticProxy]", "description": "StaticProxy: ดุลบัญชีเดินสะพัดไทย proxy", "value": 1.2, "prev": 1.2, "ma": 1.2, "unit": "B USD", "date": today, "change": "StaticProxy", "provider": "Mock", "is_valid": False, "confidence": "low"}
+        rows_by_id["Tourist Arrivals"] = {"series_id": "Tourist Arrivals", "name": "Foreign Tourist Arrivals [StaticProxy]", "description": "StaticProxy: จำนวนนักท่องเที่ยวต่างชาติเข้าไทย proxy", "value": 2.85, "prev": 2.85, "ma": 2.85, "unit": "M persons", "date": today, "change": "StaticProxy", "provider": "Mock", "is_valid": False, "confidence": "low"}
+        thai_groups = [
+            ("🏦 Monetary Policy & Liquidity", ["THB=X", "Policy Rate", "TH10Y", "Current Account"]),
+            ("📈 Economic Growth", ["^SET.BK", "Exports Growth", "Tourism Growth", "Tourist Arrivals"]),
+            ("💰 Inflation", ["CPI Inflation"]),
+            ("🛡️ Geopolitics & Risk Sentiment", ["Domestic Stimulus"])
+        ]
+    else:
+        thai_groups = _THAI_GROUPS
 
     md_lines = [
         "---",
@@ -278,7 +281,7 @@ def ingest_country_macro() -> str:
 
     regions = [
         ("🇺🇸 United States", _US_GROUPS),
-        ("🇹🇭 Thailand", _THAI_GROUPS_MOCK),
+        ("🇹🇭 Thailand", thai_groups),
         ("🇪🇺 Euro Area", _EURO_GROUPS),
         ("🇨🇳 China", _CHINA_GROUPS),
         ("🇯🇵 Japan", _JAPAN_GROUPS),
@@ -286,35 +289,14 @@ def ingest_country_macro() -> str:
         ("🌎 Latin America", _LATAM_GROUPS)
     ]
 
-    # Fallback default values for missing data based on metric type
-    def get_mock_value(sid: str) -> float:
-        if "GDP" in sid or "INDPRO" in sid or "CLVMNAC" in sid:
-            return 2.0  # Default growth 2%
-        if "CPI" in sid or "PCE" in sid or "CP0000" in sid:
-            return 2.5  # Default inflation 2.5%
-        if "Rate" in sid or "Yield" in sid or "FEDFUNDS" in sid or "ECBDFR" in sid or "INTDSR" in sid:
-            return 4.0  # Default policy rate 4.0%
-        return 0.0
-
     for region_name, group_list in regions:
         md_lines.append(f"# {region_name}")
         md_lines.append("")
         for group_name, series_ids in group_list:
-            # We want to show the group even if some rows are mock
             group_rows = []
             for sid in series_ids:
                 if sid in rows_by_id:
                     group_rows.append(rows_by_id[sid])
-                elif sid in _FRED_SERIES:
-                    # Apply Fallback Transparency Rule
-                    name, desc = _FRED_SERIES[sid]
-                    mock_val = get_mock_value(sid)
-                    unit = _FRED_UNIT_DISPLAY.get(sid, "")
-                    group_rows.append({
-                        "series_id": sid, "name": f"{name} [Mock]", "description": desc,
-                        "value": mock_val, "prev": mock_val, "ma": mock_val,
-                        "unit": unit, "date": today, "change": "-"
-                    })
             if not group_rows: continue
             md_lines += [
                 f"### {group_name}", "",

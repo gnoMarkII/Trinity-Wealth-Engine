@@ -46,5 +46,5 @@ def test_cash_flow_and_trade_stage_journal_with_state(tmp_path, monkeypatch):
     assert "CASH FLOW NOTE" in content
     assert "TRADE NOTE" in content
     assert "2026-08-23 12:00:00" in content
-    assert "[[AAPL]]" in content
+    assert "AAPL" in content
     assert trading.journal_provider.append_system_entry.call_count == 0

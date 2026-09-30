@@ -61,6 +61,8 @@ def _cited_observable_ids(direction: MacroStrategyDirection) -> set[str]:
         cited_ids.update(allocation.observable_refs)
     for pair_trade in direction.pair_trades:
         cited_ids.update(pair_trade.observable_refs)
+    if getattr(direction, "thailand_market_stance", None) and isinstance(direction.thailand_market_stance, dict):
+        cited_ids.update(direction.thailand_market_stance.get("observable_refs", []) or [])
     return cited_ids
 
 
@@ -74,6 +76,7 @@ def _coerce_observable(value: MarketObservable | Mapping[str, Any]) -> MarketObs
 def build_dashboard_indicators(
     direction: MacroStrategyDirection,
     observable_registry: Mapping[str, MarketObservable | Mapping[str, Any]] | None,
+    vault_path: Path | None = None,
 ) -> list[dict[str, Any]]:
     """Return cited, serializable indicators for the public macro dashboard."""
     if not observable_registry:
@@ -90,10 +93,26 @@ def build_dashboard_indicators(
             continue
 
         numeric_value = _numeric_value(observable)
+        s_key = _series_key(observable)
+        chart_avail = False
+        if vault_path and numeric_value is not None:
+            try:
+                path = _series_path(vault_path, s_key)
+                if not path.exists():
+                    legacy = vault_path / _SERIES_SUBDIR / f"{s_key}.json"
+                    path = legacy if legacy.exists() else None
+                if path and path.exists():
+                    series_data = json.loads(path.read_text(encoding="utf-8"))
+                    pts = series_data.get("points", [])
+                    distinct_dates = {p.get("observed_at") for p in pts if isinstance(p, dict) and "observed_at" in p}
+                    chart_avail = len(distinct_dates) >= 2
+            except Exception:
+                chart_avail = False
+
         dashboard_indicators.append(
             {
                 "indicator_id": observable.observable_id,
-                "series_key": _series_key(observable),
+                "series_key": s_key,
                 "label": observable.indicator,
                 "value": numeric_value,
                 "display_value": observable.value,
@@ -103,7 +122,10 @@ def build_dashboard_indicators(
                 "source_file": observable.source_file,
                 "is_valid": observable.is_valid,
                 "stale_reason": observable.stale_reason,
-                "chart_available": numeric_value is not None,
+                "chart_available": chart_avail,
+                "region": observable.region or "Global",
+                "source_type": "deterministic" if observable.provider in ("Derived", "QuantEngine") else "provider",
+                "status": observable.status or "verified",
             }
         )
     return dashboard_indicators

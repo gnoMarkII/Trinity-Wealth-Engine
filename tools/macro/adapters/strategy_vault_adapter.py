@@ -36,7 +36,15 @@ class StrategyVaultAdapter:
             candidates.extend(p for p in v1_dir.glob("Macro_Strategy_Direction_*.json") if "Revisions" not in p.parts)
         if not candidates:
             raise FileNotFoundError("No Macro Strategy sidecar is available")
-        candidates.sort(key=lambda p: p.name)
+        def _sort_key(p: Path) -> tuple[str, float, str]:
+            try:
+                data = json.loads(p.read_text(encoding="utf-8"))
+                ev_at = str(data.get("evaluated_at", ""))
+                return (ev_at, p.stat().st_mtime, p.name)
+            except Exception:
+                return ("", p.stat().st_mtime, p.name)
+
+        candidates.sort(key=_sort_key)
         return json.loads(candidates[-1].read_text(encoding="utf-8"))
 
 

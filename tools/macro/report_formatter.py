@@ -186,6 +186,31 @@ def format_macro_strategy_report(direction: MacroStrategyDirection) -> str:
             lines.append(f"> - **เงื่อนไขยกเลิกมุมมอง (Invalidation Conditions):** {', '.join(invals)}")
         lines.append("")
 
+    thai_stance = getattr(direction, "thailand_market_stance", None)
+    if thai_stance and any(thai_stance.values()):
+        flow_mb = thai_stance.get("investor_flow", {}).get("foreign_net_mb")
+        ad_r = thai_stance.get("market_breadth", {}).get("advance_decline_ratio")
+        ad_sent = thai_stance.get("market_breadth", {}).get("sentiment", "neutral")
+        pe_v = thai_stance.get("valuation", {}).get("pe_ratio")
+        gold_v = thai_stance.get("physical_gold", {}).get("bar_sell_thb")
+        spread_v = thai_stance.get("policy_spread_bps")
+
+        lines.append("### 🇹🇭 Thailand Market Stance & Microstructure (สรุปสภาวะตลาดทุนไทย)\n")
+        lines.append("> [!note]- **สรุปทัศนะตลาดหุ้นและสภาพคล่องไทย (Microstructure Stance):**")
+        if flow_mb is not None:
+            flow_label = "ต่างชาติซื้อสุทธิ" if flow_mb > 0 else "ต่างชาติขายสุทธิ"
+            lines.append(f"> - **SET Foreign Net Flow:** {flow_mb:,.2f} ล้านบาท ({flow_label})")
+        if ad_r is not None:
+            lines.append(f"> - **Market Breadth (Advance/Decline Ratio):** {ad_r:.2f}x (Sentiment: {ad_sent})")
+        if pe_v is not None:
+            lines.append(f"> - **SET Valuation (P/E Ratio):** {pe_v:.2f}x")
+        if gold_v is not None:
+            lines.append(f"> - **ราคาทองคำแท่งในประเทศ (GTA Bar Sell):** {gold_v:,.0f} บาท/บาททองคำ")
+        if spread_v is not None:
+            sign = "+" if spread_v > 0 else ""
+            lines.append(f"> - **ส่วนต่างอัตราดอกเบี้ยนโยบาย (Fed - BOT Spread):** {sign}{spread_v:.1f} bps")
+        lines.append("> - **หมายเหตุสภาวะเศรษฐกิจมหภาค (Macro Regime):** สถานะเศรษฐกิจไทยยังคงเป็น 'Unknown' ตามนโยบาย Fail-Closed เนื่องจากอยู่ระหว่างรอเชื่อมต่อ API ทางการจาก สศช. (NESDC) และ สนค. (MOC)\n")
+
     has_contradictions = (
         direction.quant_narrative_alignment == "divergent"
         or direction.divergence_note
@@ -306,6 +331,10 @@ def write_strategy_json_sidecar(
     *,
     observable_registry: dict | None = None,
     report_references: list[dict] | None = None,
+    regional_assessments: dict | None = None,
+    evaluated_sources: list[str] | None = None,
+    run_id: str | None = None,
+    job_id: str | None = None,
 ) -> Path:
     """เขียน direction เป็น JSON sidecar คู่กับรายงาน .md ที่ Archivist จะบันทึกทีหลัง
 
@@ -316,12 +345,40 @@ def write_strategy_json_sidecar(
     from tools.macro.dashboard import build_dashboard_indicators, persist_indicator_series
     vault_base = Path(os.getenv("OBSIDIAN_VAULT_PATH", str(VAULT_PATH))).resolve()
 
-    dashboard_indicators = build_dashboard_indicators(direction, observable_registry)
+    dashboard_indicators = build_dashboard_indicators(direction, observable_registry, vault_base)
     persist_indicator_series(vault_base, dashboard_indicators)
+
+    # Re-verify chart_available now that latest points are saved
+    for ind in dashboard_indicators:
+        s_key = ind.get("series_key", "")
+        if ind.get("value") is not None:
+            try:
+                from tools.macro.dashboard import _series_path, _SERIES_SUBDIR
+                path = _series_path(vault_base, s_key)
+                if not path.exists():
+                    legacy = vault_base / _SERIES_SUBDIR / f"{s_key}.json"
+                    path = legacy if legacy.exists() else None
+                if path and path.exists():
+                    series_data = json.loads(path.read_text(encoding="utf-8"))
+                    pts = series_data.get("points", [])
+                    distinct_dates = {p.get("observed_at") for p in pts if isinstance(p, dict) and "observed_at" in p}
+                    ind["chart_available"] = len(distinct_dates) >= 2
+            except Exception:
+                ind["chart_available"] = False
 
     payload = direction.model_dump(mode="json")
     payload["dashboard_indicators"] = dashboard_indicators
     payload["report_references"] = report_references or []
+    payload["regional_assessments"] = regional_assessments or {}
+    payload["evaluated_sources"] = evaluated_sources or []
+    payload["run_id"] = run_id or f"run_{evaluated_date}_{int(datetime.now().timestamp())}"
+    payload["job_id"] = job_id or payload["run_id"]
+    payload["snapshot_id"] = f"Macro_Strategy_Direction_{evaluated_date}"
+    if observable_registry:
+        payload["observable_registry"] = {
+            k: (v.model_dump(mode="json") if hasattr(v, "model_dump") else v)
+            for k, v in observable_registry.items()
+        }
 
     from tools.archivist.vault_paths import VaultPaths
     vp = VaultPaths(vault_base)

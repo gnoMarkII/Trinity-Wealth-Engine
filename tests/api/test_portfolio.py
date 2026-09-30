@@ -172,3 +172,103 @@ def test_portfolio_latest_404_when_no_report_exists(authed_client, tmp_path, mon
 
     r = authed_client.get("/api/portfolio/latest")
     assert r.status_code == 404
+
+
+def test_macro_dashboard_contract_ag215_fields(authed_client, tmp_path, monkeypatch):
+    import api.routes_portfolio as routes_portfolio_module
+
+    payload = json.loads(json.dumps(_SAMPLE_DIRECTION))
+    payload["run_id"] = "run-20260927-01"
+    payload["job_id"] = "macro_daily_allocator"
+    payload["snapshot_id"] = "snap-20260927-120000"
+    payload["regional_assessments"] = {
+        "United States": {"growth": 1.0, "inflation": 0.5, "state": "Reflation", "confidence": 0.85},
+        "Thailand": {"growth": None, "inflation": None, "state": "Unknown", "confidence": 0.0, "data_gaps": ["Real GDP", "Headline CPI"]},
+    }
+    payload["evaluated_sources"] = ["Country_Macro_Snapshot_2026-09-27.md", "Terminal_V2_Thai_Market.md"]
+    payload["observable_registry"] = {
+        "obs_us10y": {
+            "observable_id": "obs_us10y",
+            "indicator": "10Y Treasury",
+            "region": "United States",
+            "value": "4.25",
+            "unit": "%",
+            "observed_at": "2026-09-27",
+            "source_type": "provider",
+            "status": "verified",
+        }
+    }
+    payload["dashboard_indicators"] = [
+        {
+            "indicator_id": "obs_us10y",
+            "series_key": "obs_us10y",
+            "label": "10Y Treasury",
+            "value": 4.25,
+            "region": "United States",
+            "source_type": "provider",
+            "status": "verified",
+            "unit": "%",
+            "observed_at": "2026-09-27",
+            "provider": "FRED",
+            "source_file": "Global_Macro_Snapshot.md",
+            "is_valid": True,
+            "chart_available": False,
+        }
+    ]
+    _write_sidecar(tmp_path, monkeypatch, routes_portfolio_module, payload)
+
+    r = authed_client.get("/api/macro/dashboard")
+    assert r.status_code == 200
+    body = r.json()
+
+    # AG-215 Top-level fields
+    assert body["run_id"] == "run-20260927-01"
+    assert body["job_id"] == "macro_daily_allocator"
+    assert body["snapshot_id"] == "snap-20260927-120000"
+    assert body["regional_assessments"]["Thailand"]["state"] == "Unknown"
+    assert body["regional_assessments"]["Thailand"]["confidence"] == 0.0
+    assert "Real GDP" in body["regional_assessments"]["Thailand"]["data_gaps"]
+    assert len(body["evaluated_sources"]) == 2
+    assert "obs_us10y" in body["observable_registry"]
+
+    # AG-215 Indicator DTO fields
+    ind = body["dashboard_indicators"][0]
+    assert ind["region"] == "United States"
+    assert ind["source_type"] == "provider"
+    assert ind["status"] == "verified"
+    assert ind["chart_available"] is False
+
+
+def test_strategy_vault_adapter_same_day_two_runs(tmp_path):
+    from tools.macro.adapters.strategy_vault_adapter import StrategyVaultAdapter
+
+    strategy_dir = tmp_path / "30_Knowledge_Base" / "Strategies"
+    strategy_dir.mkdir(parents=True)
+
+    # First run earlier in the day
+    run1 = {
+        "evaluated_at": "2026-09-27T08:00:00",
+        "run_id": "run-01",
+        "overall_regime": "Reflation",
+    }
+    # Second run later in the day
+    run2 = {
+        "evaluated_at": "2026-09-27T16:00:00",
+        "run_id": "run-02",
+        "overall_regime": "Goldilocks",
+    }
+
+    f1 = strategy_dir / "Macro_Strategy_Direction_2026-09-27_run1.json"
+    f2 = strategy_dir / "Macro_Strategy_Direction_2026-09-27_run2.json"
+
+    f1.write_text(json.dumps(run1), encoding="utf-8")
+    f2.write_text(json.dumps(run2), encoding="utf-8")
+
+    adapter = StrategyVaultAdapter(tmp_path)
+    latest = adapter.latest()
+    assert latest is not None
+    # Must pick the later run by evaluated_at
+    assert latest["evaluated_at"] == "2026-09-27T16:00:00"
+    assert latest["overall_regime"] == "Goldilocks"
+
+

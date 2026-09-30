@@ -37,3 +37,17 @@ class MacroObservation(BaseModel):
         description="Provider publication/update time, distinct from the economic observation period",
     )
     freshness_reason: str = Field(default="", description="Auditable freshness decision")
+    region: str = Field(default="United States", description="Geographic region e.g. United States, Thailand, Global")
+    raw_unit: Optional[str] = Field(default=None, description="Original raw unit from provider before conversion")
+    normalized_unit: Optional[str] = Field(default=None, description="Canonical normalized unit e.g. %, % YoY, bps, USD")
+    transform: Optional[str] = Field(default=None, description="Transform applied e.g. pc1, diff_bps, ratio, none")
+    period: Optional[str] = Field(default=None, description="Economic observation period e.g. 2026-08, 2026-Q2")
+    fetched_at: Optional[str] = Field(default=None, description="Timestamp when observation was retrieved by system")
+    source_file: Optional[str] = Field(default=None, description="Source provenance file or endpoint identifier")
+    revision: Optional[int] = Field(default=None, description="Revision or announcement number if applicable")
+    status: Literal["verified", "stale", "unverified", "mock", "missing"] = Field(
+        default="verified",
+        description="Data verification status. Only 'verified' is admissible into scoring."
+    )
+    reason: str = Field(default="", description="Exclusion or downgrade reason if status is not verified")
+    input_ids: list[str] = Field(default_factory=list, description="IDs of underlying raw observables for derived metrics")

@@ -149,6 +149,16 @@ class PerformanceSnapshotDTO(BaseModel):
     Cash_Balance: float
     realized_pnl_ytd: Optional[float] = None
     passive_income_ytd: Optional[float] = None
+    Asset_Class_Values_THB: Optional[dict[str, float]] = None
+    coverage_warning: Optional[str] = None
+
+    @model_validator(mode="after")
+    def check_coverage(self) -> "PerformanceSnapshotDTO":
+        if self.Asset_Class_Values_THB is not None:
+            bd_sum = sum(self.Asset_Class_Values_THB.values())
+            if abs(bd_sum - self.Total_NAV) > 1.0:
+                self.coverage_warning = f"Asset class breakdown sum ({bd_sum:,.2f} THB) differs from NAV ({self.Total_NAV:,.2f} THB)"
+        return self
 
 
 class JournalEntryDTO(BaseModel):

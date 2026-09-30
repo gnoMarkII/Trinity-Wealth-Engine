@@ -16,6 +16,14 @@ def _reference_id(prefix: str, value: str) -> str:
     return f"{prefix}_{digest}"
 
 
+def _clean_publisher(raw: str) -> str:
+    cleaned = re.sub(r"\s*\(Sources:.*$", "", str(raw)).strip()
+    lowered = cleaned.lower()
+    if any(k in lowered for k in ["current policy", "(<=", "age:", "freshness", "discovery", "n/a"]):
+        return ""
+    return cleaned
+
+
 def news_references_from_radar(markdown: str, max_items: int = 5) -> list[dict]:
     """Parse the News Radar table that was just supplied to the economist agent."""
     references: list[dict] = []
@@ -36,7 +44,7 @@ def news_references_from_radar(markdown: str, max_items: int = 5) -> list[dict]:
                 "kind": "news",
                 "title": match.group("title").replace("~~", "").strip(),
                 "url": url,
-                "publisher": re.sub(r"\s*\(Sources:.*$", "", cells[3]).strip(),
+                "publisher": _clean_publisher(cells[3]),
                 "age_hours": int(age_match.group(1)) if age_match else None,
                 "summary": "ข่าวเศรษฐกิจมหภาคที่ใช้ประกอบการประเมินรอบนี้",
                 "is_stale": "STALE" in cells[2].upper(),

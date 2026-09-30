@@ -1,0 +1,63 @@
+{
+  "treasury_yield_curve": {
+    "as_of": "2026-09-25",
+    "rates": {
+      "1M": 5.40,
+      "3M": 5.35,
+      "6M": 5.20,
+      "1Y": 4.95,
+      "2Y": 4.90,
+      "3Y": 4.60,
+      "5Y": 4.35,
+      "7Y": 4.40,
+      "10Y": 4.55,
+      "20Y": 4.80,
+      "30Y": 4.70
+    },
+    "spreads": {
+      "10Y_2Y": -35.0,
+      "10Y_3M": -80.0
+    },
+    "is_stale": false,
+    "source": "U.S. Department of the Treasury (Fiscal Data)"
+  },
+  "global_policy_rates": {
+    "as_of": "2026-09-20",
+    "rates": [
+      {
+        "country": "United States",
+        "central_bank": "Federal Reserve",
+        "rate": 5.25,
+        "rate_type": "Federal Funds Target Rate (Upper)",
+        "effective_date": "2024-07-31",
+        "spread_vs_bot_repo": 275.0
+      },
+      {
+        "country": "Thailand",
+        "central_bank": "Bank of Thailand",
+        "rate": 2.50,
+        "rate_type": "1-Day Bilateral Repo Rate",
+        "effective_date": "2023-09-27",
+        "spread_vs_bot_repo": 0.0
+      },
+      {
+        "country": "Euro Area",
+        "central_bank": "European Central Bank",
+        "rate": 3.75,
+        "rate_type": "Deposit Facility Rate",
+        "effective_date": "2024-06-12",
+        "spread_vs_bot_repo": 125.0
+      },
+      {
+        "country": "Japan",
+        "central_bank": "Bank of Japan",
+        "rate": 0.25,
+        "rate_type": "Uncollateralized Overnight Call Rate",
+        "effective_date": "2024-07-31",
+        "spread_vs_bot_repo": -225.0
+      }
+    ],
+    "is_stale": false,
+    "source": "Bank for International Settlements (BIS)"
+  }
+}

@@ -4,9 +4,16 @@ from datetime import datetime, timezone
 from tools.market.technical import compute_tactical_setup
 
 
+def _get_test_dates() -> pd.DatetimeIndex:
+    last_bday = pd.Timestamp.now(timezone.utc).floor("D")
+    if last_bday.weekday() >= 5:
+        last_bday -= pd.offsets.BDay(1)
+    return pd.date_range(end=last_bday, periods=50, freq="B")
+
+
 def test_tactical_breakout_volume_baseline_and_confirmation():
     # Construct 50 days of data
-    dates = pd.date_range(end=datetime.now(timezone.utc), periods=50, freq="B")
+    dates = _get_test_dates()
     df = pd.DataFrame(index=dates)
     df["Close"] = [100.0] * 49 + [102.0]
     df["High"] = [102.0] * 50
@@ -31,7 +38,7 @@ def test_tactical_breakout_volume_baseline_and_confirmation():
 
 
 def test_tactical_pullback_strict_interval():
-    dates = pd.date_range(end=datetime.now(timezone.utc), periods=50, freq="B")
+    dates = _get_test_dates()
     df = pd.DataFrame(index=dates)
     df["Close"] = [100.0] * 50
     df["High"] = [105.0] * 50

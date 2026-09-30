@@ -1,23 +1,136 @@
 import { useState, useMemo } from 'react'
-import type { PerformanceSnapshotDTO } from '../../api/types'
+import type { PerformanceSnapshotDTO, ActualHoldingDTO } from '../../api/types'
 import { formatTHB } from '../../utils/formatters'
+import { CalendarHeatmap, type HeatmapDay } from '../charts/CalendarHeatmap'
+import { TreemapChart, type TreemapItem } from '../charts/TreemapChart'
+import { StackedAreaChart, type StackedAreaPoint, type StackedAreaCategory } from '../charts/StackedAreaChart'
 
 interface Props {
   performanceRows: PerformanceSnapshotDTO[]
   daysRange: number | undefined
   onChangeDaysRange: (days: number | undefined) => void
+  holdings?: ActualHoldingDTO[]
+  cashBalanceThb?: number
 }
 
 export default function PortfolioAnalyticsTab({
   performanceRows,
   daysRange,
   onChangeDaysRange,
+  holdings = [],
+  cashBalanceThb,
 }: Props) {
   const [hoverIndex, setHoverIndex] = useState<number | null>(null)
 
   const sortedRows = useMemo(() => {
     return [...performanceRows].sort((a, b) => a.Date.localeCompare(b.Date))
   }, [performanceRows])
+
+  // Heatmap daily performance conversion
+  const heatmapData = useMemo<HeatmapDay[]>(() => {
+    return sortedRows.map((r, idx) => {
+      const prev = idx > 0 ? sortedRows[idx - 1] : null
+      const dailyDelta = prev ? r.Total_NAV - prev.Total_NAV : r.Unrealized_PnL
+      return {
+        date: r.Date,
+        value: dailyDelta,
+        count: 1,
+        label: `NAV: ${formatTHB(r.Total_NAV)}`,
+      }
+    })
+  }, [sortedRows])
+
+  // Current Holdings Asset-Type Treemap
+  const treemapItems = useMemo<TreemapItem[]>(() => {
+    const items: TreemapItem[] = []
+    if (holdings && holdings.length > 0) {
+      holdings.forEach((h) => {
+        const val = h.market_value_thb || 0
+        if (val > 0) {
+          items.push({
+            id: h.symbol,
+            label: h.symbol,
+            value: val,
+            group: h.asset_type || 'Other',
+            return_pct: h.unrealized_pnl_percent ?? undefined,
+          })
+        }
+      })
+    }
+
+    const cash =
+      cashBalanceThb ??
+      (sortedRows.length > 0 ? sortedRows[sortedRows.length - 1]?.Cash_Balance : 0)
+    if (cash && cash > 0) {
+      items.push({
+        id: 'cash_thb',
+        label: 'Cash (THB)',
+        value: cash,
+        group: 'Cash',
+        return_pct: 0,
+        color: '#06b6d4',
+      })
+    }
+
+    return items
+  }, [holdings, cashBalanceThb, sortedRows])
+
+  // Historical Asset-Class Allocation (StackedAreaChart)
+  const { historicalAllocationData, allocationCategories, hasSufficientBreakdown, coverageWarnings } = useMemo(() => {
+    const rowsWithBreakdown = sortedRows.filter(
+      (r) =>
+        r.Asset_Class_Values_THB &&
+        typeof r.Asset_Class_Values_THB === 'object' &&
+        Object.keys(r.Asset_Class_Values_THB).length > 0
+    )
+
+    const warnings: string[] = []
+    rowsWithBreakdown.forEach((r) => {
+      if (r.coverage_warning) {
+        warnings.push(`${r.Date}: ${r.coverage_warning}`)
+      }
+    })
+
+    const categoryKeySet = new Set<string>()
+    rowsWithBreakdown.forEach((r) => {
+      Object.keys(r.Asset_Class_Values_THB!).forEach((k) => categoryKeySet.add(k))
+    })
+
+    const CATEGORY_COLORS: Record<string, string> = {
+      equity: '#3b82f6',
+      stock: '#3b82f6',
+      etf: '#0284c7',
+      cash: '#06b6d4',
+      fund: '#8b5cf6',
+      crypto: '#f59e0b',
+      bond: '#10b981',
+      other: '#64748b',
+    }
+
+    const categories: StackedAreaCategory[] = Array.from(categoryKeySet).map((cat, idx) => {
+      const lower = cat.toLowerCase()
+      const color =
+        CATEGORY_COLORS[lower] ||
+        ['#3b82f6', '#06b6d4', '#8b5cf6', '#10b981', '#f59e0b', '#ec4899', '#64748b'][idx % 7]!
+      return {
+        key: cat,
+        label: cat.toUpperCase(),
+        color,
+      }
+    })
+
+    const data: StackedAreaPoint[] = rowsWithBreakdown.map((r) => ({
+      date: r.Date,
+      values_by_category: r.Asset_Class_Values_THB!,
+    }))
+
+    return {
+      historicalAllocationData: data,
+      allocationCategories: categories,
+      hasSufficientBreakdown: data.length >= 2,
+      coverageWarnings: warnings,
+    }
+  }, [sortedRows])
 
   // Chart dimensions & calculations
   const width = 760
@@ -290,6 +403,57 @@ export default function PortfolioAnalyticsTab({
           </div>
         )}
       </div>
+
+      {/* Portfolio Asset-Type Treemap (Current Holdings) */}
+      <TreemapChart
+        items={treemapItems}
+        title="Asset-Type Allocation (Current Holdings)"
+        subtitle="Current asset-type distribution from portfolio holdings. Sector exposure omitted until verified constituent taxonomy dataset is integrated."
+        unit="THB"
+        height={320}
+      />
+
+      {/* Historical Asset-Class Allocation (StackedAreaChart) */}
+      <div className="space-y-3">
+        {coverageWarnings.length > 0 && (
+          <div className="rounded-xl border border-amber-200 bg-amber-50/80 p-3 text-xs text-amber-800">
+            <span className="font-bold">⚠️ Coverage Warning:</span> บางวันมียอดรวม Asset Class ไม่ตรงกับ Total NAV:
+            <ul className="mt-1 list-disc pl-5 font-mono text-[11px]">
+              {coverageWarnings.slice(0, 3).map((w, i) => (
+                <li key={i}>{w}</li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        {hasSufficientBreakdown ? (
+          <StackedAreaChart
+            data={historicalAllocationData}
+            categories={allocationCategories}
+            title="Historical Asset-Class Allocation"
+            subtitle="Historical asset-class breakdown recorded from new snapshots onwards. Toggle between absolute THB and 100% normalized mode."
+            unit="THB"
+            height={320}
+            defaultMode="absolute"
+          />
+        ) : (
+          <div className="rounded-2xl border border-sky-100 bg-panel p-6 shadow-sm text-center">
+            <h4 className="text-sm font-bold text-zinc-900">Historical Asset-Class Allocation</h4>
+            <p className="mt-2 text-xs text-zinc-500 max-w-lg mx-auto">
+              ระบบบันทึกประวัติการกระจายสินทรัพย์ (Asset-Class Breakdown) ตั้งแต่ snapshot ปัจจุบันเป็นต้นไป สำหรับ snapshot ย้อนหลังที่ไม่มีข้อมูลแยกสินทรัพย์จะแสดงเป็นช่องว่าง (gap) ตามหลักความถูกต้องของข้อมูลโดยไม่ทำการประมาณค่าหรือ backfill จาก holdings ปัจจุบัน
+            </p>
+          </div>
+        )}
+      </div>
+
+      {/* Trading Performance Calendar Heatmap */}
+      <CalendarHeatmap
+        data={heatmapData}
+        title="Trading Performance & Daily NAV Heatmap"
+        subtitle="Daily portfolio return intensity, win rates, and consistency calendar"
+        unit="฿"
+        colorScheme="pnl"
+      />
 
       {/* Performance Table (ย้ายมาอยู่ใต้อาณาบริเวณกราฟ) */}
       <div className="rounded-2xl border border-sky-100 bg-panel shadow-sm overflow-hidden">

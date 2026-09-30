@@ -838,4 +838,97 @@ export const api = {
 
   getNotebookLMStatus: (jobId: string) =>
     request<NotebookLMStatusDTO>(`/api/notebooklm/status/${encodeURIComponent(jobId)}`),
+
+  // ---------------------------------------------------------
+  // Terminal V2 Institutional Market Intelligence (Phase 1, 2, 3)
+  // ---------------------------------------------------------
+  getFinancialStress: () =>
+    request<any>('/api/v2/market/macro/financial-stress'),
+
+  getMetalsCot: (commodity: string = 'gold') =>
+    request<any>(`/api/v2/market/commodities/metals/cot?commodity=${encodeURIComponent(commodity)}`),
+
+  getGlobalPolicyRates: () =>
+    request<any>('/api/v2/market/macro/global-policy-rates'),
+
+  getNasdaqConsensus: (symbol: string) =>
+    request<any>(`/api/v2/market/equity/consensus/${encodeURIComponent(symbol)}`),
+
+  getOptionsChain: (symbol: string, expiry?: string) => {
+    const params = expiry ? `?expiry=${encodeURIComponent(expiry)}` : ''
+    return request<import('./types').OptionsChainResponseDTO>(
+      `/api/v2/market/equity/options/${encodeURIComponent(symbol)}${params}`
+    )
+  },
+
+  getOptionsMaxPain: (symbol: string, expiry?: string) => {
+    const params = expiry ? `?expiry=${encodeURIComponent(expiry)}` : ''
+    return request<import('./types').OptionsMaxPainResponseDTO>(
+      `/api/v2/market/equity/max-pain/${encodeURIComponent(symbol)}${params}`
+    )
+  },
+
+  // ---------------------------------------------------------
+  // Terminal V2 Phase 4 Endpoints (Non-Crypto)
+  // ---------------------------------------------------------
+  getCommodityVolatility: (symbol?: string) => {
+    const params = symbol ? `?symbol=${encodeURIComponent(symbol)}` : ''
+    return request<import('./types').CommodityVolSnapshotDTO[]>(
+      `/api/v2/market/commodities/volatility${params}`
+    )
+  },
+
+  getTreasuryAuctionDemand: (securityType: string, securityTerm: string) =>
+    request<import('./types').AuctionDemandSnapshotDTO>(
+      `/api/v2/market/macro/treasury/auction-demand?security_type=${encodeURIComponent(securityType)}&security_term=${encodeURIComponent(securityTerm)}`
+    ),
+
+  getSecFinancials: (symbol: string) =>
+    request<import('./types').SecCompanyFactsSnapshotDTO>(
+      `/api/v2/market/equity/sec/financials/${encodeURIComponent(symbol)}`
+    ),
+
+  getSecInsiderTrades: (symbol: string, limit: number = 20) =>
+    request<import('./types').SecInsiderTradeSnapshotDTO>(
+      `/api/v2/market/equity/sec/insider-trades/${encodeURIComponent(symbol)}?limit=${limit}`
+    ),
+
+  getEquityNewsDiscovery: (symbol: string, limit: number = 15) =>
+    request<import('./types').NewsDiscoverySnapshotDTO>(
+      `/api/v2/market/equity/news/${encodeURIComponent(symbol)}?limit=${limit}`
+    ),
+
+  getNationalDebt: (limit: number = 30) =>
+    request<import('./types').UsNationalDebtDTO[]>(
+      `/api/v2/market/macro/treasury/debt?limit=${limit}`
+    ),
+
+  // ---------------------------------------------------------
+  // Terminal V2 Thailand & Rates Radar
+  // ---------------------------------------------------------
+  getThaiInvestorFlow: (market: string = 'SET') =>
+    request<import('./types').ThaiFundFlowDTO>(
+      `/api/v2/market/thailand/flow?market=${encodeURIComponent(market)}`
+    ),
+
+  getThaiRetailGold: () =>
+    request<import('./types').ThaiRetailGoldDTO>('/api/v2/market/thailand/gold'),
+
+  getThaiMarketValuation: (market: string = 'SET') =>
+    request<import('./types').MarketValuationDTO>(
+      `/api/v2/market/thailand/valuation?market=${encodeURIComponent(market)}`
+    ),
+
+  getThaiMarketBreadth: (market: string = 'SET') =>
+    request<import('./types').MarketBreadthDTO>(
+      `/api/v2/market/thailand/breadth?market=${encodeURIComponent(market)}`
+    ),
+
+  getTreasuryYieldCurve: (month?: string) => {
+    const params = month ? `?month=${encodeURIComponent(month)}` : ''
+    return request<import('./types').TreasuryYieldCurveDTO>(
+      `/api/v2/market/macro/treasury/yield-curve${params}`
+    )
+  },
 }
+

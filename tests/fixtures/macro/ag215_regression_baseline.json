@@ -1,0 +1,134 @@
+{
+  "description": "AG-215 regression baseline fixture isolating BIS rate handling and Thailand microstructure data",
+  "metadata": {
+    "baseline_job_id": "4fb5cd61-1ac7-47d7-9322-c3d6ac7fc0b3",
+    "evaluated_at": "2026-09-27T20:40:00.577825",
+    "version": "1.0.0"
+  },
+  "scenarios": {
+    "ag215_complete": {
+      "policy_rates": [
+        {
+          "country": "US",
+          "rate_value": 5.25,
+          "rate_type": "Federal Funds Target Rate",
+          "effective_date": "2024-07-31",
+          "currency": "USD",
+          "central_bank": "Federal Reserve",
+          "is_stale": false
+        },
+        {
+          "country": "TH",
+          "rate_value": 2.50,
+          "rate_type": "1-Day Bilateral Repo Rate",
+          "effective_date": "2023-09-27",
+          "currency": "THB",
+          "central_bank": "Bank of Thailand",
+          "is_stale": false
+        }
+      ],
+      "is_policy_stale": false,
+      "thai_market": {
+        "foreign_net_mb": -3386.63,
+        "advance_decline_ratio": 1.08,
+        "pe_ratio": 16.0,
+        "pbv_ratio": 1.5,
+        "dividend_yield": 3.96,
+        "gold_bar_sell": 67850.0
+      },
+      "expected_spread_bps": 275.0,
+      "expected_diff_obs_created": true
+    },
+    "missing_th_rate": {
+      "policy_rates": [
+        {
+          "country": "US",
+          "rate_value": 5.25,
+          "rate_type": "Federal Funds Target Rate",
+          "effective_date": "2024-07-31",
+          "currency": "USD",
+          "central_bank": "Federal Reserve",
+          "is_stale": false
+        }
+      ],
+      "is_policy_stale": false,
+      "expected_spread_bps": null,
+      "expected_diff_obs_created": false
+    },
+    "stale_rate": {
+      "policy_rates": [
+        {
+          "country": "US",
+          "rate_value": 5.25,
+          "rate_type": "Federal Funds Target Rate",
+          "effective_date": "2024-07-31",
+          "currency": "USD",
+          "central_bank": "Federal Reserve",
+          "is_stale": false
+        },
+        {
+          "country": "TH",
+          "rate_value": 2.50,
+          "rate_type": "1-Day Bilateral Repo Rate",
+          "effective_date": "2023-09-27",
+          "currency": "THB",
+          "central_bank": "Bank of Thailand",
+          "is_stale": true
+        }
+      ],
+      "is_policy_stale": false,
+      "expected_spread_bps": null,
+      "expected_diff_obs_created": false
+    },
+    "negative_spread": {
+      "policy_rates": [
+        {
+          "country": "US",
+          "rate_value": 2.00,
+          "rate_type": "Federal Funds Target Rate",
+          "effective_date": "2024-07-31",
+          "currency": "USD",
+          "central_bank": "Federal Reserve",
+          "is_stale": false
+        },
+        {
+          "country": "TH",
+          "rate_value": 2.50,
+          "rate_type": "1-Day Bilateral Repo Rate",
+          "effective_date": "2023-09-27",
+          "currency": "THB",
+          "central_bank": "Bank of Thailand",
+          "is_stale": false
+        }
+      ],
+      "is_policy_stale": false,
+      "expected_spread_bps": -50.0,
+      "expected_diff_obs_created": true
+    },
+    "zero_spread": {
+      "policy_rates": [
+        {
+          "country": "US",
+          "rate_value": 2.50,
+          "rate_type": "Federal Funds Target Rate",
+          "effective_date": "2024-07-31",
+          "currency": "USD",
+          "central_bank": "Federal Reserve",
+          "is_stale": false
+        },
+        {
+          "country": "TH",
+          "rate_value": 2.50,
+          "rate_type": "1-Day Bilateral Repo Rate",
+          "effective_date": "2023-09-27",
+          "currency": "THB",
+          "central_bank": "Bank of Thailand",
+          "is_stale": false
+        }
+      ],
+      "is_policy_stale": false,
+      "expected_spread_bps": 0.0,
+      "expected_diff_obs_created": true
+    }
+  }
+}

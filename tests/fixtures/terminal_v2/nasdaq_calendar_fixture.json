@@ -1,0 +1,31 @@
+{
+  "data": {
+    "asOf": "Thu, Nov 19, 2026",
+    "rows": [
+      {
+        "time": "time-after-hours",
+        "symbol": "NVDA",
+        "name": "NVIDIA Corporation",
+        "marketCap": "$3,200,000,000,000",
+        "epsForecast": "$0.75",
+        "noOfEsts": "38",
+        "dateStatus": "confirmed"
+      },
+      {
+        "time": "time-pre-market",
+        "symbol": "SNOW",
+        "name": "Snowflake Inc.",
+        "marketCap": "$45,000,000,000",
+        "epsForecast": "$0.18",
+        "noOfEsts": "24",
+        "dateStatus": "estimated"
+      }
+    ]
+  },
+  "message": null,
+  "status": {
+    "rCode": 200,
+    "bCodeMessage": null,
+    "developerMessage": null
+  }
+}

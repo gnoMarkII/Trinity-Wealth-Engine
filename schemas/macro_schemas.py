@@ -38,7 +38,11 @@ from schemas.warning_registry import (
     HALLUCINATED_ATTRIBUTION_CLEANED,
     SUPPORTING_DATA_MISMATCH,
     MISSING_OBSERVABLE_REFS,
+    GROWTH_EVIDENCE_STALE,
+    FX_SPREAD_DATA_UNAVAILABLE,
+    REGIME_EVIDENCE_OBSERVABLE_INVALID,
 )
+
 from schemas.report_labels import DOWNGRADE_WARNING_IDS, WHY_NOT_HIGH_MESSAGES
 
 class GeographicScope(str, Enum):
@@ -58,6 +62,17 @@ class Region(str, Enum):
     # Country
     THAILAND = "Thailand"
     USA = "USA"
+
+CANONICAL_REGIONS: tuple[str, ...] = (
+    "United States",
+    "Thailand",
+    "Euro Area",
+    "China",
+    "Japan",
+    "India",
+    "Latin America",
+    "Global",
+)
 
 class EconomicIndicator(str, Enum):
     MONETARY_POLICY = "Monetary_Policy"
@@ -109,11 +124,14 @@ class MacroEconomicMatrix(BaseModel):
 # === Macro Intelligence Team Schemas ===
 
 class RegionQuantMetrics(BaseModel):
-    growth_score: float = Field(ge=-1.0, le=1.0, description="-1.0 ถึง 1.0")
-    inflation_score: float = Field(ge=-1.0, le=1.0, description="-1.0 ถึง 1.0")
-    monetary_score: float = Field(ge=-1.0, le=1.0, description="-1.0 ถึง 1.0")
-    economic_state: EconomicState = Field(description="สภาวะเศรษฐกิจ")
-    confidence: float = Field(ge=0.0, le=1.0, description="ความเชื่อมั่น 0.0 - 1.0")
+    growth_score: Optional[float] = Field(default=None, ge=-1.0, le=1.0, description="-1.0 ถึง 1.0 หรือ None หากข้อมูลไม่พอ")
+    inflation_score: Optional[float] = Field(default=None, ge=-1.0, le=1.0, description="-1.0 ถึง 1.0 หรือ None หากข้อมูลไม่พอ")
+    monetary_score: Optional[float] = Field(default=None, ge=-1.0, le=1.0, description="-1.0 ถึง 1.0 หรือ None หากข้อมูลไม่พอ")
+    economic_state: EconomicState = Field(default=EconomicState.UNKNOWN, description="สภาวะเศรษฐกิจ")
+    confidence: float = Field(default=0.0, ge=0.0, le=1.0, description="ความเชื่อมั่น 0.0 - 1.0")
+    coverage: float = Field(default=0.0, ge=0.0, le=1.0, description="Coverage ratio (0.0 to 1.0)")
+    data_gaps: list[str] = Field(default_factory=list, description="Missing indicators")
+    market_stance: Optional[dict[str, Any]] = Field(default=None, description="Market stance for region (e.g. Settrade flow/breadth)")
 
 class MarketObservable(BaseModel):
     observable_id: str = Field(description="Stable ID of observable")
@@ -134,6 +152,13 @@ class MarketObservable(BaseModel):
     calculation_method: str = Field(default="", description="Calculation methodology for derived/valuation metrics")
     input_observable_ids: list[str] = Field(default_factory=list, description="List of input observable IDs used to derive this metric")
     metadata: dict[str, Any] = Field(default_factory=dict, description="Structured metadata for machine-readable derived metrics and statistical values")
+    raw_unit: Optional[str] = Field(default=None, description="Raw unit from provider")
+    normalized_unit: Optional[str] = Field(default=None, description="Normalized canonical unit")
+    transform: Optional[str] = Field(default=None, description="Transformation method")
+    period: Optional[str] = Field(default=None, description="Observation period label")
+    published_at: Optional[str] = Field(default=None, description="Official publication date if available")
+    fetched_at: Optional[str] = Field(default=None, description="Fetch timestamp")
+    status: Literal["verified", "stale", "unverified", "mock", "missing"] = Field(default="verified", description="Data status")
 
     @field_validator("observed_at")
     @classmethod
@@ -147,10 +172,28 @@ class MarketObservable(BaseModel):
 class QuantScore(BaseModel):
     evaluated_at: str = Field(description="ISO format string (ไม่ใช่ datetime object)")
     regions: dict[str, RegionQuantMetrics] = Field(description="Key คือชื่อ Region")
-    global_geopolitics_score: float = Field(ge=-1.0, le=1.0, description="-1.0 ถึง 1.0")
-    recession_probability: float = Field(ge=0.0, le=1.0, description="0.0 - 1.0")
+    global_geopolitics_score: float = Field(default=0.0, ge=-1.0, le=1.0, description="Legacy -1.0 ถึง 1.0")
+    global_risk_sentiment_score: Optional[float] = Field(default=None, ge=-1.0, le=1.0, description="Global market risk sentiment score (-1.0 to 1.0)")
+    recession_probability: Optional[float] = Field(default=None, ge=0.0, le=1.0, description="Legacy 0.0 - 1.0")
+    us_recession_risk_score: Optional[float] = Field(default=None, ge=0.0, le=1.0, description="US recession risk heuristic score (0.0 - 1.0)")
     data_freshness_note: str = Field(description="หมายเหตุความสดใหม่ของข้อมูล")
+    coverage: dict[str, float] = Field(default_factory=dict, description="Data coverage ratio per region")
+    data_gaps: list[str] = Field(default_factory=list, description="Missing required indicators")
+    formula_version: str = Field(default="2.0.0", description="Scoring formula version")
     market_observables: list[MarketObservable] = Field(default_factory=list, description="Structured market and macro observables with provenance")
+
+    @model_validator(mode="after")
+    def sync_legacy_fields(self) -> "QuantScore":
+        if self.us_recession_risk_score is not None and self.recession_probability is None:
+            self.recession_probability = self.us_recession_risk_score
+        elif self.recession_probability is not None and self.us_recession_risk_score is None:
+            self.us_recession_risk_score = self.recession_probability
+
+        if self.global_risk_sentiment_score is not None and self.global_geopolitics_score == 0.0:
+            self.global_geopolitics_score = self.global_risk_sentiment_score
+        elif self.global_geopolitics_score != 0.0 and self.global_risk_sentiment_score is None:
+            self.global_risk_sentiment_score = self.global_geopolitics_score
+        return self
 
 class ThemeCategory(str, Enum):
     POLICY = "policy"
@@ -380,6 +423,10 @@ def _is_allowed_cross_bucket(target_bucket: str | None, obs: "MarketObservable")
         text = (obs.indicator + " " + obs.observable_id).lower()
         if any(k in text for k in ["dollar", "dtwexbgs", "dxy", "usd"]):
             return True
+    if target_bucket == "cash" and obs.asset_bucket == "fixed_income":
+        text = (obs.indicator + " " + obs.observable_id).lower()
+        if any(k in text for k in ["bill", "fedfunds", "sofr", "effr", "rate", "yield", "3m", "13w", "cash", "short"]):
+            return True
     return False
 
 
@@ -445,9 +492,8 @@ def _clean_hallucinated_attributions(text: str) -> str:
 
 
 def _split_supporting_clauses(item: str) -> list[str]:
-    """แตก supporting_data string เป็นท่อนย่อยตาม comma/semicolon
-    เพื่อไม่ให้ตัวเลขจากคนละสถิติ (เช่น Ratio vs Z-score) ถูกเทียบข้ามกัน"""
-    return [c.strip() for c in re.split(r'[,;]', str(item)) if c.strip()]
+    """แตก supporting_data string เป็นท่อนย่อยตาม semicolon หรือ comma ที่ไม่ได้คั่นหลักพัน"""
+    return [c.strip() for c in re.split(r';|,(?!\d)', str(item)) if c.strip()]
 
 
 def _is_excluded_number(num: float) -> bool:
@@ -457,6 +503,24 @@ def _is_excluded_number(num: float) -> bool:
     if num == int(num) and num <= 100:
         return True
     return False
+
+
+def _clean_numbers_from_clause(clause: str) -> list[float]:
+    """สกัดตัวเลขจากข้อความ โดยคัดกรองตัวเลขที่เป็นชื่อดัชนี (เช่น S&P 500, SET 50) ออก และรองรับ comma คั่นหลักพัน"""
+    cleaned = re.sub(
+        r'\b(?:s&p|sp|russell|set|nasdaq|nikkei|ftse|eurostoxx)\s*\d+\b',
+        '',
+        clause,
+        flags=re.IGNORECASE
+    )
+    tokens = re.findall(r'-?\b\d{1,3}(?:,\d{3})*(?:\.\d+)?\b|-?\b\d+(?:\.\d+)?\b', cleaned)
+    nums: list[float] = []
+    for t in tokens:
+        try:
+            nums.append(float(t.replace(",", "")))
+        except ValueError:
+            continue
+    return nums
 
 
 def _validate_supporting_data_against_registry(
@@ -482,6 +546,18 @@ def _validate_supporting_data_against_registry(
         except (ValueError, TypeError):
             continue
 
+    # เก็บค่าจาก observable_refs ที่อ้างอิงชัดเจนไว้ก่อน
+    cited_vals: list[float] = []
+    if observable_refs:
+        for ref_id in observable_refs:
+            ref_obs = observable_registry.get(ref_id)
+            if ref_obs:
+                try:
+                    v_ref = float(str(getattr(ref_obs, "value", "")).replace(",", "").strip())
+                    cited_vals.append(v_ref)
+                except (ValueError, TypeError):
+                    pass
+
     mismatch_found = False
     for item in supporting_data:
         if mismatch_found:
@@ -490,9 +566,7 @@ def _validate_supporting_data_against_registry(
             if mismatch_found:
                 break
             clause_str = clause.lower()
-            nums_in_clause = [
-                float(x.replace(",", "")) for x in re.findall(r'\b\d+(?:\.\d+)?\b', clause)
-            ]
+            nums_in_clause = _clean_numbers_from_clause(clause)
             if not nums_in_clause:
                 continue
 
@@ -506,7 +580,8 @@ def _validate_supporting_data_against_registry(
                     and token not in ("ratio", "the", "and", "for", "from", "with", "market", "equities", "equity")
                 )
             ]
-            if not matched_vals:
+            all_candidate_vals = cited_vals + matched_vals
+            if not all_candidate_vals:
                 continue
 
             for num in nums_in_clause:
@@ -514,8 +589,8 @@ def _validate_supporting_data_against_registry(
                     continue
                 # ถือว่า "ตรง" ถ้าใกล้เคียงกับ indicator ที่ match ได้ตัวใดตัวหนึ่งก็พอ
                 close_to_any = any(
-                    num / abs(v) <= 10.0 and abs(v) / (num if num > 0 else 1e-9) <= 10.0
-                    for v in matched_vals
+                    abs(num - v) < 1e-4 or (abs(num) / abs(v) <= 10.0 and abs(v) / (abs(num) if abs(num) > 0 else 1e-9) <= 10.0)
+                    for v in all_candidate_vals
                 )
                 if not close_to_any:
                     mismatch_found = True
@@ -523,6 +598,47 @@ def _validate_supporting_data_against_registry(
 
     if mismatch_found:
         _add_warning_idempotent(warnings_list, str(WarningMessage(SUPPORTING_DATA_MISMATCH)))
+
+
+def _auto_link_observable_refs(asset: Any, registry: dict[str, Any]) -> None:
+    """Auto-link matching valid observables from registry based on supporting data, bucket, and region."""
+    if getattr(asset, "observable_refs", None):
+        return
+    linked: list[str] = []
+    bucket = (getattr(asset, "asset_bucket", "") or "").lower()
+    reg = (getattr(asset, "region", "Global") or "Global").lower()
+    sd_text = " ".join(getattr(asset, "supporting_data", []) or []).lower()
+
+    # 1. Match by specific indicator tokens / numbers in supporting_data
+    for oid, obs in registry.items():
+        if not getattr(obs, "is_valid", False):
+            continue
+        ind = str(getattr(obs, "indicator", "")).lower()
+        val_str = str(getattr(obs, "value", "")).strip()
+        ind_tokens = [t for t in re.findall(r'[a-z0-9/]+', ind) if len(t) >= 4 and t not in ("rate", "yield", "index", "ratio", "level")]
+        if ind_tokens and all(t in sd_text for t in ind_tokens[:2]):
+            if oid not in linked:
+                linked.append(oid)
+        elif val_str and len(val_str) >= 3 and val_str in sd_text:
+            if oid not in linked:
+                linked.append(oid)
+
+    # 2. If still insufficient (< 2), fallback to bucket & region heuristics
+    if len(linked) < 2:
+        for oid, obs in registry.items():
+            if not getattr(obs, "is_valid", False):
+                continue
+            obs_bucket = getattr(obs, "asset_bucket", "")
+            obs_reg = getattr(obs, "region", "")
+            if bucket and (obs_bucket == bucket or _is_allowed_cross_bucket(bucket, obs)):
+                if reg == "global" or (obs_reg and obs_reg.lower() == reg) or bucket in ("cash", "commodities"):
+                    if oid not in linked:
+                        linked.append(oid)
+            if len(linked) >= 3:
+                break
+
+    if linked:
+        asset.observable_refs = linked
 
 
 
@@ -554,6 +670,7 @@ class AssetStance(str, Enum):
 class AssetAllocationView(BaseModel):
     asset_class: str = Field(description="ชื่อสินทรัพย์เจาะลึกระดับภูมิภาคและสไตล์ เช่น US Equities (AI/Tech Growth), EU Equities (Defensive)")
     asset_bucket: Optional[Literal["equities", "fixed_income", "commodities", "fx", "cash"]] = Field(default=None, description="หมวดหมู่สินทรัพย์หลัก")
+    region: Literal["Global", "US", "Thailand"] = Field(default="Global", description="ภูมิภาคของสินทรัพย์ (Global, US, Thailand)")
     stance: AssetStance = Field(description="มุมมองการจัดสรร")
     rationale: str = Field(description="เหตุผลรองรับ")
     confidence: Literal["high", "medium", "low"] = Field(default="medium", description="ระดับความมั่นใจต่อมุมมองนี้")
@@ -594,6 +711,12 @@ class AssetAllocationView(BaseModel):
             _add_warning_idempotent(self.validation_warnings, str(WarningMessage(ACTIVE_ALLOC_GUARDRAIL)))
 
         ac_lower = str(self.asset_class).lower()
+        if self.region == "Global":
+            if any(k in ac_lower for k in ["set ", "set50", "set100", "thailand", "thai", "gta", "usd/thb", "thb"]):
+                self.region = "Thailand"
+            elif any(k in ac_lower for k in ["us equities", "s&p", "nasdaq", "treasury", "ust ", "us fixed"]):
+                self.region = "US"
+
         is_usd_base = any(k in ac_lower for k in ["usd/thb", "usd vs thb", "ค่าเงินบาท", "เงินบาท", "currenci", "fx"]) and "thb vs usd" not in ac_lower and "thb/usd" not in ac_lower
         if is_usd_base:
             is_baht_weakening = any(k in str(self.rationale).lower() for k in ["บาทอ่อน", "เงินบาทมีแนวโน้มอ่อน", "ดอลลาร์แข็ง", "thb depreciation", "usd appreciation"])
@@ -800,10 +923,13 @@ def _normalize_why_not_high(asset: AssetAllocationView) -> None:
         asset.why_not_high = WHY_NOT_HIGH_MESSAGES["contradiction"]
     elif any(f"[{SOURCE_REF_PENALTY}]" in w for w in warnings):
         asset.why_not_high = WHY_NOT_HIGH_MESSAGES["source_ref_inferred"]
+    elif any(f"[{FX_SPREAD_DATA_UNAVAILABLE}]" in w for w in warnings):
+        asset.why_not_high = WHY_NOT_HIGH_MESSAGES["fx_spread"]
     elif asset.confidence == "low":
         asset.why_not_high = WHY_NOT_HIGH_MESSAGES["low_confidence"]
     else:
         asset.why_not_high = WHY_NOT_HIGH_MESSAGES["default"]
+
 
 
 
@@ -843,6 +969,7 @@ class MacroStrategyDirection(BaseModel):
     stale_data_warnings: list[str] = Field(default_factory=list, description="คำเตือนกรณีพบข้อมูลล่าช้าหรือหมดอายุ")
     regime_probabilities: dict[str, Any] = Field(default_factory=dict, description="การกระจายความน่าจะเป็นของสภาวะเศรษฐกิจ")
     regime_evidence: list[RegimeEvidenceComponent] = Field(default_factory=list, description="หลักฐานรองรับสภาวะเศรษฐกิจใน 5 มิติ")
+    thailand_market_stance: Optional[dict[str, Any]] = Field(default=None, description="Thailand Market Stance (Flow, Breadth, Valuation, Gold)")
 
     @field_validator("time_horizon", mode="before")
     @classmethod
@@ -855,6 +982,17 @@ class MacroStrategyDirection(BaseModel):
         """Inject registry Explicitly และรันการตรวจสอบ Guardrail ใหม่ทั้งหมด"""
         data = self.model_dump()
         data["observable_registry"] = registry
+        data["validation_warnings"] = [
+            w for w in data.get("validation_warnings", [])
+            if "SOURCE_REF_PENALTY" not in str(w)
+        ]
+        for a in data.get("asset_allocation", []):
+            a["validation_warnings"] = [
+                w for w in a.get("validation_warnings", [])
+                if "MISSING_OBSERVABLE_REFS" not in str(w)
+                and "SUPPORTING_DATA_MISMATCH" not in str(w)
+                and "SOURCE_REF_PENALTY" not in str(w)
+            ]
         return type(self).model_validate(data)
 
     @model_validator(mode='after')
@@ -864,6 +1002,8 @@ class MacroStrategyDirection(BaseModel):
         cleaned_att = (old_cr != self.conviction_rationale)
 
         for a in self.asset_allocation:
+            if self.observable_registry and not a.observable_refs:
+                _auto_link_observable_refs(a, self.observable_registry)
             old_r = a.rationale
             a.rationale = _clean_hallucinated_attributions(a.rationale)
             a.supporting_data = [_clean_hallucinated_attributions(sd) for sd in a.supporting_data]
@@ -904,6 +1044,42 @@ class MacroStrategyDirection(BaseModel):
             for obs in self.observable_registry.values():
                 if obs.is_valid and obs.source_file and obs.source_file not in self.source_files:
                     self.source_files.append(obs.source_file)
+
+        # AG-215: Validate regime evidence against observable_registry
+        if self.observable_registry:
+            for ev in getattr(self, "regime_evidence", []):
+                cleaned_refs = []
+                dropped_invalid_refs = []
+                for ref in getattr(ev, "observable_refs", []) or []:
+                    obs = self.observable_registry.get(ref)
+                    if obs and getattr(obs, "is_valid", False):
+                        cleaned_refs.append(ref)
+                    else:
+                        dropped_invalid_refs.append(ref)
+                ev.observable_refs = cleaned_refs
+                for drop_ref in dropped_invalid_refs:
+                    if getattr(ev, "dimension", "").lower() == "growth":
+                        _add_warning_idempotent(self.validation_warnings, str(WarningMessage(GROWTH_EVIDENCE_STALE, {"indicator": drop_ref})))
+                    else:
+                        _add_warning_idempotent(self.validation_warnings, str(WarningMessage(REGIME_EVIDENCE_OBSERVABLE_INVALID, {"dimension": getattr(ev, "dimension", ""), "obs_id": drop_ref})))
+
+                # Check Growth evidence specifically for RSAFS when RSAFS is invalid/stale
+                if getattr(ev, "dimension", "").lower() == "growth":
+                    rsafs_obs = self.observable_registry.get("obs_rsafs")
+                    if rsafs_obs is not None and not getattr(rsafs_obs, "is_valid", False):
+                        if re.search(r'\b(rsafs|retail sales|ยอดค้าปลีก)\b', getattr(ev, "evidence", ""), re.IGNORECASE):
+                            _add_warning_idempotent(self.validation_warnings, str(WarningMessage(GROWTH_EVIDENCE_STALE, {"indicator": "obs_rsafs"})))
+                            ev.evidence = re.sub(r'\(?\b(rsafs|retail sales|ยอดค้าปลีก)[^,;\.\)]*[\d\.\-%]+[^,;\.\)]*\)?', '', ev.evidence, flags=re.IGNORECASE).strip()
+                            if not ev.observable_refs:
+                                ev.confidence = "low"
+                                if not ev.evidence:
+                                    ev.evidence = "ไม่มีข้อมูล Growth ที่ผ่านการตรวจสอบความถูกต้องในรอบนี้"
+
+                # Update source_refs from valid observable_refs
+                if ev.observable_refs:
+                    valid_ev_files = _source_files_from_observable_refs(ev.observable_refs, self.observable_registry)
+                    if valid_ev_files:
+                        ev.source_refs = sorted(list(set(ev.source_refs or []) | set(valid_ev_files)))
 
         was_stale = any(
             "STALE_DATA_DEGRADATION" in str(w) or "ข้อมูลล่าช้า" in str(w) or "Stale Data Degradation:" in str(w)
@@ -960,9 +1136,60 @@ class MacroStrategyDirection(BaseModel):
                 if was_single and a.confidence == "medium" and not _asset_has_downgrade_warning(a):
                     a.confidence = "high"
 
+        # AG-215: Check whether valid policy rate spread observable exists in registry
+        has_valid_us_th_spread = False
+        if self.observable_registry:
+            for oid, obs in self.observable_registry.items():
+                if getattr(obs, "is_valid", False):
+                    if oid == "obs_diff_us_th_policy_rate_bis" or ("diff" in oid and "policy_rate" in oid and "th" in oid):
+                        has_valid_us_th_spread = True
+                        break
+
+        spread_pattern = re.compile(r'(ส่วนต่าง(อัตรา)?ดอกเบี้ย(นโยบาย)?|policy (rate )?spread|rate differential|fed[-–]bot|bot[-–]fed|ส่วนต่าง fed)', re.IGNORECASE)
+        spread_claim_pattern = re.compile(r'(\+?\d+([.,]\d+)?\s*(?:bps|%|จุด)|(?:กว้าง|แคบ|อยู่ที่|ประมาณ)\s*\+?\d+)', re.IGNORECASE)
+
+        if not has_valid_us_th_spread:
+            for a in self.asset_allocation:
+                bucket = (getattr(a, "asset_bucket", "") or "").lower()
+                aclass = (getattr(a, "asset_class", "") or "").lower()
+                is_fx = (bucket == "fx") or ("fx" in aclass) or ("thb" in aclass) or ("usd" in aclass) or ("currency" in aclass)
+
+                claims_spread = (
+                    bool(spread_pattern.search(a.rationale or ""))
+                    or any(spread_pattern.search(str(sd)) for sd in a.supporting_data)
+                )
+                if is_fx and claims_spread:
+                    cleaned_rat = a.rationale or ""
+                    cleaned_rat = re.sub(r'(\+?\d+([.,]\d+)?\s*(?:bps|%|จุด)|(?:กว้าง|แคบ|อยู่ที่|ประมาณ)\s*\+?\d+([.,]\d+)?\s*(?:bps|%|จุด)?)', '', cleaned_rat, flags=re.IGNORECASE)
+                    cleaned_rat = re.sub(r'\s{2,}', ' ', cleaned_rat).strip()
+                    if "ยังไม่มีข้อมูล" not in cleaned_rat:
+                        cleaned_rat = cleaned_rat.rstrip(". ") + " (ปัจจุบันยังไม่มีข้อมูลส่วนต่างอัตราดอกเบี้ยนโยบายที่ยืนยันได้ จึงยังประเมินส่วนต่างไม่ได้)"
+                    a.rationale = cleaned_rat
+
+
+                    a.supporting_data = [
+                        sd for sd in a.supporting_data
+                        if not (spread_pattern.search(str(sd)) and (spread_claim_pattern.search(str(sd)) or re.search(r'\bbps\b', str(sd), re.IGNORECASE)))
+                    ]
+
+                    if a.confidence == "high":
+                        a.confidence = "medium"
+                    elif a.confidence == "medium":
+                        a.confidence = "low"
+
+                    _add_warning_idempotent(a.validation_warnings, str(WarningMessage(FX_SPREAD_DATA_UNAVAILABLE)))
+                    _add_warning_idempotent(self.validation_warnings, str(WarningMessage(FX_SPREAD_DATA_UNAVAILABLE)))
+                    _normalize_why_not_high(a)
+
         valid_pair_trades = []
         dropped_pair_trades = 0
         for pt in self.pair_trades:
+            if self.observable_registry and pt.observable_refs:
+                pt.observable_refs = [
+                    ref for ref in pt.observable_refs
+                    if ref in self.observable_registry and getattr(self.observable_registry[ref], "is_valid", False)
+                ]
+
             if _has_pair_trade_execution_evidence(pt, self.observable_registry):
                 _downgrade_pair_trade_statistical_overclaim(pt, self.observable_registry)
                 valid_pair_trades.append(pt)

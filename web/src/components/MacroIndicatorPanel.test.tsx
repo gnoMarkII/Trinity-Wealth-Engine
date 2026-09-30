@@ -66,9 +66,17 @@ describe('MacroIndicatorPanel', () => {
     expect(screen.getByRole('button', { name: '3M' })).toHaveAttribute('aria-pressed', 'false')
   })
 
-  it('chart_available=false → ไม่ fetch และแสดงข้อความไม่มีข้อมูลกราฟ', () => {
+  it('chart_available=false มีข้อมูล 1 จุด → ไม่ fetch และแสดงข้อความจุดสังเกตการณ์', () => {
     const spy = vi.spyOn(api, 'getMacroIndicatorSeries').mockResolvedValue(makeSeries(0))
-    render(<MacroIndicatorPanel indicators={[makeIndicator({ chart_available: false })]} />)
+    render(<MacroIndicatorPanel indicators={[makeIndicator({ chart_available: false, display_value: '4.20%', observed_at: '2026-07-10' })]} />)
+
+    expect(spy).not.toHaveBeenCalled()
+    expect(screen.getByText(/มีข้อมูล 1 จุด ณ วันสังเกตการณ์ \(2026-07-10: 4\.20%\) — รอข้อมูลรอบถัดไปเพื่อแสดงแนวโน้มกราฟ/)).toBeInTheDocument()
+  })
+
+  it('chart_available=false ไม่มีข้อมูลตัวเลข → แสดงข้อความไม่มีข้อมูลกราฟ', () => {
+    const spy = vi.spyOn(api, 'getMacroIndicatorSeries').mockResolvedValue(makeSeries(0))
+    render(<MacroIndicatorPanel indicators={[makeIndicator({ chart_available: false, display_value: '—' })]} />)
 
     expect(spy).not.toHaveBeenCalled()
     expect(screen.getByText(/ยังไม่มีข้อมูลเชิงตัวเลขสำหรับสร้างกราฟ/)).toBeInTheDocument()

@@ -1,0 +1,44 @@
+{
+  "data": {
+    "symbol": "NVDA",
+    "earningsSurpriseTable": {
+      "headers": {},
+      "rows": [
+        {
+          "fiscalQtrEnd": "Jul 2026",
+          "dateReported": "8/26/2026",
+          "eps": "0.68",
+          "consensusForecast": "0.64",
+          "percentageSurprise": "6.25"
+        },
+        {
+          "fiscalQtrEnd": "Apr 2026",
+          "dateReported": "5/20/2026",
+          "eps": "0.61",
+          "consensusForecast": "0.56",
+          "percentageSurprise": "8.93"
+        },
+        {
+          "fiscalQtrEnd": "Jan 2026",
+          "dateReported": "2/25/2026",
+          "eps": "0.52",
+          "consensusForecast": "0.49",
+          "percentageSurprise": "6.12"
+        },
+        {
+          "fiscalQtrEnd": "Oct 2025",
+          "dateReported": "11/20/2025",
+          "eps": "0.40",
+          "consensusForecast": "0.38",
+          "percentageSurprise": "5.26"
+        }
+      ]
+    }
+  },
+  "message": null,
+  "status": {
+    "rCode": 200,
+    "bCodeMessage": null,
+    "developerMessage": null
+  }
+}

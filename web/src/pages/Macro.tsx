@@ -1,52 +1,73 @@
-import { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useEffect, useState, useCallback } from 'react'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { api, ApiError } from '../api/client'
-import type { MacroDashboardDTO } from '../api/types'
-import WarningPanel from '../components/WarningPanel'
-import RegimeProbabilityChart from '../components/RegimeProbabilityChart'
-import TradingViewMiniWidget from '../components/TradingViewMiniWidget'
-import PortfolioStanceBar from '../components/PortfolioStanceBar'
+import type {
+  MacroDashboardDTO,
+  TreasuryYieldCurveDTO,
+  CommodityVolSnapshotDTO,
+  AuctionDemandSnapshotDTO,
+  UsNationalDebtDTO,
+  ThaiFundFlowDTO,
+  ThaiRetailGoldDTO,
+  MarketValuationDTO,
+  MarketBreadthDTO,
+} from '../api/types'
 import MacroReferenceDrawer from '../components/MacroReferenceDrawer'
-import MacroContentReferences from '../components/MacroContentReferences'
-import MacroIndicatorPanel from '../components/MacroIndicatorPanel'
 import Toast from '../components/common/Toast'
-import { stanceCategory, type StanceCategory } from '../lib/stance'
-
-const STANCE_CLASS: Record<StanceCategory, string> = {
-  overweight: 'bg-emerald-50 text-emerald-700 border-emerald-200',
-  underweight: 'bg-red-50 text-red-700 border-red-200',
-  neutral: 'bg-surface-strong text-zinc-700 border-edge',
-}
-
-function stanceClass(stance: string): string {
-  return STANCE_CLASS[stanceCategory(stance)]
-}
-
-function confidenceBadgeClass(confidence: string): string {
-  const c = confidence.toLowerCase()
-  if (c === 'high') return 'border-emerald-200 bg-emerald-50 text-emerald-700'
-  if (c === 'medium') return 'border-amber-200 bg-amber-50 text-amber-700'
-  if (c === 'low') return 'border-red-200 bg-red-50 text-red-700'
-  return 'border-edge bg-surface text-zinc-600'
-}
-
-const cardClass =
-  'space-y-3 rounded-xl border border-sky-100 bg-panel p-4 shadow-[0_8px_26px_rgba(14,165,233,0.05)] backdrop-blur-sm transition-all duration-150 hover:border-sky-200 hover:shadow-md'
-
-type StanceFilter = 'all' | 'overweight' | 'underweight' | 'neutral'
-
-const STANCE_FILTER_TABS: { key: StanceFilter; label: string }[] = [
-  { key: 'all', label: 'ทั้งหมด' },
-  { key: 'overweight', label: 'Overweight' },
-  { key: 'underweight', label: 'Underweight' },
-  { key: 'neutral', label: 'Neutral' },
-]
+import { MacroRegionTabs, type MacroRegionTab } from '../components/macro/cockpit/MacroRegionTabs'
+import { UsMacroSection } from '../components/macro/cockpit/UsMacroSection'
+import { ThailandMacroSection } from '../components/macro/cockpit/ThailandMacroSection'
+import { CrossBorderSection } from '../components/macro/cockpit/CrossBorderSection'
+import { SourceProvenanceBadge } from '../components/macro/cockpit/SourceProvenanceBadge'
 
 export default function Macro() {
   const navigate = useNavigate()
-  const [data, setData] = useState<MacroDashboardDTO | null>(null)
-  const [error, setError] = useState<string | null>(null)
-  const [stanceFilter, setStanceFilter] = useState<StanceFilter>('all')
+  const [searchParams, setSearchParams] = useSearchParams()
+
+  // 1. Tab state synced with URL query (?tab=us | th | cross-border)
+  const tabParam = searchParams.get('tab') as MacroRegionTab | null
+  const activeTab: MacroRegionTab =
+    tabParam && ['us', 'th', 'cross-border'].includes(tabParam) ? tabParam : 'us'
+
+  const handleTabChange = (nextTab: MacroRegionTab) => {
+    setSearchParams({ tab: nextTab }, { replace: true })
+  }
+
+  // 2. Independent AI Dashboard state (isolated from market provider failures)
+  const [aiData, setAiData] = useState<MacroDashboardDTO | null>(null)
+  const [aiLoading, setAiLoading] = useState(false)
+  const [aiError, setAiError] = useState<string | null>(null)
+
+  // 3. Independent Market Provider states
+  const [yieldCurve, setYieldCurve] = useState<TreasuryYieldCurveDTO | null>(null)
+  const [loadingYield, setLoadingYield] = useState(false)
+  const [errorYield, setErrorYield] = useState<string | null>(null)
+
+  const [financialStress, setFinancialStress] = useState<any | null>(null)
+  const [loadingStress, setLoadingStress] = useState(false)
+  const [errorStress, setErrorStress] = useState<string | null>(null)
+
+  const [metalsCot, setMetalsCot] = useState<any | null>(null)
+  const [globalPolicyRates, setGlobalPolicyRates] = useState<any | null>(null)
+  const [loadingPolicy, setLoadingPolicy] = useState(false)
+  const [errorPolicy, setErrorPolicy] = useState<string | null>(null)
+
+  const [commodityVol, setCommodityVol] = useState<CommodityVolSnapshotDTO[] | null>(null)
+  const [auctionDemandNote, setAuctionDemandNote] = useState<AuctionDemandSnapshotDTO | null>(null)
+  const [auctionDemandBill, setAuctionDemandBill] = useState<AuctionDemandSnapshotDTO | null>(null)
+  const [nationalDebt, setNationalDebt] = useState<UsNationalDebtDTO[] | null>(null)
+
+  // Thai Market Observables
+  const [flow, setFlow] = useState<ThaiFundFlowDTO | null>(null)
+  const [gold, setGold] = useState<ThaiRetailGoldDTO | null>(null)
+  const [valuation, setValuation] = useState<MarketValuationDTO | null>(null)
+  const [breadth, setBreadth] = useState<MarketBreadthDTO | null>(null)
+  const [loadingThai, setLoadingThai] = useState(false)
+  const [errorThai, setErrorThai] = useState<string | null>(null)
+
+  // Metadata & UI states
+  const [lastMarketFetched, setLastMarketFetched] = useState<string | null>(null)
+  const [isRefreshingMarket, setIsRefreshingMarket] = useState(false)
   const [isRefDrawerOpen, setIsRefDrawerOpen] = useState(false)
   const [updating, setUpdating] = useState(false)
   const [toastState, setToastState] = useState<{
@@ -56,19 +77,112 @@ export default function Macro() {
     type?: 'info' | 'success' | 'error'
   } | null>(null)
 
-  const handleStanceFilterChange = (nextFilter: StanceFilter) => {
-    if (typeof document !== 'undefined' && 'startViewTransition' in document) {
-      document.startViewTransition(() => setStanceFilter(nextFilter))
-    } else {
-      setStanceFilter(nextFilter)
+  // Fetch AI Report independently
+  const fetchAiDashboard = useCallback(async () => {
+    setAiLoading(true)
+    setAiError(null)
+    try {
+      const res = await api.getMacroDashboard()
+      setAiData(res)
+    } catch (e) {
+      setAiError(e instanceof ApiError ? e.message : 'ยังไม่มีบทวิเคราะห์ภาพรวมเศรษฐกิจในคลัง')
+    } finally {
+      setAiLoading(false)
     }
-  }
+  }, [])
 
+  // Quick Refresh function for market observables without modifying AI evaluated_at
+  const fetchMarketObservables = useCallback(async () => {
+    setIsRefreshingMarket(true)
+    setLoadingYield(true)
+    setLoadingStress(true)
+    setLoadingPolicy(true)
+    setLoadingThai(true)
+
+    // Parallel calls with individual settled status
+    const [yc, fsi, cot, bis, vol, aucNote, aucBill, debt, thFlow, thGold, thVal, thBreadth] =
+      await Promise.allSettled([
+        api.getTreasuryYieldCurve?.(),
+        api.getFinancialStress?.(),
+        api.getMetalsCot?.('gold'),
+        api.getGlobalPolicyRates?.(),
+        api.getCommodityVolatility?.(),
+        api.getTreasuryAuctionDemand?.('Note', '10-Year'),
+        api.getTreasuryAuctionDemand?.('Bill', '13-Week'),
+        api.getNationalDebt?.(30),
+        api.getThaiInvestorFlow?.('SET'),
+        api.getThaiRetailGold?.(),
+        api.getThaiMarketValuation?.('SET'),
+        api.getThaiMarketBreadth?.('SET'),
+      ])
+
+    if (yc.status === 'fulfilled') {
+      setYieldCurve(yc.value)
+      setErrorYield(null)
+    } else {
+      setErrorYield('ไม่สามารถเชื่อมต่อ US Treasury Yield Curve ได้')
+    }
+    setLoadingYield(false)
+
+    if (fsi.status === 'fulfilled') {
+      setFinancialStress(fsi.value)
+      setErrorStress(null)
+    } else {
+      setErrorStress('ไม่สามารถเชื่อมต่อ OFR Financial Stress Index ได้')
+    }
+    setLoadingStress(false)
+
+    if (cot.status === 'fulfilled') setMetalsCot(cot.value)
+    if (vol.status === 'fulfilled') setCommodityVol(vol.value)
+    if (aucNote.status === 'fulfilled') setAuctionDemandNote(aucNote.value)
+    if (aucBill.status === 'fulfilled') setAuctionDemandBill(aucBill.value)
+    if (debt.status === 'fulfilled') setNationalDebt(debt.value)
+
+    if (bis.status === 'fulfilled') {
+      setGlobalPolicyRates(bis.value)
+      setErrorPolicy(null)
+    } else {
+      setErrorPolicy('ไม่สามารถเชื่อมต่ออัตราดอกเบี้ยนโยบาย BIS ได้')
+    }
+    setLoadingPolicy(false)
+
+    // Thai Observables
+    let thaiErrCount = 0
+    if (thFlow.status === 'fulfilled') setFlow(thFlow.value)
+    else thaiErrCount++
+    if (thGold.status === 'fulfilled') setGold(thGold.value)
+    else thaiErrCount++
+    if (thVal.status === 'fulfilled') setValuation(thVal.value)
+    else thaiErrCount++
+    if (thBreadth.status === 'fulfilled') setBreadth(thBreadth.value)
+    else thaiErrCount++
+
+    if (thaiErrCount > 0) {
+      setErrorThai(`มีข้อมูลตลาดไทย ${thaiErrCount} รายการที่ไม่สามารถดึงได้`)
+    } else {
+      setErrorThai(null)
+    }
+    setLoadingThai(false)
+
+    setLastMarketFetched(
+      new Date().toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+    )
+    setIsRefreshingMarket(false)
+  }, [])
+
+  // Initial load
+  useEffect(() => {
+    fetchAiDashboard()
+    fetchMarketObservables()
+  }, [fetchAiDashboard, fetchMarketObservables])
+
+  // Trigger AI Job via Kanban
   const handleUpdateMacro = async () => {
     if (updating) return
     setUpdating(true)
     const cardTitle = 'วิเคราะห์ภาวะเศรษฐกิจมหภาค (Macro Analysis)'
-    const instruction = 'วิเคราะห์ภาวะเศรษฐกิจมหภาค (Macro Intelligence & Regime Analysis) ล่าสุดพร้อมประเมิน Asset Allocation'
+    const instruction =
+      'วิเคราะห์ภาวะเศรษฐกิจมหภาค (Macro Intelligence & Regime Analysis) ล่าสุดพร้อมประเมิน Asset Allocation'
 
     let cardId: string | undefined
     try {
@@ -105,405 +219,146 @@ export default function Macro() {
     }
   }
 
-  useEffect(() => {
-    let cancelled = false
-    api
-      .getMacroDashboard()
-      .then((next) => {
-        if (!cancelled) setData(next)
-      })
-      .catch((e) => {
-        if (!cancelled) setError(e instanceof ApiError ? e.message : 'โหลดข้อมูลเศรษฐกิจมหภาคไม่สำเร็จ')
-      })
-    return () => {
-      cancelled = true
-    }
-  }, [])
-
-  if (error) return <p className="text-sm text-red-600">{error}</p>
-  if (!data) {
-    return (
-      <div className="animate-page-in space-y-6 pb-10">
-        <div className="animate-shimmer h-40 rounded-2xl border border-edge" />
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
-          <div className="space-y-6 lg:col-span-5">
-            <div className="animate-shimmer h-64 rounded-xl border border-edge" />
-            <div className="animate-shimmer h-40 rounded-xl border border-edge" />
-          </div>
-          <div className="space-y-6 lg:col-span-7">
-            <div className="animate-shimmer h-96 rounded-xl border border-edge" />
-          </div>
-        </div>
-      </div>
-    )
-  }
-
-  const assetAllocations = data.asset_allocation ?? []
-  const pairTrades = data.pair_trades ?? []
-  const riskScenarios = data.risk_scenarios ?? []
-
-  const filteredAssets = assetAllocations.filter(
-    (a) => stanceFilter === 'all' || stanceCategory(a.stance) === stanceFilter
-  )
-
   return (
-    <div className="animate-page-in space-y-6 pb-10">
-      {/* Executive Summary Banner */}
-      <div className="rounded-2xl border border-sky-100 bg-gradient-to-br from-white/90 via-sky-50/60 to-orange-50/55 p-6 shadow-[0_10px_35px_rgba(14,165,233,0.06)] backdrop-blur-sm">
+    <div className="animate-page-in space-y-6 pb-12">
+      {/* 1. Cockpit Header: Title, Controls & Provenance Legend */}
+      <div className="rounded-2xl border border-sky-100 bg-gradient-to-br from-white/95 via-sky-50/40 to-slate-50/60 p-6 shadow-sm">
         <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-          <div className="space-y-2">
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="rounded-lg border border-zinc-900 bg-zinc-900 px-3 py-1 text-sm font-bold tracking-wide text-white">
-                {data.overall_regime}
-              </span>
-              {data.conviction_level && (
-                <span className="rounded-lg border border-amber-300 bg-amber-100/80 px-2.5 py-1 text-xs font-semibold uppercase text-amber-900">
-                  Conviction: {data.conviction_level}
-                </span>
-              )}
-              {data.quant_narrative_alignment && (
-                <span className="rounded-lg border border-edge bg-panel px-2.5 py-1 text-xs font-medium text-zinc-700">
-                  Alignment: {data.quant_narrative_alignment}
-                </span>
-              )}
-              <span className="rounded-lg border border-edge bg-panel px-2.5 py-1 text-xs font-medium text-zinc-600">
-                Horizon: {data.time_horizon}
-              </span>
+          <div className="space-y-1.5">
+            <div className="flex items-center gap-2">
+              <span className="text-2xl">🧭</span>
+              <h1 className="text-xl font-bold tracking-tight text-zinc-900">
+                Macro Cockpit (ห้องควบคุมภาวะเศรษฐกิจมหภาค)
+              </h1>
             </div>
+            <p className="text-xs text-zinc-500 max-w-2xl leading-relaxed">
+              แยกแยะบริบทอย่างชัดเจนระหว่างสหรัฐฯ ไทย และความเชื่อมโยงข้ามพรมแดน พร้อมระบุแหล่งกำเนิดและวันสังเกตการณ์จริงในทุกข้อมูล
+            </p>
 
-            {data.conviction_rationale && (
-              <p className="max-w-4xl text-sm leading-relaxed text-zinc-700">{data.conviction_rationale}</p>
-            )}
-
-            {data.focus_themes && data.focus_themes.length > 0 && (
-              <div className="flex flex-wrap items-center gap-1.5 pt-1">
-                <span className="text-xs font-medium text-zinc-500">Focus Themes:</span>
-                {data.focus_themes.map((theme, i) => (
-                  <span
-                    key={i}
-                    className="rounded-full border border-edge bg-surface-strong px-2.5 py-0.5 text-xs font-medium text-zinc-700"
-                  >
-                    {theme}
-                  </span>
-                ))}
-              </div>
-            )}
+            {/* Provenance Meaning Bar */}
+            <div className="pt-2 flex flex-wrap items-center gap-1.5 text-[11px]">
+              <span className="text-zinc-400 font-semibold mr-1">สัญลักษณ์แหล่งที่มา:</span>
+              <SourceProvenanceBadge origin="provider" compact />
+              <SourceProvenanceBadge origin="deterministic" compact />
+              <SourceProvenanceBadge origin="ai" compact />
+              <SourceProvenanceBadge origin="external" compact />
+            </div>
           </div>
 
-          <div className="flex flex-col items-end justify-between gap-2">
-            <div className="flex flex-wrap items-center justify-end gap-2">
+          {/* Action Buttons */}
+          <div className="flex flex-col items-end gap-2 shrink-0">
+            <div className="flex flex-wrap items-center gap-2">
               <button
+                type="button"
+                onClick={fetchMarketObservables}
+                disabled={isRefreshingMarket}
+                className="flex items-center gap-1.5 rounded-xl border border-sky-200 bg-white px-3.5 py-2 text-xs font-semibold text-sky-700 shadow-xs transition-all hover:bg-sky-50 disabled:opacity-50"
+                title="ดึงข้อมูลตลาดสดล่าสุด (ไม่รัน AI)"
+              >
+                <span>{isRefreshingMarket ? '⏳' : '🔄'}</span>
+                <span>{isRefreshingMarket ? 'กำลังดึง...' : 'รีเฟรชข้อมูลตลาด'}</span>
+              </button>
+
+              <button
+                type="button"
                 onClick={handleUpdateMacro}
                 disabled={updating}
-                className="flex items-center gap-1.5 rounded-xl border border-sky-200 bg-sky-50 px-3.5 py-2 text-xs font-semibold text-sky-700 shadow-sm transition-all hover:bg-sky-100 disabled:opacity-50"
-                title="สร้างการ์ดใหม่ใน Kanban และเริ่มวิเคราะห์ภาวะเศรษฐกิจมหภาค"
+                className="flex items-center gap-1.5 rounded-xl border border-sky-200 bg-sky-50 px-3.5 py-2 text-xs font-semibold text-sky-700 shadow-xs transition-all hover:bg-sky-100 disabled:opacity-50"
+                title="สร้างการ์ดใหม่ใน Kanban และเริ่มวิเคราะห์ภาวะเศรษฐกิจมหภาคด้วย AI"
               >
-                <span>{updating ? '⏳' : '🔄'}</span>
+                <span>{updating ? '⏳' : '🧠'}</span>
                 <span>{updating ? 'กำลังสั่งงาน...' : 'อัปเดตบทวิเคราะห์'}</span>
               </button>
 
               <button
+                type="button"
                 onClick={() => setIsRefDrawerOpen(true)}
-                className="flex items-center gap-1.5 rounded-xl border border-edge bg-panel px-3.5 py-2 text-xs font-semibold text-zinc-800 shadow-sm transition-all hover:bg-surface-strong hover:shadow"
+                className="flex items-center gap-1.5 rounded-xl border border-edge bg-panel px-3.5 py-2 text-xs font-semibold text-zinc-800 shadow-xs transition-all hover:bg-surface-strong hover:shadow"
+                title="เปิดเอกสารอ้างอิงและตัวชี้วัด"
               >
                 <span>📚</span>
-                <span>แหล่งอ้างอิงข้อมูล (References)</span>
+                <span>References</span>
               </button>
             </div>
-            {data.evaluated_at && (
-              <div className="text-right text-xs text-zinc-400">
-                Evaluated: {data.evaluated_at}
-              </div>
+
+            {lastMarketFetched && (
+              <span className="text-[10px] text-zinc-400 font-mono">
+                ดึงตลาดล่าสุด: {lastMarketFetched}
+              </span>
             )}
           </div>
         </div>
       </div>
 
-      <WarningPanel warnings={data.warnings} />
+      {/* 2. Region Navigation (3 Tabs) */}
+      <MacroRegionTabs activeTab={activeTab} onChange={handleTabChange} />
 
-      {data.dashboard_indicators && data.dashboard_indicators.length > 0 && (
-        <MacroIndicatorPanel indicators={data.dashboard_indicators} />
+      {/* 3. Tab Contents with Error Isolation */}
+      {activeTab === 'us' && (
+        <UsMacroSection
+          yieldCurve={yieldCurve}
+          financialStress={financialStress}
+          metalsCot={metalsCot}
+          commodityVol={commodityVol}
+          auctionDemandNote={auctionDemandNote}
+          auctionDemandBill={auctionDemandBill}
+          nationalDebt={nationalDebt}
+          aiData={aiData}
+          aiLoading={aiLoading}
+          aiError={aiError}
+          loadingYield={loadingYield}
+          loadingStress={loadingStress}
+          errorYield={errorYield}
+          errorStress={errorStress}
+        />
       )}
 
-      {data.report_references && data.report_references.length > 0 && (
-        <MacroContentReferences references={data.report_references} />
+      {activeTab === 'th' && (
+        <ThailandMacroSection
+          flow={flow}
+          gold={gold}
+          valuation={valuation}
+          breadth={breadth}
+          aiData={aiData}
+          aiLoading={aiLoading}
+          aiError={aiError}
+          loading={loadingThai}
+          error={errorThai}
+        />
       )}
 
-      {/* 2-Column Responsive Layout: Left (5/12) Macro & Regime | Right (7/12) Strategic Allocation */}
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
-        {/* Left Column: Macro & Regime Analysis */}
-        <div className="space-y-6 lg:col-span-5">
-          <div className="rounded-xl border border-edge bg-panel p-5 shadow-sm shadow-black/5">
-            <h2 className="mb-4 text-base font-semibold text-zinc-900">Regime Probabilities</h2>
-            <RegimeProbabilityChart probabilities={data.regime_probabilities} />
-          </div>
-
-          {data.key_assumptions && data.key_assumptions.length > 0 && (
-            <div className="rounded-xl border border-edge bg-panel p-5 shadow-sm shadow-black/5">
-              <h2 className="mb-3 text-base font-semibold text-zinc-900">Key Macro Assumptions</h2>
-              <ul className="space-y-2 text-sm text-zinc-600">
-                {data.key_assumptions.map((assumption, idx) => (
-                  <li key={idx} className="flex items-start gap-2">
-                    <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-amber-600" />
-                    <span>{assumption}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-
-          {(data.regime_evidence ?? []).length > 0 && (
-            <div className="rounded-xl border border-edge bg-panel p-5 shadow-sm shadow-black/5">
-              <h2 className="mb-3 text-base font-semibold text-zinc-900">5-Dimension Evidence</h2>
-              <div className="space-y-3">
-                {(data.regime_evidence ?? []).map((re, idx) => (
-                  <div key={idx} className="rounded-lg border border-edge bg-zinc-50/60 p-3">
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="text-xs font-semibold uppercase tracking-wide text-zinc-800">
-                        {re.dimension}
-                      </span>
-                      <span
-                        className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold ${confidenceBadgeClass(
-                          re.confidence
-                        )}`}
-                      >
-                        {re.confidence}
-                      </span>
-                    </div>
-                    <div className="mt-1 text-sm font-medium text-zinc-900">{re.signal}</div>
-                    <p className="mt-1 text-xs text-zinc-600">{re.evidence}</p>
-                    {re.conflict && (
-                      <div className="mt-2 rounded bg-red-50 px-2 py-1 text-xs text-red-700">
-                        Conflict: {re.conflict}
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          <div className="rounded-xl border border-edge bg-panel p-5 shadow-sm shadow-black/5">
-            <h2 className="mb-3 text-base font-semibold text-zinc-900">Liquidity & Structural Rate</h2>
-            <TradingViewMiniWidget symbol="TVC:US10Y" title="US 10-Year Treasury Yield" />
-          </div>
-
-          {/* Hedging / Tail Risk Scenarios Section */}
-          {riskScenarios.length > 0 && (
-            <div className="content-auto rounded-xl border border-edge bg-panel p-5 shadow-sm shadow-black/5">
-              <h2 className="text-balance mb-1 text-base font-semibold text-zinc-900">Hedging & Tail Risk Scenarios</h2>
-              <p className="text-pretty mb-4 text-xs text-zinc-500">แผนป้องกันความเสี่ยงและเงื่อนไขการเปิด/ปิดสถานะป้องกัน</p>
-              <div className="grid grid-cols-1 gap-4">
-                {riskScenarios.map((rs, idx) => (
-                  <div key={idx} className={cardClass}>
-                    <h3 className="font-semibold text-zinc-900">{rs.tail_risk}</h3>
-
-                    {rs.mitigation_strategy && (
-                      <p className="text-sm text-zinc-600">{rs.mitigation_strategy}</p>
-                    )}
-
-                    <div className="rounded-lg bg-amber-50/70 p-2.5 text-xs text-amber-900">
-                      <div><span className="font-semibold">Trigger:</span> {rs.trigger_to_activate}</div>
-                      {rs.unwind_or_cover_condition && (
-                        <div className="mt-1"><span className="font-semibold">Unwind:</span> {rs.unwind_or_cover_condition}</div>
-                      )}
-                    </div>
-
-                    <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-zinc-500">
-                      <span>Prob: {rs.probability}</span>
-                      <span>Impact: {rs.impact}</span>
-                      {rs.hedge_size && <span>Size: {rs.hedge_size}</span>}
-                    </div>
-
-                    {rs.early_warning_indicators && rs.early_warning_indicators.length > 0 && (
-                      <div className="space-y-1 rounded-lg bg-surface p-2 text-xs text-zinc-600">
-                        <span className="font-semibold text-zinc-700">Early Warning Indicators:</span>
-                        <ul className="list-inside list-disc">
-                          {rs.early_warning_indicators.map((ewi, k) => (
-                            <li key={k}>{ewi}</li>
-                          ))}
-                        </ul>
-                      </div>
-                    )}
-
-                    {rs.hedge_instruments.length > 0 && (
-                      <p className="text-xs font-medium text-zinc-700">
-                        Hedge Instruments: <span className="text-zinc-600">{rs.hedge_instruments.join(', ')}</span>
-                      </p>
-                    )}
-
-                    {rs.cost_or_tradeoff && (
-                      <p className="text-xs text-zinc-500">Cost/Tradeoff: {rs.cost_or_tradeoff}</p>
-                    )}
-
-                    <WarningPanel warnings={rs.warnings} compact />
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Right Column: Strategic Allocation & Action Plan */}
-        <div className="space-y-6 lg:col-span-7">
-          {/* Cross-Asset Allocation Section */}
-          <div className="rounded-xl border border-edge bg-panel p-5 shadow-sm shadow-black/5">
-            <div className="mb-4 flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
-              <div>
-                <h2 className="text-balance text-base font-semibold text-zinc-900">Cross-Asset Allocation Strategy</h2>
-                <p className="text-pretty text-xs text-zinc-500">คำแนะนำจัดสรรสัดส่วนสินทรัพย์ตามภาพรวมสภาวะเศรษฐกิจ</p>
-              </div>
-              <div className="flex w-fit gap-1 rounded-lg border border-edge bg-surface p-1">
-                {STANCE_FILTER_TABS.map((t) => (
-                  <button
-                    key={t.key}
-                    onClick={() => handleStanceFilterChange(t.key)}
-                    aria-pressed={stanceFilter === t.key}
-                    className={`rounded-md px-2.5 py-1 text-xs font-medium transition-colors ${
-                      stanceFilter === t.key
-                        ? 'bg-zinc-900 text-white shadow-sm'
-                        : 'text-zinc-600 hover:text-zinc-900'
-                    }`}
-                  >
-                    {t.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {assetAllocations.length > 0 && (
-              <div className="mb-5 rounded-xl border border-edge bg-surface p-4">
-                <PortfolioStanceBar allocations={assetAllocations} />
-              </div>
-            )}
-
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              {filteredAssets.map((a, idx) => (
-                <div key={idx} className={cardClass}>
-                  <div className="flex items-start justify-between gap-2">
-                    <div>
-                      <h3 className="font-semibold text-zinc-900">{a.asset_class}</h3>
-                      {a.asset_bucket && (
-                        <span className="text-[11px] font-medium uppercase tracking-wider text-zinc-400">
-                          {a.asset_bucket}
-                        </span>
-                      )}
-                    </div>
-                    <span
-                      className={`rounded-lg border px-2.5 py-0.5 text-xs font-bold uppercase tracking-wide ${stanceClass(
-                        a.stance
-                      )}`}
-                    >
-                      {a.stance}
-                    </span>
-                  </div>
-
-                  <p className="text-pretty text-sm leading-relaxed text-zinc-600">{a.rationale}</p>
-
-                  <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs font-medium text-zinc-500">
-                    <span>Confidence: {a.confidence}</span>
-                    {a.allocation_delta && <span>Delta: {a.allocation_delta}</span>}
-                  </div>
-
-                  {a.supporting_data.length > 0 && (
-                    <ul className="space-y-1 rounded-lg bg-surface p-2.5 text-xs text-zinc-600">
-                      {a.supporting_data.map((sd, j) => (
-                        <li key={j} className="flex items-center gap-1.5">
-                          <span className="h-1 w-1 rounded-full bg-zinc-400" />
-                          <span>{sd}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-
-                  {a.why_not_high && (
-                    <p className="text-xs italic text-amber-700/80">
-                      Why not HIGH: {a.why_not_high}
-                    </p>
-                  )}
-
-                  <WarningPanel warnings={a.warnings} compact />
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Tactical Pair Trades Section */}
-          {pairTrades.length > 0 && (
-            <div className="content-auto rounded-xl border border-edge bg-panel p-5 shadow-sm shadow-black/5">
-              <h2 className="text-balance mb-1 text-base font-semibold text-zinc-900">Tactical Pair Trades</h2>
-              <p className="text-pretty mb-4 text-xs text-zinc-500">กลยุทธ์จับคู่ Long/Short เพื่อสร้างผลตอบแทนสัมพันธ์กับสภาวะตลาด</p>
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                {pairTrades.map((pt, idx) => (
-                  <div key={idx} className={cardClass}>
-                    <div className="flex items-start justify-between gap-2">
-                      <h3 className="text-balance font-semibold text-zinc-900">
-                        Long <span className="text-emerald-600">{pt.long_leg}</span> / Short{' '}
-                        <span className="text-red-600">{pt.short_leg}</span>
-                      </h3>
-                      {pt.confidence && (
-                        <span className="rounded-md bg-surface-strong px-2 py-0.5 text-[10px] font-semibold text-zinc-700">
-                          {pt.confidence}
-                        </span>
-                      )}
-                    </div>
-                    <p className="text-pretty text-sm text-zinc-600">{pt.thesis}</p>
-
-                    {pt.implementation_idea && (
-                      <div className="rounded-lg bg-emerald-50/60 p-2 text-xs font-medium text-emerald-900">
-                        Idea: {pt.implementation_idea}
-                      </div>
-                    )}
-
-                    <div className="space-y-1 rounded-lg bg-surface p-2.5 text-xs text-zinc-600">
-                      {pt.catalyst && <div><span className="font-semibold text-zinc-800">Catalyst:</span> {pt.catalyst}</div>}
-                      {pt.risk && <div><span className="font-semibold text-zinc-800">Key Risk:</span> {pt.risk}</div>}
-                      {pt.entry_trigger && <div><span className="font-semibold text-zinc-800">Entry Trigger:</span> {pt.entry_trigger}</div>}
-                      {pt.stop_loss_trigger && <div><span className="font-semibold text-zinc-800">Stop Loss:</span> {pt.stop_loss_trigger}</div>}
-                      {pt.target_gain_or_rebalance && <div><span className="font-semibold text-zinc-800">Target:</span> {pt.target_gain_or_rebalance}</div>}
-                    </div>
-
-                    <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-zinc-500">
-                      {pt.instrument_proxy && <span>Instrument: {pt.instrument_proxy}</span>}
-                      {pt.hedge_ratio && <span>Ratio: {pt.hedge_ratio}</span>}
-                    </div>
-
-                    {pt.supporting_data.length > 0 && (
-                      <ul className="space-y-1 rounded-lg bg-surface p-2 text-xs text-zinc-500">
-                        {pt.supporting_data.map((sd, j) => (
-                          <li key={j} className="flex items-center gap-1.5">
-                            <span className="h-1 w-1 rounded-full bg-zinc-400" />
-                            <span>{sd}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    )}
-
-                    <WarningPanel warnings={pt.warnings} compact />
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
+      {activeTab === 'cross-border' && (
+        <CrossBorderSection
+          globalPolicyRates={globalPolicyRates}
+          yieldCurve={yieldCurve}
+          flow={flow}
+          aiData={aiData}
+          loadingPolicy={loadingPolicy}
+          errorPolicy={errorPolicy}
+        />
+      )}
 
       {/* Floating Right Side Tab Button */}
-      <button
-        onClick={() => setIsRefDrawerOpen(true)}
-        className="fixed right-0 top-1/3 z-40 flex items-center gap-2 rounded-l-xl border-y border-l border-edge bg-zinc-900 px-3 py-3.5 text-xs font-semibold text-white shadow-xl transition-all hover:bg-zinc-800 hover:pl-4"
-        title="เปิดแท็บแหล่งอ้างอิงและตัวชี้วัด (Reference Drawer)"
-      >
-        <span className="text-sm">📚</span>
-        <span className="writing-vertical tracking-wide">References</span>
-      </button>
+      {aiData && (
+        <button
+          type="button"
+          onClick={() => setIsRefDrawerOpen(true)}
+          className="fixed right-0 top-1/3 z-40 flex items-center gap-2 rounded-l-xl border-y border-l border-edge bg-zinc-900 px-3 py-3.5 text-xs font-semibold text-white shadow-xl transition-all hover:bg-zinc-800 hover:pl-4"
+          title="เปิดแท็บแหล่งอ้างอิงและตัวชี้วัด (Reference Drawer)"
+        >
+          <span className="text-sm">📚</span>
+          <span className="writing-vertical tracking-wide">References</span>
+        </button>
+      )}
 
       {/* Slide-over Reference Drawer Panel */}
-      <MacroReferenceDrawer
-        data={data}
-        isOpen={isRefDrawerOpen}
-        onClose={() => setIsRefDrawerOpen(false)}
-      />
+      {aiData && (
+        <MacroReferenceDrawer
+          data={aiData}
+          isOpen={isRefDrawerOpen}
+          onClose={() => setIsRefDrawerOpen(false)}
+        />
+      )}
 
       {toastState && (
         <Toast

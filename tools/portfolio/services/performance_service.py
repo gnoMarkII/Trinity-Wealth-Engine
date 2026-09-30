@@ -49,6 +49,13 @@ class PortfolioPerformanceService:
             total_cost = compute_total_cost(state, current_fx)
             cash_bal = round(sum(h.market_value_thb for h in state.holdings if h.asset_type == "Cash"), _MONEY_DP)
 
+            # Asset class values breakdown in THB (holdings by asset_type, including cash)
+            asset_class_values = {}
+            for h in state.holdings:
+                at = h.asset_type or "Unknown"
+                val = round(float(h.market_value_thb or 0.0), _MONEY_DP)
+                asset_class_values[at] = round(asset_class_values.get(at, 0.0) + val, _MONEY_DP)
+
             row = {
                 "Date": datetime.now().strftime("%Y-%m-%d"),
                 "Total_NAV": total_nav,
@@ -57,6 +64,7 @@ class PortfolioPerformanceService:
                 "Cash_Balance": cash_bal,
                 "Realized_PnL_YTD": state.summary.total_realized_profit_ytd,
                 "Passive_Income_YTD": state.summary.passive_income_ytd,
+                "Asset_Class_Values_THB": asset_class_values,
             }
             self.perf_repo.upsert_snapshot(pid, row)
             return f"[PERF SNAPSHOT] บันทึก snapshot วันที่ {row['Date']} (NAV: {total_nav:,.2f} THB) สำเร็จ"

@@ -35,6 +35,7 @@ def _warnings(raw_list: list[str] | None) -> list[WarningDTO]:
 class AssetAllocationDTO(BaseModel):
     asset_class: str
     asset_bucket: Optional[str] = None
+    region: str = "Global"
     stance: str
     confidence: str
     rationale: str
@@ -122,6 +123,9 @@ class MacroIndicatorDTO(BaseModel):
     is_valid: bool = True
     stale_reason: str = ""
     chart_available: bool = False
+    region: str = "Global"
+    source_type: str = "provider"
+    status: str = "verified"
 
 
 class MacroReferenceDTO(BaseModel):
@@ -171,7 +175,14 @@ class MacroDashboardDTO(BaseModel):
     generated_by: str = ""
     dashboard_indicators: list[MacroIndicatorDTO] = []
     report_references: list[MacroReferenceDTO] = []
+    thailand_market_stance: Optional[dict[str, Any]] = None
     warnings: list[WarningDTO] = []
+    run_id: Optional[str] = None
+    job_id: Optional[str] = None
+    snapshot_id: Optional[str] = None
+    regional_assessments: Optional[dict[str, Any]] = None
+    observable_registry: Optional[dict[str, Any]] = None
+    evaluated_sources: list[str] = []
 
 
 
@@ -179,6 +190,7 @@ def _asset_dto(a: dict) -> AssetAllocationDTO:
     return AssetAllocationDTO(
         asset_class=a.get("asset_class", ""),
         asset_bucket=a.get("asset_bucket"),
+        region=a.get("region", "Global") or "Global",
         stance=a.get("stance", ""),
         confidence=a.get("confidence", ""),
         rationale=a.get("rationale", ""),
@@ -263,6 +275,9 @@ def _macro_indicator_dto(item: Any) -> MacroIndicatorDTO:
         is_valid=bool(raw.get("is_valid", True)),
         stale_reason=str(raw.get("stale_reason", "")),
         chart_available=bool(raw.get("chart_available", False)),
+        region=str(raw.get("region", "Global") or "Global"),
+        source_type=str(raw.get("source_type", "provider") or "provider"),
+        status=str(raw.get("status", "verified") or "verified"),
     )
 
 
@@ -330,7 +345,14 @@ def macro_dashboard_dto_from_raw(raw: dict) -> MacroDashboardDTO:
         generated_by=raw.get("generated_by", ""),
         dashboard_indicators=[_macro_indicator_dto(item) for item in raw.get("dashboard_indicators", [])],
         report_references=[item for item in report_references if item is not None],
+        thailand_market_stance=raw.get("thailand_market_stance"),
         warnings=_warnings(raw.get("validation_warnings")) + _warnings(raw.get("stale_data_warnings")),
+        run_id=raw.get("run_id"),
+        job_id=raw.get("job_id"),
+        snapshot_id=raw.get("snapshot_id"),
+        regional_assessments=raw.get("regional_assessments"),
+        observable_registry=raw.get("observable_registry"),
+        evaluated_sources=raw.get("evaluated_sources", []),
     )
 
 

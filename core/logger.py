@@ -2,10 +2,37 @@ import logging
 import logging.handlers
 import os
 import sys
+import time
 from pathlib import Path
 
 
 _SETUP_DONE = False
+
+class WindowsSafeTimedRotatingFileHandler(logging.handlers.TimedRotatingFileHandler):
+    """TimedRotatingFileHandler ที่ป้องกัน PermissionError บน Windows
+    
+    เมื่อมีหลาย Process เปิด system.log พร้อมกัน (เช่น uvicorn backend + CLI script)
+    Windows จะล็อกไฟล์ทำให้ os.rename หรือ os.remove ล้มเหลวด้วย [WinError 32]
+    คลาสนี้จะดักจับ PermissionError เพื่อให้ process อื่นยังเขียน log ต่อไปได้โดยไม่ crash
+    """
+
+    def rotate(self, source: str, dest: str) -> None:
+        try:
+            super().rotate(source, dest)
+        except (PermissionError, OSError):
+            pass
+
+    def doRollover(self) -> None:
+        try:
+            super().doRollover()
+        except (PermissionError, OSError):
+            # บน Windows หากไฟล์ถูกล็อกโดย process อื่น ให้ข้ามการ rollover ไปก่อน
+            # และเปิด stream ใหม่หากถูกปิดไปแล้ว
+            if self.stream is None:
+                self.stream = self._open()
+            currentTime = int(time.time())
+            self.rolloverAt = self.computeRollover(currentTime)
+
 
 def setup_logging(level: str | None = None) -> None:
     """ตั้งค่า root logger — เรียกครั้งเดียวจาก main entry point
@@ -33,7 +60,7 @@ def setup_logging(level: str | None = None) -> None:
     log_dir.mkdir(exist_ok=True)
     log_file = log_dir / "system.log"
     
-    file_handler = logging.handlers.TimedRotatingFileHandler(
+    file_handler = WindowsSafeTimedRotatingFileHandler(
         log_file, when="midnight", interval=1, backupCount=7, encoding="utf-8"
     )
     file_handler.setLevel(logging.WARNING)

@@ -1,0 +1,194 @@
+{
+  "scenarios": {
+    "complete": {
+      "description": "Both official NESDC GDP and MOC CPI are verified with live BOT policy rate",
+      "hard_data_records": {
+        "TH_REAL_GDP": {
+          "series_id": "TH_REAL_GDP",
+          "indicator_name": "Thailand Real GDP YoY",
+          "source_authority": "Office of the National Economic and Social Development Council (NESDC / สภาพัฒน์)",
+          "frequency": "Quarterly",
+          "unit": "% YoY",
+          "value": 2.5,
+          "prev": 2.3,
+          "ma": 2.2,
+          "period": "2026-Q2",
+          "observed_at": "2026-06-30",
+          "published_at": "2026-08-18",
+          "is_verified": true,
+          "status": "verified",
+          "gap_reason": ""
+        },
+        "TH_CPI_YOY": {
+          "series_id": "TH_CPI_YOY",
+          "indicator_name": "Thailand CPI Inflation YoY",
+          "source_authority": "Trade Policy and Strategy Office, Ministry of Commerce (TPSO / MOC / กระทรวงพาณิชย์)",
+          "frequency": "Monthly",
+          "unit": "% YoY",
+          "value": 0.8,
+          "prev": 0.6,
+          "ma": 0.7,
+          "period": "2026-08",
+          "observed_at": "2026-08-31",
+          "published_at": "2026-09-05",
+          "is_verified": true,
+          "status": "verified",
+          "gap_reason": ""
+        }
+      },
+      "policy_rate": {
+        "country": "TH",
+        "rate": 2.5,
+        "is_stale": false
+      },
+      "expected": {
+        "growth_is_none": false,
+        "inflation_is_none": false,
+        "state": "Reflation",
+        "confidence_ge": 0.5
+      }
+    },
+    "missing_gdp": {
+      "description": "NESDC GDP automated feed unavailable (fail-closed); CPI and policy rate valid",
+      "hard_data_records": {
+        "TH_REAL_GDP": {
+          "series_id": "TH_REAL_GDP",
+          "indicator_name": "Thailand Real GDP YoY",
+          "source_authority": "Office of the National Economic and Social Development Council (NESDC / สภาพัฒน์)",
+          "frequency": "Quarterly",
+          "unit": "% YoY",
+          "value": null,
+          "is_verified": false,
+          "status": "missing",
+          "gap_reason": "Direct NESDC automated API integration not yet active"
+        },
+        "TH_CPI_YOY": {
+          "series_id": "TH_CPI_YOY",
+          "indicator_name": "Thailand CPI Inflation YoY",
+          "source_authority": "Trade Policy and Strategy Office, Ministry of Commerce (TPSO / MOC / กระทรวงพาณิชย์)",
+          "frequency": "Monthly",
+          "unit": "% YoY",
+          "value": 0.8,
+          "prev": 0.6,
+          "ma": 0.7,
+          "period": "2026-08",
+          "observed_at": "2026-08-31",
+          "is_verified": true,
+          "status": "verified",
+          "gap_reason": ""
+        }
+      },
+      "policy_rate": {
+        "country": "TH",
+        "rate": 2.5,
+        "is_stale": false
+      },
+      "expected": {
+        "growth_is_none": true,
+        "inflation_is_none": false,
+        "state": "Unknown",
+        "confidence": 0.0,
+        "data_gap_contains": "Thailand Growth"
+      }
+    },
+    "missing_cpi": {
+      "description": "MOC CPI automated feed unavailable (fail-closed); GDP and policy rate valid",
+      "hard_data_records": {
+        "TH_REAL_GDP": {
+          "series_id": "TH_REAL_GDP",
+          "indicator_name": "Thailand Real GDP YoY",
+          "source_authority": "Office of the National Economic and Social Development Council (NESDC / สภาพัฒน์)",
+          "frequency": "Quarterly",
+          "unit": "% YoY",
+          "value": 2.5,
+          "prev": 2.3,
+          "ma": 2.2,
+          "period": "2026-Q2",
+          "observed_at": "2026-06-30",
+          "is_verified": true,
+          "status": "verified",
+          "gap_reason": ""
+        },
+        "TH_CPI_YOY": {
+          "series_id": "TH_CPI_YOY",
+          "indicator_name": "Thailand CPI Inflation YoY",
+          "source_authority": "Trade Policy and Strategy Office, Ministry of Commerce (TPSO / MOC / กระทรวงพาณิชย์)",
+          "frequency": "Monthly",
+          "unit": "% YoY",
+          "value": null,
+          "is_verified": false,
+          "status": "missing",
+          "gap_reason": "Direct MOC automated API integration not yet active"
+        }
+      },
+      "policy_rate": {
+        "country": "TH",
+        "rate": 2.5,
+        "is_stale": false
+      },
+      "expected": {
+        "growth_is_none": false,
+        "inflation_is_none": true,
+        "state": "Unknown",
+        "confidence": 0.0,
+        "data_gap_contains": "Thailand Inflation"
+      }
+    },
+    "market_only": {
+      "description": "Only SET market flow and breadth available; both GDP and CPI hard data missing",
+      "hard_data_records": {
+        "TH_REAL_GDP": {
+          "series_id": "TH_REAL_GDP",
+          "indicator_name": "Thailand Real GDP YoY",
+          "source_authority": "Office of the National Economic and Social Development Council (NESDC / สภาพัฒน์)",
+          "frequency": "Quarterly",
+          "unit": "% YoY",
+          "value": null,
+          "is_verified": false,
+          "status": "missing",
+          "gap_reason": "Direct NESDC automated API integration not yet active"
+        },
+        "TH_CPI_YOY": {
+          "series_id": "TH_CPI_YOY",
+          "indicator_name": "Thailand CPI Inflation YoY",
+          "source_authority": "Trade Policy and Strategy Office, Ministry of Commerce (TPSO / MOC / กระทรวงพาณิชย์)",
+          "frequency": "Monthly",
+          "unit": "% YoY",
+          "value": null,
+          "is_verified": false,
+          "status": "missing",
+          "gap_reason": "Direct MOC automated API integration not yet active"
+        }
+      },
+      "policy_rate": {
+        "country": "TH",
+        "rate": 2.5,
+        "is_stale": false
+      },
+      "market_stance_observables": [
+        {
+          "observable_id": "obs_thai_foreign_net_flow",
+          "indicator": "SET Foreign Net Flow",
+          "value": "1500.0",
+          "unit": "M THB",
+          "is_valid": true,
+          "region": "Thailand"
+        },
+        {
+          "observable_id": "obs_thai_breadth_ad_ratio",
+          "indicator": "SET Advance-Decline Ratio",
+          "value": "1.8",
+          "unit": "ratio",
+          "is_valid": true,
+          "region": "Thailand"
+        }
+      ],
+      "expected": {
+        "growth_is_none": true,
+        "inflation_is_none": true,
+        "state": "Unknown",
+        "confidence": 0.0
+      }
+    }
+  }
+}

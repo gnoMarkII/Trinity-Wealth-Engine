@@ -59,6 +59,56 @@ def test_save_briefing_artifact_uses_canonical_v2_routing(tmp_path):
     assert art_v2.quality_path.exists()
 
 
+def test_save_briefing_artifact_unverified_draft_maps_trust_tier_to_t3(tmp_path):
+    from schemas.briefing_book_schemas import (
+        UnverifiedBriefingDraftResult,
+        UnverifiedDraftOverrideAudit,
+        QualityIssueRecord,
+    )
+    from tools.archivist.metadata import parse_note
+
+    vault = tmp_path / "vault"
+    draft_result = UnverifiedBriefingDraftResult(
+        content="# Unverified Draft Content\n\nBody details",
+        draft=make_valid_briefing_draft(),
+        quality_report=ResearchQualityReport(
+            score=70,
+            status="degraded",
+            publishable=False,
+            issues=[
+                QualityIssueRecord(
+                    code="SRC_UNVERIFIED",
+                    category="provenance",
+                    severity="blocker",
+                    description="Missing news source",
+                    bypassable=True,
+                )
+            ],
+        ),
+        evidence_bundle=make_valid_evidence_bundle(),
+        override_audit=UnverifiedDraftOverrideAudit(
+            job_id="job-123",
+            thread_id="th-123",
+            pitch_id="p-001",
+            policy_version="v1",
+            reason="User override incomplete provenance",
+            server_timestamp="2026-09-06T12:00:00",
+            token_hash="fake_token_hash",
+            source_readiness_snapshot=["SRC_UNVERIFIED"],
+        ),
+    )
+
+    art = save_briefing_artifact(draft_result, "Draft Report", vault_root=vault, date_str="2026-09-06")
+    assert art.path.exists()
+    assert art.quality_path.exists()
+
+    meta, body, issues = parse_note(art.path.read_text(encoding="utf-8"))
+    assert meta.get("trust_tier") == "T3"
+    assert meta.get("production_eligible") is False
+    assert meta.get("artifact_status") == "unverified_draft"
+    assert "Unverified Draft Content" in body
+
+
 def test_filesystem_source_catalog_discovers_nested_and_flat(tmp_path):
     sources_dir = tmp_path / "NotebookLM_Sources"
     sources_dir.mkdir()

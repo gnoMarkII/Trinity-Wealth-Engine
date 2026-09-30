@@ -12,6 +12,7 @@ from tools.market.dcf_valuation import (
 
 def _mock_macro_registry(dgs10: float = 4.25, erp: float = 4.50) -> Dict[str, MarketObservable]:
     """Helper mock macro registry."""
+    today_str = datetime.now(timezone.utc).strftime("%Y-%m-%d")
     return {
         "obs_us_dgs10": MarketObservable(
             observable_id="obs_us_dgs10",
@@ -20,7 +21,7 @@ def _mock_macro_registry(dgs10: float = 4.25, erp: float = 4.50) -> Dict[str, Ma
             indicator="10-Year Treasury Yield",
             value=str(dgs10),
             unit="percent",
-            observed_at="2026-09-01",
+            observed_at=today_str,
             source_file="FRED_DGS10.csv",
             is_valid=True,
         ),
@@ -31,7 +32,7 @@ def _mock_macro_registry(dgs10: float = 4.25, erp: float = 4.50) -> Dict[str, Ma
             indicator="Damodaran Implied ERP",
             value=str(erp),
             unit="percent",
-            observed_at="2026-09-01",
+            observed_at=today_str,
             source_file="Damodaran_ERP.csv",
             is_valid=True,
         ),

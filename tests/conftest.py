@@ -47,7 +47,11 @@ def _snapshot_protected_dirs():
             for f in d.glob("**/*"):
                 if f.is_file() and ".obsidian" not in f.parts:
                     try:
-                        content_hash = hashlib.sha256(f.read_bytes()).hexdigest()
+                        stat = f.stat()
+                        if stat.st_size > 1024 * 1024:
+                            content_hash = f"size:{stat.st_size}-mtime:{stat.st_mtime_ns}"
+                        else:
+                            content_hash = hashlib.sha256(f.read_bytes()).hexdigest()
                         snapshot[str(f.resolve())] = content_hash
                     except Exception:
                         pass

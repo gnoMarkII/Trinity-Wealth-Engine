@@ -625,6 +625,19 @@ export default function Portfolio() {
                 performanceRows={performanceRows}
                 daysRange={daysRange}
                 onChangeDaysRange={setDaysRange}
+                holdings={portfolioState?.holdings ?? []}
+                cashBalanceThb={
+                  portfolioState?.summary?.total_value_thb != null
+                    ? Math.max(
+                        0,
+                        portfolioState.summary.total_value_thb -
+                          (portfolioState.holdings ?? []).reduce(
+                            (acc, h) => acc + (h.market_value_thb || 0),
+                            0
+                          )
+                      )
+                    : undefined
+                }
               />
             )}
           </div>

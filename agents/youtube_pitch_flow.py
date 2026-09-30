@@ -348,6 +348,8 @@ def _route_after_pitch_generation(state: YouTubePitchState) -> Literal["gate", "
 
 def synthesize_notebooklm_node(state: YouTubePitchState, config: RunnableConfig) -> dict:
     from tools.content.briefing_artifacts import save_briefing_artifact
+    from tools.archivist.composition import build_knowledge_note_writer
+    from tools.archivist.vault_paths import VaultPaths
     import hashlib
 
     approved_ids = set(state.get("approved_pitch_ids") or [])
@@ -368,6 +370,9 @@ def synthesize_notebooklm_node(state: YouTubePitchState, config: RunnableConfig)
             "result_summary": line,
             "messages": [AIMessage(content=line, name="synthesize_notebooklm")],
         }
+
+    vault_root = Path(VAULT_PATH)
+    note_writer = build_knowledge_note_writer(vault_paths=VaultPaths(vault_root))
 
     messages = []
     summary_lines = []
@@ -416,8 +421,9 @@ def synthesize_notebooklm_node(state: YouTubePitchState, config: RunnableConfig)
             saved_artifact = save_briefing_artifact(
                 synthesis=synthesis_result,
                 title=main_title,
-                vault_root=Path(VAULT_PATH),
+                vault_root=vault_root,
                 date_str=today_str,
+                note_writer=note_writer,
             )
 
             synthesized_pitch_ids.append(p_id)

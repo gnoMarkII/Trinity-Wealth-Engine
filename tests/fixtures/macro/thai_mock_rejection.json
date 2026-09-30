@@ -1,0 +1,24 @@
+{
+  "test_date": "2026-09-27",
+  "mock_markdown_snapshot": "# 🇹🇭 Thailand\n\n### 🏦 Monetary Policy & Liquidity\n\n| ดัชนี | ค่าล่าสุด | ก่อนหน้า | MA ย้อนหลัง | ประกาศ ณ / เปลี่ยนแปลง | ความหมาย |\n|-------|----------|----------|------------|-----------------------|---------|\n| **USD/THB** (`THB=X`) | 32.50 | 32.55 | 32.50 | ▼0.15% | USD to THB |\n| **Policy Rate [Mock]** (`Policy Rate`) | 2.50 % | 2.50 % | 2.50 % | - | อัตราดอกเบี้ยนโยบาย (Mock) |\n| **Thailand 10Y Gov Bond Yield [StaticProxy]** (`TH10Y`) | 2.65 % | 2.65 % | 2.65 % | StaticProxy | StaticProxy: Thailand 10-Year Government Bond Yield proxy |\n| **Thailand Current Account [StaticProxy]** (`Current Account`) | 1.20 B USD | 1.20 B USD | 1.20 B USD | StaticProxy | StaticProxy: ดุลบัญชีเดินสะพัดไทย proxy |\n\n### 📈 Economic Growth\n\n| ดัชนี | ค่าล่าสุด | ก่อนหน้า | MA ย้อนหลัง | ประกาศ ณ / เปลี่ยนแปลง | ความหมาย |\n|-------|----------|----------|------------|-----------------------|---------|\n| **SET Index** (`^SET.BK`) | 1450.00 | 1445.00 | 1450.00 | ▲0.35% | SET Index |\n| **Exports Growth [Mock]** (`Exports Growth`) | 2.00 % | 2.00 % | 2.00 % | - | การส่งออก (Mock) |\n| **Tourism Growth [Mock]** (`Tourism Growth`) | 5.00 % | 5.00 % | 5.00 % | - | การท่องเที่ยว (Mock) |\n| **Foreign Tourist Arrivals [StaticProxy]** (`Tourist Arrivals`) | 2.85 M persons | 2.85 M persons | 2.85 M persons | StaticProxy | StaticProxy: จำนวนนักท่องเที่ยวต่างชาติเข้าไทย proxy |\n\n### 💰 Inflation\n\n| ดัชนี | ค่าล่าสุด | ก่อนหน้า | MA ย้อนหลัง | ประกาศ ณ / เปลี่ยนแปลง | ความหมาย |\n|-------|----------|----------|------------|-----------------------|---------|\n| **CPI Inflation [Mock]** (`CPI Inflation`) | 1.00 % | 1.00 % | 1.00 % | - | อัตราเงินเฟ้อทั่วไป (Mock) |\n\n### 🛡️ Geopolitics & Risk Sentiment\n\n| ดัชนี | ค่าล่าสุด | ก่อนหน้า | MA ย้อนหลัง | ประกาศ ณ / เปลี่ยนแปลง | ความหมาย |\n|-------|----------|----------|------------|-----------------------|---------|\n| **Domestic Stimulus [Mock]** (`Domestic Stimulus`) | 1.00 | 1.00 | 1.00 | - | นโยบายกระตุ้นเศรษฐกิจ (Mock) |\n",
+  "expected_behavior": {
+    "thai_economic_state": "Unknown",
+    "thai_coverage": 0.0,
+    "mock_indicators_rejected": [
+      "Policy Rate",
+      "TH10Y",
+      "Current Account",
+      "Exports Growth",
+      "Tourism Growth",
+      "Tourist Arrivals",
+      "CPI Inflation",
+      "Domestic Stimulus"
+    ],
+    "disallowed_outcomes": [
+      "Goldilocks",
+      "Recession",
+      "Reflation",
+      "Stagflation"
+    ]
+  }
+}

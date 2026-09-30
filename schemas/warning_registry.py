@@ -100,6 +100,12 @@ VALUATION_RICH_WARNING = "VALUATION_RICH_WARNING"
 CREDIT_SPREAD_WARNING = "CREDIT_SPREAD_WARNING"
 CORRELATION_BREAKDOWN_WARNING = "CORRELATION_BREAKDOWN_WARNING"
 
+# AG-215 Evidence Guardrail Warnings
+GROWTH_EVIDENCE_STALE = "GROWTH_EVIDENCE_STALE"
+FX_SPREAD_DATA_UNAVAILABLE = "FX_SPREAD_DATA_UNAVAILABLE"
+REGIME_EVIDENCE_OBSERVABLE_INVALID = "REGIME_EVIDENCE_OBSERVABLE_INVALID"
+
+
 # ── Warning Severity Sets for Retry Layer ─────────────────────────
 # 🟢 RETRYABLE CRITICAL — ข้อผิดพลาดเชิงโครงสร้างที่ LLM ลืมหรือใส่ไม่ครบ สามารถสั่งให้แก้ไขใหม่ได้
 RETRYABLE_CRITICAL_IDS: set[str] = {
@@ -135,7 +141,11 @@ SOFT_WARNING_IDS: set[str] = {
     ALLOCATION_DELTA_INVALID,
     FX_STANCE_MISMATCH,
     SYSTEM_PLACEHOLDER,
+    GROWTH_EVIDENCE_STALE,
+    FX_SPREAD_DATA_UNAVAILABLE,
+    REGIME_EVIDENCE_OBSERVABLE_INVALID,
 }
+
 
 
 # ── Thai Translation Templates ────────────────────────────────────
@@ -242,7 +252,14 @@ THAI_TEMPLATES: Dict[str, str] = {
         "ตรวจพบและทำความสะอาดการอ้างอิงที่ไม่ถูกต้องหรือหลุดรูปแบบ (เช่น อ้างอิงข่าวในรูปแบบ YouTube Channel)",
     SUPPORTING_DATA_MISMATCH:
         "แจ้งเตือนความคลาดเคลื่อน: ตัวเลขใน supporting_data มีค่าไม่ตรงกับ observable_registry ที่ระบบบันทึกไว้จริง",
+    GROWTH_EVIDENCE_STALE:
+        "ตัวชี้วัด Growth ({indicator}) ไม่อยู่ในสถานะที่ใช้ได้ (stale/invalid) จึงถูกคัดออกจากหลักฐานสนับสนุน Growth",
+    FX_SPREAD_DATA_UNAVAILABLE:
+        "ไม่มีข้อมูลส่วนต่างอัตราดอกเบี้ยนโยบาย (Fed-BoT policy spread) ที่ตรวจสอบได้ในระบบ จึงปรับลดความมั่นใจและระบุข้อจำกัดข้อมูล",
+    REGIME_EVIDENCE_OBSERVABLE_INVALID:
+        "หลักฐานสภาวะเศรษฐกิจมิติ {dimension} อ้างอิงตัวชี้วัด {obs_id} ที่ไม่ผ่านการตรวจสอบความถูกต้อง",
 }
+
 
 
 def translate_warning(warning: Any) -> str:

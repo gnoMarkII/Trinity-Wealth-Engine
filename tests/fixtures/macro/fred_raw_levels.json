@@ -1,0 +1,104 @@
+{
+  "CPIAUCSL": {
+    "units": "pc1",
+    "frequency": "Monthly",
+    "observations": [
+      {"date": "2026-08-01", "value": "3.00"},
+      {"date": "2026-07-01", "value": "2.90"},
+      {"date": "2026-06-01", "value": "2.80"},
+      {"date": "2026-05-01", "value": "2.70"},
+      {"date": "2026-04-01", "value": "2.75"},
+      {"date": "2026-03-01", "value": "2.80"},
+      {"date": "2026-02-01", "value": "2.85"},
+      {"date": "2026-01-01", "value": "2.90"},
+      {"date": "2025-12-01", "value": "2.95"},
+      {"date": "2025-11-01", "value": "3.00"},
+      {"date": "2025-10-01", "value": "3.05"},
+      {"date": "2025-09-01", "value": "3.10"},
+      {"date": "2025-08-01", "value": "3.20"}
+    ]
+  },
+  "CPIAUCSL_RAW_INDEX": {
+    "units": "lin",
+    "frequency": "Monthly",
+    "observations": [
+      {"date": "2026-08-01", "value": "103.0"},
+      {"date": "2026-07-01", "value": "102.7"},
+      {"date": "2026-06-01", "value": "102.5"},
+      {"date": "2026-05-01", "value": "102.2"},
+      {"date": "2026-04-01", "value": "102.0"},
+      {"date": "2026-03-01", "value": "101.8"},
+      {"date": "2026-02-01", "value": "101.5"},
+      {"date": "2026-01-01", "value": "101.2"},
+      {"date": "2025-12-01", "value": "101.0"},
+      {"date": "2025-11-01", "value": "100.8"},
+      {"date": "2025-10-01", "value": "100.5"},
+      {"date": "2025-09-01", "value": "100.2"},
+      {"date": "2025-08-01", "value": "100.0"}
+    ]
+  },
+  "GDPC1": {
+    "units": "pc1",
+    "frequency": "Quarterly",
+    "observations": [
+      {"date": "2026-07-01", "value": "2.00"},
+      {"date": "2026-04-01", "value": "1.90"},
+      {"date": "2026-01-01", "value": "2.10"},
+      {"date": "2025-10-01", "value": "2.20"},
+      {"date": "2025-07-01", "value": "2.00"}
+    ]
+  },
+  "GDPC1_RAW_LEVEL": {
+    "units": "lin",
+    "frequency": "Quarterly",
+    "observations": [
+      {"date": "2026-07-01", "value": "102.0"},
+      {"date": "2026-04-01", "value": "101.5"},
+      {"date": "2026-01-01", "value": "101.0"},
+      {"date": "2025-10-01", "value": "100.5"},
+      {"date": "2025-07-01", "value": "100.0"}
+    ]
+  },
+  "INDPRO": {
+    "units": "pc1",
+    "frequency": "Monthly",
+    "observations": [
+      {"date": "2026-08-01", "value": "1.50"},
+      {"date": "2026-07-01", "value": "1.30"},
+      {"date": "2026-06-01", "value": "1.20"}
+    ]
+  },
+  "PCEPILFE": {
+    "units": "pc1",
+    "frequency": "Monthly",
+    "observations": [
+      {"date": "2026-08-01", "value": "2.60"},
+      {"date": "2026-07-01", "value": "2.55"},
+      {"date": "2026-06-01", "value": "2.50"}
+    ]
+  },
+  "FEDFUNDS": {
+    "units": "lin",
+    "frequency": "Monthly",
+    "observations": [
+      {"date": "2026-08-01", "value": "5.25"},
+      {"date": "2026-07-01", "value": "5.25"}
+    ]
+  },
+  "DGS2": {
+    "units": "lin",
+    "frequency": "Daily",
+    "observations": [
+      {"date": "2026-09-25", "value": "4.90"},
+      {"date": "2026-09-24", "value": "4.92"}
+    ]
+  },
+  "T10Y2Y": {
+    "units": "lin",
+    "frequency": "Daily",
+    "observations": [
+      {"date": "2026-09-25", "value": "0.35"},
+      {"date": "2026-09-24", "value": "0.33"}
+    ]
+  }
+}

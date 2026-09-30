@@ -58,7 +58,8 @@ build/
 code_review.txt
 gen_code_review.py
 scratch/
-docs/plans/
+docs/
+temp/
 
 # =========================================
 # 7. OS & IDE
