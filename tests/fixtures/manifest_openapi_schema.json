@@ -854,6 +854,196 @@
         ]
       }
     },
+    "/api/macro/reports/{strategy_report_id}": {
+      "get": {
+        "operationId": "get_macro_report_by_id_api_macro_reports__strategy_report_id__get",
+        "tags": [],
+        "summary": "Get Macro Report By Id",
+        "parameters": [
+          {
+            "name": "strategy_report_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Strategy Report Id"
+            }
+          }
+        ],
+        "has_request_body": false,
+        "responses": [
+          "200",
+          "422"
+        ]
+      }
+    },
+    "/api/macro/sector-rotation/history": {
+      "get": {
+        "operationId": "get_sector_rotation_history_api_macro_sector_rotation_history_get",
+        "tags": [],
+        "summary": "Get Sector Rotation History",
+        "parameters": [
+          {
+            "name": "snapshot_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 96,
+              "title": "Snapshot Id"
+            }
+          },
+          {
+            "name": "timeframe",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "pattern": "^(daily|weekly)$",
+              "default": "weekly",
+              "title": "Timeframe"
+            }
+          },
+          {
+            "name": "range",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "pattern": "^(3m|6m|1y|2y)$",
+              "default": "1y",
+              "title": "Range"
+            }
+          }
+        ],
+        "has_request_body": false,
+        "responses": [
+          "200",
+          "422"
+        ]
+      }
+    },
+    "/api/macro/sector-rotation/latest": {
+      "get": {
+        "operationId": "get_sector_rotation_latest_api_macro_sector_rotation_latest_get",
+        "tags": [],
+        "summary": "Get Sector Rotation Latest",
+        "parameters": [
+          {
+            "name": "timeframe",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "pattern": "^(daily|weekly)$",
+              "default": "weekly",
+              "title": "Timeframe"
+            }
+          },
+          {
+            "name": "tail",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 60,
+              "minimum": 1,
+              "default": 12,
+              "title": "Tail"
+            }
+          }
+        ],
+        "has_request_body": false,
+        "responses": [
+          "200",
+          "422"
+        ]
+      }
+    },
+    "/api/macro/sector-rotation/refresh": {
+      "post": {
+        "operationId": "refresh_sector_rotation_api_macro_sector_rotation_refresh_post",
+        "tags": [],
+        "summary": "Refresh Sector Rotation",
+        "parameters": [
+          {
+            "name": "timeframe",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "pattern": "^(daily|weekly)$",
+              "default": "weekly",
+              "title": "Timeframe"
+            }
+          },
+          {
+            "name": "tail",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 60,
+              "minimum": 1,
+              "default": 12,
+              "title": "Tail"
+            }
+          }
+        ],
+        "has_request_body": false,
+        "responses": [
+          "200",
+          "422"
+        ]
+      }
+    },
+    "/api/macro/sector-rotation/snapshots/{snapshot_id}": {
+      "get": {
+        "operationId": "get_sector_rotation_snapshot_api_macro_sector_rotation_snapshots__snapshot_id__get",
+        "tags": [],
+        "summary": "Get Sector Rotation Snapshot",
+        "parameters": [
+          {
+            "name": "snapshot_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Snapshot Id"
+            }
+          },
+          {
+            "name": "timeframe",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "pattern": "^(daily|weekly)$",
+              "default": "weekly",
+              "title": "Timeframe"
+            }
+          },
+          {
+            "name": "tail",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 60,
+              "minimum": 1,
+              "default": 12,
+              "title": "Tail"
+            }
+          }
+        ],
+        "has_request_body": false,
+        "responses": [
+          "200",
+          "422"
+        ]
+      }
+    },
     "/api/notebooklm/available-sources": {
       "get": {
         "operationId": "list_available_sources_api_notebooklm_available_sources_get",
@@ -2539,6 +2729,851 @@
           }
         ],
         "has_request_body": true,
+        "responses": [
+          "200",
+          "422"
+        ]
+      }
+    },
+    "/api/v2/market/commodities/metals/cot": {
+      "get": {
+        "operationId": "get_metals_cot_api_v2_market_commodities_metals_cot_get",
+        "tags": [
+          "Terminal V2 Market Data"
+        ],
+        "summary": "Fetch CFTC Disaggregated COT positioning for metals (gold, silver, etc.)",
+        "parameters": [
+          {
+            "name": "commodity",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "Metal name: gold, silver, copper, platinum",
+              "default": "gold",
+              "title": "Commodity"
+            }
+          }
+        ],
+        "has_request_body": false,
+        "responses": [
+          "200",
+          "422"
+        ]
+      }
+    },
+    "/api/v2/market/commodities/volatility": {
+      "get": {
+        "operationId": "get_commodity_volatility_api_v2_market_commodities_volatility_get",
+        "tags": [
+          "Terminal V2 Market Data"
+        ],
+        "summary": "Fetch Cboe 30-day commodity volatility indices (GVZ, VXSLV, OVX) with 52-week percentiles",
+        "parameters": [
+          {
+            "name": "symbol",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Optional symbol filter: GVZ, VXSLV, OVX",
+              "title": "Symbol"
+            }
+          }
+        ],
+        "has_request_body": false,
+        "responses": [
+          "200",
+          "422"
+        ]
+      }
+    },
+    "/api/v2/market/crypto/benchmark": {
+      "get": {
+        "operationId": "get_crypto_benchmark_api_v2_market_crypto_benchmark_get",
+        "tags": [
+          "Terminal V2 Market Data"
+        ],
+        "summary": "Fetch Bitcoin spot price benchmark, returns, and BTC/Gold valuation ratio",
+        "parameters": [],
+        "has_request_body": false,
+        "responses": [
+          "200"
+        ]
+      }
+    },
+    "/api/v2/market/crypto/etf-flows/{asset}": {
+      "get": {
+        "operationId": "get_spot_etf_flows_api_v2_market_crypto_etf_flows__asset__get",
+        "tags": [
+          "Terminal V2 Market Data"
+        ],
+        "summary": "Fetch US Spot ETF net flows and issuer breakdown for BTC or ETH",
+        "parameters": [
+          {
+            "name": "asset",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Asset"
+            }
+          }
+        ],
+        "has_request_body": false,
+        "responses": [
+          "200",
+          "422"
+        ]
+      }
+    },
+    "/api/v2/market/crypto/stablecoins": {
+      "get": {
+        "operationId": "get_stablecoin_supply_api_v2_market_crypto_stablecoins_get",
+        "tags": [
+          "Terminal V2 Market Data"
+        ],
+        "summary": "Fetch global USD stablecoin circulating supply and 7d/30d growth metrics from DeFiLlama",
+        "parameters": [],
+        "has_request_body": false,
+        "responses": [
+          "200"
+        ]
+      }
+    },
+    "/api/v2/market/equity/consensus/{symbol}": {
+      "get": {
+        "operationId": "get_nasdaq_consensus_api_v2_market_equity_consensus__symbol__get",
+        "tags": [
+          "Terminal V2 Market Data"
+        ],
+        "summary": "Fetch Nasdaq earnings surprise history, upcoming date status, and analyst ratings",
+        "parameters": [
+          {
+            "name": "symbol",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Symbol"
+            }
+          }
+        ],
+        "has_request_body": false,
+        "responses": [
+          "200",
+          "422"
+        ]
+      }
+    },
+    "/api/v2/market/equity/max-pain/{symbol}": {
+      "get": {
+        "operationId": "get_equity_max_pain_api_v2_market_equity_max_pain__symbol__get",
+        "tags": [
+          "Terminal V2 Market Data"
+        ],
+        "summary": "Calculate analytical Max Pain strike for a specific or nearest expiry",
+        "parameters": [
+          {
+            "name": "symbol",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Symbol"
+            }
+          },
+          {
+            "name": "expiry",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Expiry ISO YYYY-MM-DD (defaults to nearest)",
+              "title": "Expiry"
+            }
+          }
+        ],
+        "has_request_body": false,
+        "responses": [
+          "200",
+          "422"
+        ]
+      }
+    },
+    "/api/v2/market/equity/news/{symbol}": {
+      "get": {
+        "operationId": "get_equity_news_discovery_api_v2_market_equity_news__symbol__get",
+        "tags": [
+          "Terminal V2 Market Data"
+        ],
+        "summary": "Fetch normalized RSS news discovery candidates for equity symbol",
+        "parameters": [
+          {
+            "name": "symbol",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Symbol"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 30,
+              "minimum": 1,
+              "description": "Max news items to return",
+              "default": 15,
+              "title": "Limit"
+            }
+          }
+        ],
+        "has_request_body": false,
+        "responses": [
+          "200",
+          "422"
+        ]
+      }
+    },
+    "/api/v2/market/equity/options/{symbol}": {
+      "get": {
+        "operationId": "get_equity_options_chain_api_v2_market_equity_options__symbol__get",
+        "tags": [
+          "Terminal V2 Market Data"
+        ],
+        "summary": "Fetch delayed listed equity options chain from Cboe",
+        "parameters": [
+          {
+            "name": "symbol",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Symbol"
+            }
+          },
+          {
+            "name": "expiry",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter for specific expiry ISO YYYY-MM-DD",
+              "title": "Expiry"
+            }
+          }
+        ],
+        "has_request_body": false,
+        "responses": [
+          "200",
+          "422"
+        ]
+      }
+    },
+    "/api/v2/market/equity/put-call-ratios/{symbol}": {
+      "get": {
+        "operationId": "get_equity_put_call_ratios_api_v2_market_equity_put_call_ratios__symbol__get",
+        "tags": [
+          "Terminal V2 Market Data"
+        ],
+        "summary": "Calculate Put/Call volume and OI ratios for a specific or nearest expiry",
+        "parameters": [
+          {
+            "name": "symbol",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Symbol"
+            }
+          },
+          {
+            "name": "expiry",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Expiry ISO YYYY-MM-DD (defaults to nearest)",
+              "title": "Expiry"
+            }
+          }
+        ],
+        "has_request_body": false,
+        "responses": [
+          "200",
+          "422"
+        ]
+      }
+    },
+    "/api/v2/market/equity/sec/financials/{symbol}": {
+      "get": {
+        "operationId": "get_sec_financials_api_v2_market_equity_sec_financials__symbol__get",
+        "tags": [
+          "Terminal V2 Market Data"
+        ],
+        "summary": "Fetch SEC company-filed XBRL facts and calculated pure financial ratios",
+        "parameters": [
+          {
+            "name": "symbol",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Symbol"
+            }
+          }
+        ],
+        "has_request_body": false,
+        "responses": [
+          "200",
+          "422"
+        ]
+      }
+    },
+    "/api/v2/market/equity/sec/insider-trades/{symbol}": {
+      "get": {
+        "operationId": "get_sec_insider_trades_api_v2_market_equity_sec_insider_trades__symbol__get",
+        "tags": [
+          "Terminal V2 Market Data"
+        ],
+        "summary": "Fetch SEC Form 4 parsed insider transactions and 90-day net buying ratio",
+        "parameters": [
+          {
+            "name": "symbol",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Symbol"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 50,
+              "minimum": 1,
+              "description": "Max transactions to return",
+              "default": 20,
+              "title": "Limit"
+            }
+          }
+        ],
+        "has_request_body": false,
+        "responses": [
+          "200",
+          "422"
+        ]
+      }
+    },
+    "/api/v2/market/equity/short-volume/{symbol}": {
+      "get": {
+        "operationId": "get_equity_short_volume_api_v2_market_equity_short_volume__symbol__get",
+        "tags": [
+          "Terminal V2 Market Data"
+        ],
+        "summary": "Fetch FINRA consolidated daily short sale volume",
+        "parameters": [
+          {
+            "name": "symbol",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Symbol"
+            }
+          }
+        ],
+        "has_request_body": false,
+        "responses": [
+          "200",
+          "422"
+        ]
+      }
+    },
+    "/api/v2/market/macro/crypto-liquidity": {
+      "get": {
+        "operationId": "get_crypto_macro_liquidity_api_v2_market_macro_crypto_liquidity_get",
+        "tags": [
+          "Terminal V2 Market Data"
+        ],
+        "summary": "Fetch synthesized Level 1 Crypto Macro Liquidity & Risk Appetite proxy",
+        "parameters": [],
+        "has_request_body": false,
+        "responses": [
+          "200"
+        ]
+      }
+    },
+    "/api/v2/market/macro/financial-stress": {
+      "get": {
+        "operationId": "get_financial_stress_api_v2_market_macro_financial_stress_get",
+        "tags": [
+          "Terminal V2 Market Data"
+        ],
+        "summary": "Fetch US OFR Financial Stress Index with 5 categories and T-2 lag",
+        "parameters": [],
+        "has_request_body": false,
+        "responses": [
+          "200"
+        ]
+      }
+    },
+    "/api/v2/market/macro/global-policy-rates": {
+      "get": {
+        "operationId": "get_global_policy_rates_api_v2_market_macro_global_policy_rates_get",
+        "tags": [
+          "Terminal V2 Market Data"
+        ],
+        "summary": "Fetch BIS central bank policy rates across 12 countries with rate spreads",
+        "parameters": [],
+        "has_request_body": false,
+        "responses": [
+          "200"
+        ]
+      }
+    },
+    "/api/v2/market/macro/nyfed/rates": {
+      "get": {
+        "operationId": "get_nyfed_reference_rates_api_v2_market_macro_nyfed_rates_get",
+        "tags": [
+          "Terminal V2 Market Data"
+        ],
+        "summary": "Fetch NY Fed overnight benchmark reference rates and pair spreads",
+        "parameters": [],
+        "has_request_body": false,
+        "responses": [
+          "200"
+        ]
+      }
+    },
+    "/api/v2/market/macro/series/{series_id}": {
+      "get": {
+        "operationId": "get_macro_series_api_v2_market_macro_series__series_id__get",
+        "tags": [
+          "Terminal V2 Market Data"
+        ],
+        "summary": "Fetch macroeconomic time series from keyless FRED mirror",
+        "parameters": [
+          {
+            "name": "series_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Series Id"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 500,
+              "minimum": 1,
+              "default": 30,
+              "title": "Limit"
+            }
+          }
+        ],
+        "has_request_body": false,
+        "responses": [
+          "200",
+          "422"
+        ]
+      }
+    },
+    "/api/v2/market/macro/treasury/auction-demand": {
+      "get": {
+        "operationId": "get_treasury_auction_demand_api_v2_market_macro_treasury_auction_demand_get",
+        "tags": [
+          "Terminal V2 Market Data"
+        ],
+        "summary": "Fetch latest US Treasury auction demand metrics and moving average of prior 8 completed auctions",
+        "parameters": [
+          {
+            "name": "security_type",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "Security type (e.g. Note, Bill, Bond)",
+              "title": "Security Type"
+            }
+          },
+          {
+            "name": "security_term",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "Security term (e.g. 10-Year, 13-Week)",
+              "title": "Security Term"
+            }
+          }
+        ],
+        "has_request_body": false,
+        "responses": [
+          "200",
+          "422"
+        ]
+      }
+    },
+    "/api/v2/market/macro/treasury/auctions": {
+      "get": {
+        "operationId": "get_treasury_auctions_api_v2_market_macro_treasury_auctions_get",
+        "tags": [
+          "Terminal V2 Market Data"
+        ],
+        "summary": "Fetch completed US Treasury auctions from Fiscal Data API",
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 50,
+              "minimum": 1,
+              "default": 10,
+              "title": "Limit"
+            }
+          }
+        ],
+        "has_request_body": false,
+        "responses": [
+          "200",
+          "422"
+        ]
+      }
+    },
+    "/api/v2/market/macro/treasury/debt": {
+      "get": {
+        "operationId": "get_treasury_debt_api_v2_market_macro_treasury_debt_get",
+        "tags": [
+          "Terminal V2 Market Data"
+        ],
+        "summary": "Fetch daily close Debt to the Penny snapshots from US Treasury",
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 30,
+              "minimum": 1,
+              "default": 5,
+              "title": "Limit"
+            }
+          }
+        ],
+        "has_request_body": false,
+        "responses": [
+          "200",
+          "422"
+        ]
+      }
+    },
+    "/api/v2/market/macro/treasury/yield-curve": {
+      "get": {
+        "operationId": "get_treasury_yield_curve_api_v2_market_macro_treasury_yield_curve_get",
+        "tags": [
+          "Terminal V2 Market Data"
+        ],
+        "summary": "Fetch US Treasury par yield curve and spreads from Treasury.gov",
+        "parameters": [
+          {
+            "name": "month",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Observation month YYYYMM (defaults to current)",
+              "title": "Month"
+            }
+          }
+        ],
+        "has_request_body": false,
+        "responses": [
+          "200",
+          "422"
+        ]
+      }
+    },
+    "/api/v2/market/perps/quote/{symbol}": {
+      "get": {
+        "operationId": "get_perps_quote_api_v2_market_perps_quote__symbol__get",
+        "tags": [
+          "Terminal V2 Market Data"
+        ],
+        "summary": "Fetch synthetic perpetuals quote from Hyperliquid L1 clearinghouse",
+        "parameters": [
+          {
+            "name": "symbol",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Symbol"
+            }
+          }
+        ],
+        "has_request_body": false,
+        "responses": [
+          "200",
+          "422"
+        ]
+      }
+    },
+    "/api/v2/market/signals/prediction-markets": {
+      "get": {
+        "operationId": "get_prediction_markets_api_v2_market_signals_prediction_markets_get",
+        "tags": [
+          "Terminal V2 Market Data"
+        ],
+        "summary": "Fetch active prediction markets and implied odds from Polymarket",
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 50,
+              "minimum": 1,
+              "default": 12,
+              "title": "Limit"
+            }
+          }
+        ],
+        "has_request_body": false,
+        "responses": [
+          "200",
+          "422"
+        ]
+      }
+    },
+    "/api/v2/market/thailand/bonds/issuance": {
+      "get": {
+        "operationId": "get_thai_bonds_issuance_api_v2_market_thailand_bonds_issuance_get",
+        "tags": [
+          "Terminal V2 Market Data"
+        ],
+        "summary": "Fetch Thai corporate bond offering statistics from SEC Thailand",
+        "parameters": [],
+        "has_request_body": false,
+        "responses": [
+          "200"
+        ]
+      }
+    },
+    "/api/v2/market/thailand/bonds/market": {
+      "get": {
+        "operationId": "get_thai_bonds_market_api_v2_market_thailand_bonds_market_get",
+        "tags": [
+          "Terminal V2 Market Data"
+        ],
+        "summary": "Fetch Thai domestic bond market overview statistics from SEC Thailand",
+        "parameters": [],
+        "has_request_body": false,
+        "responses": [
+          "200"
+        ]
+      }
+    },
+    "/api/v2/market/thailand/breadth": {
+      "get": {
+        "operationId": "get_market_breadth_api_v2_market_thailand_breadth_get",
+        "tags": [
+          "Terminal V2 Market Data"
+        ],
+        "summary": "Fetch market breadth (gainers/losers/unchanged) from Settrade",
+        "parameters": [
+          {
+            "name": "market",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "SET or mai",
+              "default": "SET",
+              "title": "Market"
+            }
+          }
+        ],
+        "has_request_body": false,
+        "responses": [
+          "200",
+          "422"
+        ]
+      }
+    },
+    "/api/v2/market/thailand/flow": {
+      "get": {
+        "operationId": "get_thai_investor_flow_api_v2_market_thailand_flow_get",
+        "tags": [
+          "Terminal V2 Market Data"
+        ],
+        "summary": "Fetch 4-investor-type daily net trading flow on SET/mai",
+        "parameters": [
+          {
+            "name": "market",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "SET or mai",
+              "default": "SET",
+              "title": "Market"
+            }
+          }
+        ],
+        "has_request_body": false,
+        "responses": [
+          "200",
+          "422"
+        ]
+      }
+    },
+    "/api/v2/market/thailand/fund-asset-allocation": {
+      "get": {
+        "operationId": "get_thai_fund_allocation_api_v2_market_thailand_fund_asset_allocation_get",
+        "tags": [
+          "Terminal V2 Market Data"
+        ],
+        "summary": "Fetch Thai mutual fund industry asset class distribution from SEC Thailand",
+        "parameters": [],
+        "has_request_body": false,
+        "responses": [
+          "200"
+        ]
+      }
+    },
+    "/api/v2/market/thailand/gold": {
+      "get": {
+        "operationId": "get_thai_retail_gold_api_v2_market_thailand_gold_get",
+        "tags": [
+          "Terminal V2 Market Data"
+        ],
+        "summary": "Fetch official Thai retail gold prices from Gold Traders Association",
+        "parameters": [],
+        "has_request_body": false,
+        "responses": [
+          "200"
+        ]
+      }
+    },
+    "/api/v2/market/thailand/public-debt": {
+      "get": {
+        "operationId": "get_thai_public_debt_api_v2_market_thailand_public_debt_get",
+        "tags": [
+          "Terminal V2 Market Data"
+        ],
+        "summary": "Fetch monthly Thai public debt to GDP ratio and components from MOF Thailand",
+        "parameters": [],
+        "has_request_body": false,
+        "responses": [
+          "200"
+        ]
+      }
+    },
+    "/api/v2/market/thailand/valuation": {
+      "get": {
+        "operationId": "get_market_valuation_api_v2_market_thailand_valuation_get",
+        "tags": [
+          "Terminal V2 Market Data"
+        ],
+        "summary": "Fetch venue aggregate valuation multiples from Settrade",
+        "parameters": [
+          {
+            "name": "market",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "SET or mai",
+              "default": "SET",
+              "title": "Market"
+            }
+          }
+        ],
+        "has_request_body": false,
+        "responses": [
+          "200",
+          "422"
+        ]
+      }
+    },
+    "/api/v2/market/thailand/yield-curve": {
+      "get": {
+        "operationId": "get_thai_yield_curve_api_v2_market_thailand_yield_curve_get",
+        "tags": [
+          "Terminal V2 Market Data"
+        ],
+        "summary": "Fetch Thai Government Bond Model Yield Curve from ThaiBMA",
+        "parameters": [
+          {
+            "name": "date",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Observation date ISO YYYY-MM-DD (defaults to latest)",
+              "title": "Date"
+            }
+          }
+        ],
+        "has_request_body": false,
         "responses": [
           "200",
           "422"

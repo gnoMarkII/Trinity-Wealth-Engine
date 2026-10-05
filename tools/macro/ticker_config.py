@@ -112,7 +112,7 @@ _MACRO_TICKERS: dict[str, tuple[str, str]] = {
 _GLOBAL_GROUPS: list[tuple[str, list[str]]] = [
     ("🏦 Monetary Policy & Liquidity", ["DX-Y.NYB", "EURUSD=X", "USDJPY=X", "USDCNY=X", "^IRX", "^FVX", "^TNX", "^TYX"]),
     ("📈 Economic Growth", ["^GSPC", "^NDX", "^RUT", "HG=F", "CL=F"]),
-    ("💰 Inflation", ["GC=F"]),
+    ("💰 Inflation", ["GC=F", "NG=F"]),
     ("⚠️ Geopolitics & Risk Sentiment", ["^VIX", "HYG", "LQD", "BTC-USD"]),
 ]
 

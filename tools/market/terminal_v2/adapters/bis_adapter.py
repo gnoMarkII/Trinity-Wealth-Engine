@@ -134,6 +134,19 @@ class BisPolicyRatesHttpAdapter(GlobalPolicyRatesPort):
                 except ValueError:
                     continue
 
+            # Release freshness check: verify observation period age (TH-F08)
+            item_stale = False
+            if effective_date:
+                try:
+                    if len(effective_date) == 7:
+                        p_dt = datetime.strptime(effective_date, "%Y-%m").replace(tzinfo=timezone.utc)
+                    else:
+                        p_dt = datetime.strptime(effective_date, "%Y-%m-%d").replace(tzinfo=timezone.utc)
+                    if (datetime.now(timezone.utc) - p_dt).days > 180:
+                        item_stale = True
+                except Exception:
+                    pass
+
             item = PolicyRateItem(
                 country=ctry,
                 rate_value=rate_val,
@@ -143,16 +156,20 @@ class BisPolicyRatesHttpAdapter(GlobalPolicyRatesPort):
                 central_bank=meta["central_bank"],
                 previous_rate=prev_rate,
                 last_change_date=last_change,
+                is_stale=item_stale,
             )
             policy_items.append(item)
 
         spreads = calculate_policy_rate_spreads(policy_items, benchmark_country="TH")
         as_of = datetime.now(timezone.utc).strftime("%Y-%m-%d")
 
+        # Snapshot is stale if all items are stale or empty
+        snapshot_stale = bool(policy_items and all(item.is_stale for item in policy_items))
+
         return GlobalPolicyRateSnapshot(
             as_of_date=as_of,
             rates=tuple(policy_items),
             spreads_vs_bot_repo=spreads,
             source="BIS",
-            is_stale=False,
+            is_stale=snapshot_stale,
         )

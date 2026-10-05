@@ -48,6 +48,7 @@ from application.equity.service import (
 )
 from application.equity.query_service import EquityResearchQueryService
 from application.macro.service import MacroApplicationService, PortfolioCalendarApplicationService
+from application.macro.sector_rotation_service import SectorRotationApplicationService
 from application.macro.card_service import NewsFunnelCardApplicationService
 from api.db.legacy_adapter import LegacyNewsFunnelCardAdapter, NewsFunnelPromptAdapter
 from application.notebooklm.ports import NotebookLMDispatchPort, NotebookLMBinaryPort
@@ -73,6 +74,7 @@ from tools.macro.adapters.market_calendar_adapter import (
     MarketAssetResolverAdapter as MacroMarketAssetResolverAdapter,
     MarketCalendarAdapter,
 )
+from tools.macro.sector_rotation.bootstrap import get_sector_rotation_service
 from tools.macro.adapters.news_funnel_store_adapter import NewsFunnelStoreAdapter
 from tools.macro.adapters.strategy_vault_adapter import IndicatorSeriesAdapter, StrategyVaultAdapter
 
@@ -213,7 +215,6 @@ def get_macro_service() -> MacroApplicationService:
         storage=LegacyNewsFunnelCardAdapter(),
         prompt=NewsFunnelPromptAdapter(),
     )
-
     return MacroApplicationService(
         strategy=strategy,
         indicators=IndicatorSeriesAdapter(strategy),

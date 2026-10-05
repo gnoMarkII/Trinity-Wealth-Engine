@@ -152,9 +152,9 @@ export const StackedAreaChart: React.FC<StackedAreaChartProps> = ({
 
   if (data.length === 0) {
     return (
-      <div className={`rounded-xl border border-slate-800 bg-slate-900/80 p-6 text-center ${className}`}>
-        {title && <h4 className="text-sm font-semibold text-slate-300">{title}</h4>}
-        <p className="mt-4 text-xs text-slate-500">No historical series data available.</p>
+      <div className={`rounded-2xl border border-sky-100 bg-white/80 p-6 text-center shadow-xs ${className}`}>
+        {title && <h4 className="text-sm font-semibold text-zinc-800">{title}</h4>}
+        <p className="mt-4 text-xs text-zinc-500">No historical series data available.</p>
       </div>
     )
   }
@@ -162,19 +162,19 @@ export const StackedAreaChart: React.FC<StackedAreaChartProps> = ({
   const activePoint = hoverIndex !== null && points[hoverIndex] ? points[hoverIndex] : null
 
   return (
-    <div className={`relative rounded-xl border border-slate-800 bg-slate-900/90 p-5 shadow-lg backdrop-blur-sm ${className}`}>
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-3 border-b border-slate-800/80 pb-3">
+    <div className={`relative rounded-2xl border border-sky-100 bg-white/80 p-5 shadow-[0_8px_25px_rgba(14,165,233,0.06)] backdrop-blur-md ${className}`}>
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3 border-b border-sky-100/70 pb-3">
         <div>
-          {title && <h3 className="text-base font-semibold text-slate-100">{title}</h3>}
-          {subtitle && <p className="text-xs text-slate-400">{subtitle}</p>}
+          {title && <h3 className="text-base font-bold text-zinc-900 tracking-tight">{title}</h3>}
+          {subtitle && <p className="text-xs text-zinc-500">{subtitle}</p>}
         </div>
 
         <div className="flex items-center gap-2">
-          <div className="inline-flex rounded-lg border border-slate-800 bg-slate-950 p-1">
+          <div className="inline-flex rounded-lg border border-sky-200/80 bg-slate-100/80 p-1">
             <button
               type="button"
-              className={`rounded px-2.5 py-1 text-xs font-medium transition-colors ${
-                mode === 'absolute' ? 'bg-slate-800 text-slate-100' : 'text-slate-400 hover:text-slate-200'
+              className={`rounded px-2.5 py-1 text-xs font-semibold transition-colors ${
+                mode === 'absolute' ? 'bg-white text-sky-800 shadow-xs' : 'text-zinc-600 hover:text-zinc-900'
               }`}
               onClick={() => setMode('absolute')}
             >
@@ -182,8 +182,8 @@ export const StackedAreaChart: React.FC<StackedAreaChartProps> = ({
             </button>
             <button
               type="button"
-              className={`rounded px-2.5 py-1 text-xs font-medium transition-colors ${
-                mode === 'percentage' ? 'bg-slate-800 text-slate-100' : 'text-slate-400 hover:text-slate-200'
+              className={`rounded px-2.5 py-1 text-xs font-semibold transition-colors ${
+                mode === 'percentage' ? 'bg-white text-sky-800 shadow-xs' : 'text-zinc-600 hover:text-zinc-900'
               }`}
               onClick={() => setMode('percentage')}
             >
@@ -197,12 +197,12 @@ export const StackedAreaChart: React.FC<StackedAreaChartProps> = ({
         {categories.map((cat) => (
           <div key={cat.key} className="flex items-center gap-1.5">
             <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: cat.color }} />
-            <span className="text-slate-300">{cat.label}</span>
+            <span className="font-medium text-zinc-700">{cat.label}</span>
           </div>
         ))}
       </div>
 
-      <div className="relative w-full overflow-hidden rounded-lg border border-slate-800 bg-slate-950">
+      <div className="relative w-full overflow-hidden rounded-xl border border-sky-100 bg-gradient-to-b from-slate-50/80 via-white to-sky-50/20 p-2 shadow-2xs">
         <svg
           viewBox={`0 0 ${width} ${height}`}
           className="h-full w-full select-none"
@@ -217,8 +217,8 @@ export const StackedAreaChart: React.FC<StackedAreaChartProps> = ({
             const labelVal = mode === 'percentage' ? `${(frac * 100).toFixed(0)}%` : (maxTotal * frac).toLocaleString(undefined, { maximumFractionDigits: 0 })
             return (
               <g key={idx}>
-                <line x1={padLeft} y1={y} x2={width - padRight} y2={y} stroke="#1e293b" strokeDasharray="3 3" />
-                <text x={padLeft - 8} y={y + 4} textAnchor="end" fontSize="10" fill="#64748b">
+                <line x1={padLeft} y1={y} x2={width - padRight} y2={y} stroke="#e2e8f0" strokeDasharray="3 3" />
+                <text x={padLeft - 8} y={y + 4} textAnchor="end" fontSize="10" fill="#64748b" className="font-mono">
                   {labelVal}
                 </text>
               </g>
@@ -240,7 +240,7 @@ export const StackedAreaChart: React.FC<StackedAreaChartProps> = ({
           {/* X Axis Dates */}
           {points.length > 0 && points[0] && (
             <>
-              <text x={points[0].x} y={height - 10} fontSize="10" fill="#64748b" textAnchor="start">
+              <text x={points[0].x} y={height - 10} fontSize="10" fill="#64748b" textAnchor="start" className="font-mono">
                 {points[0].date}
               </text>
               {points.length > 1 && points[points.length - 1] && (
@@ -250,6 +250,7 @@ export const StackedAreaChart: React.FC<StackedAreaChartProps> = ({
                   fontSize="10"
                   fill="#64748b"
                   textAnchor="end"
+                  className="font-mono"
                 >
                   {points[points.length - 1]!.date}
                 </text>
@@ -264,7 +265,7 @@ export const StackedAreaChart: React.FC<StackedAreaChartProps> = ({
               y1={padTop}
               x2={activePoint.x}
               y2={padTop + plotHeight}
-              stroke="#cbd5e1"
+              stroke="#94a3b8"
               strokeDasharray="2 2"
               strokeWidth={1.5}
             />
@@ -289,13 +290,13 @@ export const StackedAreaChart: React.FC<StackedAreaChartProps> = ({
 
         {activePoint && (
           <div
-            className="pointer-events-none absolute z-20 rounded-lg border border-slate-700 bg-slate-900/95 p-3 text-xs shadow-xl backdrop-blur-md"
+            className="pointer-events-none absolute z-20 rounded-xl border border-sky-100 bg-white/95 p-3 text-xs shadow-lg backdrop-blur-md"
             style={{
               left: Math.min(width - 180, Math.max(padLeft, activePoint.x)),
               top: 15,
             }}
           >
-            <div className="border-b border-slate-800 pb-1.5 font-semibold text-slate-200">
+            <div className="border-b border-sky-100 pb-1.5 font-bold text-zinc-900">
               {activePoint.date}
             </div>
             <div className="mt-2 space-y-1">
@@ -304,20 +305,20 @@ export const StackedAreaChart: React.FC<StackedAreaChartProps> = ({
                 const share = activePoint.total > 0 ? (val / activePoint.total) * 100 : 0
                 return (
                   <div key={cat.key} className="flex items-center justify-between gap-3 text-[11px]">
-                    <span className="flex items-center gap-1.5 text-slate-300">
+                    <span className="flex items-center gap-1.5 text-zinc-600">
                       <span className="h-2 w-2 rounded-full" style={{ backgroundColor: cat.color }} />
                       {cat.label}:
                     </span>
-                    <span className="font-mono text-slate-100">
+                    <span className="font-mono font-semibold text-zinc-800">
                       {val.toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 })}{' '}
-                      <span className="text-slate-400">({share.toFixed(1)}%)</span>
+                      <span className="text-zinc-400 font-normal">({share.toFixed(1)}%)</span>
                     </span>
                   </div>
                 )
               })}
-              <div className="mt-1.5 flex items-center justify-between border-t border-slate-800 pt-1 font-semibold text-slate-100">
+              <div className="mt-1.5 flex items-center justify-between border-t border-slate-200 pt-1 font-semibold text-zinc-900">
                 <span>Total:</span>
-                <span className="font-mono text-emerald-400">
+                <span className="font-mono font-bold text-emerald-600">
                   {activePoint.total.toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 })} {unit}
                 </span>
               </div>

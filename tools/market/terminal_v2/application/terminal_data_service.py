@@ -43,10 +43,14 @@ from tools.market.terminal_v2.domain.models import (
     SecCompanyFactsSnapshot,
     SecInsiderTradeSnapshot,
     SpotEtfFlowSnapshot,
+    StablecoinSupplySnapshot,
+    CryptoBenchmarkSnapshot,
+    CryptoMacroLiquiditySnapshot,
     ThaiBondMarketStats,
     ThaiCorporateBondIssuance,
     ThaiFundAssetAllocationSnapshot,
     ThaiPublicDebtSnapshot,
+    ThaiYieldCurveSnapshot,
     TreasuryAuctionResult,
     TreasuryYieldCurveSnapshot,
     UsNationalDebtSnapshot,
@@ -54,6 +58,7 @@ from tools.market.terminal_v2.domain.models import (
 from tools.market.terminal_v2.ports.driven_ports import (
     AuctionHistoryPort,
     CommodityVolPort,
+    CryptoBenchmarkPort,
     GlobalPolicyRatesPort,
     MetalsPositioningPort,
     NasdaqEquityIntelligencePort,
@@ -65,13 +70,16 @@ from tools.market.terminal_v2.ports.driven_ports import (
     SecInsiderTradesPort,
     ShortVolumePort,
     SpotEtfFlowsPort,
+    StablecoinSupplyPort,
     ThaiBondMarketPort,
     ThaiFundAllocationPort,
     ThaiPublicDebtPort,
+    ThaiYieldCurvePort,
     TickerNewsPort,
     TreasuryDataPort,
 )
 from tools.market.terminal_v2.ports.driving_ports import TerminalDataServicePort
+import time
 
 logger = logging.getLogger(__name__)
 
@@ -120,14 +128,17 @@ class TerminalDataService(TerminalDataServicePort):
         auction_history: AuctionHistoryPort,
         thai_bond_market: ThaiBondMarketPort,
         thai_public_debt: ThaiPublicDebtPort,
+        thai_yield_curve: ThaiYieldCurvePort,
         # Derivatives & Commodities
         options_chain: OptionsChainPort,
         commodity_vol: CommodityVolPort,
         metals_cot: MetalsPositioningPort,
         prediction_market: PredictionMarketPort,
-        # Fund Flows
+        # Fund Flows & Crypto Liquidity
         thai_fund_allocation: ThaiFundAllocationPort,
         spot_etf_flows: SpotEtfFlowsPort,
+        stablecoin_supply: Optional[StablecoinSupplyPort] = None,
+        crypto_benchmark: Optional[CryptoBenchmarkPort] = None,
     ):
         self._short_volume = short_volume
         self._nasdaq_intelligence = nasdaq_intelligence
@@ -143,6 +154,7 @@ class TerminalDataService(TerminalDataServicePort):
         self._auction_history = auction_history
         self._thai_bond_market = thai_bond_market
         self._thai_public_debt = thai_public_debt
+        self._thai_yield_curve = thai_yield_curve
 
         self._options_chain = options_chain
         self._commodity_vol = commodity_vol
@@ -151,6 +163,8 @@ class TerminalDataService(TerminalDataServicePort):
 
         self._thai_fund_allocation = thai_fund_allocation
         self._spot_etf_flows = spot_etf_flows
+        self._stablecoin_supply = stablecoin_supply
+        self._crypto_benchmark = crypto_benchmark
 
     # ========================================================================
     # Macro Domain Capabilities
@@ -250,6 +264,11 @@ class TerminalDataService(TerminalDataServicePort):
     def get_thai_public_debt(self) -> ThaiPublicDebtSnapshot:
         return self._thai_public_debt.get_public_debt()
 
+    def get_thai_yield_curve(
+        self, as_of_date: Optional[str] = None
+    ) -> ThaiYieldCurveSnapshot:
+        return self._thai_yield_curve.get_government_yield_curve(as_of_date=as_of_date)
+
     # ========================================================================
     # Equity Domain Capabilities
     # ========================================================================
@@ -341,3 +360,107 @@ class TerminalDataService(TerminalDataServicePort):
                 capability="spot-etf-flows",
             )
         return self._spot_etf_flows.get_spot_etf_flows(clean)
+
+    # ========================================================================
+    # Crypto Macro Liquidity Capabilities (Level 1)
+    # ========================================================================
+
+    def get_stablecoin_supply(self) -> StablecoinSupplySnapshot:
+        if self._stablecoin_supply is None:
+            raise DataUnavailableError(
+                "Stablecoin supply port is not configured",
+                capability="stablecoin-supply",
+                source="TerminalDataService",
+            )
+        return self._stablecoin_supply.get_stablecoin_supply()
+
+    def get_crypto_benchmark(self) -> CryptoBenchmarkSnapshot:
+        if self._crypto_benchmark is None:
+            raise DataUnavailableError(
+                "Crypto benchmark port is not configured",
+                capability="crypto-benchmark",
+                source="TerminalDataService",
+            )
+        return self._crypto_benchmark.get_crypto_benchmark()
+
+    def get_crypto_macro_liquidity(self) -> CryptoMacroLiquiditySnapshot:
+        """Synthesized Level 1 crypto macro liquidity proxy (Stablecoins + BTC/Gold + ETF Flows)."""
+        btc_price: Optional[float] = None
+        btc_24h_pct: Optional[float] = None
+        btc_7d_pct: Optional[float] = None
+        btc_gold_ratio: Optional[float] = None
+        as_of = date.today().isoformat()
+        stale_reasons = []
+
+        if self._crypto_benchmark:
+            try:
+                bench = self._crypto_benchmark.get_crypto_benchmark()
+                btc_price = bench.price_usd
+                btc_24h_pct = bench.change_24h_pct
+                btc_7d_pct = bench.change_7d_pct
+                btc_gold_ratio = bench.btc_gold_ratio
+                if bench.as_of_date:
+                    as_of = bench.as_of_date
+                if bench.is_stale:
+                    stale_reasons.append(f"Benchmark: {bench.stale_reason}")
+            except Exception as e:
+                logger.warning("Failed to fetch crypto benchmark in liquidity synthesis: %s", e)
+                stale_reasons.append(f"Benchmark error: {str(e)}")
+
+        stable_total: Optional[float] = None
+        stable_7d_pct: Optional[float] = None
+        stable_30d_pct: Optional[float] = None
+        top_stables = ()
+
+        if self._stablecoin_supply:
+            try:
+                stables = self._stablecoin_supply.get_stablecoin_supply()
+                stable_total = stables.total_circulating_usd
+                stable_7d_pct = stables.change_7d_pct
+                stable_30d_pct = stables.change_30d_pct
+                top_stables = stables.top_stablecoins
+                if stables.is_stale:
+                    stale_reasons.append(f"Stablecoins: {stables.stale_reason}")
+            except Exception as e:
+                logger.warning("Failed to fetch stablecoin supply in liquidity synthesis: %s", e)
+                stale_reasons.append(f"Stablecoin error: {str(e)}")
+
+        etf_daily: Optional[float] = None
+        etf_cum: Optional[float] = None
+        try:
+            etf_snap = self.get_spot_etf_flows("BTC")
+            etf_daily = etf_snap.daily_total_usd
+            etf_cum = etf_snap.cumulative_total_usd
+            if etf_snap.is_stale:
+                stale_reasons.append(f"ETF flows: {etf_snap.stale_reason}")
+        except Exception as e:
+            logger.debug("Optional ETF flows fetch in liquidity synthesis: %s", e)
+
+        regime = "Neutral"
+        if stable_30d_pct is not None and stable_30d_pct > 1.0:
+            if (etf_daily is not None and etf_daily > 0) or (btc_7d_pct is not None and btc_7d_pct > 0):
+                regime = "Expanding Liquidity"
+            else:
+                regime = "Mild Expansion"
+        elif stable_30d_pct is not None and stable_30d_pct < -1.0:
+            regime = "Contracting Liquidity"
+
+        return CryptoMacroLiquiditySnapshot(
+            btc_price_usd=btc_price,
+            btc_change_24h_pct=btc_24h_pct,
+            btc_change_7d_pct=btc_7d_pct,
+            btc_gold_ratio=btc_gold_ratio,
+            stablecoin_total_usd=stable_total,
+            stablecoin_change_7d_pct=stable_7d_pct,
+            stablecoin_change_30d_pct=stable_30d_pct,
+            top_stablecoins=top_stables,
+            etf_daily_net_inflow_usd=etf_daily,
+            etf_cumulative_total_usd=etf_cum,
+            liquidity_regime=regime,
+            as_of_date=as_of,
+            fetched_at=time.time(),
+            source="DeFiLlama / SoSoValue / Benchmark",
+            is_stale=bool(stale_reasons),
+            stale_reason="; ".join(stale_reasons) if stale_reasons else "",
+        )
+

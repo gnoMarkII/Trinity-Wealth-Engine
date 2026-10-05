@@ -29,6 +29,8 @@ from tools.market.terminal_v2.bootstrap import (
 )
 from tools.market.terminal_v2.domain.errors import DataUnavailableError, ProviderError
 from tools.market.terminal_v2.domain.models import (
+    CryptoBenchmarkSnapshot,
+    CryptoMacroLiquiditySnapshot,
     FinraShortVolumeSnapshot,
     GoldPriceDetail,
     InvestorTypeRow,
@@ -40,6 +42,8 @@ from tools.market.terminal_v2.domain.models import (
     ReferenceRateSnapshot,
     SpotEtfFlowSnapshot,
     SpotEtfIssuerFlow,
+    StablecoinItem,
+    StablecoinSupplySnapshot,
     ThaiFundAssetAllocationRow,
     ThaiFundAssetAllocationSnapshot,
     ThaiFundFlowSnapshot,
@@ -336,6 +340,30 @@ def test_endpoint_thai_public_debt(client):
         assert len(data["components"]) == 1
 
 
+def test_endpoint_thai_yield_curve(client):
+    from tools.market.terminal_v2.domain.models import ThaiYieldCurveSnapshot, ThaiYieldPoint
+    mock_curve = ThaiYieldCurveSnapshot(
+        observation_date="2026-10-02",
+        yields=(
+            ThaiYieldPoint(tenor="2Y", ttm_years=2.0, yield_percent=1.3877),
+            ThaiYieldPoint(tenor="10Y", ttm_years=10.0, yield_percent=2.3914),
+        ),
+        spread_10y_2y_bps=100.4,
+        spread_10y_1y_bps=80.0,
+        fetched_at=1758880000.0,
+        source="ThaiBMA",
+    )
+    with patch("tools.market.terminal_v2.application.terminal_data_service.TerminalDataService.get_thai_yield_curve", return_value=mock_curve):
+        resp = client.get("/api/v2/market/thailand/yield-curve")
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["observation_date"] == "2026-10-02"
+        assert data["spread_10y_2y_bps"] == 100.4
+        assert len(data["yields"]) == 2
+        assert data["yields"][0]["tenor"] == "2Y"
+        assert data["yields"][0]["yield_percent"] == 1.3877
+
+
 def test_endpoint_polymarket(client):
     mock_items = (
         PredictionMarketItem(
@@ -387,6 +415,73 @@ def test_endpoint_crypto_etf_flows(client):
         assert data["daily_total_usd"] == 120000000.0
         assert len(data["issuers"]) == 1
         assert data["issuers"][0]["ticker"] == "IBIT"
+
+
+def test_api_stablecoins(client):
+    mock_stables = StablecoinSupplySnapshot(
+        total_circulating_usd=160000000000.0,
+        change_7d_pct=0.85,
+        change_30d_pct=2.1,
+        top_stablecoins=(
+            StablecoinItem(symbol="USDT", name="Tether", circulating_usd=110000000000.0, market_share_pct=68.75),
+        ),
+        as_of_date="2026-10-04",
+        source="DeFiLlama",
+    )
+    with patch("tools.market.terminal_v2.application.terminal_data_service.TerminalDataService.get_stablecoin_supply", return_value=mock_stables):
+        resp = client.get("/api/v2/market/crypto/stablecoins")
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["total_circulating_usd"] == 160000000000.0
+        assert data["change_7d_pct"] == 0.85
+        assert len(data["top_stablecoins"]) == 1
+        assert data["top_stablecoins"][0]["symbol"] == "USDT"
+
+
+def test_api_crypto_benchmark(client):
+    mock_bench = CryptoBenchmarkSnapshot(
+        symbol="BTC",
+        price_usd=85000.0,
+        change_24h_pct=1.2,
+        change_7d_pct=2.5,
+        gold_price_usd=4000.0,
+        btc_gold_ratio=21.25,
+        as_of_date="2026-10-04",
+        source="Market Benchmark",
+    )
+    with patch("tools.market.terminal_v2.application.terminal_data_service.TerminalDataService.get_crypto_benchmark", return_value=mock_bench):
+        resp = client.get("/api/v2/market/crypto/benchmark")
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["symbol"] == "BTC"
+        assert data["price_usd"] == 85000.0
+        assert data["btc_gold_ratio"] == 21.25
+
+
+def test_api_crypto_macro_liquidity(client):
+    mock_liq = CryptoMacroLiquiditySnapshot(
+        btc_price_usd=85000.0,
+        btc_change_24h_pct=1.2,
+        btc_change_7d_pct=2.5,
+        btc_gold_ratio=21.25,
+        stablecoin_total_usd=160000000000.0,
+        stablecoin_change_7d_pct=0.85,
+        stablecoin_change_30d_pct=2.1,
+        top_stablecoins=(),
+        etf_daily_net_inflow_usd=120000000.0,
+        etf_cumulative_total_usd=50000000000.0,
+        liquidity_regime="Expanding Liquidity",
+        as_of_date="2026-10-04",
+        source="DeFiLlama / SoSoValue / Benchmark",
+    )
+    with patch("tools.market.terminal_v2.application.terminal_data_service.TerminalDataService.get_crypto_macro_liquidity", return_value=mock_liq):
+        resp = client.get("/api/v2/market/macro/crypto-liquidity")
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["liquidity_regime"] == "Expanding Liquidity"
+        assert data["btc_gold_ratio"] == 21.25
+        assert data["stablecoin_total_usd"] == 160000000000.0
+
 
 
 def test_endpoint_upstream_unavailable_returns_503(client):

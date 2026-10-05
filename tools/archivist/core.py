@@ -139,8 +139,17 @@ def _vault_folders() -> list[str]:
 
 @traceable(run_type="tool")
 def init_vault_structure() -> None:
+    current_vault = Path(os.getenv("OBSIDIAN_VAULT_PATH", str(VAULT_PATH))).resolve()
     for folder in _vault_folders():
-        (VAULT_PATH / folder).mkdir(parents=True, exist_ok=True)
+        (current_vault / folder).mkdir(parents=True, exist_ok=True)
+    system_dir = current_vault / ".system"
+    system_dir.mkdir(parents=True, exist_ok=True)
+    cfg_file = system_dir / "vault_config.json"
+    if not cfg_file.exists():
+        cfg_file.write_text(
+            json.dumps({"layout_version": 2, "vault_id": current_vault.name}, indent=2),
+            encoding="utf-8"
+        )
 
 
 def _safe_read_path(filepath: str) -> Path:

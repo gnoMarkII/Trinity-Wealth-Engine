@@ -18,19 +18,21 @@ from .ticker_config import (
     _JAPAN_GROUPS, _INDIA_GROUPS, _LATAM_GROUPS
 )
 
-def _fetch_price_once(symbol: str) -> tuple[float | None, float | None]:
+def _fetch_price_once(symbol: str) -> tuple[float | None, float | None, str | None]:
     ticker = yf.Ticker(symbol)
-    fi = ticker.fast_info
-    last = getattr(fi, "last_price", None)
-    prev = getattr(fi, "previous_close", None)
-    if last is None:
-        hist = ticker.history(period="2d")
-        if not hist.empty:
-            last = float(hist["Close"].iloc[-1])
-            prev = float(hist["Close"].iloc[-2]) if len(hist) > 1 else None
-    return last, prev
+    # Read value and observation date from the same bar. fast_info has no
+    # observation timestamp, so stamping its price with today's date is unsafe.
+    hist = ticker.history(period="5d", auto_adjust=False, timeout=_FETCH_TIMEOUT)
+    if hist.empty:
+        return None, None, None
+    closes = hist["Close"].dropna()
+    if closes.empty:
+        return None, None, None
+    last = float(closes.iloc[-1])
+    prev = float(closes.iloc[-2]) if len(closes) > 1 else None
+    return last, prev, closes.index[-1].strftime("%Y-%m-%d")
 
-def _fetch_price(symbol: str) -> tuple[float | None, float | None]:
+def _fetch_price(symbol: str) -> tuple[float | None, float | None, str | None]:
     return _with_retry(_fetch_price_once, symbol)
 
 def _fetch_fred_once(fred: Fred, series_id: str):
@@ -69,12 +71,13 @@ def ingest_global_macro() -> str:
             sym = futures[future]
             name, description = _MACRO_TICKERS[sym]
             try:
-                last, prev = future.result()
+                last, prev, observed_at = future.result()
                 if last is not None:
                     change_pct = ((last - prev) / prev * 100) if prev else 0.0
                     rows_by_symbol[sym] = {
                         "symbol": sym, "name": name, "description": description,
                         "price": last, "change_pct": change_pct,
+                        "previous_price": prev, "observed_at": observed_at,
                         "direction": "▲" if change_pct >= 0 else "▼",
                     }
             except Exception:
@@ -99,14 +102,15 @@ def ingest_global_macro() -> str:
         if not group_rows: continue
         md_lines += [
             f"## {group_name}", "",
-            "| ดัชนี | ค่าล่าสุด | เปลี่ยนแปลง | ความหมาย |",
-            "|-------|----------|-------------|---------|"
+            "| ดัชนี | ค่าล่าสุด | ก่อนหน้า | เปลี่ยนแปลง | วันสังเกต | ความหมาย |",
+            "|-------|----------|----------|-------------|----------|---------|"
         ]
         for r in group_rows:
             fmt, suffix = _PRICE_FORMAT.get(r["symbol"], (".2f", ""))
             price_str = f"{r['price']:{fmt}}{suffix}"
             change_str = f"{r['direction']}{abs(r['change_pct']):.2f}%"
-            md_lines.append(f"| **{r['name']}** (`{r['symbol']}`) | {price_str} | {change_str} | {r['description']} |")
+            prev_str = f"{r['previous_price']:{fmt}}{suffix}" if r['previous_price'] is not None else "—"
+            md_lines.append(f"| **{r['name']}** (`{r['symbol']}`) | {price_str} | {prev_str} | {change_str} | {r['observed_at'] or '—'} | {r['description']} |")
         md_lines.append("")
 
     return "\n".join(md_lines)
@@ -137,12 +141,13 @@ def ingest_regional_macro() -> str:
             sym = futures[future]
             name, description = _REGIONAL_TICKERS[sym]
             try:
-                last, prev = future.result()
+                last, prev, observed_at = future.result()
                 if last is not None:
                     change_pct = ((last - prev) / prev * 100) if prev else 0.0
                     rows_by_symbol[sym] = {
                         "symbol": sym, "name": name, "description": description,
                         "price": last, "change_pct": change_pct,
+                        "previous_price": prev, "observed_at": observed_at,
                         "direction": "▲" if change_pct >= 0 else "▼",
                     }
             except Exception:
@@ -169,12 +174,13 @@ def ingest_regional_macro() -> str:
             if not group_rows: continue
             md_lines += [
                 f"### {pillar}", "",
-                "| ดัชนี | ค่าล่าสุด | เปลี่ยนแปลง | ความหมาย |",
-                "|-------|----------|-------------|---------|"
+                "| ดัชนี | ค่าล่าสุด | ก่อนหน้า | เปลี่ยนแปลง | วันสังเกต | ความหมาย |",
+                "|-------|----------|----------|-------------|----------|---------|"
             ]
             for r in group_rows:
                 change_str = f"{r['direction']}{abs(r['change_pct']):.2f}%"
-                md_lines.append(f"| **{r['name']}** (`{r['symbol']}`) | {r['price']:.2f} | {change_str} | {r['description']} |")
+                prev_str = f"{r['previous_price']:.2f}" if r['previous_price'] is not None else "—"
+                md_lines.append(f"| **{r['name']}** (`{r['symbol']}`) | {r['price']:.2f} | {prev_str} | {change_str} | {r['observed_at'] or '—'} | {r['description']} |")
             md_lines.append("")
 
     return "\n".join(md_lines)
@@ -235,13 +241,13 @@ def ingest_country_macro() -> str:
 
     for sym, (name, description) in _THAI_INDICATORS.items():
         try:
-            last, prev = _fetch_price(sym)
+            last, prev, observed_at = _fetch_price(sym)
             if last is not None:
                 change_pct = ((last - prev) / prev * 100) if prev else 0.0
                 rows_by_id[sym] = {
                     "series_id": sym, "name": name, "description": description,
                     "value": last, "prev": prev if prev is not None else last, "ma": last,
-                    "unit": "", "date": today,
+                    "unit": "", "date": observed_at or "—",
                     "change": f"{'▲' if change_pct >= 0 else '▼'}{abs(change_pct):.2f}%"
                 }
         except Exception:
@@ -307,7 +313,7 @@ def ingest_country_macro() -> str:
                 val_str = f"{r['value']:.2f} {r['unit']}".strip()
                 prev_str = f"{r['prev']:.2f} {r['unit']}".strip()
                 ma_str = f"{r['ma']:.2f} {r['unit']}".strip()
-                change = r.get('change', r['date'])
+                change = f"{r['date']} / {r['change']}" if r.get('change') else r['date']
                 md_lines.append(f"| **{r['name']}** (`{r['series_id']}`) | {val_str} | {prev_str} | {ma_str} | {change} | {r['description']} |")
             md_lines.append("")
 
@@ -315,56 +321,42 @@ def ingest_country_macro() -> str:
 
 @tool
 def ingest_us_sectors() -> str:
-    """ดึงข้อมูล US Sector ETF ครบ 11 กลุ่ม GICS
+    """Return the shared deterministic US sector snapshot as compact JSON.
 
-    [Usage/When to use]
-    ใช้เมื่อต้องการวิเคราะห์กระแสเงินไหลเวียน (Sector Rotation) ของตลาดหุ้นสหรัฐฯ
-    - ดึงข้อมูลผลตอบแทนของทั้ง 11 กลุ่มอุตสาหกรรม (GICS Sectors)
-
-    [Caution]
-    - เครื่องมือนี้แค่ส่งคืนข้อความ Markdown (ไม่บันทึกไฟล์เอง)
-    - ผลลัพธ์จะถูกนำไปส่งให้ Archivist บันทึกไฟล์ต่อโดยอัตโนมัติ
-
-    Returns:
-        str: ข้อมูล US Sectors Pulse ในรูปแบบ Markdown พร้อม YAML Frontmatter
+    The dashboard and macro agents use the same adjusted-price inputs, formula
+    versions, missing-data reasons, and immutable snapshot identity. This is a
+    market-strength proxy; it does not measure ETF fund flows.
     """
-    today = datetime.now().strftime("%Y-%m-%d")
-    now_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    symbols = list(_US_SECTORS.keys())
-    rows: list[dict] = []
-    with concurrent.futures.ThreadPoolExecutor(max_workers=len(symbols)) as executor:
-        futures = {executor.submit(_fetch_price, sym): sym for sym in symbols}
-        for future in concurrent.futures.as_completed(futures):
-            sym = futures[future]
-            try:
-                last, prev = future.result()
-                if last is not None:
-                    change_pct = ((last - prev) / prev * 100) if prev else 0.0
-                    rows.append({
-                        "symbol": sym, "name": _US_SECTORS[sym][0], "description": _US_SECTORS[sym][1],
-                        "price": last, "change_pct": change_pct, "direction": "▲" if change_pct >= 0 else "▼",
-                    })
-            except Exception: pass
-    rows.sort(key=lambda r: r["change_pct"], reverse=True)
-    md_lines = [
-        "---", "schema_version: 2", f"title: US Sectors Pulse {today}",
-        "entity_type: us_sectors_pulse", f"date: {today}", "tags: [macro, sectors, snapshot]",
-        "---", "",
-        f"# กระแสเงินไหลเวียนกลุ่มอุตสาหกรรมสหรัฐฯ — {today}", "",
-        "| อันดับ | Sector | ETF | ราคา (USD) | เปลี่ยนแปลง | ลักษณะ |",
-        "|--------|--------|-----|-----------|------------|--------|"
-    ]
-    for i, r in enumerate(rows, start=1):
-        change_str = f"{r['direction']}{abs(r['change_pct']):.2f}%"
-        md_lines.append(f"| {i} | **{r['name']}** | `{r['symbol']}` | {r['price']:.2f} | {change_str} | {r['description']} |")
-    return "\n".join(md_lines)
+    try:
+        from tools.macro.sector_rotation.bootstrap import get_sector_rotation_service
+        from tools.macro.sector_rotation.domain.claims import compact_ai_context
+        from tools.macro.sector_rotation.run_context import current_sector_run_id
 
+        run_id = current_sector_run_id()
+        if not run_id:
+            return json.dumps({"status": "unavailable", "reason": "macro_run_binding_required"}, ensure_ascii=False)
+        service = get_sector_rotation_service()
+        snapshot, binding_status = service.pin_for_run(run_id)
+        if snapshot is None:
+            return json.dumps(binding_status, ensure_ascii=False)
+        return json.dumps(compact_ai_context(snapshot), ensure_ascii=False, allow_nan=False)
+    except Exception as exc:
+        return json.dumps(
+            {"status": "unavailable", "reason": f"sector_snapshot_unavailable:{type(exc).__name__}"},
+            ensure_ascii=False,
+        )
 
 @traceable(run_type="chain")
 def fetch_and_save_macro_snapshots() -> None:
     """ดึงข้อมูล Snapshots 3 ระดับ (Global, Regional, Country) และบันทึกลง Daily_Snapshots โดยตรง"""
     today_str = os.environ.get("EVAL_DATE", datetime.now().strftime("%Y-%m-%d"))
     from tools.archivist.writer import write_raw_markdown
+
+    try:
+        from tools.macro.adapters.thai_hard_data_adapter import sync_thai_macro_data
+        sync_thai_macro_data()
+    except Exception as exc:
+        log.warning(f"Failed to sync Thai macro data during fetch_and_save_macro_snapshots: {exc}")
 
     folder = "30_Knowledge_Base/Macroeconomics/Daily_Snapshots"
     for content, filename in (

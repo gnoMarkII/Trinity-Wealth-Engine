@@ -2,6 +2,7 @@ from datetime import datetime
 from enum import Enum
 from typing import Literal, Optional, Any
 from pydantic import BaseModel, Field, computed_field, field_validator, model_validator
+from schemas.sector_rotation_schemas import SectorFactClaim, ResolvedMetricClaim, WatchCondition
 import re
 import logging
 
@@ -132,6 +133,8 @@ class RegionQuantMetrics(BaseModel):
     coverage: float = Field(default=0.0, ge=0.0, le=1.0, description="Coverage ratio (0.0 to 1.0)")
     data_gaps: list[str] = Field(default_factory=list, description="Missing indicators")
     market_stance: Optional[dict[str, Any]] = Field(default=None, description="Market stance for region (e.g. Settrade flow/breadth)")
+    fiscal_health: Optional[dict[str, Any]] = Field(default=None, description="Fiscal health diagnostics (e.g. Public Debt to GDP)")
+    thai_yield_curve: Optional[dict[str, Any]] = Field(default=None, description="Thai yield curve diagnostics (e.g. 10Y-2Y spread)")
 
 class MarketObservable(BaseModel):
     observable_id: str = Field(description="Stable ID of observable")
@@ -158,7 +161,7 @@ class MarketObservable(BaseModel):
     period: Optional[str] = Field(default=None, description="Observation period label")
     published_at: Optional[str] = Field(default=None, description="Official publication date if available")
     fetched_at: Optional[str] = Field(default=None, description="Fetch timestamp")
-    status: Literal["verified", "stale", "unverified", "mock", "missing"] = Field(default="verified", description="Data status")
+    status: Literal["verified", "stale", "unverified", "mock", "missing", "blocked", "mismatched_date"] = Field(default="verified", description="Data status")
 
     @field_validator("observed_at")
     @classmethod
@@ -265,6 +268,19 @@ class MacroTheme(BaseModel):
                 )
         return self
 
+class SectorAnalysis(BaseModel):
+    """Separate market-sector commentary from economic hard-data scoring."""
+    analysis_status: Literal["available", "limited", "unavailable"] = "unavailable"
+    unavailable_reason: Optional[str] = None
+    snapshot_id: Optional[str] = None
+    as_of_date: Optional[str] = None
+    summary_th: str = ""
+    fact_claims: list[SectorFactClaim] = Field(default_factory=list)
+    resolved_metrics: list[ResolvedMetricClaim] = Field(default_factory=list)
+    watch_conditions: list[WatchCondition] = Field(default_factory=list)
+    validation_warnings: list[str] = Field(default_factory=list)
+
+
 class NarrativeContext(BaseModel):
     evaluated_at: str = Field(description="ISO format string")
     dominant_themes: list[MacroTheme] = Field(description="ธีมหลักที่กำลังขับเคลื่อนตลาด")
@@ -277,6 +293,10 @@ class NarrativeContext(BaseModel):
     report_references: list[dict[str, Any]] = Field(
         default_factory=list,
         description="System-populated news and YouTube references used as macro context",
+    )
+    sector_analysis: Optional[SectorAnalysis] = Field(
+        default=None,
+        description="Sector market evidence linked to a deterministic snapshot; never changes macro hard-data scores",
     )
 
 

@@ -188,7 +188,7 @@ export const YieldCurveChart: React.FC<YieldCurveChartProps> = ({
       </div>
 
       {/* SVG Cross-Section Chart */}
-      <div className="mt-4 overflow-hidden rounded-xl border border-slate-100 bg-slate-950 p-3">
+      <div className="mt-4 overflow-hidden rounded-xl border border-sky-100 bg-gradient-to-b from-slate-50/80 via-white to-sky-50/20 p-3.5 shadow-2xs">
         <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-auto select-none" role="img" aria-label="Yield Curve Chart">
           {/* Y Axis Grid lines */}
           {[0, 0.25, 0.5, 0.75, 1].map((frac, i) => {
@@ -196,7 +196,7 @@ export const YieldCurveChart: React.FC<YieldCurveChartProps> = ({
             const val = minYield + yieldRange * frac
             return (
               <g key={i}>
-                <line x1={padLeft} y1={y} x2={width - padRight} y2={y} stroke="#1e293b" strokeDasharray="3 3" />
+                <line x1={padLeft} y1={y} x2={width - padRight} y2={y} stroke="#e2e8f0" strokeDasharray="3 3" />
                 <text x={padLeft - 6} y={y + 3} textAnchor="end" fontSize="10" fill="#64748b" className="font-mono">
                   {val.toFixed(2)}%
                 </text>
@@ -208,7 +208,7 @@ export const YieldCurveChart: React.FC<YieldCurveChartProps> = ({
           {polylinePoints && (
             <polyline
               fill="none"
-              stroke="#38bdf8"
+              stroke="#0284c7"
               strokeWidth="2.5"
               strokeLinecap="round"
               strokeLinejoin="round"
@@ -225,9 +225,9 @@ export const YieldCurveChart: React.FC<YieldCurveChartProps> = ({
                 <circle
                   cx={c.x}
                   cy={c.y}
-                  r={isHighlight ? 5 : 3.5}
-                  fill={isHighlight ? '#38bdf8' : '#0f172a'}
-                  stroke={isHighlight ? '#ffffff' : '#38bdf8'}
+                  r={isHighlight ? 5.5 : 3.5}
+                  fill={isHighlight ? '#0284c7' : '#ffffff'}
+                  stroke={isHighlight ? '#ffffff' : '#0284c7'}
                   strokeWidth={isHighlight ? 2 : 1.5}
                 />
                 <text
@@ -235,8 +235,8 @@ export const YieldCurveChart: React.FC<YieldCurveChartProps> = ({
                   y={height - 10}
                   textAnchor="middle"
                   fontSize="9"
-                  fill="#94a3b8"
-                  className="font-mono"
+                  fill="#64748b"
+                  className="font-mono font-medium"
                 >
                   {c.tenor}
                 </text>

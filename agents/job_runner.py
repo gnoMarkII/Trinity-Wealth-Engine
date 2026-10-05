@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import json
 import os
+from datetime import datetime, timezone
 from typing import Any, Optional
 
 from application.jobs.ports import JobRepositoryPort
@@ -122,7 +123,24 @@ def run_job_workflow(
         else:
             from agents.manager_agent import build_graph
             graph = build_graph(checkpointer=checkpointer)
-            fresh_inputs = {"messages": [("user", instruction)]}
+            fresh_inputs = {
+                "messages": [("user", instruction)],
+                "macro_run_id": job_id,
+                "macro_run_started_at": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
+                "macro_task_run_id": None,
+                "macro_task_started_at": None,
+                "macro_task_sequence": 0,
+                "sector_rotation_snapshot_id": None,
+                "sector_rotation_context": None,
+                "sector_context_status": None,
+                "quant_raw": None,
+                "quant_score": None,
+                "narrative_raw": None,
+                "narrative_context": None,
+                "task_queue": [],
+                "replan_count": 0,
+                "route_meta": {},
+            }
 
         config = {
             "configurable": {"thread_id": thread_id},

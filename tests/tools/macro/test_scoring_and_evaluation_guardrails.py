@@ -415,3 +415,38 @@ def test_fx_fed_bot_spread_guardrail_when_unavailable():
     assert any("FX_SPREAD_DATA_UNAVAILABLE" in w for w in direction.validation_warnings)
 
 
+def test_observable_region_canonicalization_merges_us_and_united_states():
+    obs_list = [
+        MarketObservable(
+            observable_id="obs_gdp",
+            asset_bucket="equities",
+            region="United States",
+            indicator="Real GDP",
+            value="2.8%",
+            unit="%",
+            observed_at="2026-09-01",
+            source_file="us_gdp.csv",
+            is_valid=True,
+            metadata={"prev": 2.5, "ma": 2.4},
+        ),
+        MarketObservable(
+            observable_id="obs_cpi",
+            asset_bucket="fixed_income",
+            region="US",
+            indicator="CPI",
+            value="2.5%",
+            unit="%",
+            observed_at="2026-09-01",
+            source_file="us_cpi.csv",
+            is_valid=True,
+            metadata={"prev": 2.7, "ma": 2.8},
+        ),
+    ]
+    scores = _calculate_matrix_scores_from_observables(obs_list)
+    assert "US" not in scores
+    assert "United States" in scores
+    us_data = scores["United States"]
+    assert us_data["growth"] is not None
+    assert us_data["inflation"] is not None
+
+

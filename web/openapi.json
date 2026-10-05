@@ -1755,6 +1755,237 @@
         }
       }
     },
+    "/api/macro/sector-rotation/latest": {
+      "get": {
+        "summary": "Get Sector Rotation Latest",
+        "operationId": "get_sector_rotation_latest_api_macro_sector_rotation_latest_get",
+        "parameters": [
+          {
+            "name": "timeframe",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "pattern": "^(daily|weekly)$",
+              "default": "weekly",
+              "title": "Timeframe"
+            }
+          },
+          {
+            "name": "tail",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 60,
+              "minimum": 1,
+              "default": 12,
+              "title": "Tail"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SectorRotationResponseDTO"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/macro/sector-rotation/refresh": {
+      "post": {
+        "summary": "Refresh Sector Rotation",
+        "operationId": "refresh_sector_rotation_api_macro_sector_rotation_refresh_post",
+        "parameters": [
+          {
+            "name": "timeframe",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "pattern": "^(daily|weekly)$",
+              "default": "weekly",
+              "title": "Timeframe"
+            }
+          },
+          {
+            "name": "tail",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 60,
+              "minimum": 1,
+              "default": 12,
+              "title": "Tail"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SectorRotationResponseDTO"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/macro/sector-rotation/history": {
+      "get": {
+        "summary": "Get Sector Rotation History",
+        "operationId": "get_sector_rotation_history_api_macro_sector_rotation_history_get",
+        "parameters": [
+          {
+            "name": "snapshot_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 96,
+              "title": "Snapshot Id"
+            }
+          },
+          {
+            "name": "timeframe",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "pattern": "^(daily|weekly)$",
+              "default": "weekly",
+              "title": "Timeframe"
+            }
+          },
+          {
+            "name": "range",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "pattern": "^(3m|6m|1y|2y)$",
+              "default": "1y",
+              "title": "Range"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SectorRotationHistoryDTO"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/macro/sector-rotation/snapshots/{snapshot_id}": {
+      "get": {
+        "summary": "Get Sector Rotation Snapshot",
+        "operationId": "get_sector_rotation_snapshot_api_macro_sector_rotation_snapshots__snapshot_id__get",
+        "parameters": [
+          {
+            "name": "snapshot_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Snapshot Id"
+            }
+          },
+          {
+            "name": "timeframe",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "pattern": "^(daily|weekly)$",
+              "default": "weekly",
+              "title": "Timeframe"
+            }
+          },
+          {
+            "name": "tail",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 60,
+              "minimum": 1,
+              "default": 12,
+              "title": "Tail"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SectorRotationResponseDTO"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/portfolio/latest": {
       "get": {
         "summary": "Get Latest Portfolio",
@@ -1784,6 +2015,45 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/MacroDashboardDTO"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/macro/reports/{strategy_report_id}": {
+      "get": {
+        "summary": "Get Macro Report By Id",
+        "operationId": "get_macro_report_by_id_api_macro_reports__strategy_report_id__get",
+        "parameters": [
+          {
+            "name": "strategy_report_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Strategy Report Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MacroDashboardDTO"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
                 }
               }
             }
@@ -6547,6 +6817,11 @@
               }
             ],
             "title": "Asset Bucket"
+          },
+          "region": {
+            "type": "string",
+            "title": "Region",
+            "default": "Global"
           },
           "stance": {
             "type": "string",
@@ -11498,12 +11773,134 @@
             "title": "Report References",
             "default": []
           },
+          "thailand_market_stance": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Thailand Market Stance"
+          },
           "warnings": {
             "items": {
               "$ref": "#/components/schemas/WarningDTO"
             },
             "type": "array",
             "title": "Warnings",
+            "default": []
+          },
+          "run_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Run Id"
+          },
+          "job_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Job Id"
+          },
+          "snapshot_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Snapshot Id"
+          },
+          "strategy_report_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Strategy Report Id"
+          },
+          "sector_snapshot_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sector Snapshot Id"
+          },
+          "sector_analysis": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sector Analysis"
+          },
+          "run_started_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Run Started At"
+          },
+          "regional_assessments": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Regional Assessments"
+          },
+          "observable_registry": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Observable Registry"
+          },
+          "evaluated_sources": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Evaluated Sources",
             "default": []
           }
         },
@@ -11579,6 +11976,21 @@
             "type": "boolean",
             "title": "Chart Available",
             "default": false
+          },
+          "region": {
+            "type": "string",
+            "title": "Region",
+            "default": "Global"
+          },
+          "source_type": {
+            "type": "string",
+            "title": "Source Type",
+            "default": "provider"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status",
+            "default": "verified"
           }
         },
         "type": "object",
@@ -13808,6 +14220,87 @@
         ],
         "title": "PredictionOutcomeSchema"
       },
+      "QuadrantTransitionEvent": {
+        "properties": {
+          "event_id": {
+            "type": "string",
+            "title": "Event Id"
+          },
+          "timeframe": {
+            "type": "string",
+            "enum": [
+              "daily",
+              "weekly"
+            ],
+            "title": "Timeframe"
+          },
+          "previous_valid_at": {
+            "type": "string",
+            "title": "Previous Valid At"
+          },
+          "changed_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Changed At"
+          },
+          "confirmed_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Confirmed At"
+          },
+          "from_quadrant": {
+            "type": "string",
+            "enum": [
+              "Leading",
+              "Weakening",
+              "Lagging",
+              "Improving"
+            ],
+            "title": "From Quadrant"
+          },
+          "to_quadrant": {
+            "type": "string",
+            "enum": [
+              "Leading",
+              "Weakening",
+              "Lagging",
+              "Improving"
+            ],
+            "title": "To Quadrant"
+          },
+          "event_type": {
+            "type": "string",
+            "enum": [
+              "transition",
+              "confirmed_transition"
+            ],
+            "title": "Event Type",
+            "default": "confirmed_transition"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "event_id",
+          "timeframe",
+          "previous_valid_at",
+          "from_quadrant",
+          "to_quadrant"
+        ],
+        "title": "QuadrantTransitionEvent"
+      },
       "ReferenceRatePointSchema": {
         "properties": {
           "code": {
@@ -13990,6 +14483,51 @@
         ],
         "title": "RegimeEvidenceDTO"
       },
+      "RelativePricePoint": {
+        "properties": {
+          "as_of": {
+            "type": "string",
+            "title": "As Of"
+          },
+          "sector_spy_rebased_100": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sector Spy Rebased 100"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "available",
+              "unavailable"
+            ],
+            "title": "Status",
+            "default": "available"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "as_of"
+        ],
+        "title": "RelativePricePoint"
+      },
       "RenamePortfolioRequestDTO": {
         "properties": {
           "name": {
@@ -14084,6 +14622,109 @@
         "type": "object",
         "title": "ResumeRequest"
       },
+      "ReturnMetric": {
+        "properties": {
+          "absolute_return_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Absolute Return Pct"
+          },
+          "excess_return_pp": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Excess Return Pp"
+          },
+          "relative_return_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Relative Return Pct"
+          },
+          "start_date": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Start Date"
+          },
+          "end_date": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "End Date"
+          },
+          "expected_sessions": {
+            "type": "integer",
+            "title": "Expected Sessions",
+            "default": 0
+          },
+          "valid_sessions": {
+            "type": "integer",
+            "title": "Valid Sessions",
+            "default": 0
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "available",
+              "partial",
+              "unavailable"
+            ],
+            "title": "Status",
+            "default": "unavailable"
+          },
+          "freshness": {
+            "type": "string",
+            "enum": [
+              "fresh",
+              "stale",
+              "unknown"
+            ],
+            "title": "Freshness",
+            "default": "unknown"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "ReturnMetric"
+      },
       "RiskScenarioDTO": {
         "properties": {
           "tail_risk": {
@@ -14168,6 +14809,79 @@
           "trigger_to_activate"
         ],
         "title": "RiskScenarioDTO"
+      },
+      "RotationPoint": {
+        "properties": {
+          "as_of": {
+            "type": "string",
+            "title": "As Of"
+          },
+          "relative_trend": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Relative Trend"
+          },
+          "relative_momentum": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Relative Momentum"
+          },
+          "quadrant": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "Leading",
+                  "Weakening",
+                  "Lagging",
+                  "Improving"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Quadrant"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "available",
+              "unavailable"
+            ],
+            "title": "Status",
+            "default": "available"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "as_of"
+        ],
+        "title": "RotationPoint"
       },
       "SCBAMBatchScanRequestDTO": {
         "properties": {
@@ -14849,6 +15563,837 @@
           "fetched_at"
         ],
         "title": "SecInsiderTradeSnapshotSchema"
+      },
+      "SectorBreadthDTO": {
+        "properties": {
+          "outperforming": {
+            "type": "integer",
+            "title": "Outperforming"
+          },
+          "valid_sectors": {
+            "type": "integer",
+            "title": "Valid Sectors"
+          },
+          "expected_sectors": {
+            "type": "integer",
+            "title": "Expected Sectors"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "complete",
+              "partial"
+            ],
+            "title": "Status"
+          },
+          "as_of": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "As Of"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "outperforming",
+          "valid_sectors",
+          "expected_sectors",
+          "status"
+        ],
+        "title": "SectorBreadthDTO"
+      },
+      "SectorExcessRankDTO": {
+        "properties": {
+          "ticker": {
+            "type": "string",
+            "title": "Ticker"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "excess_return_pp": {
+            "type": "number",
+            "title": "Excess Return Pp"
+          },
+          "as_of": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "As Of"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "available",
+              "partial"
+            ],
+            "title": "Status"
+          },
+          "valid_sessions": {
+            "type": "integer",
+            "title": "Valid Sessions"
+          },
+          "expected_sessions": {
+            "type": "integer",
+            "title": "Expected Sessions"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "ticker",
+          "name",
+          "excess_return_pp",
+          "status",
+          "valid_sessions",
+          "expected_sessions"
+        ],
+        "title": "SectorExcessRankDTO"
+      },
+      "SectorRotationHistoryDTO": {
+        "properties": {
+          "snapshot_id": {
+            "type": "string",
+            "title": "Snapshot Id"
+          },
+          "input_digest": {
+            "type": "string",
+            "title": "Input Digest"
+          },
+          "formula_version": {
+            "type": "string",
+            "title": "Formula Version"
+          },
+          "timeframe": {
+            "type": "string",
+            "enum": [
+              "daily",
+              "weekly"
+            ],
+            "title": "Timeframe"
+          },
+          "range": {
+            "type": "string",
+            "enum": [
+              "3m",
+              "6m",
+              "1y",
+              "2y"
+            ],
+            "title": "Range"
+          },
+          "from_date": {
+            "type": "string",
+            "title": "From Date"
+          },
+          "to_date": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "To Date"
+          },
+          "rows": {
+            "items": {
+              "$ref": "#/components/schemas/SectorRotationHistoryRowDTO"
+            },
+            "type": "array",
+            "title": "Rows"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "snapshot_id",
+          "input_digest",
+          "formula_version",
+          "timeframe",
+          "range",
+          "from_date",
+          "rows"
+        ],
+        "title": "SectorRotationHistoryDTO"
+      },
+      "SectorRotationHistoryRowDTO": {
+        "properties": {
+          "ticker": {
+            "type": "string",
+            "title": "Ticker"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "available",
+              "partial",
+              "unavailable"
+            ],
+            "title": "Status"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          },
+          "relative_price_base_date": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Relative Price Base Date"
+          },
+          "history": {
+            "items": {
+              "$ref": "#/components/schemas/RotationPoint"
+            },
+            "type": "array",
+            "title": "History"
+          },
+          "relative_price_history": {
+            "items": {
+              "$ref": "#/components/schemas/RelativePricePoint"
+            },
+            "type": "array",
+            "title": "Relative Price History"
+          },
+          "quadrant_transitions": {
+            "items": {
+              "$ref": "#/components/schemas/QuadrantTransitionEvent"
+            },
+            "type": "array",
+            "title": "Quadrant Transitions"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "ticker",
+          "name",
+          "status"
+        ],
+        "title": "SectorRotationHistoryRowDTO"
+      },
+      "SectorRotationResponseDTO": {
+        "properties": {
+          "capability_status": {
+            "type": "string",
+            "enum": [
+              "enabled",
+              "disabled"
+            ],
+            "title": "Capability Status"
+          },
+          "refresh_state": {
+            "type": "string",
+            "enum": [
+              "idle",
+              "running",
+              "failed"
+            ],
+            "title": "Refresh State"
+          },
+          "retry_after_seconds": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Retry After Seconds"
+          },
+          "error_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error Code"
+          },
+          "last_attempt_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Attempt At"
+          },
+          "expected_session": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expected Session"
+          },
+          "freshness": {
+            "type": "string",
+            "enum": [
+              "fresh",
+              "stale",
+              "unknown"
+            ],
+            "title": "Freshness",
+            "default": "unknown"
+          },
+          "missing_sessions": {
+            "type": "integer",
+            "title": "Missing Sessions",
+            "default": 0
+          },
+          "served_at": {
+            "type": "string",
+            "title": "Served At"
+          },
+          "timeframe": {
+            "type": "string",
+            "enum": [
+              "daily",
+              "weekly"
+            ],
+            "title": "Timeframe"
+          },
+          "tail": {
+            "type": "integer",
+            "title": "Tail"
+          },
+          "summary": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SectorRotationSummaryDTO"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "snapshot": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SectorRotationSnapshotDTO"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "capability_status",
+          "refresh_state",
+          "served_at",
+          "timeframe",
+          "tail"
+        ],
+        "title": "SectorRotationResponseDTO"
+      },
+      "SectorRotationRowDTO": {
+        "properties": {
+          "ticker": {
+            "type": "string",
+            "title": "Ticker"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "available",
+              "partial",
+              "unavailable"
+            ],
+            "title": "Status"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          },
+          "returns_pct": {
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "type": "object",
+            "title": "Returns Pct",
+            "default": {}
+          },
+          "return_metrics": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/ReturnMetric"
+            },
+            "type": "object",
+            "title": "Return Metrics",
+            "default": {}
+          },
+          "price_as_of": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Price As Of"
+          },
+          "rotation_as_of": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rotation As Of"
+          },
+          "relative_strength": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Relative Strength"
+          },
+          "relative_price_base_date": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Relative Price Base Date"
+          },
+          "relative_trend": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Relative Trend"
+          },
+          "relative_momentum": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Relative Momentum"
+          },
+          "quadrant": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "Leading",
+                  "Weakening",
+                  "Lagging",
+                  "Improving"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Quadrant"
+          },
+          "quadrant_changed_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Quadrant Changed At"
+          },
+          "momentum_direction": {
+            "type": "string",
+            "enum": [
+              "rising",
+              "falling",
+              "flat",
+              "unavailable"
+            ],
+            "title": "Momentum Direction"
+          },
+          "history": {
+            "items": {
+              "$ref": "#/components/schemas/RotationPoint"
+            },
+            "type": "array",
+            "title": "History",
+            "default": []
+          },
+          "relative_price_history": {
+            "items": {
+              "$ref": "#/components/schemas/RelativePricePoint"
+            },
+            "type": "array",
+            "title": "Relative Price History",
+            "default": []
+          },
+          "quadrant_transitions": {
+            "items": {
+              "$ref": "#/components/schemas/QuadrantTransitionEvent"
+            },
+            "type": "array",
+            "title": "Quadrant Transitions",
+            "default": []
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "ticker",
+          "name",
+          "status",
+          "momentum_direction"
+        ],
+        "title": "SectorRotationRowDTO"
+      },
+      "SectorRotationSnapshotDTO": {
+        "properties": {
+          "schema_version": {
+            "type": "string",
+            "title": "Schema Version"
+          },
+          "formula_version": {
+            "type": "string",
+            "title": "Formula Version"
+          },
+          "calendar_version": {
+            "type": "string",
+            "title": "Calendar Version",
+            "default": "legacy"
+          },
+          "transition_rule_version": {
+            "type": "string",
+            "title": "Transition Rule Version",
+            "default": "legacy"
+          },
+          "formula_config": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Formula Config"
+          },
+          "universe_version": {
+            "type": "string",
+            "title": "Universe Version"
+          },
+          "benchmark": {
+            "type": "string",
+            "title": "Benchmark"
+          },
+          "price_basis": {
+            "type": "string",
+            "title": "Price Basis"
+          },
+          "input_digest": {
+            "type": "string",
+            "title": "Input Digest"
+          },
+          "snapshot_id": {
+            "type": "string",
+            "title": "Snapshot Id"
+          },
+          "as_of_date": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "As Of Date"
+          },
+          "expected_session": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expected Session"
+          },
+          "expected_weekly_session": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expected Weekly Session"
+          },
+          "input_start_date": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Input Start Date"
+          },
+          "coverage": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "type": "object",
+            "title": "Coverage"
+          },
+          "expected_sectors": {
+            "type": "integer",
+            "title": "Expected Sectors"
+          },
+          "available_sectors": {
+            "type": "integer",
+            "title": "Available Sectors"
+          },
+          "benchmark_status": {
+            "type": "string",
+            "enum": [
+              "available",
+              "unavailable"
+            ],
+            "title": "Benchmark Status"
+          },
+          "benchmark_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Benchmark Reason"
+          },
+          "benchmark_returns_pct": {
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "type": "object",
+            "title": "Benchmark Returns Pct",
+            "default": {}
+          },
+          "rows": {
+            "items": {
+              "$ref": "#/components/schemas/SectorRotationRowDTO"
+            },
+            "type": "array",
+            "title": "Rows"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "schema_version",
+          "formula_version",
+          "universe_version",
+          "benchmark",
+          "price_basis",
+          "input_digest",
+          "snapshot_id",
+          "coverage",
+          "expected_sectors",
+          "available_sectors",
+          "benchmark_status",
+          "rows"
+        ],
+        "title": "SectorRotationSnapshotDTO"
+      },
+      "SectorRotationSummaryDTO": {
+        "properties": {
+          "summary_version": {
+            "type": "string",
+            "title": "Summary Version"
+          },
+          "timeframe": {
+            "type": "string",
+            "enum": [
+              "daily",
+              "weekly"
+            ],
+            "title": "Timeframe"
+          },
+          "rotation_as_of": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rotation As Of"
+          },
+          "ranked_by_excess_3m": {
+            "items": {
+              "$ref": "#/components/schemas/SectorExcessRankDTO"
+            },
+            "type": "array",
+            "title": "Ranked By Excess 3M"
+          },
+          "sector_breadth_3m": {
+            "$ref": "#/components/schemas/SectorBreadthDTO"
+          },
+          "quadrant_members": {
+            "additionalProperties": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "type": "object",
+            "title": "Quadrant Members"
+          },
+          "periods_in_quadrant": {
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "type": "object",
+            "title": "Periods In Quadrant"
+          },
+          "elapsed_days_in_quadrant": {
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "type": "object",
+            "title": "Elapsed Days In Quadrant"
+          },
+          "momentum_delta": {
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "type": "object",
+            "title": "Momentum Delta"
+          },
+          "heading_deg": {
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "type": "object",
+            "title": "Heading Deg"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "summary_version",
+          "timeframe",
+          "sector_breadth_3m"
+        ],
+        "title": "SectorRotationSummaryDTO"
       },
       "SourceOverrideAck": {
         "properties": {

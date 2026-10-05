@@ -36,12 +36,16 @@ from tools.market.terminal_v2.domain.models import (
     SecCompanyFactsSnapshot,
     SecInsiderTradeSnapshot,
     SpotEtfFlowSnapshot,
+    StablecoinSupplySnapshot,
+    CryptoBenchmarkSnapshot,
+    CryptoMacroLiquiditySnapshot,
     ThaiBondMarketStats,
     ThaiCorporateBondIssuance,
     ThaiFundAssetAllocationSnapshot,
     ThaiFundFlowSnapshot,
     ThaiPublicDebtSnapshot,
     ThaiRetailGoldQuote,
+    ThaiYieldCurveSnapshot,
     TreasuryAuctionResult,
     TreasuryYieldCurveSnapshot,
     UsNationalDebtSnapshot,
@@ -153,6 +157,12 @@ class FixedIncomeDrivingPort(Protocol):
         """Fetch monthly Thai public debt to GDP report."""
         ...
 
+    def get_thai_yield_curve(
+        self, as_of_date: Optional[str] = None
+    ) -> ThaiYieldCurveSnapshot:
+        """Fetch Thai Government Bond Model Yield Curve from ThaiBMA."""
+        ...
+
 
 class EquityDataDrivingPort(Protocol):
     """Driving interface for corporate equity analytics and intelligence."""
@@ -226,6 +236,22 @@ class FundFlowDrivingPort(Protocol):
         ...
 
 
+class CryptoLiquidityDrivingPort(Protocol):
+    """Driving interface for crypto macro liquidity, stablecoins, and market benchmarks."""
+
+    def get_stablecoin_supply(self) -> StablecoinSupplySnapshot:
+        """Fetch global USD stablecoin circulating supply and 7d/30d growth metrics."""
+        ...
+
+    def get_crypto_benchmark(self) -> CryptoBenchmarkSnapshot:
+        """Fetch spot BTC price, returns, and BTC/Gold ratio."""
+        ...
+
+    def get_crypto_macro_liquidity(self) -> CryptoMacroLiquiditySnapshot:
+        """Synthesized Level 1 crypto macro liquidity proxy (Stablecoins + BTC/Gold + ETF Flows)."""
+        ...
+
+
 # ============================================================================
 # 3. Composite Driving Port (Single Canonical Contract for Terminal Data)
 # ============================================================================
@@ -236,7 +262,9 @@ class TerminalDataServicePort(
     EquityDataDrivingPort,
     DerivativesDrivingPort,
     FundFlowDrivingPort,
+    CryptoLiquidityDrivingPort,
     Protocol,
 ):
     """Unified composite driving port combining all institutional and market data capabilities."""
     ...
+

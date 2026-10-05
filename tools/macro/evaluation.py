@@ -107,11 +107,12 @@ def _infer_asset_bucket(indicator: str, source_key: str) -> str:
 
 
 def _infer_provider(indicator: str, source_key: str) -> str:
+    from .ticker_config import _MACRO_TICKERS, _THAI_INDICATORS
     text = indicator.lower()
     symbol = _extract_symbol(indicator)
     if "staticproxy" in text or "static proxy" in text or "mock" in text or symbol.upper() in ["TH10Y", "CURRENT ACCOUNT", "TOURIST ARRIVALS"]:
         return "StaticProxy"
-    if symbol and any(token in symbol for token in ["=", "^", "-USD"]):
+    if symbol in _MACRO_TICKERS or symbol in _THAI_INDICATORS or (symbol and any(token in symbol for token in ["=", "^", "-USD"])):
         return "Yahoo"
     if source_key == "Regional_Macro_Snapshot":
         return "Yahoo"
@@ -121,6 +122,12 @@ def _infer_provider(indicator: str, source_key: str) -> str:
 def _infer_unit(value: str, indicator: str) -> str:
     raw = f"{value} {indicator}".lower()
     symbol = _extract_symbol(indicator).upper()
+    market_units = {"HYG": "USD", "LQD": "USD", "BTC-USD": "USD",
+                    "GC=F": "USD/oz", "CL=F": "USD/bbl", "NG=F": "USD/MMBtu", "HG=F": "USD/lb",
+                    "DX-Y.NYB": "pts", "^GSPC": "pts", "^NDX": "pts", "^RUT": "pts", "^VIX": "pts",
+                    "EURUSD=X": "USD per EUR", "USDJPY=X": "JPY per USD", "USDCNY=X": "CNY per USD"}
+    if symbol in market_units:
+        return market_units[symbol]
     if symbol in ("THB=X", "USDTHB", "USD/THB") or "usd/thb" in raw or "usd to thb" in raw:
         return "THB per USD"
     if symbol in ("T10Y2Y", "T10Y3M") or "10y-2y" in raw or "10y-3m" in raw:
@@ -192,8 +199,24 @@ def _apply_validity(obs: MarketObservable, today_str: str) -> MarketObservable:
         return obs
 
     age_days = (today - observed).days
+    if age_days < 0:
+        obs.is_valid = False
+        obs.confidence = "low"
+        obs.status = "unverified"
+        obs.stale_reason = "Observation date is in the future"
+        return obs
     symbol = _extract_symbol(obs.indicator)
     cutoff = _get_series_stale_cutoff(obs.indicator, symbol)
+    # FRED quarterly observations are labelled with the quarter's first day.
+    # Measure freshness from the completed period, keeping observed_at intact.
+    from .ticker_config import FRED_SERIES_SPECS
+    spec = FRED_SERIES_SPECS.get(symbol.upper())
+    if spec and spec.frequency.lower() == "quarterly":
+        import calendar
+        end_month = ((observed.month - 1) // 3 + 1) * 3
+        period_end = observed.replace(month=end_month, day=calendar.monthrange(observed.year, end_month)[1])
+        age_days = max(0, (today - period_end).days)
+        obs.metadata["freshness_basis"] = "quarter_end"
 
     if age_days > cutoff:
         obs.is_valid = False
@@ -261,8 +284,12 @@ def _extract_market_observables(
             parsed_val = _parse_float_from_str(value)
             if not indicator or not value or parsed_val is None:
                 continue
-            prev_val = _parse_float_from_str(row.get(keys[2], "")) if len(keys) > 2 else None
-            ma_val = _parse_float_from_str(row.get(keys[3], "")) if len(keys) > 3 else None
+            # Read named columns: a daily % change is not the previous price,
+            # and a description containing numbers is not a moving average.
+            prev_val = next((_parse_float_from_str(row[k]) for k in keys
+                             if k.strip().lower() in {"ก่อนหน้า", "previous", "prev"}), None)
+            ma_val = next((_parse_float_from_str(row[k]) for k in keys
+                           if k.strip().lower().startswith("ma") or k.strip().lower() in {"moving average", "ค่าเฉลี่ย"}), None)
             obs_date, has_real_date = _extract_observed_at(row, keys, today_str)
             symbol = _extract_symbol(indicator)
             base_id = f"obs_{_slug(source_key)}_{_slug(symbol or indicator)}_{today_str.replace('-', '')}"
@@ -491,6 +518,7 @@ def evaluate_macro_matrix() -> str:
             from .terminal_observables import (
                 build_thai_market_observables,
                 build_rates_observables,
+                build_crypto_liquidity_observables,
                 build_thai_market_stance,
             )
             if not is_test_env:
@@ -503,13 +531,19 @@ def evaluate_macro_matrix() -> str:
                 for ro in t2_rates:
                     if not any(o.observable_id == ro.observable_id for o in market_observables):
                         market_observables.append(ro)
+
+                t2_crypto = build_crypto_liquidity_observables(as_of_date=today_str)
+                for co in t2_crypto:
+                    if not any(o.observable_id == co.observable_id for o in market_observables):
+                        market_observables.append(co)
         except Exception as e:
             log.warning(f"Could not build Terminal V2 observables: {e}")
 
         # Build & merge Thai Hard Data Status Adapter (Fail-closed official feeds)
         try:
             from .adapters.thai_hard_data_adapter import ThaiHardDataAdapter
-            thai_adapter = ThaiHardDataAdapter()
+            from tools.market.terminal_v2.adapters.thaibma_adapter import ThaiBmaPublicAdapter
+            thai_adapter = ThaiHardDataAdapter(thaibma_adapter=ThaiBmaPublicAdapter())
             for th_obs in thai_adapter.as_observables(as_of_date=today_str):
                 if not any(o.observable_id == th_obs.observable_id for o in market_observables):
                     market_observables.append(th_obs)
@@ -544,6 +578,8 @@ def evaluate_macro_matrix() -> str:
                 coverage=m.get("coverage", 0.0),
                 data_gaps=m.get("data_gaps", []),
                 market_stance=stance_val,
+                fiscal_health=m.get("fiscal_health"),
+                thai_yield_curve=m.get("thai_yield_curve"),
             )
 
         all_gaps = []
@@ -577,15 +613,41 @@ def evaluate_macro_matrix() -> str:
         return f"Error: Failed to evaluate macro matrix - {str(e)}"
 
 
-def _write_macro_observables_json_sidecar(observables: list[MarketObservable], today_str: str, snapshots_dir: Path) -> Path:
-    """บันทึก list[MarketObservable] เป็น JSON Sidecar ป้องกันการ regex parse จาก prose Markdown"""
+def _write_macro_observables_json_sidecar(
+    observables: list[MarketObservable],
+    today_str: str,
+    snapshots_dir: Path,
+    macro_run_id: Optional[str] = None,
+) -> Path:
+    """บันทึก list[MarketObservable] เป็น JSON Sidecar ป้องกันการ regex parse จาก prose Markdown
+    และบันทึก revision-bound immutable snapshot เมื่อมี macro_run_id
+    """
+    import hashlib
     from tools._atomic_io import _atomic_write_to
-    sidecar_path = snapshots_dir / f"Macro_Observables_Snapshot_{today_str}.json"
     from tools.archivist.maintenance_guard import assert_write_allowed
-    assert_write_allowed(sidecar_path)
+
+    run_id = macro_run_id or os.environ.get("MACRO_RUN_ID")
     snapshots_dir.mkdir(parents=True, exist_ok=True)
     payload = [o.model_dump(mode="json") for o in observables]
-    _atomic_write_to(sidecar_path, json.dumps(payload, ensure_ascii=False, indent=2))
+    json_str = json.dumps(payload, ensure_ascii=False, indent=2)
+    content_hash = hashlib.sha256(json_str.encode("utf-8")).hexdigest()
+
+    # 1. Write immutable revision if run_id exists
+    if run_id:
+        rev_dir = snapshots_dir / "Revisions"
+        rev_dir.mkdir(parents=True, exist_ok=True)
+        safe_run_id = re.sub(r"[^A-Za-z0-9_-]", "_", run_id)
+        rev_path = rev_dir / f"Macro_Observables_Snapshot_{today_str}_{safe_run_id}.json"
+        assert_write_allowed(rev_path)
+        _atomic_write_to(rev_path, json_str)
+        checksum_path = rev_dir / f"Macro_Observables_Snapshot_{today_str}_{safe_run_id}.sha256"
+        assert_write_allowed(checksum_path)
+        _atomic_write_to(checksum_path, f"{content_hash}  {rev_path.name}\n")
+
+    # 2. Write daily pointer snapshot
+    sidecar_path = snapshots_dir / f"Macro_Observables_Snapshot_{today_str}.json"
+    assert_write_allowed(sidecar_path)
+    _atomic_write_to(sidecar_path, json_str)
     return sidecar_path
 
 

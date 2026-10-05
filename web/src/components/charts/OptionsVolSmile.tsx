@@ -98,9 +98,7 @@ export const OptionsVolSmile: React.FC<OptionsVolSmileProps> = ({
   const maxStrike: number = sortedStrikes[sortedStrikes.length - 1] ?? 100
   const strikeSpan: number = maxStrike - minStrike || 1
   const ivSpan: number = maxIv - minIv || 1
-
   const getX = (strike: number) => padLeft + ((strike - minStrike) / strikeSpan) * plotWidth
-  const getY = (iv: number) => padTop + plotHeight - ((iv - minIv) / ivSpan) * plotHeight
 
   // Generate SVG path for Call and Put IV curves
   const { callPath, putPath, callPoints, putPoints } = useMemo(() => {
@@ -112,16 +110,16 @@ export const OptionsVolSmile: React.FC<OptionsVolSmileProps> = ({
     sortedStrikes.forEach((s) => {
       const entry = strikeMap.get(s)
       if (!entry) return
-      const x = getX(s)
+      const x = padLeft + ((s - minStrike) / strikeSpan) * plotWidth
 
       if (entry.callIv !== undefined && entry.callIv !== null) {
-        const y = getY(entry.callIv)
+        const y = padTop + plotHeight - ((entry.callIv - minIv) / ivSpan) * plotHeight
         cPoints.push({ x, y, strike: s, iv: entry.callIv })
         cp += cp === '' ? `M ${x},${y}` : ` L ${x},${y}`
       }
 
       if (entry.putIv !== undefined && entry.putIv !== null) {
-        const y = getY(entry.putIv)
+        const y = padTop + plotHeight - ((entry.putIv - minIv) / ivSpan) * plotHeight
         pPoints.push({ x, y, strike: s, iv: entry.putIv })
         pp += pp === '' ? `M ${x},${y}` : ` L ${x},${y}`
       }

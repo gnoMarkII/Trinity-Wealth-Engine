@@ -4,6 +4,8 @@ import type {
   JobStatusDTO,
   KanbanCardDTO,
   MacroDashboardDTO,
+  SectorRotationResponseDTO,
+  SectorRotationHistoryDTO,
   ActualPortfolioStateDTO,
   BucketAllocationResponseDTO,
   ActualWatchlistStateDTO,
@@ -80,6 +82,17 @@ export const api = {
   me: () => request<{ authenticated: boolean }>('/api/auth/me'),
 
   getMacroDashboard: () => request<MacroDashboardDTO>('/api/macro/dashboard'),
+  getSectorRotation: (timeframe: 'daily' | 'weekly' = 'weekly', tail = 12) =>
+    request<SectorRotationResponseDTO>(`/api/macro/sector-rotation/latest?timeframe=${timeframe}&tail=${tail}`, { cache: 'no-store' }),
+  refreshSectorRotation: (timeframe: 'daily' | 'weekly' = 'weekly', tail = 12) =>
+    request<SectorRotationResponseDTO>(`/api/macro/sector-rotation/refresh?timeframe=${timeframe}&tail=${tail}`, { method: 'POST' }),
+  getSectorRotationSnapshot: (snapshotId: string, timeframe: 'daily' | 'weekly' = 'weekly', tail = 12) =>
+    request<SectorRotationResponseDTO>(`/api/macro/sector-rotation/snapshots/${encodeURIComponent(snapshotId)}?timeframe=${timeframe}&tail=${tail}`, { cache: 'no-store' }),
+  getSectorRotationHistory: (snapshotId: string, timeframe: 'daily' | 'weekly', range: '3m' | '6m' | '1y' | '2y') =>
+    request<SectorRotationHistoryDTO>(
+      `/api/macro/sector-rotation/history?snapshot_id=${encodeURIComponent(snapshotId)}&timeframe=${timeframe}&range=${range}`,
+      { cache: 'no-store' },
+    ),
 
   getEquityLatest: () => request<import('./types').EquitySummaryDTO[]>('/api/equity/latest'),
 
@@ -930,5 +943,14 @@ export const api = {
       `/api/v2/market/macro/treasury/yield-curve${params}`
     )
   },
-}
 
+  getCryptoMacroLiquidity: () =>
+    request<import('./types').CryptoMacroLiquidityDTO>(
+      '/api/v2/market/macro/crypto-liquidity'
+    ),
+
+  getStablecoinSupply: () =>
+    request<import('./types').StablecoinSupplyDTO>(
+      '/api/v2/market/crypto/stablecoins'
+    ),
+}

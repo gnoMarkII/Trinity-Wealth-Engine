@@ -8,9 +8,11 @@ import csv
 import io
 import logging
 import time
-from typing import Dict, List, Optional, Tuple
+import re
+from typing import Dict, List, Optional, Tuple, Set
 import requests
 
+from schemas.macro_schemas import MarketObservable
 from tools.market.terminal_v2.application.cache import BROWSER_HEADERS, ThreadSafeTTLCache
 from tools.market.terminal_v2.domain.errors import DataUnavailableError, ProviderError
 from tools.market.terminal_v2.domain.models import (
@@ -18,6 +20,9 @@ from tools.market.terminal_v2.domain.models import (
     ThaiCorporateBondIssuance,
     ThaiFundAssetAllocationRow,
     ThaiFundAssetAllocationSnapshot,
+    ThaiIndustryGroupItem,
+    ThaiIndustryMarketCapSnapshot,
+    ThaiSectorMarketCapItem,
 )
 from tools.market.terminal_v2.ports.driven_ports import (
     ThaiBondMarketPort,
@@ -34,9 +39,88 @@ BE_OFFSET = 543
 MF_PORT_URL = "https://dividend.sec.or.th/stat-report/MF_PORT_TH.csv"
 STAT_DEPT_URL = "https://dividend.sec.or.th/stat-report/STAT_DEPT_TH.csv"
 OFFER_DEBT_URL = "https://dividend.sec.or.th/stat-report/OFFER_DEBT_COR_TH.csv"
+STAT_INDUSTRY_URL = "https://dividend.sec.or.th/stat-report/STAT_INDUSTRY_TH.csv"
 
-# WAF headers without Origin
-SEC_HEADERS = {k: v for k, v in BROWSER_HEADERS.items() if k.lower() != "origin"}
+# WAF headers without Origin or Accept-Language to prevent F5 WAF rejection
+SEC_HEADERS = {
+    k: v for k, v in BROWSER_HEADERS.items()
+    if k.lower() not in ("origin", "accept-language")
+}
+
+# Standard SET Sector Hierarchy: 28 sectors -> 8 industry groups
+SECTOR_GROUP: Dict[str, str] = {
+    "AGRI": "AGRO",
+    "FOOD": "AGRO",
+    "FASHION": "CONSUMP",
+    "HOME": "CONSUMP",
+    "PERSON": "CONSUMP",
+    "BANK": "FINCIAL",
+    "FIN": "FINCIAL",
+    "INSUR": "FINCIAL",
+    "AUTO": "INDUS",
+    "IMM": "INDUS",
+    "PAPER": "INDUS",
+    "PETRO": "INDUS",
+    "PKG": "INDUS",
+    "STEEL": "INDUS",
+    "CONMAT": "PROPCON",
+    "CONS": "PROPCON",
+    "PROP": "PROPCON",
+    "PF&REIT": "PROPCON",
+    "ENERG": "RESOURC",
+    "MINE": "RESOURC",
+    "COMM": "SERVICE",
+    "HELTH": "SERVICE",
+    "MEDIA": "SERVICE",
+    "PROF": "SERVICE",
+    "TOURISM": "SERVICE",
+    "TRANS": "SERVICE",
+    "ETRON": "TECH",
+    "ICT": "TECH",
+}
+GROUP_CODES: Set[str] = set(SECTOR_GROUP.values())
+
+GROUP_NAMES: Dict[str, Tuple[str, str]] = {
+    "AGRO": ("Agro & Food Industry", "เกษตรและอุตสาหกรรมอาหาร"),
+    "CONSUMP": ("Consumer Products", "สินค้าอุปโภคบริโภค"),
+    "FINCIAL": ("Financials", "ธุรกิจการเงิน"),
+    "INDUS": ("Industrials", "สินค้าอุตสาหกรรม"),
+    "PROPCON": ("Property & Construction", "อสังหาริมทรัพย์และก่อสร้าง"),
+    "RESOURC": ("Resources", "ทรัพยากร"),
+    "SERVICE": ("Services", "บริการ"),
+    "TECH": ("Technology", "เทคโนโลยี"),
+}
+
+SECTOR_NAMES: Dict[str, Tuple[str, str]] = {
+    "AGRI": ("Agribusiness", "ธุรกิจการเกษตร"),
+    "FOOD": ("Food & Beverage", "อาหารและเครื่องดื่ม"),
+    "FASHION": ("Fashion", "แฟชั่น"),
+    "HOME": ("Home & Office Products", "ของใช้ในครัวเรือนและสำนักงาน"),
+    "PERSON": ("Personal Products & Pharmaceuticals", "ของใช้ส่วนตัวและเวชภัณฑ์"),
+    "BANK": ("Banking", "ธนาคาร"),
+    "FIN": ("Finance & Securities", "เงินทุนและหลักทรัพย์"),
+    "INSUR": ("Insurance", "ประกันภัยและประกันชีวิต"),
+    "AUTO": ("Automotive", "ยานยนต์"),
+    "IMM": ("Industrial Materials & Machinery", "วัสดุอุตสาหกรรมและเครื่องจักร"),
+    "PAPER": ("Paper & Printing Materials", "กระดาษและวัสดุการพิมพ์"),
+    "PETRO": ("Petrochemicals & Chemicals", "ปิโตรเคมีและเคมีภัณฑ์"),
+    "PKG": ("Packaging", "บรรจุภัณฑ์"),
+    "STEEL": ("Steel", "เหล็กและผลิตภัณฑ์โลหะ"),
+    "CONMAT": ("Construction Materials", "วัสดุก่อสร้าง"),
+    "CONS": ("Construction Services", "บริการรับเหมาก่อสร้าง"),
+    "PROP": ("Property Development", "พัฒนาอสังหาริมทรัพย์"),
+    "PF&REIT": ("Property Fund & REITs", "กองทุนรวมอสังหาริมทรัพย์และกองทรัสต์"),
+    "ENERG": ("Energy & Utilities", "พลังงานและสาธารณูปโภค"),
+    "MINE": ("Mining", "เหมืองแร่"),
+    "COMM": ("Commerce", "พาณิชย์"),
+    "HELTH": ("Health Care Services", "การแพทย์"),
+    "MEDIA": ("Media & Publishing", "สื่อและสิ่งพิมพ์"),
+    "PROF": ("Professional Services", "บริการเฉพาะกิจ"),
+    "TOURISM": ("Tourism & Leisure", "การท่องเที่ยวและสันทนาการ"),
+    "TRANS": ("Transportation & Logistics", "ขนส่งและโลจิสติกส์"),
+    "ETRON": ("Electronic Components", "ชิ้นส่วนอิเล็กทรอนิกส์"),
+    "ICT": ("Information & Communication Technology", "เทคโนโลยีสารสนเทศและการสื่อสาร"),
+}
 
 ASSET_CLASS_TRANSLATIONS = {
     "หุ้นสามัญ": "Common stock",
@@ -278,3 +362,194 @@ class SecThailandAdapter(ThaiFundAllocationPort, ThaiBondMarketPort):
             ttl_seconds=SEC_TH_TTL_SECONDS,
             max_stale_seconds=SEC_TH_MAX_STALE_SECONDS,
         )
+
+    def _parse_industry_market_cap(self, market: str = "SET") -> ThaiIndustryMarketCapSnapshot:
+        text = self._fetch_csv(STAT_INDUSTRY_URL, "STAT_INDUSTRY_TH.csv")
+        return parse_industry_csv(text, market=market)
+
+    def get_industry_market_cap(self, market: str = "SET") -> ThaiIndustryMarketCapSnapshot:
+        cache_key = f"sec_th:industry_market_cap:{market.upper()}:latest"
+        return self._cache.get_or_set(
+            key=cache_key,
+            loader=lambda: self._parse_industry_market_cap(market=market),
+            ttl_seconds=SEC_TH_TTL_SECONDS,
+            max_stale_seconds=SEC_TH_MAX_STALE_SECONDS,
+        )
+
+    def as_macro_observables(self, snapshot: Optional[ThaiIndustryMarketCapSnapshot] = None) -> list[MarketObservable]:
+        if snapshot is None:
+            try:
+                snapshot = self.get_industry_market_cap(market="SET")
+            except Exception as e:
+                logger.warning("Could not fetch SEC industry market cap for observables: %s", e)
+                return []
+
+        obs_date = snapshot.as_of if re.match(r"\d{4}-\d{2}-\d{2}", snapshot.as_of) else time.strftime("%Y-%m-%d")
+        observables: list[MarketObservable] = []
+        for grp in snapshot.groups:
+            observables.append(
+                MarketObservable(
+                    observable_id=f"obs_th_sector_mcap_sec_{grp.group_code.lower()}",
+                    asset_bucket="equities",
+                    region="Thailand",
+                    indicator=f"SET Industry Cap: {grp.group_name_en} ({grp.group_code})",
+                    value=f"{grp.market_cap_thb / MILLIONS:,.1f}",
+                    unit="Million THB",
+                    observed_at=obs_date,
+                    source_file="SEC_STAT_INDUSTRY_TH_CSV",
+                    provider="SEC Thailand",
+                    confidence="high",
+                    is_valid=True,
+                    status="verified",
+                    period=snapshot.reporting_period,
+                    metadata={
+                        "group_code": grp.group_code,
+                        "market_cap_thb": grp.market_cap_thb,
+                        "share_of_market_pct": grp.share_of_market_pct,
+                        "sector_codes": list(grp.sector_codes),
+                    },
+                )
+            )
+        return observables
+
+
+def parse_industry_csv(csv_text: str, market: str = "SET") -> ThaiIndustryMarketCapSnapshot:
+    """Parse STAT_INDUSTRY_TH.csv into structured sectors and parent industry groups."""
+    _check_waf_rejection(csv_text, "STAT_INDUSTRY_TH.csv")
+    text = _strip_bom(csv_text)
+    reader = csv.reader(io.StringIO(text))
+    rows = [r for r in reader if r]
+    if len(rows) < 2:
+        raise ProviderError("Empty or invalid STAT_INDUSTRY_TH.csv from SEC Thailand", source="SEC Thailand")
+
+    target_market = market.strip().upper()
+    latest_year = 0
+    latest_q = 0
+    latest_as_of = ""
+
+    parsed_entries: List[Dict[str, Any]] = []
+
+    for cells in rows[1:]:
+        if len(cells) < 6:
+            continue
+        as_of_raw, mkt_col, code_desc, yr_col, q_col, val_col = [c.strip() for c in cells[:6]]
+        if mkt_col.upper() != target_market:
+            continue
+
+        # Extract code (first whitespace-delimited token)
+        code = code_desc.split()[0].strip() if code_desc else ""
+        if not code:
+            continue
+
+        # Parse year (BE -> CE)
+        try:
+            be_yr = int(yr_col)
+            ce_yr = be_yr - BE_OFFSET
+        except ValueError:
+            continue
+
+        # Parse quarter
+        q_match = re.search(r"\d+", q_col)
+        quarter = int(q_match.group(0)) if q_match else 0
+
+        # Parse value: '-' or empty is missing (never convert to 0!)
+        clean_val = val_col.replace(",", "").strip()
+        if not clean_val or clean_val == "-":
+            continue
+        try:
+            val_million = float(clean_val)
+        except ValueError:
+            continue
+
+        if ce_yr > latest_year or (ce_yr == latest_year and quarter > latest_q):
+            latest_year = ce_yr
+            latest_q = quarter
+            # Parse as_of date if available
+            date_match = re.search(r"(\d{1,2})/(\d{1,2})/(\d{4})", as_of_raw)
+            if date_match:
+                d, m, y = date_match.groups()
+                latest_as_of = f"{int(y) - BE_OFFSET:04d}-{int(m):02d}-{int(d):02d}"
+            else:
+                latest_as_of = as_of_raw
+
+        parsed_entries.append({
+            "code": code,
+            "year": ce_yr,
+            "quarter": quarter,
+            "val_thb": val_million * MILLIONS,
+        })
+
+    if not parsed_entries or latest_year == 0:
+        raise ProviderError(f"No market cap data found for market {market} in STAT_INDUSTRY_TH.csv", source="SEC Thailand")
+
+    # Filter to latest period
+    latest_entries = [e for e in parsed_entries if e["year"] == latest_year and e["quarter"] == latest_q]
+    by_code: Dict[str, float] = {e["code"]: e["val_thb"] for e in latest_entries}
+
+    # Build sectors (28 sectors)
+    sectors: List[ThaiSectorMarketCapItem] = []
+    group_sums: Dict[str, float] = {g: 0.0 for g in GROUP_CODES}
+    group_sectors_map: Dict[str, List[str]] = {g: [] for g in GROUP_CODES}
+
+    for sector_code, group_code in SECTOR_GROUP.items():
+        val = by_code.get(sector_code, 0.0)
+        group_sums[group_code] += val
+        group_sectors_map[group_code].append(sector_code)
+        en_name, th_name = SECTOR_NAMES.get(sector_code, (sector_code, sector_code))
+        sectors.append(
+            ThaiSectorMarketCapItem(
+                sector_code=sector_code,
+                sector_name_en=en_name,
+                sector_name_th=th_name,
+                group_code=group_code,
+                market_cap_thb=val,
+            )
+        )
+
+    # Build parent groups (8 industry groups)
+    groups: List[ThaiIndustryGroupItem] = []
+    total_mcap = sum(group_sums.values())
+
+    for group_code in sorted(GROUP_CODES):
+        direct_val = by_code.get(group_code)
+        g_val = direct_val if (direct_val is not None and direct_val > 0) else group_sums[group_code]
+        en_name, th_name = GROUP_NAMES.get(group_code, (group_code, group_code))
+        share_pct = round((g_val / total_mcap) * 100.0, 2) if total_mcap > 0 else 0.0
+        groups.append(
+            ThaiIndustryGroupItem(
+                group_code=group_code,
+                group_name_en=en_name,
+                group_name_th=th_name,
+                market_cap_thb=g_val,
+                share_of_market_pct=share_pct,
+                sector_codes=tuple(group_sectors_map[group_code]),
+            )
+        )
+
+    # Enrich sector share_of_market_pct
+    enriched_sectors: List[ThaiSectorMarketCapItem] = []
+    for s in sectors:
+        s_share = round((s.market_cap_thb / total_mcap) * 100.0, 2) if total_mcap > 0 else 0.0
+        enriched_sectors.append(
+            ThaiSectorMarketCapItem(
+                sector_code=s.sector_code,
+                sector_name_en=s.sector_name_en,
+                sector_name_th=s.sector_name_th,
+                group_code=s.group_code,
+                market_cap_thb=s.market_cap_thb,
+                share_of_market_pct=s_share,
+            )
+        )
+
+    period_str = f"{latest_year} Q{latest_q}"
+
+    return ThaiIndustryMarketCapSnapshot(
+        market=target_market,
+        as_of=latest_as_of or period_str,
+        reporting_period=period_str,
+        total_market_cap_thb=total_mcap,
+        groups=tuple(groups),
+        sectors=tuple(enriched_sectors),
+        fetched_at=time.time(),
+        source="SEC Thailand",
+    )

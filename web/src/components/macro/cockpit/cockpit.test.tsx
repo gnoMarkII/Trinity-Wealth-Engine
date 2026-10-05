@@ -34,6 +34,10 @@ describe('Macro Cockpit Components', () => {
     const onChange = vi.fn()
     render(<MacroRegionTabs activeTab="us" onChange={onChange} />)
 
+    const aiBtn = screen.getByRole('button', { name: /บทวิเคราะห์ AI/i })
+    await userEvent.click(aiBtn)
+    expect(onChange).toHaveBeenCalledWith('ai')
+
     const thBtn = screen.getByRole('button', { name: /ประเทศไทย \(TH\)/i })
     await userEvent.click(thBtn)
     expect(onChange).toHaveBeenCalledWith('th')
@@ -146,7 +150,7 @@ describe('Macro Cockpit Components', () => {
     expect(screen.getByText('+300 bps')).toBeInTheDocument()
   })
 
-  it('renders ThailandMacroSection with AI Thailand Market Stance and Currency Strategy', () => {
+  it('renders ThailandMacroSection with Thai Market Observables and Microstructure metrics', () => {
     const mockAiData: any = {
       evaluated_at: '2026-09-27T15:30:00Z',
       overall_regime: 'Reflation',
@@ -158,31 +162,7 @@ describe('Macro Cockpit Components', () => {
         physical_gold: { bar_sell_thb: 67850 },
         policy_spread_bps: 275.0,
       },
-      asset_allocation: [
-        {
-          asset_class: 'USD/THB (FX)',
-          region: 'Thailand',
-          stance: 'Overweight',
-          confidence: 'high',
-          rationale: 'เงินบาทมีแนวโน้มอ่อนค่าเมื่อเทียบดอลลาร์จากส่วนต่างดอกเบี้ย',
-          supporting_data: ['US-TH Spread = 275 bps', 'Foreign Net Flow = -3,386.63 MB'],
-          warnings: [],
-        },
-      ],
-      report_references: [
-        {
-          reference_id: 'ref-1',
-          kind: 'news',
-          title: 'ธปท. เตรียมมาตรการช่วยลูกหนี้น้ำท่วม',
-          url: 'https://prachachat.net/finance/news-1',
-          publisher: 'ประชาชาติธุรกิจ',
-          age_hours: 4,
-          summary: 'ธนาคารแห่งประเทศไทยหารือสมาคมธนาคารไทยพักหนี้ 3 เดือน',
-          thumbnail_url: '',
-          is_stale: false,
-          related_observable_ids: [],
-        },
-      ],
+      asset_allocation: [],
       warnings: [],
     }
 
@@ -196,18 +176,19 @@ describe('Macro Cockpit Components', () => {
       />
     )
 
-    // Verify AI Header
-    expect(screen.getByText(/AI วิเคราะห์สภาวะตลาดทุนและค่าเงินบาท/)).toBeInTheDocument()
-    // Verify Stance metrics
-    expect(screen.getAllByText(/Foreign Net Flow/)[0]).toBeInTheDocument()
-    expect(screen.getByText(/USD\/THB \(FX\)/)).toBeInTheDocument()
-    expect(screen.getByText(/Overweight/i)).toBeInTheDocument()
-    expect(screen.getByText(/เงินบาทมีแนวโน้มอ่อนค่าเมื่อเทียบดอลลาร์/)).toBeInTheDocument()
-    // Verify domestic news reference
-    expect(screen.getByText(/ธปท. เตรียมมาตรการช่วยลูกหนี้น้ำท่วม/)).toBeInTheDocument()
-    expect(screen.getByText('ประชาชาติธุรกิจ')).toBeInTheDocument()
+    // Verify Pure Market Observables Header
+    expect(screen.getByText(/สภาวะตลาดทุนและสภาพคล่องไทย \(Thai Market Microstructure\)/)).toBeInTheDocument()
+    // Verify Microstructure metric labels and values
+    expect(screen.getByText('Foreign Net Flow')).toBeInTheDocument()
+    expect(screen.getByText('-3,386.63 ลบ.')).toBeInTheDocument()
+    expect(screen.getByText('ต่างชาติขายสุทธิ')).toBeInTheDocument()
+    expect(screen.getByText('1.08x')).toBeInTheDocument()
+    expect(screen.getByText('16.00x')).toBeInTheDocument()
+    expect(screen.getByText('67,850 ฿')).toBeInTheDocument()
     // Verify spread formatted properly
     expect(screen.getByText('+275 bps')).toBeInTheDocument()
+    // Verify that AI narrative is NOT in ThailandMacroSection
+    expect(screen.queryByText(/AI วิเคราะห์สภาวะตลาดทุนและค่าเงินบาท/)).not.toBeInTheDocument()
   })
 
   it('renders ThailandMacroSection without policy spread displaying fallback text and never +275 bps', () => {
@@ -259,6 +240,52 @@ describe('Macro Cockpit Components', () => {
 
     expect(screen.getByText('−50 bps')).toBeInTheDocument()
     expect(screen.queryByText('+275 bps')).not.toBeInTheDocument()
+  })
+
+  it('renders ThailandMacroSection with Thai Sovereign Fiscal Health metrics from MOF', () => {
+    const mockAiDataFiscal: any = {
+      evaluated_at: '2026-10-03T10:00:00Z',
+      overall_regime: 'Unknown',
+      regional_assessments: {
+        Thailand: {
+          state: 'Unknown',
+          confidence: 0.0,
+          data_gaps: [
+            'Thailand Growth (สศช. Real GDP)',
+            'Thailand Inflation (สนค. Headline CPI)',
+            'Thailand Monetary: อัตราดอกเบี้ยนโยบายพร้อมใช้งาน (2.50%) แต่ขาด Headline CPI เพื่อคำนวณอัตราดอกเบี้ยจริง (Real Policy Rate)',
+          ],
+          fiscal_health: {
+            debt_to_gdp_pct: 63.85,
+            public_debt_million_thb: 11850000,
+            statutory_limit_pct: 70.0,
+            status: 'within_ceiling',
+          },
+        },
+      },
+    }
+
+    render(
+      <ThailandMacroSection
+        flow={null}
+        gold={null}
+        valuation={null}
+        breadth={null}
+        aiData={mockAiDataFiscal}
+      />
+    )
+
+    // Fiscal Health panel & metrics
+    expect(screen.getByText(/ความยั่งยืนทางการคลังและหนี้สาธารณะ \(Thai Sovereign Fiscal Health\)/)).toBeInTheDocument()
+    expect(screen.getByText('63.85%')).toBeInTheDocument()
+    expect(screen.getByText('11.85 ล้านล้านบาท')).toBeInTheDocument()
+    expect(screen.getByText(/ปกติ \(ต่ำกว่าเพดาน 70%\)/)).toBeInTheDocument()
+
+    // Dynamic structured gap reasons
+    expect(screen.getByText('สศช. (NESDC)')).toBeInTheDocument()
+    expect(screen.getByText('สนค. พาณิชย์ (TPSO/MOC)')).toBeInTheDocument()
+    expect(screen.getByText('ธนาคารแห่งประเทศไทย (BOT)')).toBeInTheDocument()
+    expect(screen.getByText('ดอกเบี้ยนโยบายพร้อม แต่ขาด Headline CPI เพื่อคำนวณ Real Rate')).toBeInTheDocument()
   })
 })
 

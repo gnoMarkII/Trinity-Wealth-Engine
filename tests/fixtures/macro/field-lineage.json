@@ -1,0 +1,388 @@
+{
+  "version": "2.0.0",
+  "title": "Canonical Macro Field Lineage & Data Contract Matrix",
+  "groups": {
+    "us_yield_curve": [
+      {
+        "observable_id": "obs_ust_2y_yield",
+        "group": "us_yield_curve",
+        "is_required": true,
+        "consumers": [
+          "quant_matrix",
+          "economist_agent",
+          "macro_dashboard_ui"
+        ],
+        "status": "active"
+      },
+      {
+        "observable_id": "obs_ust_10y_yield",
+        "group": "us_yield_curve",
+        "is_required": true,
+        "consumers": [
+          "quant_matrix",
+          "economist_agent",
+          "macro_dashboard_ui"
+        ],
+        "status": "active"
+      }
+    ],
+    "financial_stress": [
+      {
+        "observable_id": "obs_ofr_financial_stress",
+        "group": "financial_stress",
+        "is_required": true,
+        "consumers": [
+          "quant_matrix",
+          "economist_agent",
+          "macro_dashboard_ui"
+        ],
+        "status": "active"
+      }
+    ],
+    "metals_cot_gold": [
+      {
+        "observable_id": "obs_cftc_gold_net_managed_money",
+        "group": "metals_cot_gold",
+        "is_required": true,
+        "consumers": [
+          "quant_matrix",
+          "economist_agent",
+          "macro_dashboard_ui"
+        ],
+        "status": "active"
+      }
+    ],
+    "global_policy_rates": [
+      {
+        "observable_id": "obs_us_policy_rate_bis",
+        "group": "global_policy_rates",
+        "is_required": true,
+        "consumers": [
+          "quant_matrix",
+          "economist_agent",
+          "macro_dashboard_ui"
+        ],
+        "status": "active"
+      },
+      {
+        "observable_id": "obs_thai_policy_rate_bis",
+        "group": "global_policy_rates",
+        "is_required": true,
+        "consumers": [
+          "quant_matrix",
+          "economist_agent",
+          "macro_dashboard_ui"
+        ],
+        "status": "active"
+      },
+      {
+        "observable_id": "obs_diff_us_th_policy_rate_bis",
+        "group": "global_policy_rates",
+        "is_required": true,
+        "consumers": [
+          "quant_matrix",
+          "economist_agent",
+          "macro_dashboard_ui"
+        ],
+        "status": "active"
+      }
+    ],
+    "commodity_volatility": [
+      {
+        "observable_id": "obs_cboe_gold_volatility_gvz",
+        "group": "commodity_volatility",
+        "is_required": true,
+        "consumers": [
+          "quant_matrix",
+          "economist_agent",
+          "macro_dashboard_ui"
+        ],
+        "status": "active"
+      },
+      {
+        "observable_id": "obs_cboe_silver_volatility_vxslv",
+        "group": "commodity_volatility",
+        "is_required": true,
+        "consumers": [
+          "quant_matrix",
+          "economist_agent",
+          "macro_dashboard_ui"
+        ],
+        "status": "active"
+      },
+      {
+        "observable_id": "obs_cboe_oil_volatility_ovx",
+        "group": "commodity_volatility",
+        "is_required": true,
+        "consumers": [
+          "quant_matrix",
+          "economist_agent",
+          "macro_dashboard_ui"
+        ],
+        "status": "active"
+      }
+    ],
+    "auction_demand_note_10y": [
+      {
+        "observable_id": "obs_treasury_auction_bid_to_cover_10y",
+        "group": "auction_demand_note_10y",
+        "is_required": true,
+        "consumers": [
+          "quant_matrix",
+          "economist_agent",
+          "macro_dashboard_ui"
+        ],
+        "status": "active"
+      }
+    ],
+    "auction_demand_bill_13w": [
+      {
+        "observable_id": "obs_treasury_auction_bid_to_cover_13w",
+        "group": "auction_demand_bill_13w",
+        "is_required": true,
+        "consumers": [
+          "quant_matrix",
+          "economist_agent",
+          "macro_dashboard_ui"
+        ],
+        "status": "active"
+      }
+    ],
+    "us_national_debt": [
+      {
+        "observable_id": "obs_us_national_debt_trillion",
+        "group": "us_national_debt",
+        "is_required": true,
+        "consumers": [
+          "quant_matrix",
+          "economist_agent",
+          "macro_dashboard_ui"
+        ],
+        "status": "active"
+      }
+    ],
+    "th_investor_flow": [
+      {
+        "observable_id": "obs_set_flow_foreign",
+        "group": "th_investor_flow",
+        "is_required": true,
+        "consumers": [
+          "quant_matrix",
+          "economist_agent",
+          "macro_dashboard_ui"
+        ],
+        "status": "active"
+      },
+      {
+        "observable_id": "obs_set_flow_prop",
+        "group": "th_investor_flow",
+        "is_required": true,
+        "consumers": [
+          "quant_matrix",
+          "economist_agent",
+          "macro_dashboard_ui"
+        ],
+        "status": "active"
+      },
+      {
+        "observable_id": "obs_set_flow_institution",
+        "group": "th_investor_flow",
+        "is_required": true,
+        "consumers": [
+          "quant_matrix",
+          "economist_agent",
+          "macro_dashboard_ui"
+        ],
+        "status": "active"
+      },
+      {
+        "observable_id": "obs_set_flow_retail",
+        "group": "th_investor_flow",
+        "is_required": true,
+        "consumers": [
+          "quant_matrix",
+          "economist_agent",
+          "macro_dashboard_ui"
+        ],
+        "status": "active"
+      }
+    ],
+    "th_retail_gold": [
+      {
+        "observable_id": "obs_gta_gold_bar_sell",
+        "group": "th_retail_gold",
+        "is_required": true,
+        "consumers": [
+          "quant_matrix",
+          "economist_agent",
+          "macro_dashboard_ui"
+        ],
+        "status": "active"
+      }
+    ],
+    "th_market_valuation": [
+      {
+        "observable_id": "obs_set_valuation_pe",
+        "group": "th_market_valuation",
+        "is_required": true,
+        "consumers": [
+          "quant_matrix",
+          "economist_agent",
+          "macro_dashboard_ui"
+        ],
+        "status": "active"
+      },
+      {
+        "observable_id": "obs_set_valuation_pbv",
+        "group": "th_market_valuation",
+        "is_required": true,
+        "consumers": [
+          "quant_matrix",
+          "economist_agent",
+          "macro_dashboard_ui"
+        ],
+        "status": "active"
+      },
+      {
+        "observable_id": "obs_set_valuation_dividend_yield",
+        "group": "th_market_valuation",
+        "is_required": true,
+        "consumers": [
+          "quant_matrix",
+          "economist_agent",
+          "macro_dashboard_ui"
+        ],
+        "status": "active"
+      }
+    ],
+    "th_market_breadth": [
+      {
+        "observable_id": "obs_set_advance_decline_ratio",
+        "group": "th_market_breadth",
+        "is_required": true,
+        "consumers": [
+          "quant_matrix",
+          "economist_agent",
+          "macro_dashboard_ui"
+        ],
+        "status": "active"
+      }
+    ],
+    "crypto_liquidity": [
+      {
+        "observable_id": "obs_crypto_stablecoin_supply_usd_b",
+        "group": "crypto_liquidity",
+        "is_required": true,
+        "consumers": [
+          "quant_matrix",
+          "economist_agent",
+          "macro_dashboard_ui"
+        ],
+        "status": "active"
+      },
+      {
+        "observable_id": "obs_crypto_stablecoin_supply_growth_30d",
+        "group": "crypto_liquidity",
+        "is_required": true,
+        "consumers": [
+          "quant_matrix",
+          "economist_agent",
+          "macro_dashboard_ui"
+        ],
+        "status": "active"
+      },
+      {
+        "observable_id": "obs_crypto_btc_gold_ratio",
+        "group": "crypto_liquidity",
+        "is_required": true,
+        "consumers": [
+          "quant_matrix",
+          "economist_agent",
+          "macro_dashboard_ui"
+        ],
+        "status": "active"
+      }
+    ],
+    "thai_hard_data": [
+      {
+        "observable_id": "obs_th_gdp_nesdc",
+        "group": "thai_hard_data",
+        "is_required": true,
+        "consumers": [
+          "quant_matrix",
+          "economist_agent",
+          "macro_dashboard_ui"
+        ],
+        "status": "active"
+      },
+      {
+        "observable_id": "obs_th_cpi_moc",
+        "group": "thai_hard_data",
+        "is_required": true,
+        "consumers": [
+          "quant_matrix",
+          "economist_agent",
+          "macro_dashboard_ui"
+        ],
+        "status": "active"
+      },
+      {
+        "observable_id": "obs_th_core_cpi_moc",
+        "group": "thai_hard_data",
+        "is_required": true,
+        "consumers": [
+          "quant_matrix",
+          "economist_agent",
+          "macro_dashboard_ui"
+        ],
+        "status": "active"
+      },
+      {
+        "observable_id": "obs_th_mpi_oie",
+        "group": "thai_hard_data",
+        "is_required": true,
+        "consumers": [
+          "quant_matrix",
+          "economist_agent",
+          "macro_dashboard_ui"
+        ],
+        "status": "active"
+      }
+    ],
+    "thai_debt_bonds": [
+      {
+        "observable_id": "obs_th_gov_yield_10y",
+        "group": "thai_debt_bonds",
+        "is_required": true,
+        "consumers": [
+          "quant_matrix",
+          "economist_agent",
+          "macro_dashboard_ui"
+        ],
+        "status": "active"
+      },
+      {
+        "observable_id": "obs_th_gov_yield_2y",
+        "group": "thai_debt_bonds",
+        "is_required": true,
+        "consumers": [
+          "quant_matrix",
+          "economist_agent",
+          "macro_dashboard_ui"
+        ],
+        "status": "active"
+      },
+      {
+        "observable_id": "obs_th_gov_10y_2y_spread",
+        "group": "thai_debt_bonds",
+        "is_required": true,
+        "consumers": [
+          "quant_matrix",
+          "economist_agent",
+          "macro_dashboard_ui"
+        ],
+        "status": "active"
+      }
+    ]
+  }
+}

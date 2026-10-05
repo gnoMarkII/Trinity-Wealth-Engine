@@ -43,6 +43,8 @@ htmlcov/
 test_report.html
 testing_report.html
 qa_dashboard.html
+tests/artifacts/
+tests/*_result.json
 
 # =========================================
 # 5. Build & Distribution

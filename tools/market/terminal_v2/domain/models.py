@@ -296,6 +296,27 @@ class TreasuryYieldCurveSnapshot:
 
 
 @dataclass(frozen=True)
+class ThaiYieldPoint:
+    tenor: str                         # e.g. "1M", "3M", "6M", "1Y", "2Y", "5Y", "10Y", "20Y", "50Y"
+    ttm_years: float                   # e.g. 2.0
+    yield_percent: Optional[float]
+
+
+@dataclass(frozen=True)
+class ThaiYieldCurveSnapshot:
+    """Thai Government Bond Model Yield Curve from ThaiBMA."""
+    observation_date: str              # ISO YYYY-MM-DD
+    yields: Tuple[ThaiYieldPoint, ...]
+    spread_10y_2y_bps: Optional[float] = None
+    spread_10y_1y_bps: Optional[float] = None
+    fetched_at: float = 0.0
+    source: str = "ThaiBMA"
+    unit: str = "percent / basis points"
+    is_stale: bool = False
+    stale_reason: str = ""
+
+
+@dataclass(frozen=True)
 class TreasuryAuctionResult:
     """Completed US Treasury auction result."""
     auction_date: str
@@ -389,6 +410,46 @@ class ThaiCorporateBondIssuance:
 
 
 @dataclass(frozen=True)
+class ThaiSectorMarketCapItem:
+    """Market Cap for a single SET sector (out of 28 sectors)."""
+    sector_code: str
+    sector_name_en: str
+    sector_name_th: str
+    group_code: str
+    market_cap_thb: float
+    market_cap_usd: Optional[float] = None
+    share_of_market_pct: Optional[float] = None
+
+
+@dataclass(frozen=True)
+class ThaiIndustryGroupItem:
+    """Aggregated Market Cap for an SET industry group (out of 8 industry groups)."""
+    group_code: str
+    group_name_en: str
+    group_name_th: str
+    market_cap_thb: float
+    market_cap_usd: Optional[float] = None
+    share_of_market_pct: Optional[float] = None
+    sector_codes: Tuple[str, ...] = ()
+
+
+@dataclass(frozen=True)
+class ThaiIndustryMarketCapSnapshot:
+    """Quarterly Market Cap breakdown across 8 industry groups and 28 sectors from SEC Thailand."""
+    market: str
+    as_of: str
+    reporting_period: str
+    total_market_cap_thb: float
+    groups: Tuple[ThaiIndustryGroupItem, ...]
+    sectors: Tuple[ThaiSectorMarketCapItem, ...]
+    fetched_at: float
+    source: str = "SEC Thailand"
+    unit: str = "THB / percent"
+    is_stale: bool = False
+    stale_reason: str = ""
+
+
+@dataclass(frozen=True)
 class ThaiPublicDebtComponent:
     """Individual line component of Thai Public Debt published by MOF."""
     component_number: int
@@ -467,6 +528,74 @@ class SpotEtfFlowSnapshot:
     is_stale: bool = False
     stale_reason: str = ""
     limitations: str = "Aggregated ETF net inflows via best-effort gateway; subject to upstream reporting delays."
+
+
+@dataclass(frozen=True)
+class StablecoinItem:
+    """Individual stablecoin circulating supply and market share."""
+    symbol: str
+    name: str
+    circulating_usd: Optional[float]
+    market_share_pct: Optional[float]
+    price_usd: Optional[float] = 1.0
+
+
+@dataclass(frozen=True)
+class StablecoinSupplySnapshot:
+    """Global stablecoin circulating supply and growth metrics from DeFiLlama."""
+    total_circulating_usd: Optional[float]
+    change_7d_pct: Optional[float]
+    change_30d_pct: Optional[float]
+    top_stablecoins: Tuple[StablecoinItem, ...]
+    as_of_date: str = ""
+    is_partial: bool = False
+    completeness_notes: str = ""
+    fetched_at: float = 0.0
+    source: str = "DeFiLlama"
+    unit: str = "USD"
+    is_stale: bool = False
+    stale_reason: str = ""
+    limitations: str = "Aggregated USD stablecoin circulating supply from public on-chain indexer."
+
+
+@dataclass(frozen=True)
+class CryptoBenchmarkSnapshot:
+    """Bitcoin spot price benchmark and cross-asset ratios."""
+    symbol: str
+    price_usd: Optional[float]
+    change_24h_pct: Optional[float]
+    change_7d_pct: Optional[float]
+    gold_price_usd: Optional[float]
+    btc_gold_ratio: Optional[float]
+    as_of_date: str = ""
+    fetched_at: float = 0.0
+    source: str = "Market Benchmark"
+    is_stale: bool = False
+    stale_reason: str = ""
+    limitations: str = "Public spot benchmark and cross-asset ratio for macro risk-sentiment context."
+
+
+@dataclass(frozen=True)
+class CryptoMacroLiquiditySnapshot:
+    """Synthesized Level 1 Crypto Macro Liquidity & Risk Appetite Snapshot."""
+    btc_price_usd: Optional[float]
+    btc_change_24h_pct: Optional[float]
+    btc_change_7d_pct: Optional[float]
+    btc_gold_ratio: Optional[float]
+    stablecoin_total_usd: Optional[float]
+    stablecoin_change_7d_pct: Optional[float]
+    stablecoin_change_30d_pct: Optional[float]
+    top_stablecoins: Tuple[StablecoinItem, ...]
+    etf_daily_net_inflow_usd: Optional[float]
+    etf_cumulative_total_usd: Optional[float]
+    liquidity_regime: str  # "Expanding", "Contracting", "Neutral"
+    as_of_date: str = ""
+    fetched_at: float = 0.0
+    source: str = "DeFiLlama / SoSoValue / Benchmark"
+    is_stale: bool = False
+    stale_reason: str = ""
+    limitations: str = "Level 1 macro liquidity proxy for global risk appetite; not individual asset investment advice."
+
 
 
 # ============================================================================

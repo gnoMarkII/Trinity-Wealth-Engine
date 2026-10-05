@@ -4,6 +4,7 @@ from datetime import datetime
 from schemas.macro_schemas import MacroStrategyDirection, AssetAllocationView, AssetStance, EconomicState
 from tools.macro.report_formatter import _translate_warning, format_macro_strategy_report, write_strategy_json_sidecar
 import tools.macro.report_formatter as report_formatter_module
+from tools.macro.adapters.strategy_vault_adapter import StrategyVaultAdapter
 from schemas.warning_registry import (
     WarningMessage,
     GRACEFUL_DROP_PAIR_TRADES,
@@ -58,8 +59,60 @@ def test_format_macro_strategy_report_divergent():
     assert "ข่าวดีแต่ตัวเลขแย่" in report
 
 
+def test_sector_report_rejects_snapshot_reference_conflict():
+    with pytest.raises(RuntimeError, match="sector_report_snapshot_link_mismatch"):
+        report_formatter_module._validate_sector_report_links({
+            "sector_snapshot_id": "snapshot-a",
+            "sector_analysis": {
+                "analysis_status": "limited",
+                "snapshot_id": "snapshot-b",
+                "resolved_metrics": [],
+            },
+        })
+
+
+def test_sector_report_rejects_resolved_metrics_without_snapshot_input_ref():
+    with pytest.raises(RuntimeError, match="sector_report_metric_snapshot_ref_mismatch"):
+        report_formatter_module._validate_sector_report_links({
+            "sector_snapshot_id": "snapshot-a",
+            "sector_analysis": {
+                "analysis_status": "available",
+                "snapshot_id": "snapshot-a",
+                "resolved_metrics": [{
+                    "snapshot_id": "snapshot-a", "input_refs": ["XLK.1M_excess_pp"],
+                }],
+            },
+        })
+
+
+def test_pending_report_retry_reuses_validated_payload_before_new_attempt(tmp_path, monkeypatch):
+    monkeypatch.setenv("OBSIDIAN_VAULT_PATH", str(tmp_path))
+    monkeypatch.setenv("INVEST_VAULT_RUNTIME_BASE", str(tmp_path.parent / f"{tmp_path.name}-runtime"))
+    original = {
+        "strategy_report_id": "report-1",
+        "sector_snapshot_id": "snapshot-a",
+        "sector_analysis": {
+            "analysis_status": "limited", "snapshot_id": "snapshot-a", "resolved_metrics": [],
+        },
+    }
+    invalid_retry = {
+        "strategy_report_id": "report-1",
+        "sector_snapshot_id": "snapshot-a",
+        "sector_analysis": {
+            "analysis_status": "limited", "snapshot_id": "snapshot-b", "resolved_metrics": [],
+        },
+    }
+
+    pending_path, staged = report_formatter_module._stage_strategy_report(original, tmp_path)
+    retry_path, resumed = report_formatter_module._stage_strategy_report(invalid_retry, tmp_path)
+
+    assert retry_path == pending_path
+    assert resumed == staged == original
+
+
 def test_write_strategy_json_sidecar(tmp_path, monkeypatch):
     monkeypatch.setenv("OBSIDIAN_VAULT_PATH", str(tmp_path))
+    monkeypatch.setenv("INVEST_VAULT_RUNTIME_BASE", str(tmp_path.parent / f"{tmp_path.name}-runtime"))
     monkeypatch.setattr(report_formatter_module, "VAULT_PATH", tmp_path)
 
     direction = MacroStrategyDirection(
@@ -85,6 +138,94 @@ def test_write_strategy_json_sidecar(tmp_path, monkeypatch):
     saved = json.loads(json_path.read_text(encoding="utf-8"))
     assert saved["overall_regime"] == "Goldilocks"
     assert saved["asset_allocation"][0]["asset_class"] == "หุ้น"
+
+
+def test_report_archive_failure_does_not_publish_latest_or_indicator_projection(tmp_path, monkeypatch):
+    monkeypatch.setenv("OBSIDIAN_VAULT_PATH", str(tmp_path))
+    monkeypatch.setenv("INVEST_VAULT_RUNTIME_BASE", str(tmp_path.parent / f"{tmp_path.name}-runtime"))
+    monkeypatch.setattr(report_formatter_module, "VAULT_PATH", tmp_path)
+    direction = MacroStrategyDirection(
+        evaluated_at=datetime.now().isoformat(),
+        overall_regime=EconomicState.GOLDILOCKS,
+        asset_allocation=[],
+        focus_themes=[],
+        conviction_level="medium",
+        conviction_rationale="Evidence is mixed.",
+        quant_narrative_alignment="aligned",
+        divergence_note="",
+    )
+
+    def fail_archive(_payload, _vault):
+        raise RuntimeError("broker unavailable")
+
+    monkeypatch.setattr(report_formatter_module, "_archive_strategy_report", fail_archive)
+    with pytest.raises(RuntimeError, match="broker unavailable"):
+        write_strategy_json_sidecar(direction, "2026-07-06", observable_registry={})
+
+    assert list(tmp_path.rglob("Macro_Strategy_Direction_*.json")) == []
+    assert list(tmp_path.rglob("Macro_Strategy_Latest.json")) == []
+    assert not (tmp_path / "30_Knowledge_Base" / "Macroeconomics" / "Indicator_Series").exists()
+
+
+def test_retried_report_uses_already_committed_canonical_payload(tmp_path, monkeypatch):
+    monkeypatch.setenv("OBSIDIAN_VAULT_PATH", str(tmp_path))
+    monkeypatch.setenv("INVEST_VAULT_RUNTIME_BASE", str(tmp_path.parent / f"{tmp_path.name}-runtime"))
+    monkeypatch.setattr(report_formatter_module, "VAULT_PATH", tmp_path)
+    new_direction = MacroStrategyDirection(
+        evaluated_at="2026-07-06T10:00:00+00:00",
+        overall_regime=EconomicState.RECESSION,
+        asset_allocation=[],
+        focus_themes=["new LLM output"],
+        conviction_level="low",
+        conviction_rationale="New attempt.",
+        quant_narrative_alignment="divergent",
+        divergence_note="changed after retry",
+    )
+    canonical_direction = MacroStrategyDirection(
+        evaluated_at="2026-07-06T09:00:00+00:00",
+        overall_regime=EconomicState.GOLDILOCKS,
+        asset_allocation=[],
+        focus_themes=["committed original"],
+        conviction_level="high",
+        conviction_rationale="Committed once.",
+        quant_narrative_alignment="aligned",
+        divergence_note="",
+    )
+    report_id = report_formatter_module._strategy_report_id("stable-macro-task")
+    canonical = canonical_direction.model_dump(mode="json")
+    canonical.update({
+        "run_id": "stable-macro-task",
+        "job_id": "job-1",
+        "snapshot_id": "Macro_Strategy_Direction_2026-07-06",
+        "strategy_report_id": report_id,
+        "run_started_at": "2026-07-06T09:00:00+00:00",
+        "dashboard_indicators": [],
+        "report_references": [],
+        "regional_assessments": {},
+        "evaluated_sources": [],
+        "sector_snapshot_id": "sr_original",
+        "sector_analysis": {"snapshot_id": "sr_original"},
+    })
+    monkeypatch.setattr(report_formatter_module, "_load_committed_strategy_report", lambda *_args: (canonical, {"note_id": "n", "revision_id": "r"}))
+    monkeypatch.setattr(report_formatter_module, "_archive_strategy_report", lambda *_args: (_ for _ in ()).throw(AssertionError("must reuse committed evidence")))
+
+    _path, persisted = write_strategy_json_sidecar(
+        new_direction, "2026-07-06", run_id="stable-macro-task", return_canonical_payload=True,
+    )
+
+    assert persisted["focus_themes"] == ["committed original"]
+    assert persisted["strategy_report_id"] == report_id
+    assert persisted["sector_snapshot_id"] == "sr_original"
+
+
+def test_strategy_latest_manifest_resolves_the_canonical_report(tmp_path, monkeypatch):
+    manifest = tmp_path / "30_Knowledge_Base" / "Strategies" / "Macro_Strategy_Latest.json"
+    manifest.parent.mkdir(parents=True)
+    manifest.write_text(json.dumps({"strategy_report_id": "macro_report_run_1"}), encoding="utf-8")
+    adapter = StrategyVaultAdapter(tmp_path)
+    monkeypatch.setattr(adapter, "report_by_id", lambda report_id: {"canonical_id": report_id})
+
+    assert adapter.latest() == {"canonical_id": "macro_report_run_1"}
 
 
 def test_translate_warning_dynamic_graceful_drop_to_thai():

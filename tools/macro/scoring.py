@@ -1,8 +1,30 @@
+import math
 from typing import Optional, Any
 from datetime import datetime
 import re
 from .parsers import _parse_markdown_with_context, _parse_float_from_str
 from schemas.macro_schemas import EconomicState
+
+_CANONICAL_REGION_MAPPING: dict[str, str] = {
+    "united states": "United States",
+    "usa": "United States",
+    "us": "United States",
+    "thailand": "Thailand",
+    "thai": "Thailand",
+    "th": "Thailand",
+    "euro area": "Euro Area",
+    "europe": "Euro Area",
+    "eu": "Euro Area",
+    "china": "China",
+    "cn": "China",
+    "japan": "Japan",
+    "jp": "Japan",
+    "india": "India",
+    "in": "India",
+    "latin america": "Latin America",
+    "latam": "Latin America",
+    "global": "Global",
+}
 
 
 def _get_global_risk_sentiment(global_md: str = "", observables: list[Any] | None = None) -> float:
@@ -70,7 +92,8 @@ def _calculate_matrix_scores_from_markdown(country_md: str) -> dict:
     for r in rows:
         # Extract region name by stripping leading flag emoji / non-word chars (e.g. '🇹🇭 Thailand' -> 'Thailand')
         h1_raw = str(r.get("_H1", "Unknown")).strip()
-        region_name = re.sub(r"^[^\w]+", "", h1_raw).strip() or h1_raw
+        cleaned_h1 = re.sub(r"^[^\w]+", "", h1_raw).strip() or h1_raw
+        region_name = _CANONICAL_REGION_MAPPING.get(cleaned_h1.lower(), cleaned_h1)
         if region_name not in regions_data:
             regions_data[region_name] = {}
 
@@ -81,8 +104,8 @@ def _calculate_matrix_scores_from_markdown(country_md: str) -> dict:
         if val is not None:
             regions_data[region_name][idx] = {
                 "val": val,
-                "prev": prev if prev is not None else val,
-                "ma": ma if ma is not None else val,
+                "prev": prev,
+                "ma": ma,
             }
 
     results = {}
@@ -98,101 +121,160 @@ def _calculate_matrix_scores_from_markdown(country_md: str) -> dict:
             return None
 
         # Helper for scoring momentum & MA
-        def score_momentum(metric: dict, is_inverse: bool = False) -> float:
+        def score_momentum(metric: dict, is_inverse: bool = False) -> Optional[float]:
+            val = metric.get("val")
+            ma = metric.get("ma")
+            prev = metric.get("prev")
+            if val is None or ma is None or prev is None:
+                return None  # Insufficient history for momentum calculation
+
             score = 0.0
-            if metric["val"] > metric["ma"]:
+            if val > ma:
                 score += 0.5 if not is_inverse else -0.5
-            elif metric["val"] < metric["ma"]:
+            elif val < ma:
                 score -= 0.5 if not is_inverse else -0.5
 
-            if metric["val"] > metric["prev"]:
+            if val > prev:
                 score += 0.5 if not is_inverse else -0.5
-            elif metric["val"] < metric["prev"]:
+            elif val < prev:
                 score -= 0.5 if not is_inverse else -0.5
             return score
 
-        # 1. Growth Pillar
-        gdp = get_metric("Real GDP")
-        indpro = get_metric("Industrial Production")
-        retail = get_metric("Retail Sales")
-        unemp = get_metric("Unemployment Rate")
+        data_gaps = []
 
-        growth_pmi_score = score_momentum(indpro) if indpro is not None else None
-        lag_score = 0.0
-        lag_count = 0
-        if gdp is not None:
-            lag_score += score_momentum(gdp)
-            lag_count += 1
-        if retail is not None:
-            lag_score += score_momentum(retail)
-            lag_count += 1
-        if unemp is not None:
-            lag_score += score_momentum(unemp, is_inverse=True)
-            lag_count += 1
+        if region == "Thailand":
+            # 1. Thai Growth Pillar (Real GDP YoY required, corroborated by OIE MPI YoY if present)
+            gdp = get_metric("Real GDP") or get_metric("GDP")
+            mpi = get_metric("Manufacturing Production") or get_metric("Industrial Production") or get_metric("MPI")
 
-        if growth_pmi_score is None and lag_count == 0:
-            final_growth = None
-        elif growth_pmi_score is not None and lag_count == 0:
-            final_growth = growth_pmi_score
-        elif growth_pmi_score is None and lag_count > 0:
-            final_growth = lag_score / lag_count
+            m_gdp = score_momentum(gdp) if gdp else None
+            m_mpi = score_momentum(mpi) if mpi else None
+
+            if m_gdp is not None and m_mpi is not None:
+                final_growth = (m_gdp * 0.4) + (m_mpi * 0.6)
+            elif m_gdp is not None:
+                final_growth = m_gdp
+            else:
+                final_growth = None
+                data_gaps.append("Thailand Growth (สศช. Real GDP)")
+
+            # 2. Thai Inflation Pillar (Headline CPI YoY required, Core CPI diagnostic)
+            cpi = get_metric("CPI")
+            m_cpi = score_momentum(cpi, is_inverse=True) if cpi else None
+            final_inflation = m_cpi
+            if final_inflation is None:
+                data_gaps.append("Thailand Inflation (สนค. Headline CPI)")
+
+            # 3. Thai Monetary Pillar (Real-rate proxy: Policy Rate - Headline CPI YoY)
+            policy_rate = get_metric("Policy Rate") or get_metric("Repo Rate")
+            spread = get_metric("10Y-2Y") or get_metric("Yield Spread")
+
+            if policy_rate is not None:
+                if cpi is not None and cpi["val"] < 30.0:
+                    real_rate = policy_rate["val"] - cpi["val"]
+                    if real_rate > 1.0:
+                        monetary_score = -1.0
+                    elif real_rate <= 0.0:
+                        monetary_score = 1.0
+                    else:
+                        monetary_score = 0.0
+                else:
+                    monetary_score = None
+                    data_gaps.append(
+                        f"Thailand Monetary: อัตราดอกเบี้ยนโยบายพร้อมใช้งาน ({policy_rate['val']:.2f}%) แต่ขาด Headline CPI เพื่อคำนวณอัตราดอกเบี้ยจริง (Real Policy Rate)"
+                    )
+            else:
+                monetary_score = None
+                data_gaps.append("Thailand Monetary (ธปท. Policy Rate / Yield Curve)")
+
         else:
-            final_growth = (growth_pmi_score * 0.6) + ((lag_score / lag_count) * 0.4)
+            # 1. Growth Pillar (United States / Euro Area / General)
+            gdp = get_metric("Real GDP")
+            indpro = get_metric("Industrial Production")
+            retail = get_metric("Retail Sales")
+            unemp = get_metric("Unemployment Rate")
 
-        # 2. Inflation Pillar
-        cpi = get_metric("CPI")
-        pce = get_metric("Core PCE") or get_metric("PCE")
+            growth_pmi_score = score_momentum(indpro) if indpro is not None else None
+            lag_score = 0.0
+            lag_count = 0
+            if gdp is not None:
+                s = score_momentum(gdp)
+                if s is not None:
+                    lag_score += s
+                    lag_count += 1
+            if retail is not None:
+                s = score_momentum(retail)
+                if s is not None:
+                    lag_score += s
+                    lag_count += 1
+            if unemp is not None:
+                s = score_momentum(unemp, is_inverse=True)
+                if s is not None:
+                    lag_score += s
+                    lag_count += 1
 
-        inf_score = 0.0
-        inf_count = 0
-        for inf_metric in [cpi, pce]:
-            if inf_metric is not None:
-                inf_score += score_momentum(inf_metric, is_inverse=True)
-                inf_count += 1
-        if inf_count == 0:
-            inf_score = None
-        else:
-            inf_score = inf_score / inf_count
+            if growth_pmi_score is None and lag_count == 0:
+                final_growth = None
+            elif growth_pmi_score is not None and lag_count == 0:
+                final_growth = growth_pmi_score
+            elif growth_pmi_score is None and lag_count > 0:
+                final_growth = lag_score / lag_count
+            else:
+                final_growth = (growth_pmi_score * 0.6) + ((lag_score / lag_count) * 0.4)
 
-        # 3. Monetary Pillar
-        fed = get_metric("Fed Funds Rate") or get_metric("Policy Rate")
-        spread = get_metric("10Y-2Y") or get_metric("10-Year Minus 2-Year")
+            # 2. Inflation Pillar
+            cpi = get_metric("CPI")
+            pce = get_metric("Core PCE") or get_metric("PCE")
 
-        monetary_score = 0.0
-        mon_count = 0
-        # Calculate real rate: only when inflation is verified YoY % (val < 30.0, reject raw index e.g. 120+)
-        inf_candidate = pce or cpi
-        if fed is not None and inf_candidate is not None:
-            if inf_candidate["val"] < 30.0:  # Valid YoY inflation percentage
-                real_rate = fed["val"] - inf_candidate["val"]
-                if real_rate > 1.0:
+            inf_score = 0.0
+            inf_count = 0
+            for inf_metric in [cpi, pce]:
+                if inf_metric is not None:
+                    s = score_momentum(inf_metric, is_inverse=True)
+                    if s is not None:
+                        inf_score += s
+                        inf_count += 1
+            if inf_count == 0:
+                final_inflation = None
+            else:
+                final_inflation = inf_score / inf_count
+
+            # 3. Monetary Pillar
+            fed = get_metric("Fed Funds Rate") or get_metric("Policy Rate")
+            spread = get_metric("10Y-2Y") or get_metric("10-Year Minus 2-Year")
+
+            monetary_score = 0.0
+            mon_count = 0
+            inf_candidate = pce or cpi
+            if fed is not None and inf_candidate is not None:
+                if inf_candidate["val"] < 30.0:
+                    real_rate = fed["val"] - inf_candidate["val"]
+                    if real_rate > 1.0:
+                        monetary_score -= 1.0
+                    elif real_rate <= 0.0:
+                        monetary_score += 1.0
+                    mon_count += 1
+            if spread is not None:
+                if spread["val"] < 0:
                     monetary_score -= 1.0
-                elif real_rate <= 0.0:
+                else:
                     monetary_score += 1.0
                 mon_count += 1
-        if spread is not None:
-            if spread["val"] < 0:
-                monetary_score -= 1.0
+
+            if mon_count == 0:
+                monetary_score = None
             else:
-                monetary_score += 1.0
-            mon_count += 1
+                monetary_score = monetary_score / mon_count
 
-        if mon_count == 0:
-            monetary_score = None
-        else:
-            monetary_score = monetary_score / mon_count
-
-        # Data gaps and coverage assessment
-        data_gaps = []
-        if final_growth is None:
-            data_gaps.append(f"{region} Growth (GDP/IP/Retail/Unemployment)")
-        if inf_score is None:
-            data_gaps.append(f"{region} Inflation (CPI/PCE)")
-        if monetary_score is None:
-            data_gaps.append(f"{region} Monetary (Policy Rate/Yield Curve)")
+            if final_growth is None:
+                data_gaps.append(f"{region} Growth (GDP/IP/Retail/Unemployment)")
+            if final_inflation is None:
+                data_gaps.append(f"{region} Inflation (CPI/PCE)")
+            if monetary_score is None:
+                data_gaps.append(f"{region} Monetary (Policy Rate/Yield Curve)")
 
         coverage = round((3 - len(data_gaps)) / 3.0, 2)
-        state = _determine_economic_state(final_growth, inf_score)
+        state = _determine_economic_state(final_growth, final_inflation)
 
         if state == EconomicState.UNKNOWN.value or coverage < 0.5:
             confidence = 0.0
@@ -201,7 +283,7 @@ def _calculate_matrix_scores_from_markdown(country_md: str) -> dict:
 
         results[region] = {
             "growth": final_growth,
-            "inflation": inf_score,
+            "inflation": final_inflation,
             "monetary": monetary_score,
             "state": state,
             "confidence": confidence,
@@ -211,20 +293,33 @@ def _calculate_matrix_scores_from_markdown(country_md: str) -> dict:
     return results
 
 
+def _is_eligible_observable(o: Any) -> bool:
+    """Check if an observable is eligible for deterministic macro scoring.
+
+    Contradictory or unverified states (is_valid=False, status='mock', 'missing', 'stale', 'unverified', 'blocked', 'mismatched_date')
+    are strictly excluded. Only status == 'verified' is eligible.
+    """
+    if not getattr(o, "is_valid", False):
+        return False
+    status = getattr(o, "status", "verified")
+    if status != "verified":
+        return False
+    return True
+
+
 def _calculate_matrix_scores_from_observables(observables: list[Any]) -> dict[str, dict]:
     """Calculate macro regime matrix scores strictly from validated observables.
 
-    Observables that are invalid (is_valid=False, status='mock', 'missing', 'stale')
+    Observables that are invalid (is_valid=False, status='mock', 'missing', 'stale', 'unverified')
     are strictly excluded from scoring and coverage calculations.
     """
-    valid_obs = [o for o in observables if getattr(o, "is_valid", False)]
+    valid_obs = [o for o in observables if _is_eligible_observable(o)]
 
-    # Group valid observables by region
+    # Group valid observables by region (canonicalized)
     by_region: dict[str, list[Any]] = {}
     for o in valid_obs:
-        reg = getattr(o, "region", "Global")
-        if not reg:
-            reg = "Global"
+        raw_reg = getattr(o, "region", "Global") or "Global"
+        reg = _CANONICAL_REGION_MAPPING.get(raw_reg.strip().lower(), raw_reg.strip())
         by_region.setdefault(reg, []).append(o)
 
     # Always ensure canonical regions are evaluated even if data is completely missing (fail-closed)
@@ -247,20 +342,23 @@ def _calculate_matrix_scores_from_observables(observables: list[Any]) -> dict[st
                     if val is None:
                         continue
                     meta = getattr(o, "metadata", {}) or {}
-                    prev = meta.get("prev", val)
-                    ma = meta.get("ma", val)
+                    prev = meta.get("prev")
+                    ma = meta.get("ma")
                     return {
                         "val": val,
-                        "prev": prev if prev is not None else val,
-                        "ma": ma if ma is not None else val,
+                        "prev": prev,
+                        "ma": ma,
                     }
             return None
 
-        def score_momentum(metric: dict, is_inverse: bool = False) -> float:
+        def score_momentum(metric: dict, is_inverse: bool = False) -> Optional[float]:
+            val = metric.get("val")
+            ma = metric.get("ma")
+            prev = metric.get("prev")
+            if val is None or ma is None or prev is None:
+                return None  # Insufficient history for momentum calculation
+
             score = 0.0
-            val = metric["val"]
-            ma = metric.get("ma", val)
-            prev = metric.get("prev", val)
             if val > ma:
                 score += 0.5 if not is_inverse else -0.5
             elif val < ma:
@@ -272,110 +370,209 @@ def _calculate_matrix_scores_from_observables(observables: list[Any]) -> dict[st
                 score -= 0.5 if not is_inverse else -0.5
             return score
 
-        # 1. Growth Pillar (exclude market breadth / foreign flow / ratios)
-        indpro = find_metric("industrial production") or find_metric("indpro") or find_metric("pmi")
-        gdp = find_metric("real gdp") or find_metric("gdp")
-        retail = find_metric("retail") or find_metric("rsafs")
-        unemp = find_metric("unemployment")
+        data_gaps = []
+        fiscal_health = None
+        thai_yield_curve = None
 
-        growth_pmi_score = score_momentum(indpro) if indpro is not None else None
-        lag_score = 0.0
-        lag_count = 0
-        if gdp is not None:
-            lag_score += score_momentum(gdp)
-            lag_count += 1
-        if retail is not None:
-            lag_score += score_momentum(retail)
-            lag_count += 1
-        if unemp is not None:
-            lag_score += score_momentum(unemp, is_inverse=True)
-            lag_count += 1
+        if region == "Thailand":
+            # 1. Thai Growth Pillar (Real GDP YoY required, corroborated by OIE MPI YoY if present)
+            gdp = find_metric("real gdp") or find_metric("gdp")
+            mpi = find_metric("manufacturing production") or find_metric("mpi") or find_metric("indpro")
 
-        if growth_pmi_score is None and lag_count == 0:
-            final_growth = None
-        elif growth_pmi_score is not None and lag_count == 0:
-            final_growth = growth_pmi_score
-        elif growth_pmi_score is None and lag_count > 0:
-            final_growth = lag_score / lag_count
+            m_gdp = score_momentum(gdp) if gdp else None
+            m_mpi = score_momentum(mpi) if mpi else None
+
+            if m_gdp is not None and m_mpi is not None:
+                final_growth = (m_gdp * 0.4) + (m_mpi * 0.6)
+            elif m_gdp is not None:
+                final_growth = m_gdp
+            else:
+                final_growth = None
+                data_gaps.append("Thailand Growth (สศช. Real GDP)")
+
+            # 2. Thai Inflation Pillar (Headline CPI YoY required, Core CPI diagnostic)
+            cpi = find_metric("cpi")
+            m_cpi = score_momentum(cpi, is_inverse=True) if cpi else None
+            final_inflation = m_cpi
+            if final_inflation is None:
+                data_gaps.append("Thailand Inflation (สนค. Headline CPI)")
+
+            # 3. Thai Monetary Pillar (Real-rate proxy: Policy Rate - Headline CPI YoY)
+            policy_rate = (
+                find_metric("policy rate")
+                or find_metric("policy_rate")
+                or find_metric("repo rate")
+            )
+            spread = find_metric("10y", "2y") or find_metric("yield spread")
+            y2_val = find_metric("2y gov bond yield") or find_metric("gov_yield_2y")
+            y10_val = find_metric("10y gov bond yield") or find_metric("gov_yield_10y")
+            thai_yield_curve = {
+                "spread_10y_2y_bps": spread["val"] if spread else None,
+                "yield_2y": y2_val["val"] if y2_val else None,
+                "yield_10y": y10_val["val"] if y10_val else None,
+                "is_available": spread is not None,
+                "status": "verified" if spread else "blocked",
+                "reason": "" if spread else "ThaiBMA authorized access required (separate access gate)",
+            }
+
+            if policy_rate is not None:
+                if cpi is not None and cpi["val"] < 30.0:
+                    real_rate = policy_rate["val"] - cpi["val"]
+                    if real_rate > 1.0:
+                        monetary_score = -1.0
+                    elif real_rate <= 0.0:
+                        monetary_score = 1.0
+                    else:
+                        monetary_score = 0.0
+                else:
+                    monetary_score = None
+                    data_gaps.append(
+                        f"Thailand Monetary: อัตราดอกเบี้ยนโยบายพร้อมใช้งาน ({policy_rate['val']:.2f}%) แต่ขาด Headline CPI เพื่อคำนวณอัตราดอกเบี้ยจริง (Real Policy Rate)"
+                    )
+            else:
+                monetary_score = None
+                data_gaps.append("Thailand Monetary (ธปท. Policy Rate / Yield Curve)")
+
+            # 4. Thai Fiscal Health Diagnostic (MOF Public Debt to GDP vs 70% statutory limit)
+            debt_to_gdp = find_metric("debt to gdp") or find_metric("debt_to_gdp")
+            public_debt = find_metric("public debt") or find_metric("public_debt")
+            fiscal_health = {
+                "debt_to_gdp_pct": debt_to_gdp["val"] if debt_to_gdp else None,
+                "public_debt_million_thb": public_debt["val"] if public_debt else None,
+                "statutory_limit_pct": 70.0,
+                "status": (
+                    "within_ceiling"
+                    if (debt_to_gdp and debt_to_gdp["val"] <= 70.0)
+                    else ("exceeds_ceiling" if debt_to_gdp else "unknown")
+                ),
+            }
+
         else:
-            final_growth = (growth_pmi_score * 0.6) + ((lag_score / lag_count) * 0.4)
+            # 1. Growth Pillar (United States / Euro Area / General)
+            indpro = find_metric("industrial production") or find_metric("indpro") or find_metric("pmi")
+            gdp = find_metric("real gdp") or find_metric("gdp")
+            retail = find_metric("retail") or find_metric("rsafs")
+            unemp = find_metric("unemployment")
 
-        # 2. Inflation Pillar
-        cpi = find_metric("cpi")
-        pce = find_metric("core pce") or find_metric("pce")
+            growth_pmi_score = score_momentum(indpro) if indpro is not None else None
+            lag_score = 0.0
+            lag_count = 0
+            if gdp is not None:
+                s = score_momentum(gdp)
+                if s is not None:
+                    lag_score += s
+                    lag_count += 1
+            if retail is not None:
+                s = score_momentum(retail)
+                if s is not None:
+                    lag_score += s
+                    lag_count += 1
+            if unemp is not None:
+                s = score_momentum(unemp, is_inverse=True)
+                if s is not None:
+                    lag_score += s
+                    lag_count += 1
 
-        inf_score = 0.0
-        inf_count = 0
-        for inf_metric in [cpi, pce]:
-            if inf_metric is not None:
-                inf_score += score_momentum(inf_metric, is_inverse=True)
-                inf_count += 1
-        if inf_count == 0:
-            inf_score = None
-        else:
-            inf_score = inf_score / inf_count
+            if growth_pmi_score is None and lag_count == 0:
+                final_growth = None
+            elif growth_pmi_score is not None and lag_count == 0:
+                final_growth = growth_pmi_score
+            elif growth_pmi_score is None and lag_count > 0:
+                final_growth = lag_score / lag_count
+            else:
+                final_growth = (growth_pmi_score * 0.6) + ((lag_score / lag_count) * 0.4)
 
-        # 3. Monetary Pillar
-        fed = (
-            find_metric("fed funds")
-            or find_metric("policy rate")
-            or find_metric("policy_rate")
-        )
-        spread = (
-            find_metric("10y", "2y")
-            or find_metric("t10y2y")
-            or find_metric("yield spread")
-        )
+            # 2. Inflation Pillar
+            cpi = find_metric("cpi")
+            pce = find_metric("core pce") or find_metric("pce")
 
-        monetary_score = 0.0
-        mon_count = 0
-        inf_candidate = pce or cpi
-        if fed is not None and inf_candidate is not None:
-            if inf_candidate["val"] < 30.0:  # Valid YoY inflation percentage
-                real_rate = fed["val"] - inf_candidate["val"]
-                if real_rate > 1.0:
+            inf_score = 0.0
+            inf_count = 0
+            for inf_metric in [cpi, pce]:
+                if inf_metric is not None:
+                    s = score_momentum(inf_metric, is_inverse=True)
+                    if s is not None:
+                        inf_score += s
+                        inf_count += 1
+            if inf_count == 0:
+                final_inflation = None
+            else:
+                final_inflation = inf_score / inf_count
+
+            # 3. Monetary Pillar
+            fed = (
+                find_metric("fed funds")
+                or find_metric("policy rate")
+                or find_metric("policy_rate")
+            )
+            spread = (
+                find_metric("10y", "2y")
+                or find_metric("t10y2y")
+                or find_metric("yield spread")
+            )
+
+            monetary_score = 0.0
+            mon_count = 0
+            inf_candidate = pce or cpi
+            if fed is not None and inf_candidate is not None:
+                if inf_candidate["val"] < 30.0:
+                    real_rate = fed["val"] - inf_candidate["val"]
+                    if real_rate > 1.0:
+                        monetary_score -= 1.0
+                    elif real_rate <= 0.0:
+                        monetary_score += 1.0
+                    mon_count += 1
+            if spread is not None:
+                if spread["val"] < 0:
                     monetary_score -= 1.0
-                elif real_rate <= 0.0:
+                else:
                     monetary_score += 1.0
                 mon_count += 1
-        if spread is not None:
-            if spread["val"] < 0:
-                monetary_score -= 1.0
+
+            if mon_count == 0:
+                monetary_score = None
             else:
-                monetary_score += 1.0
-            mon_count += 1
+                monetary_score = monetary_score / mon_count
 
-        if mon_count == 0:
-            monetary_score = None
-        else:
-            monetary_score = monetary_score / mon_count
-
-        # Data gaps and coverage assessment
-        data_gaps = []
-        if final_growth is None:
-            data_gaps.append(f"{region} Growth (GDP/IP/Retail/Unemployment)")
-        if inf_score is None:
-            data_gaps.append(f"{region} Inflation (CPI/PCE)")
-        if monetary_score is None:
-            data_gaps.append(f"{region} Monetary (Policy Rate/Yield Curve)")
+            if final_growth is None:
+                data_gaps.append(f"{region} Growth (GDP/IP/Retail/Unemployment)")
+            if final_inflation is None:
+                data_gaps.append(f"{region} Inflation (CPI/PCE)")
+            if monetary_score is None:
+                data_gaps.append(f"{region} Monetary (Policy Rate/Yield Curve)")
 
         coverage = round((3 - len(data_gaps)) / 3.0, 2)
-        state = _determine_economic_state(final_growth, inf_score)
+        state = _determine_economic_state(final_growth, final_inflation)
 
         if state == EconomicState.UNKNOWN.value or coverage < 0.5:
             confidence = 0.0
         else:
             confidence = round(0.5 + (coverage * 0.4), 2)
 
-        results[region] = {
-            "growth": final_growth,
-            "inflation": inf_score,
-            "monetary": monetary_score,
+        def _safe_float(v: Any) -> Optional[float]:
+            if v is None:
+                return None
+            try:
+                flt = float(v)
+                return flt if math.isfinite(flt) else None
+            except (ValueError, TypeError):
+                return None
+
+        result_entry: dict[str, Any] = {
+            "growth": _safe_float(final_growth),
+            "inflation": _safe_float(final_inflation),
+            "monetary": _safe_float(monetary_score),
             "state": state,
-            "confidence": confidence,
-            "coverage": coverage,
+            "confidence": _safe_float(confidence) or 0.0,
+            "coverage": _safe_float(coverage) or 0.0,
             "data_gaps": data_gaps,
         }
+        if fiscal_health is not None:
+            result_entry["fiscal_health"] = fiscal_health
+        if thai_yield_curve is not None:
+            result_entry["thai_yield_curve"] = thai_yield_curve
+
+        results[region] = result_entry
     return results
 
 

@@ -25,12 +25,16 @@ from tools.market.terminal_v2.domain.models import (
     SecCompanyFactsSnapshot,
     SecInsiderTradeSnapshot,
     SpotEtfFlowSnapshot,
+    StablecoinSupplySnapshot,
+    CryptoBenchmarkSnapshot,
     ThaiBondMarketStats,
     ThaiCorporateBondIssuance,
     ThaiFundAssetAllocationSnapshot,
     ThaiFundFlowSnapshot,
     ThaiPublicDebtSnapshot,
     ThaiRetailGoldQuote,
+    ThaiYieldCurveSnapshot,
+    ThaiYieldPoint,
     TreasuryAuctionResult,
     TreasuryYieldCurveSnapshot,
     UsNationalDebtSnapshot,
@@ -244,6 +248,25 @@ class SpotEtfFlowsPort(ABC):
         pass
 
 
+class StablecoinSupplyPort(ABC):
+    """Port for global stablecoin circulating supply and growth metrics."""
+
+    @abstractmethod
+    def get_stablecoin_supply(self) -> StablecoinSupplySnapshot:
+        """Fetch total USD stablecoin supply, 7d/30d changes, and top assets."""
+        pass
+
+
+class CryptoBenchmarkPort(ABC):
+    """Port for Bitcoin spot benchmark and macro ratios."""
+
+    @abstractmethod
+    def get_crypto_benchmark(self) -> CryptoBenchmarkSnapshot:
+        """Fetch spot BTC price, returns, and BTC/Gold ratio."""
+        pass
+
+
+
 class ThaiFundAllocationPort(ABC):
     """Port for Thai mutual fund industry asset class distribution."""
 
@@ -273,4 +296,13 @@ class ThaiPublicDebtPort(ABC):
     @abstractmethod
     def get_public_debt(self) -> ThaiPublicDebtSnapshot:
         """Fetch monthly Thai public debt report from MOF Thailand."""
+        pass
+
+
+class ThaiYieldCurvePort(ABC):
+    """Port for Thai Government Bond Yield Curve from ThaiBMA."""
+
+    @abstractmethod
+    def get_government_yield_curve(self, as_of_date: Optional[str] = None) -> ThaiYieldCurveSnapshot:
+        """Fetch daily Thai government bond yield curve from ThaiBMA."""
         pass

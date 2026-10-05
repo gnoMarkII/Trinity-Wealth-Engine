@@ -23,7 +23,7 @@ from agents.strategic_allocator import invoke_strategic_allocator
 from agents.equity_quant_agent import create_equity_quant
 from agents.equity_narrative_agent import create_equity_narrative
 from agents.equity_synthesizer import invoke_equity_synthesizer
-from schemas.macro_schemas import MarketObservable
+from schemas.macro_schemas import MacroStrategyDirection, MarketObservable
 from schemas.micro_quant_schemas import QuantSignals, EquitySentimentContext, MicroQuantOutput
 from tools.macro.report_formatter import format_macro_strategy_report, write_strategy_json_sidecar
 from tools.macro.ingest import fetch_and_save_macro_snapshots
@@ -127,6 +127,14 @@ class AgentState(MessagesState):
     # Macro Pipeline State
     quant_raw: Optional[str]
     quant_score: Optional[dict]
+    sector_rotation_snapshot_id: Optional[str]
+    sector_rotation_context: Optional[dict]
+    sector_context_status: Optional[dict]
+    macro_run_id: Optional[str]
+    macro_run_started_at: Optional[str]
+    macro_task_run_id: Optional[str]
+    macro_task_started_at: Optional[str]
+    macro_task_sequence: int
     narrative_raw: Optional[str]
     narrative_context: Optional[dict]
 
@@ -280,12 +288,20 @@ def build_graph(checkpointer=None, note_writer: Optional[KnowledgeNoteWritePort]
     equity_narrative_graph = _get_equity_narrative_graph()
     router_model = _get_router_model()
 
-    def supervisor_node(state: AgentState) -> Command[Literal["prepare_archivist", "bookkeeper", "macro_quant", "equity_quant", "__end__"]]:
+    def supervisor_node(state: AgentState, config: RunnableConfig) -> Command[Literal["prepare_archivist", "bookkeeper", "macro_quant", "equity_quant", "__end__"]]:
         messages = state["messages"]
         turn_id = state.get("turn_id")
+        macro_run_id = state.get("macro_run_id")
+        macro_run_started_at = state.get("macro_run_started_at")
+        is_new_turn = False
+        macro_retry_pending = False
 
         if isinstance(messages[-1], HumanMessage) and getattr(messages[-1], "name", None) != "manager":
+            is_new_turn = True
             turn_id = uuid.uuid4().hex[:8]
+            config_meta = (config or {}).get("metadata", {}) if isinstance(config, dict) else {}
+            macro_run_id = str(config_meta.get("job_id") or turn_id)
+            macro_run_started_at = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
             log_turn_start(turn_id, messages[-1].content)
 
             router_messages = [
@@ -307,6 +323,18 @@ def build_graph(checkpointer=None, note_writer: Optional[KnowledgeNoteWritePort]
                         "task_queue": [],
                         "replan_count": 0,
                         "turn_id": turn_id,
+                        "macro_run_id": macro_run_id,
+                        "macro_run_started_at": macro_run_started_at,
+                        "macro_task_run_id": None,
+                        "macro_task_started_at": None,
+                        "macro_task_sequence": 0,
+                        "sector_rotation_snapshot_id": None,
+                        "sector_rotation_context": None,
+                        "sector_context_status": None,
+                        "quant_raw": None,
+                        "quant_score": None,
+                        "narrative_raw": None,
+                        "narrative_context": None,
                     },
                 )
             log_manager_plan(turn_id, [t.model_dump() for t in decision.tasks])
@@ -355,6 +383,11 @@ def build_graph(checkpointer=None, note_writer: Optional[KnowledgeNoteWritePort]
                 queue = [t.model_dump() for t in decision.tasks]
                 messages_update = [replan_hint]
                 replan_count_update = replan_count + 1
+                previous_route = state.get("route_meta") or {}
+                macro_retry_pending = bool(
+                    state.get("macro_task_run_id")
+                    and previous_route.get("target") in {"macro_intel", "macro_economist", "strategic_allocator"}
+                )
             elif error_msg:
                 log.error("max replan reached, returning error to user: %s", error_msg[:100])
                 log_system_action(turn_id, "Re-plan Exhausted", error_msg, status="failure")
@@ -406,11 +439,53 @@ def build_graph(checkpointer=None, note_writer: Optional[KnowledgeNoteWritePort]
             "task_queue": rest,
             "replan_count": replan_count_update,
             "turn_id": turn_id,
+            "macro_run_id": macro_run_id or turn_id,
+            "macro_run_started_at": macro_run_started_at,
         }
+        if is_new_turn:
+            state_update.update({
+                "macro_task_run_id": None,
+                "macro_task_started_at": None,
+                "macro_task_sequence": 0,
+                "sector_rotation_snapshot_id": None,
+                "sector_rotation_context": None,
+                "sector_context_status": None,
+                "quant_raw": None,
+                "quant_score": None,
+                "narrative_raw": None,
+                "narrative_context": None,
+            })
         if target == "equity_intel":
             state_update["equity_save_to_vault"] = task.get("save_to_vault", True)
             state_update["equity_output"] = None
             state_update["equity_news_raw"] = None
+        if target == "macro_intel":
+            from application.macro.run_identity import next_macro_task_run_id
+            task_run_id, next_sequence = next_macro_task_run_id(
+                macro_run_id or turn_id,
+                str(turn_id),
+                0 if is_new_turn else int(state.get("macro_task_sequence", 0)),
+                retry_run_id=(state.get("macro_task_run_id") if macro_retry_pending else None),
+            )
+            if macro_retry_pending and state.get("macro_task_run_id"):
+                state_update.update({
+                    "macro_task_run_id": task_run_id,
+                    "macro_task_started_at": state.get("macro_task_started_at"),
+                    "macro_task_sequence": next_sequence,
+                })
+            else:
+                state_update.update({
+                    "macro_task_sequence": next_sequence,
+                    "macro_task_run_id": task_run_id,
+                    "macro_task_started_at": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
+                    "sector_rotation_snapshot_id": None,
+                    "sector_rotation_context": None,
+                    "sector_context_status": None,
+                    "quant_raw": None,
+                    "quant_score": None,
+                    "narrative_raw": None,
+                    "narrative_context": None,
+                })
 
         return Command(goto=goto_target, update=state_update)
 
@@ -657,6 +732,10 @@ def build_graph(checkpointer=None, note_writer: Optional[KnowledgeNoteWritePort]
                     unverified_observables.append(item)
 
             allocator_quant_data = dict(quant_data) if isinstance(quant_data, dict) else {}
+            # Keep market-price evidence beside, never inside, macro hard-data observables.
+            allocator_quant_data["sector_rotation_context"] = state.get("sector_rotation_context")
+            allocator_quant_data["sector_snapshot_id"] = state.get("sector_rotation_snapshot_id")
+            allocator_quant_data["sector_context_status"] = state.get("sector_context_status")
             allocator_quant_data["valid_observables"] = valid_observables
             allocator_quant_data["invalid_observables"] = unverified_observables
             allocator_quant_data["regional_data_gaps"] = allocator_quant_data.get("data_gaps", [])
@@ -682,12 +761,19 @@ def build_graph(checkpointer=None, note_writer: Optional[KnowledgeNoteWritePort]
             th_quant = (allocator_quant_data.get("regions", {}).get("Thailand", {}).get("market_stance") or {})
             th_llm = getattr(direction, "thailand_market_stance", None) or {}
             merged_stance = dict(th_quant)
-            # Rationale is strictly from AI (no fallback injection)
+            # Rationale is from LLM if provided, otherwise synthesized from quant + asset allocations
             ai_rationale = None
             if isinstance(th_llm, dict):
                 ai_rationale = th_llm.get("rationale")
                 if th_llm.get("observable_refs"):
                     merged_stance["observable_refs"] = th_llm["observable_refs"]
+            if not ai_rationale:
+                from tools.macro.terminal_observables import synthesize_thai_market_stance_narrative
+                thai_assets_in_dir = [
+                    a for a in getattr(direction, "asset_allocation", []) or []
+                    if getattr(a, "region", "") == "Thailand" or "THB" in getattr(a, "asset_class", "")
+                ]
+                ai_rationale = synthesize_thai_market_stance_narrative(merged_stance, thai_assets_in_dir)
             merged_stance["rationale"] = ai_rationale
             if not merged_stance.get("observable_refs"):
                 merged_stance["observable_refs"] = [
@@ -708,36 +794,66 @@ def build_graph(checkpointer=None, note_writer: Optional[KnowledgeNoteWritePort]
             )
             if not has_thai_equity and th_quant:
                 from schemas.macro_schemas import AssetAllocationView, AssetStance
-                flow_mb = th_quant.get("investor_flow", {}).get("foreign_net_mb", 0)
-                pe = th_quant.get("valuation", {}).get("pe_ratio", 16.0)
-                ad = th_quant.get("market_breadth", {}).get("advance_decline_ratio", 1.0)
-                thai_stance = AssetStance.UNDERWEIGHT if (flow_mb and flow_mb < 0) or pe > 17 else AssetStance.NEUTRAL
-                delta_str = "-2% vs benchmark" if thai_stance == AssetStance.UNDERWEIGHT else "0% vs benchmark"
-                thai_eq_view = AssetAllocationView(
-                    asset_class="SET Equities (Thailand)",
-                    asset_bucket="equities",
-                    region="Thailand",
-                    stance=thai_stance,
-                    rationale=merged_stance.get("rationale") or f"ตลาดหุ้นไทยเผชิญแรงกดดันจากกระแสเงินทุนต่างชาติขายสุทธิ ({flow_mb:,.1f} ลบ.) และ Valuation P/E ที่ {pe:.1f}x",
-                    confidence="medium",
-                    supporting_data=[
-                        f"SET Foreign Investor Net Flow {flow_mb:,.2f} THB Mil",
-                        f"SET Market Breadth A/D {ad:.2f}x",
-                        f"SET Index P/E {pe:.2f}",
-                    ],
-                    observable_refs=[
-                        oid for oid in ["obs_set_flow_foreign", "obs_set_advance_decline_ratio", "obs_set_valuation_pe"]
-                        if oid in observable_registry
-                    ],
-                    source_refs=["Terminal_V2_Settrade", "valuation.py"],
-                    why_not_high="ความมั่นใจอยู่ในระดับปานกลางเนื่องจากอยู่ระหว่างรอการเชื่อมต่อ API มหภาคทางการ (NESDC/MOC)",
-                    allocation_delta=delta_str,
-                    benchmark_ref="SET Index",
-                    time_horizon="1-3 months",
-                )
-                if not hasattr(direction, "asset_allocation") or direction.asset_allocation is None:
-                    direction.asset_allocation = []
-                direction.asset_allocation.append(thai_eq_view)
+                flow_mb = th_quant.get("investor_flow", {}).get("foreign_net_mb")
+                pe = th_quant.get("valuation", {}).get("pe_ratio")
+                ad = th_quant.get("market_breadth", {}).get("advance_decline_ratio")
+
+                has_eligible_data = (flow_mb is not None) or (pe is not None) or (ad is not None)
+                if has_eligible_data:
+                    is_bearish = (
+                        (flow_mb is not None and flow_mb < 0)
+                        or (pe is not None and pe > 17)
+                        or (ad is not None and ad < 0.8)
+                    )
+                    thai_stance = AssetStance.UNDERWEIGHT if is_bearish else AssetStance.NEUTRAL
+                    delta_str = "-2% vs benchmark" if thai_stance == AssetStance.UNDERWEIGHT else "0% vs benchmark"
+
+                    support_items = []
+                    obs_refs = []
+                    rationale_parts = []
+
+                    if flow_mb is not None and "obs_set_flow_foreign" in observable_registry:
+                        obs_refs.append("obs_set_flow_foreign")
+                        support_items.append(f"SET Foreign Investor Net Flow {flow_mb:,.2f} THB Mil")
+                        if flow_mb < 0:
+                            rationale_parts.append(f"กระแสเงินทุนต่างชาติขายสุทธิ ({flow_mb:,.1f} ลบ.)")
+                        elif flow_mb > 0:
+                            rationale_parts.append(f"กระแสเงินทุนต่างชาติซื้อสุทธิ (+{flow_mb:,.1f} ลบ.)")
+                        else:
+                            rationale_parts.append("กระแสเงินทุนต่างชาติทรงตัว (0.0 ลบ.)")
+
+                    if ad is not None and "obs_set_advance_decline_ratio" in observable_registry:
+                        obs_refs.append("obs_set_advance_decline_ratio")
+                        support_items.append(f"SET Market Breadth A/D {ad:.2f}x")
+
+                    if pe is not None and "obs_set_valuation_pe" in observable_registry:
+                        obs_refs.append("obs_set_valuation_pe")
+                        support_items.append(f"SET Index P/E {pe:.2f}")
+                        rationale_parts.append(f"ระดับ Valuation P/E อยู่ที่ {pe:.1f}x")
+
+                    if rationale_parts:
+                        constructed_rationale = f"ตลาดหุ้นไทยประเมินจากหลักฐานตลาดทุน: {' และ '.join(rationale_parts)}"
+                    else:
+                        constructed_rationale = "ประเมินสภาวะตลาดหุ้นไทยจากข้อมูลสภาพคล่องและโครงสร้างตลาดทุน"
+
+                    thai_eq_view = AssetAllocationView(
+                        asset_class="SET Equities (Thailand)",
+                        asset_bucket="equities",
+                        region="Thailand",
+                        stance=thai_stance,
+                        rationale=merged_stance.get("rationale") or constructed_rationale,
+                        confidence="medium" if len(obs_refs) >= 2 else "low",
+                        supporting_data=support_items,
+                        observable_refs=obs_refs,
+                        source_refs=["Terminal_V2_Settrade"],
+                        why_not_high="ความมั่นใจอยู่ในระดับปานกลางเนื่องจากอยู่ระหว่างรอการเชื่อมต่อ API มหภาคทางการ (NESDC/MOC)",
+                        allocation_delta=delta_str,
+                        benchmark_ref="SET Index",
+                        time_horizon="1-3 months",
+                    )
+                    if not hasattr(direction, "asset_allocation") or direction.asset_allocation is None:
+                        direction.asset_allocation = []
+                    direction.asset_allocation.append(thai_eq_view)
 
             # Ensure Cash region is Global
             for a in getattr(direction, "asset_allocation", []) or []:
@@ -755,20 +871,35 @@ def build_graph(checkpointer=None, note_writer: Optional[KnowledgeNoteWritePort]
                     if obs.is_valid and obs.source_file
                 ]
 
-            try:
-                write_strategy_json_sidecar(
-                    direction,
-                    evaluated_date,
-                    observable_registry=observable_registry,
-                    report_references=(state.get("narrative_context", {}) or {}).get("report_references", []),
-                    regional_assessments=allocator_quant_data.get("regions"),
-                    evaluated_sources=sorted(list(evaluated_source_files)),
-                    run_id=state.get("run_id") or state.get("job_id"),
-                )
-            except Exception as sidecar_err:
-                log.warning(f"[strategic_allocator] เขียน JSON sidecar ไม่สำเร็จ (ไม่กระทบรายงาน .md): {sidecar_err}")
+            sidecar_result = write_strategy_json_sidecar(
+                direction,
+                evaluated_date,
+                observable_registry=observable_registry,
+                report_references=(state.get("narrative_context", {}) or {}).get("report_references", []),
+                regional_assessments=allocator_quant_data.get("regions"),
+                evaluated_sources=sorted(list(evaluated_source_files)),
+                run_id=state.get("macro_task_run_id") or state.get("macro_run_id") or state.get("turn_id"),
+                job_id=state.get("macro_run_id"),
+                run_started_at=state.get("macro_task_started_at") or state.get("macro_run_started_at"),
+                sector_snapshot_id=state.get("sector_rotation_snapshot_id"),
+                sector_analysis=(state.get("narrative_context", {}) or {}).get("sector_analysis"),
+                return_canonical_payload=True,
+            )
+            canonical_report = (
+                sidecar_result[1] if isinstance(sidecar_result, tuple)
+                else {**direction.model_dump(mode="json"),
+                      "sector_analysis": (state.get("narrative_context", {}) or {}).get("sector_analysis")}
+            )
 
-            report = format_macro_strategy_report(direction)
+            direction_fields = MacroStrategyDirection.model_fields
+            canonical_direction = {key: canonical_report[key] for key in direction_fields if key in canonical_report}
+            direction = MacroStrategyDirection.model_validate(canonical_direction)
+            sector_analysis = canonical_report.get("sector_analysis")
+            report = format_macro_strategy_report(
+                direction,
+                sector_analysis=sector_analysis,
+                strategy_report_id=canonical_report.get("strategy_report_id"),
+            )
 
             return Command(
                 goto="post_macro_intel",
@@ -835,15 +966,113 @@ def build_graph(checkpointer=None, note_writer: Optional[KnowledgeNoteWritePort]
     def macro_quant_wrapper(state: AgentState, config: RunnableConfig):
         fetch_and_save_macro_snapshots()
         task_message = state["messages"][-1]
-        result = macro_quant_graph.invoke({"messages": [task_message]}, config=config)
+        snapshot = None
+        sector_context = None
+        config_meta = (config or {}).get("metadata", {}) if isinstance(config, dict) else {}
+        macro_run_id = state.get("macro_run_id") or config_meta.get("job_id") or state.get("turn_id")
+        task_run_id = state.get("macro_task_run_id") or f"{macro_run_id}:{state.get('turn_id', 'task')}:1"
+        try:
+            from tools.macro.sector_rotation.bootstrap import get_sector_rotation_service
+            from tools.macro.sector_rotation.domain.claims import compact_ai_context
+
+            rotation_service = get_sector_rotation_service()
+            snapshot, sector_context_status = rotation_service.pin_for_run(
+                str(task_run_id),
+                job_id=str(macro_run_id) if macro_run_id else None,
+                task_id=str(task_run_id),
+                preferred_snapshot_id=state.get("sector_rotation_snapshot_id"),
+            )
+            if snapshot:
+                sector_context = compact_ai_context(snapshot)
+                has_sector_data = any(row.status != "unavailable" for row in snapshot.rows)
+                complete = snapshot.benchmark_status == "available" and all(row.status == "available" for row in snapshot.rows)
+                sector_context_status = {
+                    **sector_context_status,
+                    "status": "available" if complete else "limited" if has_sector_data else "unavailable",
+                    "reason": None if complete else "partial_sector_coverage" if has_sector_data else "sector_history_unavailable",
+                }
+        except Exception as exc:
+            log.warning("Sector snapshot unavailable; continuing Macro analysis without sector facts: %s", exc)
+            snapshot = None
+            sector_context = None
+            sector_context_status = {"status": "unavailable", "reason": f"snapshot_prepare_failed:{type(exc).__name__}"}
+        if sector_context_status["status"] == "unavailable":
+            sector_context = None
+        quant_instruction = normalize_content(task_message.content)
+        if sector_context:
+            quant_instruction += (
+                "\n\nDeterministic sector rotation evidence for this macro run (cite its values as market evidence; "
+                "do not count ETFs as GDP/CPI hard-data or infer fund flows):\n"
+                + json.dumps(sector_context, ensure_ascii=False)
+            )
+        else:
+            quant_instruction += (
+                "\n\nSector rotation context status: unavailable ("
+                + str(sector_context_status.get("reason") or "no_valid_snapshot")
+                + "). Continue the macro analysis using the other evidence and do not assert sector facts."
+            )
+        from tools.macro.sector_rotation.run_context import sector_run_scope
+        with sector_run_scope(str(task_run_id)):
+            result = macro_quant_graph.invoke({"messages": [HumanMessage(content=quant_instruction)]}, config=config)
         reply = extract_worker_reply(result["messages"])
-        return {"messages": [AIMessage(content=reply, name="macro_quant")]}
+        return {
+            "messages": [AIMessage(content=reply, name="macro_quant")],
+            "macro_run_id": str(macro_run_id) if macro_run_id else None,
+            "macro_task_run_id": state.get("macro_task_run_id") or f"{macro_run_id}:{state.get('turn_id', 'task')}:1",
+            "sector_rotation_snapshot_id": snapshot.snapshot_id if snapshot else None,
+            "sector_rotation_context": sector_context,
+            "sector_context_status": sector_context_status,
+        }
 
     def macro_economist_wrapper(state: AgentState, config: RunnableConfig):
         task_message = state["messages"][-1]
-        result = macro_economist_graph.invoke({"messages": [task_message]}, config=config)
+        sector_snapshot = None
+        sector_context = None
+        sector_context_status = {"status": "unavailable", "reason": "run_binding_missing"}
+        task_run_id = state.get("macro_task_run_id")
+        if task_run_id:
+            from tools.macro.sector_rotation.bootstrap import get_sector_rotation_service
+            from tools.macro.sector_rotation.domain.claims import compact_ai_context
+            try:
+                sector_snapshot, binding = get_sector_rotation_service().pin_for_run(
+                    str(task_run_id),
+                    job_id=str(state.get("macro_run_id")) if state.get("macro_run_id") else None,
+                    task_id=str(task_run_id),
+                )
+                if sector_snapshot is not None:
+                    sector_context = compact_ai_context(sector_snapshot)
+                    has_sector_data = any(row.status != "unavailable" for row in sector_snapshot.rows)
+                    complete = sector_snapshot.benchmark_status == "available" and all(
+                        row.status == "available" for row in sector_snapshot.rows
+                    )
+                    sector_context_status = {
+                        "status": "available" if complete else "limited" if has_sector_data else "unavailable",
+                        "reason": None if complete else "partial_sector_coverage" if has_sector_data else "sector_history_unavailable",
+                        "snapshot_id": sector_snapshot.snapshot_id,
+                    }
+                else:
+                    sector_context_status = {
+                        "status": "unavailable",
+                        "reason": binding.get("unavailable_reason") or binding.get("reason") or "pinned_snapshot_unavailable",
+                    }
+            except Exception as exc:
+                log.warning("Pinned sector evidence unavailable to Macro Economist: %s", exc)
+                sector_snapshot = None
+                sector_context_status = {"status": "unavailable", "reason": f"pinned_snapshot_unavailable:{type(exc).__name__}"}
+        result = macro_economist_graph.invoke({
+            "messages": [task_message],
+            "quant_score": state.get("quant_score") or {},
+            "sector_rotation_context": sector_context,
+            "sector_context_status": sector_context_status,
+            "sector_rotation_snapshot": sector_snapshot.model_dump(mode="json") if sector_snapshot else None,
+        }, config=config)
         reply = extract_worker_reply(result["messages"])
-        return {"messages": [AIMessage(content=reply, name="macro_economist")]}
+        return {
+            "messages": [AIMessage(content=reply, name="macro_economist")],
+            "sector_rotation_snapshot_id": sector_snapshot.snapshot_id if sector_snapshot else None,
+            "sector_rotation_context": sector_context,
+            "sector_context_status": sector_context_status,
+        }
 
     builder.add_node("macro_quant", macro_quant_wrapper)
     builder.add_node("macro_economist", macro_economist_wrapper)

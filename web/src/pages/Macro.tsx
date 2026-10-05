@@ -11,10 +11,13 @@ import type {
   ThaiRetailGoldDTO,
   MarketValuationDTO,
   MarketBreadthDTO,
+  CryptoMacroLiquidityDTO,
 } from '../api/types'
 import MacroReferenceDrawer from '../components/MacroReferenceDrawer'
 import Toast from '../components/common/Toast'
 import { MacroRegionTabs, type MacroRegionTab } from '../components/macro/cockpit/MacroRegionTabs'
+import { AiBriefingCard } from '../components/macro/cockpit/AiBriefingCard'
+import { AiAnalysisSection } from '../components/macro/cockpit/AiAnalysisSection'
 import { UsMacroSection } from '../components/macro/cockpit/UsMacroSection'
 import { ThailandMacroSection } from '../components/macro/cockpit/ThailandMacroSection'
 import { CrossBorderSection } from '../components/macro/cockpit/CrossBorderSection'
@@ -24,10 +27,10 @@ export default function Macro() {
   const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
 
-  // 1. Tab state synced with URL query (?tab=us | th | cross-border)
+  // 1. Tab state synced with URL query (?tab=ai | us | th | cross-border)
   const tabParam = searchParams.get('tab') as MacroRegionTab | null
   const activeTab: MacroRegionTab =
-    tabParam && ['us', 'th', 'cross-border'].includes(tabParam) ? tabParam : 'us'
+    tabParam && ['ai', 'us', 'th', 'cross-border'].includes(tabParam) ? tabParam : 'ai'
 
   const handleTabChange = (nextTab: MacroRegionTab) => {
     setSearchParams({ tab: nextTab }, { replace: true })
@@ -35,7 +38,7 @@ export default function Macro() {
 
   // 2. Independent AI Dashboard state (isolated from market provider failures)
   const [aiData, setAiData] = useState<MacroDashboardDTO | null>(null)
-  const [aiLoading, setAiLoading] = useState(false)
+  const [aiLoading, setAiLoading] = useState(true)
   const [aiError, setAiError] = useState<string | null>(null)
 
   // 3. Independent Market Provider states
@@ -56,6 +59,9 @@ export default function Macro() {
   const [auctionDemandNote, setAuctionDemandNote] = useState<AuctionDemandSnapshotDTO | null>(null)
   const [auctionDemandBill, setAuctionDemandBill] = useState<AuctionDemandSnapshotDTO | null>(null)
   const [nationalDebt, setNationalDebt] = useState<UsNationalDebtDTO[] | null>(null)
+  const [cryptoLiquidity, setCryptoLiquidity] = useState<CryptoMacroLiquidityDTO | null>(null)
+  const [loadingCrypto, setLoadingCrypto] = useState(false)
+  const [marketIssues, setMarketIssues] = useState<string[]>([])
 
   // Thai Market Observables
   const [flow, setFlow] = useState<ThaiFundFlowDTO | null>(null)
@@ -98,9 +104,10 @@ export default function Macro() {
     setLoadingStress(true)
     setLoadingPolicy(true)
     setLoadingThai(true)
+    setLoadingCrypto(true)
 
     // Parallel calls with individual settled status
-    const [yc, fsi, cot, bis, vol, aucNote, aucBill, debt, thFlow, thGold, thVal, thBreadth] =
+    const [yc, fsi, cot, bis, vol, aucNote, aucBill, debt, thFlow, thGold, thVal, thBreadth, cryptoLiq] =
       await Promise.allSettled([
         api.getTreasuryYieldCurve?.(),
         api.getFinancialStress?.(),
@@ -114,6 +121,7 @@ export default function Macro() {
         api.getThaiRetailGold?.(),
         api.getThaiMarketValuation?.('SET'),
         api.getThaiMarketBreadth?.('SET'),
+        api.getCryptoMacroLiquidity?.(),
       ])
 
     if (yc.status === 'fulfilled') {
@@ -132,11 +140,13 @@ export default function Macro() {
     }
     setLoadingStress(false)
 
-    if (cot.status === 'fulfilled') setMetalsCot(cot.value)
-    if (vol.status === 'fulfilled') setCommodityVol(vol.value)
-    if (aucNote.status === 'fulfilled') setAuctionDemandNote(aucNote.value)
-    if (aucBill.status === 'fulfilled') setAuctionDemandBill(aucBill.value)
-    if (debt.status === 'fulfilled') setNationalDebt(debt.value)
+    setMetalsCot(cot.status === 'fulfilled' ? cot.value : null)
+    setCommodityVol(vol.status === 'fulfilled' ? vol.value : null)
+    setAuctionDemandNote(aucNote.status === 'fulfilled' ? aucNote.value : null)
+    setAuctionDemandBill(aucBill.status === 'fulfilled' ? aucBill.value : null)
+    setCryptoLiquidity(cryptoLiq.status === 'fulfilled' ? cryptoLiq.value : null)
+    setLoadingCrypto(false)
+    setNationalDebt(debt.status === 'fulfilled' ? debt.value : null)
 
     if (bis.status === 'fulfilled') {
       setGlobalPolicyRates(bis.value)
@@ -149,13 +159,13 @@ export default function Macro() {
     // Thai Observables
     let thaiErrCount = 0
     if (thFlow.status === 'fulfilled') setFlow(thFlow.value)
-    else thaiErrCount++
+    else { setFlow(null); thaiErrCount++ }
     if (thGold.status === 'fulfilled') setGold(thGold.value)
-    else thaiErrCount++
+    else { setGold(null); thaiErrCount++ }
     if (thVal.status === 'fulfilled') setValuation(thVal.value)
-    else thaiErrCount++
+    else { setValuation(null); thaiErrCount++ }
     if (thBreadth.status === 'fulfilled') setBreadth(thBreadth.value)
-    else thaiErrCount++
+    else { setBreadth(null); thaiErrCount++ }
 
     if (thaiErrCount > 0) {
       setErrorThai(`มีข้อมูลตลาดไทย ${thaiErrCount} รายการที่ไม่สามารถดึงได้`)
@@ -163,6 +173,16 @@ export default function Macro() {
       setErrorThai(null)
     }
     setLoadingThai(false)
+
+    const providerResults = [yc, fsi, cot, bis, vol, aucNote, aucBill, debt, thFlow, thGold, thVal, thBreadth, cryptoLiq]
+    const providerNames = ['US Yield Curve', 'OFR Stress', 'Gold COT', 'Policy Rates', 'Commodity Volatility', '10Y Auction', '13W Auction', 'US Debt', 'SET Flow', 'GTA Gold', 'SET Valuation', 'SET Breadth', 'Crypto Liquidity']
+    setMarketIssues(providerResults.flatMap((result, index) => {
+      if (result.status === 'rejected') return [`${providerNames[index]}: ดึงข้อมูลไม่สำเร็จ`]
+      const values = Array.isArray(result.value) ? result.value : [result.value]
+      return values.some((value) => value?.is_stale)
+        ? [`${providerNames[index]}: ข้อมูลบางส่วนล้าสมัย`]
+        : []
+    }))
 
     setLastMarketFetched(
       new Date().toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
@@ -175,6 +195,13 @@ export default function Macro() {
     fetchAiDashboard()
     fetchMarketObservables()
   }, [fetchAiDashboard, fetchMarketObservables])
+
+  // Fallback to 'us' tab if initial AI load completed without report and user did not explicitly choose ?tab
+  useEffect(() => {
+    if (!aiLoading && !aiData && !tabParam) {
+      setSearchParams({ tab: 'us' }, { replace: true })
+    }
+  }, [aiLoading, aiData, tabParam, setSearchParams])
 
   // Trigger AI Job via Kanban
   const handleUpdateMacro = async () => {
@@ -261,17 +288,6 @@ export default function Macro() {
 
               <button
                 type="button"
-                onClick={handleUpdateMacro}
-                disabled={updating}
-                className="flex items-center gap-1.5 rounded-xl border border-sky-200 bg-sky-50 px-3.5 py-2 text-xs font-semibold text-sky-700 shadow-xs transition-all hover:bg-sky-100 disabled:opacity-50"
-                title="สร้างการ์ดใหม่ใน Kanban และเริ่มวิเคราะห์ภาวะเศรษฐกิจมหภาคด้วย AI"
-              >
-                <span>{updating ? '⏳' : '🧠'}</span>
-                <span>{updating ? 'กำลังสั่งงาน...' : 'อัปเดตบทวิเคราะห์'}</span>
-              </button>
-
-              <button
-                type="button"
                 onClick={() => setIsRefDrawerOpen(true)}
                 className="flex items-center gap-1.5 rounded-xl border border-edge bg-panel px-3.5 py-2 text-xs font-semibold text-zinc-800 shadow-xs transition-all hover:bg-surface-strong hover:shadow"
                 title="เปิดเอกสารอ้างอิงและตัวชี้วัด"
@@ -290,10 +306,34 @@ export default function Macro() {
         </div>
       </div>
 
-      {/* 2. Region Navigation (3 Tabs) */}
+      {marketIssues.length > 0 && (
+        <div role="status" className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-xs text-amber-900">
+          ข้อมูลตลาดที่ต้องตรวจสอบ: {marketIssues.join(' • ')}
+        </div>
+      )}
+
+      {/* 2. Top Anchor: AI Executive Briefing (Always visible above tabs) */}
+      <AiBriefingCard
+        aiData={aiData}
+        aiLoading={aiLoading}
+        aiError={aiError}
+        onUpdateMacro={handleUpdateMacro}
+        updating={updating}
+        onNavigateToAiTab={() => handleTabChange('ai')}
+      />
+
+      {/* 3. Region & Analysis Navigation (4 Tabs) */}
       <MacroRegionTabs activeTab={activeTab} onChange={handleTabChange} />
 
-      {/* 3. Tab Contents with Error Isolation */}
+      {/* 4. Tab Contents with Error Isolation */}
+      {activeTab === 'ai' && (
+        <AiAnalysisSection
+          aiData={aiData}
+          aiLoading={aiLoading}
+          aiError={aiError}
+        />
+      )}
+
       {activeTab === 'us' && (
         <UsMacroSection
           yieldCurve={yieldCurve}
@@ -303,13 +343,12 @@ export default function Macro() {
           auctionDemandNote={auctionDemandNote}
           auctionDemandBill={auctionDemandBill}
           nationalDebt={nationalDebt}
-          aiData={aiData}
-          aiLoading={aiLoading}
-          aiError={aiError}
           loadingYield={loadingYield}
           loadingStress={loadingStress}
           errorYield={errorYield}
           errorStress={errorStress}
+          cryptoLiquidity={cryptoLiquidity}
+          loadingCrypto={loadingCrypto}
         />
       )}
 
@@ -320,8 +359,7 @@ export default function Macro() {
           valuation={valuation}
           breadth={breadth}
           aiData={aiData}
-          aiLoading={aiLoading}
-          aiError={aiError}
+          globalPolicyRates={globalPolicyRates}
           loading={loadingThai}
           error={errorThai}
         />
@@ -332,7 +370,6 @@ export default function Macro() {
           globalPolicyRates={globalPolicyRates}
           yieldCurve={yieldCurve}
           flow={flow}
-          aiData={aiData}
           loadingPolicy={loadingPolicy}
           errorPolicy={errorPolicy}
         />

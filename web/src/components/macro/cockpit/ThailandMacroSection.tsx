@@ -9,7 +9,6 @@ import type {
 import { DivergingFlowBar } from './DivergingFlowBar'
 import { BreadthStackedBar } from './BreadthStackedBar'
 import { SourceProvenanceBadge } from './SourceProvenanceBadge'
-import { stanceCategory, type StanceCategory } from '../../../lib/stance'
 
 interface ThailandMacroSectionProps {
   flow: ThaiFundFlowDTO | null
@@ -17,24 +16,11 @@ interface ThailandMacroSectionProps {
   valuation: MarketValuationDTO | null
   breadth: MarketBreadthDTO | null
   aiData?: MacroDashboardDTO | null
+  globalPolicyRates?: { as_of_date?: string; spreads_vs_bot_repo?: Record<string, number | null> } | null
   aiLoading?: boolean
   aiError?: string | null
   loading?: boolean
   error?: string | null
-}
-
-const STANCE_BADGE: Record<StanceCategory, string> = {
-  overweight: 'bg-emerald-50 text-emerald-700 border-emerald-200',
-  underweight: 'bg-rose-50 text-rose-700 border-rose-200',
-  neutral: 'bg-zinc-100 text-zinc-700 border-zinc-200',
-}
-
-function confidenceBadgeClass(confidence: string): string {
-  const c = confidence.toLowerCase()
-  if (c === 'high') return 'border-emerald-200 bg-emerald-50 text-emerald-700'
-  if (c === 'medium') return 'border-amber-200 bg-amber-50 text-amber-700'
-  if (c === 'low') return 'border-rose-200 bg-rose-50 text-rose-700'
-  return 'border-zinc-200 bg-zinc-50 text-zinc-600'
 }
 
 function formatThb(val: number | null | undefined): string {
@@ -52,65 +38,151 @@ function formatPolicySpreadBps(val: number | null | undefined): { text: string; 
   return { text: `${val < 0 ? '−' : prefix}${formattedVal} bps`, hasValue: true }
 }
 
+function parseGapDetails(gap: string): { authority: string; label: string; reason: string } {
+  const lower = gap.toLowerCase()
+  if (lower.includes('gdp') || lower.includes('สศช') || lower.includes('nesdc')) {
+    return {
+      authority: 'สศช. (NESDC)',
+      label: 'Real GDP YoY',
+      reason: 'รอรอบรายงานไตรมาส / เชื่อมต่อ API ทางการ',
+    }
+  }
+  if (lower.includes('mpi') || lower.includes('สศอ') || lower.includes('manufacturing')) {
+    return {
+      authority: 'สศอ. (OIE)',
+      label: 'Manufacturing Production Index (MPI)',
+      reason: 'ตัวชี้วัดเสริมภาคการผลิตภาคอุตสาหกรรม',
+    }
+  }
+  if (
+    lower.includes('monetary') ||
+    lower.includes('ดอกเบี้ย') ||
+    lower.includes('policy rate') ||
+    lower.includes('ธปท') ||
+    lower.includes('bot')
+  ) {
+    if (gap.includes('ขาด Headline CPI') || gap.includes('Headline CPI เพื่อคำนวณ')) {
+      return {
+        authority: 'ธนาคารแห่งประเทศไทย (BOT)',
+        label: 'Policy Rate & Real Rate Proxy',
+        reason: 'ดอกเบี้ยนโยบายพร้อม แต่ขาด Headline CPI เพื่อคำนวณ Real Rate',
+      }
+    }
+    return {
+      authority: 'ธนาคารแห่งประเทศไทย (BOT)',
+      label: 'Policy Rate & Yield Curve',
+      reason: 'รอข้อมูลอัตราดอกเบี้ยนโยบาย / เส้นผลตอบแทน',
+    }
+  }
+  if (lower.includes('core cpi')) {
+    return {
+      authority: 'สนค. พาณิชย์ (TPSO/MOC)',
+      label: 'Core CPI YoY',
+      reason: 'ข้อมูลเสริมเงินเฟ้อพื้นฐาน',
+    }
+  }
+  if (lower.includes('cpi') || lower.includes('สนค') || lower.includes('moc')) {
+    return {
+      authority: 'สนค. พาณิชย์ (TPSO/MOC)',
+      label: 'Headline CPI YoY',
+      reason: 'รอรอบรายงานประจำเดือน / เชื่อมต่อ API ทางการ',
+    }
+  }
+  if (lower.includes('debt') || lower.includes('หนี้') || lower.includes('mof')) {
+    return {
+      authority: 'กระทรวงการคลัง (MOF)',
+      label: 'Public Debt & Debt-to-GDP',
+      reason: 'รอข้อมูลหนี้สาธารณะคงค้าง',
+    }
+  }
+  return {
+    authority: 'ข้อมูลทางการ (Official Source)',
+    label: gap,
+    reason: 'รอข้อมูลที่ผ่านเกณฑ์ Dual-Track',
+  }
+}
+
 export const ThailandMacroSection: React.FC<ThailandMacroSectionProps> = ({
   flow,
   gold,
   valuation,
   breadth,
   aiData = null,
-  aiLoading = false,
-  aiError = null,
+  globalPolicyRates = null,
   loading = false,
   error = null,
 }) => {
-  // Extract Thailand-specific asset allocations (USD/THB, SET Equities, Thai Gold)
-  const thaiAssets = (aiData?.asset_allocation ?? []).filter((a) => {
-    if (a.region === 'Thailand') return true
-    const nameLower = (a.asset_class || '').toLowerCase()
-    return (
-      nameLower.includes('usd/thb') ||
-      nameLower.includes('set ') ||
-      nameLower.includes('thailand') ||
-      nameLower.includes('thai ') ||
-      nameLower.includes('baht') ||
-      nameLower.includes('gta')
-    )
-  })
-
-  // Extract Thailand-specific references from News Funnel
-  const thaiReferences = (aiData?.report_references ?? []).filter((ref) => {
-    const text = `${ref.title} ${ref.summary} ${ref.publisher}`.toLowerCase()
-    return (
-      text.includes('ไทย') ||
-      text.includes('บาท') ||
-      text.includes('thailand') ||
-      text.includes('thai') ||
-      text.includes('set') ||
-      text.includes('bot') ||
-      text.includes('กนง') ||
-      text.includes('ประชาชาติ') ||
-      text.includes('bangkok post')
-    )
-  })
-
   const marketStance = aiData?.thailand_market_stance
-  const foreignFlowMb = marketStance?.investor_flow?.foreign_net_mb
-  const adRatio = marketStance?.market_breadth?.advance_decline_ratio
-  const breadthSentiment = marketStance?.market_breadth?.sentiment
-  const peRatio = marketStance?.valuation?.pe_ratio
-  const goldBarSell = marketStance?.physical_gold?.bar_sell_thb
-  const policySpreadBps = marketStance?.policy_spread_bps
+  const foreignRow = flow?.investors.find((row) =>
+    row.investor_type.toLowerCase().includes('foreign') || row.investor_type.includes('ต่างชาติ')
+  )
+  const foreignFlowMb = flow
+    ? foreignRow?.net_value != null ? foreignRow.net_value / 1e6 : null
+    : marketStance?.investor_flow?.foreign_net_mb ?? null
+  const adRatio = breadth
+    ? breadth.losers > 0 ? breadth.gainers / breadth.losers : null
+    : marketStance?.market_breadth?.advance_decline_ratio ?? null
+  const breadthSentiment = breadth ? null : marketStance?.market_breadth?.sentiment
+  const peRatio = valuation ? valuation.pe_ratio ?? null : marketStance?.valuation?.pe_ratio ?? null
+  const goldBarSell = gold ? gold.bar?.sell ?? null : marketStance?.physical_gold?.bar_sell_thb ?? null
+  const policySpreadBps = globalPolicyRates
+    ? globalPolicyRates.spreads_vs_bot_repo?.US ?? null
+    : marketStance?.policy_spread_bps ?? null
 
   const thAssessment = aiData?.regional_assessments?.Thailand
-  const thState = thAssessment?.economic_state ?? 'Unknown'
+  const thState = thAssessment?.economic_state ?? thAssessment?.state ?? 'Unknown'
   const thConfidence =
     typeof thAssessment?.confidence === 'number'
       ? `${(thAssessment.confidence * 100).toFixed(1)}%`
       : '0.0%'
   const thGaps =
-    thAssessment?.data_gaps && thAssessment.data_gaps.length > 0
-      ? thAssessment.data_gaps
+    thAssessment
+      ? thAssessment.data_gaps ?? []
       : ['Real GDP YoY', 'Headline CPI YoY', 'Core CPI YoY']
+
+  const fiscalHealth = thAssessment?.fiscal_health
+  const registry = aiData?.observable_registry
+  const debtObs = registry?.['obs_th_debt_to_gdp_mof']?.is_valid === false ? null : registry?.['obs_th_debt_to_gdp_mof']
+  const debtTotalObs = registry?.['obs_th_public_debt_mof']?.is_valid === false ? null : registry?.['obs_th_public_debt_mof']
+  const resolvedDebtToGdp =
+    fiscalHealth?.debt_to_gdp_pct !== undefined && fiscalHealth?.debt_to_gdp_pct !== null
+      ? fiscalHealth.debt_to_gdp_pct
+      : debtObs?.value
+      ? parseFloat(debtObs.value)
+      : null
+  const resolvedPublicDebtMb =
+    fiscalHealth?.public_debt_million_thb !== undefined && fiscalHealth?.public_debt_million_thb !== null
+      ? fiscalHealth.public_debt_million_thb
+      : debtTotalObs?.value
+      ? parseFloat(debtTotalObs.value)
+      : null
+  const statLimit = fiscalHealth?.statutory_limit_pct ?? 70.0
+
+  const thaiYieldCurve = (thAssessment as any)?.thai_yield_curve
+  const y2Obs = registry?.['obs_th_gov_yield_2y']?.is_valid === false ? null : registry?.['obs_th_gov_yield_2y']
+  const y10Obs = registry?.['obs_th_gov_yield_10y']?.is_valid === false ? null : registry?.['obs_th_gov_yield_10y']
+  const spreadObs = registry?.['obs_th_gov_10y_2y_spread']?.is_valid === false ? null : registry?.['obs_th_gov_10y_2y_spread']
+
+  const resolvedY2 =
+    thaiYieldCurve?.yield_2y !== undefined && thaiYieldCurve?.yield_2y !== null
+      ? thaiYieldCurve.yield_2y
+      : y2Obs?.value
+      ? parseFloat(y2Obs.value)
+      : null
+
+  const resolvedY10 =
+    thaiYieldCurve?.yield_10y !== undefined && thaiYieldCurve?.yield_10y !== null
+      ? thaiYieldCurve.yield_10y
+      : y10Obs?.value
+      ? parseFloat(y10Obs.value)
+      : null
+
+  const resolvedSpread =
+    thaiYieldCurve?.spread_10y_2y_bps !== undefined && thaiYieldCurve?.spread_10y_2y_bps !== null
+      ? thaiYieldCurve.spread_10y_2y_bps
+      : spreadObs?.value
+      ? parseFloat(spreadObs.value)
+      : null
 
   return (
     <div className="space-y-6">
@@ -139,18 +211,21 @@ export const ThailandMacroSection: React.FC<ThailandMacroSectionProps> = ({
               ช่องว่างข้อมูลฮาร์ดดาต้าที่อยู่ระหว่างเชื่อมต่อ API ทางการ:
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 mt-2">
-              {thGaps.map((gap, gIdx) => (
-                <div key={gIdx} className="rounded-lg bg-amber-100/60 p-2 border border-amber-200/80">
-                  <span className="font-mono text-[10px] text-amber-800 block">
-                    {gap.toLowerCase().includes('gdp') ? 'สศช. (NESDC)' : 'สนค. พาณิชย์ (MOC)'}
-                  </span>
-                  <span className="font-bold text-amber-950 text-xs">{gap}</span>
-                  <span className="text-[10px] text-amber-700 block mt-0.5">รอเชื่อมต่อ API ทางการ</span>
-                </div>
-              ))}
+              {thGaps.map((gap, gIdx) => {
+                const parsed = parseGapDetails(gap)
+                return (
+                  <div key={gIdx} className="rounded-lg bg-amber-100/60 p-2.5 border border-amber-200/80">
+                    <span className="font-mono text-[10px] text-amber-800 block font-semibold">
+                      {parsed.authority}
+                    </span>
+                    <span className="font-bold text-amber-950 text-xs block mt-0.5">{parsed.label}</span>
+                    <span className="text-[10px] text-amber-700 block mt-1 leading-snug">{parsed.reason}</span>
+                  </div>
+                )
+              })}
             </div>
-            <p className="mt-2 text-[11px] leading-relaxed text-amber-900/90">
-              ตามข้อกำหนด Dual-Track Revision 5 เพื่อป้องกันไม่ให้โมเดลสร้างค่าจำลอง (Hallucination) สภาวะเศรษฐกิจไทยจึงถูกระบุเป็น &ldquo;ยังประเมินไม่ได้&rdquo; อย่างตรงไปตรงมา และการประเมินสภาวะตลาดในประเทศจะอ้างอิงจาก Microstructure จริงของตลาดทุนไทยด้านล่างเท่านั้น
+            <p className="mt-2.5 text-[11px] leading-relaxed text-amber-900/90">
+              ตามข้อกำหนด Dual-Track เพื่อป้องกันไม่ให้โมเดลสร้างค่าจำลอง (Hallucination) สภาวะเศรษฐกิจไทยจึงถูกระบุเป็น &ldquo;ยังประเมินไม่ได้&rdquo; อย่างตรงไปตรงมา และการประเมินสภาวะตลาดในประเทศจะอ้างอิงจาก Microstructure จริงของตลาดทุนไทยและข้อมูลความยั่งยืนทางการคลังด้านล่าง
             </p>
           </div>
         </div>
@@ -181,7 +256,154 @@ export const ThailandMacroSection: React.FC<ThailandMacroSectionProps> = ({
         </div>
       )}
 
-      {/* 2. Thai Market Microstructure Panel (Provider / Deterministic Data) */}
+      {/* 2. Thailand Sovereign Fiscal Health & Public Debt (MOF Data Services) */}
+      <div className="rounded-2xl border border-slate-200 bg-white/95 p-5 shadow-sm space-y-4">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between border-b border-slate-100 pb-3">
+          <div>
+            <h2 className="text-base font-bold text-zinc-900 tracking-tight flex items-center gap-2">
+              <span>🏛️ ความยั่งยืนทางการคลังและหนี้สาธารณะ (Thai Sovereign Fiscal Health)</span>
+            </h2>
+            <p className="text-xs text-zinc-500">
+              สถิติหนี้สาธารณะคงค้างและสัดส่วนต่อ GDP จากสำนักงานบริหารหนี้สาธารณะ กระทรวงการคลัง (MOF Data Services)
+            </p>
+          </div>
+          <SourceProvenanceBadge
+            origin="provider"
+            sourceName="กระทรวงการคลัง (MOF)"
+            observedAt={debtObs?.observed_at}
+            compact
+          />
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+          <div className="rounded-xl bg-slate-50 p-3.5 border border-slate-100">
+            <span className="text-[10px] text-zinc-500 block">สัดส่วนหนี้สาธารณะต่อ GDP</span>
+            <span className={`font-mono text-xl font-extrabold mt-0.5 block ${
+              resolvedDebtToGdp !== null && resolvedDebtToGdp <= statLimit
+                ? 'text-emerald-700'
+                : resolvedDebtToGdp !== null && resolvedDebtToGdp > statLimit
+                ? 'text-rose-700'
+                : 'text-zinc-700'
+            }`}>
+              {resolvedDebtToGdp !== null ? `${resolvedDebtToGdp.toFixed(2)}%` : 'รอข้อมูล MOF'}
+            </span>
+            <div className="flex items-center justify-between text-[10px] text-zinc-400 mt-1">
+              <span>เพดาน พ.ร.บ. วินัยการคลัง</span>
+              <span className="font-mono font-semibold text-zinc-600">≤ {statLimit.toFixed(0)}%</span>
+            </div>
+          </div>
+
+          <div className="rounded-xl bg-slate-50 p-3.5 border border-slate-100">
+            <span className="text-[10px] text-zinc-500 block">ยอดหนี้สาธารณะคงค้างรวม</span>
+            <span className="font-mono text-xl font-extrabold text-zinc-900 mt-0.5 block">
+              {resolvedPublicDebtMb !== null
+                ? `${(resolvedPublicDebtMb / 1e6).toFixed(2)} ล้านล้านบาท`
+                : 'รอข้อมูล MOF'}
+            </span>
+            <div className="flex items-center justify-between text-[10px] text-zinc-400 mt-1">
+              <span>หน่วย: ล้านล้านบาท</span>
+              <span className="font-mono text-zinc-500">
+                {resolvedPublicDebtMb !== null ? `${resolvedPublicDebtMb.toLocaleString('th-TH')} ลบ.` : '—'}
+              </span>
+            </div>
+          </div>
+
+          <div className="rounded-xl bg-slate-50 p-3.5 border border-slate-100 flex flex-col justify-between">
+            <div>
+              <span className="text-[10px] text-zinc-500 block">สถานะวินัยการเงินการคลัง</span>
+              <div className="mt-1">
+                {resolvedDebtToGdp !== null ? (
+                  resolvedDebtToGdp <= statLimit ? (
+                    <span className="inline-flex items-center gap-1 rounded-md bg-emerald-100 px-2 py-1 text-xs font-semibold text-emerald-800 border border-emerald-200">
+                      ✓ ปกติ (ต่ำกว่าเพดาน {statLimit}%)
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1 rounded-md bg-rose-100 px-2 py-1 text-xs font-semibold text-rose-800 border border-rose-200">
+                      ⚠️ เกินเพดานกฎหมาย ({resolvedDebtToGdp.toFixed(1)}% &gt; {statLimit}%)
+                    </span>
+                  )
+                ) : (
+                  <span className="inline-flex items-center rounded-md bg-slate-200 px-2 py-1 text-xs font-semibold text-zinc-700">
+                    รอข้อมูล
+                  </span>
+                )}
+              </div>
+            </div>
+            <span className="text-[10px] text-zinc-400 mt-2 block">
+              พ.ร.บ. วินัยการเงินการคลังของรัฐ พ.ศ. 2561
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {/* 3. Thai Government Bond Yield Curve (ThaiBMA) */}
+      <div className="rounded-2xl border border-slate-200 bg-white/95 p-5 shadow-sm space-y-4">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between border-b border-slate-100 pb-3">
+          <div>
+            <h2 className="text-base font-bold text-zinc-900 tracking-tight flex items-center gap-2">
+              <span>📈 เส้นผลตอบแทนพันธบัตรรัฐบาลไทย (Thai Government Bond Yield Curve)</span>
+            </h2>
+            <p className="text-xs text-zinc-500">
+              เส้นอัตราผลตอบแทนพันธบัตรรัฐบาลไทยแบบจำลอง (Model Yield Curve) จากสมาคมตลาดตราสารหนี้ไทย (ThaiBMA)
+            </p>
+          </div>
+          <SourceProvenanceBadge
+            origin="provider"
+            sourceName="สมาคมตลาดตราสารหนี้ไทย (ThaiBMA)"
+            observedAt={spreadObs?.observed_at ?? y10Obs?.observed_at}
+            compact
+          />
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+          <div className="rounded-xl bg-slate-50 p-3.5 border border-slate-100">
+            <span className="text-[10px] text-zinc-500 block">อัตราผลตอบแทนพันธบัตร 2 ปี (2Y)</span>
+            <span className="font-mono text-xl font-extrabold text-zinc-900 mt-0.5 block">
+              {resolvedY2 !== null ? `${resolvedY2.toFixed(2)}%` : 'รอข้อมูล ThaiBMA'}
+            </span>
+            <span className="text-[10px] text-zinc-400 mt-1 block">ตัวแทนคาดการณ์ดอกเบี้ยระยะสั้น-กลาง</span>
+          </div>
+
+          <div className="rounded-xl bg-slate-50 p-3.5 border border-slate-100">
+            <span className="text-[10px] text-zinc-500 block">อัตราผลตอบแทนพันธบัตร 10 ปี (10Y)</span>
+            <span className="font-mono text-xl font-extrabold text-zinc-900 mt-0.5 block">
+              {resolvedY10 !== null ? `${resolvedY10.toFixed(2)}%` : 'รอข้อมูล ThaiBMA'}
+            </span>
+            <span className="text-[10px] text-zinc-400 mt-1 block">Benchmark ผลตอบแทนพันธบัตรระยะยาว</span>
+          </div>
+
+          <div className="rounded-xl bg-slate-50 p-3.5 border border-slate-100 flex flex-col justify-between">
+            <div>
+              <span className="text-[10px] text-zinc-500 block">ส่วนต่างอัตราผลตอบแทน (10Y-2Y Spread)</span>
+              <div className="flex items-baseline gap-2 mt-0.5">
+                <span className={`font-mono text-xl font-extrabold ${
+                  resolvedSpread !== null && resolvedSpread > 0
+                    ? 'text-emerald-700'
+                    : resolvedSpread !== null && resolvedSpread < 0
+                    ? 'text-rose-700'
+                    : 'text-zinc-700'
+                }`}>
+                  {resolvedSpread !== null ? `${resolvedSpread > 0 ? '+' : ''}${resolvedSpread.toFixed(1)} bps` : 'รอข้อมูล'}
+                </span>
+                {resolvedSpread !== null && (
+                  <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded ${
+                    resolvedSpread > 0 ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'
+                  }`}>
+                    {resolvedSpread > 0 ? 'Normal (ชันขึ้น)' : 'Inverted (ผกผัน)'}
+                  </span>
+                )}
+              </div>
+            </div>
+            <span className="text-[10px] text-zinc-400 mt-2 block">
+              {resolvedSpread !== null && resolvedSpread > 0
+                ? 'เส้นผลตอบแทนลาดชันปกติ สะท้อนคาดการณ์เศรษฐกิจขยายตัว'
+                : 'ส่วนต่างผลตอบแทน 10 ปี ลบ 2 ปี'}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {/* 4. Thai Market Microstructure Panel (Provider / Deterministic Data) */}
       <div className="rounded-2xl border border-slate-200 bg-white/95 p-5 shadow-sm space-y-4">
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between border-b border-slate-100 pb-3">
           <div>
@@ -191,6 +413,11 @@ export const ThailandMacroSection: React.FC<ThailandMacroSectionProps> = ({
             <p className="text-xs text-zinc-500">
               ข้อมูลโครงสร้างตลาดสด: กระแสเงินทุนต่างชาติ ความกว้างตลาด อัตราส่วนมูลค่า และราคาทองคำแท่ง
             </p>
+            {aiData && (!flow || !breadth || !valuation || !gold) && (
+              <p className="text-[11px] text-amber-700 mt-1">
+                รายการที่ยังดึงข้อมูลตลาดไม่ได้อ้างอิงค่า ณ รอบรายงาน {aiData.evaluated_at}
+              </p>
+            )}
           </div>
           <SourceProvenanceBadge
             origin="provider"
@@ -205,24 +432,25 @@ export const ThailandMacroSection: React.FC<ThailandMacroSectionProps> = ({
           <div className="rounded-xl bg-slate-50 p-3 border border-slate-100">
             <span className="text-[10px] text-zinc-500 block">Foreign Net Flow</span>
             <span className={`font-mono text-base font-extrabold mt-0.5 block ${
-              foreignFlowMb !== undefined && foreignFlowMb > 0
+              foreignFlowMb !== null && foreignFlowMb > 0
                 ? 'text-emerald-700'
-                : foreignFlowMb !== undefined && foreignFlowMb < 0
+                : foreignFlowMb !== null && foreignFlowMb < 0
                 ? 'text-rose-700'
                 : 'text-zinc-700'
             }`}>
-              {foreignFlowMb !== undefined ? `${foreignFlowMb.toLocaleString('th-TH')} ลบ.` : 'รอประเมิน'}
+              {foreignFlowMb !== null ? `${foreignFlowMb.toLocaleString('th-TH')} ลบ.` : 'ไม่มีข้อมูล'}
             </span>
             <span className="text-[10px] text-zinc-400 mt-0.5 flex items-center justify-between">
-              <span>{foreignFlowMb !== undefined && foreignFlowMb < 0 ? 'ต่างชาติขายสุทธิ' : foreignFlowMb !== undefined && foreignFlowMb > 0 ? 'ต่างชาติซื้อสุทธิ' : 'Settrade Data'}</span>
+              <span>{foreignFlowMb !== null && foreignFlowMb < 0 ? 'ต่างชาติขายสุทธิ' : foreignFlowMb !== null && foreignFlowMb > 0 ? 'ต่างชาติซื้อสุทธิ' : 'Settrade Data'}</span>
               <span className="text-[9px] bg-slate-200/70 px-1 py-0.2 rounded font-mono text-zinc-600">SET</span>
             </span>
+            <span className="text-[9px] text-zinc-400 block mt-1">{flow?.as_of || (foreignFlowMb !== null && aiData ? `ณ รอบรายงาน ${aiData.evaluated_at}` : '')}</span>
           </div>
 
           <div className="rounded-xl bg-slate-50 p-3 border border-slate-100">
             <span className="text-[10px] text-zinc-500 block">Market Breadth (A/D)</span>
             <span className="font-mono text-base font-extrabold text-zinc-900 mt-0.5 block">
-              {adRatio !== undefined ? `${adRatio.toFixed(2)}x` : 'รอประเมิน'}
+              {adRatio !== null ? `${adRatio.toFixed(2)}x` : 'ไม่มีข้อมูล'}
             </span>
             <span className="text-[10px] text-zinc-400 mt-0.5 flex items-center justify-between">
               <span className="capitalize">{breadthSentiment ? `Sentiment: ${breadthSentiment}` : 'สัดส่วนหุ้นขึ้น/ตก'}</span>
@@ -233,7 +461,7 @@ export const ThailandMacroSection: React.FC<ThailandMacroSectionProps> = ({
           <div className="rounded-xl bg-slate-50 p-3 border border-slate-100">
             <span className="text-[10px] text-zinc-500 block">SET Valuation P/E</span>
             <span className="font-mono text-base font-extrabold text-zinc-900 mt-0.5 block">
-              {peRatio !== undefined ? `${peRatio.toFixed(2)}x` : valuation?.pe_ratio ? `${valuation.pe_ratio.toFixed(2)}x` : 'รอประเมิน'}
+              {peRatio !== null ? `${peRatio.toFixed(2)}x` : 'ไม่มีข้อมูล'}
             </span>
             <span className="text-[10px] text-zinc-400 mt-0.5 flex items-center justify-between">
               <span>ราคาเทียบกำไรตลาด</span>
@@ -244,7 +472,7 @@ export const ThailandMacroSection: React.FC<ThailandMacroSectionProps> = ({
           <div className="rounded-xl bg-slate-50 p-3 border border-slate-100">
             <span className="text-[10px] text-zinc-500 block">GTA Gold (96.5%)</span>
             <span className="font-mono text-base font-extrabold text-amber-800 mt-0.5 block">
-              {goldBarSell !== undefined ? `${goldBarSell.toLocaleString('th-TH')} ฿` : gold?.bar?.sell ? `${gold.bar.sell.toLocaleString('th-TH')} ฿` : 'รอประกาศ'}
+              {goldBarSell !== null ? `${goldBarSell.toLocaleString('th-TH')} ฿` : 'รอประกาศ'}
             </span>
             <span className="text-[10px] text-zinc-400 mt-0.5 flex items-center justify-between">
               <span>ทองคำแท่งขายออก</span>
@@ -274,160 +502,6 @@ export const ThailandMacroSection: React.FC<ThailandMacroSectionProps> = ({
             </span>
           </div>
         </div>
-      </div>
-
-      {/* 3. AI Thailand Market Stance & Strategy Panel */}
-      <div className="rounded-2xl border border-sky-100 bg-white/95 p-5 shadow-sm space-y-4">
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between border-b border-sky-100/70 pb-3">
-          <div>
-            <h2 className="text-base font-bold text-zinc-900 tracking-tight flex items-center gap-2">
-              <span>🇹🇭 AI วิเคราะห์สภาวะตลาดทุนและค่าเงินบาท (AI Thailand Market Stance & Strategy)</span>
-            </h2>
-            <p className="text-xs text-zinc-500">
-              บทวิเคราะห์เชิงคุณภาพและคำแนะนำจัดสรรสินทรัพย์ไทย/ค่าเงินบาทโดย Strategic Allocator
-            </p>
-          </div>
-          <SourceProvenanceBadge
-            origin="ai"
-            evaluatedAt={aiData?.evaluated_at}
-            compact
-          />
-        </div>
-
-        {aiLoading && (
-          <div className="p-4 text-center text-xs text-zinc-500 animate-pulse">
-            กำลังโหลดข้อมูลวิเคราะห์ AI...
-          </div>
-        )}
-
-        {aiError && (
-          <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800">
-            ⚠️ ไม่สามารถโหลดบทวิเคราะห์ AI ได้: {aiError}
-          </div>
-        )}
-
-        {/* Microstructure AI Rationale / Summary */}
-        {marketStance?.rationale ? (
-          <div className="rounded-xl border border-sky-100 bg-sky-50/60 p-3.5 text-xs text-sky-950 leading-relaxed shadow-2xs">
-            <div className="font-semibold text-sky-900 mb-1 flex items-center gap-1.5 text-xs">
-              <span>💡 ทัศนะรวมสภาวะตลาดทุนไทย (Macro Stance Narrative):</span>
-            </div>
-            <p className="text-zinc-700">{marketStance.rationale}</p>
-          </div>
-        ) : (
-          <div className="rounded-xl border border-zinc-200 bg-zinc-50 p-3 text-xs text-zinc-500 italic text-center">
-            ยังไม่มีบทสรุป AI สำหรับตลาดทุนไทยในรอบนี้ (แสดงเฉพาะข้อมูลตลาดและผลคำนวณที่ยืนยันได้)
-          </div>
-        )}
-
-
-        {/* Thai Asset Allocations & Currency Strategy */}
-        <div className="space-y-3 pt-2">
-          <h3 className="text-sm font-semibold text-zinc-900">
-            กลยุทธ์จัดสรรสินทรัพย์และค่าเงินบาท (Thai Asset & Currency Stance)
-          </h3>
-
-          {thaiAssets.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {thaiAssets.map((asset, idx) => {
-                const sCat = stanceCategory(asset.stance)
-                return (
-                  <div
-                    key={idx}
-                    className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm space-y-2.5 transition-all hover:border-sky-300"
-                  >
-                    <div className="flex items-center justify-between gap-2 border-b border-slate-100 pb-2">
-                      <div>
-                        <span className="font-bold text-sm text-zinc-900 block">
-                          {asset.asset_class}
-                        </span>
-                        <span className="text-[10px] text-zinc-400 font-mono">
-                          {asset.asset_bucket ? `หมวด: ${asset.asset_bucket}` : 'สินทรัพย์ตลาดไทย/ข้ามพรมแดน'}
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-1.5">
-                        <span
-                          className={`rounded-full border px-2.5 py-0.5 text-xs font-bold uppercase ${STANCE_BADGE[sCat]}`}
-                        >
-                          {asset.stance}
-                        </span>
-                        <span
-                          className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold ${confidenceBadgeClass(
-                            asset.confidence
-                          )}`}
-                        >
-                          {asset.confidence}
-                        </span>
-                      </div>
-                    </div>
-
-                    <p className="text-xs leading-relaxed text-zinc-700">
-                      {asset.rationale}
-                    </p>
-
-                    {asset.supporting_data && asset.supporting_data.length > 0 && (
-                      <div className="rounded-lg bg-slate-50 p-2.5 border border-slate-100 text-[11px] text-zinc-600 space-y-1 font-mono">
-                        <span className="text-[10px] font-semibold text-zinc-500 uppercase block">
-                          หลักฐานเชิงปริมาณรองรับ:
-                        </span>
-                        {asset.supporting_data.map((sd, sIdx) => (
-                          <div key={sIdx} className="flex items-start gap-1">
-                            <span className="text-sky-600">•</span>
-                            <span>{sd}</span>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-
-                    {asset.allocation_delta && (
-                      <div className="text-[11px] text-zinc-500 flex items-center justify-between border-t border-slate-100 pt-1.5">
-                        <span>การปรับสัดส่วน:</span>
-                        <span className="font-semibold text-zinc-800">{asset.allocation_delta}</span>
-                      </div>
-                    )}
-                  </div>
-                )
-              })}
-            </div>
-          ) : (
-            <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50/60 p-4 text-xs text-zinc-500">
-              💡 ระบบกำลังประมวลผลกลยุทธ์เฉพาะเจาะจงสำหรับสินทรัพย์ไทย — กลยุทธ์ค่าเงินบาท USD/THB จะแสดงผลที่นี่โดยอัตโนมัติเมื่อ AI สร้างแผนจัดสรรสินทรัพย์
-            </div>
-          )}
-        </div>
-
-        {/* Domestic News & Policy Developments */}
-        {thaiReferences.length > 0 && (
-          <div className="space-y-2 pt-2 border-t border-sky-100/70">
-            <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-600 flex items-center gap-1.5">
-              <span>📰 ปัจจัยและข่าวสารเศรษฐกิจในประเทศที่ AI ใช้อ้างอิง</span>
-            </h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
-              {thaiReferences.slice(0, 4).map((ref, idx) => (
-                <a
-                  key={idx}
-                  href={ref.url}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="rounded-lg border border-slate-100 bg-slate-50/70 p-2.5 transition-all hover:bg-white hover:shadow-xs group block"
-                >
-                  <div className="flex items-center justify-between text-[10px] text-zinc-400 font-mono mb-1">
-                    <span className="font-semibold text-sky-700">{ref.publisher || 'ข่าวเศรษฐกิจ'}</span>
-                    {ref.age_hours !== null && <span>{ref.age_hours} ชม. ที่แล้ว</span>}
-                  </div>
-                  <div className="text-xs font-semibold text-zinc-900 group-hover:text-sky-700 line-clamp-1">
-                    {ref.title}
-                  </div>
-                  {ref.summary && (
-                    <p className="text-[11px] text-zinc-500 line-clamp-2 mt-1">
-                      {ref.summary}
-                    </p>
-                  )}
-                </a>
-              ))}
-            </div>
-          </div>
-        )}
       </div>
 
       {/* 3. Primary Market Observables: Flow & Breadth */}

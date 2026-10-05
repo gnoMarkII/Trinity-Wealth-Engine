@@ -186,6 +186,7 @@ export default function DimePdfViewerModal({ warning, password, source = 'dime',
               <div className="relative overflow-hidden rounded-2xl border border-sky-100 bg-slate-50 shadow-inner">
                 <iframe
                   src={pdfInlineUrl}
+                  sandbox="allow-scripts allow-same-origin"
                   title={`${source === 'scb' ? 'SCBAM Email' : 'Dime PDF'} - ${warning.filename || warning.subject || 'Confirmation'}`}
                   className="w-full h-[540px] border-0 bg-white"
                 />

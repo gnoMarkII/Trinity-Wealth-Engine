@@ -5,6 +5,156 @@ export interface WarningDTO {
   message: string
 }
 
+export type SectorRotationQuadrant = 'Leading' | 'Weakening' | 'Lagging' | 'Improving'
+
+export interface SectorRotationPointDTO {
+  as_of: string
+  relative_trend: number | null
+  relative_momentum: number | null
+  quadrant: SectorRotationQuadrant | null
+  status: 'available' | 'unavailable'
+  reason: string | null
+}
+
+export interface SectorReturnMetricDTO {
+  absolute_return_pct: number | null
+  excess_return_pp: number | null
+  relative_return_pct: number | null
+  start_date: string | null
+  end_date: string | null
+  expected_sessions: number
+  valid_sessions: number
+  status: 'available' | 'partial' | 'unavailable'
+  freshness: 'fresh' | 'stale' | 'unknown'
+  reason: string | null
+}
+
+export interface SectorRotationRowDTO {
+  ticker: string
+  name: string
+  status: 'available' | 'partial' | 'unavailable'
+  reason: string | null
+  returns_pct: Record<string, number | null>
+  return_metrics: Record<string, SectorReturnMetricDTO>
+  price_as_of: string | null
+  rotation_as_of: string | null
+  relative_strength: number | null
+  relative_price_base_date: string | null
+  relative_trend: number | null
+  relative_momentum: number | null
+  quadrant: SectorRotationQuadrant | null
+  quadrant_changed_at: string | null
+  momentum_direction: 'rising' | 'falling' | 'flat' | 'unavailable'
+  history: SectorRotationPointDTO[]
+  relative_price_history: Array<{
+    as_of: string
+    sector_spy_rebased_100: number | null
+    status: 'available' | 'unavailable'
+    reason: string | null
+  }>
+  quadrant_transitions: Array<{
+    event_id: string
+    timeframe: 'daily' | 'weekly'
+    previous_valid_at: string
+    changed_at: string | null
+    confirmed_at: string | null
+    event_type: 'transition' | 'confirmed_transition'
+    from_quadrant: SectorRotationQuadrant
+    to_quadrant: SectorRotationQuadrant
+  }>
+}
+
+export interface SectorRotationSnapshotDTO {
+  schema_version: string
+  formula_version: string
+  calendar_version: string
+  transition_rule_version: string
+  formula_config: Record<string, unknown>
+  universe_version: string
+  benchmark: string
+  price_basis: string
+  input_digest: string
+  snapshot_id: string
+  as_of_date: string | null
+  expected_session: string | null
+  expected_weekly_session: string | null
+  input_start_date: string | null
+  coverage: Record<string, number>
+  expected_sectors: number
+  available_sectors: number
+  benchmark_status: 'available' | 'unavailable'
+  benchmark_reason: string | null
+  benchmark_returns_pct: Record<string, number | null>
+  rows: SectorRotationRowDTO[]
+}
+
+export interface SectorRotationResponseDTO {
+  capability_status: 'enabled' | 'disabled'
+  refresh_state: 'idle' | 'running' | 'failed'
+  retry_after_seconds: number | null
+  error_code: string | null
+  last_attempt_at: string | null
+  expected_session: string | null
+  freshness: 'fresh' | 'stale' | 'unknown'
+  missing_sessions: number
+  served_at: string
+  timeframe: 'daily' | 'weekly'
+  tail: number
+  summary?: SectorRotationSummaryDTO | null
+  snapshot: SectorRotationSnapshotDTO | null
+}
+
+export interface SectorExcessRankDTO {
+  ticker: string
+  name: string
+  excess_return_pp: number
+  as_of: string | null
+  status: 'available' | 'partial'
+  valid_sessions: number
+  expected_sessions: number
+}
+
+export interface SectorRotationSummaryDTO {
+  summary_version: string
+  timeframe: 'daily' | 'weekly'
+  rotation_as_of: string | null
+  ranked_by_excess_3m: SectorExcessRankDTO[]
+  sector_breadth_3m: {
+    outperforming: number
+    valid_sectors: number
+    expected_sectors: number
+    status: 'complete' | 'partial'
+    as_of: string | null
+  }
+  quadrant_members: Record<string, string[]>
+  periods_in_quadrant: Record<string, number | null>
+  elapsed_days_in_quadrant: Record<string, number | null>
+  momentum_delta: Record<string, number | null>
+  heading_deg: Record<string, number | null>
+}
+
+export interface SectorRotationHistoryRowDTO {
+  ticker: string
+  name: string
+  status: 'available' | 'partial' | 'unavailable'
+  reason: string | null
+  relative_price_base_date: string | null
+  history: SectorRotationPointDTO[]
+  relative_price_history: SectorRotationRowDTO['relative_price_history']
+  quadrant_transitions: SectorRotationRowDTO['quadrant_transitions']
+}
+
+export interface SectorRotationHistoryDTO {
+  snapshot_id: string
+  input_digest: string
+  formula_version: string
+  timeframe: 'daily' | 'weekly'
+  range: '3m' | '6m' | '1y' | '2y'
+  from_date: string
+  to_date: string | null
+  rows: SectorRotationHistoryRowDTO[]
+}
+
 export interface AssetAllocationDTO {
   asset_class: string
   asset_bucket: string | null
@@ -161,11 +311,25 @@ export interface MacroDashboardDTO {
   run_id?: string
   job_id?: string
   snapshot_id?: string
+  strategy_report_id?: string
+  sector_snapshot_id?: string
+  sector_analysis?: SectorAnalysisDTO | null
+  run_started_at?: string
   regional_assessments?: Record<string, {
     growth_score?: number | null
     inflation_score?: number | null
     monetary_score?: number | null
     economic_state?: string
+    state?: string
+    growth?: number | null
+    inflation?: number | null
+    monetary?: number | null
+    fiscal_health?: {
+      debt_to_gdp_pct?: number | null
+      public_debt_million_thb?: number | null
+      statutory_limit_pct?: number
+      status?: string
+    }
     confidence?: number
     coverage?: number
     data_gaps?: string[]
@@ -173,6 +337,42 @@ export interface MacroDashboardDTO {
   }>
   observable_registry?: Record<string, any>
   evaluated_sources?: string[]
+}
+
+export interface SectorAnalysisDTO {
+  analysis_status?: 'available' | 'limited' | 'unavailable'
+  unavailable_reason?: string | null
+  snapshot_id: string | null
+  as_of_date: string | null
+  summary_th: string
+  fact_claims: Array<{
+    ticker: string
+    claim_kind: string
+    metric_ref: string
+    event_ref: string | null
+    macro_observable_refs: string[]
+    interpretation_th: string
+  }>
+  resolved_metrics: Array<{
+    ticker: string
+    metric_ref: string
+    numeric_value: number | null
+    categorical_value: string | null
+    unit: string
+    horizon: string
+    metric_as_of: string
+    snapshot_id: string
+    input_refs: string[]
+  }>
+  watch_conditions: Array<{
+    metric_ref: string
+    operator: string
+    future_threshold: number
+    unit: string
+    horizon: string
+    reason: string
+  }>
+  validation_warnings: string[]
 }
 
 export interface NewsCandidate {
@@ -1908,3 +2108,47 @@ export interface TreasuryYieldCurveDTO {
 
 
 
+
+export interface StablecoinItemDTO {
+  symbol: string
+  name: string
+  circulating_usd?: number | null
+  market_share_pct?: number | null
+  price_usd?: number | null
+}
+
+export interface StablecoinSupplyDTO {
+  total_circulating_usd?: number | null
+  change_7d_pct?: number | null
+  change_30d_pct?: number | null
+  top_stablecoins: StablecoinItemDTO[]
+  as_of_date: string
+  is_partial: boolean
+  completeness_notes: string
+  fetched_at: number
+  source: string
+  unit: string
+  is_stale: boolean
+  stale_reason?: string | null
+  limitations?: string | null
+}
+
+export interface CryptoMacroLiquidityDTO {
+  btc_price_usd?: number | null
+  btc_change_24h_pct?: number | null
+  btc_change_7d_pct?: number | null
+  btc_gold_ratio?: number | null
+  stablecoin_total_usd?: number | null
+  stablecoin_change_7d_pct?: number | null
+  stablecoin_change_30d_pct?: number | null
+  top_stablecoins: StablecoinItemDTO[]
+  etf_daily_net_inflow_usd?: number | null
+  etf_cumulative_total_usd?: number | null
+  liquidity_regime: string
+  as_of_date: string
+  fetched_at: number
+  source: string
+  is_stale: boolean
+  stale_reason?: string | null
+  limitations?: string | null
+}

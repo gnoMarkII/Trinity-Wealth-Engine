@@ -34,6 +34,15 @@ class MacroApplicationService:
     def dashboard(self) -> Dict[str, Any]:
         return self._strategy.latest()
 
+    def report_by_id(self, strategy_report_id: str) -> Dict[str, Any]:
+        reader = getattr(self._strategy, "report_by_id", None)
+        if not callable(reader):
+            raise LookupError("Archived Macro reports are unavailable")
+        try:
+            return reader(strategy_report_id)
+        except FileNotFoundError as exc:
+            raise LookupError("Macro report not found") from exc
+
     def indicator_series(self, indicator_id: str, range_name: str) -> Dict[str, Any]:
         if range_name not in {"1m", "3m", "1y"}:
             raise ValueError("range must be one of: 1m, 3m, 1y")

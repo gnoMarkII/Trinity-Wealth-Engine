@@ -152,10 +152,10 @@ describe('Macro Page - Dual Track Cockpit', () => {
     expect(screen.getAllByText('ระบบคำนวณ')[0]).toBeInTheDocument()
     expect(screen.getAllByText('AI วิเคราะห์')[0]).toBeInTheDocument()
 
-    // Default tab is US
+    // Default tab is AI Analysis
     await waitFor(() => {
-      expect(screen.getAllByText('Goldilocks')[0]).toBeInTheDocument()
-      expect(screen.getByText('US Treasury Yield Curve (Cross-Section)')).toBeInTheDocument()
+      expect(screen.getAllByText(/Goldilocks/i)[0]).toBeInTheDocument()
+      expect(screen.getByText(/บทวิเคราะห์สภาวะเศรษฐกิจและการจัดสรรสินทรัพย์เชิงลึก/)).toBeInTheDocument()
     })
 
     const updateBtn = screen.getByRole('button', { name: /อัปเดตบทวิเคราะห์/ })
@@ -180,7 +180,7 @@ describe('Macro Page - Dual Track Cockpit', () => {
     })
   })
 
-  it('switches between US, Thailand, and Cross-Border tabs', async () => {
+  it('switches between AI, US, Thailand, and Cross-Border tabs', async () => {
     vi.mocked(api.getMacroDashboard).mockResolvedValue(mockMacroDashboard as any)
 
     render(
@@ -188,6 +188,15 @@ describe('Macro Page - Dual Track Cockpit', () => {
         <Macro />
       </MemoryRouter>
     )
+
+    // Switch to US tab
+    const usTabBtn = screen.getByRole('button', { name: /สหรัฐอเมริกา \(US\)/i })
+    await userEvent.click(usTabBtn)
+
+    await waitFor(() => {
+      expect(screen.getByText('US Treasury Yield Curve (Cross-Section)')).toBeInTheDocument()
+      expect(screen.getByText('US Financial Stress Index (OFR FSI)')).toBeInTheDocument()
+    })
 
     // Switch to Thailand tab
     const thaiTabBtn = screen.getByRole('button', { name: /ประเทศไทย \(TH\)/i })
@@ -219,10 +228,10 @@ describe('Macro Page - Dual Track Cockpit', () => {
     )
 
     // Even if AI report fails, the page does NOT crash or blank out
+    // and automatically falls back to US tab displaying pure market observables
     await waitFor(() => {
       expect(screen.getByText('US Treasury Yield Curve (Cross-Section)')).toBeInTheDocument()
       expect(screen.getByText('US Financial Stress Index (OFR FSI)')).toBeInTheDocument()
-      expect(screen.getByText(/สถานะบทวิเคราะห์ AI:/i)).toBeInTheDocument()
     })
   })
 })

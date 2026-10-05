@@ -8,10 +8,14 @@ from typing import Any, Dict, List, Optional
 from pydantic import BaseModel, Field
 
 from tools.market.terminal_v2.domain.models import (
+    CryptoBenchmarkSnapshot,
+    CryptoMacroLiquiditySnapshot,
     LivePerpsQuote,
     MacroSeries,
     MarketBreadth,
     MarketValuation,
+    StablecoinItem,
+    StablecoinSupplySnapshot,
     ThaiFundFlowSnapshot,
     ThaiRetailGoldQuote,
 )
@@ -219,6 +223,8 @@ from tools.market.terminal_v2.domain.models import (
     ThaiFundAssetAllocationSnapshot,
     ThaiPublicDebtComponent,
     ThaiPublicDebtSnapshot,
+    ThaiYieldCurveSnapshot,
+    ThaiYieldPoint,
     TreasuryAuctionResult,
     TreasuryYieldCurveSnapshot,
     TreasuryYieldPoint,
@@ -332,6 +338,24 @@ class TreasuryYieldCurveResponse(BaseModel):
     yields: List[TreasuryYieldPointSchema]
     spread_10y_2y_bps: Optional[float] = None
     spread_10y_3m_bps: Optional[float] = None
+    fetched_at: float
+    source: str
+    unit: str
+    is_stale: bool
+    stale_reason: Optional[str] = None
+
+
+class ThaiYieldPointSchema(BaseModel):
+    tenor: str
+    ttm_years: float
+    yield_percent: Optional[float]
+
+
+class ThaiYieldCurveResponse(BaseModel):
+    observation_date: str
+    yields: List[ThaiYieldPointSchema]
+    spread_10y_2y_bps: Optional[float] = None
+    spread_10y_1y_bps: Optional[float] = None
     fetched_at: float
     source: str
     unit: str
@@ -602,6 +626,27 @@ def from_domain_yield_curve(d: TreasuryYieldCurveSnapshot) -> TreasuryYieldCurve
         ],
         spread_10y_2y_bps=d.spread_10y_2y_bps,
         spread_10y_3m_bps=d.spread_10y_3m_bps,
+        fetched_at=d.fetched_at,
+        source=d.source,
+        unit=d.unit,
+        is_stale=d.is_stale,
+        stale_reason=d.stale_reason,
+    )
+
+
+def from_domain_thai_yield_curve(d: ThaiYieldCurveSnapshot) -> ThaiYieldCurveResponse:
+    return ThaiYieldCurveResponse(
+        observation_date=d.observation_date,
+        yields=[
+            ThaiYieldPointSchema(
+                tenor=y.tenor,
+                ttm_years=y.ttm_years,
+                yield_percent=y.yield_percent,
+            )
+            for y in d.yields
+        ],
+        spread_10y_2y_bps=d.spread_10y_2y_bps,
+        spread_10y_1y_bps=d.spread_10y_1y_bps,
         fetched_at=d.fetched_at,
         source=d.source,
         unit=d.unit,
@@ -1293,4 +1338,143 @@ def map_news_discovery_to_schema(snap: NewsDiscoverySnapshot) -> NewsDiscoverySn
         fetched_at=snap.fetched_at,
         limitations=list(snap.limitations),
     )
+
+
+# ============================================================================
+# Level 1 Crypto Macro Liquidity Boundary Schemas
+# ============================================================================
+
+class StablecoinItemSchema(BaseModel):
+    symbol: str
+    name: str
+    circulating_usd: Optional[float] = None
+    market_share_pct: Optional[float] = None
+    price_usd: Optional[float] = 1.0
+
+
+class StablecoinSupplyResponse(BaseModel):
+    total_circulating_usd: Optional[float] = None
+    change_7d_pct: Optional[float] = None
+    change_30d_pct: Optional[float] = None
+    top_stablecoins: List[StablecoinItemSchema] = Field(default_factory=list)
+    as_of_date: str = ""
+    is_partial: bool = False
+    completeness_notes: str = ""
+    fetched_at: float = 0.0
+    source: str = "DeFiLlama"
+    unit: str = "USD"
+    is_stale: bool = False
+    stale_reason: str = ""
+    limitations: str = ""
+
+
+class CryptoBenchmarkResponse(BaseModel):
+    symbol: str = "BTC"
+    price_usd: Optional[float] = None
+    change_24h_pct: Optional[float] = None
+    change_7d_pct: Optional[float] = None
+    gold_price_usd: Optional[float] = None
+    btc_gold_ratio: Optional[float] = None
+    as_of_date: str = ""
+    fetched_at: float = 0.0
+    source: str = "Market Benchmark"
+    is_stale: bool = False
+    stale_reason: str = ""
+    limitations: str = ""
+
+
+class CryptoMacroLiquidityResponse(BaseModel):
+    btc_price_usd: Optional[float] = None
+    btc_change_24h_pct: Optional[float] = None
+    btc_change_7d_pct: Optional[float] = None
+    btc_gold_ratio: Optional[float] = None
+    stablecoin_total_usd: Optional[float] = None
+    stablecoin_change_7d_pct: Optional[float] = None
+    stablecoin_change_30d_pct: Optional[float] = None
+    top_stablecoins: List[StablecoinItemSchema] = Field(default_factory=list)
+    etf_daily_net_inflow_usd: Optional[float] = None
+    etf_cumulative_total_usd: Optional[float] = None
+    liquidity_regime: str = "Neutral"
+    as_of_date: str = ""
+    fetched_at: float = 0.0
+    source: str = "DeFiLlama / SoSoValue / Benchmark"
+    is_stale: bool = False
+    stale_reason: str = ""
+    limitations: str = ""
+
+
+def from_domain_stablecoins(d: StablecoinSupplySnapshot) -> StablecoinSupplyResponse:
+    return StablecoinSupplyResponse(
+        total_circulating_usd=d.total_circulating_usd,
+        change_7d_pct=d.change_7d_pct,
+        change_30d_pct=d.change_30d_pct,
+        top_stablecoins=[
+            StablecoinItemSchema(
+                symbol=item.symbol,
+                name=item.name,
+                circulating_usd=item.circulating_usd,
+                market_share_pct=item.market_share_pct,
+                price_usd=item.price_usd,
+            )
+            for item in d.top_stablecoins
+        ],
+        as_of_date=d.as_of_date,
+        is_partial=d.is_partial,
+        completeness_notes=d.completeness_notes,
+        fetched_at=d.fetched_at,
+        source=d.source,
+        unit=d.unit,
+        is_stale=d.is_stale,
+        stale_reason=d.stale_reason,
+        limitations=d.limitations,
+    )
+
+
+def from_domain_crypto_benchmark(d: CryptoBenchmarkSnapshot) -> CryptoBenchmarkResponse:
+    return CryptoBenchmarkResponse(
+        symbol=d.symbol,
+        price_usd=d.price_usd,
+        change_24h_pct=d.change_24h_pct,
+        change_7d_pct=d.change_7d_pct,
+        gold_price_usd=d.gold_price_usd,
+        btc_gold_ratio=d.btc_gold_ratio,
+        as_of_date=d.as_of_date,
+        fetched_at=d.fetched_at,
+        source=d.source,
+        is_stale=d.is_stale,
+        stale_reason=d.stale_reason,
+        limitations=d.limitations,
+    )
+
+
+def from_domain_crypto_liquidity(d: CryptoMacroLiquiditySnapshot) -> CryptoMacroLiquidityResponse:
+    return CryptoMacroLiquidityResponse(
+        btc_price_usd=d.btc_price_usd,
+        btc_change_24h_pct=d.btc_change_24h_pct,
+        btc_change_7d_pct=d.btc_change_7d_pct,
+        btc_gold_ratio=d.btc_gold_ratio,
+        stablecoin_total_usd=d.stablecoin_total_usd,
+        stablecoin_change_7d_pct=d.stablecoin_change_7d_pct,
+        stablecoin_change_30d_pct=d.stablecoin_change_30d_pct,
+        top_stablecoins=[
+            StablecoinItemSchema(
+                symbol=item.symbol,
+                name=item.name,
+                circulating_usd=item.circulating_usd,
+                market_share_pct=item.market_share_pct,
+                price_usd=item.price_usd,
+            )
+            for item in d.top_stablecoins
+        ],
+        etf_daily_net_inflow_usd=d.etf_daily_net_inflow_usd,
+        etf_cumulative_total_usd=d.etf_cumulative_total_usd,
+        liquidity_regime=d.liquidity_regime,
+        as_of_date=d.as_of_date,
+        fetched_at=d.fetched_at,
+        source=d.source,
+        is_stale=d.is_stale,
+        stale_reason=d.stale_reason,
+        limitations=d.limitations,
+    )
+
 

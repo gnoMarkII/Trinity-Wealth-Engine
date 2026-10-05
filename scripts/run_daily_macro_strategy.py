@@ -3,7 +3,7 @@ import sys
 import time
 import uuid
 from pathlib import Path
-from datetime import datetime
+from datetime import datetime, timezone
 from dotenv import load_dotenv
 
 # Add project root to sys.path
@@ -42,7 +42,7 @@ def main():
         "configurable": {"thread_id": f"daily-macro-{today_str}-{turn_id}"},
         "recursion_limit": 150,
         "tags": ["daily-macro-strategy", "institutional-grade"],
-        "metadata": {"run_type": "daily_pipeline"}
+        "metadata": {"run_type": "daily_pipeline", "job_id": turn_id}
     }
     
     if len(sys.argv) > 1:
@@ -59,7 +59,24 @@ def main():
     print(f"\n[Prompt]: {prompt}\n")
     print("🚀 เริ่มประมวลผลระบบ Multi-Agent Pipeline...\n")
     
-    inputs = {"messages": [("user", prompt)]}
+    inputs = {
+        "messages": [("user", prompt)],
+        "macro_run_id": turn_id,
+        "macro_run_started_at": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
+        "macro_task_run_id": None,
+        "macro_task_started_at": None,
+        "macro_task_sequence": 0,
+        "sector_rotation_snapshot_id": None,
+        "sector_rotation_context": None,
+        "sector_context_status": None,
+        "quant_raw": None,
+        "quant_score": None,
+        "narrative_raw": None,
+        "narrative_context": None,
+        "task_queue": [],
+        "replan_count": 0,
+        "route_meta": {},
+    }
     
     visited_nodes = []
     start_time = time.time()
@@ -97,22 +114,49 @@ def main():
             return 1
 
     elapsed = time.time() - start_time
-    print(f"\n✅ Pipeline ประมวลผลเสร็จสิ้นในเวลา {elapsed:.2f} วินาที!")
-    print(f"📍 Nodes ที่ทำงาน: {visited_nodes}")
+    print(f"\n✅ Pipeline stream finished in {elapsed:.2f} seconds!")
+    print(f"📍 Completed nodes: {visited_nodes}")
     
-    # ตรวจสอบไฟล์ใน Obsidian Vault
+    # 1. Assert required execution nodes were completed
+    required_nodes = ["strategic_allocator", "prepare_archivist", "archivist"]
+    missing_nodes = [node for node in required_nodes if node not in visited_nodes]
+    if missing_nodes:
+        print(f"\n❌ [FAIL] Missing required workflow nodes: {missing_nodes}")
+        return 1
+
+    # 2. Check and assert Obsidian Vault files (using rglob across year/month hierarchies)
     vault_path = Path(os.getenv("OBSIDIAN_VAULT_PATH", "./memories")).resolve()
     daily_dir = vault_path / "30_Knowledge_Base" / "Macroeconomics" / "Daily_Snapshots"
     
-    print(f"\n🔍 ตรวจสอบไฟล์ผลลัพธ์ใน Obsidian Vault: {daily_dir}")
-    if daily_dir.exists():
-        all_md = sorted(daily_dir.glob("*.md"), key=lambda p: p.stat().st_mtime, reverse=True)
-        recent_files = all_md[:5]
-        for f in recent_files:
-            print(f"   📄 พบไฟล์: {f.name} (ขนาด {f.stat().st_size} bytes, อัปเดตเมื่อ {datetime.fromtimestamp(f.stat().st_mtime).strftime('%Y-%m-%d %H:%M:%S')})")
-    else:
-        print("   ⚠️ ไม่พบโฟลเดอร์ Daily_Snapshots")
-        
+    print(f"\n🔍 Verifying output files in Obsidian Vault: {daily_dir}")
+    if not daily_dir.exists():
+        print(f"❌ [FAIL] Daily_Snapshots directory not found at {daily_dir}")
+        return 1
+
+    all_snapshots = sorted(daily_dir.rglob("*.json"), key=lambda p: p.stat().st_mtime, reverse=True)
+    if not all_snapshots:
+        print(f"❌ [FAIL] No JSON snapshot files found in {daily_dir} or subdirectories")
+        return 1
+
+    recent_snapshots = all_snapshots[:3]
+    for s in recent_snapshots:
+        print(f"   📄 Verified snapshot: {s.name} ({s.stat().st_size} bytes, modified {datetime.fromtimestamp(s.stat().st_mtime).strftime('%Y-%m-%d %H:%M:%S')})")
+
+    # 3. Assert latest strategy report is committed and loadable
+    try:
+        from tools.macro.adapters.strategy_vault_adapter import StrategyVaultAdapter
+        vault_adapter = StrategyVaultAdapter(vault_path)
+        latest_report = vault_adapter.latest()
+        report_id = latest_report.get("strategy_report_id")
+        regime = latest_report.get("overall_regime")
+        print(f"\n🏆 [COMMIT VERIFIED] Latest Strategy Report ID: {report_id}")
+        print(f"   Overall Macro Regime: {regime}")
+        print(f"   Observables in registry: {len(latest_report.get('observable_registry', {}))}")
+    except Exception as exc:
+        print(f"\n❌ [FAIL] Failed to load latest committed strategy report from vault: {exc}")
+        return 1
+
+    print("\n[PASS] Macro daily strategy pipeline executed and verified successfully!")
     return 0
 
 if __name__ == "__main__":

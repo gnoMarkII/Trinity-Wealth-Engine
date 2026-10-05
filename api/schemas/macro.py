@@ -180,6 +180,10 @@ class MacroDashboardDTO(BaseModel):
     run_id: Optional[str] = None
     job_id: Optional[str] = None
     snapshot_id: Optional[str] = None
+    strategy_report_id: Optional[str] = None
+    sector_snapshot_id: Optional[str] = None
+    sector_analysis: Optional[dict[str, Any]] = None
+    run_started_at: Optional[str] = None
     regional_assessments: Optional[dict[str, Any]] = None
     observable_registry: Optional[dict[str, Any]] = None
     evaluated_sources: list[str] = []
@@ -350,6 +354,10 @@ def macro_dashboard_dto_from_raw(raw: dict) -> MacroDashboardDTO:
         run_id=raw.get("run_id"),
         job_id=raw.get("job_id"),
         snapshot_id=raw.get("snapshot_id"),
+        strategy_report_id=raw.get("strategy_report_id"),
+        sector_snapshot_id=raw.get("sector_snapshot_id"),
+        sector_analysis=raw.get("sector_analysis"),
+        run_started_at=raw.get("run_started_at"),
         regional_assessments=raw.get("regional_assessments"),
         observable_registry=raw.get("observable_registry"),
         evaluated_sources=raw.get("evaluated_sources", []),

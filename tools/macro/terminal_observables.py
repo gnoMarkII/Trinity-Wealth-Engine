@@ -7,6 +7,7 @@ Integrates via Hexagonal Architecture driving ports:
 - TerminalDataServicePort (Institutional Macro Data)
 """
 from datetime import datetime
+from dataclasses import asdict, is_dataclass
 import re
 from typing import Any, Optional
 from core.logger import get_logger
@@ -120,7 +121,7 @@ def build_thai_market_observables(
                 key = "institution"
             elif "prop" in name_en_lower or "บล." in name_th:
                 key = "proprietary"
-            elif "retail" in name_en_lower or "ในประเทศ" in name_th:
+            elif "retail" in name_en_lower or "individual" in name_en_lower or "ในประเทศ" in name_th or "รายย่อย" in name_th or "individual" in name_th.lower():
                 key = "retail"
 
             if key and key in flow_slug_map:
@@ -298,8 +299,9 @@ def build_rates_observables(
         for pt in getattr(curve, "yields", []):
             m = getattr(pt, "maturity", "")
             y_val = getattr(pt, "yield_percent", None)
-            if m in tenor_map and y_val is not None:
-                obs_id, ind_title = tenor_map[m]
+            if m and y_val is not None:
+                tenor_key = re.sub(r"[^a-z0-9]+", "_", m.lower()).strip("_")
+                obs_id, ind_title = tenor_map.get(m, (f"obs_ust_{tenor_key}_yield", f"US Treasury {m} Yield"))
                 observables.append(MarketObservable(
                     observable_id=obs_id,
                     asset_bucket="fixed_income",
@@ -380,7 +382,7 @@ def build_rates_observables(
                     asset_bucket="cash",
                     region="United States",
                     indicator="US Fed Funds Policy Rate (BIS)",
-                    value=f"{rate:.2f}",
+                    value=f"{rate:.3f}" if rate != round(rate, 2) else f"{rate:.2f}",
                     unit="%",
                     observed_at=eff_date,
                     source_file="Terminal_V2_BIS",
@@ -388,7 +390,7 @@ def build_rates_observables(
                     confidence="high" if item_valid else "low",
                     is_valid=item_valid,
                     status="verified" if item_valid else "stale",
-                    metadata={"raw_country": raw_country},
+                    metadata={"raw_country": raw_country, "numeric_value": rate, "previous_rate": item.previous_rate, "rate_type": item.rate_type},
                 ))
             elif norm_country == "TH":
                 th_rate_val = rate
@@ -406,7 +408,20 @@ def build_rates_observables(
                     confidence="high" if item_valid else "low",
                     is_valid=item_valid,
                     status="verified" if item_valid else "stale",
-                    metadata={"raw_country": raw_country},
+                    metadata={"raw_country": raw_country, "numeric_value": rate, "previous_rate": item.previous_rate, "rate_type": item.rate_type},
+                ))
+            else:
+                region = {"XM": "Euro Area", "JP": "Japan", "CN": "China", "IN": "India"}.get(norm_country, norm_country)
+                observables.append(MarketObservable(
+                    observable_id=f"obs_{norm_country.lower()}_policy_rate_bis",
+                    asset_bucket="cash", region=region,
+                    indicator=f"{item.central_bank} Policy Rate (BIS)",
+                    value=f"{rate:.3f}" if rate != round(rate, 2) else f"{rate:.2f}",
+                    unit="%", observed_at=eff_date,
+                    source_file="Terminal_V2_BIS", provider="Terminal V2 (BIS)",
+                    confidence="high" if item_valid else "low", is_valid=item_valid,
+                    status="verified" if item_valid else "stale",
+                    metadata={"raw_country": raw_country, "numeric_value": rate, "previous_rate": item.previous_rate, "rate_type": item.rate_type},
                 ))
 
         if us_rate_val is not None and th_rate_val is not None and us_rate_valid and th_rate_valid:
@@ -458,6 +473,8 @@ def build_rates_observables(
             confidence="high" if is_valid else "low",
             is_valid=is_valid,
             status="verified" if is_valid else "stale",
+            metadata={"numeric_value": fsi_val, "published_at": stress.published_at,
+                      "categories": [asdict(category) for category in stress.categories if is_dataclass(category)]},
         ))
     except Exception as e:
         log.warning("Failed to collect OFR financial stress from Terminal V2: %s", e)
@@ -490,33 +507,39 @@ def build_rates_observables(
         log.warning("Failed to collect US National Debt from Terminal V2: %s", e)
 
     # 5. Treasury Auction Demand (10-Year Note Bid-to-Cover)
-    try:
-        auc = terminal_data_service.get_auction_demand_summary(security_type="Note", security_term="10-Year")
-        a_date = normalize_observed_date(
-            getattr(auc, "latest_auction_date", None) or getattr(auc, "as_of_date", today_str),
-            today_str,
-        )
-        btc = float(getattr(auc, "latest_bid_to_cover_ratio", 0.0))
-        a_valid = not getattr(auc, "is_stale", False)
+    for security_type, security_term, obs_id, label in (
+        ("Note", "10-Year", "obs_treasury_auction_bid_to_cover_10y", "10-Year Treasury Note"),
+        ("Bill", "13-Week", "obs_treasury_auction_bid_to_cover_13w", "13-Week Treasury Bill"),
+    ):
+        try:
+            auc = terminal_data_service.get_auction_demand_summary(security_type=security_type, security_term=security_term)
+            a_date = normalize_observed_date(
+                getattr(auc, "latest_auction_date", None) or getattr(auc, "as_of_date", today_str),
+                today_str,
+            )
+            raw_btc = getattr(auc, "latest_bid_to_cover_ratio", None)
+            btc = float(raw_btc) if raw_btc is not None else 0.0
+            a_valid = not getattr(auc, "is_stale", False)
 
-        if btc > 0:
-            observables.append(MarketObservable(
-                observable_id="obs_treasury_auction_bid_to_cover_10y",
-                asset_bucket="fixed_income",
-                region="United States",
-                indicator="US 10-Year Treasury Note Auction Bid-to-Cover Ratio",
-                value=f"{btc:.2f}",
-                unit="ratio",
-                observed_at=a_date,
-                source_file="Terminal_V2_USTreasury",
-                provider="Terminal V2 (Fiscal Data)",
-                confidence="high" if a_valid else "low",
-                is_valid=a_valid,
-                status="verified" if a_valid else "stale",
-                metadata={"demand_delta": getattr(auc, "demand_delta", 0.0)},
-            ))
-    except Exception as e:
-        log.warning("Failed to collect Treasury auction demand from Terminal V2: %s", e)
+            if btc > 0:
+                observables.append(MarketObservable(
+                    observable_id=obs_id,
+                    asset_bucket="fixed_income",
+                    region="United States",
+                    indicator=f"US {label} Auction Bid-to-Cover Ratio",
+                    value=f"{btc:.2f}",
+                    unit="ratio",
+                    observed_at=a_date,
+                    source_file="Terminal_V2_USTreasury",
+                    provider="Terminal V2 (Fiscal Data)",
+                    confidence="high" if a_valid else "low",
+                    is_valid=a_valid,
+                    status="verified" if a_valid else "stale",
+                    stale_reason=getattr(auc, "stale_reason", None) or "",
+                    metadata=asdict(auc) if is_dataclass(auc) else {"demand_delta": getattr(auc, "demand_delta", None)},
+                ))
+        except Exception as e:
+            log.warning("Failed to collect Treasury %s auction demand from Terminal V2: %s", security_term, e)
 
     # 6. CFTC Gold Positioning (Commitments of Traders)
     try:
@@ -538,40 +561,240 @@ def build_rates_observables(
             confidence="high" if c_valid else "low",
             is_valid=c_valid,
             status="verified" if c_valid else "stale",
-            metadata={"open_interest": getattr(cot, "open_interest", 0)},
+            metadata=asdict(cot) if is_dataclass(cot) else {"open_interest": getattr(cot, "open_interest", 0)},
         ))
     except Exception as e:
         log.warning("Failed to collect CFTC Metals COT from Terminal V2: %s", e)
 
-    # 7. Cboe Gold Volatility (GVZ)
-    try:
-        vol = terminal_data_service.get_commodity_volatility("GVZ")
-        v_date = normalize_observed_date(
-            getattr(vol, "close_date", None) or getattr(vol, "as_of_date", today_str),
-            today_str,
-        )
-        v_val = float(getattr(vol, "implied_volatility", 0.0))
-        v_valid = not getattr(vol, "is_stale", False)
+    # 7. All Cboe commodity volatility metrics shown on the Macro page.
+    for symbol, name, obs_id in (
+        ("GVZ", "Gold", "obs_cboe_gold_volatility_gvz"),
+        ("VXSLV", "Silver", "obs_cboe_silver_volatility_vxslv"),
+        ("OVX", "Oil", "obs_cboe_oil_volatility_ovx"),
+    ):
+        try:
+            vol = terminal_data_service.get_commodity_volatility(symbol)
+            v_date = normalize_observed_date(
+                getattr(vol, "close_date", None) or getattr(vol, "as_of_date", today_str),
+                today_str,
+            )
+            v_val = float(getattr(vol, "implied_volatility", 0.0))
+            v_valid = not getattr(vol, "is_stale", False)
 
-        if v_val > 0:
-            observables.append(MarketObservable(
-                observable_id="obs_cboe_gold_volatility_gvz",
-                asset_bucket="commodities",
-                region="Global",
-                indicator="Cboe 30-Day Gold Volatility Index (GVZ)",
-                value=f"{v_val:.2f}",
-                unit="pts",
-                observed_at=v_date,
-                source_file="Terminal_V2_Cboe",
-                provider="Terminal V2 (Cboe)",
-                confidence="high" if v_valid else "low",
-                is_valid=v_valid,
-                status="verified" if v_valid else "stale",
-            ))
-    except Exception as e:
-        log.warning("Failed to collect Cboe GVZ from Terminal V2: %s", e)
+            if v_val > 0:
+                observables.append(MarketObservable(
+                    observable_id=obs_id,
+                    asset_bucket="commodities",
+                    region="Global",
+                    indicator=f"Cboe 30-Day {name} Volatility Index ({symbol})",
+                    value=f"{v_val:.2f}",
+                    unit="pts",
+                    observed_at=v_date,
+                    source_file="Terminal_V2_Cboe",
+                    provider="Terminal V2 (Cboe)",
+                    confidence="high" if v_valid else "low",
+                    is_valid=v_valid,
+                    status="verified" if v_valid else "stale",
+                    stale_reason=getattr(vol, "stale_reason", None) or "",
+                    metadata=asdict(vol) if is_dataclass(vol) else {},
+                ))
+        except Exception as e:
+            log.warning("Failed to collect Cboe %s from Terminal V2: %s", symbol, e)
 
     return observables
+
+
+def build_crypto_liquidity_observables(
+    terminal_data_service: Optional[TerminalDataServicePort] = None,
+    as_of_date: Optional[str] = None,
+) -> list[MarketObservable]:
+    """Build typed MarketObservables for Level 1 crypto macro liquidity (Stablecoins, BTC/Gold ratio, ETF flows)."""
+    if terminal_data_service is None:
+        try:
+            from tools.market.terminal_v2.bootstrap import get_terminal_data_service
+            terminal_data_service = get_terminal_data_service()
+        except Exception as e:
+            log.warning("Could not obtain TerminalDataServicePort instance: %s", e)
+            return []
+
+    today_str = as_of_date or datetime.now().strftime("%Y-%m-%d")
+    observables: list[MarketObservable] = []
+
+    try:
+        liq = terminal_data_service.get_crypto_macro_liquidity()
+        obs_date = normalize_observed_date(liq.as_of_date or today_str, today_str)
+        is_valid = not liq.is_stale
+
+        # 1. Total Stablecoin Supply (Global Digital Dollar / Dry Powder)
+        if liq.stablecoin_total_usd is not None and liq.stablecoin_total_usd > 0:
+            supply_b = round(liq.stablecoin_total_usd / 1_000_000_000.0, 2)
+            observables.append(MarketObservable(
+                observable_id="obs_crypto_stablecoin_supply_usd_b",
+                asset_bucket="cash",
+                region="Global",
+                indicator="Global USD Stablecoin Total Circulating Supply",
+                value=f"{supply_b:.2f}",
+                unit="USD Bil",
+                observed_at=obs_date,
+                source_file="Terminal_V2_DeFiLlama",
+                provider="Terminal V2 (DeFiLlama)",
+                confidence="high" if is_valid else "low",
+                is_valid=is_valid,
+                status="verified" if is_valid else "stale",
+                metadata={
+                    "total_usd": liq.stablecoin_total_usd,
+                    "change_7d_pct": liq.stablecoin_change_7d_pct,
+                    "change_30d_pct": liq.stablecoin_change_30d_pct,
+                    "liquidity_regime": liq.liquidity_regime,
+                },
+            ))
+
+        # 2. Stablecoin 30-Day Growth Rate (Liquidity Expansion / Contraction Indicator)
+        if liq.stablecoin_change_30d_pct is not None:
+            observables.append(MarketObservable(
+                observable_id="obs_crypto_stablecoin_supply_growth_30d",
+                asset_bucket="cash",
+                region="Global",
+                indicator="Global Stablecoin Supply 30-Day Growth Rate",
+                value=f"{liq.stablecoin_change_30d_pct:.2f}",
+                unit="%",
+                observed_at=obs_date,
+                source_file="Terminal_V2_DeFiLlama",
+                provider="Terminal V2 (DeFiLlama)",
+                confidence="high" if is_valid else "low",
+                is_valid=is_valid,
+                status="verified" if is_valid else "stale",
+                metadata={
+                    "change_7d_pct": liq.stablecoin_change_7d_pct,
+                    "regime": liq.liquidity_regime,
+                },
+            ))
+
+        # 3. BTC / Gold Valuation Ratio (Risk Appetite vs Safe Haven)
+        if liq.btc_gold_ratio is not None and liq.btc_gold_ratio > 0:
+            observables.append(MarketObservable(
+                observable_id="obs_crypto_btc_gold_ratio",
+                asset_bucket="commodities",
+                region="Global",
+                indicator="Bitcoin to Gold Price Ratio (Risk Appetite Barometer)",
+                value=f"{liq.btc_gold_ratio:.2f}",
+                unit="ratio",
+                observed_at=obs_date,
+                source_file="Terminal_V2_MarketBenchmark",
+                provider="Terminal V2 (Benchmark)",
+                confidence="high" if is_valid else "low",
+                is_valid=is_valid,
+                status="verified" if is_valid else "stale",
+                metadata={
+                    "btc_price_usd": liq.btc_price_usd,
+                    "btc_change_24h_pct": liq.btc_change_24h_pct,
+                    "btc_change_7d_pct": liq.btc_change_7d_pct,
+                },
+            ))
+
+        # 4. Spot BTC ETF Daily Net Inflow (Institutional Capital Flow)
+        if liq.etf_daily_net_inflow_usd is not None:
+            flow_m = round(liq.etf_daily_net_inflow_usd / 1_000_000.0, 2)
+            observables.append(MarketObservable(
+                observable_id="obs_crypto_etf_daily_net_inflow_m",
+                asset_bucket="equities",
+                region="United States",
+                indicator="US Spot Bitcoin ETF Daily Net Inflow",
+                value=f"{flow_m:.2f}",
+                unit="USD Mil",
+                observed_at=obs_date,
+                source_file="Terminal_V2_SoSoValue",
+                provider="Terminal V2 (SoSoValue)",
+                confidence="high" if is_valid else "low",
+                is_valid=is_valid,
+                status="verified" if is_valid else "stale",
+                metadata={
+                    "daily_usd": liq.etf_daily_net_inflow_usd,
+                    "cumulative_usd": liq.etf_cumulative_total_usd,
+                },
+            ))
+
+    except Exception as e:
+        log.warning("Failed to collect Level 1 crypto macro liquidity observables: %s", e)
+
+    return observables
+
+
+def synthesize_thai_market_stance_narrative(
+    stance: dict[str, Any],
+    thai_assets: list[Any] | None = None,
+) -> str:
+    """Generate an institutional-grade Thai market stance narrative from verified microstructure data."""
+    parts = []
+
+    # 1. Valuation & Breadth
+    val = stance.get("valuation") or {}
+    pe = val.get("pe_ratio")
+    div_y = val.get("dividend_yield")
+    breadth = stance.get("market_breadth") or {}
+    ad_ratio = breadth.get("advance_decline_ratio")
+    ad_sent = breadth.get("sentiment")
+
+    if pe is not None or ad_ratio is not None:
+        val_components = []
+        if pe is not None:
+            val_components.append(f"P/E {pe:.2f} เท่า")
+        if div_y is not None:
+            val_components.append(f"Dividend Yield {div_y:.2f}%")
+        val_desc = f" ด้วยระดับราคา {' และ '.join(val_components)}" if val_components else ""
+
+        breadth_desc = ""
+        if ad_ratio is not None:
+            breadth_desc = f" ประกอบกับ Market Breadth สะท้อนทัศนะเชิงบวก (A/D Ratio {ad_ratio:.2f}x{', ' + ad_sent if ad_sent else ''})"
+
+        parts.append(
+            f"สภาวะตลาดทุนไทยอยู่ในช่วงฟื้นตัวเชิงคุณค่า (Valuation-Driven Recovery){val_desc}{breadth_desc}"
+        )
+
+    # 2. Investor Flow
+    flow = stance.get("investor_flow") or {}
+    foreign = flow.get("foreign_net_mb")
+    inst = flow.get("institution_net_mb")
+    if foreign is not None or inst is not None:
+        flow_components = []
+        if foreign is not None:
+            f_act = "ซื้อสุทธิ" if foreign > 0 else "ขายสุทธิ"
+            flow_components.append(f"นักลงทุนต่างชาติ{f_act} {foreign:+,.2f} ล้านบาท")
+        if inst is not None:
+            i_act = "ซื้อสุทธิ" if inst > 0 else "ขายสุทธิ"
+            flow_components.append(f"สถาบันในประเทศ{i_act} {inst:+,.2f} ล้านบาท เข้ามาช่วยดูดซับแรงขาย")
+        parts.append(f"ด้านกระแสเงินทุน: {', '.join(flow_components)}")
+
+    # 3. Policy Rate Differential Spread
+    spread = stance.get("policy_spread_bps")
+    if spread is not None:
+        sign = "+" if spread > 0 else ""
+        parts.append(
+            f"ส่วนต่างอัตราดอกเบี้ยนโยบายสหรัฐฯ-ไทย (Fed-BOT Spread {sign}{spread:.1f} bps) ยังคงเป็นปัจจัยกดดันและชี้นำทิศทางค่าเงินบาท (USD/THB)"
+        )
+
+    # 4. Thai Yield Curve Spread
+    yc_spread = stance.get("yield_curve_spread_10y_2y_bps")
+    if yc_spread is not None:
+        sign = "+" if yc_spread > 0 else ""
+        curve_type = "Steepening" if yc_spread > 50 else ("Inverted" if yc_spread < 0 else "Flat")
+        parts.append(
+            f"เส้นอัตราผลตอบแทนพันธบัตรรัฐบาลไทย (ThaiBMA 10Y-2Y Spread {sign}{yc_spread:.1f} bps, {curve_type}) สะท้อนมุมมองการฟื้นตัวของเศรษฐกิจระยะยาว"
+        )
+
+    # 5. Asset Allocation Stance
+    if thai_assets:
+        asset_summaries = []
+        for a in thai_assets:
+            a_class = getattr(a, "asset_class", None) or (a.get("asset_class") if isinstance(a, dict) else "")
+            a_stance = getattr(a, "stance", None) or (a.get("stance") if isinstance(a, dict) else "")
+            a_rat = getattr(a, "rationale", None) or (a.get("rationale") if isinstance(a, dict) else "")
+            if a_class and a_stance:
+                asset_summaries.append(f"{a_class}: {a_stance} ({a_rat})" if a_rat else f"{a_class}: {a_stance}")
+        if asset_summaries:
+            parts.append(f"กลยุทธ์จัดสรรสินทรัพย์: {'; '.join(asset_summaries)}")
+
+    return " โดย".join(parts) if len(parts) <= 2 else " ".join(parts)
 
 
 def build_thai_market_stance(observables: list[MarketObservable]) -> dict[str, Any]:
@@ -611,5 +834,17 @@ def build_thai_market_stance(observables: list[MarketObservable]) -> dict[str, A
             stance["physical_gold"]["unit"] = obs.unit
         elif oid in ("obs_diff_us_th_policy_rate_bis", "obs_diff_us_th_policy_rate"):
             stance["policy_spread_bps"] = float(obs.value)
+        elif oid == "obs_th_gov_10y_2y_spread":
+            stance["yield_curve_spread_10y_2y_bps"] = float(obs.value)
+
+    # Automatically synthesize institutional rationale if quantitative signals are present
+    has_signals = (
+        bool(stance["investor_flow"])
+        or bool(stance["valuation"])
+        or stance["policy_spread_bps"] is not None
+        or bool(stance["market_breadth"])
+    )
+    if has_signals:
+        stance["rationale"] = synthesize_thai_market_stance_narrative(stance)
 
     return stance

@@ -11,11 +11,11 @@ def test_evaluation_quant_valid_json(tmp_vault):
     snapshots_dir.mkdir(parents=True, exist_ok=True)
 
     us_content = f"""# 🇺🇸 United States
-| ดัชนี | ค่าล่าสุด | วันที่ |
-|-------|----------|----------|
-| **Real GDP (YoY %)** | 3.0% | {today_str} |
-| **CPI (YoY %)** | 3.5% | {today_str} |
-| **Fed Funds Rate** | 5.25% | {today_str} |"""
+| ดัชนี | ค่าล่าสุด | ก่อนหน้า | MA ย้อนหลัง | วันที่ |
+|-------|----------|----------|----------|----------|
+| **Real GDP (YoY %)** | 3.0% | 2.8% | 2.7% | {today_str} |
+| **CPI (YoY %)** | 3.5% | 3.4% | 3.2% | {today_str} |
+| **Fed Funds Rate** | 5.25% | 5.25% | 5.25% | {today_str} |"""
 
     global_content = f"""| ดัชนี | ค่าล่าสุด | วันที่ |
 |-------|----------|----------|

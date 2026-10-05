@@ -16,23 +16,19 @@ export const CrossBorderSection: React.FC<CrossBorderSectionProps> = ({
   globalPolicyRates,
   yieldCurve,
   flow,
-  aiData = null,
   loadingPolicy = false,
   errorPolicy = null,
 }) => {
   const foreignRow = flow?.investors?.find(
     (i) => i.investor_type.toLowerCase().includes('foreign') || i.investor_type.includes('ต่างชาติ')
   )
-  const foreignNetMil = foreignRow?.net_value ? (foreignRow.net_value / 1e6).toFixed(1) : '—'
-  const isForeignBuy = (foreignRow?.net_value ?? 0) >= 0
+  const foreignNet = foreignRow?.net_value
+  const hasForeignNet = foreignNet != null && Number.isFinite(foreignNet)
+  const foreignNetMil = hasForeignNet ? (foreignNet / 1e6).toFixed(1) : null
+  const isForeignBuy = hasForeignNet && foreignNet > 0
 
   const us10y = yieldCurve?.yields?.find((y) => y.maturity === '10 Yr')?.yield_percent
   const spread10y2y = yieldCurve?.spread_10y_2y_bps
-
-  const crossAssets = (aiData?.asset_allocation ?? []).filter((a) => {
-    const name = (a.asset_class || '').toLowerCase()
-    return name.includes('usd/thb') || name.includes('dollar') || name.includes('thb') || a.asset_bucket === 'fx' || a.region === 'Thailand'
-  })
 
   return (
     <div className="space-y-6">
@@ -99,10 +95,10 @@ export const CrossBorderSection: React.FC<CrossBorderSectionProps> = ({
                 <span className="text-[10px] text-zinc-500 block">SET Foreign Net Flow</span>
                 <span
                   className={`font-mono text-xl font-extrabold mt-0.5 block ${
-                    isForeignBuy ? 'text-emerald-700' : 'text-rose-600'
+                    isForeignBuy ? 'text-emerald-700' : hasForeignNet && foreignNet < 0 ? 'text-rose-600' : 'text-zinc-500'
                   }`}
                 >
-                  {isForeignBuy ? `+${foreignNetMil}` : foreignNetMil} M
+                  {foreignNetMil !== null ? `${isForeignBuy ? '+' : ''}${foreignNetMil} M` : '—'}
                 </span>
                 <span className="text-[10px] text-zinc-400 mt-1 block">ยอดซื้อขายต่างชาติ</span>
               </div>
@@ -142,75 +138,6 @@ export const CrossBorderSection: React.FC<CrossBorderSectionProps> = ({
             </div>
           </div>
         </div>
-      </div>
-
-      {/* 3. AI Transmission Channel Analysis */}
-      <div className="rounded-2xl border border-edge bg-panel p-5 shadow-sm space-y-3">
-        <div className="flex items-center justify-between border-b border-slate-100 pb-2">
-          <div>
-            <h3 className="text-sm font-semibold text-zinc-900 flex items-center gap-2">
-              <span>AI สรุปผลกระทบต่อนโยบายการเงินและตลาดไทย (Transmission Synthesis)</span>
-            </h3>
-            <p className="text-xs text-zinc-500">
-              สังเคราะห์การส่งผ่านผลกระทบข้ามพรมแดนจาก AI ตามข้อมูลจริงในรอบนี้
-            </p>
-          </div>
-          <SourceProvenanceBadge origin="ai" evaluatedAt={aiData?.evaluated_at} compact />
-        </div>
-
-        {aiData ? (
-          <div className="space-y-3 text-xs">
-            {aiData.divergence_note && (
-              <div className="rounded-xl border border-sky-100 bg-sky-50/50 p-3.5 leading-relaxed text-zinc-700">
-                <div className="font-semibold text-sky-950 mb-1">
-                  🌐 การประเมินความแตกต่างเชิงนโยบาย/การเติบโต (Divergence Note):
-                </div>
-                <p>{aiData.divergence_note}</p>
-              </div>
-            )}
-
-            {aiData.thailand_market_stance?.rationale && (
-              <div className="rounded-xl border border-indigo-100 bg-indigo-50/40 p-3.5 leading-relaxed text-zinc-700">
-                <div className="font-semibold text-indigo-950 mb-1">
-                  🇹🇭 มุมมอง AI ต่อความเชื่อมโยงกับตลาดทุนไทย (Thai Market Rationale):
-                </div>
-                <p>{aiData.thailand_market_stance.rationale}</p>
-              </div>
-            )}
-
-            {/* Cross-border and FX Asset Allocations */}
-            {crossAssets.length > 0 && (
-              <div className="space-y-2">
-                <div className="font-semibold text-zinc-800">
-                  คำแนะนำสินทรัพย์ที่ได้รับผลกระทบจากปัจจัยข้ามพรมแดน:
-                </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  {crossAssets.map((asset, idx) => (
-                    <div key={idx} className="rounded-xl border border-sky-100 bg-panel p-3.5 space-y-1.5">
-                      <div className="flex items-center justify-between">
-                        <span className="font-semibold text-zinc-900">{asset.asset_class}</span>
-                        <span className="rounded-md border border-sky-200 bg-sky-50 px-2 py-0.5 text-[10px] font-bold text-sky-800 uppercase">
-                          {asset.stance}
-                        </span>
-                      </div>
-                      <p className="text-[11px] text-zinc-600 leading-relaxed">{asset.rationale}</p>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {!aiData.divergence_note && !aiData.thailand_market_stance?.rationale && crossAssets.length === 0 && (
-              <div className="rounded-xl border border-slate-100 bg-slate-50 p-4 text-xs text-zinc-500">
-                บทวิเคราะห์ AI ในรอบนี้ยังไม่ได้ให้ข้อสังเกตเจาะจงเกี่ยวกับส่วนต่างนโยบายหรือผลกระทบข้ามพรมแดน
-              </div>
-            )}
-          </div>
-        ) : (
-          <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50/60 p-6 text-center text-xs text-zinc-500">
-            ยังไม่มีบทสรุป AI ข้ามพรมแดนในรอบนี้ (สามารถกดปุ่ม &ldquo;อัปเดตบทวิเคราะห์&rdquo; ที่แถบด้านบนเพื่อเริ่มงาน)
-          </div>
-        )}
       </div>
     </div>
   )

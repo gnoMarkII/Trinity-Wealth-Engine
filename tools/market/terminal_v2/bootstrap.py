@@ -11,6 +11,8 @@ from tools.market.terminal_v2.adapters.bis_adapter import BisPolicyRatesHttpAdap
 from tools.market.terminal_v2.adapters.cboe_commodity_vol_adapter import CboeCommodityVolAdapter
 from tools.market.terminal_v2.adapters.cboe_options_adapter import CboeOptionsAdapter
 from tools.market.terminal_v2.adapters.cftc_cot_adapter import CftcCotHttpAdapter
+from tools.market.terminal_v2.adapters.crypto_benchmark_adapter import CryptoBenchmarkAdapter
+from tools.market.terminal_v2.adapters.defillama_stablecoin_adapter import DefiLlamaStablecoinsAdapter
 from tools.market.terminal_v2.adapters.etf_flows_adapter import SoSoValueEtfFlowsAdapter
 from tools.market.terminal_v2.adapters.finra_adapter import FinraAdapter
 from tools.market.terminal_v2.adapters.fred_csv_adapter import FredCsvAdapter
@@ -26,6 +28,7 @@ from tools.market.terminal_v2.adapters.rss_news_adapter import RssNewsDiscoveryA
 from tools.market.terminal_v2.adapters.sec_edgar_adapter import SecEdgarAdapter
 from tools.market.terminal_v2.adapters.sec_th_adapter import SecThailandAdapter
 from tools.market.terminal_v2.adapters.settrade_adapter import SettradeAdapter
+from tools.market.terminal_v2.adapters.thaibma_adapter import ThaiBmaPublicAdapter
 from tools.market.terminal_v2.adapters.treasury_adapter import TreasuryAdapter
 from tools.market.terminal_v2.application.cache import ThreadSafeTTLCache
 from tools.market.terminal_v2.application.routing_service import DynamicRoutingService
@@ -98,6 +101,9 @@ def create_terminal_data_service(
     nasdaq_adapter = NasdaqHttpAdapter(cache=cache)
     sec_edgar_adapter = SecEdgarAdapter(cache=cache)
     rss_news_adapter = RssNewsDiscoveryAdapter(cache=cache)
+    thaibma_adapter = ThaiBmaPublicAdapter(cache=cache)
+    stablecoins_adapter = DefiLlamaStablecoinsAdapter(cache=cache)
+    crypto_benchmark_adapter = CryptoBenchmarkAdapter(cache=cache)
 
     return TerminalDataService(
         short_volume=finra_adapter,
@@ -112,12 +118,15 @@ def create_terminal_data_service(
         auction_history=treasury_adapter,
         thai_bond_market=sec_th_adapter,
         thai_public_debt=mof_adapter,
+        thai_yield_curve=thaibma_adapter,
         options_chain=cboe_options_adapter,
         commodity_vol=cboe_vol_adapter,
         metals_cot=cot_adapter,
         prediction_market=polymarket_adapter,
         thai_fund_allocation=sec_th_adapter,
         spot_etf_flows=soso_adapter,
+        stablecoin_supply=stablecoins_adapter,
+        crypto_benchmark=crypto_benchmark_adapter,
     )
 
 

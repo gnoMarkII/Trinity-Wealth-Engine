@@ -22,25 +22,25 @@ export const TreasuryAuctionDemandCard: React.FC<TreasuryAuctionDemandCardProps>
   const delta = activeDemand?.demand_delta
 
   return (
-    <div className={`rounded-xl border border-slate-800 bg-slate-900/90 p-5 shadow-lg backdrop-blur-sm ${className}`}>
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-3 border-b border-slate-800/80 pb-3">
+    <div className={`rounded-2xl border border-sky-100 bg-white/80 p-5 shadow-[0_8px_25px_rgba(14,165,233,0.06)] backdrop-blur-md ${className}`}>
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3 border-b border-sky-100/70 pb-3">
         <div>
-          <h3 className="text-base font-semibold text-slate-100 flex items-center gap-2">
+          <h3 className="text-base font-bold text-zinc-900 tracking-tight flex items-center gap-2">
             <span>US Treasury Auction Demand</span>
-            <span className="rounded-full bg-slate-800 text-slate-300 font-mono text-[10px] font-bold px-2 py-0.5">
+            <span className="rounded-full bg-sky-100 text-sky-800 font-mono text-[10px] font-bold px-2.5 py-0.5">
               FISCAL DATA
             </span>
           </h3>
-          <p className="text-xs text-slate-400">
+          <p className="text-xs text-zinc-500">
             Latest auction demand vs prior 8 completed auctions (Moving Average)
           </p>
         </div>
 
-        <div className="inline-flex rounded-lg border border-slate-800 bg-slate-950 p-1">
+        <div className="inline-flex rounded-lg border border-sky-200/80 bg-slate-100/80 p-1">
           <button
             type="button"
             className={`rounded px-3 py-1 text-xs font-semibold transition-colors ${
-              selectedTab === 'Note' ? 'bg-slate-800 text-slate-100' : 'text-slate-400 hover:text-slate-200'
+              selectedTab === 'Note' ? 'bg-white text-sky-800 shadow-xs' : 'text-zinc-600 hover:text-zinc-900'
             }`}
             onClick={() => setSelectedTab('Note')}
           >
@@ -49,7 +49,7 @@ export const TreasuryAuctionDemandCard: React.FC<TreasuryAuctionDemandCardProps>
           <button
             type="button"
             className={`rounded px-3 py-1 text-xs font-semibold transition-colors ${
-              selectedTab === 'Bill' ? 'bg-slate-800 text-slate-100' : 'text-slate-400 hover:text-slate-200'
+              selectedTab === 'Bill' ? 'bg-white text-sky-800 shadow-xs' : 'text-zinc-600 hover:text-zinc-900'
             }`}
             onClick={() => setSelectedTab('Bill')}
           >
@@ -61,37 +61,37 @@ export const TreasuryAuctionDemandCard: React.FC<TreasuryAuctionDemandCardProps>
       {activeDemand ? (
         <div className="space-y-4">
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            <div className="rounded-lg border border-slate-800 bg-slate-950/70 p-3">
-              <div className="text-[11px] text-slate-400">Latest Bid-to-Cover</div>
-              <div className="mt-1 font-mono text-xl font-bold text-slate-100">
+            <div className="rounded-xl border border-slate-100 bg-slate-50/80 p-3.5 transition-all hover:bg-white hover:shadow-xs hover:border-sky-200">
+              <div className="text-[11px] font-medium text-zinc-500 uppercase tracking-wider">Latest Bid-to-Cover</div>
+              <div className="mt-1 font-mono text-xl font-bold text-zinc-900">
                 {btc !== null && btc !== undefined ? `${btc.toFixed(2)}x` : 'N/A'}
               </div>
-              <div className="text-[10px] text-slate-500">As of {activeDemand.latest_auction_date}</div>
+              <div className="mt-0.5 text-[10px] text-zinc-400">As of {activeDemand.latest_auction_date}</div>
             </div>
 
-            <div className="rounded-lg border border-slate-800 bg-slate-950/70 p-3">
-              <div className="text-[11px] text-slate-400">Prior 8-Auction Mean</div>
-              <div className="mt-1 font-mono text-xl font-bold text-slate-300">
+            <div className="rounded-xl border border-slate-100 bg-slate-50/80 p-3.5 transition-all hover:bg-white hover:shadow-xs hover:border-sky-200">
+              <div className="text-[11px] font-medium text-zinc-500 uppercase tracking-wider">Prior 8-Auction Mean</div>
+              <div className="mt-1 font-mono text-xl font-bold text-zinc-700">
                 {priorMean !== null && priorMean !== undefined ? `${priorMean.toFixed(2)}x` : 'N/A (< 3)'}
               </div>
-              <div className="text-[10px] text-slate-500">{activeDemand.sample_count} samples</div>
+              <div className="mt-0.5 text-[10px] text-zinc-400">{activeDemand.sample_count} samples</div>
             </div>
 
-            <div className="rounded-lg border border-slate-800 bg-slate-950/70 p-3">
-              <div className="text-[11px] text-slate-400">Demand Delta</div>
+            <div className="rounded-xl border border-slate-100 bg-slate-50/80 p-3.5 transition-all hover:bg-white hover:shadow-xs hover:border-sky-200">
+              <div className="text-[11px] font-medium text-zinc-500 uppercase tracking-wider">Demand Delta</div>
               <div className={`mt-1 font-mono text-xl font-bold ${
-                (delta ?? 0) >= 0 ? 'text-emerald-400' : 'text-rose-400'
+                (delta ?? 0) >= 0 ? 'text-emerald-600' : 'text-rose-600'
               }`}>
                 {delta !== null && delta !== undefined ? `${delta >= 0 ? '+' : ''}${delta.toFixed(2)}x` : 'N/A'}
               </div>
-              <div className="text-[10px] text-slate-500">Latest - Prior Mean</div>
+              <div className="mt-0.5 text-[10px] text-zinc-400">Latest - Prior Mean</div>
             </div>
 
-            <div className="rounded-lg border border-slate-800 bg-slate-950/70 p-3">
-              <div className="text-[11px] text-slate-400">
+            <div className="rounded-xl border border-slate-100 bg-slate-50/80 p-3.5 transition-all hover:bg-white hover:shadow-xs hover:border-sky-200">
+              <div className="text-[11px] font-medium text-zinc-500 uppercase tracking-wider">
                 {activeDemand.security_type === 'Bill' ? 'Investment Rate' : 'High Yield'}
               </div>
-              <div className="mt-1 font-mono text-xl font-bold text-sky-400">
+              <div className="mt-1 font-mono text-xl font-bold text-sky-700">
                 {activeDemand.security_type === 'Bill'
                   ? (activeDemand.latest_high_investment_rate !== null && activeDemand.latest_high_investment_rate !== undefined
                       ? `${activeDemand.latest_high_investment_rate.toFixed(3)}%`
@@ -100,28 +100,28 @@ export const TreasuryAuctionDemandCard: React.FC<TreasuryAuctionDemandCardProps>
                       ? `${activeDemand.latest_high_yield.toFixed(3)}%`
                       : 'N/A')}
               </div>
-              <div className="text-[10px] text-slate-500">Awarded rate</div>
+              <div className="mt-0.5 text-[10px] text-zinc-400">Awarded rate</div>
             </div>
           </div>
 
-          <div className="flex flex-wrap items-center justify-between text-xs text-slate-400 border-t border-slate-800/80 pt-3">
+          <div className="flex flex-wrap items-center justify-between text-xs text-zinc-500 border-t border-sky-100/70 pt-3">
             <div>
-              Offering: <span className="font-mono text-slate-200">${(activeDemand.latest_offering_amount_usd ?? 0).toLocaleString()}</span> • Accepted: <span className="font-mono text-slate-200">${(activeDemand.latest_total_accepted_usd ?? 0).toLocaleString()}</span>
+              Offering: <span className="font-mono font-semibold text-zinc-800">${(activeDemand.latest_offering_amount_usd ?? 0).toLocaleString()}</span> • Accepted: <span className="font-mono font-semibold text-zinc-800">${(activeDemand.latest_total_accepted_usd ?? 0).toLocaleString()}</span>
             </div>
-            <div className="text-slate-500">
-              Source: {activeDemand.source}
+            <div className="text-zinc-500">
+              Source: <span className="font-medium text-zinc-700">{activeDemand.source}</span>
             </div>
           </div>
 
-          <div className="rounded-lg border border-amber-900/40 bg-amber-950/20 p-2.5 text-[11px] text-amber-300 flex items-start gap-2">
-            <span className="shrink-0">⚠️</span>
-            <span>
+          <div className="rounded-xl border border-amber-200/80 bg-amber-50/70 p-3 text-[11px] text-amber-900 flex items-start gap-2">
+            <span className="shrink-0 text-base leading-none">⚠️</span>
+            <span className="leading-relaxed">
               <strong>Contract Invariant:</strong> Auction tail is intentionally excluded as US Treasury Fiscal Data does not provide When-Issued (WI) market yields. Moving average is computed across identical security type and term only.
             </span>
           </div>
         </div>
       ) : (
-        <div className="py-4 text-center text-xs text-slate-500">
+        <div className="py-4 text-center text-xs text-zinc-500">
           No auction demand snapshot available for {selectedTab}.
         </div>
       )}

@@ -17,14 +17,18 @@ from api.schemas.terminal_v2_schemas import (
     OptionsMaxPainResponse,
     OptionsPutCallRatiosResponse,
     PredictionMarketResponse,
+    CryptoBenchmarkResponse,
+    CryptoMacroLiquidityResponse,
     ReferenceRatesResponse,
     SpotEtfFlowResponse,
+    StablecoinSupplyResponse,
     ThaiBondMarketStatsResponse,
     ThaiCorporateBondIssuanceResponse,
     ThaiFundAssetAllocationResponse,
     ThaiFundFlowResponse,
     ThaiPublicDebtResponse,
     ThaiRetailGoldResponse,
+    ThaiYieldCurveResponse,
     TreasuryAuctionResponse,
     TreasuryYieldCurveResponse,
     UsNationalDebtResponse,
@@ -32,6 +36,8 @@ from api.schemas.terminal_v2_schemas import (
     from_domain_bond_issuance,
     from_domain_bond_stats,
     from_domain_breadth,
+    from_domain_crypto_benchmark,
+    from_domain_crypto_liquidity,
     from_domain_debt,
     from_domain_etf_flows,
     from_domain_flow,
@@ -46,6 +52,8 @@ from api.schemas.terminal_v2_schemas import (
     from_domain_put_call,
     from_domain_reference_rates,
     from_domain_short_volume,
+    from_domain_stablecoins,
+    from_domain_thai_yield_curve,
     from_domain_valuation,
     from_domain_yield_curve,
     FinancialStressResponse,
@@ -463,6 +471,25 @@ def get_thai_public_debt(
 
 
 @router.get(
+    "/thailand/yield-curve",
+    response_model=ThaiYieldCurveResponse,
+    summary="Fetch Thai Government Bond Model Yield Curve from ThaiBMA",
+)
+def get_thai_yield_curve(
+    date: Optional[str] = Query(None, description="Observation date ISO YYYY-MM-DD (defaults to latest)"),
+    service: TerminalDataServicePort = Depends(get_terminal_data_service),
+):
+    try:
+        curve = service.get_thai_yield_curve(as_of_date=date)
+        return from_domain_thai_yield_curve(curve)
+    except DataUnavailableError as exc:
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=str(exc))
+    except ProviderError as exc:
+        code = exc.status_code or status.HTTP_502_BAD_GATEWAY
+        raise HTTPException(status_code=code, detail=str(exc))
+
+
+@router.get(
     "/signals/prediction-markets",
     response_model=List[PredictionMarketResponse],
     summary="Fetch active prediction markets and implied odds from Polymarket",
@@ -500,6 +527,61 @@ def get_spot_etf_flows(
     except ProviderError as exc:
         code = exc.status_code or status.HTTP_502_BAD_GATEWAY
         raise HTTPException(status_code=code, detail=str(exc))
+
+
+@router.get(
+    "/crypto/stablecoins",
+    response_model=StablecoinSupplyResponse,
+    summary="Fetch global USD stablecoin circulating supply and 7d/30d growth metrics from DeFiLlama",
+)
+def get_stablecoin_supply(
+    service: TerminalDataServicePort = Depends(get_terminal_data_service),
+):
+    try:
+        snap = service.get_stablecoin_supply()
+        return from_domain_stablecoins(snap)
+    except DataUnavailableError as exc:
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=str(exc))
+    except ProviderError as exc:
+        code = exc.status_code or status.HTTP_502_BAD_GATEWAY
+        raise HTTPException(status_code=code, detail=str(exc))
+
+
+@router.get(
+    "/crypto/benchmark",
+    response_model=CryptoBenchmarkResponse,
+    summary="Fetch Bitcoin spot price benchmark, returns, and BTC/Gold valuation ratio",
+)
+def get_crypto_benchmark(
+    service: TerminalDataServicePort = Depends(get_terminal_data_service),
+):
+    try:
+        snap = service.get_crypto_benchmark()
+        return from_domain_crypto_benchmark(snap)
+    except DataUnavailableError as exc:
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=str(exc))
+    except ProviderError as exc:
+        code = exc.status_code or status.HTTP_502_BAD_GATEWAY
+        raise HTTPException(status_code=code, detail=str(exc))
+
+
+@router.get(
+    "/macro/crypto-liquidity",
+    response_model=CryptoMacroLiquidityResponse,
+    summary="Fetch synthesized Level 1 Crypto Macro Liquidity & Risk Appetite proxy",
+)
+def get_crypto_macro_liquidity(
+    service: TerminalDataServicePort = Depends(get_terminal_data_service),
+):
+    try:
+        snap = service.get_crypto_macro_liquidity()
+        return from_domain_crypto_liquidity(snap)
+    except DataUnavailableError as exc:
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=str(exc))
+    except ProviderError as exc:
+        code = exc.status_code or status.HTTP_502_BAD_GATEWAY
+        raise HTTPException(status_code=code, detail=str(exc))
+
 
 
 # ============================================================================

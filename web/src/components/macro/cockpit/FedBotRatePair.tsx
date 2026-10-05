@@ -116,7 +116,7 @@ export const FedBotRatePair: React.FC<FedBotRatePairProps> = ({
             </div>
             <div className="font-mono text-2xl font-extrabold text-sky-900">
               {spreadVsBot !== undefined && spreadVsBot !== null
-                ? `${spreadVsBot > 0 ? '+' : ''}${spreadVsBot.toFixed(0)} bps`
+                ? `${spreadVsBot > 0 ? '+' : ''}${spreadVsBot.toFixed(Number.isInteger(spreadVsBot) ? 0 : 1)} bps`
                 : 'ไม่มีข้อมูล'}
             </div>
           </div>

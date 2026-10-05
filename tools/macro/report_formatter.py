@@ -1,8 +1,10 @@
 import json
 import os
 import re
+import hashlib
 from datetime import datetime
 from pathlib import Path
+from filelock import FileLock
 
 from tools.archivist.core import VAULT_PATH, _atomic_write_text
 from schemas.macro_schemas import AssetStance, MacroStrategyDirection
@@ -96,7 +98,12 @@ def _display_time_horizon(value: str) -> str:
     return str(value or "3-6 Months")
 
 
-def format_macro_strategy_report(direction: MacroStrategyDirection) -> str:
+def format_macro_strategy_report(
+    direction: MacroStrategyDirection,
+    *,
+    sector_analysis: dict | None = None,
+    strategy_report_id: str | None = None,
+) -> str:
     """Build a clean markdown report without source-level mojibake literals."""
     today = datetime.now().strftime("%Y-%m-%d")
     now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -118,6 +125,9 @@ def format_macro_strategy_report(direction: MacroStrategyDirection) -> str:
         f"> **ความสอดคล้อง Quant-Narrative:** {direction.quant_narrative_alignment}",
         f"> **ประเมินเมื่อ (Evaluated At):** {direction.evaluated_at}\n",
     ]
+
+    if strategy_report_id:
+        lines.insert(3, f"strategy_report_id: {strategy_report_id}")
 
     reg_probs = getattr(direction, "regime_probabilities", {})
     if reg_probs:
@@ -197,6 +207,9 @@ def format_macro_strategy_report(direction: MacroStrategyDirection) -> str:
 
         lines.append("### 🇹🇭 Thailand Market Stance & Microstructure (สรุปสภาวะตลาดทุนไทย)\n")
         lines.append("> [!note]- **สรุปทัศนะตลาดหุ้นและสภาพคล่องไทย (Microstructure Stance):**")
+        thai_rationale = thai_stance.get("rationale")
+        if thai_rationale:
+            lines.append(f"> - **บทสรุปทัศนะ AI (Macro Stance Narrative):** {thai_rationale}")
         if flow_mb is not None:
             flow_label = "ต่างชาติซื้อสุทธิ" if flow_mb > 0 else "ต่างชาติขายสุทธิ"
             lines.append(f"> - **SET Foreign Net Flow:** {flow_mb:,.2f} ล้านบาท ({flow_label})")
@@ -318,11 +331,115 @@ def format_macro_strategy_report(direction: MacroStrategyDirection) -> str:
         "ไม่ถือเป็นคำแนะนำการลงทุนรายบุคคล คำสั่งซื้อขาย หรือการชี้ชวนให้ซื้อขายหลักทรัพย์ใดๆ ผู้ใช้งานควรประเมินข้อจำกัดและความเสี่ยงของพอร์ตการลงทุนก่อนดำเนินการเสมอ"
     )
 
+    if sector_analysis:
+        lines.extend(["## Sector Rotation Context", ""])
+        lines.append(f"Analysis status: `{sector_analysis.get('analysis_status') or 'unavailable'}`")
+        if sector_analysis.get("unavailable_reason"):
+            lines.append(f"Unavailable reason: `{sector_analysis['unavailable_reason']}`")
+        lines.append(f"Snapshot: `{sector_analysis.get('snapshot_id') or 'unavailable'}` · as of `{sector_analysis.get('as_of_date') or 'unavailable'}`")
+        if sector_analysis.get("summary_th"):
+            lines.extend(["", str(sector_analysis["summary_th"])])
+        for metric in sector_analysis.get("resolved_metrics", []) or []:
+            if not isinstance(metric, dict):
+                continue
+            value = metric.get("numeric_value")
+            rendered = f"{float(value):+.2f} {metric.get('unit', '')}" if isinstance(value, (int, float)) else str(metric.get("categorical_value") or "unavailable")
+            lines.append(f"- {metric.get('ticker', '')} `{metric.get('metric_ref', '')}`: {rendered}; horizon {metric.get('horizon', '')}; as of {metric.get('metric_as_of', '')}.")
+        if sector_analysis.get("validation_warnings"):
+            lines.append("- Some LLM sector claims were rejected by deterministic reference/value validation.")
+        lines.append("")
+
+    if strategy_report_id:
+        lines.append(f"\n[Open canonical report](/api/macro/reports/{strategy_report_id})")
     raw_markdown = "\n".join(lines)
     return repair_mojibake(raw_markdown)
 
 
 _STRATEGY_SUBDIR = "30_Knowledge_Base/Strategies"
+
+
+def _strategy_report_id(run_text: str) -> str:
+    safe_run_id = re.sub(r"[^A-Za-z0-9_-]", "_", run_text)[:80] or "unknown"
+    run_hash = hashlib.sha256(run_text.encode("utf-8")).hexdigest()[:10]
+    return f"macro_report_{safe_run_id}_{run_hash}"
+
+
+def _validate_sector_report_links(payload: dict) -> None:
+    """Keep report-level, analysis-level, and resolved metric snapshot refs aligned."""
+    sector_analysis = payload.get("sector_analysis")
+    snapshot_ref = payload.get("sector_snapshot_id")
+    if not isinstance(sector_analysis, dict):
+        if snapshot_ref:
+            raise RuntimeError("sector_report_analysis_missing_for_snapshot")
+        return
+
+    analysis_ref = sector_analysis.get("snapshot_id")
+    status = sector_analysis.get("analysis_status")
+    if snapshot_ref and snapshot_ref != analysis_ref:
+        raise RuntimeError("sector_report_snapshot_link_mismatch")
+    if status in {"available", "limited"} and (not snapshot_ref or analysis_ref != snapshot_ref):
+        raise RuntimeError("sector_report_snapshot_link_missing")
+
+    resolved = sector_analysis.get("resolved_metrics") or []
+    if status == "unavailable" and (resolved or sector_analysis.get("fact_claims") or sector_analysis.get("watch_conditions")):
+        raise RuntimeError("unavailable_sector_report_contains_claims")
+    for claim in resolved:
+        if not isinstance(claim, dict):
+            raise RuntimeError("sector_report_resolved_metric_shape_invalid")
+        input_refs = claim.get("input_refs") or []
+        if (not analysis_ref or claim.get("snapshot_id") != analysis_ref
+                or analysis_ref not in input_refs):
+            raise RuntimeError("sector_report_metric_snapshot_ref_mismatch")
+
+
+def _load_committed_strategy_report(report_id: str, vault_base: Path) -> tuple[dict, dict] | None:
+    from tools.archivist.artifact_store import ArtifactError, DurableArtifactStore
+    from tools.archivist.composition import build_knowledge_write_port
+    from tools.archivist.vault_paths import VaultPaths
+
+    paths = VaultPaths(vault_base)
+    port = build_knowledge_write_port(vault_paths=paths)
+    idempotency_key = f"macro-strategy-report:{report_id}"
+    receipt = port.get_receipt(idempotency_key=idempotency_key)
+    if receipt is None:
+        return None
+    if not receipt.is_success or not receipt.note_id or not receipt.revision_id:
+        return None
+    try:
+        artifact = DurableArtifactStore(paths).get_revision_artifact(receipt.note_id, receipt.revision_id)
+    except ArtifactError as exc:
+        raise RuntimeError("macro_strategy_report_evidence_integrity_failure") from exc
+    payload = json.loads(artifact.body)
+    if payload.get("strategy_report_id") != report_id:
+        raise RuntimeError("macro_strategy_report_artifact_identity_mismatch")
+    evidence = {
+        "note_id": receipt.note_id,
+        "revision_id": receipt.revision_id,
+        "relative_path": receipt.relative_path,
+        "content_hash": receipt.content_hash,
+        "artifact_set_hash": receipt.artifact_set_hash,
+        "idempotency_key": receipt.idempotency_key,
+    }
+    return payload, evidence
+
+
+def _stage_strategy_report(payload: dict, vault_base: Path) -> tuple[Path, dict]:
+    from tools.archivist.runtime_layout import runtime_root_for
+
+    report_id = str(payload["strategy_report_id"])
+    pending_path = runtime_root_for(vault_base, create=True) / "macro_strategy_reports" / f"{report_id}.json"
+    pending_path.parent.mkdir(parents=True, exist_ok=True)
+    lock_path = pending_path.with_suffix(".lock")
+    with FileLock(str(lock_path), timeout=30):
+        if pending_path.exists():
+            staged = json.loads(pending_path.read_text(encoding="utf-8"))
+            if staged.get("strategy_report_id") != report_id:
+                raise RuntimeError("pending_macro_strategy_report_identity_mismatch")
+            _validate_sector_report_links(staged)
+            return pending_path, staged
+        _validate_sector_report_links(payload)
+        _atomic_write_text(pending_path, json.dumps(payload, ensure_ascii=False, sort_keys=True, indent=2))
+        return pending_path, payload
 
 
 def write_strategy_json_sidecar(
@@ -335,7 +452,11 @@ def write_strategy_json_sidecar(
     evaluated_sources: list[str] | None = None,
     run_id: str | None = None,
     job_id: str | None = None,
-) -> Path:
+    run_started_at: str | None = None,
+    sector_snapshot_id: str | None = None,
+    sector_analysis: dict | None = None,
+    return_canonical_payload: bool = False,
+) -> Path | tuple[Path, dict]:
     """เขียน direction เป็น JSON sidecar คู่กับรายงาน .md ที่ Archivist จะบันทึกทีหลัง
 
     เขียนตรงจาก Python (atomic, ไม่ผ่าน Archivist LLM tool-call) เพราะเนื้อหา JSON
@@ -346,9 +467,8 @@ def write_strategy_json_sidecar(
     vault_base = Path(os.getenv("OBSIDIAN_VAULT_PATH", str(VAULT_PATH))).resolve()
 
     dashboard_indicators = build_dashboard_indicators(direction, observable_registry, vault_base)
-    persist_indicator_series(vault_base, dashboard_indicators)
-
-    # Re-verify chart_available now that latest points are saved
+    # Predict chart availability from the current point plus the existing series,
+    # without changing any projection before the canonical report is committed.
     for ind in dashboard_indicators:
         s_key = ind.get("series_key", "")
         if ind.get("value") is not None:
@@ -362,6 +482,8 @@ def write_strategy_json_sidecar(
                     series_data = json.loads(path.read_text(encoding="utf-8"))
                     pts = series_data.get("points", [])
                     distinct_dates = {p.get("observed_at") for p in pts if isinstance(p, dict) and "observed_at" in p}
+                    if ind.get("observed_at"):
+                        distinct_dates.add(ind["observed_at"])
                     ind["chart_available"] = len(distinct_dates) >= 2
             except Exception:
                 ind["chart_available"] = False
@@ -374,21 +496,146 @@ def write_strategy_json_sidecar(
     payload["run_id"] = run_id or f"run_{evaluated_date}_{int(datetime.now().timestamp())}"
     payload["job_id"] = job_id or payload["run_id"]
     payload["snapshot_id"] = f"Macro_Strategy_Direction_{evaluated_date}"
+    payload["sector_snapshot_id"] = sector_snapshot_id
+    if hasattr(sector_analysis, "model_dump"):
+        sector_analysis = sector_analysis.model_dump(mode="json")
+    elif sector_analysis is not None and not isinstance(sector_analysis, dict):
+        raise TypeError("sector_analysis_must_be_a_mapping_or_pydantic_model")
+    payload["sector_analysis"] = sector_analysis
+    payload["run_started_at"] = run_started_at or datetime.now().astimezone().isoformat()
+    run_text = str(payload["run_id"])
+    report_id = _strategy_report_id(run_text)
+    payload["strategy_report_id"] = report_id
     if observable_registry:
         payload["observable_registry"] = {
             k: (v.model_dump(mode="json") if hasattr(v, "model_dump") else v)
             for k, v in observable_registry.items()
         }
-
     from tools.archivist.vault_paths import VaultPaths
     vp = VaultPaths(vault_base)
-    if vp.layout_version >= 2 and len(evaluated_date) >= 7:
-        target_dir = vault_base / "30_Knowledge_Base" / "Macroeconomics" / "Strategies" / evaluated_date[:4] / evaluated_date[5:7]
+    preflight_dir = (vault_base / "30_Knowledge_Base" / "Macroeconomics" / "Strategies" / evaluated_date[:4] / evaluated_date[5:7]
+                     if vp.layout_version >= 2 and len(evaluated_date) >= 7 else vault_base / _STRATEGY_SUBDIR)
+    preflight_json = preflight_dir / f"Macro_Strategy_Direction_{evaluated_date}.json"
+    preflight_latest = (vault_base / "30_Knowledge_Base" / "Macroeconomics" / "Strategies"
+                        if vp.layout_version >= 2 else vault_base / _STRATEGY_SUBDIR) / "Macro_Strategy_Latest.json"
+    from tools.archivist.maintenance_guard import assert_write_allowed
+    assert_write_allowed(preflight_json)
+    assert_write_allowed(preflight_latest)
+    existing = _load_committed_strategy_report(report_id, vault_base)
+    pending_path = None
+    if existing:
+        payload, archive_ref = existing
+        dashboard_indicators = payload.get("dashboard_indicators", [])
+    else:
+        pending_path, payload = _stage_strategy_report(payload, vault_base)
+        dashboard_indicators = payload.get("dashboard_indicators", [])
+        archive_ref = _archive_strategy_report(payload, vault_base)
+        pending_path.unlink(missing_ok=True)
+    projection_date = str(payload.get("snapshot_id", "")).removeprefix("Macro_Strategy_Direction_") or evaluated_date
+    if vp.layout_version >= 2 and len(projection_date) >= 7:
+        target_dir = vault_base / "30_Knowledge_Base" / "Macroeconomics" / "Strategies" / projection_date[:4] / projection_date[5:7]
     else:
         target_dir = vault_base / _STRATEGY_SUBDIR
-    json_path = target_dir / f"Macro_Strategy_Direction_{evaluated_date}.json"
-    from tools.archivist.maintenance_guard import assert_write_allowed
+    json_path = target_dir / f"Macro_Strategy_Direction_{projection_date}.json"
+    latest_dir = (vault_base / "30_Knowledge_Base" / "Macroeconomics" / "Strategies"
+                  if vp.layout_version >= 2 else vault_base / _STRATEGY_SUBDIR)
+    latest_manifest = latest_dir / "Macro_Strategy_Latest.json"
     assert_write_allowed(json_path)
-    target_dir.mkdir(parents=True, exist_ok=True)
-    _atomic_write_text(json_path, json.dumps(payload, ensure_ascii=False, indent=2))
-    return json_path
+    assert_write_allowed(latest_manifest)
+    payload["strategy_report_evidence"] = archive_ref
+    try:
+        persist_indicator_series(vault_base, dashboard_indicators)
+        target_dir.mkdir(parents=True, exist_ok=True)
+        lock = FileLock(str(json_path.with_suffix(json_path.suffix + ".lock")), timeout=15)
+        with lock:
+            publish_daily_projection = True
+            if json_path.exists():
+                try:
+                    current = json.loads(json_path.read_text(encoding="utf-8"))
+                    old_key = (str(current.get("evaluated_at", ""))[:10], str(current.get("run_started_at", "")))
+                    new_key = (str(payload.get("evaluated_at", ""))[:10], str(payload.get("run_started_at", "")))
+                    publish_daily_projection = new_key >= old_key
+                except (OSError, json.JSONDecodeError, AttributeError):
+                    publish_daily_projection = True
+            if publish_daily_projection:
+                _atomic_write_text(json_path, json.dumps(payload, ensure_ascii=False, indent=2))
+
+        # The durable latest pointer is published only after the canonical report commit.
+        latest_lock = FileLock(str(latest_manifest.with_suffix(latest_manifest.suffix + ".lock")), timeout=15)
+        with latest_lock:
+            publish_manifest = True
+            if latest_manifest.exists():
+                try:
+                    current = json.loads(latest_manifest.read_text(encoding="utf-8"))
+                    old_key = (str(current.get("evaluated_at", ""))[:10], str(current.get("run_started_at", "")))
+                    new_key = (str(payload.get("evaluated_at", ""))[:10], str(payload.get("run_started_at", "")))
+                    publish_manifest = new_key >= old_key
+                except (OSError, json.JSONDecodeError, AttributeError):
+                    publish_manifest = True
+            if publish_manifest:
+                manifest = {
+                    "strategy_report_id": payload["strategy_report_id"],
+                    "evaluated_at": payload.get("evaluated_at"),
+                    "run_started_at": payload.get("run_started_at"),
+                }
+                _atomic_write_text(latest_manifest, json.dumps(manifest, ensure_ascii=False, indent=2))
+    except Exception as exc:
+        # The committed report remains available by ID; projections can be rebuilt on retry.
+        import logging
+        logging.getLogger(__name__).warning(
+            "Committed Macro report projection failed (%s): %s", payload["strategy_report_id"], exc,
+        )
+    return (json_path, payload) if return_canonical_payload else json_path
+
+
+def _archive_strategy_report(payload: dict, vault_base: Path) -> dict:
+    """Commit an immutable report through the KnowledgeWritePort before projection."""
+    from application.knowledge.write_models import KnowledgeWriteCommand
+    from tools.archivist.artifact_store import DurableArtifactStore
+    from tools.archivist.composition import build_knowledge_write_port
+    from tools.archivist.vault_paths import VaultPaths
+
+    report_id = str(payload["strategy_report_id"])
+    document_key = f"macro:strategy_report:{report_id}"
+    body = json.dumps(payload, ensure_ascii=False, sort_keys=True, separators=(",", ":"), allow_nan=False)
+    if len(body.encode("utf-8")) > 4_500_000:
+        raise RuntimeError("macro_strategy_report_exceeds_safe_payload_limit")
+    command = KnowledgeWriteCommand(
+        operation="upsert_note",
+        idempotency_key=f"macro-strategy-report:{report_id}",
+        document_key=document_key,
+        entity_type="macro_strategy",
+        producer="macro-strategic-allocator",
+        producer_version="sector-rotation-v2",
+        actor="macro-strategy-report",
+        payload={
+            "metadata": {
+                "schema_version": 2,
+                "document_key": document_key,
+                "entity_type": "macro_strategy",
+                "title": f"Macro Strategy Report {payload.get('evaluated_at', '')}",
+                "as_of_date": str(payload.get("evaluated_at", ""))[:10],
+                "strategy_report_id": report_id,
+                "sector_snapshot_id": payload.get("sector_snapshot_id"),
+            },
+            "body": body,
+            "filename": f"Macro_Strategy_Report_{report_id}.md",
+            "profile_id": "published",
+        },
+    )
+    paths = VaultPaths(vault_base)
+    receipt = build_knowledge_write_port(vault_paths=paths).submit(command)
+    if not receipt.is_success or not receipt.note_id or not receipt.revision_id:
+        raise RuntimeError(f"macro_strategy_report_not_committed:{receipt.status}:{receipt.error_code or 'unknown'}")
+    artifact = DurableArtifactStore(paths).get_revision_artifact(receipt.note_id, receipt.revision_id)
+    archived = json.loads(artifact.body)
+    if archived.get("strategy_report_id") != report_id or archived != json.loads(body):
+        raise RuntimeError("macro_strategy_report_artifact_identity_mismatch")
+    return {
+        "note_id": receipt.note_id,
+        "revision_id": receipt.revision_id,
+        "relative_path": receipt.relative_path,
+        "content_hash": receipt.content_hash,
+        "artifact_set_hash": receipt.artifact_set_hash,
+        "idempotency_key": receipt.idempotency_key,
+    }

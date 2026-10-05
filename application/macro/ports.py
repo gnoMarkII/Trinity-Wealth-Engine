@@ -6,6 +6,9 @@ class StrategySnapshotPort(Protocol):
     def latest(self) -> Dict[str, Any]:
         ...
 
+    def report_by_id(self, strategy_report_id: str) -> Dict[str, Any]:
+        ...
+
 
 class IndicatorSeriesPort(Protocol):
     def load(self, series_key: str, range_name: str) -> List[Dict[str, Any]]:

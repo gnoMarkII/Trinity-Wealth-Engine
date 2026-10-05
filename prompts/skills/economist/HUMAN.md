@@ -1,3 +1,7 @@
 Please synthesize the NarrativeContext JSON based on the following data:
 
 {{context}}
+
+When the Deterministic Sector Rotation Snapshot is available, compare its dated sector evidence with the macro findings above. Return a `sector_analysis` section with a concise Thai interpretation, typed `fact_claims`, and at least 1-2 statistical `watch_conditions` defining key hypothetical threshold levels for leading, improving, or vulnerable sectors (e.g. tracking when a leading sector's momentum slows or when an improving sector breaks out). Each watch condition must specify `metric_ref` (e.g. `XLK.1M_excess_pp` with unit='percentage_points' and horizon='1M', or `XLF.relative_momentum` with unit='index' and horizon='current_weekly'), `operator` (e.g. '>', '<', 'crosses_above', 'crosses_below'), `future_threshold`, and a clear actionable `reason` in Thai explaining what market shift would be signaled. A fact claim must cite a metric reference exactly as shown (for example `XLK.1M_excess_pp`, `XLE.quadrant`, or `XLF.momentum_direction`). Use only supplied values and dates. Mark a quadrant change with the supplied semantic `event_ref`. Sector prices do not prove fund flows or macro causality, and they must not count as GDP, CPI, or other macro hard-data support.
+
+If the supplied `sector_context_status.status` is `unavailable`, do not invent sector facts or a sector interpretation. The application will return a typed unavailable section with the supplied reason while continuing the rest of the macro analysis.

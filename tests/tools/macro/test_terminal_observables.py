@@ -151,6 +151,61 @@ def test_build_rates_observables_from_mock_service():
     assert stress_obs.unit == "pts"
 
 
+def test_rates_include_dashboard_auctions_volatilities_and_global_policy_rates():
+    from tools.market.terminal_v2.domain.models import AuctionDemandSnapshot, CommodityVolSnapshot
+
+    service = MagicMock()
+    service.get_treasury_yield_curve.return_value = TreasuryYieldCurveSnapshot(
+        observation_date='2026-10-02', yields=(TreasuryYieldPoint('30 Yr', 4.8),),
+    )
+    service.get_global_policy_rates.return_value = GlobalPolicyRateSnapshot(
+        as_of_date='2026-10-04', rates=(
+            PolicyRateItem('US', 3.625, 'Midpoint', '2026-08', 'USD', 'Fed'),
+            PolicyRateItem('TH', 1.0, 'Repo', '2026-08', 'THB', 'BOT'),
+            PolicyRateItem('JP', 1.0, 'Call', '2026-08', 'JPY', 'BOJ'),
+        ),
+    )
+    def auction(security_type, security_term):
+        if security_type == 'Note':
+            raise RuntimeError('Note temporarily unavailable')
+        return AuctionDemandSnapshot(security_type, security_term, '2026-09-28', 2.99,
+                                     None, 3.5, 3.4, 1e10, 1e10, 2.8, 0.19, 8,
+                                     'Treasury', '2026-09-28', 0.0)
+    service.get_auction_demand_summary.side_effect = auction
+    service.get_commodity_volatility.side_effect = lambda symbol: CommodityVolSnapshot(
+        symbol, 'ETF options', '2026-10-02', 25.0, -0.5, 60.0, 252, 'normal',
+        'Cboe', '2026-10-02', 0.0,
+    )
+    observables = {o.observable_id: o for o in build_rates_observables(service, '2026-10-04')}
+    assert observables['obs_us_policy_rate_bis'].value == '3.625'
+    assert observables['obs_jp_policy_rate_bis'].value == '1.00'
+    assert observables['obs_ust_30_yr_yield'].value == '4.80'
+    assert observables['obs_treasury_auction_bid_to_cover_13w'].metadata['prior_mean_bid_to_cover'] == 2.8
+    assert 'obs_treasury_auction_bid_to_cover_10y' not in observables
+    for obs_id in ('obs_cboe_gold_volatility_gvz', 'obs_cboe_silver_volatility_vxslv', 'obs_cboe_oil_volatility_ovx'):
+        assert observables[obs_id].metadata['percentile_52w'] == 60.0
+
+
+def test_thai_verified_record_expires_and_missing_date_stays_unverified():
+    from tools.macro.adapters.thai_hard_data_adapter import ThaiHardDataAdapter, ThaiHardDataRecord
+
+    records = {
+        'TH_PUBLIC_DEBT_TOTAL': ThaiHardDataRecord(
+            'TH_PUBLIC_DEBT_TOTAL', 'Thailand Public Debt', 'MOF', 'Monthly', 'Million THB',
+            value=12000000, observed_at='2026-02-28', is_verified=True, status='verified',
+        ),
+        'TH_REAL_GDP': ThaiHardDataRecord(
+            'TH_REAL_GDP', 'Real GDP YoY', 'NESDC', 'Quarterly', '%',
+            value=2.3, is_verified=True, status='verified',
+        ),
+    }
+    observables = {o.observable_id: o for o in ThaiHardDataAdapter(override_records=records).as_observables('2026-10-04')}
+    assert observables['obs_th_public_debt_mof'].status == 'stale'
+    assert not observables['obs_th_public_debt_mof'].is_valid
+    assert observables['obs_th_gdp_nesdc'].observed_at == '1970-01-01'
+    assert not observables['obs_th_gdp_nesdc'].is_valid
+
+
 def test_build_thai_market_stance_aggregation():
     obs_list = [
         MarketObservable(
@@ -383,4 +438,3 @@ def test_ag215_regression_baseline_fixture_execution():
     assert "stale_rate" in scenarios
     assert "negative_spread" in scenarios
     assert "zero_spread" in scenarios
-

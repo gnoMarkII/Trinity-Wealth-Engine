@@ -555,6 +555,74 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/macro/sector-rotation/latest": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Sector Rotation Latest */
+        get: operations["get_sector_rotation_latest_api_macro_sector_rotation_latest_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/macro/sector-rotation/refresh": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Refresh Sector Rotation */
+        post: operations["refresh_sector_rotation_api_macro_sector_rotation_refresh_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/macro/sector-rotation/history": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Sector Rotation History */
+        get: operations["get_sector_rotation_history_api_macro_sector_rotation_history_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/macro/sector-rotation/snapshots/{snapshot_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Sector Rotation Snapshot */
+        get: operations["get_sector_rotation_snapshot_api_macro_sector_rotation_snapshots__snapshot_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/portfolio/latest": {
         parameters: {
             query?: never;
@@ -581,6 +649,23 @@ export interface paths {
         };
         /** Get Macro Dashboard */
         get: operations["get_macro_dashboard_api_macro_dashboard_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/macro/reports/{strategy_report_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Macro Report By Id */
+        get: operations["get_macro_report_by_id_api_macro_reports__strategy_report_id__get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -2404,6 +2489,11 @@ export interface components {
             asset_class: string;
             /** Asset Bucket */
             asset_bucket?: string | null;
+            /**
+             * Region
+             * @default Global
+             */
+            region: string;
             /** Stance */
             stance: string;
             /** Confidence */
@@ -4422,11 +4512,44 @@ export interface components {
              * @default []
              */
             report_references: components["schemas"]["MacroReferenceDTO"][];
+            /** Thailand Market Stance */
+            thailand_market_stance?: {
+                [key: string]: unknown;
+            } | null;
             /**
              * Warnings
              * @default []
              */
             warnings: components["schemas"]["WarningDTO"][];
+            /** Run Id */
+            run_id?: string | null;
+            /** Job Id */
+            job_id?: string | null;
+            /** Snapshot Id */
+            snapshot_id?: string | null;
+            /** Strategy Report Id */
+            strategy_report_id?: string | null;
+            /** Sector Snapshot Id */
+            sector_snapshot_id?: string | null;
+            /** Sector Analysis */
+            sector_analysis?: {
+                [key: string]: unknown;
+            } | null;
+            /** Run Started At */
+            run_started_at?: string | null;
+            /** Regional Assessments */
+            regional_assessments?: {
+                [key: string]: unknown;
+            } | null;
+            /** Observable Registry */
+            observable_registry?: {
+                [key: string]: unknown;
+            } | null;
+            /**
+             * Evaluated Sources
+             * @default []
+             */
+            evaluated_sources: string[];
         };
         /** MacroIndicatorDTO */
         MacroIndicatorDTO: {
@@ -4478,6 +4601,21 @@ export interface components {
              * @default false
              */
             chart_available: boolean;
+            /**
+             * Region
+             * @default Global
+             */
+            region: string;
+            /**
+             * Source Type
+             * @default provider
+             */
+            source_type: string;
+            /**
+             * Status
+             * @default verified
+             */
+            status: string;
         };
         /** MacroIndicatorSeriesDTO */
         MacroIndicatorSeriesDTO: {
@@ -5384,6 +5522,38 @@ export interface components {
             /** Price */
             price: number;
         };
+        /** QuadrantTransitionEvent */
+        QuadrantTransitionEvent: {
+            /** Event Id */
+            event_id: string;
+            /**
+             * Timeframe
+             * @enum {string}
+             */
+            timeframe: "daily" | "weekly";
+            /** Previous Valid At */
+            previous_valid_at: string;
+            /** Changed At */
+            changed_at?: string | null;
+            /** Confirmed At */
+            confirmed_at?: string | null;
+            /**
+             * From Quadrant
+             * @enum {string}
+             */
+            from_quadrant: "Leading" | "Weakening" | "Lagging" | "Improving";
+            /**
+             * To Quadrant
+             * @enum {string}
+             */
+            to_quadrant: "Leading" | "Weakening" | "Lagging" | "Improving";
+            /**
+             * Event Type
+             * @default confirmed_transition
+             * @enum {string}
+             */
+            event_type: "transition" | "confirmed_transition";
+        };
         /** ReferenceRatePointSchema */
         ReferenceRatePointSchema: {
             /** Code */
@@ -5450,6 +5620,21 @@ export interface components {
              */
             observable_refs: string[];
         };
+        /** RelativePricePoint */
+        RelativePricePoint: {
+            /** As Of */
+            as_of: string;
+            /** Sector Spy Rebased 100 */
+            sector_spy_rebased_100?: number | null;
+            /**
+             * Status
+             * @default available
+             * @enum {string}
+             */
+            status: "available" | "unavailable";
+            /** Reason */
+            reason?: string | null;
+        };
         /** RenamePortfolioRequestDTO */
         RenamePortfolioRequestDTO: {
             /** Name */
@@ -5486,6 +5671,43 @@ export interface components {
              * @enum {string}
              */
             action: "approve" | "refresh_sources";
+        };
+        /** ReturnMetric */
+        ReturnMetric: {
+            /** Absolute Return Pct */
+            absolute_return_pct?: number | null;
+            /** Excess Return Pp */
+            excess_return_pp?: number | null;
+            /** Relative Return Pct */
+            relative_return_pct?: number | null;
+            /** Start Date */
+            start_date?: string | null;
+            /** End Date */
+            end_date?: string | null;
+            /**
+             * Expected Sessions
+             * @default 0
+             */
+            expected_sessions: number;
+            /**
+             * Valid Sessions
+             * @default 0
+             */
+            valid_sessions: number;
+            /**
+             * Status
+             * @default unavailable
+             * @enum {string}
+             */
+            status: "available" | "partial" | "unavailable";
+            /**
+             * Freshness
+             * @default unknown
+             * @enum {string}
+             */
+            freshness: "fresh" | "stale" | "unknown";
+            /** Reason */
+            reason?: string | null;
         };
         /** RiskScenarioDTO */
         RiskScenarioDTO: {
@@ -5542,6 +5764,25 @@ export interface components {
              * @default []
              */
             warnings: components["schemas"]["WarningDTO"][];
+        };
+        /** RotationPoint */
+        RotationPoint: {
+            /** As Of */
+            as_of: string;
+            /** Relative Trend */
+            relative_trend?: number | null;
+            /** Relative Momentum */
+            relative_momentum?: number | null;
+            /** Quadrant */
+            quadrant?: ("Leading" | "Weakening" | "Lagging" | "Improving") | null;
+            /**
+             * Status
+             * @default available
+             * @enum {string}
+             */
+            status: "available" | "unavailable";
+            /** Reason */
+            reason?: string | null;
         };
         /** SCBAMBatchScanRequestDTO */
         SCBAMBatchScanRequestDTO: {
@@ -5819,6 +6060,294 @@ export interface components {
             stale_reason?: string | null;
             /** Limitations */
             limitations?: string[];
+        };
+        /** SectorBreadthDTO */
+        SectorBreadthDTO: {
+            /** Outperforming */
+            outperforming: number;
+            /** Valid Sectors */
+            valid_sectors: number;
+            /** Expected Sectors */
+            expected_sectors: number;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "complete" | "partial";
+            /** As Of */
+            as_of?: string | null;
+        };
+        /** SectorExcessRankDTO */
+        SectorExcessRankDTO: {
+            /** Ticker */
+            ticker: string;
+            /** Name */
+            name: string;
+            /** Excess Return Pp */
+            excess_return_pp: number;
+            /** As Of */
+            as_of?: string | null;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "available" | "partial";
+            /** Valid Sessions */
+            valid_sessions: number;
+            /** Expected Sessions */
+            expected_sessions: number;
+        };
+        /** SectorRotationHistoryDTO */
+        SectorRotationHistoryDTO: {
+            /** Snapshot Id */
+            snapshot_id: string;
+            /** Input Digest */
+            input_digest: string;
+            /** Formula Version */
+            formula_version: string;
+            /**
+             * Timeframe
+             * @enum {string}
+             */
+            timeframe: "daily" | "weekly";
+            /**
+             * Range
+             * @enum {string}
+             */
+            range: "3m" | "6m" | "1y" | "2y";
+            /** From Date */
+            from_date: string;
+            /** To Date */
+            to_date?: string | null;
+            /** Rows */
+            rows: components["schemas"]["SectorRotationHistoryRowDTO"][];
+        };
+        /** SectorRotationHistoryRowDTO */
+        SectorRotationHistoryRowDTO: {
+            /** Ticker */
+            ticker: string;
+            /** Name */
+            name: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "available" | "partial" | "unavailable";
+            /** Reason */
+            reason?: string | null;
+            /** Relative Price Base Date */
+            relative_price_base_date?: string | null;
+            /** History */
+            history?: components["schemas"]["RotationPoint"][];
+            /** Relative Price History */
+            relative_price_history?: components["schemas"]["RelativePricePoint"][];
+            /** Quadrant Transitions */
+            quadrant_transitions?: components["schemas"]["QuadrantTransitionEvent"][];
+        };
+        /** SectorRotationResponseDTO */
+        SectorRotationResponseDTO: {
+            /**
+             * Capability Status
+             * @enum {string}
+             */
+            capability_status: "enabled" | "disabled";
+            /**
+             * Refresh State
+             * @enum {string}
+             */
+            refresh_state: "idle" | "running" | "failed";
+            /** Retry After Seconds */
+            retry_after_seconds?: number | null;
+            /** Error Code */
+            error_code?: string | null;
+            /** Last Attempt At */
+            last_attempt_at?: string | null;
+            /** Expected Session */
+            expected_session?: string | null;
+            /**
+             * Freshness
+             * @default unknown
+             * @enum {string}
+             */
+            freshness: "fresh" | "stale" | "unknown";
+            /**
+             * Missing Sessions
+             * @default 0
+             */
+            missing_sessions: number;
+            /** Served At */
+            served_at: string;
+            /**
+             * Timeframe
+             * @enum {string}
+             */
+            timeframe: "daily" | "weekly";
+            /** Tail */
+            tail: number;
+            summary?: components["schemas"]["SectorRotationSummaryDTO"] | null;
+            snapshot?: components["schemas"]["SectorRotationSnapshotDTO"] | null;
+        };
+        /** SectorRotationRowDTO */
+        SectorRotationRowDTO: {
+            /** Ticker */
+            ticker: string;
+            /** Name */
+            name: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "available" | "partial" | "unavailable";
+            /** Reason */
+            reason?: string | null;
+            /**
+             * Returns Pct
+             * @default {}
+             */
+            returns_pct: {
+                [key: string]: number | null;
+            };
+            /**
+             * Return Metrics
+             * @default {}
+             */
+            return_metrics: {
+                [key: string]: components["schemas"]["ReturnMetric"];
+            };
+            /** Price As Of */
+            price_as_of?: string | null;
+            /** Rotation As Of */
+            rotation_as_of?: string | null;
+            /** Relative Strength */
+            relative_strength?: number | null;
+            /** Relative Price Base Date */
+            relative_price_base_date?: string | null;
+            /** Relative Trend */
+            relative_trend?: number | null;
+            /** Relative Momentum */
+            relative_momentum?: number | null;
+            /** Quadrant */
+            quadrant?: ("Leading" | "Weakening" | "Lagging" | "Improving") | null;
+            /** Quadrant Changed At */
+            quadrant_changed_at?: string | null;
+            /**
+             * Momentum Direction
+             * @enum {string}
+             */
+            momentum_direction: "rising" | "falling" | "flat" | "unavailable";
+            /**
+             * History
+             * @default []
+             */
+            history: components["schemas"]["RotationPoint"][];
+            /**
+             * Relative Price History
+             * @default []
+             */
+            relative_price_history: components["schemas"]["RelativePricePoint"][];
+            /**
+             * Quadrant Transitions
+             * @default []
+             */
+            quadrant_transitions: components["schemas"]["QuadrantTransitionEvent"][];
+        };
+        /** SectorRotationSnapshotDTO */
+        SectorRotationSnapshotDTO: {
+            /** Schema Version */
+            schema_version: string;
+            /** Formula Version */
+            formula_version: string;
+            /**
+             * Calendar Version
+             * @default legacy
+             */
+            calendar_version: string;
+            /**
+             * Transition Rule Version
+             * @default legacy
+             */
+            transition_rule_version: string;
+            /** Formula Config */
+            formula_config?: {
+                [key: string]: unknown;
+            };
+            /** Universe Version */
+            universe_version: string;
+            /** Benchmark */
+            benchmark: string;
+            /** Price Basis */
+            price_basis: string;
+            /** Input Digest */
+            input_digest: string;
+            /** Snapshot Id */
+            snapshot_id: string;
+            /** As Of Date */
+            as_of_date?: string | null;
+            /** Expected Session */
+            expected_session?: string | null;
+            /** Expected Weekly Session */
+            expected_weekly_session?: string | null;
+            /** Input Start Date */
+            input_start_date?: string | null;
+            /** Coverage */
+            coverage: {
+                [key: string]: number;
+            };
+            /** Expected Sectors */
+            expected_sectors: number;
+            /** Available Sectors */
+            available_sectors: number;
+            /**
+             * Benchmark Status
+             * @enum {string}
+             */
+            benchmark_status: "available" | "unavailable";
+            /** Benchmark Reason */
+            benchmark_reason?: string | null;
+            /**
+             * Benchmark Returns Pct
+             * @default {}
+             */
+            benchmark_returns_pct: {
+                [key: string]: number | null;
+            };
+            /** Rows */
+            rows: components["schemas"]["SectorRotationRowDTO"][];
+        };
+        /** SectorRotationSummaryDTO */
+        SectorRotationSummaryDTO: {
+            /** Summary Version */
+            summary_version: string;
+            /**
+             * Timeframe
+             * @enum {string}
+             */
+            timeframe: "daily" | "weekly";
+            /** Rotation As Of */
+            rotation_as_of?: string | null;
+            /** Ranked By Excess 3M */
+            ranked_by_excess_3m?: components["schemas"]["SectorExcessRankDTO"][];
+            sector_breadth_3m: components["schemas"]["SectorBreadthDTO"];
+            /** Quadrant Members */
+            quadrant_members?: {
+                [key: string]: string[];
+            };
+            /** Periods In Quadrant */
+            periods_in_quadrant?: {
+                [key: string]: number | null;
+            };
+            /** Elapsed Days In Quadrant */
+            elapsed_days_in_quadrant?: {
+                [key: string]: number | null;
+            };
+            /** Momentum Delta */
+            momentum_delta?: {
+                [key: string]: number | null;
+            };
+            /** Heading Deg */
+            heading_deg?: {
+                [key: string]: number | null;
+            };
         };
         /** SourceOverrideAck */
         SourceOverrideAck: {
@@ -7869,6 +8398,137 @@ export interface operations {
             };
         };
     };
+    get_sector_rotation_latest_api_macro_sector_rotation_latest_get: {
+        parameters: {
+            query?: {
+                timeframe?: string;
+                tail?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SectorRotationResponseDTO"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    refresh_sector_rotation_api_macro_sector_rotation_refresh_post: {
+        parameters: {
+            query?: {
+                timeframe?: string;
+                tail?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SectorRotationResponseDTO"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_sector_rotation_history_api_macro_sector_rotation_history_get: {
+        parameters: {
+            query: {
+                snapshot_id: string;
+                timeframe?: string;
+                range?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SectorRotationHistoryDTO"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_sector_rotation_snapshot_api_macro_sector_rotation_snapshots__snapshot_id__get: {
+        parameters: {
+            query?: {
+                timeframe?: string;
+                tail?: number;
+            };
+            header?: never;
+            path: {
+                snapshot_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SectorRotationResponseDTO"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     get_latest_portfolio_api_portfolio_latest_get: {
         parameters: {
             query?: never;
@@ -7905,6 +8565,37 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["MacroDashboardDTO"];
+                };
+            };
+        };
+    };
+    get_macro_report_by_id_api_macro_reports__strategy_report_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                strategy_report_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MacroDashboardDTO"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

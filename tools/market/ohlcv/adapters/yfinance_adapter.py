@@ -1,10 +1,12 @@
 """YFinance Adapter for OHLCV Market Data and Corporate Actions."""
 import logging
+import time
 from typing import Any, Dict, List, Optional, Tuple
 import pandas as pd
 import yfinance as yf
 
 from tools.market.ohlcv.ports.ohlcv_port import OhlcvProviderPort, CorporateActionProviderPort
+from core.retry import is_transient_error as _is_transient_error
 from core.retry import with_retry as _with_retry
 from tools.market.earnings import fetch_earnings_dates as _core_fetch_earnings
 
@@ -14,8 +16,18 @@ log = logging.getLogger(__name__)
 class YFinanceOhlcvAdapter(OhlcvProviderPort, CorporateActionProviderPort):
     """Concrete driven adapter using yfinance."""
 
-    def __init__(self, yf_module=None):
+    def __init__(
+        self,
+        yf_module=None,
+        *,
+        request_timeout: float | None = None,
+        retry_attempts: int | None = None,
+        raise_errors: bool = False,
+    ):
         self._yf = yf_module or yf
+        self._request_timeout = request_timeout
+        self._retry_attempts = retry_attempts
+        self._raise_errors = raise_errors
 
     def fetch_history(
         self,
@@ -26,10 +38,31 @@ class YFinanceOhlcvAdapter(OhlcvProviderPort, CorporateActionProviderPort):
     ) -> pd.DataFrame:
         tk = self._yf.Ticker(symbol)
         try:
-            df = _with_retry(lambda: tk.history(period=period, interval=interval, auto_adjust=auto_adjust))
+            def fetch():
+                kwargs = {"period": period, "interval": interval, "auto_adjust": auto_adjust}
+                if self._request_timeout is not None:
+                    kwargs["timeout"] = max(1.0, float(self._request_timeout))
+                if self._raise_errors:
+                    kwargs["raise_errors"] = True
+                return tk.history(**kwargs)
+
+            if self._retry_attempts is None:
+                df = _with_retry(fetch)
+            else:
+                attempts = max(1, int(self._retry_attempts))
+                for attempt in range(attempts):
+                    try:
+                        df = fetch()
+                        break
+                    except Exception as exc:
+                        if attempt + 1 >= attempts or not _is_transient_error(exc):
+                            raise
+                        time.sleep(2 ** attempt)
             return df if df is not None else pd.DataFrame()
         except Exception as exc:
             log.warning("Failed to fetch OHLCV from yfinance for %s (period=%s, interval=%s): %s", symbol, period, interval, exc)
+            if self._raise_errors:
+                raise
             return pd.DataFrame()
 
     def fetch_dividends(self, symbol: str) -> Tuple[List[Dict[str, Any]], str]:
