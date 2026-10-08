@@ -200,7 +200,7 @@ class InMemoryOperationRepository(OperationRepositoryPort):
     def claim_lease(self, worker_id: str, lease_seconds: int) -> Optional[Dict[str, Any]]:
         for item in self.enqueued:
             if item["op"].status == "queued":
-                item["op"] = OperationView(
+                op = OperationView(
                     operation_id=item["op"].operation_id,
                     stage=item["op"].stage,
                     resource_id=item["op"].resource_id,
@@ -209,8 +209,18 @@ class InMemoryOperationRepository(OperationRepositoryPort):
                     attempt=item["op"].attempt,
                     poll_url=item["op"].poll_url,
                 )
-                self.ops[item["op"].operation_id] = item["op"]
-                return item
+                item["op"] = op
+                self.ops[op.operation_id] = op
+                return {
+                    "operation_id": op.operation_id,
+                    "task_type": op.stage,
+                    "resource_id": op.resource_id,
+                    "payload": {
+                        "resource_revision": op.resource_revision,
+                        "frozen_input": item.get("frozen_input", {}),
+                    },
+                    "fencing_token": 1,
+                }
         return None
 
     def complete_with_fence(self, operation_id: str, fence: int, result: Dict[str, Any]) -> bool:
@@ -225,6 +235,7 @@ class InMemoryOperationRepository(OperationRepositoryPort):
                 attempt=op.attempt,
                 poll_url=op.poll_url,
                 result_ref=result.get("ref"),
+                result=result,
             )
             return True
         return False

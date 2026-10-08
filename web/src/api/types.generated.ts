@@ -2312,6 +2312,418 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/investor/essence/interview-config": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Interview Config
+         * @description Returns interview metadata and 10-question / 4-option protocol parameters.
+         */
+        get: operations["get_interview_config_api_investor_essence_interview_config_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/investor/essence/sessions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Start Session
+         * @description Starts a new adaptive interview session and generates Question 1.
+         */
+        post: operations["start_session_api_investor_essence_sessions_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/investor/essence/sessions/current": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Current Session
+         * @description Resumes the most recent session for the current scope.
+         */
+        get: operations["get_current_session_api_investor_essence_sessions_current_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/investor/essence/sessions/{session_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Session
+         * @description Fetches session state, answered questions, and current active question.
+         */
+        get: operations["get_session_api_investor_essence_sessions__session_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/investor/essence/sessions/{session_id}/answers/{question_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Record Answer
+         * @description Records an answer to a question in the active branch.
+         */
+        put: operations["record_answer_api_investor_essence_sessions__session_id__answers__question_id__put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/investor/essence/sessions/{session_id}/next-question": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Advance Next Question
+         * @description Generates and advances to the next adaptive question (Q2..Q10).
+         */
+        post: operations["advance_next_question_api_investor_essence_sessions__session_id__next_question_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/investor/essence/sessions/{session_id}/summarize": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Generate Summary
+         * @description Synthesizes the completed 10-question interview into a bulleted essence draft.
+         */
+        post: operations["generate_summary_api_investor_essence_sessions__session_id__summarize_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/investor/essence/sessions/{session_id}/summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Summary
+         * @description Retrieves the current draft summary for a session.
+         */
+        get: operations["get_summary_api_investor_essence_sessions__session_id__summary_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/investor/essence/sessions/{session_id}/summary/claims/{claim_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Review Claim
+         * @description Rates, edits, or excludes a claim in the draft summary.
+         */
+        put: operations["review_claim_api_investor_essence_sessions__session_id__summary_claims__claim_id__put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/investor/essence/sessions/{session_id}/confirm": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Confirm Essence
+         * @description Confirms accepted essence claims and sets the workspace confirmed pointer.
+         */
+        post: operations["confirm_essence_api_investor_essence_sessions__session_id__confirm_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/investor/essence/current": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Current Essence
+         * @description Retrieves the current confirmed investor essence pointer.
+         */
+        get: operations["get_current_essence_api_investor_essence_current_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/investor/financial-context": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Financial Context
+         * @description Retrieves the reported financial context facts and readiness audit for a portfolio.
+         */
+        get: operations["get_financial_context_api_investor_financial_context_get"];
+        /**
+         * Update Financial Context
+         * @description Updates reported financial context facts and recalculates readiness.
+         */
+        put: operations["update_financial_context_api_investor_financial_context_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/investor/investment-axis/drafts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Create Axis Draft
+         * @description Generates an 8-section investment policy draft using Command 2 and confirmed essence.
+         */
+        post: operations["create_axis_draft_api_investor_investment_axis_drafts_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/investor/investment-axis/drafts/{draft_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Axis Draft
+         * @description Retrieves an existing investment axis draft with completeness audit.
+         */
+        get: operations["get_axis_draft_api_investor_investment_axis_drafts__draft_id__get"];
+        /**
+         * Update Axis Draft
+         * @description Updates sections, non-actions, or numeric values of an investment axis draft.
+         */
+        put: operations["update_axis_draft_api_investor_investment_axis_drafts__draft_id__put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/investor/investment-axis/drafts/{draft_id}/confirm": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Confirm Investment Axis
+         * @description Validates 8 sections, non-actions >= 3, and numeric constraints, then sets confirmed pointer.
+         */
+        post: operations["confirm_investment_axis_api_investor_investment_axis_drafts__draft_id__confirm_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/investor/investment-axis/current": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Current Axis
+         * @description Retrieves the current confirmed investment axis pointer for a portfolio.
+         */
+        get: operations["get_current_axis_api_investor_investment_axis_current_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/investor/bucket-plans": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Create Bucket Plan
+         * @description Generates 3-5 purpose buckets and multi-dimensional mapping from confirmed axis.
+         */
+        post: operations["create_bucket_plan_api_investor_bucket_plans_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/investor/bucket-plans/{draft_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Bucket Plan
+         * @description Retrieves an existing bucket plan draft with matrix mapping and validation.
+         */
+        get: operations["get_bucket_plan_api_investor_bucket_plans__draft_id__get"];
+        /**
+         * Update Bucket Plan
+         * @description Updates purpose buckets, mapping weights, or holding remappings.
+         */
+        put: operations["update_bucket_plan_api_investor_bucket_plans__draft_id__put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/investor/bucket-plans/{draft_id}/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Preview Bucket Plan
+         * @description Previews before/after allocation targets and affected holdings.
+         */
+        get: operations["preview_bucket_plan_api_investor_bucket_plans__draft_id__preview_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/investor/bucket-plans/{draft_id}/apply": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Apply Bucket Plan
+         * @description Atomically commits new targets and remaps holdings in a single Portfolio transaction.
+         */
+        post: operations["apply_bucket_plan_api_investor_bucket_plans__draft_id__apply_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/health": {
         parameters: {
             query?: never;
@@ -2543,6 +2955,64 @@ export interface components {
              */
             items: components["schemas"]["ActualWatchlistItemDTO"][];
         };
+        /** AdvanceQuestionRequest */
+        AdvanceQuestionRequest: {
+            /** Expected Revision */
+            expected_revision?: number | null;
+            /**
+             * Prompt Version
+             * @default 1.0
+             */
+            prompt_version: string;
+        };
+        /** AllocationApplyReceiptResponse */
+        AllocationApplyReceiptResponse: {
+            /** Command Id */
+            command_id: string;
+            /** Portfolio Id */
+            portfolio_id: string;
+            /** Request Hash */
+            request_hash: string;
+            /** Applied Sequence */
+            applied_sequence: number;
+            /** Applied State Hash */
+            applied_state_hash: string;
+            /** Applied At Iso */
+            applied_at_iso: string;
+            /** Canonical Status */
+            canonical_status: string;
+            /** Projection Status */
+            projection_status: string;
+            /** Warnings */
+            warnings?: string[];
+        };
+        /** AllocationPreviewResponse */
+        AllocationPreviewResponse: {
+            /** Checkpoint Sequence */
+            checkpoint_sequence: number;
+            /** Checkpoint State Hash */
+            checkpoint_state_hash: string;
+            /** Validated Targets */
+            validated_targets: {
+                [key: string]: unknown;
+            }[];
+            /** Affected Holdings */
+            affected_holdings: {
+                [key: string]: unknown;
+            }[];
+            /** Before Allocation */
+            before_allocation: {
+                [key: string]: unknown;
+            };
+            /** After Allocation */
+            after_allocation: {
+                [key: string]: unknown;
+            };
+            /** Issues */
+            issues: string[];
+            /** Payload Hash */
+            payload_hash: string;
+        };
         /** AllocationTargetDTO */
         AllocationTargetDTO: {
             /** Bucket Id */
@@ -2614,10 +3084,28 @@ export interface components {
             /** Broker Names */
             broker_names: string[];
         };
+        /** AnswerDetailSchema */
+        AnswerDetailSchema: {
+            /** Answer Id */
+            answer_id: string;
+            /** Answer Kind */
+            answer_kind: string;
+            /** Option Id */
+            option_id?: string | null;
+            /** Free Text */
+            free_text?: string | null;
+            /** Evidence Type */
+            evidence_type: string;
+        };
         /** AppendJournalRequestDTO */
         AppendJournalRequestDTO: {
             /** Entry */
             entry: string;
+        };
+        /** ApplyBucketPlanRequest */
+        ApplyBucketPlanRequest: {
+            /** Idempotency Key */
+            idempotency_key?: string | null;
         };
         /** AssetAllocationDTO */
         AssetAllocationDTO: {
@@ -2749,6 +3237,63 @@ export interface components {
             /** Limitations */
             limitations?: string[];
         };
+        /** AxisDraftResponse */
+        AxisDraftResponse: {
+            /** Draft Id */
+            draft_id: string;
+            /** Portfolio Id */
+            portfolio_id: string;
+            /** Essence Ref */
+            essence_ref: {
+                [key: string]: unknown;
+            };
+            /** Context Ref */
+            context_ref: string;
+            /** Basic Policy */
+            basic_policy: string;
+            /** Risk Limits */
+            risk_limits: {
+                [key: string]: unknown;
+            };
+            /** Invest Targets */
+            invest_targets: string[];
+            /** Exclude Targets */
+            exclude_targets: string[];
+            /** Primary Methods */
+            primary_methods: string[];
+            /** Secondary Methods */
+            secondary_methods: string[];
+            /** Investment Horizon */
+            investment_horizon: string;
+            /** Allocation Basis */
+            allocation_basis: string;
+            /** Allocation Rows */
+            allocation_rows: {
+                [key: string]: unknown;
+            }[];
+            /** Rebalance Frequency */
+            rebalance_frequency: string;
+            /** Role Models */
+            role_models: string[];
+            /** Non Actions */
+            non_actions: string[];
+            /** Assumptions */
+            assumptions?: string[];
+            /** Clarifications */
+            clarifications?: string[];
+            /**
+             * Revision
+             * @default 1
+             */
+            revision: number;
+            /** Completeness Issues */
+            completeness_issues?: string[];
+            /**
+             * Is Complete
+             * @default false
+             */
+            is_complete: boolean;
+        };
         /** BatchAssignBucketRequestDTO */
         BatchAssignBucketRequestDTO: {
             /**
@@ -2808,6 +3353,60 @@ export interface components {
             /** Color */
             color?: string | null;
         };
+        /** BucketPlanDraftResponse */
+        BucketPlanDraftResponse: {
+            /** Draft Id */
+            draft_id: string;
+            /** Portfolio Id */
+            portfolio_id: string;
+            /** Essence Ref */
+            essence_ref: {
+                [key: string]: unknown;
+            };
+            /** Axis Ref */
+            axis_ref: {
+                [key: string]: unknown;
+            };
+            /** Context Ref */
+            context_ref: string;
+            /** Portfolio Checkpoint */
+            portfolio_checkpoint: {
+                [key: string]: unknown;
+            };
+            /** Purpose Buckets */
+            purpose_buckets: components["schemas"]["PurposeBucketSchema"][];
+            /** Allocation Basis */
+            allocation_basis: string;
+            /** Mapping Weights */
+            mapping_weights: components["schemas"]["MappingWeightSchema"][];
+            /** Constraints */
+            constraints: string[];
+            /** Remapping */
+            remapping: components["schemas"]["BucketRemappingSchema"][];
+            /** Status */
+            status: string;
+            /** Revision */
+            revision: number;
+            /** Validation Issues */
+            validation_issues?: string[];
+            /**
+             * Is Valid
+             * @default false
+             */
+            is_valid: boolean;
+        };
+        /** BucketRemappingSchema */
+        BucketRemappingSchema: {
+            /** Old Bucket Id */
+            old_bucket_id: string;
+            /** Target Bucket Id */
+            target_bucket_id?: string | null;
+            /**
+             * Affected Holding Count
+             * @default 0
+             */
+            affected_holding_count: number;
+        };
         /** CalendarEventDTO */
         CalendarEventDTO: {
             /** Ticker */
@@ -2859,6 +3458,27 @@ export interface components {
              * @default
              */
             notes: string;
+        };
+        /** ClaimSchema */
+        ClaimSchema: {
+            /** Claim Id */
+            claim_id: string;
+            /** Text */
+            text: string;
+            /** Effective Text */
+            effective_text: string;
+            /** Source Kind */
+            source_kind: string;
+            /** Fit Rating */
+            fit_rating?: string | null;
+            /** Edited Text */
+            edited_text?: string | null;
+            /** Text Revision */
+            text_revision: number;
+            /** Is Accepted */
+            is_accepted: boolean;
+            /** Evidence Refs */
+            evidence_refs?: components["schemas"]["EvidenceRefSchema"][];
         };
         /** CommodityVolSnapshotSchema */
         CommodityVolSnapshotSchema: {
@@ -2920,6 +3540,47 @@ export interface components {
             stale_reason?: string | null;
             /** Limitations */
             limitations?: string[];
+        };
+        /** ConfirmAxisRequest */
+        ConfirmAxisRequest: {
+            /** Idempotency Key */
+            idempotency_key?: string | null;
+        };
+        /** ConfirmEssenceRequest */
+        ConfirmEssenceRequest: {
+            /** Accepted Claim Ids */
+            accepted_claim_ids?: string[] | null;
+            /** Expected Summary Revision */
+            expected_summary_revision?: number | null;
+            /** Idempotency Key */
+            idempotency_key?: string | null;
+        };
+        /** ConfirmationResponse */
+        ConfirmationResponse: {
+            /** Confirmation Id */
+            confirmation_id: string;
+            /** Status */
+            status: string;
+            /** Accepted Claims Count */
+            accepted_claims_count: number;
+            /** Artifact Ref */
+            artifact_ref?: {
+                [key: string]: string;
+            } | null;
+            /**
+             * Message
+             * @default
+             */
+            message: string;
+        };
+        /** ContentOptionSchema */
+        ContentOptionSchema: {
+            /** Option Id */
+            option_id: string;
+            /** Option Key */
+            option_key: string;
+            /** Text */
+            text: string;
         };
         /** CorporateActionEventDTO */
         CorporateActionEventDTO: {
@@ -3015,6 +3676,35 @@ export interface components {
              * @default Yahoo Finance (yfinance)
              */
             data_provenance: string;
+        };
+        /** CoverageItemSchema */
+        CoverageItemSchema: {
+            /** Topic */
+            topic: string;
+            /** Status */
+            status: string;
+            /** Supporting Answer Ids */
+            supporting_answer_ids?: string[];
+        };
+        /** CreateAxisDraftRequest */
+        CreateAxisDraftRequest: {
+            /** Portfolio Id */
+            portfolio_id: string;
+            /**
+             * Prompt Version
+             * @default 1.0
+             */
+            prompt_version: string;
+        };
+        /** CreateBucketPlanRequest */
+        CreateBucketPlanRequest: {
+            /** Portfolio Id */
+            portfolio_id: string;
+            /**
+             * Prompt Version
+             * @default 1.0
+             */
+            prompt_version: string;
         };
         /** CreateCardRequest */
         CreateCardRequest: {
@@ -3193,6 +3883,8 @@ export interface components {
              * @default default
              */
             portfolio_id: string;
+            /** Selected Item Ids */
+            selected_item_ids?: string[] | null;
         };
         /** DimeCommitResponseDTO */
         DimeCommitResponseDTO: {
@@ -3793,6 +4485,19 @@ export interface components {
             /** Sidecar File */
             sidecar_file?: string | null;
         };
+        /** EvidenceRefSchema */
+        EvidenceRefSchema: {
+            /** Answer Id */
+            answer_id: string;
+            /** Question Id */
+            question_id: string;
+            /** Revision */
+            revision: number;
+            /** Quote */
+            quote: string;
+            /** Evidence Type */
+            evidence_type: string;
+        };
         /** FXRateResponseDTO */
         FXRateResponseDTO: {
             /** Date */
@@ -3841,6 +4546,56 @@ export interface components {
              * @default false
              */
             is_derived: boolean;
+        };
+        /** FinancialContextResponse */
+        FinancialContextResponse: {
+            /** Snapshot Id */
+            snapshot_id: string;
+            /** Portfolio Id */
+            portfolio_id: string;
+            /** Horizon Years */
+            horizon_years?: string | null;
+            /** Target Use Amount */
+            target_use_amount?: string | null;
+            /** Target Use Range */
+            target_use_range?: string | null;
+            /** Target Use Timeline */
+            target_use_timeline?: string | null;
+            /** Emergency Reserves Amount */
+            emergency_reserves_amount?: string | null;
+            /** Emergency Reserves Months */
+            emergency_reserves_months?: string | null;
+            /** Obligations Monthly */
+            obligations_monthly?: string | null;
+            /** Obligations Description */
+            obligations_description?: string | null;
+            /** Withdrawal Frequency */
+            withdrawal_frequency?: string | null;
+            /** Withdrawal Amount */
+            withdrawal_amount?: string | null;
+            /** Experience Description */
+            experience_description?: string | null;
+            /** Unknown Fields */
+            unknown_fields?: string[];
+            /**
+             * As Of
+             * @default
+             */
+            as_of: string;
+            /**
+             * Source
+             * @default user_reported
+             */
+            source: string;
+            /** Readiness Issues */
+            readiness_issues?: {
+                [key: string]: unknown;
+            }[];
+            /**
+             * Is Ready For Numeric Policy
+             * @default false
+             */
+            is_ready_for_numeric_policy: boolean;
         };
         /** FinancialPeriodDTO */
         FinancialPeriodDTO: {
@@ -4108,6 +4863,26 @@ export interface components {
             is_stale: boolean;
             /** Stale Reason */
             stale_reason?: string | null;
+        };
+        /** GeneratedQuestionSchema */
+        GeneratedQuestionSchema: {
+            /** Question Id */
+            question_id: string;
+            /** Sequence No */
+            sequence_no: number;
+            /** Text */
+            text: string;
+            /** Options */
+            options: components["schemas"]["ContentOptionSchema"][];
+            /** Evidence Type */
+            evidence_type: string;
+            /** Coverage Topics */
+            coverage_topics: string[];
+            /**
+             * Is Clarification
+             * @default false
+             */
+            is_clarification: boolean;
         };
         /** GlobalPolicyRatesResponse */
         GlobalPolicyRatesResponse: {
@@ -4388,6 +5163,31 @@ export interface components {
             accession_number: string;
             /** Is Amendment */
             is_amendment: boolean;
+        };
+        /** InterviewConfigResponse */
+        InterviewConfigResponse: {
+            /**
+             * Interview Version
+             * @default 1.0
+             */
+            interview_version: string;
+            /**
+             * Prompt Version
+             * @default 1.0
+             */
+            prompt_version: string;
+            /**
+             * Questions Count
+             * @default 10
+             */
+            questions_count: number;
+            /**
+             * Options Per Question
+             * @default 4
+             */
+            options_per_question: number;
+            /** Topics */
+            topics?: string[];
         };
         /** InvestorTypeRowSchema */
         InvestorTypeRowSchema: {
@@ -5105,6 +5905,15 @@ export interface components {
             is_stale: boolean;
             /** Stale Reason */
             stale_reason?: string | null;
+        };
+        /** MappingWeightSchema */
+        MappingWeightSchema: {
+            /** Axis Allocation Id */
+            axis_allocation_id: string;
+            /** Bucket Id */
+            bucket_id: string;
+            /** Portfolio Weight Percent */
+            portfolio_weight_percent: string;
         };
         /** MarketBreadthResponse */
         MarketBreadthResponse: {
@@ -5905,6 +6714,41 @@ export interface components {
             /** Price */
             price: number;
         };
+        /** PurposeBucketSchema */
+        PurposeBucketSchema: {
+            /** Bucket Id */
+            bucket_id: string;
+            /** Name */
+            name: string;
+            /** Role */
+            role: string;
+            /** Color */
+            color: string;
+            /** Target Percent */
+            target_percent: string;
+            /** Source Value Ids */
+            source_value_ids?: string[];
+            /** Source Axis Allocation Ids */
+            source_axis_allocation_ids?: string[];
+        };
+        /** QAItemSchema */
+        QAItemSchema: {
+            /** Question Id */
+            question_id: string;
+            /** Sequence No */
+            sequence_no: number;
+            /** Text */
+            text: string;
+            /** Options */
+            options: components["schemas"]["ContentOptionSchema"][];
+            /** Evidence Type */
+            evidence_type: string;
+            /** Coverage Topics */
+            coverage_topics: string[];
+            /** Is Clarification */
+            is_clarification: boolean;
+            answer?: components["schemas"]["AnswerDetailSchema"] | null;
+        };
         /** QuadrantTransitionEvent */
         QuadrantTransitionEvent: {
             /** Event Id */
@@ -5936,6 +6780,20 @@ export interface components {
              * @enum {string}
              */
             event_type: "transition" | "confirmed_transition";
+        };
+        /** RecordAnswerRequest */
+        RecordAnswerRequest: {
+            /**
+             * Answer Kind
+             * @default choice
+             */
+            answer_kind: string;
+            /** Option Id */
+            option_id?: string | null;
+            /** Free Text */
+            free_text?: string | null;
+            /** Expected Revision */
+            expected_revision?: number | null;
         };
         /** ReferenceRatePointSchema */
         ReferenceRatePointSchema: {
@@ -6091,6 +6949,17 @@ export interface components {
             freshness: "fresh" | "stale" | "unknown";
             /** Reason */
             reason?: string | null;
+        };
+        /** ReviewClaimRequest */
+        ReviewClaimRequest: {
+            /** Fit Rating */
+            fit_rating?: string | null;
+            /** Edited Text */
+            edited_text?: string | null;
+            /** Is Excluded */
+            is_excluded?: boolean | null;
+            /** Expected Revision */
+            expected_revision?: number | null;
         };
         /** RiskScenarioDTO */
         RiskScenarioDTO: {
@@ -6732,6 +7601,26 @@ export interface components {
                 [key: string]: number | null;
             };
         };
+        /** SessionResponse */
+        SessionResponse: {
+            /** Session Id */
+            session_id: string;
+            /** Status */
+            status: string;
+            /** Revision */
+            revision: number;
+            /** Active Branch Id */
+            active_branch_id: string;
+            /** Questions Count */
+            questions_count: number;
+            /** Answers Count */
+            answers_count: number;
+            /** Is Complete */
+            is_complete: boolean;
+            current_question?: components["schemas"]["GeneratedQuestionSchema"] | null;
+            /** Qa History */
+            qa_history?: components["schemas"]["QAItemSchema"][];
+        };
         /** SourceOverrideAck */
         SourceOverrideAck: {
             /**
@@ -6875,6 +7764,46 @@ export interface components {
              * @default
              */
             limitations: string;
+        };
+        /** StartSessionRequest */
+        StartSessionRequest: {
+            /**
+             * Scope
+             * @default workspace
+             */
+            scope: string;
+            /**
+             * Prompt Version
+             * @default 1.0
+             */
+            prompt_version: string;
+        };
+        /** SummarizeRequest */
+        SummarizeRequest: {
+            /** Expected Revision */
+            expected_revision?: number | null;
+            /**
+             * Prompt Version
+             * @default 1.0
+             */
+            prompt_version: string;
+        };
+        /** SummaryResponse */
+        SummaryResponse: {
+            /** Summary Id */
+            summary_id: string;
+            /** Session Id */
+            session_id: string;
+            /** Statement */
+            statement: string;
+            /** Claims */
+            claims: components["schemas"]["ClaimSchema"][];
+            /** Unresolved Topics */
+            unresolved_topics: string[];
+            /** Coverage Report */
+            coverage_report: components["schemas"]["CoverageItemSchema"][];
+            /** Revision */
+            revision: number;
         };
         /** SyncDividendsResponseDTO */
         SyncDividendsResponseDTO: {
@@ -7324,6 +8253,56 @@ export interface components {
             pitch_id: string;
             ack: components["schemas"]["SourceOverrideAck"];
         };
+        /** UpdateAxisDraftRequest */
+        UpdateAxisDraftRequest: {
+            /** Basic Policy */
+            basic_policy?: string | null;
+            /** Risk Limits */
+            risk_limits?: {
+                [key: string]: unknown;
+            } | null;
+            /** Invest Targets */
+            invest_targets?: string[] | null;
+            /** Exclude Targets */
+            exclude_targets?: string[] | null;
+            /** Primary Methods */
+            primary_methods?: string[] | null;
+            /** Secondary Methods */
+            secondary_methods?: string[] | null;
+            /** Investment Horizon */
+            investment_horizon?: string | null;
+            /** Allocation Rows */
+            allocation_rows?: {
+                [key: string]: unknown;
+            }[] | null;
+            /** Rebalance Frequency */
+            rebalance_frequency?: string | null;
+            /** Role Models */
+            role_models?: string[] | null;
+            /** Non Actions */
+            non_actions?: string[] | null;
+            /** Expected Revision */
+            expected_revision?: number | null;
+        };
+        /** UpdateBucketPlanRequest */
+        UpdateBucketPlanRequest: {
+            /** Purpose Buckets */
+            purpose_buckets?: {
+                [key: string]: unknown;
+            }[] | null;
+            /** Mapping Weights */
+            mapping_weights?: {
+                [key: string]: unknown;
+            }[] | null;
+            /** Remapping */
+            remapping?: {
+                [key: string]: unknown;
+            }[] | null;
+            /** Constraints */
+            constraints?: string[] | null;
+            /** Expected Revision */
+            expected_revision?: number | null;
+        };
         /** UpdateCardRequest */
         UpdateCardRequest: {
             /** Title */
@@ -7337,6 +8316,33 @@ export interface components {
              * @default both
              */
             scope: string;
+        };
+        /** UpdateFinancialContextRequest */
+        UpdateFinancialContextRequest: {
+            /** Horizon Years */
+            horizon_years?: string | null;
+            /** Target Use Amount */
+            target_use_amount?: string | null;
+            /** Target Use Range */
+            target_use_range?: string | null;
+            /** Target Use Timeline */
+            target_use_timeline?: string | null;
+            /** Emergency Reserves Amount */
+            emergency_reserves_amount?: string | null;
+            /** Emergency Reserves Months */
+            emergency_reserves_months?: string | null;
+            /** Obligations Monthly */
+            obligations_monthly?: string | null;
+            /** Obligations Description */
+            obligations_description?: string | null;
+            /** Withdrawal Frequency */
+            withdrawal_frequency?: string | null;
+            /** Withdrawal Amount */
+            withdrawal_amount?: string | null;
+            /** Experience Description */
+            experience_description?: string | null;
+            /** Unknown Fields */
+            unknown_fields?: string[] | null;
         };
         /** UpdateTransactionNoteRequestDTO */
         UpdateTransactionNoteRequestDTO: {
@@ -7536,6 +8542,8 @@ export interface components {
              * @default default
              */
             portfolio_id: string;
+            /** Selected Item Ids */
+            selected_item_ids?: string[] | null;
         };
         /** WealthXCommitResponseDTO */
         WealthXCommitResponseDTO: {
@@ -11980,6 +12988,749 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["NewsDiscoverySnapshotSchema"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_interview_config_api_investor_essence_interview_config_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InterviewConfigResponse"];
+                };
+            };
+        };
+    };
+    start_session_api_investor_essence_sessions_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StartSessionRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SessionResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_current_session_api_investor_essence_sessions_current_get: {
+        parameters: {
+            query?: {
+                scope?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SessionResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_session_api_investor_essence_sessions__session_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                session_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SessionResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    record_answer_api_investor_essence_sessions__session_id__answers__question_id__put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                session_id: string;
+                question_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RecordAnswerRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SessionResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    advance_next_question_api_investor_essence_sessions__session_id__next_question_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                session_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["AdvanceQuestionRequest"] | null;
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SessionResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    generate_summary_api_investor_essence_sessions__session_id__summarize_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                session_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["SummarizeRequest"] | null;
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SummaryResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_summary_api_investor_essence_sessions__session_id__summary_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                session_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SummaryResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    review_claim_api_investor_essence_sessions__session_id__summary_claims__claim_id__put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                session_id: string;
+                claim_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReviewClaimRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SummaryResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    confirm_essence_api_investor_essence_sessions__session_id__confirm_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                session_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ConfirmEssenceRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConfirmationResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_current_essence_api_investor_essence_current_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+        };
+    };
+    get_financial_context_api_investor_financial_context_get: {
+        parameters: {
+            query: {
+                portfolio_id: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FinancialContextResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_financial_context_api_investor_financial_context_put: {
+        parameters: {
+            query: {
+                portfolio_id: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateFinancialContextRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FinancialContextResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_axis_draft_api_investor_investment_axis_drafts_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateAxisDraftRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AxisDraftResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_axis_draft_api_investor_investment_axis_drafts__draft_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                draft_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AxisDraftResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_axis_draft_api_investor_investment_axis_drafts__draft_id__put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                draft_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateAxisDraftRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AxisDraftResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    confirm_investment_axis_api_investor_investment_axis_drafts__draft_id__confirm_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                draft_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["ConfirmAxisRequest"] | null;
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConfirmationResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_current_axis_api_investor_investment_axis_current_get: {
+        parameters: {
+            query: {
+                portfolio_id: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_bucket_plan_api_investor_bucket_plans_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateBucketPlanRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BucketPlanDraftResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_bucket_plan_api_investor_bucket_plans__draft_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                draft_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BucketPlanDraftResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_bucket_plan_api_investor_bucket_plans__draft_id__put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                draft_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateBucketPlanRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BucketPlanDraftResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    preview_bucket_plan_api_investor_bucket_plans__draft_id__preview_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                draft_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AllocationPreviewResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    apply_bucket_plan_api_investor_bucket_plans__draft_id__apply_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                draft_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["ApplyBucketPlanRequest"] | null;
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AllocationApplyReceiptResponse"];
                 };
             };
             /** @description Validation Error */
