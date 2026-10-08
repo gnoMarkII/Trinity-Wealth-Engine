@@ -75,6 +75,7 @@ def _to_axis_view(draft: InvestmentAxisDraft) -> AxisDraftView:
         allocation_rows=[
             {
                 "allocation_id": r.allocation_id,
+                "category": r.category_name,
                 "category_name": r.category_name,
                 "target_percent": str(r.target_percent),
                 "role_description": r.role_description,
@@ -465,15 +466,59 @@ class InvestmentAxisService:
                 confirmed_at_iso=now_iso,
             )
 
-            # 4. CAS Pointer Update
+            # 4. CAS Pointer Update & Confirmed Snapshot
             current_pointer = uow.planning.get_confirmed_pointer(scope, "investment_axis")
             doc_key = f"investment-axis-{draft.portfolio_id}"
             artifact_ref_str = f"vault:investment_axis:{conf_id}:{confirmed.content_hash[:16]}"
+            confirmed_snapshot = {
+                "artifact_id": conf_id,
+                "portfolio_id": draft.portfolio_id,
+                "essence_ref": {
+                    "document_key": draft.essence_ref.document_key,
+                    "note_id": draft.essence_ref.note_id,
+                    "revision_id": draft.essence_ref.revision_id,
+                    "content_hash": draft.essence_ref.content_hash,
+                    "artifact_set_hash": draft.essence_ref.artifact_set_hash,
+                },
+                "basic_policy": draft.basic_policy,
+                "risk_limits": {
+                    k: {
+                        "field_id": v.field_id,
+                        "value": str(v.value) if v.value is not None else None,
+                        "unit": v.unit,
+                        "calculation_basis": v.calculation_basis,
+                        "origin": v.origin.value,
+                        "is_confirmed": v.is_confirmed,
+                    }
+                    for k, v in draft.risk_limits.items()
+                },
+                "invest_targets": list(draft.invest_targets),
+                "exclude_targets": list(draft.exclude_targets),
+                "primary_methods": list(draft.primary_methods),
+                "secondary_methods": list(draft.secondary_methods),
+                "investment_horizon": draft.investment_horizon,
+                "allocation_basis": draft.allocation_basis.value,
+                "allocation_rows": [
+                    {
+                        "allocation_id": r.allocation_id,
+                        "category": r.category_name,
+                        "category_name": r.category_name,
+                        "target_percent": str(r.target_percent),
+                        "role_description": r.role_description,
+                    }
+                    for r in draft.allocation_rows
+                ],
+                "rebalance_frequency": draft.rebalance_frequency,
+                "role_models": list(draft.role_models),
+                "non_actions": list(draft.non_actions),
+                "confirmed_at_iso": now_iso,
+            }
             cas_ok = uow.planning.set_confirmed_pointer(
                 scope=scope,
                 kind="investment_axis",
                 artifact_ref=artifact_ref_str,
                 expected_ref=current_pointer,
+                snapshot=confirmed_snapshot,
             )
             if not cas_ok:
                 actual = uow.planning.get_confirmed_pointer(scope, "investment_axis")
@@ -531,12 +576,23 @@ class InvestmentAxisService:
     def get_current_confirmed_axis(self, portfolio_id: str) -> Optional[Dict[str, Any]]:
         with self._uow_factory.open() as uow:
             scope = f"portfolio:{portfolio_id}"
+            snapshot = uow.planning.get_confirmed_snapshot(scope, "investment_axis")
+            if snapshot:
+                return snapshot
             pointer = uow.planning.get_confirmed_pointer(scope, "investment_axis")
             if not pointer:
                 return None
             return {
+                "artifact_id": pointer,
                 "scope": scope,
                 "portfolio_id": portfolio_id,
                 "kind": "investment_axis",
                 "pointer": pointer,
             }
+
+    def get_latest_axis_draft(self, portfolio_id: str) -> Optional[AxisDraftView]:
+        with self._uow_factory.open() as uow:
+            draft = uow.planning.get_latest_axis_draft(portfolio_id)
+            if not draft:
+                return None
+            return _to_axis_view(draft)

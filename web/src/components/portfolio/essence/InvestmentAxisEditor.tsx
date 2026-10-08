@@ -39,108 +39,85 @@ export default function InvestmentAxisEditor({
   statusText,
 }: InvestmentAxisEditorProps) {
   const isConfirmed = !!confirmedAxis
+  const [isEditing, setIsEditing] = useState(false)
+  const isReadOnly = isConfirmed && !isEditing
+
+  const source = axisDraft || confirmedAxis
 
   // Local editable state
   const [basicPolicy, setBasicPolicy] = useState(
-    axisDraft?.basic_policy || confirmedAxis?.basic_policy || '',
+    source?.basic_policy || '',
   )
   const [mddPercent, setMddPercent] = useState(
     parseRiskLimitValue(
-      axisDraft?.risk_limits?.mdd_max_annual ||
-        axisDraft?.risk_limits?.mdd_percent ||
-        confirmedAxis?.risk_limits?.mdd_max_annual ||
-        confirmedAxis?.risk_limits?.mdd_percent,
+      source?.risk_limits?.mdd_max_annual ||
+        source?.risk_limits?.mdd_percent,
       '15',
     ),
   )
   const [maxLossPerTrade, setMaxLossPerTrade] = useState(
     parseRiskLimitValue(
-      axisDraft?.risk_limits?.max_loss_per_trade ||
-        axisDraft?.risk_limits?.max_loss_per_trade_percent ||
-        confirmedAxis?.risk_limits?.max_loss_per_trade ||
-        confirmedAxis?.risk_limits?.max_loss_per_trade_percent,
+      source?.risk_limits?.max_loss_per_trade ||
+        source?.risk_limits?.max_loss_per_trade_percent,
       '2',
     ),
   )
   const [horizon, setHorizon] = useState(
-    axisDraft?.investment_horizon || confirmedAxis?.investment_horizon || '',
+    source?.investment_horizon || '',
   )
   const [rebalanceFreq, setRebalanceFreq] = useState(
-    axisDraft?.rebalance_frequency || confirmedAxis?.rebalance_frequency || 'รายปี',
+    source?.rebalance_frequency || 'รายปี',
   )
   const [nonActions, setNonActions] = useState<string[]>(
-    axisDraft?.non_actions || confirmedAxis?.non_actions || [],
+    source?.non_actions || [],
   )
   const [newNonAction, setNewNonAction] = useState('')
 
   const [investTargets, setInvestTargets] = useState<string[]>(
-    axisDraft?.invest_targets || confirmedAxis?.invest_targets || [],
+    source?.invest_targets || [],
   )
   const [excludeTargets, setExcludeTargets] = useState<string[]>(
-    axisDraft?.exclude_targets || confirmedAxis?.exclude_targets || [],
+    source?.exclude_targets || [],
   )
   const [primaryMethods, setPrimaryMethods] = useState<string[]>(
-    axisDraft?.primary_methods || confirmedAxis?.primary_methods || [],
+    source?.primary_methods || [],
   )
   const [secondaryMethods, setSecondaryMethods] = useState<string[]>(
-    axisDraft?.secondary_methods || confirmedAxis?.secondary_methods || [],
+    source?.secondary_methods || [],
   )
   const [roleModels, setRoleModels] = useState<string[]>(
-    axisDraft?.role_models || confirmedAxis?.role_models || [],
+    source?.role_models || [],
   )
   const [allocationRows, setAllocationRows] = useState<AllocationRowDTO[]>(
-    axisDraft?.allocation_rows || confirmedAxis?.allocation_rows || [],
+    source?.allocation_rows || [],
   )
 
   useEffect(() => {
-    if (axisDraft) {
-      setBasicPolicy(axisDraft.basic_policy || '')
+    const s = axisDraft || confirmedAxis
+    if (s) {
+      setBasicPolicy(s.basic_policy || '')
       setMddPercent(
         parseRiskLimitValue(
-          axisDraft.risk_limits?.mdd_max_annual || axisDraft.risk_limits?.mdd_percent,
+          s.risk_limits?.mdd_max_annual || s.risk_limits?.mdd_percent,
           '15',
         ),
       )
       setMaxLossPerTrade(
         parseRiskLimitValue(
-          axisDraft.risk_limits?.max_loss_per_trade ||
-            axisDraft.risk_limits?.max_loss_per_trade_percent,
+          s.risk_limits?.max_loss_per_trade ||
+            s.risk_limits?.max_loss_per_trade_percent,
           '2',
         ),
       )
-      setHorizon(axisDraft.investment_horizon || '')
-      setRebalanceFreq(axisDraft.rebalance_frequency || 'รายปี')
-      setNonActions(axisDraft.non_actions || [])
-      setInvestTargets(axisDraft.invest_targets || [])
-      setExcludeTargets(axisDraft.exclude_targets || [])
-      setPrimaryMethods(axisDraft.primary_methods || [])
-      setSecondaryMethods(axisDraft.secondary_methods || [])
-      setRoleModels(axisDraft.role_models || [])
-      setAllocationRows(axisDraft.allocation_rows || [])
-    } else if (confirmedAxis) {
-      setBasicPolicy(confirmedAxis.basic_policy || '')
-      setMddPercent(
-        parseRiskLimitValue(
-          confirmedAxis.risk_limits?.mdd_max_annual || confirmedAxis.risk_limits?.mdd_percent,
-          '15',
-        ),
-      )
-      setMaxLossPerTrade(
-        parseRiskLimitValue(
-          confirmedAxis.risk_limits?.max_loss_per_trade ||
-            confirmedAxis.risk_limits?.max_loss_per_trade_percent,
-          '2',
-        ),
-      )
-      setHorizon(confirmedAxis.investment_horizon || '')
-      setRebalanceFreq(confirmedAxis.rebalance_frequency || 'รายปี')
-      setNonActions(confirmedAxis.non_actions || [])
-      setInvestTargets(confirmedAxis.invest_targets || [])
-      setExcludeTargets(confirmedAxis.exclude_targets || [])
-      setPrimaryMethods(confirmedAxis.primary_methods || [])
-      setSecondaryMethods(confirmedAxis.secondary_methods || [])
-      setRoleModels(confirmedAxis.role_models || [])
-      setAllocationRows(confirmedAxis.allocation_rows || [])
+      setHorizon(s.investment_horizon || '')
+      setRebalanceFreq(s.rebalance_frequency || 'รายปี')
+      setNonActions(s.non_actions || [])
+      setInvestTargets(s.invest_targets || [])
+      setExcludeTargets(s.exclude_targets || [])
+      setPrimaryMethods(s.primary_methods || [])
+      setSecondaryMethods(s.secondary_methods || [])
+      setRoleModels(s.role_models || [])
+      setAllocationRows(s.allocation_rows || [])
     }
   }, [axisDraft, confirmedAxis])
 
@@ -222,6 +199,7 @@ export default function InvestmentAxisEditor({
     try {
       await handleSaveDraft()
       await onConfirmAxis(proceedToBuckets)
+      setIsEditing(false)
     } catch {
       // Errors handled by parent hook
     }
@@ -246,12 +224,58 @@ export default function InvestmentAxisEditor({
             </div>
           </div>
 
-          <div>
+          <div className="flex items-center gap-2">
             {isConfirmed ? (
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-700 border border-emerald-200">
-                <span className="h-2 w-2 rounded-full bg-emerald-500" />
-                ยืนยันแล้ว
-              </span>
+              <>
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-700 border border-emerald-200">
+                  <span className="h-2 w-2 rounded-full bg-emerald-500" />
+                  ยืนยันแล้ว
+                </span>
+                {!isEditing ? (
+                  <button
+                    type="button"
+                    onClick={() => setIsEditing(true)}
+                    className="rounded-xl border border-sky-300 bg-sky-50 px-3 py-1 text-xs font-bold text-sky-700 hover:bg-sky-100"
+                  >
+                    ✏️ ปรับแก้แกนหลัก
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsEditing(false)
+                      if (confirmedAxis) {
+                        setBasicPolicy(confirmedAxis.basic_policy || '')
+                        setMddPercent(
+                          parseRiskLimitValue(
+                            confirmedAxis.risk_limits?.mdd_max_annual || confirmedAxis.risk_limits?.mdd_percent,
+                            '15',
+                          ),
+                        )
+                        setMaxLossPerTrade(
+                          parseRiskLimitValue(
+                            confirmedAxis.risk_limits?.max_loss_per_trade ||
+                              confirmedAxis.risk_limits?.max_loss_per_trade_percent,
+                            '2',
+                          ),
+                        )
+                        setHorizon(confirmedAxis.investment_horizon || '')
+                        setRebalanceFreq(confirmedAxis.rebalance_frequency || 'รายปี')
+                        setNonActions(confirmedAxis.non_actions || [])
+                        setInvestTargets(confirmedAxis.invest_targets || [])
+                        setExcludeTargets(confirmedAxis.exclude_targets || [])
+                        setPrimaryMethods(confirmedAxis.primary_methods || [])
+                        setSecondaryMethods(confirmedAxis.secondary_methods || [])
+                        setRoleModels(confirmedAxis.role_models || [])
+                        setAllocationRows(confirmedAxis.allocation_rows || [])
+                      }
+                    }}
+                    className="rounded-xl border border-zinc-200 bg-white px-3 py-1 text-xs font-semibold text-zinc-600 hover:bg-zinc-50"
+                  >
+                    ยกเลิกการแก้ไข
+                  </button>
+                )}
+              </>
             ) : (
               <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-50 px-3 py-1 text-xs font-bold text-amber-700 border border-amber-200">
                 <span className="h-2 w-2 rounded-full bg-amber-500 animate-pulse" />
@@ -262,7 +286,7 @@ export default function InvestmentAxisEditor({
         </div>
 
         {/* Completeness Alert */}
-        {!isConfirmed && clientIssues.length > 0 && (
+        {(!isConfirmed || isEditing) && clientIssues.length > 0 && (
           <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50/80 p-3.5 text-xs text-amber-900 space-y-1">
             <span className="font-bold">⚠️ สิ่งที่ต้องระบุให้ครบก่อนยืนยันแกนหลัก:</span>
             <ul className="list-disc list-inside">
@@ -287,7 +311,7 @@ export default function InvestmentAxisEditor({
           <textarea
             id="basic-policy-input"
             rows={2}
-            disabled={isConfirmed}
+            disabled={isReadOnly}
             value={basicPolicy}
             onChange={(e) => setBasicPolicy(e.target.value)}
             className="w-full rounded-lg border border-zinc-200 bg-white p-3 text-sm text-zinc-800 focus:outline-none focus:ring-2 focus:ring-sky-400 disabled:bg-zinc-50"
@@ -311,7 +335,7 @@ export default function InvestmentAxisEditor({
                 <input
                   id="mdd-input"
                   type="text"
-                  disabled={isConfirmed}
+                  disabled={isReadOnly}
                   value={mddPercent}
                   onChange={(e) => setMddPercent(e.target.value)}
                   className="w-full rounded-lg border border-zinc-200 bg-white p-2.5 text-xs text-zinc-800 focus:outline-none focus:ring-2 focus:ring-sky-400 disabled:bg-zinc-50 font-bold"
@@ -328,7 +352,7 @@ export default function InvestmentAxisEditor({
                 <input
                   id="max-loss-input"
                   type="text"
-                  disabled={isConfirmed}
+                  disabled={isReadOnly}
                   value={maxLossPerTrade}
                   onChange={(e) => setMaxLossPerTrade(e.target.value)}
                   className="w-full rounded-lg border border-zinc-200 bg-white p-2.5 text-xs text-zinc-800 focus:outline-none focus:ring-2 focus:ring-sky-400 disabled:bg-zinc-50 font-bold"
@@ -399,7 +423,7 @@ export default function InvestmentAxisEditor({
             <input
               id="horizon-input"
               type="text"
-              disabled={isConfirmed}
+              disabled={isReadOnly}
               value={horizon}
               onChange={(e) => setHorizon(e.target.value)}
               placeholder="เช่น 5-10 ปี หรือ ระยะยาวต่อเนื่อง"
@@ -419,7 +443,7 @@ export default function InvestmentAxisEditor({
               <input
                 id="rebalance-input"
                 type="text"
-                disabled={isConfirmed}
+                disabled={isReadOnly}
                 value={rebalanceFreq}
                 onChange={(e) => setRebalanceFreq(e.target.value)}
                 className="w-24 rounded border border-zinc-200 px-2 py-0.5 text-xs font-bold text-zinc-800"
@@ -432,7 +456,7 @@ export default function InvestmentAxisEditor({
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 pt-1">
             {allocationRows.map((row, idx) => (
               <div key={idx} className="p-2.5 rounded-lg bg-white border border-sky-200/70 text-xs">
-                <span className="font-semibold text-zinc-800 block truncate">{row.category}</span>
+                <span className="font-semibold text-zinc-800 block truncate">{row.category || (row as any).category_name || (row as any).allocation_id}</span>
                 <span className="text-sm font-extrabold text-sky-700">{row.target_percent}%</span>
               </div>
             ))}
@@ -476,7 +500,7 @@ export default function InvestmentAxisEditor({
                 className="flex items-center justify-between gap-2 p-2.5 rounded-lg bg-white border border-rose-200 text-xs text-zinc-800"
               >
                 <span>• {na}</span>
-                {!isConfirmed && (
+                {(!isConfirmed || isEditing) && (
                   <button
                     type="button"
                     onClick={() => handleRemoveNonAction(idx)}
@@ -489,7 +513,7 @@ export default function InvestmentAxisEditor({
             ))}
           </div>
 
-          {!isConfirmed && (
+          {(!isConfirmed || isEditing) && (
             <div className="flex items-center gap-2 pt-1">
               <input
                 type="text"
@@ -523,7 +547,7 @@ export default function InvestmentAxisEditor({
                 <span className="h-2 w-2 rounded-full bg-sky-500" />
                 {statusText}
               </span>
-            ) : isConfirmed ? (
+            ) : isConfirmed && !isEditing ? (
               <span className="text-emerald-700 font-semibold">
                 ✓ ยืนยันแกนหลักเรียบร้อยแล้ว แผนพอร์ตยังไม่เปลี่ยนจนกว่าจะกดสร้างและใช้ Buckets
               </span>
@@ -539,7 +563,7 @@ export default function InvestmentAxisEditor({
           </div>
 
           <div className="flex items-center gap-3 w-full sm:w-auto">
-            {!isConfirmed && (
+            {(!isConfirmed || isEditing) && (
               <>
                 <button
                   type="button"
@@ -556,7 +580,7 @@ export default function InvestmentAxisEditor({
                   disabled={!canConfirm}
                   className="rounded-xl border border-emerald-300 bg-emerald-50 px-5 py-2.5 text-xs sm:text-sm font-bold text-emerald-800 hover:bg-emerald-100 active:scale-98 transition-all disabled:opacity-50"
                 >
-                  ✓ ยืนยันแกนหลักของพอร์ตนี้
+                  ✓ {isConfirmed ? 'ยืนยันการแก้ไขแกนหลัก' : 'ยืนยันแกนหลักของพอร์ตนี้'}
                 </button>
               </>
             )}
@@ -564,13 +588,13 @@ export default function InvestmentAxisEditor({
             <button
               type="button"
               onClick={() => {
-                if (isConfirmed) {
+                if (isConfirmed && !isEditing) {
                   onProceedToBuckets()
                 } else {
                   handleConfirm(true)
                 }
               }}
-              disabled={loading || (!isConfirmed && !canConfirm)}
+              disabled={loading || ((!isConfirmed || isEditing) && !canConfirm)}
               className="rounded-xl bg-gradient-to-r from-sky-600 to-blue-600 px-6 py-2.5 text-xs sm:text-sm font-bold text-white shadow-md shadow-sky-500/20 hover:from-sky-700 hover:to-blue-700 active:scale-98 transition-all flex items-center gap-1.5 disabled:opacity-50"
             >
               <span>สร้าง Buckets จากแกนหลัก →</span>

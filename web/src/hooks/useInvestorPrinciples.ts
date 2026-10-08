@@ -113,6 +113,30 @@ export function useInvestorPrinciples({
         } catch {
           setConfirmedAxis(null)
         }
+
+        try {
+          const draft = await api.getLatestAxisDraft(portfolioId)
+          if (draft) {
+            setAxisDraft(draft)
+          }
+        } catch {
+          // ignore draft fetch error
+        }
+
+        try {
+          const bp = await api.getLatestBucketPlan(portfolioId)
+          if (bp) {
+            setBucketPlan(bp)
+            try {
+              const prev = await api.previewBucketPlan(bp.draft_id)
+              setPreview(prev)
+            } catch {
+              // ignore preview error
+            }
+          }
+        } catch {
+          // ignore bucket fetch error
+        }
       }
     } catch (err: any) {
       setError(err?.message || 'เกิดข้อผิดพลาดในการโหลดข้อมูลหลักการลงทุน')
@@ -350,13 +374,30 @@ export function useInvestorPrinciples({
 
   const updateAxis = useCallback(
     async (updates: UpdateAxisDraftRequestDTO) => {
-      if (!axisDraft) return
+      let draft = axisDraft
+      if (!draft && portfolioId) {
+        try {
+          draft = await api.getLatestAxisDraft(portfolioId)
+          if (draft) setAxisDraft(draft)
+        } catch {
+          // ignore
+        }
+      }
+      if (!draft && portfolioId) {
+        try {
+          draft = await api.createAxisDraft(portfolioId)
+          setAxisDraft(draft)
+        } catch {
+          // ignore
+        }
+      }
+      if (!draft) return
       setActionLoading(true)
       setError(null)
       try {
-        const updated = await api.updateAxisDraft(axisDraft.draft_id, {
+        const updated = await api.updateAxisDraft(draft.draft_id, {
           ...updates,
-          expected_revision: axisDraft.revision,
+          expected_revision: draft.revision,
         })
         setAxisDraft(updated)
       } catch (err: any) {
@@ -365,18 +406,27 @@ export function useInvestorPrinciples({
         setActionLoading(false)
       }
     },
-    [axisDraft],
+    [axisDraft, portfolioId],
   )
 
   const confirmAxis = useCallback(
     async (proceedToBuckets: boolean = false) => {
-      if (!axisDraft) return
+      let draft = axisDraft
+      if (!draft && portfolioId) {
+        try {
+          draft = await api.getLatestAxisDraft(portfolioId)
+          if (draft) setAxisDraft(draft)
+        } catch {
+          // ignore
+        }
+      }
+      if (!draft) return
       setActionLoading(true)
       setActionStatusText('กำลังตรวจสอบความครบถ้วนและยืนยันแกนหลักการลงทุน...')
       setError(null)
       try {
-        await api.confirmInvestmentAxis(axisDraft.draft_id, {
-          idempotency_key: `confirm_axis_${axisDraft.draft_id}_${axisDraft.revision}`,
+        await api.confirmInvestmentAxis(draft.draft_id, {
+          idempotency_key: `confirm_axis_${draft.draft_id}_${draft.revision}`,
         })
         const refreshed = await api.getCurrentConfirmedAxis(portfolioId)
         setConfirmedAxis(refreshed as ConfirmedAxisDTO)

@@ -1084,6 +1084,11 @@ export const api = {
       body: JSON.stringify({ portfolio_id: portfolioId, prompt_version: promptVersion }),
     }),
 
+  getLatestAxisDraft: (portfolioId: string) =>
+    request<AxisDraftDTO | null>(
+      `/api/investor/investment-axis/drafts/latest?portfolio_id=${encodeURIComponent(portfolioId)}`,
+    ),
+
   getAxisDraft: (draftId: string) =>
     request<AxisDraftDTO>(`/api/investor/investment-axis/drafts/${encodeURIComponent(draftId)}`),
 
@@ -1113,6 +1118,11 @@ export const api = {
       method: 'POST',
       body: JSON.stringify({ portfolio_id: portfolioId, prompt_version: promptVersion }),
     }),
+
+  getLatestBucketPlan: (portfolioId: string) =>
+    request<BucketPlanDraftDTO | null>(
+      `/api/investor/bucket-plans/latest?portfolio_id=${encodeURIComponent(portfolioId)}`,
+    ),
 
   getBucketPlan: (draftId: string) =>
     request<BucketPlanDraftDTO>(`/api/investor/bucket-plans/${encodeURIComponent(draftId)}`),

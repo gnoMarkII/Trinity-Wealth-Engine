@@ -250,6 +250,13 @@ class BucketPlanningService:
                 return None
             return _to_view(draft)
 
+    def get_latest_bucket_plan_draft(self, portfolio_id: str) -> Optional[BucketPlanDraftView]:
+        with self._uow_factory.open() as uow:
+            draft = uow.planning.get_latest_bucket_draft(portfolio_id)
+            if not draft:
+                return None
+            return _to_view(draft)
+
     def update_bucket_plan_draft(
         self,
         draft_id: str,

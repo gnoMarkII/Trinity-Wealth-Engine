@@ -809,6 +809,26 @@ class SqlitePlanningRepository(PlanningRepositoryPort):
             created_at_iso=row[1] or "",
         )
 
+    def get_latest_axis_draft(self, portfolio_id: str) -> Optional[InvestmentAxisDraft]:
+        row = self._conn.execute(
+            "SELECT draft_id FROM investor_plan_drafts WHERE portfolio_id = ? AND draft_type = 'axis' "
+            "ORDER BY updated_at DESC LIMIT 1",
+            (portfolio_id,),
+        ).fetchone()
+        if not row:
+            return None
+        return self.get_axis_draft(row[0])
+
+    def get_latest_bucket_draft(self, portfolio_id: str) -> Optional[BucketPlanDraft]:
+        row = self._conn.execute(
+            "SELECT draft_id FROM investor_plan_drafts WHERE portfolio_id = ? AND draft_type = 'bucket' "
+            "ORDER BY updated_at DESC LIMIT 1",
+            (portfolio_id,),
+        ).fetchone()
+        if not row:
+            return None
+        return self.get_bucket_draft(row[0])
+
     def get_confirmed_pointer(self, scope: str, kind: str) -> Optional[str]:
         pointer_key = f"{scope}:{kind}"
         row = self._conn.execute(
@@ -819,11 +839,94 @@ class SqlitePlanningRepository(PlanningRepositoryPort):
             return None
         return row[0]
 
+    def get_confirmed_snapshot(self, scope: str, kind: str) -> Optional[Dict[str, Any]]:
+        pointer_key = f"{scope}:{kind}"
+        row = self._conn.execute(
+            "SELECT artifact_ref_json, snapshot_json, confirmed_at FROM investor_confirmed_refs WHERE pointer_key = ?",
+            (pointer_key,),
+        ).fetchone()
+        if not row:
+            return None
+
+        art_ref, raw_snap, conf_at = row[0], row[1], row[2]
+        if raw_snap and raw_snap != "{}":
+            try:
+                snap = json.loads(raw_snap)
+                if snap and isinstance(snap, dict):
+                    return snap
+            except Exception:
+                pass
+
+        # Backwards compatibility / recovery for historical pointer records with empty snapshot_json
+        if kind == "investment_axis":
+            port_id = scope.replace("portfolio:", "")
+            draft = self.get_latest_axis_draft(port_id)
+            if draft:
+                recovered_snapshot = {
+                    "artifact_id": art_ref,
+                    "portfolio_id": port_id,
+                    "essence_ref": {
+                        "document_key": draft.essence_ref.document_key,
+                        "note_id": draft.essence_ref.note_id,
+                        "revision_id": draft.essence_ref.revision_id,
+                        "content_hash": draft.essence_ref.content_hash,
+                        "artifact_set_hash": draft.essence_ref.artifact_set_hash,
+                    },
+                    "basic_policy": draft.basic_policy,
+                    "risk_limits": {
+                        k: {
+                            "field_id": v.field_id,
+                            "value": str(v.value) if v.value is not None else None,
+                            "unit": v.unit,
+                            "calculation_basis": v.calculation_basis,
+                            "origin": v.origin.value,
+                            "is_confirmed": v.is_confirmed,
+                        }
+                        for k, v in draft.risk_limits.items()
+                    },
+                    "invest_targets": list(draft.invest_targets),
+                    "exclude_targets": list(draft.exclude_targets),
+                    "primary_methods": list(draft.primary_methods),
+                    "secondary_methods": list(draft.secondary_methods),
+                    "investment_horizon": draft.investment_horizon,
+                    "allocation_basis": draft.allocation_basis.value,
+                    "allocation_rows": [
+                        {
+                            "allocation_id": r.allocation_id,
+                            "category": r.category_name,
+                            "category_name": r.category_name,
+                            "target_percent": str(r.target_percent),
+                            "role_description": r.role_description,
+                        }
+                        for r in draft.allocation_rows
+                    ],
+                    "rebalance_frequency": draft.rebalance_frequency,
+                    "role_models": list(draft.role_models),
+                    "non_actions": list(draft.non_actions),
+                    "confirmed_at_iso": conf_at or "",
+                }
+                try:
+                    self._conn.execute(
+                        "UPDATE investor_confirmed_refs SET snapshot_json = ? WHERE pointer_key = ?",
+                        (json.dumps(recovered_snapshot, ensure_ascii=False), pointer_key),
+                    )
+                except Exception:
+                    pass
+                return recovered_snapshot
+
+        return None
+
     def set_confirmed_pointer(
-        self, scope: str, kind: str, artifact_ref: str, expected_ref: Optional[str]
+        self,
+        scope: str,
+        kind: str,
+        artifact_ref: str,
+        expected_ref: Optional[str],
+        snapshot: Optional[Dict[str, Any]] = None,
     ) -> bool:
         pointer_key = f"{scope}:{kind}"
         now_iso = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+        snapshot_str = json.dumps(snapshot, ensure_ascii=False) if snapshot is not None else "{}"
 
         current = self.get_confirmed_pointer(scope, kind)
         if expected_ref is None:
@@ -832,17 +935,17 @@ class SqlitePlanningRepository(PlanningRepositoryPort):
             self._conn.execute(
                 "INSERT INTO investor_confirmed_refs (pointer_key, scope, ref_type, "
                 "artifact_ref_json, snapshot_json, revision, confirmed_at) "
-                "VALUES (?, ?, ?, ?, '{}', 1, ?)",
-                (pointer_key, scope, kind, artifact_ref, now_iso),
+                "VALUES (?, ?, ?, ?, ?, 1, ?)",
+                (pointer_key, scope, kind, artifact_ref, snapshot_str, now_iso),
             )
             return True
         else:
             if current != expected_ref:
                 return False
             cursor = self._conn.execute(
-                "UPDATE investor_confirmed_refs SET artifact_ref_json = ?, revision = revision + 1, "
-                "confirmed_at = ? WHERE pointer_key = ? AND artifact_ref_json = ?",
-                (artifact_ref, now_iso, pointer_key, expected_ref),
+                "UPDATE investor_confirmed_refs SET artifact_ref_json = ?, snapshot_json = ?, "
+                "revision = revision + 1, confirmed_at = ? WHERE pointer_key = ? AND artifact_ref_json = ?",
+                (artifact_ref, snapshot_str, now_iso, pointer_key, expected_ref),
             )
             return cursor.rowcount == 1
 

@@ -366,6 +366,18 @@ def create_axis_draft(
         raise exc
 
 
+@router.get("/investment-axis/drafts/latest", response_model=Optional[AxisDraftResponse])
+def get_latest_axis_draft(
+    portfolio_id: str = Query(...),
+    service: InvestmentAxisService = Depends(get_investment_axis_service),
+) -> Optional[AxisDraftResponse]:
+    """Retrieves the most recent investment axis draft for a portfolio."""
+    view = service.get_latest_axis_draft(portfolio_id=portfolio_id)
+    if not view:
+        return None
+    return AxisDraftResponse.model_validate(view, from_attributes=True)
+
+
 @router.get("/investment-axis/drafts/{draft_id}", response_model=AxisDraftResponse)
 def get_axis_draft(
     draft_id: str,
@@ -452,6 +464,18 @@ def create_bucket_plan(
     except Exception as exc:
         _handle_error(exc)
         raise exc
+
+
+@router.get("/bucket-plans/latest", response_model=Optional[BucketPlanDraftResponse])
+def get_latest_bucket_plan(
+    portfolio_id: str = Query(...),
+    service: BucketPlanningService = Depends(get_bucket_planning_service),
+) -> Optional[BucketPlanDraftResponse]:
+    """Retrieves the most recent bucket plan draft for a portfolio."""
+    view = service.get_latest_bucket_plan_draft(portfolio_id=portfolio_id)
+    if not view:
+        return None
+    return BucketPlanDraftResponse.model_validate(view, from_attributes=True)
 
 
 @router.get("/bucket-plans/{draft_id}", response_model=BucketPlanDraftResponse)

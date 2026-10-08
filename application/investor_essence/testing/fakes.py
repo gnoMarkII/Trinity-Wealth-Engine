@@ -149,21 +149,43 @@ class InMemoryPlanningRepository(PlanningRepositoryPort):
     def get_axis_draft(self, draft_id: str) -> Optional[InvestmentAxisDraft]:
         return self.axis_drafts.get(draft_id)
 
+    def get_latest_axis_draft(self, portfolio_id: str) -> Optional[InvestmentAxisDraft]:
+        matches = [d for d in self.axis_drafts.values() if d.portfolio_id == portfolio_id]
+        return matches[-1] if matches else None
+
     def save_bucket_draft(self, draft: BucketPlanDraft) -> None:
         self.bucket_drafts[draft.draft_id] = draft
 
     def get_bucket_draft(self, draft_id: str) -> Optional[BucketPlanDraft]:
         return self.bucket_drafts.get(draft_id)
 
+    def get_latest_bucket_draft(self, portfolio_id: str) -> Optional[BucketPlanDraft]:
+        matches = [d for d in self.bucket_drafts.values() if d.portfolio_id == portfolio_id]
+        return matches[-1] if matches else None
+
     def get_confirmed_pointer(self, scope: str, kind: str) -> Optional[str]:
         return self.pointers.get(f"{scope}:{kind}")
 
-    def set_confirmed_pointer(self, scope: str, kind: str, artifact_ref: str, expected_ref: Optional[str]) -> bool:
+    def get_confirmed_snapshot(self, scope: str, kind: str) -> Optional[Dict[str, Any]]:
+        return getattr(self, "_snapshots_dict", {}).get(f"{scope}:{kind}")
+
+    def set_confirmed_pointer(
+        self,
+        scope: str,
+        kind: str,
+        artifact_ref: str,
+        expected_ref: Optional[str],
+        snapshot: Optional[Dict[str, Any]] = None,
+    ) -> bool:
         key = f"{scope}:{kind}"
         actual = self.pointers.get(key)
         if actual != expected_ref:
             return False
         self.pointers[key] = artifact_ref
+        if not hasattr(self, "_snapshots_dict"):
+            self._snapshots_dict = {}
+        if snapshot is not None:
+            self._snapshots_dict[key] = snapshot
         return True
 
 
