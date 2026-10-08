@@ -12,6 +12,7 @@ adapter boundary and contains only connection/row mapping concerns.
 """
 
 from contextlib import closing, contextmanager
+import json
 import sqlite3
 from typing import Any, Iterator, List, Optional, Dict
 
@@ -618,3 +619,122 @@ class SqliteEarningsCallWorkflowAdapter(_SqliteAdapterBase, EarningsCallWorkflow
                 # than leaking an infrastructure failure as HTTP 500.
                 raise EarningsCallRunNotReadyError(str(exc)) from exc
             return run_dto, event_dto, lease_dto
+
+
+from application.macro.notebooklm_export_ports import (
+    MacroExportRecord,
+    MacroExportRepositoryPort,
+)
+import api.db.repositories.macro_export_repository as macro_export_repo_dao
+
+
+def _row_to_macro_export_record(row: sqlite3.Row) -> MacroExportRecord:
+    return MacroExportRecord(
+        export_id=row["export_id"],
+        request_key=row["request_key"],
+        content_hash=row["content_hash"],
+        job_id=row["job_id"],
+        state=row["state"],
+        stage=row["stage"],
+        snapshot_at=row["snapshot_at"],
+        strategy_report_id=row["strategy_report_id"],
+        notebook_id=row["notebook_id"],
+        notebook_url=row["notebook_url"],
+        manifest_path=row["manifest_path"],
+        inventory=json.loads(row["inventory_json"]) if row["inventory_json"] else {},
+        warnings=json.loads(row["warnings_json"]) if row["warnings_json"] else [],
+        error_code=row["error_code"],
+        error_message=row["error_message"],
+        created_at=row["created_at"],
+        updated_at=row["updated_at"],
+    )
+
+
+class SqliteMacroExportRepositoryAdapter(MacroExportRepositoryPort):
+    """Adapter implementing MacroExportRepositoryPort backed by SQLite."""
+
+    def __init__(self, conn: Optional[sqlite3.Connection] = None, db_path: Optional[str] = None) -> None:
+        self._conn = conn
+        self._db_path = db_path
+
+    @contextmanager
+    def _connection(self, write: bool = False):
+        if self._conn is not None:
+            yield self._conn
+        else:
+            with get_connection(self._db_path) as conn:
+                if write:
+                    with conn:
+                        yield conn
+                else:
+                    yield conn
+
+    def create(self, record: MacroExportRecord) -> MacroExportRecord:
+        with self._connection(write=True) as conn:
+            row = macro_export_repo_dao.insert_export(
+                conn=conn,
+                export_id=record.export_id,
+                request_key=record.request_key,
+                content_hash=record.content_hash,
+                snapshot_at=record.snapshot_at,
+                strategy_report_id=record.strategy_report_id,
+                job_id=record.job_id,
+                state=record.state,
+                stage=record.stage,
+                manifest_path=record.manifest_path,
+                inventory=record.inventory,
+                warnings=record.warnings,
+            )
+            return _row_to_macro_export_record(row)
+
+    def get_by_id(self, export_id: str) -> Optional[MacroExportRecord]:
+        with self._connection() as conn:
+            row = macro_export_repo_dao.get_export_by_id(conn=conn, export_id=export_id)
+            return _row_to_macro_export_record(row) if row else None
+
+    def get_by_request_key(self, request_key: str) -> Optional[MacroExportRecord]:
+        with self._connection() as conn:
+            row = macro_export_repo_dao.get_export_by_request_key(conn=conn, request_key=request_key)
+            return _row_to_macro_export_record(row) if row else None
+
+    def get_by_content_hash(self, content_hash: str) -> Optional[MacroExportRecord]:
+        with self._connection() as conn:
+            row = macro_export_repo_dao.get_export_by_content_hash(conn=conn, content_hash=content_hash)
+            return _row_to_macro_export_record(row) if row else None
+
+    def get_latest(self) -> Optional[MacroExportRecord]:
+        with self._connection() as conn:
+            row = macro_export_repo_dao.get_latest_export(conn=conn)
+            return _row_to_macro_export_record(row) if row else None
+
+    def update_state(
+        self,
+        export_id: str,
+        state: str,
+        stage: str,
+        *,
+        job_id: Optional[str] = None,
+        notebook_id: Optional[str] = None,
+        notebook_url: Optional[str] = None,
+        manifest_path: Optional[str] = None,
+        inventory: Optional[Dict[str, Any]] = None,
+        warnings: Optional[List[str]] = None,
+        error_code: Optional[str] = None,
+        error_message: Optional[str] = None,
+    ) -> Optional[MacroExportRecord]:
+        with self._connection(write=True) as conn:
+            row = macro_export_repo_dao.update_export_state(
+                conn=conn,
+                export_id=export_id,
+                state=state,
+                stage=stage,
+                job_id=job_id,
+                notebook_id=notebook_id,
+                notebook_url=notebook_url,
+                manifest_path=manifest_path,
+                inventory=inventory,
+                warnings=warnings,
+                error_code=error_code,
+                error_message=error_message,
+            )
+            return _row_to_macro_export_record(row) if row else None

@@ -512,3 +512,41 @@ def _replay_symbol_trades(
         float(quantize_decimal(avg_cost_native_dec, PRICE_QUANTUM)),
         float(quantize_decimal(total_realized_pnl_thb_dec, MONEY_QUANTUM)),
     )
+
+
+def extract_active_ledger_identities(
+    rows: list[dict],
+) -> dict[tuple[str, str], dict]:
+    """Extract active (non-voided, non-reversal) transactions keyed by (Confirmation_No, Order_ID).
+
+    Any transaction row that has been voided by a subsequent reversal row (identified by
+    Action starting with 'VOID_' referencing the original Transaction_ID via Related_Transaction_ID)
+    is excluded. The reversal row itself is also excluded.
+
+    This ensures that when a transaction is deleted/voided from the portfolio, its natural
+    identity is considered vacated, allowing it to be safely re-imported from trade confirmations.
+    """
+    voided_target_ids: set[str] = set()
+    for r in rows:
+        act = str(r.get("Action") or "").strip().upper()
+        rel_id = str(r.get("Related_Transaction_ID") or "").strip()
+        if (act.startswith("VOID_") or act == "REVERSAL") and rel_id:
+            voided_target_ids.add(rel_id)
+
+    active_map: dict[tuple[str, str], dict] = {}
+    for r in rows:
+        if not r:
+            continue
+        tx_id = str(r.get("Transaction_ID") or "").strip()
+        act = str(r.get("Action") or "").strip().upper()
+
+        # Skip reversal records and original records that were voided
+        if act.startswith("VOID_") or act == "REVERSAL" or (tx_id and tx_id in voided_target_ids):
+            continue
+
+        c_no = str(r.get("Confirmation_No") or "").strip()
+        o_id = str(r.get("Order_ID") or "").strip()
+        if c_no and o_id:
+            active_map[(c_no, o_id)] = dict(r)
+
+    return active_map

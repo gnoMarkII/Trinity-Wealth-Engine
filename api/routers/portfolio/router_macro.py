@@ -1,9 +1,11 @@
 """Inbound HTTP adapter for Macro and Portfolio Calendar queries."""
+from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, Query, Response
 from datetime import datetime, timezone
 
 from api.auth import require_session
 from api.dependencies import (
+    get_macro_notebooklm_export_service,
     get_macro_service,
     get_portfolio_calendar_service,
     get_sector_rotation_service,
@@ -13,6 +15,10 @@ from api.schemas import (
     CalendarEventDTO,
     MacroDashboardDTO,
     MacroIndicatorSeriesDTO,
+    MacroNotebookLMExportRequestDTO,
+    MacroNotebookLMExportResponseDTO,
+    MacroNotebookLMExportStatusDTO,
+    macro_export_record_to_dto,
     NewsFunnelFilteredItemDTO,
     NewsFunnelPendingItemDTO,
     PortfolioCalendarDTO,
@@ -183,3 +189,88 @@ def get_portfolio_calendar(
 ) -> PortfolioCalendarDTO:
     with handle_portfolio_exceptions("Portfolio lock timeout"):
         return PortfolioCalendarDTO.model_validate(service.get_calendar(portfolio_id=portfolio_id))
+
+
+from application.macro.notebooklm_export_service import MacroNotebookLMExportService
+
+
+@router.post(
+    "/api/macro/notebooklm/exports",
+    status_code=202,
+    response_model=MacroNotebookLMExportResponseDTO,
+)
+def export_macro_to_notebooklm(
+    payload: Optional[MacroNotebookLMExportRequestDTO] = None,
+    service: MacroNotebookLMExportService = Depends(get_macro_notebooklm_export_service),
+) -> MacroNotebookLMExportResponseDTO:
+    mode = payload.mode if payload else "all_retained"
+    try:
+        record = service.request_export(mode=mode)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Failed to prepare macro export: {exc}") from exc
+    return MacroNotebookLMExportResponseDTO(
+        export_id=record.export_id,
+        job_id=record.job_id,
+        state=record.state,
+        stage=record.stage,
+        message="Macro export bundle prepared and dispatched to NotebookLM worker",
+    )
+
+
+@router.get(
+    "/api/macro/notebooklm/exports/latest",
+    response_model=Optional[MacroNotebookLMExportStatusDTO],
+)
+def get_latest_macro_notebooklm_export(
+    service: MacroNotebookLMExportService = Depends(get_macro_notebooklm_export_service),
+) -> Optional[MacroNotebookLMExportStatusDTO]:
+    record = service.get_latest_export()
+    if record is None:
+        return None
+    return macro_export_record_to_dto(record)
+
+
+@router.get(
+    "/api/macro/notebooklm/exports/{export_id}",
+    response_model=MacroNotebookLMExportStatusDTO,
+)
+def get_macro_notebooklm_export_by_id(
+    export_id: str,
+    service: MacroNotebookLMExportService = Depends(get_macro_notebooklm_export_service),
+) -> MacroNotebookLMExportStatusDTO:
+    record = service.get_export(export_id)
+    if record is None:
+        raise HTTPException(
+            status_code=404,
+            detail={"code": "macro_export_not_found", "message": f"Export '{export_id}' not found"},
+        )
+    return macro_export_record_to_dto(record)
+
+
+@router.post(
+    "/api/macro/notebooklm/exports/{export_id}/retry",
+    status_code=202,
+    response_model=MacroNotebookLMExportResponseDTO,
+)
+def retry_macro_notebooklm_export(
+    export_id: str,
+    service: MacroNotebookLMExportService = Depends(get_macro_notebooklm_export_service),
+) -> MacroNotebookLMExportResponseDTO:
+    try:
+        record = service.retry_export(export_id)
+    except LookupError as exc:
+        raise HTTPException(
+            status_code=404,
+            detail={"code": "macro_export_not_found", "message": str(exc)},
+        ) from exc
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Failed to retry macro export: {exc}") from exc
+    return MacroNotebookLMExportResponseDTO(
+        export_id=record.export_id,
+        job_id=record.job_id,
+        state=record.state,
+        stage=record.stage,
+        message="Macro export retry dispatched to NotebookLM worker",
+    )

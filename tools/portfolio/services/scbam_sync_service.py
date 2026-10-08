@@ -18,6 +18,7 @@ import uuid
 
 from tools.portfolio.adapters.markdown.paths import get_vault_path, get_trades_log_filepath
 from tools.portfolio.adapters.scb.scbam_parser_adapter import parse_scbam_fundclick_html, SCBAMRawOrder
+from tools.portfolio.domain.calculations import extract_active_ledger_identities
 from tools.portfolio.domain.models import (
     PortfolioState,
     TradeImportItem,
@@ -85,24 +86,28 @@ def _save_sync_history(portfolio_id: str, account_email: str, history: Dict[str,
             temp_file.unlink(missing_ok=True)
 
 
-def _load_existing_ledger_identities(portfolio_id: str) -> Dict[Tuple[str, str], Dict[str, str]]:
+def _load_existing_ledger_identities(
+    portfolio_id: str, repo: Optional[Any] = None
+) -> Dict[Tuple[str, str], Dict[str, str]]:
+    """Load active, non-voided transactions keyed by (Confirmation_No, Order_ID)."""
+    if repo is not None:
+        try:
+            with repo.unit_of_work(portfolio_id) as uow:
+                rows = uow.read_trade_log_locked()
+                return extract_active_ledger_identities(rows)
+        except Exception as e:
+            log.warning("Could not load identities from repository unit of work for %s: %s", portfolio_id, e)
+
     fpath = get_trades_log_filepath(portfolio_id)
     if not fpath.exists():
         return {}
-    identity_map: Dict[Tuple[str, str], Dict[str, str]] = {}
     try:
         with fpath.open("r", encoding="utf-8", newline="") as f:
-            reader = csv.DictReader(f)
-            for r in reader:
-                if not r:
-                    continue
-                c_no = str(r.get("Confirmation_No") or "").strip()
-                o_id = str(r.get("Order_ID") or "").strip()
-                if c_no and o_id:
-                    identity_map[(c_no, o_id)] = dict(r)
+            rows = list(csv.DictReader(f))
+            return extract_active_ledger_identities(rows)
     except Exception as e:
         log.warning("Could not load existing trade log identities for %s: %s", portfolio_id, e)
-    return identity_map
+    return {}
 
 
 class SCBAMSyncService:
@@ -155,7 +160,8 @@ class SCBAMSyncService:
         total_emails = len(email_metas)
         yield f"event: status\ndata: {json.dumps({'message': f'พบอีเมลคำสั่งซื้อ SCBAM ทั้งหมด {total_emails} ฉบับ กำลังประมวลผล...'})}\n\n"
 
-        existing_identities = _load_existing_ledger_identities(portfolio_id)
+        repo = getattr(self.batch_importer, "repo", None)
+        existing_identities = _load_existing_ledger_identities(portfolio_id, repo=repo)
 
         staged_items: List[TradeImportItem] = []
         accumulated_warnings: List[Dict[str, Any]] = []
@@ -313,14 +319,13 @@ class SCBAMSyncService:
                 asset_type="Fund",
             )
 
-            staged_items.append(item)
-
             if is_duplicate:
                 dup_count += 1
                 status_label = "ALREADY_IMPORTED"
             else:
                 new_count += 1
                 status_label = "NEW"
+                staged_items.append(item)
 
             order_payload = {
                 "item_id": item.item_id,

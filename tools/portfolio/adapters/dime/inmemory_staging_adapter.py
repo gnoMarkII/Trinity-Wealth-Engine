@@ -7,7 +7,7 @@ which the driving adapter (FastAPI router) maps to HTTP status codes.
 import threading
 import time
 import uuid
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
 from tools.portfolio.domain.errors import (
     StagedScanExpiredError,
@@ -23,6 +23,7 @@ class _StagedBatch:
         self.items = items
         self.expires_at = expires_at
         self.session_id = session_id
+        self.provenance: Optional[Dict[str, Any]] = None
 
 
 class InMemoryStagingAdapter(TradeStagingPort):
@@ -84,3 +85,47 @@ class InMemoryStagingAdapter(TradeStagingPort):
                 raise StagedScanForbiddenError("ไม่อนุญาตให้ลบข้อมูล staged ของ session อื่น")
 
             self._store.pop(scan_id, None)
+
+    def stage_provenance(
+        self,
+        scan_id: str,
+        provenance: Dict[str, Any],
+        session_id: Optional[str] = None,
+    ) -> None:
+        with self._lock:
+            batch = self._store.get(scan_id)
+            if not batch:
+                return
+            if batch.session_id is not None and session_id and batch.session_id != session_id:
+                raise StagedScanForbiddenError("ไม่อนุญาตให้เข้าถึงข้อมูล staged ของ session อื่น")
+            batch.provenance = dict(provenance)
+
+    def get_provenance(
+        self,
+        scan_id: str,
+        session_id: Optional[str] = None,
+    ) -> Optional[Dict[str, Any]]:
+        with self._lock:
+            batch = self._store.get(scan_id)
+            if not batch:
+                return None
+            if time.time() > batch.expires_at:
+                return None
+            if batch.session_id is not None and session_id and batch.session_id != session_id:
+                raise StagedScanForbiddenError("ไม่อนุญาตให้เข้าถึงข้อมูล staged ของ session อื่น")
+            return dict(batch.provenance) if batch.provenance is not None else None
+
+    def pop_provenance(
+        self,
+        scan_id: str,
+        session_id: Optional[str] = None,
+    ) -> Optional[Dict[str, Any]]:
+        with self._lock:
+            batch = self._store.get(scan_id)
+            if not batch:
+                return None
+            if batch.session_id is not None and session_id and batch.session_id != session_id:
+                raise StagedScanForbiddenError("ไม่อนุญาตให้เข้าถึงข้อมูล staged ของ session อื่น")
+            prov = batch.provenance
+            batch.provenance = None
+            return dict(prov) if prov is not None else None

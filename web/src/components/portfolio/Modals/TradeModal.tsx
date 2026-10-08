@@ -126,7 +126,7 @@ export default function TradeModal({ targets, holdings, selectedPortfolioId, onC
 
   const renderErrorNode = () => {
     if (!error) return null
-    const isInsufficientCash = error.includes('Insufficient cash balance') && action === 'buy'
+    const isInsufficientCash = /(?:Insufficient cash|เงินสดไม่พอ)/i.test(error) && action === 'buy'
 
     return (
       <div className="space-y-2">

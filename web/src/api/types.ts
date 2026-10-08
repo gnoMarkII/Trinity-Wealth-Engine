@@ -2152,3 +2152,69 @@ export interface CryptoMacroLiquidityDTO {
   stale_reason?: string | null
   limitations?: string | null
 }
+
+// ---------------------------------------------------------
+// ---------------------------------------------------------
+// Macro NotebookLM Research Companion Export Types
+// ---------------------------------------------------------
+
+export type MacroNotebookLMExportState = 'queued' | 'running' | 'completed' | 'failed'
+
+export interface MacroNotebookLMNotebookDTO {
+  notebook_id: string
+  title: string
+  url: string
+  status: string
+  source_count: number
+}
+
+export interface MacroNotebookLMSourceResultDTO {
+  file_name: string
+  title: string
+  status: string
+  source_id?: string | null
+  error?: string | null
+}
+
+export interface MacroNotebookLMCoverageDTO {
+  strategy_report_present: boolean
+  historical_reports_count: number
+  catalog_notes_count: number
+  indicator_series_count: number
+  market_observables_cached: number
+  market_observables_total: number
+  thailand_hard_data_present: boolean
+  sector_rotation_present: boolean
+  news_events_count: number
+}
+
+export interface MacroNotebookLMExportRequestDTO {
+  mode?: 'all_retained'
+}
+
+export interface MacroNotebookLMExportResponseDTO {
+  export_id: string
+  job_id?: string | null
+  state: string
+  stage: string
+  message: string
+}
+
+export interface MacroNotebookLMExportStatusDTO {
+  export_id: string
+  job_id?: string | null
+  mode: string
+  state: MacroNotebookLMExportState | string
+  stage: string
+  snapshot_at: string
+  bundle_hash: string
+  strategy_report_id?: string | null
+  notebooks: MacroNotebookLMNotebookDTO[]
+  counts: Record<string, any>
+  source_results: MacroNotebookLMSourceResultDTO[]
+  coverage: MacroNotebookLMCoverageDTO
+  warnings: string[]
+  error_code?: string | null
+  error?: string | null
+  can_retry: boolean
+}

@@ -48,17 +48,31 @@ def notebooklm_run_fn(
     scope: str = "both",
     resume_value: Optional[dict[str, Any]] = None,
 ) -> None:
-    """Run NotebookLM post-production while preserving the JobQueue contract."""
-    del thread_id, flow, scope, resume_value  # reserved by the common queue signature
-    service = NotebookLMPostProductionApplicationService(
-        state=LegacyNotebookLMWorkerStateAdapter(),
-        content=FilesystemBriefingContentAdapter(),
-        pipeline_runner=run_notebooklm_post_production_pipeline,
-        prompt_extractor=extract_notebooklm_prompts,
-        notifier=_DiscordNotifierAdapter(),
-        outbox=LegacyNotebookLMNotificationOutboxAdapter(),
-    )
-    service.execute(job_id=job_id, instruction=instruction)
+    """Route NotebookLM jobs based on explicit flow name."""
+    del thread_id, scope, resume_value  # reserved by the common queue signature
+
+    if flow == "notebooklm":
+        service = NotebookLMPostProductionApplicationService(
+            state=LegacyNotebookLMWorkerStateAdapter(),
+            content=FilesystemBriefingContentAdapter(),
+            pipeline_runner=run_notebooklm_post_production_pipeline,
+            prompt_extractor=extract_notebooklm_prompts,
+            notifier=_DiscordNotifierAdapter(),
+            outbox=LegacyNotebookLMNotificationOutboxAdapter(),
+        )
+        service.execute(job_id=job_id, instruction=instruction)
+    elif flow == "macro_notebooklm":
+        from api.dependencies import build_macro_notebooklm_export_service
+
+        macro_export_service = build_macro_notebooklm_export_service()
+        state_adapter = LegacyNotebookLMWorkerStateAdapter()
+        macro_export_service.execute_sync(
+            job_id=job_id,
+            instruction=instruction,
+            on_step=lambda node, msg: state_adapter.append_log(job_id, node, msg),
+        )
+    else:
+        raise ValueError(f"Unknown flow '{flow}' dispatched to notebooklm worker")
 
 
 __all__ = [

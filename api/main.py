@@ -69,7 +69,7 @@ async def lifespan(app: FastAPI):
 
     app.state.notebooklm_job_queue = jobs.JobQueue(
         run_fn=notebooklm_worker.notebooklm_run_fn,
-        flows={"notebooklm"},
+        flows={"notebooklm", "macro_notebooklm"},
     )
     # Queue objects remain available to request dependencies for compatibility,
     # but no background task or scheduler is started when explicitly disabled

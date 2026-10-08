@@ -195,6 +195,28 @@ CREATE TABLE IF NOT EXISTS earnings_call_outbox (
 );
 CREATE INDEX IF NOT EXISTS idx_earnings_call_outbox_pending
     ON earnings_call_outbox(status, available_at ASC);
+
+CREATE TABLE IF NOT EXISTS macro_notebooklm_exports (
+    export_id TEXT PRIMARY KEY,
+    request_key TEXT UNIQUE,
+    content_hash TEXT NOT NULL,
+    job_id TEXT,
+    state TEXT NOT NULL DEFAULT 'queued',
+    stage TEXT NOT NULL DEFAULT 'initialized',
+    snapshot_at TEXT NOT NULL,
+    strategy_report_id TEXT,
+    notebook_id TEXT,
+    notebook_url TEXT,
+    manifest_path TEXT,
+    inventory_json TEXT,
+    warnings_json TEXT,
+    error_code TEXT,
+    error_message TEXT,
+    created_at REAL NOT NULL,
+    updated_at REAL NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_macro_export_hash ON macro_notebooklm_exports(content_hash);
+CREATE INDEX IF NOT EXISTS idx_macro_export_created ON macro_notebooklm_exports(created_at DESC);
 """
 
 _INITIALIZED_DB_PATHS: set[str] = set()

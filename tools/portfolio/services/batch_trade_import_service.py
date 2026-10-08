@@ -10,7 +10,11 @@ from decimal import Decimal
 from typing import List, Optional, Set, Tuple
 
 from core.logger import get_logger
-from tools.portfolio.domain.calculations import _replay_symbol_trades, recalc_all
+from tools.portfolio.domain.calculations import (
+    _replay_symbol_trades,
+    extract_active_ledger_identities,
+    recalc_all,
+)
 from tools.portfolio.domain.constants import _FLOAT_EPS, _MONEY_DP
 from tools.portfolio.domain.errors import TradeDuplicateError, TradeReconciliationError
 from tools.portfolio.domain.events import SystemJournalEvent
@@ -67,20 +71,17 @@ class BatchTradeImportService:
             state = uow.load_state()
             existing_rows = uow.read_trade_log_locked()
 
-            # 1. Map existing transactions by Fingerprint and (Confirmation_No, Order_ID)
-            existing_fps = {
-                str(r.get("Fingerprint") or "").strip()
-                for r in existing_rows
-                if r.get("Fingerprint")
-            }
-            existing_identity_map: dict = {}
-            for r in existing_rows:
-                c_no = str(r.get("Confirmation_No") or "").strip()
-                o_id = str(r.get("Order_ID") or "").strip()
-                if c_no and o_id:
-                    existing_identity_map[(c_no, o_id)] = r
+            # 1. Map existing active transactions by (Confirmation_No, Order_ID)
+            # Voided transactions and reversal records are excluded so deleted/voided trades can be re-imported
+            existing_identity_map = extract_active_ledger_identities(existing_rows)
 
-            # Legacy natural key map for rows migrated from old ledgers without Order_ID
+            voided_target_ids = {
+                str(r.get("Related_Transaction_ID") or "").strip()
+                for r in existing_rows
+                if str(r.get("Action") or "").strip().upper().startswith("VOID_") and r.get("Related_Transaction_ID")
+            }
+
+            # Legacy natural key map for active rows migrated from old ledgers without Order_ID
             legacy_existing_keys = {
                 (
                     str(r.get("Confirmation_No") or "").strip(),
@@ -91,7 +92,18 @@ class BatchTradeImportService:
                     str(r.get("Timestamp") or "")[:10].strip(),
                 )
                 for r in existing_rows
-                if r.get("Confirmation_No") and not str(r.get("Order_ID") or "").strip()
+                if r.get("Confirmation_No")
+                and not str(r.get("Order_ID") or "").strip()
+                and not str(r.get("Action") or "").strip().upper().startswith("VOID_")
+                and str(r.get("Transaction_ID") or "").strip() not in voided_target_ids
+            }
+
+            existing_fps = {
+                str(r.get("Fingerprint") or "").strip()
+                for r in existing_rows
+                if r.get("Fingerprint")
+                and not str(r.get("Action") or "").strip().upper().startswith("VOID_")
+                and str(r.get("Transaction_ID") or "").strip() not in voided_target_ids
             }
 
             # 2. Check for intra-batch duplicates and conflicts

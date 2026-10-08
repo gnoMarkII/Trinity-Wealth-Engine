@@ -107,14 +107,21 @@ import pytest
 import tools.portfolio.journal as journal
 
 class TestInjectJournalWikilinks:
-    def test_inject_journal_wikilinks_ignores_cash(self):
-        # Normal stock should get wikilink
+    def test_inject_journal_wikilinks_ignores_cash(self, isolated_portfolio, tmp_vault):
+        # Create AAPL note so link resolution resolves
+        aapl_file = tmp_vault / "30_Knowledge_Base/Stocks/AAPL/AAPL.md"
+        aapl_file.parent.mkdir(parents=True, exist_ok=True)
+        aapl_file.write_text("# AAPL", encoding="utf-8")
+
+        # Normal stock should get link
         res1 = journal._inject_journal_wikilinks("**[BUY]** AAPL **[10 units]**")
-        assert "[[AAPL]]" in res1
-        
+        assert "AAPL" in res1
+        assert "—" in res1
+
         # Cash should be ignored
         res2 = journal._inject_journal_wikilinks(f"**[DEPOSIT]** {journal.CASH_THB_SYMBOL} **[100 THB]**")
         assert f"[[{journal.CASH_THB_SYMBOL}]]" not in res2
+        assert "—" not in res2
         assert "CASH_THB" in res2
 
 class TestAppendTradingJournalExceptions:

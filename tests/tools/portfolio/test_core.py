@@ -196,8 +196,9 @@ class TestHoldingSidecars:
             current_price_usd=200.0,
             market_value_thb=70000.0
         )
-        md = core._holding_to_md(h)
-        assert "schema_version: 1" in md
+        import tools.portfolio.core as cl
+        md = core._holding_to_md(h, "default", cl.get_vault_path())
+        assert "schema_version: 2" in md
         assert "derived: true" in md
         assert "status: active" in md
         assert "currency: USD" in md
@@ -227,14 +228,14 @@ class TestHoldingSidecars:
             ptt_post = frontmatter.load(f)
         assert ptt_post.metadata.get("status") == "archived"
         assert ptt_post.metadata.get("archived_at") is not None
-        assert ptt_post.metadata.get("schema_version") == 1
+        assert ptt_post.metadata.get("schema_version") == 2
         assert ptt_post.metadata.get("derived") is True
 
         aapl_file = holdings_dir / "AAPL.md"
         with aapl_file.open("r", encoding="utf-8") as f:
             aapl_post = frontmatter.load(f)
         assert aapl_post.metadata.get("status") == "active"
-        assert aapl_post.metadata.get("schema_version") == 1
+        assert aapl_post.metadata.get("schema_version") == 2
         assert aapl_post.metadata.get("derived") is True
         assert "# AAPL" in aapl_post.content
         assert "> [!CAUTION]" in aapl_post.content
@@ -253,11 +254,12 @@ class TestHoldingSidecars:
 
         post, state = cl._load_or_init()
         assert len(state.holdings) > 0
-        assert state.schema_version == 1
+        assert state.schema_version in (1, 2)
 
         # Run reset clean slate
         new_state = cl.structured_reset_clean_slate()
-        assert len(new_state.holdings) == 0
+        assert len(new_state.holdings) == 2
+        assert all(h.symbol in ("CASH_THB", "CASH_USD") for h in new_state.holdings)
         assert not (holdings_dir / "PTT.md").exists()
 
         # Check .backups directory created

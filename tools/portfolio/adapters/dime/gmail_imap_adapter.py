@@ -60,7 +60,12 @@ class GmailImapSourceAdapter(TradeEmailSourcePort):
             raise ValueError(f"เข้าสู่ระบบ Gmail IMAP ไม่สำเร็จ: {e} (กรุณาตรวจสอบ GMAIL_IMAP_USER และ App Password)") from e
         return mail
 
-    def search_dime_emails(self, query: str = "", limit: Optional[int] = None) -> List[TradeDocumentMetadata]:
+    def search_dime_emails(
+        self,
+        query: str = "",
+        limit: Optional[int] = None,
+        since_date: Optional[str] = None,
+    ) -> List[TradeDocumentMetadata]:
         username = self.username or os.getenv("GMAIL_IMAP_USER", "")
         clean_user = username.strip() if username else ""
         if not self.username or not self.password:
@@ -71,9 +76,22 @@ class GmailImapSourceAdapter(TradeEmailSourcePort):
         try:
             mail.select("INBOX", readonly=True)
             if not query:
-                search_crit = '(FROM "dime.co.th" OR SUBJECT "Confirmation" SUBJECT "Confirmation Note")'
+                base_crit = '(FROM "dime.co.th" OR SUBJECT "Confirmation" SUBJECT "Confirmation Note")'
             else:
-                search_crit = f'(FROM "dime.co.th" SUBJECT "{query}")'
+                base_crit = f'(FROM "dime.co.th" SUBJECT "{query}")'
+
+            if since_date:
+                try:
+                    if len(since_date) == 10 and since_date[4] == "-" and since_date[7] == "-":
+                        dt = datetime.strptime(since_date, "%Y-%m-%d")
+                        imap_date = dt.strftime("%d-%b-%Y")
+                    else:
+                        imap_date = since_date
+                    search_crit = f'({base_crit} SINCE {imap_date})'
+                except Exception:
+                    search_crit = base_crit
+            else:
+                search_crit = base_crit
 
             try:
                 typ, data = mail.uid("SEARCH", "CHARSET", "UTF-8", search_crit)
@@ -154,7 +172,12 @@ class GmailImapSourceAdapter(TradeEmailSourcePort):
             except Exception:
                 pass
 
-    def search_wealthx_emails(self, query: str = "", limit: Optional[int] = None) -> List[TradeDocumentMetadata]:
+    def search_wealthx_emails(
+        self,
+        query: str = "",
+        limit: Optional[int] = None,
+        since_date: Optional[str] = None,
+    ) -> List[TradeDocumentMetadata]:
         username = self.username or os.getenv("GMAIL_IMAP_USER", "")
         clean_user = username.strip() if username else ""
         if not self.username or not self.password:
@@ -164,7 +187,19 @@ class GmailImapSourceAdapter(TradeEmailSourcePort):
         mail = self._get_connection()
         try:
             mail.select("INBOX", readonly=True)
-            search_crit = '(FROM "wealthx.co")'
+            base_crit = '(FROM "wealthx.co")'
+            if since_date:
+                try:
+                    if len(since_date) == 10 and since_date[4] == "-" and since_date[7] == "-":
+                        dt = datetime.strptime(since_date, "%Y-%m-%d")
+                        imap_date = dt.strftime("%d-%b-%Y")
+                    else:
+                        imap_date = since_date
+                    search_crit = f'({base_crit} SINCE {imap_date})'
+                except Exception:
+                    search_crit = base_crit
+            else:
+                search_crit = base_crit
 
             try:
                 typ, data = mail.uid("SEARCH", "CHARSET", "UTF-8", search_crit)

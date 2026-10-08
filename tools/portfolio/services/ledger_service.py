@@ -146,6 +146,13 @@ class PortfolioLedgerService:
             new_units_val = float(target_row.get("Units") or target_row.get("units") or 0)
             new_price_val = float(target_row.get("Price") or target_row.get("price") or 0)
 
+            if units is not None or price is not None:
+                if target_row.get("Net_Amount") is not None or target_row.get("net_amount") is not None:
+                    target_row["Net_Amount"] = f"{new_units_val * new_price_val:.2f}"
+                if target_row.get("Gross_Amount") is not None or target_row.get("gross_amount") is not None:
+                    target_row["Gross_Amount"] = f"{new_units_val * new_price_val:.2f}"
+
+
             sym = target_row.get("Symbol") or target_row.get("symbol")
             ccy = target_row.get("Currency") or target_row.get("currency") or "THB"
             sym_rows = [r for r in rows if (r.get("Symbol") or r.get("symbol")) == sym]

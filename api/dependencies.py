@@ -1,6 +1,6 @@
 """FastAPI Application Dependencies & Composition Provider."""
 from pathlib import Path
-from typing import Optional
+from typing import Any, Optional
 from fastapi import Request
 import yfinance as yf
 
@@ -136,7 +136,13 @@ class _JobQueueDispatchAdapter(NotebookLMDispatchPort):
     def __init__(self, queue) -> None:
         self._queue = queue
 
-    def dispatch(self, instruction: str, card_id: str, flow: str = "notebooklm", scope: str = "both") -> str:
+    def dispatch(
+        self,
+        instruction: str,
+        card_id: Optional[str] = None,
+        flow: str = "notebooklm",
+        scope: str = "both",
+    ) -> str:
         if self._queue is None:
             raise RuntimeError("NotebookLM job queue is not running")
         return self._queue.dispatch(instruction, card_id, flow=flow, scope=scope)
@@ -164,6 +170,34 @@ def get_notebooklm_service(request: Request) -> NotebookLMApplicationService:
         card_repo=SqliteNotebookLMCardRepositoryAdapter(),
         dispatcher=_JobQueueDispatchAdapter(getattr(request.app.state, "notebooklm_job_queue", None)),
         binary=_NotebookLMBinaryAdapter(check_binary_available),
+    )
+
+
+def get_macro_notebooklm_export_service(
+    request: Request,
+) -> "MacroNotebookLMExportService":
+    """Dependency provider for MacroNotebookLMExportService."""
+    queue = getattr(request.app.state, "notebooklm_job_queue", None)
+    return build_macro_notebooklm_export_service(queue=queue)
+
+
+def build_macro_notebooklm_export_service(
+    queue: Any = None,
+) -> "MacroNotebookLMExportService":
+    from application.macro.notebooklm_export_service import MacroNotebookLMExportService
+    from tools.macro.adapters.macro_corpus_adapter import MacroCorpusAdapter
+    from tools.macro.notebooklm_bundle_builder import MacroExportBundleBuilder
+    from api.db.adapters import SqliteMacroExportRepositoryAdapter
+    from tools.content.notebooklm.research_export_pipeline import (
+        NotebookLMResearchExportPipelineAdapter,
+    )
+
+    return MacroNotebookLMExportService(
+        corpus_reader=MacroCorpusAdapter(),
+        bundle_builder=MacroExportBundleBuilder(),
+        repo=SqliteMacroExportRepositoryAdapter(),
+        dispatcher=_JobQueueDispatchAdapter(queue),
+        pipeline=NotebookLMResearchExportPipelineAdapter(),
     )
 
 

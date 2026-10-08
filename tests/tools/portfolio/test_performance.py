@@ -175,9 +175,9 @@ class TestReadPerformanceHistoryAddons:
             rows = list(csv.reader(f))
 
         header = rows[0]
-        assert header == ["Date", "Total_NAV", "Total_Cost", "Unrealized_PnL", "Cash_Balance", "Realized_PnL_YTD", "Passive_Income_YTD"]
+        assert header == perf_mod._PERFORMANCE_LOG_HEADER
         data_row = rows[-1]
-        assert len(data_row) == 7
+        assert len(data_row) == len(perf_mod._PERFORMANCE_LOG_HEADER)
         assert float(data_row[6]) == pytest.approx(1500.0)  # Passive_Income_YTD
 
     def test_snapshot_header_migration(self, isolated_portfolio, tmp_vault):
@@ -198,10 +198,10 @@ class TestReadPerformanceHistoryAddons:
             rows = list(csv.reader(f))
 
         header = rows[0]
-        assert header == ["Date", "Total_NAV", "Total_Cost", "Unrealized_PnL", "Cash_Balance", "Realized_PnL_YTD", "Passive_Income_YTD"]
+        assert header == perf_mod._PERFORMANCE_LOG_HEADER
         old_row = rows[1]
         assert old_row[0] == "2026-01-01"
-        assert len(old_row) == 7
+        assert len(old_row) == len(perf_mod._PERFORMANCE_LOG_HEADER)
         assert old_row[5] == "" and old_row[6] == ""
 
         # Structured history read check

@@ -247,10 +247,10 @@ def remove_goal(name: str) -> str:
     return f"[GOAL DEL] {nm} | remaining: {remaining}"
 
 
-def get_structured_goals(portfolio_id: str | None = None) -> list[dict]:
-    with _goals_lock:
-        _, goals_state = _load_or_init_goals()
-
+def _compute_structured_goals(
+    goals_state: GoalsState,
+    portfolio_id: str | None = None,
+) -> list[dict]:
     now = datetime.now()
     results = []
     port_states: dict[str, PortfolioState] = {}
@@ -261,10 +261,14 @@ def get_structured_goals(portfolio_id: str | None = None) -> list[dict]:
             continue
 
         if pid not in port_states:
-            p_lock = _get_portfolio_lock(pid)
-            with p_lock:
-                _, p_state = _load_or_init(portfolio_id=pid)
-                _recalc_all(p_state)
+            try:
+                p_lock = _get_portfolio_lock(pid)
+                with p_lock:
+                    _, p_state = _load_or_init(portfolio_id=pid)
+                    _recalc_all(p_state)
+                    port_states[pid] = p_state
+            except Exception:
+                p_state = PortfolioState(last_updated=_now_iso())
                 port_states[pid] = p_state
         else:
             p_state = port_states[pid]
@@ -321,6 +325,14 @@ def get_structured_goals(portfolio_id: str | None = None) -> list[dict]:
             entry["notes"] = g.notes
         results.append(entry)
     return results
+
+
+def get_structured_goals(
+    portfolio_id: Optional[str] = None,
+) -> List[Dict]:
+    with _goals_lock:
+        _, goals_state = _load_or_init_goals()
+    return _compute_structured_goals(goals_state=goals_state, portfolio_id=portfolio_id)
 
 
 @tool

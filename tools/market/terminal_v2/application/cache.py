@@ -129,6 +129,57 @@ class ThreadSafeTTLCache:
             return entry.data
         return None
 
+    def set(self, key: str, value: Any, ttl_seconds: Optional[float] = None) -> None:
+        """Direct store with TTL."""
+        ttl = ttl_seconds if ttl_seconds is not None else self._default_ttl
+        now_mono = time.monotonic()
+        now_epoch = time.time()
+        with self._global_lock:
+            self._entries[key] = CacheEntry(
+                data=value,
+                expires_at=now_mono + ttl,
+                cached_at=now_epoch,
+                monotonic_cached_at=now_mono,
+            )
+            self._evict_if_needed()
+
+    def peek(self, key: str) -> Optional[Dict[str, Any]]:
+        """Read-only inspection of a cache entry without triggering any loader.
+
+        Returns metadata and data if present (even if expired). Returns None if absent.
+        """
+        with self._global_lock:
+            entry = self._entries.get(key)
+            if entry is None:
+                return None
+            now = time.monotonic()
+            return {
+                "data": entry.data,
+                "cached_at": entry.cached_at,
+                "expires_at": entry.expires_at,
+                "is_expired": now >= entry.expires_at,
+            }
+
+    def peek_data(self, key: str) -> Optional[Any]:
+        """Return the cached payload if present, regardless of expiration, without triggering loader."""
+        with self._global_lock:
+            entry = self._entries.get(key)
+            return entry.data if entry is not None else None
+
+    def snapshot_entries(self) -> Dict[str, Dict[str, Any]]:
+        """Return a read-only snapshot dictionary of all stored cache entries."""
+        with self._global_lock:
+            now = time.monotonic()
+            return {
+                k: {
+                    "data": entry.data,
+                    "cached_at": entry.cached_at,
+                    "expires_at": entry.expires_at,
+                    "is_expired": now >= entry.expires_at,
+                }
+                for k, entry in self._entries.items()
+            }
+
     def get_or_compute(
         self,
         key: str,

@@ -367,6 +367,102 @@ describe('DimeSyncModal', () => {
       expect(screen.getByText(/SCBAM Fund Click \(กองทุนรวมไทย\)/)).toBeInTheDocument()
     })
   })
+
+  it('supports partial item selection and passes selectedItemIds on commit for Dime & WealthX', async () => {
+    const onClose = vi.fn()
+    const onSuccess = vi.fn()
+    const mockState = {
+      holdings: [],
+      summary: {},
+      allocation_targets: [],
+      fx_rates: {},
+    } as any
+
+    vi.mocked(api.streamBatchDimeSync).mockImplementation(async (_payload, callbacks) => {
+      callbacks.onComplete?.({
+        scan_id: 'scan_partial_123',
+        item_count: 2,
+        items: [
+          {
+            item_id: 'item_1',
+            trade_date: '2026-08-01',
+            settlement_date: '2026-08-03',
+            symbol: 'AAPL',
+            action: 'BUY',
+            units: '10',
+            price: '150',
+            gross_amount: '1500',
+            fees: { commission: '0', vat: '0', other_fees: '0', fee_currency: 'USD' },
+            net_amount: '1500',
+            currency: 'USD',
+            confirmation_no: 'CONF_1',
+            order_id: 'ORD_1',
+            source: 'DIME',
+            fingerprint: 'fp_1',
+            line_index: 0,
+            cash_adjusted: true,
+            asset_type: 'Stock',
+          },
+          {
+            item_id: 'item_2',
+            trade_date: '2026-08-02',
+            settlement_date: '2026-08-04',
+            symbol: 'MSFT',
+            action: 'BUY',
+            units: '5',
+            price: '300',
+            gross_amount: '1500',
+            fees: { commission: '0', vat: '0', other_fees: '0', fee_currency: 'USD' },
+            net_amount: '1500',
+            currency: 'USD',
+            confirmation_no: 'CONF_2',
+            order_id: 'ORD_2',
+            source: 'DIME',
+            fingerprint: 'fp_2',
+            line_index: 0,
+            cash_adjusted: true,
+            asset_type: 'Stock',
+          },
+        ],
+        warnings: [],
+        skipped_synced_count: 0,
+      })
+    })
+
+    vi.mocked(api.commitDimeTrades).mockResolvedValue({
+      ok: true,
+      imported_count: 1,
+      state: mockState,
+    })
+
+    render(<DimeSyncModal portfolioId="default" onClose={onClose} onSuccess={onSuccess} />)
+
+    // Switch to email tab
+    fireEvent.click(screen.getByText('📧 ค้นหาจาก Gmail'))
+
+    // Trigger Sync All
+    fireEvent.click(screen.getByRole('button', { name: /ดึงและนำเข้าข้อมูลทั้งหมด \(Sync All\)/ }))
+
+    await waitFor(() => {
+      expect(screen.getByText('ตรวจสอบรายการที่พบ (2 รายการ)')).toBeInTheDocument()
+      expect(screen.getByText('ยืนยันนำเข้า 2 รายการ')).toBeInTheDocument()
+    })
+
+    // Uncheck MSFT (item_2)
+    const msftCheckbox = screen.getByLabelText(/Select MSFT 2026-08-02/)
+    fireEvent.click(msftCheckbox)
+
+    // Now button should show 1 item
+    expect(screen.getByText('ยืนยันนำเข้า 1 รายการ')).toBeInTheDocument()
+
+    // Click commit
+    const commitBtn = screen.getByRole('button', { name: /ยืนยันนำเข้า 1 รายการ/ })
+    fireEvent.click(commitBtn)
+
+    await waitFor(() => {
+      expect(api.commitDimeTrades).toHaveBeenCalledWith('scan_partial_123', 'default', ['item_1'])
+    })
+  })
 })
 
 

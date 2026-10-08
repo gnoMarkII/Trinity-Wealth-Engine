@@ -31,7 +31,11 @@ def get_actual_transactions(
         total_buy_count = sum(1 for t in tx_items if t.action == "BUY")
         total_sell_count = sum(1 for t in tx_items if t.action == "SELL")
         total_buy_thb = sum(t.cost_thb for t in tx_items if t.action == "BUY")
-        total_sell_thb = sum(t.cost_thb for t in tx_items if t.action == "SELL")
+        total_sell_thb = sum(
+            (t.cost_thb + (t.realized_pnl_thb or 0.0))
+            for t in tx_items
+            if t.action == "SELL"
+        )
         total_realized_pnl_thb = sum(
             t.realized_pnl_thb for t in tx_items if t.realized_pnl_thb is not None
         )

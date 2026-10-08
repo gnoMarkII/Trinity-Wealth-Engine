@@ -35,7 +35,8 @@ class FinnomenaFundAdapter(ThaiFundPricePort):
     ):
         self._timeout = timeout
         self._catalog_ttl = catalog_ttl
-        self._cache_dir = Path(cache_dir) if cache_dir else Path("data/cache")
+        cache_dir_env = os.environ.get("FINNOMENA_CACHE_DIR")
+        self._cache_dir = Path(cache_dir) if cache_dir else (Path(cache_dir_env) if cache_dir_env else Path("data/cache"))
         self._cache_file = self._cache_dir / "finnomena_funds_catalog.json"
         
         self._lock = threading.Lock()

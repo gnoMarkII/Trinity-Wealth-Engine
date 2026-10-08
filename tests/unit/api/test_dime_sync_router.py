@@ -149,3 +149,53 @@ def test_void_and_deprecated_delete_endpoints(auth_client):
         assert "use POST /api/portfolio/actual/transactions/{tx_id}/void instead" in res_del.headers["X-Deprecation-Warning"]
     finally:
         app.dependency_overrides.pop(get_portfolio_service, None)
+
+
+def test_dime_sync_partial_commit_selection(auth_client):
+    from api.dependencies import get_portfolio_service
+    item1 = _sample_trade_item()
+    item2 = TradeImportItem(
+        item_id="item_002",
+        trade_date="2026-09-02",
+        symbol="MSFT",
+        action="BUY",
+        units=Decimal("5"),
+        price=Decimal("300.00"),
+        gross_amount=Decimal("1500.00"),
+        fees=TradeFeeBreakdown(commission=Decimal("0"), vat=Decimal("0"), other_fees=Decimal("0"), fee_currency="USD"),
+        net_amount=Decimal("1500.00"),
+        currency="USD",
+        confirmation_no="CONF_002",
+        source="DIME",
+        fingerprint="fp_sample_002",
+        cash_adjusted=True,
+    )
+    fake_state = PortfolioState(
+        last_updated="2026-09-02T00:00:00",
+        holdings=[Holding(symbol="AAPL", asset_type="Stock", units=10.0, avg_cost_usd=150.16)],
+    )
+
+    mock_service = MagicMock()
+    mock_sync = MagicMock()
+    mock_service._dime_sync_service = mock_sync
+    mock_sync.get_staged.return_value = [item1, item2]
+    mock_sync.commit_staged.return_value = fake_state
+
+    app.dependency_overrides[get_portfolio_service] = lambda: mock_service
+    try:
+        # Commit only item_001
+        res = auth_client.post(
+            "/api/portfolio/dime/commit/scan_partial",
+            json={"portfolio_id": "default", "selected_item_ids": ["item_001"]},
+        )
+        assert res.status_code == 200
+        assert res.json()["imported_count"] == 1
+        mock_sync.commit_staged.assert_called_once_with(
+            scan_id="scan_partial",
+            session_id="test_session_123",
+            portfolio_id="default",
+            selected_item_ids=["item_001"],
+        )
+    finally:
+        app.dependency_overrides.pop(get_portfolio_service, None)
+

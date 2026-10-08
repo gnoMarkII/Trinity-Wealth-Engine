@@ -28,6 +28,9 @@ import type {
   NotebookLMStatusDTO,
   FXRateResponseDTO,
   SyncDividendsResponseDTO,
+  MacroNotebookLMExportRequestDTO,
+  MacroNotebookLMExportResponseDTO,
+  MacroNotebookLMExportStatusDTO,
 } from './types'
 
 export class ApiError extends Error {
@@ -468,10 +471,10 @@ export const api = {
   getStagedDimeTrades: (scanId: string) =>
     request<import('./types').DimeScanResponseDTO>(`/api/portfolio/dime/staged/${encodeURIComponent(scanId)}`),
 
-  commitDimeTrades: (scanId: string, portfolioId: string = 'default') =>
+  commitDimeTrades: (scanId: string, portfolioId: string = 'default', selectedItemIds?: string[]) =>
     request<import('./types').DimeCommitResponseDTO>(`/api/portfolio/dime/commit/${encodeURIComponent(scanId)}`, {
       method: 'POST',
-      body: JSON.stringify({ portfolio_id: portfolioId }),
+      body: JSON.stringify({ portfolio_id: portfolioId, selected_item_ids: selectedItemIds }),
     }),
 
   getDimePdfUrl: (messageId: string, attachmentId: string, password?: string, decrypt: boolean = true) => {
@@ -611,10 +614,10 @@ export const api = {
   getStagedWealthXTrades: (scanId: string) =>
     request<import('./types').WealthXScanResponseDTO>(`/api/portfolio/wealthx/staged/${encodeURIComponent(scanId)}`),
 
-  commitWealthXTrades: (scanId: string, portfolioId: string = 'default') =>
+  commitWealthXTrades: (scanId: string, portfolioId: string = 'default', selectedItemIds?: string[]) =>
     request<import('./types').WealthXCommitResponseDTO>(`/api/portfolio/wealthx/commit/${encodeURIComponent(scanId)}`, {
       method: 'POST',
-      body: JSON.stringify({ portfolio_id: portfolioId }),
+      body: JSON.stringify({ portfolio_id: portfolioId, selected_item_ids: selectedItemIds }),
     }),
 
   getWealthXPdfUrl: (messageId: string, attachmentId: string, password?: string, decrypt: boolean = true) => {
@@ -953,4 +956,24 @@ export const api = {
     request<import('./types').StablecoinSupplyDTO>(
       '/api/v2/market/crypto/stablecoins'
     ),
+
+  // ---------------------------------------------------------
+  // Macro NotebookLM Research Companion Export
+  // ---------------------------------------------------------
+  exportMacroToNotebookLM: (payload?: MacroNotebookLMExportRequestDTO) =>
+    request<MacroNotebookLMExportResponseDTO>('/api/macro/notebooklm/exports', {
+      method: 'POST',
+      body: JSON.stringify(payload ?? {}),
+    }),
+
+  getLatestMacroNotebookLMExport: () =>
+    request<MacroNotebookLMExportStatusDTO | null>('/api/macro/notebooklm/exports/latest'),
+
+  getMacroNotebookLMExport: (exportId: string) =>
+    request<MacroNotebookLMExportStatusDTO>(`/api/macro/notebooklm/exports/${encodeURIComponent(exportId)}`),
+
+  retryMacroNotebookLMExport: (exportId: string) =>
+    request<MacroNotebookLMExportResponseDTO>(`/api/macro/notebooklm/exports/${encodeURIComponent(exportId)}/retry`, {
+      method: 'POST',
+    }),
 }

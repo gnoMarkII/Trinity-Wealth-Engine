@@ -2235,6 +2235,155 @@
         }
       }
     },
+    "/api/macro/notebooklm/exports": {
+      "post": {
+        "summary": "Export Macro To Notebooklm",
+        "operationId": "export_macro_to_notebooklm_api_macro_notebooklm_exports_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/MacroNotebookLMExportRequestDTO"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Payload"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MacroNotebookLMExportResponseDTO"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/macro/notebooklm/exports/latest": {
+      "get": {
+        "summary": "Get Latest Macro Notebooklm Export",
+        "operationId": "get_latest_macro_notebooklm_export_api_macro_notebooklm_exports_latest_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/MacroNotebookLMExportStatusDTO"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "title": "Response Get Latest Macro Notebooklm Export Api Macro Notebooklm Exports Latest Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/macro/notebooklm/exports/{export_id}": {
+      "get": {
+        "summary": "Get Macro Notebooklm Export By Id",
+        "operationId": "get_macro_notebooklm_export_by_id_api_macro_notebooklm_exports__export_id__get",
+        "parameters": [
+          {
+            "name": "export_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Export Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MacroNotebookLMExportStatusDTO"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/macro/notebooklm/exports/{export_id}/retry": {
+      "post": {
+        "summary": "Retry Macro Notebooklm Export",
+        "operationId": "retry_macro_notebooklm_export_api_macro_notebooklm_exports__export_id__retry_post",
+        "parameters": [
+          {
+            "name": "export_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Export Id"
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MacroNotebookLMExportResponseDTO"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/portfolio/dime/emails": {
       "get": {
         "tags": [
@@ -5424,6 +5573,57 @@
         }
       }
     },
+    "/api/v2/market/thailand/yield-curve": {
+      "get": {
+        "tags": [
+          "Terminal V2 Market Data"
+        ],
+        "summary": "Fetch Thai Government Bond Model Yield Curve from ThaiBMA",
+        "operationId": "get_thai_yield_curve_api_v2_market_thailand_yield_curve_get",
+        "parameters": [
+          {
+            "name": "date",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Observation date ISO YYYY-MM-DD (defaults to latest)",
+              "title": "Date"
+            },
+            "description": "Observation date ISO YYYY-MM-DD (defaults to latest)"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ThaiYieldCurveResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v2/market/signals/prediction-markets": {
       "get": {
         "tags": [
@@ -5508,6 +5708,69 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/market/crypto/stablecoins": {
+      "get": {
+        "tags": [
+          "Terminal V2 Market Data"
+        ],
+        "summary": "Fetch global USD stablecoin circulating supply and 7d/30d growth metrics from DeFiLlama",
+        "operationId": "get_stablecoin_supply_api_v2_market_crypto_stablecoins_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StablecoinSupplyResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/market/crypto/benchmark": {
+      "get": {
+        "tags": [
+          "Terminal V2 Market Data"
+        ],
+        "summary": "Fetch Bitcoin spot price benchmark, returns, and BTC/Gold valuation ratio",
+        "operationId": "get_crypto_benchmark_api_v2_market_crypto_benchmark_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CryptoBenchmarkResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/market/macro/crypto-liquidity": {
+      "get": {
+        "tags": [
+          "Terminal V2 Market Data"
+        ],
+        "summary": "Fetch synthesized Level 1 Crypto Macro Liquidity & Risk Appetite proxy",
+        "operationId": "get_crypto_macro_liquidity_api_v2_market_macro_crypto_liquidity_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CryptoMacroLiquidityResponse"
                 }
               }
             }
@@ -7840,6 +8103,249 @@
           "name"
         ],
         "title": "CreatePortfolioRequestDTO"
+      },
+      "CryptoBenchmarkResponse": {
+        "properties": {
+          "symbol": {
+            "type": "string",
+            "title": "Symbol",
+            "default": "BTC"
+          },
+          "price_usd": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Price Usd"
+          },
+          "change_24h_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Change 24H Pct"
+          },
+          "change_7d_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Change 7D Pct"
+          },
+          "gold_price_usd": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Gold Price Usd"
+          },
+          "btc_gold_ratio": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Btc Gold Ratio"
+          },
+          "as_of_date": {
+            "type": "string",
+            "title": "As Of Date",
+            "default": ""
+          },
+          "fetched_at": {
+            "type": "number",
+            "title": "Fetched At",
+            "default": 0.0
+          },
+          "source": {
+            "type": "string",
+            "title": "Source",
+            "default": "Market Benchmark"
+          },
+          "is_stale": {
+            "type": "boolean",
+            "title": "Is Stale",
+            "default": false
+          },
+          "stale_reason": {
+            "type": "string",
+            "title": "Stale Reason",
+            "default": ""
+          },
+          "limitations": {
+            "type": "string",
+            "title": "Limitations",
+            "default": ""
+          }
+        },
+        "type": "object",
+        "title": "CryptoBenchmarkResponse"
+      },
+      "CryptoMacroLiquidityResponse": {
+        "properties": {
+          "btc_price_usd": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Btc Price Usd"
+          },
+          "btc_change_24h_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Btc Change 24H Pct"
+          },
+          "btc_change_7d_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Btc Change 7D Pct"
+          },
+          "btc_gold_ratio": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Btc Gold Ratio"
+          },
+          "stablecoin_total_usd": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Stablecoin Total Usd"
+          },
+          "stablecoin_change_7d_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Stablecoin Change 7D Pct"
+          },
+          "stablecoin_change_30d_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Stablecoin Change 30D Pct"
+          },
+          "top_stablecoins": {
+            "items": {
+              "$ref": "#/components/schemas/StablecoinItemSchema"
+            },
+            "type": "array",
+            "title": "Top Stablecoins"
+          },
+          "etf_daily_net_inflow_usd": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Etf Daily Net Inflow Usd"
+          },
+          "etf_cumulative_total_usd": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Etf Cumulative Total Usd"
+          },
+          "liquidity_regime": {
+            "type": "string",
+            "title": "Liquidity Regime",
+            "default": "Neutral"
+          },
+          "as_of_date": {
+            "type": "string",
+            "title": "As Of Date",
+            "default": ""
+          },
+          "fetched_at": {
+            "type": "number",
+            "title": "Fetched At",
+            "default": 0.0
+          },
+          "source": {
+            "type": "string",
+            "title": "Source",
+            "default": "DeFiLlama / SoSoValue / Benchmark"
+          },
+          "is_stale": {
+            "type": "boolean",
+            "title": "Is Stale",
+            "default": false
+          },
+          "stale_reason": {
+            "type": "string",
+            "title": "Stale Reason",
+            "default": ""
+          },
+          "limitations": {
+            "type": "string",
+            "title": "Limitations",
+            "default": ""
+          }
+        },
+        "type": "object",
+        "title": "CryptoMacroLiquidityResponse"
       },
       "DCFScenarioLevelDTO": {
         "properties": {
@@ -12046,6 +12552,303 @@
           "range"
         ],
         "title": "MacroIndicatorSeriesDTO"
+      },
+      "MacroNotebookLMCoverageDTO": {
+        "properties": {
+          "strategy_report_present": {
+            "type": "boolean",
+            "title": "Strategy Report Present",
+            "default": false
+          },
+          "historical_reports_count": {
+            "type": "integer",
+            "title": "Historical Reports Count",
+            "default": 0
+          },
+          "catalog_notes_count": {
+            "type": "integer",
+            "title": "Catalog Notes Count",
+            "default": 0
+          },
+          "indicator_series_count": {
+            "type": "integer",
+            "title": "Indicator Series Count",
+            "default": 0
+          },
+          "market_observables_cached": {
+            "type": "integer",
+            "title": "Market Observables Cached",
+            "default": 0
+          },
+          "market_observables_total": {
+            "type": "integer",
+            "title": "Market Observables Total",
+            "default": 13
+          },
+          "thailand_hard_data_present": {
+            "type": "boolean",
+            "title": "Thailand Hard Data Present",
+            "default": false
+          },
+          "sector_rotation_present": {
+            "type": "boolean",
+            "title": "Sector Rotation Present",
+            "default": false
+          },
+          "news_events_count": {
+            "type": "integer",
+            "title": "News Events Count",
+            "default": 0
+          }
+        },
+        "type": "object",
+        "title": "MacroNotebookLMCoverageDTO"
+      },
+      "MacroNotebookLMExportRequestDTO": {
+        "properties": {
+          "mode": {
+            "type": "string",
+            "const": "all_retained",
+            "title": "Mode",
+            "default": "all_retained"
+          }
+        },
+        "type": "object",
+        "title": "MacroNotebookLMExportRequestDTO"
+      },
+      "MacroNotebookLMExportResponseDTO": {
+        "properties": {
+          "export_id": {
+            "type": "string",
+            "title": "Export Id"
+          },
+          "job_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Job Id"
+          },
+          "state": {
+            "type": "string",
+            "title": "State"
+          },
+          "stage": {
+            "type": "string",
+            "title": "Stage"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          }
+        },
+        "type": "object",
+        "required": [
+          "export_id",
+          "state",
+          "stage",
+          "message"
+        ],
+        "title": "MacroNotebookLMExportResponseDTO"
+      },
+      "MacroNotebookLMExportStatusDTO": {
+        "properties": {
+          "export_id": {
+            "type": "string",
+            "title": "Export Id"
+          },
+          "job_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Job Id"
+          },
+          "mode": {
+            "type": "string",
+            "title": "Mode",
+            "default": "all_retained"
+          },
+          "state": {
+            "type": "string",
+            "title": "State"
+          },
+          "stage": {
+            "type": "string",
+            "title": "Stage"
+          },
+          "snapshot_at": {
+            "type": "string",
+            "title": "Snapshot At"
+          },
+          "bundle_hash": {
+            "type": "string",
+            "title": "Bundle Hash"
+          },
+          "strategy_report_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Strategy Report Id"
+          },
+          "notebooks": {
+            "items": {
+              "$ref": "#/components/schemas/MacroNotebookLMNotebookDTO"
+            },
+            "type": "array",
+            "title": "Notebooks"
+          },
+          "counts": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Counts"
+          },
+          "source_results": {
+            "items": {
+              "$ref": "#/components/schemas/MacroNotebookLMSourceResultDTO"
+            },
+            "type": "array",
+            "title": "Source Results"
+          },
+          "coverage": {
+            "$ref": "#/components/schemas/MacroNotebookLMCoverageDTO"
+          },
+          "warnings": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Warnings"
+          },
+          "error_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error Code"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
+          "can_retry": {
+            "type": "boolean",
+            "title": "Can Retry",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": [
+          "export_id",
+          "state",
+          "stage",
+          "snapshot_at",
+          "bundle_hash",
+          "coverage"
+        ],
+        "title": "MacroNotebookLMExportStatusDTO"
+      },
+      "MacroNotebookLMNotebookDTO": {
+        "properties": {
+          "notebook_id": {
+            "type": "string",
+            "title": "Notebook Id"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "url": {
+            "type": "string",
+            "title": "Url"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "source_count": {
+            "type": "integer",
+            "title": "Source Count",
+            "default": 0
+          }
+        },
+        "type": "object",
+        "required": [
+          "notebook_id",
+          "title",
+          "url",
+          "status"
+        ],
+        "title": "MacroNotebookLMNotebookDTO"
+      },
+      "MacroNotebookLMSourceResultDTO": {
+        "properties": {
+          "file_name": {
+            "type": "string",
+            "title": "File Name"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "source_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Id"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          }
+        },
+        "type": "object",
+        "required": [
+          "file_name",
+          "title",
+          "status"
+        ],
+        "title": "MacroNotebookLMSourceResultDTO"
       },
       "MacroReferenceDTO": {
         "properties": {
@@ -16609,6 +17412,149 @@
         ],
         "title": "SpotEtfIssuerFlowSchema"
       },
+      "StablecoinItemSchema": {
+        "properties": {
+          "symbol": {
+            "type": "string",
+            "title": "Symbol"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "circulating_usd": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Circulating Usd"
+          },
+          "market_share_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Market Share Pct"
+          },
+          "price_usd": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Price Usd",
+            "default": 1.0
+          }
+        },
+        "type": "object",
+        "required": [
+          "symbol",
+          "name"
+        ],
+        "title": "StablecoinItemSchema"
+      },
+      "StablecoinSupplyResponse": {
+        "properties": {
+          "total_circulating_usd": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Total Circulating Usd"
+          },
+          "change_7d_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Change 7D Pct"
+          },
+          "change_30d_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Change 30D Pct"
+          },
+          "top_stablecoins": {
+            "items": {
+              "$ref": "#/components/schemas/StablecoinItemSchema"
+            },
+            "type": "array",
+            "title": "Top Stablecoins"
+          },
+          "as_of_date": {
+            "type": "string",
+            "title": "As Of Date",
+            "default": ""
+          },
+          "is_partial": {
+            "type": "boolean",
+            "title": "Is Partial",
+            "default": false
+          },
+          "completeness_notes": {
+            "type": "string",
+            "title": "Completeness Notes",
+            "default": ""
+          },
+          "fetched_at": {
+            "type": "number",
+            "title": "Fetched At",
+            "default": 0.0
+          },
+          "source": {
+            "type": "string",
+            "title": "Source",
+            "default": "DeFiLlama"
+          },
+          "unit": {
+            "type": "string",
+            "title": "Unit",
+            "default": "USD"
+          },
+          "is_stale": {
+            "type": "boolean",
+            "title": "Is Stale",
+            "default": false
+          },
+          "stale_reason": {
+            "type": "string",
+            "title": "Stale Reason",
+            "default": ""
+          },
+          "limitations": {
+            "type": "string",
+            "title": "Limitations",
+            "default": ""
+          }
+        },
+        "type": "object",
+        "title": "StablecoinSupplyResponse"
+      },
       "SyncDividendsResponseDTO": {
         "properties": {
           "synced_symbols": {
@@ -17130,6 +18076,110 @@
           "announced_at"
         ],
         "title": "ThaiRetailGoldResponse"
+      },
+      "ThaiYieldCurveResponse": {
+        "properties": {
+          "observation_date": {
+            "type": "string",
+            "title": "Observation Date"
+          },
+          "yields": {
+            "items": {
+              "$ref": "#/components/schemas/ThaiYieldPointSchema"
+            },
+            "type": "array",
+            "title": "Yields"
+          },
+          "spread_10y_2y_bps": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Spread 10Y 2Y Bps"
+          },
+          "spread_10y_1y_bps": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Spread 10Y 1Y Bps"
+          },
+          "fetched_at": {
+            "type": "number",
+            "title": "Fetched At"
+          },
+          "source": {
+            "type": "string",
+            "title": "Source"
+          },
+          "unit": {
+            "type": "string",
+            "title": "Unit"
+          },
+          "is_stale": {
+            "type": "boolean",
+            "title": "Is Stale"
+          },
+          "stale_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Stale Reason"
+          }
+        },
+        "type": "object",
+        "required": [
+          "observation_date",
+          "yields",
+          "fetched_at",
+          "source",
+          "unit",
+          "is_stale"
+        ],
+        "title": "ThaiYieldCurveResponse"
+      },
+      "ThaiYieldPointSchema": {
+        "properties": {
+          "tenor": {
+            "type": "string",
+            "title": "Tenor"
+          },
+          "ttm_years": {
+            "type": "number",
+            "title": "Ttm Years"
+          },
+          "yield_percent": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Yield Percent"
+          }
+        },
+        "type": "object",
+        "required": [
+          "tenor",
+          "ttm_years",
+          "yield_percent"
+        ],
+        "title": "ThaiYieldPointSchema"
       },
       "ToggleDiscordRequest": {
         "properties": {

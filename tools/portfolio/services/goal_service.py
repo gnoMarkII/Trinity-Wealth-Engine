@@ -50,8 +50,9 @@ class PortfolioGoalService:
         return json.dumps(goals, ensure_ascii=False, indent=2)
 
     def get_structured_goals(self, portfolio_id: Optional[str] = None) -> List[Dict]:
-        from tools.portfolio.goals import get_structured_goals as _calc_goals
-        return _calc_goals(portfolio_id=portfolio_id)
+        from tools.portfolio.goals import _compute_structured_goals
+        state = self.goals_repo.load_goals(portfolio_id=portfolio_id)
+        return _compute_structured_goals(goals_state=state, portfolio_id=portfolio_id)
 
     def structured_upsert_goal(
         self,

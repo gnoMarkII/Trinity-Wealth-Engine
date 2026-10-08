@@ -121,3 +121,12 @@ class DbUnitOfWork:
                 conn=self.conn
             )
         return self._earnings_call_workflow
+
+    @property
+    def macro_exports(self):
+        """Connection-bound :class:`MacroExportRepositoryPort` adapter."""
+        if getattr(self, "_macro_exports", None) is None:
+            from api.db.adapters import SqliteMacroExportRepositoryAdapter
+
+            self._macro_exports = SqliteMacroExportRepositoryAdapter(conn=self.conn)
+        return self._macro_exports

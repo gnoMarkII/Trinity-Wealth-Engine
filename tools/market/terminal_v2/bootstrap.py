@@ -40,6 +40,15 @@ from tools.market.terminal_v2.ports.driving_ports import (
 
 _terminal_service_instance: Optional[MarketTerminalServicePort] = None
 _terminal_data_service_instance: Optional[TerminalDataServicePort] = None
+_shared_market_cache: Optional[ThreadSafeTTLCache] = None
+
+
+def get_shared_market_cache() -> ThreadSafeTTLCache:
+    """Return the application-wide shared market cache instance."""
+    global _shared_market_cache
+    if _shared_market_cache is None:
+        _shared_market_cache = ThreadSafeTTLCache()
+    return _shared_market_cache
 
 
 # ============================================================================
@@ -50,7 +59,7 @@ def create_terminal_service(
     shared_cache: Optional[ThreadSafeTTLCache] = None,
 ) -> MarketTerminalServicePort:
     """Factory creating a new fully-wired instance of MarketTerminalServicePort."""
-    cache = shared_cache or ThreadSafeTTLCache()
+    cache = shared_cache or get_shared_market_cache()
 
     settrade_adapter = SettradeAdapter(cache=cache)
     goldtraders_adapter = GoldTradersAdapter(cache=cache)
@@ -83,7 +92,7 @@ def create_terminal_data_service(
     shared_cache: Optional[ThreadSafeTTLCache] = None,
 ) -> TerminalDataServicePort:
     """Factory creating a new fully-wired instance of TerminalDataServicePort."""
-    cache = shared_cache or ThreadSafeTTLCache()
+    cache = shared_cache or get_shared_market_cache()
 
     # Adapters instantiation
     finra_adapter = FinraAdapter(cache=cache)

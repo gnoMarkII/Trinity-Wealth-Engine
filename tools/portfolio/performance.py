@@ -54,6 +54,13 @@ def record_performance_snapshot(refresh_prices: bool = True, portfolio_id: str =
             passive_ytd = state.summary.passive_income_ytd
 
             today = datetime.now().strftime("%Y-%m-%d")
+            asset_class_values = {}
+            for h in state.holdings:
+                at = h.asset_type or "Unknown"
+                val = round(float(h.market_value_thb or 0.0), _MONEY_DP)
+                asset_class_values[at] = round(asset_class_values.get(at, 0.0) + val, _MONEY_DP)
+            ac_json = json.dumps(asset_class_values, ensure_ascii=False) if asset_class_values else ""
+
             row = [
                 today,
                 f"{total_nav:.2f}",
@@ -62,6 +69,7 @@ def record_performance_snapshot(refresh_prices: bool = True, portfolio_id: str =
                 f"{cash_balance:.2f}",
                 f"{realized_ytd:.2f}",
                 f"{passive_ytd:.2f}",
+                ac_json,
             ]
 
             perf_path = _get_performance_filepath(portfolio_id)

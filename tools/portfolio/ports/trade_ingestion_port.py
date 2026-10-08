@@ -6,7 +6,7 @@ Defines abstract interfaces for:
 3. TradeStagingPort: Temporary session-bound staging of parsed items before user review/commit.
 """
 from abc import ABC, abstractmethod
-from typing import Optional, List
+from typing import Optional, List, Dict, Any
 from pydantic import BaseModel, ConfigDict
 
 from tools.portfolio.domain.models import TradeImportItem
@@ -31,12 +31,16 @@ class TradeEmailSourcePort(ABC):
     """Port for fetching trade confirmation documents from email (e.g. Gmail IMAP)."""
 
     @abstractmethod
-    def search_dime_emails(self, query: str = "", limit: int = 20) -> List[TradeDocumentMetadata]:
+    def search_dime_emails(
+        self, query: str = "", limit: Optional[int] = 20, since_date: Optional[str] = None
+    ) -> List[TradeDocumentMetadata]:
         """Search email inbox for Dime confirmation emails."""
         pass
 
     @abstractmethod
-    def search_wealthx_emails(self, query: str = "", limit: Optional[int] = None) -> List[TradeDocumentMetadata]:
+    def search_wealthx_emails(
+        self, query: str = "", limit: Optional[int] = None, since_date: Optional[str] = None
+    ) -> List[TradeDocumentMetadata]:
         """Search email inbox for WealthX confirmation emails (Trade Confirmations only)."""
         pass
 
@@ -95,3 +99,29 @@ class TradeStagingPort(ABC):
     ) -> None:
         """Delete staged items for a given scan_id and session_id."""
         pass
+
+    def stage_provenance(
+        self,
+        scan_id: str,
+        provenance: Dict[str, Any],
+        session_id: Optional[str] = None,
+    ) -> None:
+        """Stage scan provenance metadata associated with a scan_id."""
+        pass
+
+    def get_provenance(
+        self,
+        scan_id: str,
+        session_id: Optional[str] = None,
+    ) -> Optional[Dict[str, Any]]:
+        """Retrieve scan provenance metadata without removing it."""
+        return None
+
+    def pop_provenance(
+        self,
+        scan_id: str,
+        session_id: Optional[str] = None,
+    ) -> Optional[Dict[str, Any]]:
+        """Pop scan provenance metadata for a given scan_id."""
+        return None
+

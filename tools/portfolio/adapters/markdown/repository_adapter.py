@@ -393,9 +393,13 @@ class MarkdownVaultRepositoryAdapter(PortfolioRepositoryPort):
 
             new_state = PortfolioState(
                 last_updated=_now_iso(),
+                summary=Summary(),
                 allocation_targets=default_allocation_targets(),
                 fx_rates={"USDTHB": 36.5},
-                holdings=[],
+                holdings=[
+                    Holding(symbol=CASH_THB_SYMBOL, asset_type="Cash", units=0.0, market_value_thb=0.0),
+                    Holding(symbol=CASH_USD_SYMBOL, asset_type="Cash", units=0.0, market_value_thb=0.0),
+                ],
             )
             uow.commit(new_state, LedgerChange(kind="replace_all", rows=[]))
             return new_state
@@ -549,12 +553,18 @@ class MarkdownVaultRepositoryAdapter(PortfolioRepositoryPort):
         post = frontmatter.Post(content="", **ordered)
         return frontmatter.dumps(post, sort_keys=False)
 
-    def _sync_sidecars(self, state: PortfolioState, portfolio_id: str = "default") -> None:
+    def _sync_sidecars(
+        self,
+        state: PortfolioState,
+        portfolio_id: str = "default",
+        deleted_symbols: Optional[List[str]] = None,
+    ) -> None:
         """Sync derived sidecars Holdings/*.md atomically."""
         holdings_dir = get_holdings_dir(portfolio_id)
         assert_write_allowed(holdings_dir)
         holdings_dir.mkdir(parents=True, exist_ok=True)
         live: set[str] = set()
+        deleted_set = {s.strip().upper().replace("/", "_") for s in (deleted_symbols or [])}
 
         for h in state.holdings:
             if h.asset_type == "Cash":
@@ -567,6 +577,12 @@ class MarkdownVaultRepositoryAdapter(PortfolioRepositoryPort):
             live.add(safe)
 
         for old in holdings_dir.glob("*.md"):
+            if old.stem in deleted_set:
+                try:
+                    old.unlink(missing_ok=True)
+                except Exception as e:
+                    log.warning("Failed to delete sidecar %s: %s", old.name, e)
+                continue
             if old.stem not in live:
                 try:
                     with old.open("r", encoding="utf-8") as f:
@@ -766,6 +782,7 @@ class MarkdownVaultRepositoryAdapter(PortfolioRepositoryPort):
             "timestamp": time.time(),
             "ledger_kind": change.kind,
             "has_journal_events": bool(mutation.system_journal_events),
+            "deleted_symbols": getattr(mutation, "deleted_symbols", []),
             "pre_master_sha256": pre_master_sha,
             "staged_master_file": str(staged_master),
             "staged_master_sha256": staged_master_sha,
@@ -794,7 +811,11 @@ class MarkdownVaultRepositoryAdapter(PortfolioRepositoryPort):
             os.replace(staged_journal, journal_file)
 
         # 8. Sync Derived Sidecars (Deferred Sync)
-        self._sync_sidecars(state, portfolio_id=portfolio_id)
+        self._sync_sidecars(
+            state,
+            portfolio_id=portfolio_id,
+            deleted_symbols=getattr(mutation, "deleted_symbols", None),
+        )
 
         # 9. Unlink Manifest
         manifest_path.unlink(missing_ok=True)

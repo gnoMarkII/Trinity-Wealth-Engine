@@ -22,6 +22,7 @@ import { UsMacroSection } from '../components/macro/cockpit/UsMacroSection'
 import { ThailandMacroSection } from '../components/macro/cockpit/ThailandMacroSection'
 import { CrossBorderSection } from '../components/macro/cockpit/CrossBorderSection'
 import { SourceProvenanceBadge } from '../components/macro/cockpit/SourceProvenanceBadge'
+import { MacroNotebookLMExport } from '../components/macro/cockpit/MacroNotebookLMExport'
 
 export default function Macro() {
   const navigate = useNavigate()
@@ -275,6 +276,15 @@ export default function Macro() {
           {/* Action Buttons */}
           <div className="flex flex-col items-end gap-2 shrink-0">
             <div className="flex flex-wrap items-center gap-2">
+              <MacroNotebookLMExport
+                onNotify={(msg, type) =>
+                  setToastState({
+                    message: msg,
+                    type,
+                  })
+                }
+              />
+
               <button
                 type="button"
                 onClick={fetchMarketObservables}

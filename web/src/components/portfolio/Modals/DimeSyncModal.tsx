@@ -186,8 +186,12 @@ export default function DimeSyncModal({ portfolioId, onClose, onSuccess }: Props
         if (data.warnings && data.warnings.length > 0) {
           setWarnings(data.warnings)
         }
-        if (data.item_count === 0 && data.skipped_synced_count > 0) {
-          setSuccessMessage(`ซิงค์ข้อมูลเรียบร้อยแล้ว: เอกสารทั้งหมด (${data.skipped_synced_count} ฉบับ) ได้รับการบันทึกลงสมุดบัญชีแล้ว`)
+        const alreadyInPort = (data.skipped_synced_count || 0) + (data.already_in_portfolio_count || 0)
+        if (data.item_count === 0 && alreadyInPort > 0) {
+          setSuccessMessage(`ซิงค์ข้อมูลเรียบร้อยแล้ว: รายการทั้งหมด (${alreadyInPort} รายการ) ได้รับการบันทึกลงสมุดบัญชีแล้ว (ไม่มีรายการใหม่)`)
+        } else if (data.item_count > 0) {
+          const inPortMsg = alreadyInPort > 0 ? ` (ข้าม ${alreadyInPort} รายการเดิมในพอร์ต)` : ''
+          setSuccessMessage(`พบ ${data.item_count} รายการใหม่/กู้คืนที่พร้อมนำเข้า${inPortMsg}`)
         }
       },
       onError: (err: any) => {
@@ -235,10 +239,10 @@ export default function DimeSyncModal({ portfolioId, onClose, onSuccess }: Props
     setError(null)
     try {
       const res = activeSource === 'wealthx'
-        ? await api.commitWealthXTrades(stagedResult.scan_id, portfolioId)
+        ? await api.commitWealthXTrades(stagedResult.scan_id, portfolioId, selectedItemIds)
         : activeSource === 'scb'
         ? await api.commitScbTrades(stagedResult.scan_id, portfolioId, selectedItemIds)
-        : await api.commitDimeTrades(stagedResult.scan_id, portfolioId)
+        : await api.commitDimeTrades(stagedResult.scan_id, portfolioId, selectedItemIds)
       setSuccessMessage(`นำเข้ารายการสำเร็จเรียบร้อยแล้ว จำนวน ${res.imported_count} รายการ`)
       setTimeout(() => {
         onSuccess(res.state)
@@ -673,10 +677,10 @@ export default function DimeSyncModal({ portfolioId, onClose, onSuccess }: Props
               <button
                 type="button"
                 onClick={handleCommit}
-                disabled={committing}
+                disabled={committing || selectedItemIds.length === 0}
                 className="rounded-xl bg-flow-blue px-6 py-2 text-xs font-bold text-white shadow-md hover:bg-sky-600 active:scale-95 transition-all disabled:opacity-50 cursor-pointer"
               >
-                {committing ? 'กำลังบันทึกลง Ledger และ Replay...' : `ยืนยันนำเข้า ${stagedResult.item_count} รายการ`}
+                {committing ? 'กำลังบันทึกลง Ledger และ Replay...' : `ยืนยันนำเข้า ${selectedItemIds.length} รายการ`}
               </button>
             </div>
           </div>

@@ -854,6 +854,77 @@
         ]
       }
     },
+    "/api/macro/notebooklm/exports": {
+      "post": {
+        "operationId": "export_macro_to_notebooklm_api_macro_notebooklm_exports_post",
+        "tags": [],
+        "summary": "Export Macro To Notebooklm",
+        "parameters": [],
+        "has_request_body": true,
+        "responses": [
+          "202",
+          "422"
+        ]
+      }
+    },
+    "/api/macro/notebooklm/exports/latest": {
+      "get": {
+        "operationId": "get_latest_macro_notebooklm_export_api_macro_notebooklm_exports_latest_get",
+        "tags": [],
+        "summary": "Get Latest Macro Notebooklm Export",
+        "parameters": [],
+        "has_request_body": false,
+        "responses": [
+          "200"
+        ]
+      }
+    },
+    "/api/macro/notebooklm/exports/{export_id}": {
+      "get": {
+        "operationId": "get_macro_notebooklm_export_by_id_api_macro_notebooklm_exports__export_id__get",
+        "tags": [],
+        "summary": "Get Macro Notebooklm Export By Id",
+        "parameters": [
+          {
+            "name": "export_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Export Id"
+            }
+          }
+        ],
+        "has_request_body": false,
+        "responses": [
+          "200",
+          "422"
+        ]
+      }
+    },
+    "/api/macro/notebooklm/exports/{export_id}/retry": {
+      "post": {
+        "operationId": "retry_macro_notebooklm_export_api_macro_notebooklm_exports__export_id__retry_post",
+        "tags": [],
+        "summary": "Retry Macro Notebooklm Export",
+        "parameters": [
+          {
+            "name": "export_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Export Id"
+            }
+          }
+        ],
+        "has_request_body": false,
+        "responses": [
+          "202",
+          "422"
+        ]
+      }
+    },
     "/api/macro/reports/{strategy_report_id}": {
       "get": {
         "operationId": "get_macro_report_by_id_api_macro_reports__strategy_report_id__get",

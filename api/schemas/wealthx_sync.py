@@ -68,6 +68,7 @@ class WealthXBatchScanRequestDTO(BaseModel):
 
 class WealthXCommitRequestDTO(BaseModel):
     portfolio_id: str = "default"
+    selected_item_ids: Optional[List[str]] = None
 
 
 class WealthXCommitResponseDTO(BaseModel):

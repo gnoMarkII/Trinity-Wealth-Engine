@@ -89,7 +89,9 @@ def test_reset_portfolio_clean_slate(authed_client, isolated_mutation_portfolio)
     r = authed_client.post("/api/portfolio/actual/reset")
     assert r.status_code == 200
     data = r.json()
-    assert len(data["holdings"]) == 0
+    assert len(data["holdings"]) == 2
+    assert all(h["symbol"] in ("CASH_THB", "CASH_USD") for h in data["holdings"])
+    assert all(h["units"] == 0.0 for h in data["holdings"])
     assert data["summary"]["total_value_thb"] == 0.0
 
 
@@ -268,5 +270,37 @@ def test_edit_and_delete_transaction_endpoints(authed_client, isolated_mutation_
     assert r_del.status_code == 200
     del_data = r_del.json()
     assert not any(h["symbol"] == "NVDA" for h in del_data["holdings"])
+
+
+def test_transaction_ledger_sell_summary_calculation(authed_client, isolated_mutation_portfolio):
+    # 1. Deposit cash
+    authed_client.post("/api/portfolio/actual/cash-flow", json={
+        "action": "deposit", "amount": 2000.0, "currency": "THB"
+    })
+
+    # 2. Buy 100 units at 10 THB (Cost = 1,000 THB)
+    r_buy = authed_client.post("/api/portfolio/actual/trade", json={
+        "symbol": "TESTCO", "asset_type": "Stock", "action": "buy", "units": 100.0, "price": 10.0, "currency": "THB"
+    })
+    assert r_buy.status_code == 200
+
+    # 3. Sell 50 units at 15 THB (Gross = 750 THB, Cost = 500 THB, Realized PnL = 250 THB)
+    r_sell = authed_client.post("/api/portfolio/actual/trade", json={
+        "symbol": "TESTCO", "asset_type": "Stock", "action": "sell", "units": 50.0, "price": 15.0, "currency": "THB"
+    })
+    assert r_sell.status_code == 200
+
+    # 4. Fetch transactions and verify summary calculation (TXN-04 / TXN-05)
+    r_tx = authed_client.get("/api/portfolio/actual/transactions")
+    assert r_tx.status_code == 200
+    summary = r_tx.json()["summary"]
+
+    assert summary["total_buy_count"] == 1
+    assert summary["total_buy_thb"] == 1000.0
+    assert summary["total_sell_count"] == 1
+    # total_sell_thb must be actual sale proceeds (750.0 THB), not merely the cost basis (500.0 THB)
+    assert summary["total_sell_thb"] == 750.0
+    assert summary["total_realized_pnl_thb"] == 250.0
+
 
 

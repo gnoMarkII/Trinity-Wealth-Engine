@@ -46,6 +46,7 @@ from tools.portfolio.adapters.markdown.paths import (
     get_portfolio_filepath as _get_portfolio_filepath,
     get_portfolio_dir as _get_portfolio_dir,
     get_holdings_dir as _get_holdings_dir,
+    get_vault_path,
     PORTFOLIOS_DIR,
     VAULT_PATH,
 )
@@ -146,12 +147,23 @@ def _portfolio_exists(portfolio_id: str = "default") -> bool:
     return _get_portfolio_filepath(portfolio_id).exists()
 
 def _load_or_init(portfolio_id: str = "default") -> Tuple[frontmatter.Post, PortfolioState]:
+    from tools.portfolio import get_default_service
     from tools.portfolio.adapters.markdown.repository_adapter import MarkdownVaultRepositoryAdapter
     md_repo = MarkdownVaultRepositoryAdapter()
-    return md_repo._load_or_init_locked(portfolio_id)
+    post, md_state = md_repo._load_or_init_locked(portfolio_id)
+    try:
+        repo = get_default_service().repo
+        state = repo.load_state(portfolio_id)
+    except Exception:
+        state = md_state
+    return post, state
 
 def _save(post: frontmatter.Post, state: PortfolioState, portfolio_id: str = "default") -> None:
-    from tools.portfolio.adapters.markdown.repository_adapter import MarkdownVaultRepositoryAdapter
     from tools.portfolio.domain.ledger_change import LedgerChange
-    md_repo = MarkdownVaultRepositoryAdapter()
-    md_repo._commit_locked(portfolio_id, state, LedgerChange(kind="unchanged"))
+    from tools.portfolio.domain.calculations import recalc_all
+    recalc_all(state)
+    from tools.portfolio import get_default_service
+    repo = get_default_service().repo
+    with repo.unit_of_work(portfolio_id) as uow:
+        _ = uow.load_state()
+        uow.commit(state, LedgerChange(kind="unchanged"))

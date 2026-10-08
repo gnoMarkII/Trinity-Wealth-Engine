@@ -68,6 +68,7 @@ class DimeBatchScanRequestDTO(BaseModel):
 
 class DimeCommitRequestDTO(BaseModel):
     portfolio_id: str = "default"
+    selected_item_ids: Optional[List[str]] = None
 
 
 class DimeCommitResponseDTO(BaseModel):

@@ -61,7 +61,12 @@ class TransactionalPortfolioUnitOfWork(PortfolioUnitOfWork):
         return state
 
     def read_trade_log_locked(self) -> List[Dict]:
-        return [dict(row) for row in self.ledger_rows]
+        rows: List[Dict] = []
+        for r in self.ledger_rows:
+            item_dict = {k.lower(): v for k, v in r.items()}
+            item_dict.update({k: v for k, v in r.items()})
+            rows.append(item_dict)
+        return rows
 
     def commit(
         self,
@@ -106,9 +111,13 @@ class TransactionalPortfolioRepository(PortfolioRepositoryPort):
 
     def _ledger_or_legacy(self, portfolio_id: str, underlying_uow: PortfolioUnitOfWork) -> list[dict[str, Any]]:
         events = self.store.events(portfolio_id)
-        if events:
-            return self.store.replay_ledger(portfolio_id)
-        return [dict(row) for row in underlying_uow.read_trade_log_locked()]
+        raw_rows = self.store.replay_ledger(portfolio_id) if events else underlying_uow.read_trade_log_locked()
+        rows: list[dict[str, Any]] = []
+        for r in raw_rows:
+            item_dict = {k.lower(): v for k, v in r.items()}
+            item_dict.update({k: v for k, v in r.items()})
+            rows.append(item_dict)
+        return rows
 
     def unit_of_work(self, portfolio_id: str = "default") -> PortfolioUnitOfWork:
         pid = validate_portfolio_id(portfolio_id)
@@ -124,10 +133,16 @@ class TransactionalPortfolioRepository(PortfolioRepositoryPort):
 
     def read_trade_log(self, portfolio_id: str = "default", symbol: Optional[str] = None) -> List[Dict]:
         pid = validate_portfolio_id(portfolio_id)
-        rows = self.store.replay_ledger(pid) if self.store.events(pid) else self.underlying_repo.read_trade_log(pid)
-        if symbol:
-            wanted = symbol.strip().upper()
-            rows = [row for row in rows if str(row.get("symbol") or row.get("Symbol") or "").upper() == wanted]
+        raw_rows = self.store.replay_ledger(pid) if self.store.events(pid) else self.underlying_repo.read_trade_log(pid)
+        rows: List[Dict] = []
+        for r in raw_rows:
+            item_dict = {k.lower(): v for k, v in r.items()}
+            item_dict.update({k: v for k, v in r.items()})
+            if symbol:
+                wanted = symbol.strip().upper()
+                if str(item_dict.get("symbol") or item_dict.get("Symbol") or "").upper() != wanted:
+                    continue
+            rows.append(item_dict)
         return rows
 
     def backup_and_reset_clean_slate(self, portfolio_id: str = "default") -> PortfolioState:

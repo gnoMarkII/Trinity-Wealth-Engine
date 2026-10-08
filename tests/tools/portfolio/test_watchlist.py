@@ -169,5 +169,5 @@ class TestSyncWatchlistSidecars:
         with aapl_file.open("r", encoding="utf-8") as f:
             post_aapl = frontmatter.load(f)
         assert post_aapl.metadata.get("status") is None
-        assert post_aapl.metadata.get("schema_version") == 1
+        assert post_aapl.metadata.get("schema_version") == 2
         assert post_aapl.metadata.get("derived") is True

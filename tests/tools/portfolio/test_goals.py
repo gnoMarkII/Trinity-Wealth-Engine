@@ -216,7 +216,7 @@ class TestGoals:
         with sidecars[0].open("r", encoding="utf-8") as f:
             post = frontmatter.load(f)
         assert post.metadata.get("status") is None
-        assert post.metadata.get("schema_version") == 1
+        assert post.metadata.get("schema_version") == 2
         assert post.metadata.get("derived") is True
 
     def test_sidecar_deleted_on_remove(self, isolated_portfolio):
@@ -249,9 +249,11 @@ class TestGoalItemToMd:
         pt = isolated_portfolio
         import tools.portfolio.models as models
         import tools.portfolio.goals as gl
+        import frontmatter
         goal = models.GoalItem(name="A", goal_type="nav_target", target_amount_thb=100.0, created_date="2026-01-01", notes="Some notes")
         md = gl._goal_item_to_md(goal)
-        assert 'notes: "Some notes"' in md
+        post = frontmatter.loads(md)
+        assert post.metadata.get("notes") == "Some notes"
 
 class TestLoadOrInitGoals:
     def test_load_no_metadata(self, isolated_portfolio):

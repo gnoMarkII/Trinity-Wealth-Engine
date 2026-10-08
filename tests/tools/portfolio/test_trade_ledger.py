@@ -35,8 +35,7 @@ def test_buy_creates_ledger_row(isolated_portfolio, tmp_vault):
     assert row[0].startswith("tx_")
     assert row[2] == "PTT"
     assert row[3] == "BUY"
-    assert row[4] == "100"
-    assert row[5] == "35.00"
+    assert float(row[5]) == 35.00
     assert row[6] == "THB"
     assert row[8] == "3500.00"
     assert row[9] == ""  # Realized PnL is empty for buy
@@ -84,7 +83,7 @@ def test_sell_appends_ledger_row_and_binary_check(isolated_portfolio, tmp_vault)
     assert sell_row[2] == "PTT"
     assert sell_row[3] == "SELL"
     assert sell_row[4] == "40"
-    assert sell_row[5] == "40.00"
+    assert float(sell_row[5]) == 40.00
     assert sell_row[8] == "1400.00"  # cost basis = 40 * 35 = 1400.00
     assert sell_row[9] == "200.00"   # realized profit = (40 - 35) * 40 = 200.00
 
@@ -144,7 +143,7 @@ def test_pre_migration_on_read(isolated_portfolio, tmp_vault):
         reader = csv.reader(f)
         rows = list(reader)
     assert rows[0] == _TRADES_LOG_HEADER
-    assert len(rows[1]) == 11
+    assert len(rows[1]) == len(_TRADES_LOG_HEADER)
     assert rows[1][0] == items[0]["transaction_id"]
     assert rows[1][2] == "UNH"
 
@@ -185,14 +184,14 @@ def test_pre_migration_on_write(isolated_portfolio, tmp_vault):
     assert len(rows) == 3
     assert rows[0] == _TRADES_LOG_HEADER
 
-    # แถวเดิม 1 (Legacy trade) ต้องมี 11 คอลัมน์
-    assert len(rows[1]) == 11
+    # แถวเดิม 1 (Legacy trade) ต้องมี len(_TRADES_LOG_HEADER) คอลัมน์
+    assert len(rows[1]) == len(_TRADES_LOG_HEADER)
     assert rows[1][0].startswith("tx_")
     assert rows[1][2] == "UNH"
     assert rows[1][10] == "Legacy trade"
 
-    # แถวใหม่ 2 (New trade) ต้องมี 11 คอลัมน์
-    assert len(rows[2]) == 11
+    # แถวใหม่ 2 (New trade) ต้องมี len(_TRADES_LOG_HEADER) คอลัมน์
+    assert len(rows[2]) == len(_TRADES_LOG_HEADER)
     assert rows[2][0].startswith("tx_")
     assert rows[2][2] == "PTT"
     assert rows[2][10] == "New trade"

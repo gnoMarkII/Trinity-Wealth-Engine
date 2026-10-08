@@ -247,10 +247,14 @@ def commit_staged_endpoint(
         raise HTTPException(status_code=503, detail="WealthX Sync Service is not available")
     with _map_wealthx_exceptions():
         items = service._wealthx_sync_service.get_staged(scan_id=scan_id, session_id=session_id)
+        if payload.selected_item_ids is not None:
+            selected_set = set(payload.selected_item_ids)
+            items = [item for item in items if item.item_id in selected_set]
         state = service._wealthx_sync_service.commit_staged(
             scan_id=scan_id,
             session_id=session_id,
             portfolio_id=payload.portfolio_id,
+            selected_item_ids=payload.selected_item_ids,
         )
         return WealthXCommitResponseDTO(
             ok=True,

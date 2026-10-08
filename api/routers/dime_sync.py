@@ -246,10 +246,14 @@ def commit_staged_endpoint(
     with _map_dime_exceptions():
         # Get count before commit
         items = service._dime_sync_service.get_staged(scan_id=scan_id, session_id=session_id)
+        if payload.selected_item_ids is not None:
+            selected_set = set(payload.selected_item_ids)
+            items = [item for item in items if item.item_id in selected_set]
         state = service._dime_sync_service.commit_staged(
             scan_id=scan_id,
             session_id=session_id,
             portfolio_id=payload.portfolio_id,
+            selected_item_ids=payload.selected_item_ids,
         )
         return DimeCommitResponseDTO(
             ok=True,

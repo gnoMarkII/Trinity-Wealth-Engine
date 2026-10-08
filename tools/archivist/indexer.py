@@ -161,6 +161,13 @@ def _write_index_from_cache(vault_root: Optional[Path | str] = None) -> str:
     holding_root = target_root / "20_Portfolio_Management" / "Current_Holdings" / "Portfolios"
     if holding_root.is_dir():
         for holding in sorted(holding_root.glob("*/Holdings/*.md")):
+            try:
+                with holding.open("r", encoding="utf-8") as hf:
+                    post = fm.load(hf)
+                if post.metadata and post.metadata.get("status") == "archived":
+                    continue
+            except Exception:
+                pass
             portfolio_targets.append(
                 (_file_folder_label(holding, vault_root=target_root) + "/" + holding.name, holding.stem)
             )

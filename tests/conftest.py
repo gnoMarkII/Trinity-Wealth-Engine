@@ -20,6 +20,7 @@ os.environ["OBSIDIAN_VAULT_PATH"] = str(_GLOBAL_TEST_TEMP / "vault")
 os.environ["WEBUI_STATE_DB_PATH"] = str(_GLOBAL_TEST_TEMP / "webui_state.sqlite")
 os.environ["CHECKPOINT_DB_PATH"] = str(_GLOBAL_TEST_TEMP / "checkpoints.sqlite")
 os.environ["NEWS_FUNNEL_STORE_PATH"] = str(_GLOBAL_TEST_TEMP / "news_funnel_state.json")
+os.environ["FINNOMENA_CACHE_DIR"] = str(_GLOBAL_TEST_TEMP / "finnomena_cache")
 # Never start production background workers/schedulers during tests.  The
 # application lifespan still constructs queue objects for dependency shape
 # compatibility, but no task is started and no durable work is re-enqueued.
@@ -45,7 +46,7 @@ def _snapshot_protected_dirs():
         d = Path(d_name)
         if d.exists():
             for f in d.glob("**/*"):
-                if f.is_file() and ".obsidian" not in f.parts:
+                if f.is_file() and ".obsidian" not in f.parts and "cache" not in f.parts:
                     try:
                         stat = f.stat()
                         if stat.st_size > 1024 * 1024:
@@ -278,6 +279,8 @@ def _reset_portfolio_modules(tmp_vault, monkeypatch):
         monkeypatch.setattr(mod, "WATCHLIST_ITEMS_DIR", watchlist_items_dir, raising=False)
         monkeypatch.setattr(mod, "JOURNAL_PATH", journal_path, raising=False)
         monkeypatch.setattr(mod, "JOURNAL_DIR", journal_dir, raising=False)
+    import tools.portfolio as tp
+    monkeypatch.setattr(tp, "_service_instance", None, raising=False)
 
     from filelock import FileLock
     goals_lock = FileLock(str(goals_path) + ".lock", timeout=15)

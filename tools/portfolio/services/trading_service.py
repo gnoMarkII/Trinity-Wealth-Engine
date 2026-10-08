@@ -26,6 +26,7 @@ from tools.portfolio.domain.calculations import (
     calc_weighted_avg_cost,
     calc_realized_pnl,
     recalc_all,
+    _replay_symbol_trades,
 )
 from tools.portfolio.domain.validator import validate_portfolio_id
 from tools.portfolio.ports.repository_port import PortfolioRepositoryPort
@@ -603,6 +604,101 @@ class PortfolioTradingService:
             res_str = f"[EDIT {clean_sym}] {', '.join(changes)} (เหตุผล: {reason})"
             return res_str, state
 
+    def _purge_holding_transactions_locked(
+        self,
+        uow,
+        state: PortfolioState,
+        symbols: List[str],
+    ) -> Tuple[List[Dict], List[SystemJournalEvent], bool]:
+        """Hard purge all transactions for the given symbols from the ledger, adjusting cash if necessary."""
+        rows = uow.read_trade_log_locked()
+        if not rows:
+            return rows, [], False
+
+        sym_set = {s.strip().upper() for s in symbols if s}
+        if not sym_set:
+            return rows, [], False
+
+        # 1. Identify already voided target IDs
+        voided_target_ids = {
+            str(r.get("Related_Transaction_ID") or r.get("related_transaction_id") or "").strip()
+            for r in rows
+            if str(r.get("Action") or r.get("action") or "").strip().upper().startswith("VOID_")
+            or str(r.get("Action") or r.get("action") or "").strip().upper() == "REVERSAL"
+        }
+
+        # 2. Adjust cash for active transactions belonging to symbols being purged
+        journal_events: List[SystemJournalEvent] = []
+        purged_tx_ids: Set[str] = set()
+
+        for r in rows:
+            tx_id = str(r.get("Transaction_ID") or r.get("transaction_id") or "").strip()
+            sym = str(r.get("Symbol") or r.get("symbol") or "").strip().upper()
+            action = str(r.get("Action") or r.get("action") or "").strip().upper()
+            rel_tx_id = str(r.get("Related_Transaction_ID") or r.get("related_transaction_id") or "").strip()
+
+            if sym not in sym_set:
+                continue
+
+            if tx_id:
+                purged_tx_ids.add(tx_id)
+
+            # Only active (non-voided, non-reversal) transactions need cash refund
+            if action.startswith("VOID_") or action == "REVERSAL" or rel_tx_id or tx_id in voided_target_ids:
+                continue
+
+            ccy = str(r.get("Currency") or r.get("currency") or "THB").strip().upper()
+            effective_cash_adjusted = str(r.get("Cash_Adjusted") or r.get("cash_adjusted") or "YES").strip().upper() == "YES"
+
+            net_amt_raw = r.get("Net_Amount") or r.get("net_amount")
+            if net_amt_raw is not None and str(net_amt_raw).strip() != "":
+                try:
+                    net_cash_amount = float(Decimal(str(net_amt_raw)))
+                except Exception:
+                    units_val = float(r.get("Units") or r.get("units") or 0)
+                    price_val = float(r.get("Price") or r.get("price") or 0)
+                    net_cash_amount = units_val * price_val
+            else:
+                units_val = float(r.get("Units") or r.get("units") or 0)
+                price_val = float(r.get("Price") or r.get("price") or 0)
+                net_cash_amount = units_val * price_val
+
+            if effective_cash_adjusted:
+                cash = _require_cash(state, ccy)
+                if action == "BUY":
+                    cash.units += net_cash_amount
+                elif action == "SELL":
+                    cash.units -= net_cash_amount
+
+        # 3. Purge all rows for sym_set and any reversal rows referring to purged tx_ids
+        final_rows = [
+            r for r in rows
+            if str(r.get("Symbol") or r.get("symbol") or "").strip().upper() not in sym_set
+            and str(r.get("Related_Transaction_ID") or r.get("related_transaction_id") or "").strip() not in purged_tx_ids
+            and str(r.get("Transaction_ID") or r.get("transaction_id") or "").strip() not in purged_tx_ids
+        ]
+
+        for sym in sym_set:
+            purged_count = len([r for r in rows if str(r.get("Symbol") or r.get("symbol") or "").strip().upper() == sym])
+            if purged_count > 0:
+                journal_events.append(
+                    SystemJournalEvent.from_entry(
+                        event_type="transactions_purged",
+                        message=f"**[TRANSACTIONS PURGED]** ลบประวัติธุรกรรมทั้งหมดของ {sym} ({purged_count} รายการ) ออกจากระบบ",
+                        metadata={"symbol": sym, "purged_count": purged_count},
+                    )
+                )
+
+        state.summary.total_realized_profit_ytd = round(
+            sum(float(row.get("Realized_PnL_THB") or row.get("realized_pnl_thb") or 0.0) for row in final_rows),
+            _MONEY_DP,
+        )
+
+        had_changes = len(final_rows) != len(rows)
+        return final_rows, journal_events, had_changes
+
+    _void_holding_transactions_locked = _purge_holding_transactions_locked
+
     def structured_remove_holding(self, symbol: str, portfolio_id: str = "default") -> PortfolioState:
         clean_sym = symbol.strip().upper()
         if clean_sym in _CASH_SYMBOLS:
@@ -611,22 +707,36 @@ class PortfolioTradingService:
         with self.repo.unit_of_work(pid) as uow:
             state = uow.load_state()
             target = _find_holding(state, clean_sym)
-            if not target:
+            rows = uow.read_trade_log_locked()
+            has_trades = any(str(r.get("Symbol") or r.get("symbol") or "").strip().upper() == clean_sym for r in rows)
+            if not target and not has_trades:
                 raise ValueError(f"ไม่พบสินทรัพย์ {clean_sym} ในพอร์ต")
-            state.holdings.remove(target)
+            if target:
+                state.holdings.remove(target)
+
+            final_rows, purge_events, had_changes = self._purge_holding_transactions_locked(
+                uow, state, [clean_sym]
+            )
+            ledger_change = (
+                LedgerChange(kind="replace_all", rows=final_rows, tx_id="holding_remove")
+                if had_changes
+                else LedgerChange(kind="unchanged")
+            )
+
+            remove_event = SystemJournalEvent.from_entry(
+                event_type="holding_removed",
+                message=f"**[REMOVE {clean_sym}]** ลบสินทรัพย์ออกจากพอร์ตโดยตรง",
+                metadata={"symbol": clean_sym},
+            )
+
             recalc_all(state)
             commit_mutation(
                 uow,
                 state,
                 PortfolioMutation(
-                    ledger_change=LedgerChange(kind="unchanged"),
-                    system_journal_events=[
-                        SystemJournalEvent.from_entry(
-                            event_type="holding_removed",
-                            message=f"**[REMOVE {clean_sym}]** ลบสินทรัพย์ออกจากพอร์ตโดยตรง",
-                            metadata={"symbol": clean_sym},
-                        )
-                    ],
+                    ledger_change=ledger_change,
+                    system_journal_events=purge_events + [remove_event],
+                    deleted_symbols=[clean_sym],
                 ),
                 journal_provider=self.journal_provider,
                 portfolio_id=pid,
@@ -637,28 +747,41 @@ class PortfolioTradingService:
         pid = validate_portfolio_id(portfolio_id)
         with self.repo.unit_of_work(pid) as uow:
             state = uow.load_state()
-            journal_events: List[SystemJournalEvent] = []
+            remove_events: List[SystemJournalEvent] = []
+            clean_syms = []
             for sym in symbols:
                 clean_sym = sym.strip().upper()
                 if clean_sym in _CASH_SYMBOLS:
                     continue
+                clean_syms.append(clean_sym)
                 target = _find_holding(state, clean_sym)
                 if target:
                     state.holdings.remove(target)
-                    journal_events.append(
+                    remove_events.append(
                         SystemJournalEvent.from_entry(
                             event_type="holding_removed",
                             message=f"**[REMOVE {clean_sym}]** ลบสินทรัพย์ออกจากพอร์ตโดยตรง",
                             metadata={"symbol": clean_sym},
                         )
                     )
+
+            final_rows, purge_events, had_changes = self._purge_holding_transactions_locked(
+                uow, state, clean_syms
+            )
+            ledger_change = (
+                LedgerChange(kind="replace_all", rows=final_rows, tx_id="batch_holding_remove")
+                if had_changes
+                else LedgerChange(kind="unchanged")
+            )
+
             recalc_all(state)
             commit_mutation(
                 uow,
                 state,
                 PortfolioMutation(
-                    ledger_change=LedgerChange(kind="unchanged"),
-                    system_journal_events=journal_events,
+                    ledger_change=ledger_change,
+                    system_journal_events=purge_events + remove_events,
+                    deleted_symbols=clean_syms,
                 ),
                 journal_provider=self.journal_provider,
                 portfolio_id=pid,

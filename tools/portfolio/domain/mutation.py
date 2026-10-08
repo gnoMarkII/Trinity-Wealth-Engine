@@ -11,6 +11,7 @@ class PortfolioMutation:
     """Encapsulates all side-effecting mutations executed within a single Unit of Work."""
     ledger_change: Optional[LedgerChange] = None
     system_journal_events: List[SystemJournalEvent] = field(default_factory=list)
+    deleted_symbols: List[str] = field(default_factory=list)
 
     @classmethod
     def from_change(cls, change: Optional[Union[LedgerChange, "PortfolioMutation"]] = None) -> "PortfolioMutation":

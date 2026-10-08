@@ -183,7 +183,19 @@ def test_delete_transaction_with_cash_adjustment(isolated_portfolio, tmp_vault):
 
     with csv_path.open("r", encoding="utf-8") as f:
         remaining_rows = list(csv.DictReader(f))
-    assert len(remaining_rows) == 0
+    voided_ids = {
+        r.get("Related_Transaction_ID")
+        for r in remaining_rows
+        if (r.get("Action") or "").startswith("VOID_")
+    }
+    active_rows = [
+        r for r in remaining_rows
+        if not (r.get("Action") or "").startswith("VOID_")
+        and r.get("Transaction_ID") not in voided_ids
+    ]
+    assert len(active_rows) == 0
+    assert len(remaining_rows) == 2
+    assert any((r.get("Action") or "").startswith("VOID_") for r in remaining_rows)
 
 
 def test_delete_transaction_rejects_if_causes_negative_units(isolated_portfolio, tmp_vault):

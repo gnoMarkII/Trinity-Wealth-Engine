@@ -759,6 +759,74 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/macro/notebooklm/exports": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Export Macro To Notebooklm */
+        post: operations["export_macro_to_notebooklm_api_macro_notebooklm_exports_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/macro/notebooklm/exports/latest": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Latest Macro Notebooklm Export */
+        get: operations["get_latest_macro_notebooklm_export_api_macro_notebooklm_exports_latest_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/macro/notebooklm/exports/{export_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Macro Notebooklm Export By Id */
+        get: operations["get_macro_notebooklm_export_by_id_api_macro_notebooklm_exports__export_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/macro/notebooklm/exports/{export_id}/retry": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Retry Macro Notebooklm Export */
+        post: operations["retry_macro_notebooklm_export_api_macro_notebooklm_exports__export_id__retry_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/portfolio/dime/emails": {
         parameters: {
             query?: never;
@@ -1989,6 +2057,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v2/market/thailand/yield-curve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Fetch Thai Government Bond Model Yield Curve from ThaiBMA */
+        get: operations["get_thai_yield_curve_api_v2_market_thailand_yield_curve_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v2/market/signals/prediction-markets": {
         parameters: {
             query?: never;
@@ -2015,6 +2100,57 @@ export interface paths {
         };
         /** Fetch US Spot ETF net flows and issuer breakdown for BTC or ETH */
         get: operations["get_spot_etf_flows_api_v2_market_crypto_etf_flows__asset__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/market/crypto/stablecoins": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Fetch global USD stablecoin circulating supply and 7d/30d growth metrics from DeFiLlama */
+        get: operations["get_stablecoin_supply_api_v2_market_crypto_stablecoins_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/market/crypto/benchmark": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Fetch Bitcoin spot price benchmark, returns, and BTC/Gold valuation ratio */
+        get: operations["get_crypto_benchmark_api_v2_market_crypto_benchmark_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/market/macro/crypto-liquidity": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Fetch synthesized Level 1 Crypto Macro Liquidity & Risk Appetite proxy */
+        get: operations["get_crypto_macro_liquidity_api_v2_market_macro_crypto_liquidity_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -2909,6 +3045,112 @@ export interface components {
             name: string;
             /** Portfolio Id */
             portfolio_id?: string | null;
+        };
+        /** CryptoBenchmarkResponse */
+        CryptoBenchmarkResponse: {
+            /**
+             * Symbol
+             * @default BTC
+             */
+            symbol: string;
+            /** Price Usd */
+            price_usd?: number | null;
+            /** Change 24H Pct */
+            change_24h_pct?: number | null;
+            /** Change 7D Pct */
+            change_7d_pct?: number | null;
+            /** Gold Price Usd */
+            gold_price_usd?: number | null;
+            /** Btc Gold Ratio */
+            btc_gold_ratio?: number | null;
+            /**
+             * As Of Date
+             * @default
+             */
+            as_of_date: string;
+            /**
+             * Fetched At
+             * @default 0
+             */
+            fetched_at: number;
+            /**
+             * Source
+             * @default Market Benchmark
+             */
+            source: string;
+            /**
+             * Is Stale
+             * @default false
+             */
+            is_stale: boolean;
+            /**
+             * Stale Reason
+             * @default
+             */
+            stale_reason: string;
+            /**
+             * Limitations
+             * @default
+             */
+            limitations: string;
+        };
+        /** CryptoMacroLiquidityResponse */
+        CryptoMacroLiquidityResponse: {
+            /** Btc Price Usd */
+            btc_price_usd?: number | null;
+            /** Btc Change 24H Pct */
+            btc_change_24h_pct?: number | null;
+            /** Btc Change 7D Pct */
+            btc_change_7d_pct?: number | null;
+            /** Btc Gold Ratio */
+            btc_gold_ratio?: number | null;
+            /** Stablecoin Total Usd */
+            stablecoin_total_usd?: number | null;
+            /** Stablecoin Change 7D Pct */
+            stablecoin_change_7d_pct?: number | null;
+            /** Stablecoin Change 30D Pct */
+            stablecoin_change_30d_pct?: number | null;
+            /** Top Stablecoins */
+            top_stablecoins?: components["schemas"]["StablecoinItemSchema"][];
+            /** Etf Daily Net Inflow Usd */
+            etf_daily_net_inflow_usd?: number | null;
+            /** Etf Cumulative Total Usd */
+            etf_cumulative_total_usd?: number | null;
+            /**
+             * Liquidity Regime
+             * @default Neutral
+             */
+            liquidity_regime: string;
+            /**
+             * As Of Date
+             * @default
+             */
+            as_of_date: string;
+            /**
+             * Fetched At
+             * @default 0
+             */
+            fetched_at: number;
+            /**
+             * Source
+             * @default DeFiLlama / SoSoValue / Benchmark
+             */
+            source: string;
+            /**
+             * Is Stale
+             * @default false
+             */
+            is_stale: boolean;
+            /**
+             * Stale Reason
+             * @default
+             */
+            stale_reason: string;
+            /**
+             * Limitations
+             * @default
+             */
+            limitations: string;
         };
         /** DCFScenarioLevelDTO */
         DCFScenarioLevelDTO: {
@@ -4637,6 +4879,147 @@ export interface components {
              * @default []
              */
             points: components["schemas"]["MacroSeriesPointDTO"][];
+        };
+        /** MacroNotebookLMCoverageDTO */
+        MacroNotebookLMCoverageDTO: {
+            /**
+             * Strategy Report Present
+             * @default false
+             */
+            strategy_report_present: boolean;
+            /**
+             * Historical Reports Count
+             * @default 0
+             */
+            historical_reports_count: number;
+            /**
+             * Catalog Notes Count
+             * @default 0
+             */
+            catalog_notes_count: number;
+            /**
+             * Indicator Series Count
+             * @default 0
+             */
+            indicator_series_count: number;
+            /**
+             * Market Observables Cached
+             * @default 0
+             */
+            market_observables_cached: number;
+            /**
+             * Market Observables Total
+             * @default 13
+             */
+            market_observables_total: number;
+            /**
+             * Thailand Hard Data Present
+             * @default false
+             */
+            thailand_hard_data_present: boolean;
+            /**
+             * Sector Rotation Present
+             * @default false
+             */
+            sector_rotation_present: boolean;
+            /**
+             * News Events Count
+             * @default 0
+             */
+            news_events_count: number;
+        };
+        /** MacroNotebookLMExportRequestDTO */
+        MacroNotebookLMExportRequestDTO: {
+            /**
+             * Mode
+             * @default all_retained
+             * @constant
+             */
+            mode: "all_retained";
+        };
+        /** MacroNotebookLMExportResponseDTO */
+        MacroNotebookLMExportResponseDTO: {
+            /** Export Id */
+            export_id: string;
+            /** Job Id */
+            job_id?: string | null;
+            /** State */
+            state: string;
+            /** Stage */
+            stage: string;
+            /** Message */
+            message: string;
+        };
+        /** MacroNotebookLMExportStatusDTO */
+        MacroNotebookLMExportStatusDTO: {
+            /** Export Id */
+            export_id: string;
+            /** Job Id */
+            job_id?: string | null;
+            /**
+             * Mode
+             * @default all_retained
+             */
+            mode: string;
+            /** State */
+            state: string;
+            /** Stage */
+            stage: string;
+            /** Snapshot At */
+            snapshot_at: string;
+            /** Bundle Hash */
+            bundle_hash: string;
+            /** Strategy Report Id */
+            strategy_report_id?: string | null;
+            /** Notebooks */
+            notebooks?: components["schemas"]["MacroNotebookLMNotebookDTO"][];
+            /** Counts */
+            counts?: {
+                [key: string]: unknown;
+            };
+            /** Source Results */
+            source_results?: components["schemas"]["MacroNotebookLMSourceResultDTO"][];
+            coverage: components["schemas"]["MacroNotebookLMCoverageDTO"];
+            /** Warnings */
+            warnings?: string[];
+            /** Error Code */
+            error_code?: string | null;
+            /** Error */
+            error?: string | null;
+            /**
+             * Can Retry
+             * @default false
+             */
+            can_retry: boolean;
+        };
+        /** MacroNotebookLMNotebookDTO */
+        MacroNotebookLMNotebookDTO: {
+            /** Notebook Id */
+            notebook_id: string;
+            /** Title */
+            title: string;
+            /** Url */
+            url: string;
+            /** Status */
+            status: string;
+            /**
+             * Source Count
+             * @default 0
+             */
+            source_count: number;
+        };
+        /** MacroNotebookLMSourceResultDTO */
+        MacroNotebookLMSourceResultDTO: {
+            /** File Name */
+            file_name: string;
+            /** Title */
+            title: string;
+            /** Status */
+            status: string;
+            /** Source Id */
+            source_id?: string | null;
+            /** Error */
+            error?: string | null;
         };
         /** MacroReferenceDTO */
         MacroReferenceDTO: {
@@ -6421,6 +6804,78 @@ export interface components {
             /** Total Net Assets Usd */
             total_net_assets_usd?: number | null;
         };
+        /** StablecoinItemSchema */
+        StablecoinItemSchema: {
+            /** Symbol */
+            symbol: string;
+            /** Name */
+            name: string;
+            /** Circulating Usd */
+            circulating_usd?: number | null;
+            /** Market Share Pct */
+            market_share_pct?: number | null;
+            /**
+             * Price Usd
+             * @default 1
+             */
+            price_usd: number | null;
+        };
+        /** StablecoinSupplyResponse */
+        StablecoinSupplyResponse: {
+            /** Total Circulating Usd */
+            total_circulating_usd?: number | null;
+            /** Change 7D Pct */
+            change_7d_pct?: number | null;
+            /** Change 30D Pct */
+            change_30d_pct?: number | null;
+            /** Top Stablecoins */
+            top_stablecoins?: components["schemas"]["StablecoinItemSchema"][];
+            /**
+             * As Of Date
+             * @default
+             */
+            as_of_date: string;
+            /**
+             * Is Partial
+             * @default false
+             */
+            is_partial: boolean;
+            /**
+             * Completeness Notes
+             * @default
+             */
+            completeness_notes: string;
+            /**
+             * Fetched At
+             * @default 0
+             */
+            fetched_at: number;
+            /**
+             * Source
+             * @default DeFiLlama
+             */
+            source: string;
+            /**
+             * Unit
+             * @default USD
+             */
+            unit: string;
+            /**
+             * Is Stale
+             * @default false
+             */
+            is_stale: boolean;
+            /**
+             * Stale Reason
+             * @default
+             */
+            stale_reason: string;
+            /**
+             * Limitations
+             * @default
+             */
+            limitations: string;
+        };
         /** SyncDividendsResponseDTO */
         SyncDividendsResponseDTO: {
             /** Synced Symbols */
@@ -6613,6 +7068,36 @@ export interface components {
             is_stale: boolean;
             /** Stale Reason */
             stale_reason?: string | null;
+        };
+        /** ThaiYieldCurveResponse */
+        ThaiYieldCurveResponse: {
+            /** Observation Date */
+            observation_date: string;
+            /** Yields */
+            yields: components["schemas"]["ThaiYieldPointSchema"][];
+            /** Spread 10Y 2Y Bps */
+            spread_10y_2y_bps?: number | null;
+            /** Spread 10Y 1Y Bps */
+            spread_10y_1y_bps?: number | null;
+            /** Fetched At */
+            fetched_at: number;
+            /** Source */
+            source: string;
+            /** Unit */
+            unit: string;
+            /** Is Stale */
+            is_stale: boolean;
+            /** Stale Reason */
+            stale_reason?: string | null;
+        };
+        /** ThaiYieldPointSchema */
+        ThaiYieldPointSchema: {
+            /** Tenor */
+            tenor: string;
+            /** Ttm Years */
+            ttm_years: number;
+            /** Yield Percent */
+            yield_percent: number | null;
         };
         /** ToggleDiscordRequest */
         ToggleDiscordRequest: {
@@ -8724,6 +9209,121 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PortfolioCalendarDTO"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    export_macro_to_notebooklm_api_macro_notebooklm_exports_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["MacroNotebookLMExportRequestDTO"] | null;
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MacroNotebookLMExportResponseDTO"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_latest_macro_notebooklm_export_api_macro_notebooklm_exports_latest_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MacroNotebookLMExportStatusDTO"] | null;
+                };
+            };
+        };
+    };
+    get_macro_notebooklm_export_by_id_api_macro_notebooklm_exports__export_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                export_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MacroNotebookLMExportStatusDTO"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    retry_macro_notebooklm_export_api_macro_notebooklm_exports__export_id__retry_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                export_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MacroNotebookLMExportResponseDTO"];
                 };
             };
             /** @description Validation Error */
@@ -10971,6 +11571,38 @@ export interface operations {
             };
         };
     };
+    get_thai_yield_curve_api_v2_market_thailand_yield_curve_get: {
+        parameters: {
+            query?: {
+                /** @description Observation date ISO YYYY-MM-DD (defaults to latest) */
+                date?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ThaiYieldCurveResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     get_prediction_markets_api_v2_market_signals_prediction_markets_get: {
         parameters: {
             query?: {
@@ -11029,6 +11661,66 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_stablecoin_supply_api_v2_market_crypto_stablecoins_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StablecoinSupplyResponse"];
+                };
+            };
+        };
+    };
+    get_crypto_benchmark_api_v2_market_crypto_benchmark_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CryptoBenchmarkResponse"];
+                };
+            };
+        };
+    };
+    get_crypto_macro_liquidity_api_v2_market_macro_crypto_liquidity_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CryptoMacroLiquidityResponse"];
                 };
             };
         };
