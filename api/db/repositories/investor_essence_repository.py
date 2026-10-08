@@ -23,6 +23,7 @@ from core.investor_essence.models import (
     AnswerKind,
     BucketPlanDraft,
     BucketPlanStatus,
+    BucketRemappingItem,
     ContentOption,
     CoverageItem,
     EssenceClaim,
@@ -652,6 +653,13 @@ class SqlitePlanningRepository(PlanningRepositoryPort):
         data = {
             "draft_id": draft.draft_id,
             "portfolio_id": draft.portfolio_id,
+            "essence_ref": {
+                "document_key": draft.essence_ref.document_key,
+                "note_id": draft.essence_ref.note_id,
+                "revision_id": draft.essence_ref.revision_id,
+                "content_hash": draft.essence_ref.content_hash,
+                "artifact_set_hash": draft.essence_ref.artifact_set_hash,
+            },
             "axis_ref": {
                 "document_key": draft.axis_ref.document_key,
                 "note_id": draft.axis_ref.note_id,
@@ -659,28 +667,40 @@ class SqlitePlanningRepository(PlanningRepositoryPort):
                 "content_hash": draft.axis_ref.content_hash,
                 "artifact_set_hash": draft.axis_ref.artifact_set_hash,
             },
+            "context_ref": draft.context_ref,
+            "portfolio_checkpoint": draft.portfolio_checkpoint,
             "status": draft.status.value,
             "purpose_buckets": [
                 {
                     "bucket_id": b.bucket_id,
                     "name": b.name,
                     "role": b.role,
-                    "color_hex": b.color_hex,
+                    "color": b.color,
+                    "color_hex": b.color,
                     "target_percent": str(b.target_percent),
                     "source_value_ids": b.source_value_ids,
                     "source_axis_allocation_ids": b.source_axis_allocation_ids,
                 }
                 for b in draft.purpose_buckets
             ],
-            "allocation_mapping": [
+            "allocation_basis": draft.allocation_basis.value,
+            "mapping_weights": [
                 {
                     "axis_allocation_id": c.axis_allocation_id,
                     "bucket_id": c.bucket_id,
                     "portfolio_weight_percent": str(c.portfolio_weight_percent),
                 }
-                for c in draft.allocation_mapping
+                for c in draft.mapping_weights
             ],
-            "holding_remapping": draft.holding_remapping,
+            "constraints": list(draft.constraints),
+            "remapping": [
+                {
+                    "old_bucket_id": r.old_bucket_id,
+                    "target_bucket_id": r.target_bucket_id,
+                    "affected_holding_count": r.affected_holding_count,
+                }
+                for r in draft.remapping
+            ],
             "revision": draft.revision,
         }
 
@@ -711,21 +731,29 @@ class SqlitePlanningRepository(PlanningRepositoryPort):
             return None
 
         d = json.loads(row[0])
-        ref_d = d["axis_ref"]
+        ref_axis = d.get("axis_ref", {})
         axis_ref = ArtifactRef(
-            document_key=ref_d["document_key"],
-            note_id=ref_d["note_id"],
-            revision_id=ref_d["revision_id"],
-            content_hash=ref_d["content_hash"],
-            artifact_set_hash=ref_d["artifact_set_hash"],
+            document_key=ref_axis.get("document_key", f"investment-axis-{d.get('portfolio_id')}"),
+            note_id=ref_axis.get("note_id", "latest"),
+            revision_id=ref_axis.get("revision_id", "1"),
+            content_hash=ref_axis.get("content_hash", "hash"),
+            artifact_set_hash=ref_axis.get("artifact_set_hash", "hash"),
+        )
+        ref_ess = d.get("essence_ref", {})
+        essence_ref = ArtifactRef(
+            document_key=ref_ess.get("document_key", f"investor-essence-{d.get('portfolio_id')}"),
+            note_id=ref_ess.get("note_id", "latest"),
+            revision_id=ref_ess.get("revision_id", "1"),
+            content_hash=ref_ess.get("content_hash", "hash"),
+            artifact_set_hash=ref_ess.get("artifact_set_hash", "hash"),
         )
         buckets = [
             PurposeBucketDraft(
                 bucket_id=b["bucket_id"],
                 name=b["name"],
                 role=b["role"],
-                color_hex=b["color_hex"],
-                target_percent=Decimal(b["target_percent"]),
+                color=b.get("color") or b.get("color_hex", "#3B82F6"),
+                target_percent=Decimal(str(b["target_percent"])),
                 source_value_ids=b.get("source_value_ids", []),
                 source_axis_allocation_ids=b.get("source_axis_allocation_ids", []),
             )
@@ -735,19 +763,48 @@ class SqlitePlanningRepository(PlanningRepositoryPort):
             AllocationMappingCell(
                 axis_allocation_id=c["axis_allocation_id"],
                 bucket_id=c["bucket_id"],
-                portfolio_weight_percent=Decimal(c["portfolio_weight_percent"]),
+                portfolio_weight_percent=Decimal(str(c["portfolio_weight_percent"])),
             )
-            for c in d.get("allocation_mapping", [])
+            for c in d.get("mapping_weights", d.get("allocation_mapping", []))
         ]
+        raw_remapping = d.get("remapping", [])
+        if isinstance(raw_remapping, list):
+            remapping = [
+                BucketRemappingItem(
+                    old_bucket_id=r["old_bucket_id"],
+                    target_bucket_id=r.get("target_bucket_id"),
+                    affected_holding_count=r.get("affected_holding_count", 0),
+                )
+                for r in raw_remapping
+            ]
+        elif isinstance(raw_remapping, dict):
+            remapping = [
+                BucketRemappingItem(
+                    old_bucket_id=k,
+                    target_bucket_id=v,
+                    affected_holding_count=0,
+                )
+                for k, v in raw_remapping.items()
+            ]
+        else:
+            remapping = []
+
+        alloc_basis_val = d.get("allocation_basis", AllocationBasis.PURPOSE.value)
+        alloc_basis = AllocationBasis(alloc_basis_val) if alloc_basis_val in AllocationBasis._value2member_map_ else AllocationBasis.PURPOSE
 
         return BucketPlanDraft(
             draft_id=d["draft_id"],
             portfolio_id=d["portfolio_id"],
+            essence_ref=essence_ref,
             axis_ref=axis_ref,
-            status=BucketPlanStatus(d["status"]),
+            context_ref=d.get("context_ref", f"ctx_{d.get('portfolio_id')}"),
+            portfolio_checkpoint=d.get("portfolio_checkpoint", {}),
             purpose_buckets=buckets,
-            allocation_mapping=cells,
-            holding_remapping=d.get("holding_remapping", {}),
+            allocation_basis=alloc_basis,
+            mapping_weights=cells,
+            constraints=d.get("constraints", []),
+            remapping=remapping,
+            status=BucketPlanStatus(d.get("status", "draft")),
             revision=d.get("revision", 1),
             created_at_iso=row[1] or "",
         )
