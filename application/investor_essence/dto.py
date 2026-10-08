@@ -112,10 +112,17 @@ class BucketPlanProposal:
     purpose_buckets: List[PurposeBucketProposal]
     allocation_basis: str
     mapping_weights: List[Dict[str, Any]]
-    constraints: List[str] = field(default_factory=list)
-
-
 @dataclass(frozen=True)
+class WeightedAllocationMappingProposal:
+    axis_allocation_id: str
+    bucket_id: str
+    portfolio_weight_percent: str
+
+
+# Backward-compatible aliases
+NumericPolicyFieldProposal = NumericPolicyFieldDTO
+AllocationPlanRowProposal = AllocationRowDTO
+
 class PortfolioPlanningSnapshot:
     """Consistent point-in-time snapshot of portfolio state & checkpoint."""
     portfolio_id: str

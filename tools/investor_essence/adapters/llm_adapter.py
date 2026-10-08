@@ -214,24 +214,24 @@ class LlmInvestorEssenceAdapter(
         raw_limits = parsed.get("risk_limits", {})
         risk_limits = {}
         for k, v in raw_limits.items():
-            val = Decimal(str(v["value"])) if v.get("value") is not None else None
+            val = str(v["value"]) if v.get("value") is not None else None
             risk_limits[k] = NumericPolicyFieldProposal(
-                field_id=v["field_id"],
+                field_id=v.get("field_id", k),
                 value=val,
-                unit=v["unit"],
-                calculation_basis=v["calculation_basis"],
+                unit=v.get("unit", ""),
+                calculation_basis=v.get("calculation_basis", ""),
                 origin=v.get("origin", "ai_proposal"),
             )
 
         raw_rows = parsed.get("allocation_rows", [])
         allocation_rows = [
             AllocationPlanRowProposal(
-                allocation_id=r["allocation_id"],
-                category_name=r["category_name"],
-                target_percent=Decimal(str(r["target_percent"])),
-                role_description=r["role_description"],
+                allocation_id=r.get("allocation_id", f"alloc_{idx}"),
+                category_name=r.get("category_name", ""),
+                target_percent=str(r.get("target_percent", "0")),
+                role_description=r.get("role_description", ""),
             )
-            for r in raw_rows
+            for idx, r in enumerate(raw_rows)
         ]
 
         return AxisProposal(
@@ -251,17 +251,17 @@ class LlmInvestorEssenceAdapter(
 
     def generate_buckets(
         self,
-        axis_sections: Dict[str, Any],
-        accepted_claims: List[Dict[str, Any]],
+        confirmed_axis: Dict[str, Any],
         prompt_version: str,
+        accepted_claims: Optional[List[Dict[str, Any]]] = None,
     ) -> BucketPlanProposal:
         skill_prompt = _read_prompt("SKILL.md")
         stage_prompt = _read_prompt("BUCKET_PROPOSAL.md")
         system = f"{skill_prompt}\n\n{stage_prompt}"
 
         context_data = {
-            "axis_sections": axis_sections,
-            "accepted_claims": accepted_claims,
+            "confirmed_axis": confirmed_axis,
+            "accepted_claims": accepted_claims or [],
             "prompt_version": prompt_version,
         }
         user = f"ข้อมูลแกนหลักและแก่นแท้:\n```json\n{json.dumps(context_data, ensure_ascii=False, indent=2)}\n```\n\nกรุณาร่าง Purpose Buckets พร้อม matrix การจัดสรร"
@@ -271,26 +271,31 @@ class LlmInvestorEssenceAdapter(
         raw_buckets = parsed.get("purpose_buckets", [])
         purpose_buckets = [
             PurposeBucketProposal(
-                bucket_id=b["bucket_id"],
-                name=b["name"],
-                role=b["role"],
-                color_hex=b.get("color_hex", "#3B82F6"),
-                target_percent=Decimal(str(b["target_percent"])),
+                bucket_id=b.get("bucket_id"),
+                name=b.get("name", ""),
+                role=b.get("role", ""),
+                color=b.get("color") or b.get("color_hex", "#3B82F6"),
+                target_percent=str(b.get("target_percent", "0")),
+                source_value_ids=b.get("source_value_ids", []),
+                source_axis_allocation_ids=b.get("source_axis_allocation_ids", []),
             )
             for b in raw_buckets
         ]
 
-        raw_mapping = parsed.get("allocation_mapping", [])
-        allocation_mapping = [
-            WeightedAllocationMappingProposal(
-                axis_allocation_id=m["axis_allocation_id"],
-                bucket_id=m["bucket_id"],
-                portfolio_weight_percent=Decimal(str(m["portfolio_weight_percent"])),
-            )
+        raw_mapping = parsed.get("allocation_mapping") or parsed.get("mapping_weights", [])
+        mapping_weights = [
+            {
+                "axis_allocation_id": m.get("axis_allocation_id", ""),
+                "bucket_id": m.get("bucket_id", ""),
+                "portfolio_weight_percent": str(m.get("portfolio_weight_percent", "0")),
+            }
             for m in raw_mapping
         ]
 
         return BucketPlanProposal(
             purpose_buckets=purpose_buckets,
-            allocation_mapping=allocation_mapping,
+            allocation_basis=parsed.get("allocation_basis", "asset_class"),
+            mapping_weights=mapping_weights,
+            constraints=parsed.get("constraints", []),
         )
+
