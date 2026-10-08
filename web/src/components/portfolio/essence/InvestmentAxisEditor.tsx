@@ -17,6 +17,17 @@ interface InvestmentAxisEditorProps {
   statusText?: string | null
 }
 
+function parseRiskLimitValue(val: unknown, fallback: string): string {
+  if (val === null || val === undefined) return fallback
+  if (typeof val === 'object' && val !== null && 'value' in val) {
+    const inner = (val as { value?: unknown }).value
+    return inner !== null && inner !== undefined && String(inner).trim() !== ''
+      ? String(inner)
+      : fallback
+  }
+  return String(val).trim() !== '' ? String(val) : fallback
+}
+
 export default function InvestmentAxisEditor({
   axisDraft,
   confirmedAxis,
@@ -34,12 +45,13 @@ export default function InvestmentAxisEditor({
     axisDraft?.basic_policy || confirmedAxis?.basic_policy || '',
   )
   const [mddPercent, setMddPercent] = useState(
-    axisDraft?.risk_limits?.mdd_percent || confirmedAxis?.risk_limits?.mdd_percent || '15',
+    parseRiskLimitValue(axisDraft?.risk_limits?.mdd_percent || confirmedAxis?.risk_limits?.mdd_percent, '15'),
   )
   const [maxLossPerTrade, setMaxLossPerTrade] = useState(
-    axisDraft?.risk_limits?.max_loss_per_trade_percent ||
-      confirmedAxis?.risk_limits?.max_loss_per_trade_percent ||
+    parseRiskLimitValue(
+      axisDraft?.risk_limits?.max_loss_per_trade_percent || confirmedAxis?.risk_limits?.max_loss_per_trade_percent,
       '2',
+    ),
   )
   const [horizon, setHorizon] = useState(
     axisDraft?.investment_horizon || confirmedAxis?.investment_horizon || '',
@@ -71,8 +83,8 @@ export default function InvestmentAxisEditor({
   useEffect(() => {
     if (axisDraft) {
       setBasicPolicy(axisDraft.basic_policy || '')
-      setMddPercent(axisDraft.risk_limits?.mdd_percent || '15')
-      setMaxLossPerTrade(axisDraft.risk_limits?.max_loss_per_trade_percent || '2')
+      setMddPercent(parseRiskLimitValue(axisDraft.risk_limits?.mdd_percent, '15'))
+      setMaxLossPerTrade(parseRiskLimitValue(axisDraft.risk_limits?.max_loss_per_trade_percent, '2'))
       setHorizon(axisDraft.investment_horizon || '')
       setRebalanceFreq(axisDraft.rebalance_frequency || 'รายปี')
       setNonActions(axisDraft.non_actions || [])
@@ -83,8 +95,8 @@ export default function InvestmentAxisEditor({
       setAllocationRows(axisDraft.allocation_rows || [])
     } else if (confirmedAxis) {
       setBasicPolicy(confirmedAxis.basic_policy || '')
-      setMddPercent(confirmedAxis.risk_limits?.mdd_percent || '15')
-      setMaxLossPerTrade(confirmedAxis.risk_limits?.max_loss_per_trade_percent || '2')
+      setMddPercent(parseRiskLimitValue(confirmedAxis.risk_limits?.mdd_percent, '15'))
+      setMaxLossPerTrade(parseRiskLimitValue(confirmedAxis.risk_limits?.max_loss_per_trade_percent, '2'))
       setHorizon(confirmedAxis.investment_horizon || '')
       setRebalanceFreq(confirmedAxis.rebalance_frequency || 'รายปี')
       setNonActions(confirmedAxis.non_actions || [])
@@ -111,8 +123,8 @@ export default function InvestmentAxisEditor({
     await onUpdateDraft({
       basic_policy: basicPolicy,
       risk_limits: {
-        mdd_percent: mddPercent,
-        max_loss_per_trade_percent: maxLossPerTrade,
+        mdd_percent: { value: mddPercent, unit: '%', calculation_basis: 'NAV' },
+        max_loss_per_trade_percent: { value: maxLossPerTrade, unit: '%', calculation_basis: 'NAV' },
       },
       investment_horizon: horizon,
       rebalance_frequency: rebalanceFreq,

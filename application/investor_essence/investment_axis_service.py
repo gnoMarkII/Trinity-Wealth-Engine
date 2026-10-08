@@ -267,18 +267,32 @@ class InvestmentAxisService:
 
             # Update risk limits / numeric fields
             risk_lims = dict(draft.risk_limits)
-            if "risk_limits" in updates:
+            if "risk_limits" in updates and isinstance(updates["risk_limits"], dict):
                 for k, v in updates["risk_limits"].items():
-                    val = Decimal(str(v["value"])) if v.get("value") is not None else None
+                    if isinstance(v, dict):
+                        raw_val = v.get("value")
+                        val = Decimal(str(raw_val)) if raw_val is not None and str(raw_val).strip() != "" else None
+                        unit = v.get("unit", "%")
+                        calc_basis = v.get("calculation_basis", "NAV")
+                        assumptions = v.get("assumptions", "")
+                        is_conf = bool(v.get("is_confirmed", True))
+                    else:
+                        val = Decimal(str(v)) if v is not None and str(v).strip() != "" else None
+                        unit = "%"
+                        calc_basis = "NAV"
+                        assumptions = ""
+                        is_conf = True
+
                     risk_lims[k] = NumericPolicyField(
                         field_id=k,
                         value=val,
-                        unit=v.get("unit", "%"),
-                        calculation_basis=v.get("calculation_basis", "NAV"),
+                        unit=unit,
+                        calculation_basis=calc_basis,
                         origin=NumericPolicyOrigin.USER_INPUT,
-                        assumptions=v.get("assumptions", ""),
-                        is_confirmed=bool(v.get("is_confirmed", True)),
+                        assumptions=assumptions,
+                        is_confirmed=is_conf,
                     )
+
 
             updated_draft = InvestmentAxisDraft(
                 draft_id=draft.draft_id,
