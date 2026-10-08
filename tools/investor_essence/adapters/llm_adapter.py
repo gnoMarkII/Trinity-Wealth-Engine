@@ -47,15 +47,29 @@ def _read_prompt(filename: str) -> str:
     return path.read_text(encoding="utf-8")
 
 
+import re
+
+
 def _clean_json_text(text: str) -> str:
     cleaned = text.strip()
-    if cleaned.startswith("```json"):
-        cleaned = cleaned[7:]
-    elif cleaned.startswith("```"):
-        cleaned = cleaned[3:]
-    if cleaned.endswith("```"):
-        cleaned = cleaned[:-3]
-    return cleaned.strip()
+    match = re.search(r"```(?:json)?\s*([\s\S]*?)\s*```", cleaned)
+    if match:
+        cleaned = match.group(1).strip()
+    elif "{" in cleaned and "}" in cleaned:
+        start = cleaned.find("{")
+        end = cleaned.rfind("}") + 1
+        cleaned = cleaned[start:end].strip()
+    return cleaned
+
+
+def _safe_json_loads(text: str) -> Dict[str, Any]:
+    cleaned = _clean_json_text(text)
+    try:
+        return json.loads(cleaned)
+    except json.JSONDecodeError:
+        # Repair trailing commas: e.g. [1, 2,] -> [1, 2] or {"a": 1,} -> {"a": 1}
+        repaired = re.sub(r",\s*([\]}])", r"\1", cleaned)
+        return json.loads(repaired)
 
 
 class LlmInvestorEssenceAdapter(
@@ -76,22 +90,31 @@ class LlmInvestorEssenceAdapter(
         return get_llm(provider, "gemini-2.5-flash", temperature=0.2)
 
     def _invoke_and_parse(self, system_prompt: str, user_prompt: str) -> Dict[str, Any]:
-        try:
-            llm = self._get_active_llm()
-            messages = [
-                SystemMessage(content=system_prompt),
-                HumanMessage(content=user_prompt),
-            ]
-            response = llm.invoke(messages)
-            content = response.content if hasattr(response, "content") else str(response)
-            cleaned = _clean_json_text(content)
-            return json.loads(cleaned)
-        except json.JSONDecodeError as exc:
-            logger.error("LLM failed to output valid JSON: %s", exc)
-            raise ValidationFailedError(f"Model output could not be parsed as JSON: {exc}") from exc
-        except Exception as exc:
-            logger.error("LLM provider invocation failed: %s", exc)
-            raise ProviderUnavailableError(f"LLM provider error: {exc}") from exc
+        last_exc: Optional[Exception] = None
+        for attempt in range(2):
+            try:
+                llm = self._get_active_llm()
+                prompt_text = user_prompt
+                if attempt > 0:
+                    prompt_text += "\n\nสำคัญมาก: กรุณาส่งผลลัพธ์เป็น JSON ล้วนๆ ที่ถูกต้องตามมาตรฐาน JSON เท่านั้น ห้ามใส่คอมเมนต์หรือ trailing comma"
+                messages = [
+                    SystemMessage(content=system_prompt),
+                    HumanMessage(content=prompt_text),
+                ]
+                response = llm.invoke(messages)
+                content = response.content if hasattr(response, "content") else str(response)
+                return _safe_json_loads(content)
+            except json.JSONDecodeError as exc:
+                last_exc = exc
+                logger.warning("LLM output JSON decode error (attempt %d/2): %s", attempt + 1, exc)
+                continue
+            except Exception as exc:
+                logger.error("LLM provider invocation failed: %s", exc)
+                raise ProviderUnavailableError(f"LLM provider error: {exc}") from exc
+
+        logger.error("LLM failed to output valid JSON after 2 attempts: %s", last_exc)
+        raise ValidationFailedError(f"Model output could not be parsed as JSON: {last_exc}") from last_exc
+
 
     def generate_next_question(
         self, evidence: EvidenceSnapshot, prompt_version: str
