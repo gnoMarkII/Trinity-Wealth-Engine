@@ -12,6 +12,7 @@ interface Props {
   onSelectBucket: (bucketId: string) => void
   onSuccess?: (state: ActualPortfolioStateDTO) => void
   onOpenTradeModal?: () => void
+  onNavigateToPrinciples?: () => void
 }
 
 const DEFAULT_COLORS = [
@@ -30,7 +31,16 @@ function getBucketColor(index: number, explicitColor?: string | null): string {
   return DEFAULT_COLORS[index % DEFAULT_COLORS.length] ?? '#0284c7'
 }
 
-export default function PortfolioOverviewTab({ portfolioId, targets, summaries, warning, onSelectBucket, onSuccess, onOpenTradeModal }: Props) {
+export default function PortfolioOverviewTab({
+  portfolioId,
+  targets,
+  summaries,
+  warning,
+  onSelectBucket,
+  onSuccess,
+  onOpenTradeModal,
+  onNavigateToPrinciples,
+}: Props) {
   const [hoveredBucket, setHoveredBucket] = useState<string | null>(null)
   const [targetModalOpen, setTargetModalOpen] = useState(false)
 
@@ -105,6 +115,36 @@ export default function PortfolioOverviewTab({ portfolioId, targets, summaries, 
           </div>
         </div>
       )}
+
+      {/* Investor Principles Summary Card */}
+      <div className="rounded-2xl border border-sky-100 bg-gradient-to-r from-sky-50/80 via-white to-blue-50/50 p-4 sm:p-5 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-sky-100 text-sky-700 font-bold text-lg shadow-xs">
+            🧭
+          </span>
+          <div>
+            <h3 className="text-sm sm:text-base font-bold text-zinc-900 flex items-center gap-2">
+              <span>หลักการลงทุน (Investor Principles)</span>
+              <span className="rounded-full bg-sky-100 px-2 py-0.5 text-[10px] font-bold text-sky-700">
+                Phase 1
+              </span>
+            </h3>
+            <p className="text-xs text-zinc-500 mt-0.5">
+              ค้นหาแก่นแท้ในการลงทุน กำหนดแกนหลัก 8 หัวข้อ และสร้าง Purpose Buckets สำหรับพอร์ตนี้
+            </p>
+          </div>
+        </div>
+
+        {onNavigateToPrinciples && (
+          <button
+            type="button"
+            onClick={onNavigateToPrinciples}
+            className="shrink-0 rounded-xl bg-gradient-to-r from-sky-600 to-blue-600 px-4 py-2 text-xs sm:text-sm font-bold text-white shadow-xs hover:from-sky-700 hover:to-blue-700 active:scale-98 transition-all flex items-center gap-1.5 justify-center"
+          >
+            <span>ดูหลักการลงทุน / ค้นหาแก่นแท้ →</span>
+          </button>
+        )}
+      </div>
 
       {/* Grid: Donut Chart + Table */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">

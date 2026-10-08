@@ -31,6 +31,26 @@ import type {
   MacroNotebookLMExportRequestDTO,
   MacroNotebookLMExportResponseDTO,
   MacroNotebookLMExportStatusDTO,
+  SessionResponseDTO,
+  StartSessionRequestDTO,
+  RecordAnswerRequestDTO,
+  AdvanceQuestionRequestDTO,
+  InterviewConfigDTO,
+  SummaryResponseDTO,
+  ReviewClaimRequestDTO,
+  ConfirmEssenceRequestDTO,
+  ConfirmationResponseDTO,
+  ConfirmedEssenceDTO,
+  FinancialContextDTO,
+  UpdateFinancialContextRequestDTO,
+  AxisDraftDTO,
+  UpdateAxisDraftRequestDTO,
+  ConfirmAxisRequestDTO,
+  ConfirmedAxisDTO,
+  BucketPlanDraftDTO,
+  UpdateBucketPlanRequestDTO,
+  AllocationPreviewDTO,
+  AllocationApplyReceiptDTO,
 } from './types'
 
 export class ApiError extends Error {
@@ -976,4 +996,146 @@ export const api = {
     request<MacroNotebookLMExportResponseDTO>(`/api/macro/notebooklm/exports/${encodeURIComponent(exportId)}/retry`, {
       method: 'POST',
     }),
+
+  // ---------------------------------------------------------
+  // Investor Essence & Investment Axis (Milestones 1-3)
+  // ---------------------------------------------------------
+  getInterviewConfig: () =>
+    request<InterviewConfigDTO>('/api/investor/essence/interview-config'),
+
+  startEssenceSession: (payload?: StartSessionRequestDTO) =>
+    request<SessionResponseDTO>('/api/investor/essence/sessions', {
+      method: 'POST',
+      body: JSON.stringify(payload ?? {}),
+    }),
+
+  getCurrentEssenceSession: (scope: string = 'workspace') =>
+    request<SessionResponseDTO>(`/api/investor/essence/sessions/current?scope=${encodeURIComponent(scope)}`),
+
+  getEssenceSession: (sessionId: string) =>
+    request<SessionResponseDTO>(`/api/investor/essence/sessions/${encodeURIComponent(sessionId)}`),
+
+  recordEssenceAnswer: (sessionId: string, questionId: string, payload: RecordAnswerRequestDTO) =>
+    request<SessionResponseDTO>(
+      `/api/investor/essence/sessions/${encodeURIComponent(sessionId)}/answers/${encodeURIComponent(questionId)}`,
+      {
+        method: 'PUT',
+        body: JSON.stringify(payload),
+      },
+    ),
+
+  advanceEssenceQuestion: (sessionId: string, payload?: AdvanceQuestionRequestDTO) =>
+    request<SessionResponseDTO>(
+      `/api/investor/essence/sessions/${encodeURIComponent(sessionId)}/next-question`,
+      {
+        method: 'POST',
+        body: JSON.stringify(payload ?? {}),
+      },
+    ),
+
+  summarizeEssence: (sessionId: string, payload?: { expected_revision?: number | null; prompt_version?: string }) =>
+    request<SummaryResponseDTO>(
+      `/api/investor/essence/sessions/${encodeURIComponent(sessionId)}/summarize`,
+      {
+        method: 'POST',
+        body: JSON.stringify(payload ?? {}),
+      },
+    ),
+
+  getEssenceSummary: (sessionId: string) =>
+    request<SummaryResponseDTO>(`/api/investor/essence/sessions/${encodeURIComponent(sessionId)}/summary`),
+
+  reviewEssenceClaim: (sessionId: string, claimId: string, payload: ReviewClaimRequestDTO) =>
+    request<SummaryResponseDTO>(
+      `/api/investor/essence/sessions/${encodeURIComponent(sessionId)}/summary/claims/${encodeURIComponent(claimId)}`,
+      {
+        method: 'PUT',
+        body: JSON.stringify(payload),
+      },
+    ),
+
+  confirmEssence: (sessionId: string, payload: ConfirmEssenceRequestDTO) =>
+    request<ConfirmationResponseDTO>(
+      `/api/investor/essence/sessions/${encodeURIComponent(sessionId)}/confirm`,
+      {
+        method: 'POST',
+        body: JSON.stringify(payload),
+      },
+    ),
+
+  getCurrentConfirmedEssence: () =>
+    request<ConfirmedEssenceDTO>('/api/investor/essence/current'),
+
+  getFinancialContext: (portfolioId: string) =>
+    request<FinancialContextDTO>(`/api/investor/financial-context?portfolio_id=${encodeURIComponent(portfolioId)}`),
+
+  updateFinancialContext: (portfolioId: string, payload: UpdateFinancialContextRequestDTO) =>
+    request<FinancialContextDTO>(
+      `/api/investor/financial-context?portfolio_id=${encodeURIComponent(portfolioId)}`,
+      {
+        method: 'PUT',
+        body: JSON.stringify(payload),
+      },
+    ),
+
+  createAxisDraft: (portfolioId: string, promptVersion: string = '1.0') =>
+    request<AxisDraftDTO>('/api/investor/investment-axis/drafts', {
+      method: 'POST',
+      body: JSON.stringify({ portfolio_id: portfolioId, prompt_version: promptVersion }),
+    }),
+
+  getAxisDraft: (draftId: string) =>
+    request<AxisDraftDTO>(`/api/investor/investment-axis/drafts/${encodeURIComponent(draftId)}`),
+
+  updateAxisDraft: (draftId: string, payload: UpdateAxisDraftRequestDTO) =>
+    request<AxisDraftDTO>(
+      `/api/investor/investment-axis/drafts/${encodeURIComponent(draftId)}`,
+      {
+        method: 'PUT',
+        body: JSON.stringify(payload),
+      },
+    ),
+
+  confirmInvestmentAxis: (draftId: string, payload?: ConfirmAxisRequestDTO) =>
+    request<ConfirmationResponseDTO>(
+      `/api/investor/investment-axis/drafts/${encodeURIComponent(draftId)}/confirm`,
+      {
+        method: 'POST',
+        body: JSON.stringify(payload ?? {}),
+      },
+    ),
+
+  getCurrentConfirmedAxis: (portfolioId: string) =>
+    request<ConfirmedAxisDTO>(`/api/investor/investment-axis/current?portfolio_id=${encodeURIComponent(portfolioId)}`),
+
+  createBucketPlan: (portfolioId: string, promptVersion: string = '1.0') =>
+    request<BucketPlanDraftDTO>('/api/investor/bucket-plans', {
+      method: 'POST',
+      body: JSON.stringify({ portfolio_id: portfolioId, prompt_version: promptVersion }),
+    }),
+
+  getBucketPlan: (draftId: string) =>
+    request<BucketPlanDraftDTO>(`/api/investor/bucket-plans/${encodeURIComponent(draftId)}`),
+
+  updateBucketPlan: (draftId: string, payload: UpdateBucketPlanRequestDTO) =>
+    request<BucketPlanDraftDTO>(
+      `/api/investor/bucket-plans/${encodeURIComponent(draftId)}`,
+      {
+        method: 'PUT',
+        body: JSON.stringify(payload),
+      },
+    ),
+
+  previewBucketPlan: (draftId: string) =>
+    request<AllocationPreviewDTO>(`/api/investor/bucket-plans/${encodeURIComponent(draftId)}/preview`),
+
+  applyBucketPlan: (draftId: string, idempotencyKey?: string) =>
+    request<AllocationApplyReceiptDTO>(
+      `/api/investor/bucket-plans/${encodeURIComponent(draftId)}/apply`,
+      {
+        method: 'POST',
+        body: JSON.stringify({ idempotency_key: idempotencyKey }),
+      },
+    ),
 }
+

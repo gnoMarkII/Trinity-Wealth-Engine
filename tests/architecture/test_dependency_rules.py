@@ -67,6 +67,7 @@ def _find_sys_modules_lookups(file_path: Path) -> list[tuple[int, str]]:
 def test_domain_layer_isolation():
     """Domain layers must not import infrastructure, frameworks, adapters, or api."""
     domain_dirs = [
+        PROJECT_ROOT / "core" / "investor_essence",
         PROJECT_ROOT / "tools" / "portfolio" / "domain",
         PROJECT_ROOT / "tools" / "market" / "financials" / "domain",
         PROJECT_ROOT / "tools" / "market" / "ohlcv" / "domain",
@@ -83,6 +84,7 @@ def test_domain_layer_isolation():
         "tools.market.financials.adapters",
         "tools.market.ohlcv.adapters",
         "tools.market.terminal_v2.adapters",
+        "tools.investor_essence.adapters",
     ]
 
     violations = []

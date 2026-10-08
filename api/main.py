@@ -30,6 +30,7 @@ from api.routers.equity import router as equity_router
 from api.routers.equity.router_ohlcv import router as ohlcv_router
 from api.routers.knowledge_writes import router as knowledge_writes_router
 from api.routers.routes_terminal_v2 import router as terminal_v2_router
+from api.routers.investor_essence import router as investor_essence_router
 
 WEB_DIST = Path(__file__).resolve().parent.parent / "web" / "dist"
 
@@ -141,6 +142,7 @@ app.include_router(ohlcv_router)
 app.include_router(health_router)
 app.include_router(knowledge_writes_router)
 app.include_router(terminal_v2_router)
+app.include_router(investor_essence_router)
 
 
 @app.get("/health")

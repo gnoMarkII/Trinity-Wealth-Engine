@@ -1,0 +1,102 @@
+"""Pure Domain layer for Investor Essence and Investment Axis.
+
+This package contains:
+- Domain aggregates: EssenceSession
+- Value objects: Question, Answer, Claim, Confirmation, FinancialContext, Axis, BucketPlan
+- Domain validation and invariant rules
+"""
+from core.investor_essence.models import (
+    HUNDRED_PERCENT,
+    PERCENT_TOLERANCE,
+    SCHEMA_VERSION,
+    AllocationBasis,
+    AllocationMappingCell,
+    AllocationPlanOrigin,
+    AllocationPlanRow,
+    Answer,
+    AnswerKind,
+    ArtifactRef,
+    BucketPlanDraft,
+    BucketPlanStatus,
+    BucketRemappingItem,
+    ConfirmedInvestmentAxis,
+    ContentOption,
+    CoverageItem,
+    EssenceClaim,
+    EssenceConfirmationSnapshot,
+    EssenceSummaryDraft,
+    EvidenceRef,
+    EvidenceType,
+    FinancialContextSnapshot,
+    FinancialReadinessIssue,
+    FitRating,
+    GeneratedQuestion,
+    InvestmentAxisDraft,
+    NumericPolicyField,
+    NumericPolicyOrigin,
+    PerClaimConfirmationSnapshot,
+    PurposeBucketDraft,
+    SessionStatus,
+    SourceKind,
+)
+from core.investor_essence.interview import EssenceSession
+from core.investor_essence.claims import (
+    build_confirmation_snapshot,
+    edit_claim_text,
+    exclude_claim,
+    rate_claim_fit,
+)
+from core.investor_essence.financial_context import evaluate_financial_readiness, update_readiness
+from core.investor_essence.investment_axis import build_confirmed_axis, validate_axis_completeness
+from core.investor_essence.validation import (
+    to_decimal_2dp,
+    validate_allocation_matrix,
+    validate_percent_sum,
+)
+
+__all__ = [
+    "HUNDRED_PERCENT",
+    "PERCENT_TOLERANCE",
+    "SCHEMA_VERSION",
+    "AllocationBasis",
+    "AllocationMappingCell",
+    "AllocationPlanOrigin",
+    "AllocationPlanRow",
+    "Answer",
+    "AnswerKind",
+    "ArtifactRef",
+    "BucketPlanDraft",
+    "BucketPlanStatus",
+    "BucketRemappingItem",
+    "ConfirmedInvestmentAxis",
+    "ContentOption",
+    "CoverageItem",
+    "EssenceClaim",
+    "EssenceConfirmationSnapshot",
+    "EssenceSession",
+    "EssenceSummaryDraft",
+    "EvidenceRef",
+    "EvidenceType",
+    "FinancialContextSnapshot",
+    "FinancialReadinessIssue",
+    "FitRating",
+    "GeneratedQuestion",
+    "InvestmentAxisDraft",
+    "NumericPolicyField",
+    "NumericPolicyOrigin",
+    "PerClaimConfirmationSnapshot",
+    "PurposeBucketDraft",
+    "SessionStatus",
+    "SourceKind",
+    "build_confirmation_snapshot",
+    "build_confirmed_axis",
+    "edit_claim_text",
+    "evaluate_financial_readiness",
+    "exclude_claim",
+    "rate_claim_fit",
+    "to_decimal_2dp",
+    "update_readiness",
+    "validate_allocation_matrix",
+    "validate_axis_completeness",
+    "validate_percent_sum",
+]

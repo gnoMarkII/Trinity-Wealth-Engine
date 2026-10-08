@@ -217,6 +217,127 @@ CREATE TABLE IF NOT EXISTS macro_notebooklm_exports (
 );
 CREATE INDEX IF NOT EXISTS idx_macro_export_hash ON macro_notebooklm_exports(content_hash);
 CREATE INDEX IF NOT EXISTS idx_macro_export_created ON macro_notebooklm_exports(created_at DESC);
+
+-- Investor Essence Runtime Tables
+CREATE TABLE IF NOT EXISTS investor_sessions (
+    session_id TEXT PRIMARY KEY,
+    scope TEXT NOT NULL DEFAULT 'workspace',
+    status TEXT NOT NULL,
+    active_branch_id TEXT NOT NULL DEFAULT 'main',
+    revision INTEGER NOT NULL DEFAULT 1,
+    schema_version INTEGER NOT NULL DEFAULT 1,
+    interview_version TEXT NOT NULL DEFAULT '1.0',
+    context_hash TEXT,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS investor_questions (
+    question_id TEXT PRIMARY KEY,
+    session_id TEXT NOT NULL,
+    branch_id TEXT NOT NULL,
+    sequence_no INTEGER NOT NULL,
+    text TEXT NOT NULL,
+    options_json TEXT NOT NULL,
+    evidence_type TEXT NOT NULL,
+    coverage_topics_json TEXT NOT NULL,
+    is_clarification INTEGER NOT NULL DEFAULT 0,
+    created_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_investor_questions_seq ON investor_questions(session_id, branch_id, sequence_no);
+
+CREATE TABLE IF NOT EXISTS investor_answers (
+    answer_id TEXT PRIMARY KEY,
+    session_id TEXT NOT NULL,
+    question_id TEXT NOT NULL,
+    branch_id TEXT NOT NULL,
+    answer_kind TEXT NOT NULL,
+    option_id TEXT,
+    free_text TEXT,
+    evidence_type TEXT NOT NULL,
+    created_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_investor_answers_q ON investor_answers(session_id, question_id);
+
+CREATE TABLE IF NOT EXISTS investor_summary_drafts (
+    session_id TEXT PRIMARY KEY,
+    statement TEXT NOT NULL,
+    claims_json TEXT NOT NULL,
+    unresolved_topics_json TEXT NOT NULL,
+    coverage_report_json TEXT NOT NULL,
+    evidence_snapshot_hash TEXT NOT NULL,
+    revision INTEGER NOT NULL DEFAULT 1,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS investor_context_snapshots (
+    snapshot_id TEXT PRIMARY KEY,
+    portfolio_id TEXT NOT NULL,
+    data_json TEXT NOT NULL,
+    is_ready INTEGER NOT NULL DEFAULT 0,
+    created_at TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS investor_plan_drafts (
+    draft_id TEXT PRIMARY KEY,
+    draft_type TEXT NOT NULL,
+    portfolio_id TEXT NOT NULL,
+    data_json TEXT NOT NULL,
+    revision INTEGER NOT NULL DEFAULT 1,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_investor_plan_drafts_port ON investor_plan_drafts(portfolio_id, draft_type);
+
+CREATE TABLE IF NOT EXISTS investor_confirmed_refs (
+    pointer_key TEXT PRIMARY KEY,
+    scope TEXT NOT NULL,
+    portfolio_id TEXT,
+    ref_type TEXT NOT NULL,
+    artifact_ref_json TEXT NOT NULL,
+    snapshot_json TEXT NOT NULL,
+    revision INTEGER NOT NULL DEFAULT 1,
+    confirmed_at TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS investor_operations (
+    operation_id TEXT PRIMARY KEY,
+    task_type TEXT NOT NULL,
+    resource_id TEXT NOT NULL,
+    status TEXT NOT NULL,
+    payload_json TEXT NOT NULL,
+    result_json TEXT,
+    error_message TEXT,
+    lease_owner TEXT,
+    lease_expires_at REAL,
+    fencing_token INTEGER NOT NULL DEFAULT 0,
+    attempts INTEGER NOT NULL DEFAULT 0,
+    created_at REAL NOT NULL,
+    updated_at REAL NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_investor_operations_status ON investor_operations(status, lease_expires_at);
+
+CREATE TABLE IF NOT EXISTS investor_intents (
+    intent_id TEXT PRIMARY KEY,
+    intent_type TEXT NOT NULL,
+    resource_id TEXT NOT NULL,
+    status TEXT NOT NULL,
+    request_fingerprint TEXT NOT NULL,
+    receipt_json TEXT,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS investor_command_receipts (
+    receipt_key TEXT PRIMARY KEY,
+    scope TEXT NOT NULL,
+    use_case TEXT NOT NULL,
+    idempotency_key TEXT NOT NULL,
+    request_hash TEXT NOT NULL,
+    result_json TEXT NOT NULL,
+    created_at TEXT NOT NULL
+);
 """
 
 _INITIALIZED_DB_PATHS: set[str] = set()

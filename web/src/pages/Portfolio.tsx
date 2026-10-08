@@ -25,6 +25,7 @@ import ResetConfirmModal from '../components/portfolio/Modals/ResetConfirmModal'
 import PortfolioCalendarTab from '../components/portfolio/PortfolioCalendarTab'
 import PortfolioTransactionsTab from '../components/portfolio/PortfolioTransactionsTab'
 import PortfolioIncomesTab from '../components/portfolio/PortfolioIncomesTab'
+import InvestorPrinciplesTab from '../components/portfolio/essence/InvestorPrinciplesTab'
 import {
   TradeIcon,
   CashFlowIcon,
@@ -43,6 +44,15 @@ const TABS = [
       <span className="flex items-center gap-2 text-sm sm:text-base font-semibold">
         <ChartBarIcon className="w-4 h-4 sm:w-5 sm:h-5 text-flow-blue shrink-0" />
         <span>Strategy Buckets & Allocation</span>
+      </span>
+    ),
+  },
+  {
+    key: 'principles',
+    label: (
+      <span className="flex items-center gap-2 text-sm sm:text-base font-semibold">
+        <span className="text-base shrink-0">🧭</span>
+        <span>หลักการลงทุน (Principles)</span>
       </span>
     ),
   },
@@ -95,7 +105,8 @@ const TABS = [
 
 export default function Portfolio() {
   const [searchParams, setSearchParams] = useSearchParams()
-  const activeTab = searchParams.get('tab') || 'overview'
+  const rawTab = searchParams.get('tab') || 'overview'
+  const activeTab = rawTab === 'essence' ? 'principles' : rawTab
   const selectedBucket = searchParams.get('bucket') || null
   const selectedSymbol = searchParams.get('symbol') || null
   const selectedPortfolioId = searchParams.get('portfolio_id') || 'default'
@@ -660,6 +671,23 @@ export default function Portfolio() {
             onSelectBucket={handleSelectBucket}
             onSuccess={handlePortfolioStateSuccess}
             onOpenTradeModal={() => setTradeModalOpen(true)}
+            onNavigateToPrinciples={() => {
+              const nextParams = new URLSearchParams(searchParams)
+              nextParams.set('tab', 'principles')
+              setSearchParams(nextParams)
+            }}
+          />
+        )}
+
+        {activeTab === 'principles' && (
+          <InvestorPrinciplesTab
+            portfolioId={selectedPortfolioId}
+            onPortfolioChangeNeeded={() => void fetchAllData(false)}
+            onNavigateToOverview={() => {
+              const nextParams = new URLSearchParams(searchParams)
+              nextParams.set('tab', 'overview')
+              setSearchParams(nextParams)
+            }}
           />
         )}
 

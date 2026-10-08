@@ -2218,3 +2218,347 @@ export interface MacroNotebookLMExportStatusDTO {
   error?: string | null
   can_retry: boolean
 }
+
+// ============================================================================
+// Investor Essence, Investment Axis, and Purpose Buckets (Milestones 1-3)
+// ============================================================================
+
+export interface ContentOptionDTO {
+  option_id: string
+  option_key: string
+  text: string
+}
+
+export interface GeneratedQuestionDTO {
+  question_id: string
+  sequence_no: number
+  text: string
+  options: ContentOptionDTO[]
+  evidence_type: string
+  coverage_topics: string[]
+  is_clarification: boolean
+}
+
+export interface AnswerDetailDTO {
+  answer_id: string
+  answer_kind: 'choice' | 'free_text' | 'unsure' | 'skipped' | string
+  option_id?: string | null
+  free_text?: string | null
+  evidence_type: string
+}
+
+export interface QAItemDTO {
+  question_id: string
+  sequence_no: number
+  text: string
+  options: ContentOptionDTO[]
+  evidence_type: string
+  coverage_topics: string[]
+  is_clarification: boolean
+  answer?: AnswerDetailDTO | null
+}
+
+export interface SessionResponseDTO {
+  session_id: string
+  status: 'in_progress' | 'completed' | 'abandoned' | string
+  revision: number
+  active_branch_id: string
+  questions_count: number
+  answers_count: number
+  is_complete: boolean
+  current_question?: GeneratedQuestionDTO | null
+  qa_history: QAItemDTO[]
+}
+
+export interface StartSessionRequestDTO {
+  scope?: string
+  prompt_version?: string
+}
+
+export interface RecordAnswerRequestDTO {
+  answer_kind: 'choice' | 'free_text' | 'unsure' | 'skipped' | string
+  option_id?: string | null
+  free_text?: string | null
+  expected_revision?: number | null
+}
+
+export interface AdvanceQuestionRequestDTO {
+  expected_revision?: number | null
+  prompt_version?: string
+}
+
+export interface InterviewConfigDTO {
+  interview_version: string
+  prompt_version: string
+  questions_count: number
+  options_per_question: number
+  topics: string[]
+}
+
+export interface EvidenceRefDTO {
+  answer_id: string
+  question_id: string
+  revision: number
+  quote: string
+  evidence_type: string
+}
+
+export interface ClaimDTO {
+  claim_id: string
+  text: string
+  effective_text: string
+  source_kind: 'user_stated' | 'ai_interpreted' | 'user_edited' | string
+  fit_rating?: 'exact' | 'partial' | 'rejected' | null
+  edited_text?: string | null
+  text_revision: number
+  is_accepted: boolean
+  evidence_refs: EvidenceRefDTO[]
+}
+
+export interface CoverageItemDTO {
+  topic: string
+  status: 'covered' | 'needs_review' | 'not_ready' | string
+  supporting_answer_ids: string[]
+}
+
+export interface SummaryResponseDTO {
+  summary_id: string
+  session_id: string
+  statement: string
+  claims: ClaimDTO[]
+  unresolved_topics: string[]
+  coverage_report: CoverageItemDTO[]
+  revision: number
+}
+
+export interface ReviewClaimRequestDTO {
+  fit_rating?: 'exact' | 'partial' | 'rejected' | null
+  edited_text?: string | null
+  is_excluded?: boolean | null
+  expected_revision?: number | null
+}
+
+export interface ConfirmEssenceRequestDTO {
+  accepted_claim_ids?: string[] | null
+  expected_summary_revision?: number | null
+  idempotency_key?: string | null
+}
+
+export interface ConfirmationResponseDTO {
+  confirmation_id: string
+  status: string
+  accepted_claims_count: number
+  artifact_ref?: Record<string, string> | null
+  message: string
+}
+
+export interface ConfirmedEssenceDTO {
+  artifact_id: string
+  scope: string
+  statement: string
+  accepted_claims: Array<{
+    claim_id: string
+    effective_text: string
+    source_kind: string
+    evidence_refs: EvidenceRefDTO[]
+  }>
+  unresolved_topics: string[]
+  confirmed_at_iso: string
+}
+
+export interface ReadinessIssueDTO {
+  field?: string
+  issue: string
+  level: 'blocking' | 'warning' | string
+}
+
+export interface FinancialContextDTO {
+  snapshot_id: string
+  portfolio_id: string
+  horizon_years?: string | null
+  target_use_amount?: string | null
+  target_use_range?: string | null
+  target_use_timeline?: string | null
+  emergency_reserves_amount?: string | null
+  emergency_reserves_months?: string | null
+  obligations_monthly?: string | null
+  obligations_description?: string | null
+  withdrawal_frequency?: string | null
+  withdrawal_amount?: string | null
+  experience_description?: string | null
+  unknown_fields: string[]
+  as_of: string
+  source: string
+  readiness_issues: ReadinessIssueDTO[]
+  is_ready_for_numeric_policy: boolean
+}
+
+export interface UpdateFinancialContextRequestDTO {
+  horizon_years?: string | null
+  target_use_amount?: string | null
+  target_use_range?: string | null
+  target_use_timeline?: string | null
+  emergency_reserves_amount?: string | null
+  emergency_reserves_months?: string | null
+  obligations_monthly?: string | null
+  obligations_description?: string | null
+  withdrawal_frequency?: string | null
+  withdrawal_amount?: string | null
+  experience_description?: string | null
+  unknown_fields?: string[] | null
+}
+
+export interface AllocationRowDTO {
+  category: string
+  target_percent: string
+  min_percent?: string | null
+  max_percent?: string | null
+  notes?: string | null
+}
+
+export interface AxisDraftDTO {
+  draft_id: string
+  portfolio_id: string
+  essence_ref: Record<string, any>
+  context_ref: string
+  basic_policy: string
+  risk_limits: {
+    mdd_percent?: string
+    max_loss_per_trade_percent?: string
+    [key: string]: any
+  }
+  invest_targets: string[]
+  exclude_targets: string[]
+  primary_methods: string[]
+  secondary_methods: string[]
+  investment_horizon: string
+  allocation_basis: string
+  allocation_rows: AllocationRowDTO[]
+  rebalance_frequency: string
+  role_models: string[]
+  non_actions: string[]
+  assumptions: string[]
+  clarifications: string[]
+  revision: number
+  completeness_issues: string[]
+  is_complete: boolean
+}
+
+export interface UpdateAxisDraftRequestDTO {
+  basic_policy?: string
+  risk_limits?: Record<string, any>
+  invest_targets?: string[]
+  exclude_targets?: string[]
+  primary_methods?: string[]
+  secondary_methods?: string[]
+  investment_horizon?: string
+  allocation_rows?: AllocationRowDTO[]
+  rebalance_frequency?: string
+  role_models?: string[]
+  non_actions?: string[]
+  expected_revision?: number
+}
+
+export interface ConfirmAxisRequestDTO {
+  idempotency_key?: string
+}
+
+export interface ConfirmedAxisDTO {
+  artifact_id: string
+  portfolio_id: string
+  essence_ref: Record<string, any>
+  basic_policy: string
+  risk_limits: Record<string, any>
+  invest_targets: string[]
+  exclude_targets: string[]
+  primary_methods: string[]
+  secondary_methods: string[]
+  investment_horizon: string
+  allocation_basis: string
+  allocation_rows: AllocationRowDTO[]
+  rebalance_frequency: string
+  role_models: string[]
+  non_actions: string[]
+  confirmed_at_iso: string
+}
+
+export interface PurposeBucketDTO {
+  bucket_id: string
+  name: string
+  role: string
+  color: string
+  target_percent: string
+  source_value_ids: string[]
+  source_axis_allocation_ids: string[]
+}
+
+export interface MappingWeightDTO {
+  axis_allocation_id: string
+  bucket_id: string
+  portfolio_weight_percent: string
+}
+
+export interface BucketRemappingDTO {
+  old_bucket_id: string
+  target_bucket_id?: string | null
+  affected_holding_count: number
+}
+
+export interface BucketPlanDraftDTO {
+  draft_id: string
+  portfolio_id: string
+  essence_ref: Record<string, any>
+  axis_ref: Record<string, any>
+  context_ref: string
+  portfolio_checkpoint: Record<string, any>
+  purpose_buckets: PurposeBucketDTO[]
+  allocation_basis: string
+  mapping_weights: MappingWeightDTO[]
+  constraints: string[]
+  remapping: BucketRemappingDTO[]
+  status: string
+  revision: number
+  validation_issues: string[]
+  is_valid: boolean
+}
+
+export interface UpdateBucketPlanRequestDTO {
+  purpose_buckets?: Array<Partial<PurposeBucketDTO>>
+  mapping_weights?: Array<Partial<MappingWeightDTO>>
+  remapping?: Array<Partial<BucketRemappingDTO>>
+  constraints?: string[]
+  expected_revision?: number
+}
+
+export interface AllocationPreviewDTO {
+  checkpoint_sequence: number
+  checkpoint_state_hash: string
+  validated_targets: Array<{
+    bucket_id: string
+    name: string
+    target_percent: number
+    color?: string
+  }>
+  affected_holdings: Array<{
+    symbol: string
+    old_bucket_id: string
+    new_bucket_id: string
+  }>
+  before_allocation: Record<string, any>
+  after_allocation: Record<string, any>
+  issues: string[]
+  payload_hash: string
+}
+
+export interface AllocationApplyReceiptDTO {
+  command_id: string
+  portfolio_id: string
+  request_hash: string
+  applied_sequence: number
+  applied_state_hash: string
+  applied_at_iso: string
+  canonical_status: string
+  projection_status: string
+  warnings: string[]
+}
+

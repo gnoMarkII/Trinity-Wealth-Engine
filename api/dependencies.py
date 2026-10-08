@@ -306,3 +306,113 @@ def get_earnings_call_service() -> EarningsCallApplicationService:
         workflow_port=SqliteEarningsCallWorkflowAdapter(),
         kanban_port=KanbanEarningsCallAdapter(kanban_service=kanban_service),
     )
+
+
+def get_investor_uow_factory():
+    """Dependency provider for Investor Essence SQLite UoW Factory."""
+    from api.db.investor_essence_adapters import SqliteInvestorRuntimeUowFactory
+    return SqliteInvestorRuntimeUowFactory()
+
+
+def get_interview_service():
+    """Dependency provider for InterviewService."""
+    from api.db.investor_essence_adapters import SqliteInvestorRuntimeUowFactory
+    from application.investor_essence import InterviewService
+    from tools.investor_essence.adapters.llm_adapter import LlmInvestorEssenceAdapter
+    from tools.investor_essence.adapters.system_adapter import SystemClockAdapter, UuidGeneratorAdapter
+
+    return InterviewService(
+        uow_factory=SqliteInvestorRuntimeUowFactory(),
+        generator=LlmInvestorEssenceAdapter(),
+        clock=SystemClockAdapter(),
+        id_gen=UuidGeneratorAdapter(),
+    )
+
+
+def get_claim_review_service():
+    """Dependency provider for ClaimReviewService."""
+    from api.db.investor_essence_adapters import SqliteInvestorRuntimeUowFactory
+    from application.investor_essence import ClaimReviewService
+    from tools.investor_essence.adapters.llm_adapter import LlmInvestorEssenceAdapter
+    from tools.investor_essence.adapters.system_adapter import SystemClockAdapter, UuidGeneratorAdapter
+
+    adapter = LlmInvestorEssenceAdapter()
+    return ClaimReviewService(
+        uow_factory=SqliteInvestorRuntimeUowFactory(),
+        essence_generator=adapter,
+        interview_generator=adapter,
+        clock=SystemClockAdapter(),
+        id_gen=UuidGeneratorAdapter(),
+    )
+
+
+def get_confirmation_service():
+    """Dependency provider for ConfirmationService."""
+    from api.db.investor_essence_adapters import SqliteInvestorRuntimeUowFactory
+    from application.investor_essence import ConfirmationService
+    from tools.investor_essence.adapters.system_adapter import SystemClockAdapter, UuidGeneratorAdapter
+
+    knowledge_write_port = None
+    try:
+        knowledge_write_port = build_knowledge_write_port(vault_paths=VaultPaths(_get_vault_path()))
+    except Exception:
+        pass
+
+    return ConfirmationService(
+        uow_factory=SqliteInvestorRuntimeUowFactory(),
+        clock=SystemClockAdapter(),
+        id_gen=UuidGeneratorAdapter(),
+        knowledge_write=knowledge_write_port,
+    )
+
+
+def get_financial_context_service():
+    """Dependency provider for FinancialContextService."""
+    from api.db.investor_essence_adapters import SqliteInvestorRuntimeUowFactory
+    from application.investor_essence import FinancialContextService
+    from tools.investor_essence.adapters.system_adapter import SystemClockAdapter, UuidGeneratorAdapter
+
+    return FinancialContextService(
+        uow_factory=SqliteInvestorRuntimeUowFactory(),
+        clock=SystemClockAdapter(),
+        id_gen=UuidGeneratorAdapter(),
+    )
+
+
+def get_investment_axis_service():
+    """Dependency provider for InvestmentAxisService."""
+    from api.db.investor_essence_adapters import SqliteInvestorRuntimeUowFactory
+    from application.investor_essence import InvestmentAxisService
+    from tools.investor_essence.adapters.llm_adapter import LlmInvestorEssenceAdapter
+    from tools.investor_essence.adapters.system_adapter import SystemClockAdapter, UuidGeneratorAdapter
+
+    knowledge_write_port = None
+    try:
+        knowledge_write_port = build_knowledge_write_port(vault_paths=VaultPaths(_get_vault_path()))
+    except Exception:
+        pass
+
+    return InvestmentAxisService(
+        uow_factory=SqliteInvestorRuntimeUowFactory(),
+        axis_generator=LlmInvestorEssenceAdapter(),
+        clock=SystemClockAdapter(),
+        id_gen=UuidGeneratorAdapter(),
+        knowledge_write=knowledge_write_port,
+    )
+
+
+def get_bucket_planning_service():
+    """Dependency provider for BucketPlanningService."""
+    from api.db.investor_essence_adapters import SqliteInvestorRuntimeUowFactory
+    from application.investor_essence import BucketPlanningService
+    from tools.investor_essence.adapters.llm_adapter import LlmInvestorEssenceAdapter
+    from tools.investor_essence.adapters.portfolio_planning_adapter import PortfolioPlanningAdapter
+    from tools.investor_essence.adapters.system_adapter import SystemClockAdapter, UuidGeneratorAdapter
+
+    return BucketPlanningService(
+        uow_factory=SqliteInvestorRuntimeUowFactory(),
+        bucket_generator=LlmInvestorEssenceAdapter(),
+        portfolio_port=PortfolioPlanningAdapter(),
+        clock=SystemClockAdapter(),
+        id_gen=UuidGeneratorAdapter(),
+    )
