@@ -1,0 +1,39 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:invest-agents:vault:investor-essence:v1",
+  "title": "Confirmed Investor Essence Note v1",
+  "allOf": [{"$ref": "../core/note-v2.json"}],
+  "required": [
+    "schema_version",
+    "note_id",
+    "document_key",
+    "entity_type",
+    "title",
+    "scope",
+    "statement",
+    "accepted_claims"
+  ],
+  "properties": {
+    "entity_type": {"const": "investor_essence"},
+    "scope": {"type": "string", "minLength": 1},
+    "statement": {"type": "string", "minLength": 1},
+    "accepted_claims": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["claim_id", "effective_text", "source_kind"],
+        "properties": {
+          "claim_id": {"type": "string"},
+          "effective_text": {"type": "string"},
+          "source_kind": {"type": "string"},
+          "evidence_refs": {"type": "array"}
+        }
+      }
+    },
+    "unresolved_topics": {
+      "type": "array",
+      "items": {"type": "string"}
+    },
+    "confirmed_at": {"type": "string"}
+  }
+}

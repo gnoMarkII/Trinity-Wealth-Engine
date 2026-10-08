@@ -211,6 +211,15 @@ class VaultPaths:
                 return self.safe_resolve(portfolio_root / "Watchlist_Items" / safe_title)
             return self.safe_resolve(Path("20_Portfolio_Management") / "Goals" / "Items" / safe_title)
 
+        # 13. Investor Essence & Investment Axis
+        elif entity_type == "investor_essence":
+            return self.safe_resolve(Path("10_Investor_Essence") / safe_title)
+
+        elif entity_type == "investment_axis":
+            portfolio_id = sanitize_filename(str(meta_dict.get("portfolio_id") or "default"))
+            portfolio_root = Path("20_Portfolio_Management") / "Current_Holdings" / "Portfolios" / portfolio_id
+            return self.safe_resolve(portfolio_root / "Investment_Axis.md")
+
         # Default: Concepts / General
         else:
             return self.safe_resolve(kb / "Concepts" / safe_title)

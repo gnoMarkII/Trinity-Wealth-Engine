@@ -42,7 +42,9 @@
         "macro_snapshot",
         "briefing_book",
         "book_note",
-        "youtube_summary"
+        "youtube_summary",
+        "investor_essence",
+        "investment_axis"
       ],
       "required": [
         "schema_version",

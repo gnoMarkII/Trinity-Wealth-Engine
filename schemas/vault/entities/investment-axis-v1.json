@@ -1,0 +1,52 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:invest-agents:vault:investment-axis:v1",
+  "title": "Confirmed Investment Axis Note v1",
+  "allOf": [{"$ref": "../core/note-v2.json"}],
+  "required": [
+    "schema_version",
+    "note_id",
+    "document_key",
+    "entity_type",
+    "title",
+    "portfolio_id",
+    "basic_policy",
+    "risk_limits",
+    "non_actions"
+  ],
+  "properties": {
+    "entity_type": {"const": "investment_axis"},
+    "portfolio_id": {"type": "string", "minLength": 1},
+    "basic_policy": {"type": "string", "minLength": 1},
+    "risk_limits": {"type": "object"},
+    "invest_targets": {
+      "type": "array",
+      "items": {"type": "string"}
+    },
+    "exclude_targets": {
+      "type": "array",
+      "items": {"type": "string"}
+    },
+    "primary_methods": {
+      "type": "array",
+      "items": {"type": "string"}
+    },
+    "secondary_methods": {
+      "type": "array",
+      "items": {"type": "string"}
+    },
+    "investment_horizon": {"type": "string"},
+    "allocation_rows": {"type": "array"},
+    "rebalance_frequency": {"type": "string"},
+    "role_models": {
+      "type": "array",
+      "items": {"type": "string"}
+    },
+    "non_actions": {
+      "type": "array",
+      "minItems": 3,
+      "items": {"type": "string"}
+    },
+    "confirmed_at": {"type": "string"}
+  }
+}
