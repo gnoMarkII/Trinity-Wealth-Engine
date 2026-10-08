@@ -37,7 +37,7 @@ class PortfolioPlanningAdapter(PortfolioPlanningPort):
     def __init__(self, repo=None) -> None:
         if repo is None:
             deps = build_default_portfolio_dependencies()
-            self._repo = deps.repository
+            self._repo = getattr(deps, "repo", None) or getattr(deps, "repository", None)
         else:
             self._repo = repo
 
