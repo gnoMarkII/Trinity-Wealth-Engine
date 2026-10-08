@@ -293,6 +293,61 @@ class InvestmentAxisService:
                         is_confirmed=is_conf,
                     )
 
+                # Mirror canonical / alias keys to ensure compatibility across consumers
+                if "mdd_percent" in risk_lims and "mdd_max_annual" not in updates.get("risk_limits", {}):
+                    src = risk_lims["mdd_percent"]
+                    risk_lims["mdd_max_annual"] = NumericPolicyField(
+                        field_id="mdd_max_annual",
+                        value=src.value,
+                        unit=src.unit,
+                        calculation_basis=src.calculation_basis,
+                        origin=src.origin,
+                        source_refs=src.source_refs,
+                        assumptions=src.assumptions,
+                        confirmed_text_revision=src.confirmed_text_revision,
+                        is_confirmed=src.is_confirmed,
+                    )
+                elif "mdd_max_annual" in risk_lims and "mdd_percent" not in updates.get("risk_limits", {}):
+                    src = risk_lims["mdd_max_annual"]
+                    risk_lims["mdd_percent"] = NumericPolicyField(
+                        field_id="mdd_percent",
+                        value=src.value,
+                        unit=src.unit,
+                        calculation_basis=src.calculation_basis,
+                        origin=src.origin,
+                        source_refs=src.source_refs,
+                        assumptions=src.assumptions,
+                        confirmed_text_revision=src.confirmed_text_revision,
+                        is_confirmed=src.is_confirmed,
+                    )
+
+                if "max_loss_per_trade_percent" in risk_lims and "max_loss_per_trade" not in updates.get("risk_limits", {}):
+                    src = risk_lims["max_loss_per_trade_percent"]
+                    risk_lims["max_loss_per_trade"] = NumericPolicyField(
+                        field_id="max_loss_per_trade",
+                        value=src.value,
+                        unit=src.unit,
+                        calculation_basis=src.calculation_basis,
+                        origin=src.origin,
+                        source_refs=src.source_refs,
+                        assumptions=src.assumptions,
+                        confirmed_text_revision=src.confirmed_text_revision,
+                        is_confirmed=src.is_confirmed,
+                    )
+                elif "max_loss_per_trade" in risk_lims and "max_loss_per_trade_percent" not in updates.get("risk_limits", {}):
+                    src = risk_lims["max_loss_per_trade"]
+                    risk_lims["max_loss_per_trade_percent"] = NumericPolicyField(
+                        field_id="max_loss_per_trade_percent",
+                        value=src.value,
+                        unit=src.unit,
+                        calculation_basis=src.calculation_basis,
+                        origin=src.origin,
+                        source_refs=src.source_refs,
+                        assumptions=src.assumptions,
+                        confirmed_text_revision=src.confirmed_text_revision,
+                        is_confirmed=src.is_confirmed,
+                    )
+
 
             updated_draft = InvestmentAxisDraft(
                 draft_id=draft.draft_id,
@@ -350,7 +405,53 @@ class InvestmentAxisService:
                         message=res.get("message", "Axis confirmed (idempotent replay)"),
                     )
 
-            # 2. Completeness validation
+            # 2. Auto-confirm proposed numeric limits with non-null values upon explicit confirmation
+            auto_confirmed_limits = {}
+            limits_modified = False
+            for k, v in draft.risk_limits.items():
+                if not v.is_confirmed and v.value is not None:
+                    auto_confirmed_limits[k] = NumericPolicyField(
+                        field_id=v.field_id,
+                        value=v.value,
+                        unit=v.unit,
+                        calculation_basis=v.calculation_basis,
+                        origin=NumericPolicyOrigin.USER_INPUT,
+                        source_refs=v.source_refs,
+                        assumptions=v.assumptions,
+                        confirmed_text_revision=v.confirmed_text_revision,
+                        is_confirmed=True,
+                    )
+                    limits_modified = True
+                else:
+                    auto_confirmed_limits[k] = v
+
+            if limits_modified:
+                draft = InvestmentAxisDraft(
+                    draft_id=draft.draft_id,
+                    portfolio_id=draft.portfolio_id,
+                    essence_ref=draft.essence_ref,
+                    context_ref=draft.context_ref,
+                    basic_policy=draft.basic_policy,
+                    risk_limits=auto_confirmed_limits,
+                    invest_targets=draft.invest_targets,
+                    exclude_targets=draft.exclude_targets,
+                    primary_methods=draft.primary_methods,
+                    secondary_methods=draft.secondary_methods,
+                    investment_horizon=draft.investment_horizon,
+                    allocation_basis=draft.allocation_basis,
+                    allocation_rows=draft.allocation_rows,
+                    rebalance_frequency=draft.rebalance_frequency,
+                    role_models=draft.role_models,
+                    non_actions=draft.non_actions,
+                    numeric_fields=auto_confirmed_limits,
+                    assumptions=draft.assumptions,
+                    clarifications=draft.clarifications,
+                    revision=draft.revision,
+                    created_at_iso=draft.created_at_iso,
+                )
+                uow.planning.save_axis_draft(draft)
+
+            # Completeness validation
             issues = validate_axis_completeness(draft)
             if issues:
                 raise AxisIncompleteError(issues)

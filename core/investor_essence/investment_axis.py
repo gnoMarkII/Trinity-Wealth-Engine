@@ -38,12 +38,12 @@ def validate_axis_completeness(draft: InvestmentAxisDraft) -> List[str]:
     if not draft.basic_policy.strip():
         errors.append("Section 1 (นโยบายพื้นฐาน): ต้องระบุข้อความนโยบายพื้นฐาน")
 
-    # 2. Risk Limits
-    mdd = draft.risk_limits.get("mdd_max_annual")
+    # 2. Risk Limits (support canonical and alias keys)
+    mdd = draft.risk_limits.get("mdd_max_annual") or draft.risk_limits.get("mdd_percent")
     if mdd is None or mdd.value is None or not mdd.is_confirmed:
         errors.append("Section 2 (ระดับความเสี่ยง): ต้องระบุและยืนยันค่า MDD สูงสุดต่อปี")
 
-    trade_limit = draft.risk_limits.get("max_loss_per_trade")
+    trade_limit = draft.risk_limits.get("max_loss_per_trade") or draft.risk_limits.get("max_loss_per_trade_percent")
     if trade_limit is None or trade_limit.value is None or not trade_limit.is_confirmed:
         errors.append("Section 2 (ระดับความเสี่ยง): ต้องระบุและยืนยันขีดจำกัดผลขาดทุนต่อ 1 การซื้อขาย")
 

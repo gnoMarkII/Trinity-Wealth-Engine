@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import type {
   AxisDraftDTO,
   ConfirmedAxisDTO,
@@ -45,11 +45,20 @@ export default function InvestmentAxisEditor({
     axisDraft?.basic_policy || confirmedAxis?.basic_policy || '',
   )
   const [mddPercent, setMddPercent] = useState(
-    parseRiskLimitValue(axisDraft?.risk_limits?.mdd_percent || confirmedAxis?.risk_limits?.mdd_percent, '15'),
+    parseRiskLimitValue(
+      axisDraft?.risk_limits?.mdd_max_annual ||
+        axisDraft?.risk_limits?.mdd_percent ||
+        confirmedAxis?.risk_limits?.mdd_max_annual ||
+        confirmedAxis?.risk_limits?.mdd_percent,
+      '15',
+    ),
   )
   const [maxLossPerTrade, setMaxLossPerTrade] = useState(
     parseRiskLimitValue(
-      axisDraft?.risk_limits?.max_loss_per_trade_percent || confirmedAxis?.risk_limits?.max_loss_per_trade_percent,
+      axisDraft?.risk_limits?.max_loss_per_trade ||
+        axisDraft?.risk_limits?.max_loss_per_trade_percent ||
+        confirmedAxis?.risk_limits?.max_loss_per_trade ||
+        confirmedAxis?.risk_limits?.max_loss_per_trade_percent,
       '2',
     ),
   )
@@ -73,6 +82,9 @@ export default function InvestmentAxisEditor({
   const [primaryMethods, setPrimaryMethods] = useState<string[]>(
     axisDraft?.primary_methods || confirmedAxis?.primary_methods || [],
   )
+  const [secondaryMethods, setSecondaryMethods] = useState<string[]>(
+    axisDraft?.secondary_methods || confirmedAxis?.secondary_methods || [],
+  )
   const [roleModels, setRoleModels] = useState<string[]>(
     axisDraft?.role_models || confirmedAxis?.role_models || [],
   )
@@ -83,26 +95,50 @@ export default function InvestmentAxisEditor({
   useEffect(() => {
     if (axisDraft) {
       setBasicPolicy(axisDraft.basic_policy || '')
-      setMddPercent(parseRiskLimitValue(axisDraft.risk_limits?.mdd_percent, '15'))
-      setMaxLossPerTrade(parseRiskLimitValue(axisDraft.risk_limits?.max_loss_per_trade_percent, '2'))
+      setMddPercent(
+        parseRiskLimitValue(
+          axisDraft.risk_limits?.mdd_max_annual || axisDraft.risk_limits?.mdd_percent,
+          '15',
+        ),
+      )
+      setMaxLossPerTrade(
+        parseRiskLimitValue(
+          axisDraft.risk_limits?.max_loss_per_trade ||
+            axisDraft.risk_limits?.max_loss_per_trade_percent,
+          '2',
+        ),
+      )
       setHorizon(axisDraft.investment_horizon || '')
       setRebalanceFreq(axisDraft.rebalance_frequency || 'รายปี')
       setNonActions(axisDraft.non_actions || [])
       setInvestTargets(axisDraft.invest_targets || [])
       setExcludeTargets(axisDraft.exclude_targets || [])
       setPrimaryMethods(axisDraft.primary_methods || [])
+      setSecondaryMethods(axisDraft.secondary_methods || [])
       setRoleModels(axisDraft.role_models || [])
       setAllocationRows(axisDraft.allocation_rows || [])
     } else if (confirmedAxis) {
       setBasicPolicy(confirmedAxis.basic_policy || '')
-      setMddPercent(parseRiskLimitValue(confirmedAxis.risk_limits?.mdd_percent, '15'))
-      setMaxLossPerTrade(parseRiskLimitValue(confirmedAxis.risk_limits?.max_loss_per_trade_percent, '2'))
+      setMddPercent(
+        parseRiskLimitValue(
+          confirmedAxis.risk_limits?.mdd_max_annual || confirmedAxis.risk_limits?.mdd_percent,
+          '15',
+        ),
+      )
+      setMaxLossPerTrade(
+        parseRiskLimitValue(
+          confirmedAxis.risk_limits?.max_loss_per_trade ||
+            confirmedAxis.risk_limits?.max_loss_per_trade_percent,
+          '2',
+        ),
+      )
       setHorizon(confirmedAxis.investment_horizon || '')
       setRebalanceFreq(confirmedAxis.rebalance_frequency || 'รายปี')
       setNonActions(confirmedAxis.non_actions || [])
       setInvestTargets(confirmedAxis.invest_targets || [])
       setExcludeTargets(confirmedAxis.exclude_targets || [])
       setPrimaryMethods(confirmedAxis.primary_methods || [])
+      setSecondaryMethods(confirmedAxis.secondary_methods || [])
       setRoleModels(confirmedAxis.role_models || [])
       setAllocationRows(confirmedAxis.allocation_rows || [])
     }
@@ -123,8 +159,10 @@ export default function InvestmentAxisEditor({
     await onUpdateDraft({
       basic_policy: basicPolicy,
       risk_limits: {
-        mdd_percent: { value: mddPercent, unit: '%', calculation_basis: 'NAV' },
-        max_loss_per_trade_percent: { value: maxLossPerTrade, unit: '%', calculation_basis: 'NAV' },
+        mdd_max_annual: { value: mddPercent, unit: 'percent', calculation_basis: 'annual_nav_drawdown', is_confirmed: true },
+        max_loss_per_trade: { value: maxLossPerTrade, unit: 'percent', calculation_basis: 'portfolio_nav_at_entry', is_confirmed: true },
+        mdd_percent: { value: mddPercent, unit: 'percent', calculation_basis: 'annual_nav_drawdown', is_confirmed: true },
+        max_loss_per_trade_percent: { value: maxLossPerTrade, unit: 'percent', calculation_basis: 'portfolio_nav_at_entry', is_confirmed: true },
       },
       investment_horizon: horizon,
       rebalance_frequency: rebalanceFreq,
@@ -132,13 +170,62 @@ export default function InvestmentAxisEditor({
       invest_targets: investTargets,
       exclude_targets: excludeTargets,
       primary_methods: primaryMethods,
+      secondary_methods: secondaryMethods,
       role_models: roleModels,
       allocation_rows: allocationRows,
     })
   }
 
-  const completenessIssues = axisDraft?.completeness_issues ?? []
-  const isComplete = (axisDraft?.is_complete ?? false) || isConfirmed
+  const totalAllocation = useMemo(() => {
+    return allocationRows.reduce((sum, r) => sum + (parseFloat(r.target_percent) || 0), 0)
+  }, [allocationRows])
+  const isAllocation100 = Math.abs(totalAllocation - 100) <= 0.05
+
+  const clientIssues = useMemo(() => {
+    const issues: string[] = []
+    if (!basicPolicy.trim()) issues.push('หัวข้อ 1: นโยบายพื้นฐาน')
+    if (!mddPercent.trim()) issues.push('หัวข้อ 2: MDD สูงสุด')
+    if (!maxLossPerTrade.trim()) issues.push('หัวข้อ 2: ขีดจำกัดขาดทุนต่อไม้')
+    if (investTargets.length === 0) issues.push('หัวข้อ 3: สินทรัพย์ที่ลงทุน')
+    if (excludeTargets.length === 0) issues.push('หัวข้อ 3: สินทรัพย์ที่ไม่ลงทุน')
+    if (primaryMethods.length === 0) issues.push('หัวข้อ 4: วิธีการลงทุนหลัก')
+    if (!horizon.trim()) issues.push('หัวข้อ 5: กรอบเวลา')
+    if (allocationRows.length === 0) {
+      issues.push('หัวข้อ 6: สัดส่วนจัดสรรสินทรัพย์')
+    } else if (!isAllocation100) {
+      issues.push(`หัวข้อ 6: สัดส่วนรวมต้องได้ 100% (ปัจจุบัน ${totalAllocation.toFixed(2)}%)`)
+    }
+    if (roleModels.length === 0) issues.push('หัวข้อ 7: นักลงทุนต้นแบบ')
+    if (nonActions.length < 3) {
+      issues.push(`หัวข้อ 8: สิ่งที่จะไม่ทำต้องมีอย่างน้อย 3 ข้อ (ปัจจุบัน ${nonActions.length}/3)`)
+    }
+    return issues
+  }, [
+    basicPolicy,
+    mddPercent,
+    maxLossPerTrade,
+    investTargets,
+    excludeTargets,
+    primaryMethods,
+    horizon,
+    allocationRows,
+    isAllocation100,
+    totalAllocation,
+    roleModels,
+    nonActions,
+  ])
+
+  const isFormComplete = clientIssues.length === 0
+  const canConfirm = !loading && (isConfirmed || (axisDraft?.is_complete ?? false) || isFormComplete)
+
+  const handleConfirm = async (proceedToBuckets: boolean) => {
+    try {
+      await handleSaveDraft()
+      await onConfirmAxis(proceedToBuckets)
+    } catch {
+      // Errors handled by parent hook
+    }
+  }
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
@@ -175,11 +262,11 @@ export default function InvestmentAxisEditor({
         </div>
 
         {/* Completeness Alert */}
-        {!isConfirmed && completenessIssues.length > 0 && (
+        {!isConfirmed && clientIssues.length > 0 && (
           <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50/80 p-3.5 text-xs text-amber-900 space-y-1">
             <span className="font-bold">⚠️ สิ่งที่ต้องระบุให้ครบก่อนยืนยันแกนหลัก:</span>
             <ul className="list-disc list-inside">
-              {completenessIssues.map((issue, idx) => (
+              {clientIssues.map((issue, idx) => (
                 <li key={idx}>{issue}</li>
               ))}
             </ul>
@@ -287,12 +374,22 @@ export default function InvestmentAxisEditor({
             <h3 className="text-sm font-bold text-zinc-900">
               ⚙️ 4. วิธีการลงทุน (Methods)
             </h3>
-            <span className="block text-xs font-semibold text-zinc-600">หลักและเสริม:</span>
+            <span className="block text-xs font-semibold text-zinc-600">วิธีการหลัก:</span>
             <ul className="text-xs text-zinc-700 space-y-1 list-disc list-inside">
               {primaryMethods.map((m, idx) => (
                 <li key={idx}>{m}</li>
               ))}
             </ul>
+            {secondaryMethods.length > 0 && (
+              <>
+                <span className="block text-xs font-semibold text-zinc-600 pt-1">วิธีการเสริม:</span>
+                <ul className="text-xs text-zinc-700 space-y-1 list-disc list-inside">
+                  {secondaryMethods.map((m, idx) => (
+                    <li key={idx}>{m}</li>
+                  ))}
+                </ul>
+              </>
+            )}
           </div>
 
           <div className="p-4 rounded-xl bg-sky-50/30 border border-sky-100 space-y-2">
@@ -430,8 +527,14 @@ export default function InvestmentAxisEditor({
               <span className="text-emerald-700 font-semibold">
                 ✓ ยืนยันแกนหลักเรียบร้อยแล้ว แผนพอร์ตยังไม่เปลี่ยนจนกว่าจะกดสร้างและใช้ Buckets
               </span>
+            ) : clientIssues.length > 0 ? (
+              <span className="text-amber-700 font-semibold">
+                ⚠️ ยังไม่ครบ: {clientIssues.join(', ')}
+              </span>
             ) : (
-              <span>ตรวจสอบครบ 8 หัวข้อก่อนยืนยันแกนหลักการลงทุน</span>
+              <span className="text-emerald-700 font-semibold">
+                ✓ ตรวจสอบครบ 8 หัวข้อแล้ว พร้อมยืนยันแกนหลักการลงทุน
+              </span>
             )}
           </div>
 
@@ -449,8 +552,8 @@ export default function InvestmentAxisEditor({
 
                 <button
                   type="button"
-                  onClick={() => onConfirmAxis(false)}
-                  disabled={loading || nonActions.length < 3 || (!isConfirmed && !isComplete)}
+                  onClick={() => handleConfirm(false)}
+                  disabled={!canConfirm}
                   className="rounded-xl border border-emerald-300 bg-emerald-50 px-5 py-2.5 text-xs sm:text-sm font-bold text-emerald-800 hover:bg-emerald-100 active:scale-98 transition-all disabled:opacity-50"
                 >
                   ✓ ยืนยันแกนหลักของพอร์ตนี้
@@ -464,10 +567,10 @@ export default function InvestmentAxisEditor({
                 if (isConfirmed) {
                   onProceedToBuckets()
                 } else {
-                  onConfirmAxis(true)
+                  handleConfirm(true)
                 }
               }}
-              disabled={loading || (!isConfirmed && (nonActions.length < 3 || !isComplete))}
+              disabled={loading || (!isConfirmed && !canConfirm)}
               className="rounded-xl bg-gradient-to-r from-sky-600 to-blue-600 px-6 py-2.5 text-xs sm:text-sm font-bold text-white shadow-md shadow-sky-500/20 hover:from-sky-700 hover:to-blue-700 active:scale-98 transition-all flex items-center gap-1.5 disabled:opacity-50"
             >
               <span>สร้าง Buckets จากแกนหลัก →</span>
