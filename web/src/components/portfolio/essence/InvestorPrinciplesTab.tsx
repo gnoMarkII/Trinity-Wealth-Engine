@@ -33,7 +33,9 @@ export default function InvestorPrinciplesTab({
     confirmedEssence,
     startNewSession,
     recordAndNext,
+    advanceNextQuestion,
     rateClaim,
+
     editClaim,
     excludeClaim,
     confirmEssenceBatch,
@@ -240,6 +242,7 @@ export default function InvestorPrinciplesTab({
               <EssenceInterview
                 session={session}
                 onRecordAndNext={recordAndNext}
+                onAdvanceNext={advanceNextQuestion}
                 onPause={() => {}}
                 loading={actionLoading}
                 statusText={actionStatusText}

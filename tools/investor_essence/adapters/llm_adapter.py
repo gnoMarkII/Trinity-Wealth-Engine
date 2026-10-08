@@ -67,9 +67,31 @@ def _safe_json_loads(text: str) -> Dict[str, Any]:
     try:
         return json.loads(cleaned)
     except json.JSONDecodeError:
-        # Repair trailing commas: e.g. [1, 2,] -> [1, 2] or {"a": 1,} -> {"a": 1}
-        repaired = re.sub(r",\s*([\]}])", r"\1", cleaned)
-        return json.loads(repaired)
+        pass
+
+    # Pass 1: Remove line comments // ...
+    candidate = re.sub(r"//.*", "", cleaned)
+
+    # Pass 2: Repair trailing commas before closing braces/brackets
+    candidate = re.sub(r",\s*([\]}])", r"\1", candidate)
+
+    # Pass 3: Fix missing commas between key-value lines
+    candidate = re.sub(r'("(?:[^"\\]|\\.)*")\s*\n\s*(")', r'\1,\n\2', candidate)
+
+    try:
+        return json.loads(candidate)
+    except json.JSONDecodeError:
+        pass
+
+    # Pass 4: Fix single quotes replacing double quotes
+    if "'" in candidate and '"' not in candidate:
+        try:
+            return json.loads(candidate.replace("'", '"'))
+        except json.JSONDecodeError:
+            pass
+
+    # Re-raise original error to let caller retry
+    return json.loads(cleaned)
 
 
 class LlmInvestorEssenceAdapter(
@@ -83,20 +105,21 @@ class LlmInvestorEssenceAdapter(
     def __init__(self, llm: Optional[BaseChatModel] = None) -> None:
         self._llm = llm
 
-    def _get_active_llm(self) -> BaseChatModel:
+    def _get_active_llm(self, temperature: float = 0.2) -> BaseChatModel:
         if self._llm is not None:
             return self._llm
         provider = detect_provider("gemini-2.5-flash")
-        return get_llm(provider, "gemini-2.5-flash", temperature=0.2)
+        return get_llm(provider, "gemini-2.5-flash", temperature=temperature)
 
     def _invoke_and_parse(self, system_prompt: str, user_prompt: str) -> Dict[str, Any]:
         last_exc: Optional[Exception] = None
-        for attempt in range(2):
+        for attempt in range(3):
             try:
-                llm = self._get_active_llm()
+                temp = 0.2 if attempt == 0 else 0.0
+                llm = self._get_active_llm(temperature=temp)
                 prompt_text = user_prompt
                 if attempt > 0:
-                    prompt_text += "\n\nสำคัญมาก: กรุณาส่งผลลัพธ์เป็น JSON ล้วนๆ ที่ถูกต้องตามมาตรฐาน JSON เท่านั้น ห้ามใส่คอมเมนต์หรือ trailing comma"
+                    prompt_text += "\n\nคำเตือน: โปรดส่งผลลัพธ์เป็น JSON ล้วนๆ ที่ถูกต้องตามมาตรฐาน JSON (RFC 8259) เท่านั้น ห้ามใส่คอมเมนต์หรือ trailing comma และ escape double quotes ภายในข้อความอย่างถูกต้อง"
                 messages = [
                     SystemMessage(content=system_prompt),
                     HumanMessage(content=prompt_text),
@@ -106,14 +129,15 @@ class LlmInvestorEssenceAdapter(
                 return _safe_json_loads(content)
             except json.JSONDecodeError as exc:
                 last_exc = exc
-                logger.warning("LLM output JSON decode error (attempt %d/2): %s", attempt + 1, exc)
+                logger.warning("LLM output JSON decode error (attempt %d/3): %s", attempt + 1, exc)
                 continue
             except Exception as exc:
                 logger.error("LLM provider invocation failed: %s", exc)
                 raise ProviderUnavailableError(f"LLM provider error: {exc}") from exc
 
-        logger.error("LLM failed to output valid JSON after 2 attempts: %s", last_exc)
+        logger.error("LLM failed to output valid JSON after 3 attempts: %s", last_exc)
         raise ValidationFailedError(f"Model output could not be parsed as JSON: {last_exc}") from last_exc
+
 
 
     def generate_next_question(

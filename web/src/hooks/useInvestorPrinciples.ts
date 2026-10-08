@@ -196,6 +196,25 @@ export function useInvestorPrinciples({
     [session],
   )
 
+  const advanceNextQuestion = useCallback(async () => {
+    if (!session) return
+    const nextSeq = (session.answers_count || 0) + 1
+    setActionLoading(true)
+    setActionStatusText(`กำลังเตรียมคำถามที่ ${nextSeq}...`)
+    setError(null)
+    try {
+      const nextSess = await api.advanceEssenceQuestion(session.session_id, {
+        expected_revision: session.revision,
+      })
+      setSession(nextSess)
+    } catch (err: any) {
+      setError(err?.message || 'เกิดข้อผิดพลาดในการสร้างคำถามถัดไป')
+    } finally {
+      setActionLoading(false)
+      setActionStatusText(null)
+    }
+  }, [session])
+
   const rateClaim = useCallback(
     async (claimId: string, fitRating: 'exact' | 'partial' | 'rejected') => {
       if (!session || !summary) return
@@ -473,7 +492,9 @@ export function useInvestorPrinciples({
     confirmedEssence,
     startNewSession,
     recordAndNext,
+    advanceNextQuestion,
     rateClaim,
+
     editClaim,
     excludeClaim,
     confirmEssenceBatch,

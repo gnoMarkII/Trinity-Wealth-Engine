@@ -8,6 +8,7 @@ interface EssenceInterviewProps {
     optionId?: string | null,
     freeText?: string | null,
   ) => Promise<void>
+  onAdvanceNext?: () => Promise<void>
   onPause: () => void
   loading: boolean
   statusText?: string | null
@@ -25,6 +26,7 @@ const TOPIC_NAMES: Record<string, string> = {
 export default function EssenceInterview({
   session,
   onRecordAndNext,
+  onAdvanceNext,
   onPause,
   loading,
   statusText,
@@ -37,12 +39,39 @@ export default function EssenceInterview({
   const [showFreeTextInput, setShowFreeTextInput] = useState<boolean>(false)
 
   if (!currentQ) {
+    const nextSeq = (session.answers_count || 0) + 1
     return (
-      <div className="rounded-2xl border border-sky-100 bg-white p-8 text-center shadow-xs">
-        <p className="text-zinc-600">ไม่มีคำถามที่พร้อมแสดง กรุณาลองใหม่อีกครั้ง</p>
+      <div className="max-w-xl mx-auto rounded-2xl border border-sky-100 bg-white p-8 text-center shadow-xs space-y-5">
+        <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-sky-50 text-2xl text-sky-600">
+          🧭
+        </div>
+        <div>
+          <h3 className="text-base font-bold text-zinc-900">
+            ตอบแล้ว {session.answers_count} จาก 10 ข้อ
+          </h3>
+          <p className="text-xs text-zinc-500 mt-1 max-w-sm mx-auto leading-relaxed">
+            คำตอบของคุณได้รับการบันทึกแล้ว แต่ระบบยังไม่ได้สร้างคำถามข้อถัดไป
+            กดปุ่มด้านล่างเพื่อสร้างคำถามข้อถัดไป
+          </p>
+        </div>
+        <div>
+          <button
+            type="button"
+            onClick={onAdvanceNext}
+            disabled={loading}
+            className="rounded-xl bg-gradient-to-r from-sky-600 to-blue-600 px-6 py-3 text-xs font-bold text-white shadow-sm hover:from-sky-700 hover:to-blue-700 disabled:opacity-50 transition-all cursor-pointer inline-flex items-center gap-2"
+          >
+            {loading ? (
+              <span>{statusText || 'กำลังเตรียมคำถาม...'}</span>
+            ) : (
+              <span>🔄 ดำเนินการต่อเพื่อดึงคำถามที่ {nextSeq}</span>
+            )}
+          </button>
+        </div>
       </div>
     )
   }
+
 
   const isFinalQuestion = currentQ.sequence_no >= 10
   const topicLabel = currentQ.coverage_topics?.[0]
