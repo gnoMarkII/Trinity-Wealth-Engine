@@ -23,6 +23,7 @@ from core.investor_essence.claims import (
     exclude_claim,
     rate_claim_fit,
 )
+from core.investor_essence.evidence_builder import build_evidence_snapshot_from_session
 from application.investor_essence.dto import (
     EvidenceSnapshot,
     SummaryView,
@@ -124,48 +125,40 @@ class ClaimReviewService:
             if not session.is_base_interview_complete():
                 raise ValidationFailedError("Cannot summarize incomplete interview (needs all 10 questions answered)")
 
-            active_qa = session.get_active_qa_pairs()
-            qa_dict = []
-            for q, a in active_qa:
-                qa_dict.append({
-                    "question_id": q.question_id,
-                    "sequence_no": q.sequence_no,
-                    "text": q.text,
-                    "answer": {
-                        "kind": a.answer_kind.value if a else None,
-                        "option_id": a.option_id if a else None,
-                        "free_text": a.free_text if a else None,
-                        "quote": a.free_text or (q.get_option(a.option_id).text if a.option_id and q.get_option(a.option_id) else ""),
-                    } if a else None,
-                })
-
-            evidence = EvidenceSnapshot(
-                session_id=session_id,
-                branch_id=session.active_branch_id,
-                revision=session.revision,
-                context_hash=session.compute_context_hash(),
-                qa_pairs=qa_dict,
-                coverage_topics=[],
-            )
-
+            evidence = build_evidence_snapshot_from_session(session)
             proposal = self._essence_generator.generate_summary(evidence, prompt_version=prompt_version)
 
+            active_qids = set(session.active_question_ids)
             claims: List[EssenceClaim] = []
+            unresolved = list(proposal.unresolved_topics)
+
             for idx, cp in enumerate(proposal.claims, start=1):
                 ev_refs = []
                 for qid in cp.supporting_question_ids:
+                    if qid not in active_qids:
+                        continue
                     q = session.get_question(qid)
                     ans = session.get_answer(qid)
                     if q and ans:
+                        quote = cp.quote
+                        if not quote:
+                            selected_opt = q.get_option(ans.option_id) if ans.option_id else None
+                            quote = ans.free_text or (selected_opt.text if selected_opt else "")
                         ev_refs.append(
                             EvidenceRef(
                                 answer_id=ans.answer_id,
                                 question_id=qid,
                                 revision=1,
-                                quote=cp.quote or ans.free_text or "",
+                                quote=quote,
                                 evidence_type=ans.evidence_type,
                             )
                         )
+                # If claim has no valid evidence in active branch, promote to unresolved topics
+                if not ev_refs:
+                    if cp.text not in unresolved:
+                        unresolved.append(cp.text)
+                    continue
+
                 claims.append(
                     EssenceClaim(
                         claim_id=f"c_{session_id}_{idx}",
@@ -192,7 +185,7 @@ class ClaimReviewService:
                 session_id=session_id,
                 statement=proposal.statement,
                 claims=claims,
-                unresolved_topics=proposal.unresolved_topics,
+                unresolved_topics=unresolved,
                 coverage_report=coverage_items,
                 context_hash=evidence.context_hash,
                 revision=1,
@@ -356,3 +349,69 @@ class ClaimReviewService:
             uow.commit()
 
             return _to_summary_view(updated_summary)
+
+    def request_clarification(
+        self,
+        session_id: str,
+        unresolved_topic: str,
+        expected_revision: Optional[int] = None,
+        prompt_version: str = "1.0",
+    ) -> Dict[str, Any]:
+        """Generates a clarification question for an unresolved topic and appends to session."""
+        with self._uow_factory.open() as uow:
+            session = uow.sessions.get(session_id)
+            if not session:
+                raise ResourceNotFoundError(f"Interview session {session_id} not found")
+
+            if expected_revision is not None and session.revision != expected_revision:
+                raise RevisionConflictError(
+                    f"Revision mismatch: expected {expected_revision}, current {session.revision}",
+                    latest_revision=session.revision,
+                )
+
+            evidence = build_evidence_snapshot_from_session(session)
+            proposal = self._interview_generator.generate_clarification(
+                evidence=evidence,
+                unresolved_topic=unresolved_topic,
+                prompt_version=prompt_version,
+            )
+
+            clarification_idx = len(session.clarifications) + 1
+            cid = f"q_clarify_{session_id}_{clarification_idx}"
+            options = [
+                ContentOption(
+                    option_id=f"opt_clarify_{clarification_idx}_{p.key.lower()}",
+                    option_key=p.key,
+                    text=p.text,
+                )
+                for p in proposal.options
+            ]
+            now_iso = self._clock.now_utc()
+            question = GeneratedQuestion(
+                question_id=cid,
+                sequence_no=100 + clarification_idx,
+                text=proposal.text,
+                options=options,
+                evidence_type=EvidenceType.SELF_REPORT,
+                coverage_topics=[unresolved_topic],
+                is_clarification=True,
+                created_at_iso=now_iso,
+            )
+            session.add_question(question)
+            session.revision += 1
+            session.updated_at_iso = now_iso
+            uow.sessions.save(session)
+            uow.commit()
+
+            return {
+                "question_id": question.question_id,
+                "sequence_no": question.sequence_no,
+                "text": question.text,
+                "options": [
+                    {"option_id": o.option_id, "option_key": o.option_key, "text": o.text}
+                    for o in question.options
+                ],
+                "evidence_type": question.evidence_type.value,
+                "coverage_topics": question.coverage_topics,
+                "is_clarification": True,
+            }

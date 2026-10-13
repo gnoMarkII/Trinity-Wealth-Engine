@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
+import AutoResizeTextarea from '../../ui/AutoResizeTextarea'
 import type {
   BucketPlanDraftDTO,
   UpdateBucketPlanRequestDTO,
@@ -9,8 +10,9 @@ import { VIBRANT_BUCKET_PALETTE } from '../../../lib/bucketColors'
 interface EssenceBucketBuilderProps {
   draft: BucketPlanDraftDTO
   portfolioId: string
-  onUpdateDraft: (updates: UpdateBucketPlanRequestDTO) => Promise<void>
+  onUpdateDraft: (updates: UpdateBucketPlanRequestDTO) => Promise<any>
   onProceedToReview: () => void
+  onRegenerateBuckets?: () => Promise<any>
   loading: boolean
   statusText?: string | null
 }
@@ -20,25 +22,37 @@ export default function EssenceBucketBuilder({
   portfolioId,
   onUpdateDraft,
   onProceedToReview,
+  onRegenerateBuckets,
   loading,
   statusText,
 }: EssenceBucketBuilderProps) {
   const [buckets, setBuckets] = useState<PurposeBucketDTO[]>(draft.purpose_buckets || [])
 
+  // Input states for adding new asset or action rule per bucket
+  const [newAssetInputs, setNewAssetInputs] = useState<Record<string, string>>({})
+  const [newRuleInputs, setNewRuleInputs] = useState<Record<string, string>>({})
+
   useEffect(() => {
     setBuckets(draft.purpose_buckets || [])
   }, [draft])
 
-  const totalPercent = buckets.reduce((sum, b) => sum + (parseFloat(b.target_percent) || 0), 0)
-  const is100Percent = Math.abs(totalPercent - 100) < 0.01
+  const totalPercent = useMemo(() => {
+    return buckets.reduce((sum, b) => sum + (parseFloat(b.target_percent) || 0), 0)
+  }, [buckets])
+
+  const is100Percent = Math.abs(totalPercent - 100) < 0.05
+
+  const navThb = parseFloat(draft.portfolio_checkpoint?.nav_thb || '0')
 
   const handleUpdateBucket = (
     index: number,
     field: keyof PurposeBucketDTO,
-    value: string,
+    value: any,
   ) => {
     const updated = [...buckets]
-    updated[index] = { ...updated[index], [field]: value } as PurposeBucketDTO
+    const current = updated[index]
+    if (!current) return
+    updated[index] = { ...current, [field]: value }
     setBuckets(updated)
   }
 
@@ -48,11 +62,15 @@ export default function EssenceBucketBuilder({
     const newB: PurposeBucketDTO = {
       bucket_id: `b_purpose_${Date.now()}`,
       name: `พอร์ตย่อย ${nextIdx}`,
-      role: 'เพื่อสร้างผลตอบแทนหรือสภาพคล่อง',
+      role: 'เพื่อสร้างผลตอบแทนและบริหารความเสี่ยงตามเป้าหมาย',
       color,
       target_percent: '0',
       source_value_ids: [],
       source_axis_allocation_ids: [],
+      linked_goal_name: '',
+      eligible_assets: ['สินทรัพย์คุณภาพดีตามแกนหลัก'],
+      cash_inflow_routing_pct: '0',
+      action_rules: ['ปฏิบัติตามกฎเหล็กในแกนหลักการลงทุน'],
     }
     setBuckets([...buckets, newB])
   }
@@ -62,129 +80,440 @@ export default function EssenceBucketBuilder({
     setBuckets(buckets.filter((_, i) => i !== index))
   }
 
-  const handleSaveAndReview = async () => {
+  const handleAddAsset = (bucketIdx: number, bucketId: string) => {
+    const text = (newAssetInputs[bucketId] || '').trim()
+    if (!text) return
+    const b = buckets[bucketIdx]
+    if (!b) return
+    const currentAssets = b.eligible_assets || []
+    if (!currentAssets.includes(text)) {
+      handleUpdateBucket(bucketIdx, 'eligible_assets', [...currentAssets, text])
+    }
+    setNewAssetInputs({ ...newAssetInputs, [bucketId]: '' })
+  }
+
+  const handleRemoveAsset = (bucketIdx: number, assetIdx: number) => {
+    const b = buckets[bucketIdx]
+    if (!b) return
+    const currentAssets = b.eligible_assets || []
+    handleUpdateBucket(
+      bucketIdx,
+      'eligible_assets',
+      currentAssets.filter((_, i) => i !== assetIdx),
+    )
+  }
+
+  const handleAddRule = (bucketIdx: number, bucketId: string) => {
+    const text = (newRuleInputs[bucketId] || '').trim()
+    if (!text) return
+    const b = buckets[bucketIdx]
+    if (!b) return
+    const currentRules = b.action_rules || []
+    if (!currentRules.includes(text)) {
+      handleUpdateBucket(bucketIdx, 'action_rules', [...currentRules, text])
+    }
+    setNewRuleInputs({ ...newRuleInputs, [bucketId]: '' })
+  }
+
+  const handleRemoveRule = (bucketIdx: number, ruleIdx: number) => {
+    const b = buckets[bucketIdx]
+    if (!b) return
+    const currentRules = b.action_rules || []
+    handleUpdateBucket(
+      bucketIdx,
+      'action_rules',
+      currentRules.filter((_, i) => i !== ruleIdx),
+    )
+  }
+
+  const handleCycleColor = (index: number) => {
+    const current = buckets[index]
+    if (!current) return
+    const currentIdx = VIBRANT_BUCKET_PALETTE.indexOf(current.color)
+    const nextColor =
+      VIBRANT_BUCKET_PALETTE[(currentIdx + 1) % VIBRANT_BUCKET_PALETTE.length] || '#3b82f6'
+    handleUpdateBucket(index, 'color', nextColor)
+  }
+
+  const applyPreset = (presetType: '3_buckets_standard' | '4_buckets_growth') => {
+    const resolveId = (prefix: string, fallback: string) => {
+      const existing = buckets.find((b) => b.bucket_id.startsWith(prefix) || b.bucket_id === fallback)
+      return existing ? existing.bucket_id : fallback
+    }
+
+    if (presetType === '3_buckets_standard') {
+      setBuckets([
+        {
+          bucket_id: resolveId('b_emergency', 'b_emergency'),
+          name: 'เสบียงสำรอง & สภาพคล่อง',
+          role: 'รองรับค่าใช้จ่ายฉุกเฉิน 6-12 เดือน ปกป้องเงินต้น ไม่ขาดทุน สภาพคล่องสูง',
+          color: '#10B981',
+          target_percent: '15',
+          linked_goal_name: 'เงินสำรองฉุกเฉิน',
+          eligible_assets: ['บัญชีเงินฝากดิจิทัลดอกเบี้ยสูง', 'กองทุนรวมตลาดเงิน (MMF)', 'ตราสารหนี้ระยะสั้นมาก'],
+          cash_inflow_routing_pct: '20',
+          action_rules: [
+            'ห้ามนำเงินก้อนนี้ไปลงทุนในหุ้นหรือสินทรัพย์เสี่ยงเด็ดขาด',
+            'เป็น Watermark แรกในการถอนเมื่อเกิดเหตุฉุกเฉิน',
+            'เมื่อสะสมครบเป้าหมาย 300,000 บาทแล้ว ส่งต่อเงินออมใหม่ส่วนเกินไปที่ Bucket เติบโตความมั่งคั่ง',
+          ],
+          source_value_ids: [],
+          source_axis_allocation_ids: [],
+        },
+        {
+          bucket_id: resolveId('b_income', 'b_income'),
+          name: 'ฐานรากกระแสเงินสด & กันชน',
+          role: 'สร้างกระแสเงินสดสม่ำเสมอ ชนะเงินเฟ้อ และเป็นกันชนลดความผันผวนของพอร์ต',
+          color: '#8B5CF6',
+          target_percent: '25',
+          linked_goal_name: 'กระแสเงินสดและกันชนความเสี่ยง',
+          eligible_assets: ['กองทุนตราสารหนี้คุณภาพดี', 'หุ้นกู้ Investment Grade', 'กองทุนอสังหาริมทรัพย์ / REITs ปันผลสูง'],
+          cash_inflow_routing_pct: '20',
+          action_rules: [
+            'นำกระแสเงินสดหรือเงินปันผลที่ได้กลับไป Reinvest ใน Bucket เติบโตระยะยาวอัตโนมัติ',
+            'รักษาสภาพคล่องเพื่อพร้อมปรับสมดุล Rebalance สู่สินทรัพย์เติบโตเมื่อตลาดปรับฐาน',
+          ],
+          source_value_ids: [],
+          source_axis_allocation_ids: [],
+        },
+        {
+          bucket_id: resolveId('b_growth', 'b_growth'),
+          name: 'กองหน้าขับเคลื่อน 10 ล้าน',
+          role: 'เร่งผลตอบแทนทบต้นในระยะยาว 7-10 ปี เพื่อบรรลุเป้าหมายพอร์ต 10 ล้านบาท',
+          color: '#3B82F6',
+          target_percent: '60',
+          linked_goal_name: 'พอร์ต 10 ล้านบาท',
+          eligible_assets: ['ดัชนีหุ้นโลก (เช่น S&P 500, MSCI World)', 'กองทุนรวมหุ้นเติบโตคุณภาพสูง', 'หุ้นรายตัวตามเกณฑ์แกนหลัก'],
+          cash_inflow_routing_pct: '60',
+          action_rules: [
+            'เป็นท่อหลักในการรับเงินลงทุน DCA รายเดือน',
+            'เน้นถือครองระยะยาว ไม่ขายตัดขาดทุนเพราะความตื่นตระหนกยามตลาดปรับฐาน',
+            'ตรวจสอบสัดส่วน Rebalance ทุก 6 เดือน หรือเมื่อสัดส่วนเบี่ยงเบนเกิน ±5%',
+          ],
+          source_value_ids: [],
+          source_axis_allocation_ids: [],
+        },
+      ])
+    } else {
+      setBuckets([
+        {
+          bucket_id: resolveId('b_emergency', 'b_emergency'),
+          name: 'เสบียงสำรอง & สภาพคล่อง',
+          role: 'รองรับค่าใช้จ่ายฉุกเฉิน 6 เดือน สภาพคล่องสูงสุด',
+          color: '#10B981',
+          target_percent: '10',
+          linked_goal_name: 'เงินสำรองฉุกเฉิน',
+          eligible_assets: ['เงินฝากดอกเบี้ยสูง', 'กองทุนรวมตลาดเงิน MMF'],
+          cash_inflow_routing_pct: '10',
+          action_rules: ['ห้ามนำไปเสี่ยงในหุ้นเด็ดขาด', 'สำรองเฉพาะค่าใช้จ่ายจำเป็น'],
+          source_value_ids: [],
+          source_axis_allocation_ids: [],
+        },
+        {
+          bucket_id: resolveId('b_income', 'b_income'),
+          name: 'ฐานรากกระแสเงินสด & กันชน',
+          role: 'กันชนลดความผันผวนและสร้างกระแสเงินสด',
+          color: '#8B5CF6',
+          target_percent: '20',
+          linked_goal_name: 'กระแสเงินสดและกันชนความเสี่ยง',
+          eligible_assets: ['กองทุนตราสารหนี้คุณภาพดี', 'หุ้นกู้ Investment Grade'],
+          cash_inflow_routing_pct: '20',
+          action_rules: ['นำปันผลไป Reinvest ในสินทรัพย์เติบโต'],
+          source_value_ids: [],
+          source_axis_allocation_ids: [],
+        },
+        {
+          bucket_id: resolveId('b_growth', 'b_growth'),
+          name: 'กองหน้าขับเคลื่อน 10 ล้าน',
+          role: 'เร่งผลตอบแทนทบต้นในระยะยาวเพื่อพิชิตพอร์ต 10 ล้านบาท',
+          color: '#3B82F6',
+          target_percent: '60',
+          linked_goal_name: 'พอร์ต 10 ล้านบาท',
+          eligible_assets: ['ดัชนีหุ้นโลก S&P 500', 'กองทุนรวมหุ้นเติบโต'],
+          cash_inflow_routing_pct: '60',
+          action_rules: ['รับเงิน DCA รายเดือนเป็นหลัก', 'ถือครองระยะยาว Rebalance ทุก 6 เดือน'],
+          source_value_ids: [],
+          source_axis_allocation_ids: [],
+        },
+        {
+          bucket_id: resolveId('b_tactical', 'b_tactical'),
+          name: 'สำรวจโอกาส & เทรนด์เติบโตสูง',
+          role: 'ลงทุนตามธีมเทคโนโลยีหรือหุ้นรายตัวที่มีศักยภาพสูงเพื่อผลตอบแทนส่วนเพิ่ม (Alpha)',
+          color: '#F59E0B',
+          target_percent: '10',
+          linked_goal_name: 'ผลตอบแทนส่วนเพิ่ม (Alpha)',
+          eligible_assets: ['หุ้นเทคโนโลยีรายตัว', 'หุ้น Growth / Momentum คุณภาพสูงตามแกนหลัก'],
+          cash_inflow_routing_pct: '10',
+          action_rules: ['จำกัดขาดทุนต่อไม้ไม่เกิน 2% ตามกฎเหล็กแกนหลัก', 'ขนาดรวมห้ามเกิน 10% ของพอร์ต'],
+          source_value_ids: [],
+          source_axis_allocation_ids: [],
+        },
+      ])
+    }
+  }
+
+  const handleSaveDraft = async () => {
     await onUpdateDraft({
       purpose_buckets: buckets,
     })
-    onProceedToReview()
   }
 
+  const handleSaveAndReview = async () => {
+    try {
+      await handleSaveDraft()
+      onProceedToReview()
+    } catch {
+      // Do not proceed to review if saving draft failed; preserve user edits in buckets state
+    }
+  }
+
+  // Check if current buckets have empty or missing linked goals
+  const hasEmptyLinkedGoals = buckets.some((b) => !b.linked_goal_name || b.linked_goal_name.trim() === '')
+
   return (
-    <div className="max-w-4xl mx-auto space-y-6">
-      {/* Header Banner */}
-      <div className="rounded-2xl border border-sky-100 bg-gradient-to-br from-sky-50/70 via-white to-blue-50/30 p-6 sm:p-8 shadow-sm">
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-sky-100 pb-4">
+    <div className="space-y-4 max-w-5xl mx-auto w-full pb-6">
+      {/* Top Header Banner & Strategy Summary */}
+      <div className="rounded-2xl border border-sky-100 bg-gradient-to-br from-sky-50/80 via-white to-indigo-50/30 p-4 sm:p-5 shadow-xs space-y-3">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-sky-100/80 pb-2.5">
           <div className="flex items-center gap-2.5">
-            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-tr from-sky-500 to-blue-600 text-white font-bold text-lg shadow-sm">
+            <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-tr from-purple-600 to-indigo-600 text-white font-bold text-lg shadow-xs">
               🗂️
             </span>
             <div>
-              <h1 className="text-xl sm:text-2xl font-extrabold text-zinc-900 tracking-tight">
-                ออกแบบ Purpose Buckets จากแกนหลัก
-              </h1>
-              <p className="text-xs text-zinc-500 mt-0.5">
-                พอร์ต: <span className="font-semibold text-zinc-700">{portfolioId}</span> | จัดกลุ่มพอร์ตตามบทบาทของเงิน (เช่น รายได้, เติบโต, สภาพคล่อง) โดยสอดคล้องกับแผนจัดสรรในแกนหลัก
+              <div className="flex items-center gap-2">
+                <h1 className="text-base sm:text-lg font-black text-zinc-900 tracking-tight">
+                  ออกแบบ Purpose Buckets ตามเป้าหมายชีวิต
+                </h1>
+                <span className="inline-flex items-center gap-1 rounded-full bg-purple-100 px-2.5 py-0.5 text-[11px] font-bold text-purple-800 border border-purple-200">
+                  {buckets.length} Buckets
+                </span>
+              </div>
+              <p className="text-[11px] text-zinc-600">
+                พอร์ต: <span className="font-bold text-zinc-800">{portfolioId}</span>
+                {navThb > 0 && (
+                  <span className="ml-2 pl-2 border-l border-zinc-300">
+                    มูลค่าพอร์ต: <strong className="text-indigo-700">{navThb.toLocaleString('th-TH')} บาท</strong>
+                  </span>
+                )}
               </p>
             </div>
           </div>
 
-          {/* Live Total Percentage Badge */}
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            {/* Live Total Percentage Badge */}
             <span
-              className={`inline-flex items-center gap-1.5 rounded-full px-3.5 py-1 text-xs font-extrabold border ${
+              className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-extrabold border shadow-2xs ${
                 is100Percent
-                  ? 'bg-emerald-50 text-emerald-700 border-emerald-300'
-                  : 'bg-amber-50 text-amber-700 border-amber-300'
+                  ? 'bg-emerald-50 text-emerald-800 border-emerald-300'
+                  : 'bg-rose-50 text-rose-800 border-rose-300 animate-pulse'
               }`}
             >
               <span>รวมสัดส่วน:</span>
               <span className="text-sm font-black">{totalPercent.toFixed(1)}%</span>
               <span>/ 100%</span>
             </span>
+
+            {/* AI Suggest / Regenerate Button */}
+            {onRegenerateBuckets && (
+              <button
+                type="button"
+                onClick={onRegenerateBuckets}
+                disabled={loading}
+                className="inline-flex items-center gap-1.5 rounded-xl border border-purple-300 bg-purple-600 hover:bg-purple-700 px-3.5 py-1.5 text-xs font-extrabold text-white shadow-sm active:scale-98 transition-all disabled:opacity-50"
+                title="สั่งให้ AI วิเคราะห์แกนหลักและเป้าหมายล่าสุดเพื่อแนะนำ Purpose Buckets ให้โดยอัตโนมัติ"
+              >
+                <span>✨ ให้ AI แนะนำ Buckets จากแกนหลัก</span>
+              </button>
+            )}
           </div>
         </div>
 
-        {/* Info card */}
-        <div className="mt-4 rounded-xl bg-white p-4 border border-sky-200/80 text-xs text-zinc-600 space-y-1">
-          <p>
-            • <strong>Bucket คือบทบาทของเงิน:</strong> เช่น "เงินพร้อมใช้", "รายได้สม่ำเสมอ", หรือ "เติบโตระยะยาว"
-          </p>
-          <p>
-            • สัดส่วนเริ่มต้นดึงมาจากแผนจัดสรรในแกนหลักที่คุณยืนยันไว้ คุณสามารถปรับแต่งชื่อ สี และสัดส่วนได้
-          </p>
+        {/* Quick Suggestion Presets */}
+        <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
+          <div className="flex flex-wrap items-center gap-1.5">
+            <span className="font-bold text-zinc-600 flex items-center gap-1 text-[11px]">
+              <span>⚡</span> เทมเพลตแนะนำด่วน:
+            </span>
+            <button
+              type="button"
+              onClick={() => applyPreset('3_buckets_standard')}
+              className="rounded-lg bg-white border border-purple-200 hover:bg-purple-50 hover:border-purple-300 px-2 py-0.5 text-[11px] font-bold text-purple-900 shadow-2xs transition-all active:scale-98"
+            >
+              📌 3-Buckets มาตรฐาน (เสบียง 15% + กันชน 25% + เติบโต 60%)
+            </button>
+            <button
+              type="button"
+              onClick={() => applyPreset('4_buckets_growth')}
+              className="rounded-lg bg-white border border-purple-200 hover:bg-purple-50 hover:border-purple-300 px-2 py-0.5 text-[11px] font-bold text-purple-900 shadow-2xs transition-all active:scale-98"
+            >
+              📌 4-Buckets เติบโตรุก (เสบียง 10% + กันชน 20% + กองหน้า 60% + โอกาสพิเศษ 10%)
+            </button>
+          </div>
+        </div>
+
+        {/* Visual Stacked Bar Chart & Cash Inflow Routing summary */}
+        <div className="space-y-1">
+          <div className="flex justify-between text-[10px] text-zinc-500 font-semibold">
+            <span>การกระจายสัดส่วนพอร์ต (Target Allocation):</span>
+            <span>{is100Percent ? '✓ สัดส่วนสมบูรณ์ครบ 100%' : '⚠️ ผลรวมต้องได้ 100%'}</span>
+          </div>
+          <div className="h-3 w-full rounded-full bg-zinc-100 overflow-hidden flex shadow-inner">
+            {buckets.map((b) => {
+              const pct = Math.max(0, parseFloat(b.target_percent) || 0)
+              if (pct <= 0) return null
+              return (
+                <div
+                  key={b.bucket_id}
+                  className="h-full transition-all"
+                  style={{ width: `${pct}%`, backgroundColor: b.color || '#3b82f6' }}
+                  title={`${b.name}: ${pct}%`}
+                />
+              )
+            })}
+          </div>
+
+          {/* Cash Inflow Routing Pills */}
+          <div className="flex flex-wrap items-center gap-1.5 pt-0.5 text-[11px]">
+            <span className="font-semibold text-zinc-500 flex items-center gap-1">
+              <span>💡</span> สัดส่วนเงินเข้าใหม่ (DCA):
+            </span>
+            {buckets.map((b) => {
+              const routePct = b.cash_inflow_routing_pct || b.target_percent || '0'
+              return (
+                <span
+                  key={b.bucket_id}
+                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-indigo-50/70 border border-indigo-100 text-zinc-800"
+                >
+                  <span className="w-2 h-2 rounded-full" style={{ backgroundColor: b.color || '#3b82f6' }} />
+                  <span className="font-medium truncate max-w-[120px]">{b.name}:</span>
+                  <strong className="text-indigo-700">{routePct}%</strong>
+                </span>
+              )
+            })}
+          </div>
         </div>
       </div>
 
-      {/* Purpose Buckets List */}
-      <div className="rounded-2xl border border-sky-100 bg-white p-6 sm:p-8 shadow-sm space-y-6">
-        <div className="flex items-center justify-between border-b border-sky-50 pb-3">
-          <h2 className="text-base sm:text-lg font-bold text-zinc-900">
-            รายการ Purpose Buckets ({buckets.length})
+      {/* Purpose Buckets Cards List */}
+      <div className="space-y-4">
+        {/* Informative Guidance Banner if buckets need suggestion */}
+        {hasEmptyLinkedGoals && (
+          <div className="rounded-xl border border-purple-200 bg-gradient-to-r from-purple-50 via-white to-indigo-50/60 p-3 text-xs text-purple-950 shadow-2xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="flex items-start gap-2.5">
+              <span className="text-xl">🤖</span>
+              <div>
+                <span className="font-extrabold block text-purple-900">ไม่ต้องพิมพ์ออกแบบเองจากศูนย์!</span>
+                <span className="text-purple-800/80 leading-relaxed text-[11px]">
+                  คลิกปุ่ม <strong>"✨ ให้ AI แนะนำ Buckets จากแกนหลัก"</strong> ด้านบน หรือเลือกเทมเพลตแนะนำด่วน เพื่อให้ระบบวางโครงสร้างที่ผูกกับเป้าหมาย สินทรัพย์ที่อนุญาต และกฎปฏิบัติให้โดยอัตโนมัติ
+                </span>
+              </div>
+            </div>
+            {onRegenerateBuckets && (
+              <button
+                type="button"
+                onClick={onRegenerateBuckets}
+                disabled={loading}
+                className="rounded-xl bg-purple-700 px-3.5 py-1.5 text-xs font-bold text-white hover:bg-purple-800 shrink-0 shadow-xs active:scale-98"
+              >
+                ✨ ให้ AI แนะนำทันที
+              </button>
+            )}
+          </div>
+        )}
+
+        {/* Purpose Buckets List Header */}
+        <div className="flex items-center justify-between px-1">
+          <h2 className="text-sm sm:text-base font-extrabold text-zinc-900">
+            รายละเอียด Purpose Buckets ({buckets.length} รายการ)
           </h2>
           <button
             type="button"
             onClick={handleAddBucket}
             disabled={loading}
-            className="rounded-xl border border-sky-200 bg-sky-50 px-3.5 py-1.5 text-xs font-bold text-sky-700 hover:bg-sky-100 transition-all flex items-center gap-1"
+            className="rounded-xl border border-purple-200 bg-purple-50 px-3.5 py-1.5 text-xs font-bold text-purple-700 hover:bg-purple-100 transition-all flex items-center gap-1.5 shadow-2xs"
           >
             <span>+ เพิ่ม Bucket</span>
           </button>
         </div>
 
-        <div className="space-y-4">
-          {buckets.map((b, idx) => (
+        {buckets.map((b, idx) => {
+          const targetPct = parseFloat(b.target_percent) || 0
+          const approxThb = navThb > 0 ? (navThb * targetPct) / 100 : 0
+          const bucketId = b.bucket_id
+
+          return (
             <div
-              key={b.bucket_id}
-              className="rounded-xl border border-sky-100 bg-white p-4 sm:p-5 shadow-xs hover:border-sky-300 transition-all space-y-3"
+              key={bucketId}
+              className="rounded-2xl border border-zinc-200/90 bg-white p-5 sm:p-6 shadow-sm hover:border-purple-200 transition-all space-y-4"
             >
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                {/* Color + Name */}
-                <div className="flex items-center gap-3 flex-1 min-w-0">
-                  <div className="relative group">
-                    <span
-                      className="block w-6 h-6 rounded-full border border-black/10 shadow-xs cursor-pointer"
-                      style={{ backgroundColor: b.color }}
-                      title="คลิกเพื่อสลับสี"
-                    />
-                  </div>
+              {/* Card Header: Color, Name, Linked Goal, Target %, THB */}
+              <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 border-b border-zinc-100 pb-4">
+                <div className="flex items-center gap-2.5 flex-1 min-w-0">
+                  <button
+                    type="button"
+                    onClick={() => handleCycleColor(idx)}
+                    className="flex h-9 w-9 items-center justify-center rounded-xl border border-black/10 shadow-xs shrink-0 cursor-pointer hover:scale-105 transition-transform"
+                    style={{ backgroundColor: b.color }}
+                    title="คลิกเพื่อสลับสี"
+                  >
+                    <span className="text-white text-xs drop-shadow">🎨</span>
+                  </button>
 
                   <div className="flex-1 min-w-0">
-                    <label htmlFor={`b-name-${b.bucket_id}`} className="sr-only">ชื่อ Bucket</label>
+                    <label htmlFor={`b-name-${bucketId}`} className="sr-only">
+                      ชื่อ Bucket
+                    </label>
                     <input
-                      id={`b-name-${b.bucket_id}`}
+                      id={`b-name-${bucketId}`}
                       type="text"
                       value={b.name}
                       onChange={(e) => handleUpdateBucket(idx, 'name', e.target.value)}
-                      placeholder="ชื่อ Bucket เช่น รายได้สม่ำเสมอ"
-                      className="w-full rounded-lg border border-zinc-200 px-3 py-1.5 text-sm font-bold text-zinc-800 focus:outline-none focus:ring-2 focus:ring-sky-400"
+                      placeholder="ชื่อ Bucket เช่น ขับเคลื่อนพอร์ต 10 ล้าน"
+                      className="w-full rounded-xl border border-zinc-200 px-3.5 py-1.5 text-sm sm:text-base font-extrabold text-zinc-900 focus:outline-none focus:ring-2 focus:ring-purple-400"
                     />
                   </div>
                 </div>
 
-                {/* Target Percent */}
-                <div className="flex items-center gap-3 shrink-0">
-                  <label htmlFor={`b-target-${b.bucket_id}`} className="text-xs font-semibold text-zinc-500">
-                    สัดส่วน:
-                  </label>
-                  <div className="flex items-center gap-1">
+                <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+                  {/* Linked Financial Goal */}
+                  <div className="flex items-center gap-1.5 bg-purple-50/70 border border-purple-200/80 px-2.5 py-1 rounded-xl">
+                    <span className="text-xs">🎯</span>
                     <input
-                      id={`b-target-${b.bucket_id}`}
+                      type="text"
+                      value={b.linked_goal_name || ''}
+                      onChange={(e) => handleUpdateBucket(idx, 'linked_goal_name', e.target.value)}
+                      placeholder="ระบุเป้าหมายที่ผูก..."
+                      className="bg-transparent text-xs font-bold text-purple-900 focus:outline-none w-32 sm:w-40"
+                      title="เป้าหมายทางการเงินที่เงินก้อนนี้รองรับโดยตรง"
+                    />
+                  </div>
+
+                  {/* Target Percent & Calculated THB */}
+                  <div className="flex items-center gap-1.5 bg-zinc-50 border border-zinc-200 px-2.5 sm:px-3 py-1 rounded-xl">
+                    <span className="text-xs font-semibold text-zinc-500">สัดส่วน:</span>
+                    <input
+                      id={`b-target-${bucketId}`}
                       type="number"
                       min="0"
                       max="100"
                       step="1"
                       value={b.target_percent}
                       onChange={(e) => handleUpdateBucket(idx, 'target_percent', e.target.value)}
-                      className="w-20 rounded-lg border border-zinc-200 px-2.5 py-1.5 text-sm font-extrabold text-sky-700 text-right focus:outline-none focus:ring-2 focus:ring-sky-400"
+                      className="w-14 sm:w-16 rounded border border-zinc-300 px-1 py-0.5 text-xs font-black text-purple-700 text-right focus:outline-none focus:ring-1 focus:ring-purple-400"
                     />
-                    <span className="text-xs font-bold text-zinc-500">%</span>
+                    <span className="text-xs font-bold text-zinc-600">%</span>
+                    {approxThb > 0 && (
+                      <span className="text-[11px] font-bold text-zinc-600 pl-1 border-l border-zinc-300 whitespace-nowrap">
+                        ≈ {Math.round(approxThb).toLocaleString('th-TH')} บ.
+                      </span>
+                    )}
                   </div>
 
                   {buckets.length > 1 && (
                     <button
                       type="button"
                       onClick={() => handleRemoveBucket(idx)}
-                      className="rounded-lg p-1.5 text-zinc-400 hover:text-rose-600 hover:bg-rose-50"
+                      className="rounded-xl p-2 text-zinc-400 hover:text-rose-600 hover:bg-rose-50 transition-colors ml-auto sm:ml-0"
                       title="ลบ Bucket นี้"
                     >
                       🗑️
@@ -193,57 +522,226 @@ export default function EssenceBucketBuilder({
                 </div>
               </div>
 
-              {/* Role */}
+              {/* Role & Money Purpose */}
               <div>
-                <label htmlFor={`b-role-${b.bucket_id}`} className="block text-xs font-semibold text-zinc-600 mb-1">
+                <label htmlFor={`b-role-${bucketId}`} className="block text-xs font-bold text-zinc-700 mb-1">
                   บทบาทและเหตุผลของเงินก้อนนี้:
                 </label>
-                <input
-                  id={`b-role-${b.bucket_id}`}
-                  type="text"
+                <AutoResizeTextarea
+                  id={`b-role-${bucketId}`}
+                  minRows={2}
                   value={b.role}
                   onChange={(e) => handleUpdateBucket(idx, 'role', e.target.value)}
-                  placeholder="เช่น สร้างกระแสเงินสดปันผลเพื่อค่าใช้จ่าย หรือ พอร์ตทดลองเรียนรู้"
-                  className="w-full rounded-lg border border-zinc-200 bg-sky-50/20 px-3 py-1.5 text-xs text-zinc-700 focus:outline-none focus:ring-2 focus:ring-sky-400"
+                  placeholder="เช่น สร้างกระแสเงินสดปันผล หรือ เร่งพลังผลตอบแทนทบต้นเพื่อพอร์ต 10 ล้าน..."
+                  className="rounded-xl border border-zinc-200 bg-zinc-50/50 p-2.5 text-xs text-zinc-800 focus:outline-none focus:ring-2 focus:ring-purple-400 leading-relaxed shadow-2xs"
                 />
               </div>
+
+              {/* Two Column Grid: Eligible Assets & Action Rules */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-1">
+                {/* Eligible Assets */}
+                <div className="rounded-xl border border-emerald-100 bg-emerald-50/30 p-3.5 space-y-2.5">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-extrabold text-emerald-950 flex items-center gap-1.5">
+                      <span>💼</span> สินทรัพย์ที่อนุญาต (Eligible Assets)
+                    </span>
+                    <span className="text-[11px] font-bold text-emerald-700">
+                      {(b.eligible_assets || []).length} รายการ
+                    </span>
+                  </div>
+
+                  <div className="flex flex-wrap gap-1.5 min-h-[32px]">
+                    {(b.eligible_assets || []).map((asset, aIdx) => (
+                      <span
+                        key={aIdx}
+                        className="inline-flex items-center gap-1 rounded-lg bg-white border border-emerald-200 px-2 py-1 text-[11px] font-medium text-emerald-950 shadow-2xs"
+                      >
+                        <span>• {asset}</span>
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveAsset(idx, aIdx)}
+                          className="text-zinc-400 hover:text-rose-600 p-0.5"
+                          title="ลบสินทรัพย์นี้"
+                        >
+                          ✕
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+
+                  <div className="flex gap-1.5 pt-1">
+                    <input
+                      type="text"
+                      value={newAssetInputs[bucketId] || ''}
+                      onChange={(e) => setNewAssetInputs({ ...newAssetInputs, [bucketId]: e.target.value })}
+                      onKeyDown={(e) => e.key === 'Enter' && handleAddAsset(idx, bucketId)}
+                      placeholder="เพิ่มสินทรัพย์ เช่น หุ้นดัชนี S&P500..."
+                      className="w-full rounded-lg border border-zinc-200 bg-white px-2.5 py-1 text-xs text-zinc-800 focus:outline-none focus:ring-1 focus:ring-emerald-400"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => handleAddAsset(idx, bucketId)}
+                      className="rounded-lg bg-emerald-600 px-3 py-1 text-xs font-bold text-white hover:bg-emerald-700 shrink-0"
+                    >
+                      + เพิ่ม
+                    </button>
+                  </div>
+                </div>
+
+                {/* Action Rules & Safeguards */}
+                <div className="rounded-xl border border-sky-100 bg-sky-50/30 p-3.5 space-y-2.5">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-extrabold text-sky-950 flex items-center gap-1.5">
+                      <span>🛡️</span> กฎปฏิบัติและแนวทาง (Action Rules)
+                    </span>
+                    <span className="text-[11px] font-bold text-sky-700">
+                      {(b.action_rules || []).length} ข้อ
+                    </span>
+                  </div>
+
+                  <div className="space-y-1.5 min-h-[32px]">
+                    {(b.action_rules || []).map((rule, rIdx) => (
+                      <div
+                        key={rIdx}
+                        className="flex items-start justify-between gap-1.5 rounded-lg bg-white border border-sky-200/80 p-1.5 text-[11px] text-zinc-800 shadow-2xs"
+                      >
+                        <span className="leading-tight">• {rule}</span>
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveRule(idx, rIdx)}
+                          className="text-zinc-400 hover:text-rose-600 p-0.5 shrink-0"
+                          title="ลบข้อนี้"
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="flex gap-1.5 pt-1">
+                    <AutoResizeTextarea
+                      minRows={1}
+                      value={newRuleInputs[bucketId] || ''}
+                      onChange={(e) => setNewRuleInputs({ ...newRuleInputs, [bucketId]: e.target.value })}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' && !e.shiftKey) {
+                          e.preventDefault()
+                          handleAddRule(idx, bucketId)
+                        }
+                      }}
+                      placeholder="เพิ่มกฎปฏิบัติ เช่น เป็นท่อหลักรับเงิน DCA..."
+                      className="w-full rounded-lg border border-zinc-200 bg-white px-2.5 py-1 text-xs text-zinc-800 focus:outline-none focus:ring-1 focus:ring-sky-400"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => handleAddRule(idx, bucketId)}
+                      className="rounded-lg bg-sky-600 px-3 py-1 text-xs font-bold text-white hover:bg-sky-700 shrink-0"
+                    >
+                      + เพิ่ม
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Funding & Inflow Configuration for this Bucket (WP09) */}
+              <div className="pt-2 border-t border-zinc-100 flex flex-wrap items-center justify-between gap-3 text-xs">
+                <div className="flex flex-wrap items-center gap-3">
+                  <div className="flex items-center gap-1.5">
+                    <span className="font-bold text-zinc-600">📥 เงินออมใหม่ (Inflow):</span>
+                    <input
+                      type="number"
+                      min="0"
+                      max="100"
+                      step="1"
+                      value={b.cash_inflow_routing_pct || b.target_percent || '0'}
+                      onChange={(e) => handleUpdateBucket(idx, 'cash_inflow_routing_pct', e.target.value)}
+                      className="w-16 rounded border border-zinc-300 px-2 py-0.5 text-xs font-bold text-indigo-700 text-right focus:outline-none focus:ring-1 focus:ring-indigo-400"
+                    />
+                    <span className="font-bold text-zinc-500">%</span>
+                  </div>
+
+                  <div className="flex items-center gap-1.5">
+                    <span className="font-bold text-zinc-600">🎯 ยอดเป้าหมาย (บาท):</span>
+                    <input
+                      type="number"
+                      min="0"
+                      step="1000"
+                      value={b.target_amount || ''}
+                      onChange={(e) => handleUpdateBucket(idx, 'target_amount', e.target.value || null)}
+                      placeholder="ไม่ระบุ"
+                      className="w-28 rounded border border-zinc-300 px-2 py-0.5 text-xs font-bold text-zinc-800 text-right focus:outline-none focus:ring-1 focus:ring-purple-400"
+                    />
+                  </div>
+
+                  <div className="flex items-center gap-1.5">
+                    <span className="font-bold text-zinc-600">โหมด:</span>
+                    <select
+                      value={b.inflow_route_mode || 'fixed_ratio'}
+                      onChange={(e) => handleUpdateBucket(idx, 'inflow_route_mode', e.target.value as any)}
+                      className="rounded border border-zinc-300 px-1.5 py-0.5 text-xs font-medium text-zinc-700 bg-white"
+                    >
+                      <option value="fixed_ratio">Fixed Ratio (%)</option>
+                      <option value="priority_fill">Priority Fill</option>
+                    </select>
+                  </div>
+                </div>
+
+                <span className="text-[11px] text-zinc-500">
+                  {b.inflow_route_mode === 'priority_fill' ? 'เติมเงินให้เต็มเป้าหมายตามลำดับก่อน redirect' : 'สัดส่วนเงินที่จะนำไปซื้อสะสม (DCA) รายเดือน'}
+                </span>
+              </div>
             </div>
-          ))}
+          )
+        })}
+      </div>
+
+      {/* Action Footer Bar */}
+      <div className="rounded-2xl border border-sky-100 bg-white p-4 sm:p-5 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-4">
+        <div className="text-xs">
+          {statusText ? (
+            <span className="flex items-center gap-2 text-indigo-700 font-bold animate-pulse">
+              <span className="h-2 w-2 rounded-full bg-indigo-500" />
+              {statusText}
+            </span>
+          ) : !is100Percent ? (
+            <span className="text-rose-700 font-extrabold flex items-center gap-1.5">
+              <span>⚠️</span> ผลรวมสัดส่วนต้องเท่ากับ 100% (ปัจจุบัน {totalPercent.toFixed(1)}%)
+            </span>
+          ) : (
+            <span className="text-emerald-700 font-bold flex items-center gap-1.5">
+              <span>✓</span> สัดส่วนรวมครบ 100% พร้อมสำหรับการตรวจสอบและนำไปใช้กับพอร์ต
+            </span>
+          )}
         </div>
 
-        {/* Action Bar */}
-        <div className="pt-6 border-t border-sky-100 flex flex-col sm:flex-row items-center justify-between gap-4 mt-6">
-          <div className="text-xs text-zinc-500">
-            {statusText ? (
-              <span className="flex items-center gap-2 text-sky-700 font-semibold animate-pulse">
-                <span className="h-2 w-2 rounded-full bg-sky-500" />
-                {statusText}
-              </span>
-            ) : !is100Percent ? (
-              <span className="text-amber-700 font-semibold">
-                ⚠️ ผลรวมสัดส่วนต้องเท่ากับ 100% (ปัจจุบัน {totalPercent.toFixed(1)}%)
-              </span>
-            ) : (
-              <span className="text-emerald-700 font-semibold">
-                ✓ สัดส่วนรวมครบ 100% พร้อมสำหรับการตรวจสอบความปลอดภัย
-              </span>
-            )}
-          </div>
+        <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto">
+          <button
+            type="button"
+            onClick={async () => {
+              try {
+                await handleSaveDraft()
+              } catch {
+                // Handled
+              }
+            }}
+            disabled={loading}
+            className="rounded-xl border border-purple-300 bg-purple-50 px-5 py-2.5 text-xs font-bold text-purple-700 hover:bg-purple-100 active:scale-98 transition-all disabled:opacity-50"
+          >
+            💾 บันทึกแบบร่าง Buckets
+          </button>
 
-          <div className="flex items-center gap-3 w-full sm:w-auto">
-            <button
-              type="button"
-              onClick={handleSaveAndReview}
-              disabled={!is100Percent || loading}
-              className={`w-full sm:w-auto px-7 py-3 rounded-xl font-bold text-sm text-white shadow-md transition-all flex items-center justify-center gap-2 ${
-                is100Percent && !loading
-                  ? 'bg-gradient-to-r from-sky-600 to-blue-600 hover:from-sky-700 hover:to-blue-700 shadow-sky-500/25 active:scale-98 cursor-pointer'
-                  : 'bg-zinc-300 text-zinc-500 cursor-not-allowed shadow-none'
-              }`}
-            >
-              <span>ตรวจสอบก่อนใช้กับพอร์ต →</span>
-            </button>
-          </div>
+          <button
+            type="button"
+            onClick={handleSaveAndReview}
+            disabled={!is100Percent || loading}
+            className={`px-6 py-2.5 rounded-xl font-bold text-xs text-white shadow-md transition-all flex items-center justify-center gap-2 ${
+              is100Percent && !loading
+                ? 'bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 shadow-purple-500/20 active:scale-98 cursor-pointer'
+                : 'bg-zinc-300 text-zinc-500 cursor-not-allowed shadow-none'
+            }`}
+          >
+            <span>ตรวจสอบก่อนใช้กับพอร์ต →</span>
+          </button>
         </div>
       </div>
     </div>

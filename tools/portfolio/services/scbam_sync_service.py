@@ -236,14 +236,15 @@ class SCBAMSyncService:
                 yield f"event: warning\ndata: {json.dumps(w_payload)}\n\n"
                 continue
 
-            # Quarantine advance orders (ADV-) that may have failed or been cancelled
-            if raw_order.transaction_no.startswith("ADV-"):
+            # Only quarantine advance orders (ADV-) whose effective date is in the future (not yet executed)
+            today_iso = datetime.now().strftime("%Y-%m-%d")
+            if raw_order.transaction_no.startswith("ADV-") and raw_order.effective_date > today_iso:
                 w_payload = {
                     "subject": meta.subject,
                     "message_id": meta.message_id,
                     "filename": "SCBAM Confirmation Email",
                     "received_at": meta.received_at,
-                    "reason": f"รายการคำสั่งล่วงหน้า (Advance Order: {raw_order.transaction_no}) ถูกกักกัน (Quarantine) ไม่นำเข้าโดยอัตโนมัติ เนื่องจากอาจถูกยกเลิกหรือไม่มีการตัดเงินจริง โปรดตรวจสอบกับ Statement ทางการ",
+                    "reason": f"รายการคำสั่งล่วงหน้า (Advance Order: {raw_order.transaction_no}) ยังไม่ถึงวันที่มีผล ({raw_order.effective_date}) ระบบจะนำเข้าเมื่อถึงวันที่มีผลและทราบราคา NAV",
                     "can_preview": True,
                 }
                 accumulated_warnings.append(w_payload)
@@ -304,7 +305,7 @@ class SCBAMSyncService:
                 trade_date=raw_order.tx_date,
                 settlement_date=raw_order.effective_date,
                 symbol=fund_sym,
-                action="BUY",
+                action=raw_order.action,
                 units=dec_units,
                 price=dec_nav,
                 gross_amount=dec_amount,
@@ -373,9 +374,10 @@ class SCBAMSyncService:
         if not raw_order:
             raise ValueError("ไม่สามารถสกัดข้อมูลคำสั่งซื้อจากอีเมลนี้ได้ (รูปแบบไม่ตรงกับ SCBAM Fund Click)")
 
-        if raw_order.transaction_no.startswith("ADV-"):
+        today_iso = datetime.now().strftime("%Y-%m-%d")
+        if raw_order.transaction_no.startswith("ADV-") and raw_order.effective_date > today_iso:
             raise ValueError(
-                f"คำสั่งซื้อนี้เป็นคำสั่งล่วงหน้า (Advance Order: {raw_order.transaction_no}) ซึ่งมีความเสี่ยงที่จะถูกยกเลิกหรือไม่มีผลจริง ระบบจึงไม่อนุญาตให้นำเข้าโดยตรง"
+                f"คำสั่งซื้อนี้เป็นคำสั่งล่วงหน้า (Advance Order: {raw_order.transaction_no}) ที่ยังไม่ถึงวันที่มีผล ({raw_order.effective_date}) จึงยังไม่สามารถนำเข้าได้ในขณะนี้"
             )
 
         fund_sym = raw_order.fund_code
@@ -400,7 +402,7 @@ class SCBAMSyncService:
             trade_date=raw_order.tx_date,
             settlement_date=raw_order.effective_date,
             symbol=fund_sym,
-            action="BUY",
+            action=raw_order.action,
             units=dec_units,
             price=dec_nav,
             gross_amount=dec_amount,

@@ -15,11 +15,11 @@ export default function Layout() {
   }
 
   return (
-    <div className="flow-theme flex h-full">
+    <div className="flow-theme flex h-full w-full overflow-hidden">
       <Sidebar />
       <main
-        className={`flow-main min-w-0 flex-1 ${
-          isEquityPage ? 'overflow-hidden p-0' : 'overflow-y-auto p-5 sm:p-8'
+        className={`flow-main min-w-0 min-h-0 flex-1 h-full ${
+          isEquityPage ? 'overflow-hidden p-0' : 'overflow-y-auto p-4 sm:p-5 lg:p-6 xl:p-8 custom-scrollbar'
         }`}
       >
         <Outlet />

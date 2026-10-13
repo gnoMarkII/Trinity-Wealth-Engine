@@ -8,7 +8,7 @@ function LandingContent() {
   const shouldReduceMotion = useReducedMotion()
 
   return (
-    <div className="relative min-h-screen overflow-hidden bg-[#08090d] text-white">
+    <div className="relative h-full overflow-y-auto bg-[#08090d] text-white">
       <FemaleHeroVisual fullBleed />
       <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(90deg,rgba(5,6,14,0.9)_0%,rgba(5,6,14,0.64)_35%,rgba(5,6,14,0.08)_75%),linear-gradient(0deg,rgba(5,6,14,0.72),transparent_44%)]" />
       <div className="pointer-events-none absolute inset-0 opacity-30 [background-image:linear-gradient(rgba(255,255,255,0.05)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.05)_1px,transparent_1px)] [background-size:5rem_5rem] [mask-image:radial-gradient(ellipse_at_70%_40%,black,transparent_74%)]" />

@@ -14,7 +14,7 @@ export default function Sidebar() {
   const { logout } = useAuth()
 
   return (
-    <aside className="flex w-60 shrink-0 flex-col border-r border-sky-100 bg-panel p-4 shadow-[10px_0_35px_rgba(14,165,233,0.04)] backdrop-blur-xl">
+    <aside className="flex w-60 shrink-0 flex-col border-r border-sky-100 bg-panel p-4 shadow-[10px_0_35px_rgba(14,165,233,0.04)] backdrop-blur-xl h-full min-h-0 overflow-y-auto custom-scrollbar">
       <h2 className="mb-6 flex items-center gap-2 px-1 text-sm font-semibold tracking-[0.08em] text-sky-950">
         <span className="h-2 w-2 rounded-full bg-flow-cyan shadow-[0_0_10px_rgba(6,182,212,0.5)]" />
         Money ReRoute

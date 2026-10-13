@@ -27,7 +27,7 @@ export default function Login() {
   }
 
   return (
-    <div className="flow-theme flex min-h-screen items-center justify-center px-6">
+    <div className="flow-theme flex h-full items-center justify-center px-6 overflow-y-auto">
       <form
         onSubmit={handleSubmit}
         className="flow-panel animate-page-in w-full max-w-sm space-y-4 rounded-3xl p-8"

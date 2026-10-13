@@ -1,18 +1,22 @@
 import { useState, useEffect, useMemo } from 'react'
+import AutoResizeTextarea from '../../ui/AutoResizeTextarea'
 import type {
   AxisDraftDTO,
   ConfirmedAxisDTO,
   UpdateAxisDraftRequestDTO,
   AllocationRowDTO,
+  ActualGoalItemDTO,
 } from '../../../api/types'
 
 interface InvestmentAxisEditorProps {
   axisDraft: AxisDraftDTO | null
   confirmedAxis: ConfirmedAxisDTO | null
   portfolioId: string
-  onUpdateDraft: (updates: UpdateAxisDraftRequestDTO) => Promise<void>
-  onConfirmAxis: (proceedToBuckets: boolean) => Promise<void>
+  portfolioGoals?: ActualGoalItemDTO[]
+  onUpdateDraft: (updates: UpdateAxisDraftRequestDTO) => Promise<any>
+  onConfirmAxis: (proceedToBuckets: boolean, targetDraft?: AxisDraftDTO) => Promise<any>
   onProceedToBuckets: () => void
+  onRegenerateDraft?: () => Promise<any>
   loading: boolean
   statusText?: string | null
 }
@@ -28,13 +32,37 @@ function parseRiskLimitValue(val: unknown, fallback: string): string {
   return String(val).trim() !== '' ? String(val) : fallback
 }
 
+const ALLOCATION_PALETTE = [
+  'bg-blue-500 text-white',
+  'bg-emerald-500 text-white',
+  'bg-violet-500 text-white',
+  'bg-amber-500 text-white',
+  'bg-rose-500 text-white',
+  'bg-cyan-500 text-white',
+  'bg-teal-500 text-white',
+  'bg-indigo-500 text-white',
+]
+
+const ALLOCATION_BAR_COLORS = [
+  'bg-blue-500',
+  'bg-emerald-500',
+  'bg-violet-500',
+  'bg-amber-500',
+  'bg-rose-500',
+  'bg-cyan-500',
+  'bg-teal-500',
+  'bg-indigo-500',
+]
+
 export default function InvestmentAxisEditor({
   axisDraft,
   confirmedAxis,
   portfolioId,
+  portfolioGoals,
   onUpdateDraft,
   onConfirmAxis,
   onProceedToBuckets,
+  onRegenerateDraft,
   loading,
   statusText,
 }: InvestmentAxisEditorProps) {
@@ -42,58 +70,44 @@ export default function InvestmentAxisEditor({
   const [isEditing, setIsEditing] = useState(false)
   const isReadOnly = isConfirmed && !isEditing
 
-  const source = axisDraft || confirmedAxis
+  const source = isReadOnly ? confirmedAxis : (axisDraft || confirmedAxis)
 
   // Local editable state
-  const [basicPolicy, setBasicPolicy] = useState(
-    source?.basic_policy || '',
-  )
+  const [basicPolicy, setBasicPolicy] = useState(source?.basic_policy || '')
   const [mddPercent, setMddPercent] = useState(
     parseRiskLimitValue(
-      source?.risk_limits?.mdd_max_annual ||
-        source?.risk_limits?.mdd_percent,
+      source?.risk_limits?.mdd_max_annual || source?.risk_limits?.mdd_percent,
       '15',
     ),
   )
   const [maxLossPerTrade, setMaxLossPerTrade] = useState(
     parseRiskLimitValue(
-      source?.risk_limits?.max_loss_per_trade ||
-        source?.risk_limits?.max_loss_per_trade_percent,
+      source?.risk_limits?.max_loss_per_trade || source?.risk_limits?.max_loss_per_trade_percent,
       '2',
     ),
   )
-  const [horizon, setHorizon] = useState(
-    source?.investment_horizon || '',
-  )
-  const [rebalanceFreq, setRebalanceFreq] = useState(
-    source?.rebalance_frequency || 'รายปี',
-  )
-  const [nonActions, setNonActions] = useState<string[]>(
-    source?.non_actions || [],
-  )
-  const [newNonAction, setNewNonAction] = useState('')
+  const [horizon, setHorizon] = useState(source?.investment_horizon || '')
+  const [rebalanceFreq, setRebalanceFreq] = useState(source?.rebalance_frequency || 'ทุก 6 เดือน หรือเบี่ยงเบนเกิน 5%')
+  const [nonActions, setNonActions] = useState<string[]>(source?.non_actions || [])
+  const [investTargets, setInvestTargets] = useState<string[]>(source?.invest_targets || [])
+  const [excludeTargets, setExcludeTargets] = useState<string[]>(source?.exclude_targets || [])
+  const [primaryMethods, setPrimaryMethods] = useState<string[]>(source?.primary_methods || [])
+  const [secondaryMethods, setSecondaryMethods] = useState<string[]>(source?.secondary_methods || [])
+  const [roleModels, setRoleModels] = useState<string[]>(source?.role_models || [])
+  const [allocationRows, setAllocationRows] = useState<AllocationRowDTO[]>(source?.allocation_rows || [])
 
-  const [investTargets, setInvestTargets] = useState<string[]>(
-    source?.invest_targets || [],
-  )
-  const [excludeTargets, setExcludeTargets] = useState<string[]>(
-    source?.exclude_targets || [],
-  )
-  const [primaryMethods, setPrimaryMethods] = useState<string[]>(
-    source?.primary_methods || [],
-  )
-  const [secondaryMethods, setSecondaryMethods] = useState<string[]>(
-    source?.secondary_methods || [],
-  )
-  const [roleModels, setRoleModels] = useState<string[]>(
-    source?.role_models || [],
-  )
-  const [allocationRows, setAllocationRows] = useState<AllocationRowDTO[]>(
-    source?.allocation_rows || [],
-  )
+  // Input states for adding new items
+  const [newNonAction, setNewNonAction] = useState('')
+  const [editingNonActionIdx, setEditingNonActionIdx] = useState<number | null>(null)
+  const [editingNonActionText, setEditingNonActionText] = useState('')
+  const [newInvestTarget, setNewInvestTarget] = useState('')
+  const [newExcludeTarget, setNewExcludeTarget] = useState('')
+  const [newPrimaryMethod, setNewPrimaryMethod] = useState('')
+  const [newSecondaryMethod, setNewSecondaryMethod] = useState('')
+  const [newRoleModel, setNewRoleModel] = useState('')
 
   useEffect(() => {
-    const s = axisDraft || confirmedAxis
+    const s = isReadOnly ? confirmedAxis : (axisDraft || confirmedAxis)
     if (s) {
       setBasicPolicy(s.basic_policy || '')
       setMddPercent(
@@ -104,13 +118,12 @@ export default function InvestmentAxisEditor({
       )
       setMaxLossPerTrade(
         parseRiskLimitValue(
-          s.risk_limits?.max_loss_per_trade ||
-            s.risk_limits?.max_loss_per_trade_percent,
+          s.risk_limits?.max_loss_per_trade || s.risk_limits?.max_loss_per_trade_percent,
           '2',
         ),
       )
       setHorizon(s.investment_horizon || '')
-      setRebalanceFreq(s.rebalance_frequency || 'รายปี')
+      setRebalanceFreq(s.rebalance_frequency || 'ทุก 6 เดือน หรือเบี่ยงเบนเกิน 5%')
       setNonActions(s.non_actions || [])
       setInvestTargets(s.invest_targets || [])
       setExcludeTargets(s.exclude_targets || [])
@@ -119,7 +132,43 @@ export default function InvestmentAxisEditor({
       setRoleModels(s.role_models || [])
       setAllocationRows(s.allocation_rows || [])
     }
-  }, [axisDraft, confirmedAxis])
+  }, [axisDraft, confirmedAxis, isReadOnly])
+
+  // Handlers for list management
+  const handleAddInvestTarget = () => {
+    if (newInvestTarget.trim() && !investTargets.includes(newInvestTarget.trim())) {
+      setInvestTargets([...investTargets, newInvestTarget.trim()])
+      setNewInvestTarget('')
+    }
+  }
+
+  const handleAddExcludeTarget = () => {
+    if (newExcludeTarget.trim() && !excludeTargets.includes(newExcludeTarget.trim())) {
+      setExcludeTargets([...excludeTargets, newExcludeTarget.trim()])
+      setNewExcludeTarget('')
+    }
+  }
+
+  const handleAddPrimaryMethod = () => {
+    if (newPrimaryMethod.trim() && !primaryMethods.includes(newPrimaryMethod.trim())) {
+      setPrimaryMethods([...primaryMethods, newPrimaryMethod.trim()])
+      setNewPrimaryMethod('')
+    }
+  }
+
+  const handleAddSecondaryMethod = () => {
+    if (newSecondaryMethod.trim() && !secondaryMethods.includes(newSecondaryMethod.trim())) {
+      setSecondaryMethods([...secondaryMethods, newSecondaryMethod.trim()])
+      setNewSecondaryMethod('')
+    }
+  }
+
+  const handleAddRoleModel = () => {
+    if (newRoleModel.trim() && !roleModels.includes(newRoleModel.trim())) {
+      setRoleModels([...roleModels, newRoleModel.trim()])
+      setNewRoleModel('')
+    }
+  }
 
   const handleAddNonAction = () => {
     if (newNonAction.trim() && !nonActions.includes(newNonAction.trim())) {
@@ -128,12 +177,72 @@ export default function InvestmentAxisEditor({
     }
   }
 
-  const handleRemoveNonAction = (idx: number) => {
-    setNonActions(nonActions.filter((_, i) => i !== idx))
+  const handleRemoveNonAction = (index: number) => {
+    setNonActions(nonActions.filter((_, i) => i !== index))
+    if (editingNonActionIdx === index) {
+      setEditingNonActionIdx(null)
+      setEditingNonActionText('')
+    }
+  }
+
+  const handleStartEditNonAction = (index: number, text: string) => {
+    setEditingNonActionIdx(index)
+    setEditingNonActionText(text)
+  }
+
+  const handleSaveEditNonAction = (index: number) => {
+    if (editingNonActionText.trim()) {
+      const updated = [...nonActions]
+      updated[index] = editingNonActionText.trim()
+      setNonActions(updated)
+    }
+    setEditingNonActionIdx(null)
+    setEditingNonActionText('')
+  }
+
+  const handleCancelEditNonAction = () => {
+    setEditingNonActionIdx(null)
+    setEditingNonActionText('')
+  }
+
+  const handleUpdateAllocationRow = (index: number, field: string, value: string) => {
+    const updated = [...allocationRows]
+    const current = updated[index]
+    if (!current) return
+
+    const updatedRow: AllocationRowDTO = {
+      ...current,
+      [field]: value,
+      category: field === 'category' ? value : current.category,
+      target_percent: field === 'target_percent' ? value : current.target_percent,
+    }
+    if (field === 'category') {
+      updatedRow.category_name = value
+    }
+    updated[index] = updatedRow
+    setAllocationRows(updated)
+  }
+
+  const handleAddAllocationRow = () => {
+    const newId = `alloc_${Date.now()}`
+    setAllocationRows([
+      ...allocationRows,
+      {
+        allocation_id: newId,
+        category: 'สินทรัพย์ใหม่',
+        category_name: 'สินทรัพย์ใหม่',
+        target_percent: '0',
+        role_description: 'ระบุบทบาทที่รองรับเป้าหมาย',
+      },
+    ])
+  }
+
+  const handleRemoveAllocationRow = (index: number) => {
+    setAllocationRows(allocationRows.filter((_, i) => i !== index))
   }
 
   const handleSaveDraft = async () => {
-    await onUpdateDraft({
+    return await onUpdateDraft({
       basic_policy: basicPolicy,
       risk_limits: {
         mdd_max_annual: { value: mddPercent, unit: 'percent', calculation_basis: 'annual_nav_drawdown', is_confirmed: true },
@@ -166,15 +275,24 @@ export default function InvestmentAxisEditor({
     if (investTargets.length === 0) issues.push('หัวข้อ 3: สินทรัพย์ที่ลงทุน')
     if (excludeTargets.length === 0) issues.push('หัวข้อ 3: สินทรัพย์ที่ไม่ลงทุน')
     if (primaryMethods.length === 0) issues.push('หัวข้อ 4: วิธีการลงทุนหลัก')
+    if (secondaryMethods.length === 0) issues.push('หัวข้อ 4: วิธีการลงทุนเสริม')
     if (!horizon.trim()) issues.push('หัวข้อ 5: กรอบเวลา')
     if (allocationRows.length === 0) {
       issues.push('หัวข้อ 6: สัดส่วนจัดสรรสินทรัพย์')
     } else if (!isAllocation100) {
-      issues.push(`หัวข้อ 6: สัดส่วนรวมต้องได้ 100% (ปัจจุบัน ${totalAllocation.toFixed(2)}%)`)
+      issues.push(`หัวข้อ 6: สัดส่วนรวมต้องได้ 100% (ปัจจุบัน ${totalAllocation.toFixed(1)}%)`)
     }
+    if (!rebalanceFreq.trim()) issues.push('หัวข้อ 6: รอบความถี่ Rebalance')
     if (roleModels.length === 0) issues.push('หัวข้อ 7: นักลงทุนต้นแบบ')
-    if (nonActions.length < 3) {
-      issues.push(`หัวข้อ 8: สิ่งที่จะไม่ทำต้องมีอย่างน้อย 3 ข้อ (ปัจจุบัน ${nonActions.length}/3)`)
+    const uniqueNonActions = new Set(nonActions.map((n) => n.trim()).filter(Boolean))
+    if (uniqueNonActions.size < 3) {
+      if (nonActions.length >= 3 && uniqueNonActions.size < nonActions.length) {
+        issues.push(`หัวข้อ 8: สิ่งที่จะไม่ทำมีข้อความซ้ำกัน (ต้องไม่ซ้ำกันอย่างน้อย 3 ข้อ)`)
+      } else {
+        issues.push(
+          `หัวข้อ 8: สิ่งที่จะไม่ทำต้องมีอย่างน้อย 3 ข้อ (ปัจจุบันมี ${uniqueNonActions.size} ข้อ ขาดอีก ${3 - uniqueNonActions.size} ข้อ)`
+        )
+      }
     }
     return issues
   }, [
@@ -184,10 +302,12 @@ export default function InvestmentAxisEditor({
     investTargets,
     excludeTargets,
     primaryMethods,
+    secondaryMethods,
     horizon,
     allocationRows,
     isAllocation100,
     totalAllocation,
+    rebalanceFreq,
     roleModels,
     nonActions,
   ])
@@ -197,8 +317,8 @@ export default function InvestmentAxisEditor({
 
   const handleConfirm = async (proceedToBuckets: boolean) => {
     try {
-      await handleSaveDraft()
-      await onConfirmAxis(proceedToBuckets)
+      const updated = await handleSaveDraft()
+      await onConfirmAxis(proceedToBuckets, updated)
       setIsEditing(false)
     } catch {
       // Errors handled by parent hook
@@ -208,303 +328,785 @@ export default function InvestmentAxisEditor({
   return (
     <div className="max-w-4xl mx-auto space-y-6">
       {/* Header Banner */}
-      <div className="rounded-2xl border border-sky-100 bg-gradient-to-br from-sky-50/70 via-white to-blue-50/30 p-6 sm:p-8 shadow-sm">
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-sky-100 pb-4">
-          <div className="flex items-center gap-2.5">
-            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-tr from-sky-500 to-blue-600 text-white font-bold text-lg shadow-sm">
+      <div className="rounded-2xl border border-sky-100 bg-gradient-to-br from-sky-50/80 via-white to-indigo-50/30 p-6 sm:p-7 shadow-sm">
+        <div className="flex flex-wrap items-center justify-between gap-4 border-b border-sky-100/80 pb-5">
+          <div className="flex items-center gap-3">
+            <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-tr from-sky-500 to-indigo-600 text-white font-bold text-2xl shadow-md shadow-sky-500/20">
               🧭
             </span>
             <div>
-              <h1 className="text-xl sm:text-2xl font-extrabold text-zinc-900 tracking-tight">
-                แกนหลักการลงทุน (Investment Axis)
-              </h1>
-              <p className="text-xs text-zinc-500 mt-0.5">
-                พอร์ต: <span className="font-semibold text-zinc-700">{portfolioId}</span> | แปลงแก่นแท้และบริบทการเงินเป็นนโยบาย 8 หัวข้อที่มีตัวเลขรูปธรรมและสิ่งที่จะไม่ทำ
+              <div className="flex items-center gap-2">
+                <h1 className="text-xl sm:text-2xl font-black text-zinc-900 tracking-tight">
+                  แกนหลักการลงทุน (Investment Axis)
+                </h1>
+                {isConfirmed && !isEditing ? (
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-100 px-3 py-0.5 text-xs font-bold text-emerald-800 border border-emerald-300">
+                    <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+                    ใช้งานจริง
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-bold text-amber-800 border border-amber-300">
+                    ✏️ อยู่ในโหมดแก้ไข/ร่าง
+                  </span>
+                )}
+              </div>
+              <p className="text-xs text-zinc-600 mt-1">
+                พอร์ต: <span className="font-bold text-zinc-800">{portfolioId}</span> | นโยบาย 8 หัวข้อที่แปลงมาจากแก่นแท้และเชื่อมโยงกับเป้าหมายทางการเงินของคุณ
               </p>
             </div>
           </div>
 
           <div className="flex items-center gap-2">
-            {isConfirmed ? (
-              <>
-                <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-700 border border-emerald-200">
-                  <span className="h-2 w-2 rounded-full bg-emerald-500" />
-                  ยืนยันแล้ว
-                </span>
-                {!isEditing ? (
-                  <button
-                    type="button"
-                    onClick={() => setIsEditing(true)}
-                    className="rounded-xl border border-sky-300 bg-sky-50 px-3 py-1 text-xs font-bold text-sky-700 hover:bg-sky-100"
-                  >
-                    ✏️ ปรับแก้แกนหลัก
-                  </button>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setIsEditing(false)
-                      if (confirmedAxis) {
-                        setBasicPolicy(confirmedAxis.basic_policy || '')
-                        setMddPercent(
-                          parseRiskLimitValue(
-                            confirmedAxis.risk_limits?.mdd_max_annual || confirmedAxis.risk_limits?.mdd_percent,
-                            '15',
-                          ),
-                        )
-                        setMaxLossPerTrade(
-                          parseRiskLimitValue(
-                            confirmedAxis.risk_limits?.max_loss_per_trade ||
-                              confirmedAxis.risk_limits?.max_loss_per_trade_percent,
-                            '2',
-                          ),
-                        )
-                        setHorizon(confirmedAxis.investment_horizon || '')
-                        setRebalanceFreq(confirmedAxis.rebalance_frequency || 'รายปี')
-                        setNonActions(confirmedAxis.non_actions || [])
-                        setInvestTargets(confirmedAxis.invest_targets || [])
-                        setExcludeTargets(confirmedAxis.exclude_targets || [])
-                        setPrimaryMethods(confirmedAxis.primary_methods || [])
-                        setSecondaryMethods(confirmedAxis.secondary_methods || [])
-                        setRoleModels(confirmedAxis.role_models || [])
-                        setAllocationRows(confirmedAxis.allocation_rows || [])
-                      }
-                    }}
-                    className="rounded-xl border border-zinc-200 bg-white px-3 py-1 text-xs font-semibold text-zinc-600 hover:bg-zinc-50"
-                  >
-                    ยกเลิกการแก้ไข
-                  </button>
-                )}
-              </>
-            ) : (
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-50 px-3 py-1 text-xs font-bold text-amber-700 border border-amber-200">
-                <span className="h-2 w-2 rounded-full bg-amber-500 animate-pulse" />
-                ร่างนโยบายรอตรวจ
-              </span>
+            {isConfirmed && !isEditing ? (
+              <button
+                type="button"
+                onClick={() => setIsEditing(true)}
+                className="inline-flex items-center gap-1.5 rounded-xl border border-sky-300 bg-white px-4 py-2 text-xs font-bold text-sky-700 shadow-xs hover:bg-sky-50 active:scale-98 transition-all"
+              >
+                ✏️ แก้ไขแกนหลัก
+              </button>
+            ) : isEditing ? (
+              <button
+                type="button"
+                onClick={() => {
+                  setIsEditing(false)
+                  if (confirmedAxis) {
+                    setBasicPolicy(confirmedAxis.basic_policy || '')
+                    setMddPercent(parseRiskLimitValue(confirmedAxis.risk_limits?.mdd_max_annual, '15'))
+                    setMaxLossPerTrade(parseRiskLimitValue(confirmedAxis.risk_limits?.max_loss_per_trade, '2'))
+                    setHorizon(confirmedAxis.investment_horizon || '')
+                    setRebalanceFreq(confirmedAxis.rebalance_frequency || 'รายปี')
+                    setNonActions(confirmedAxis.non_actions || [])
+                    setInvestTargets(confirmedAxis.invest_targets || [])
+                    setExcludeTargets(confirmedAxis.exclude_targets || [])
+                    setPrimaryMethods(confirmedAxis.primary_methods || [])
+                    setSecondaryMethods(confirmedAxis.secondary_methods || [])
+                    setRoleModels(confirmedAxis.role_models || [])
+                    setAllocationRows(confirmedAxis.allocation_rows || [])
+                  }
+                }}
+                className="rounded-xl border border-zinc-300 bg-white px-3.5 py-2 text-xs font-bold text-zinc-700 hover:bg-zinc-50"
+              >
+                ยกเลิกการแก้ไข
+              </button>
+            ) : null}
+
+            {onRegenerateDraft && (!isConfirmed || isEditing) && (
+              <button
+                type="button"
+                onClick={onRegenerateDraft}
+                disabled={loading}
+                className="inline-flex items-center gap-1.5 rounded-xl border border-indigo-200 bg-indigo-50 px-3.5 py-2 text-xs font-bold text-indigo-700 hover:bg-indigo-100 active:scale-98 transition-all disabled:opacity-50"
+                title="สั่งให้ AI วิเคราะห์เป้าหมายล่าสุดและแก่นแท้เพื่อร่างแกนหลักชุดใหม่"
+              >
+                🔄 ร่างใหม่โดยอิงเป้าหมาย
+              </button>
             )}
           </div>
         </div>
 
-        {/* Completeness Alert */}
+        {/* Completeness Checklist Alert */}
         {(!isConfirmed || isEditing) && clientIssues.length > 0 && (
-          <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50/80 p-3.5 text-xs text-amber-900 space-y-1">
-            <span className="font-bold">⚠️ สิ่งที่ต้องระบุให้ครบก่อนยืนยันแกนหลัก:</span>
-            <ul className="list-disc list-inside">
+          <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50/90 p-4 text-xs text-amber-900 shadow-2xs space-y-1.5">
+            <div className="flex items-center gap-1.5 font-bold text-amber-950">
+              <span>⚠️</span>
+              <span>สิ่งที่ต้องระบุให้ครบถ้วนก่อนยืนยันแกนหลัก ({clientIssues.length} รายการ):</span>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1 pl-5 list-disc">
               {clientIssues.map((issue, idx) => (
-                <li key={idx}>{issue}</li>
+                <div key={idx} className="text-amber-800">
+                  • {issue}
+                </div>
               ))}
-            </ul>
+            </div>
           </div>
         )}
       </div>
 
-      {/* 8 Sections Editor */}
-      <div className="rounded-2xl border border-sky-100 bg-white p-6 sm:p-8 shadow-sm space-y-6">
-        {/* Section 1: Basic Policy */}
-        <div className="p-4 rounded-xl bg-sky-50/30 border border-sky-100 space-y-2">
-          <label htmlFor="basic-policy-input" className="block text-sm font-bold text-zinc-900">
-            📌 1. นโยบายพื้นฐาน (Basic Policy)
-          </label>
-          <p className="text-xs text-zinc-500">
-            แนวทางหลักและสิ่งที่ให้ความสำคัญในการลงทุน เชื่อมโยงกับแก่นแท้ของคุณ
-          </p>
-          <textarea
-            id="basic-policy-input"
-            rows={2}
-            disabled={isReadOnly}
-            value={basicPolicy}
-            onChange={(e) => setBasicPolicy(e.target.value)}
-            className="w-full rounded-lg border border-zinc-200 bg-white p-3 text-sm text-zinc-800 focus:outline-none focus:ring-2 focus:ring-sky-400 disabled:bg-zinc-50"
-          />
-        </div>
-
-        {/* Section 2: Risk Limits */}
-        <div className="p-4 rounded-xl bg-sky-50/30 border border-sky-100 space-y-3">
-          <h3 className="text-sm font-bold text-zinc-900">
-            🛡️ 2. ระดับความเสี่ยงที่ยอมรับได้ (Risk Limits)
-          </h3>
-          <p className="text-xs text-zinc-500">
-            MDD = การลดลงมากที่สุดจากจุดสูงสุดถึงจุดต่ำสุดในรอบปี | ขีดจำกัดต่อรายการ = การตัดขาดทุนสูงสุดต่อ 1 การซื้อขาย
-          </p>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
-            <div>
-              <label htmlFor="mdd-input" className="block text-xs font-semibold text-zinc-700 mb-1">
-                MDD สูงสุดต่อปี (%):
-              </label>
-              <div className="flex items-center gap-2">
-                <input
-                  id="mdd-input"
-                  type="text"
-                  disabled={isReadOnly}
-                  value={mddPercent}
-                  onChange={(e) => setMddPercent(e.target.value)}
-                  className="w-full rounded-lg border border-zinc-200 bg-white p-2.5 text-xs text-zinc-800 focus:outline-none focus:ring-2 focus:ring-sky-400 disabled:bg-zinc-50 font-bold"
-                />
-                <span className="text-xs font-bold text-zinc-500">%</span>
-              </div>
-            </div>
-
-            <div>
-              <label htmlFor="max-loss-input" className="block text-xs font-semibold text-zinc-700 mb-1">
-                ขีดจำกัดผลขาดทุนต่อ 1 การซื้อขาย (% ของพอร์ต):
-              </label>
-              <div className="flex items-center gap-2">
-                <input
-                  id="max-loss-input"
-                  type="text"
-                  disabled={isReadOnly}
-                  value={maxLossPerTrade}
-                  onChange={(e) => setMaxLossPerTrade(e.target.value)}
-                  className="w-full rounded-lg border border-zinc-200 bg-white p-2.5 text-xs text-zinc-800 focus:outline-none focus:ring-2 focus:ring-sky-400 disabled:bg-zinc-50 font-bold"
-                />
-                <span className="text-xs font-bold text-zinc-500">%</span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Section 3: Targets (Invest / Exclude) */}
-        <div className="p-4 rounded-xl bg-sky-50/30 border border-sky-100 space-y-3">
-          <h3 className="text-sm font-bold text-zinc-900">
-            🎯 3. เป้าหมาย: ลงทุน / ไม่ลงทุน (Invest & Exclude Targets)
-          </h3>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <span className="block text-xs font-semibold text-emerald-800 mb-1">
-                สินทรัพย์หรือประเภทที่เลือกลงทุน:
+      {/* Linked Portfolio Goals Banner */}
+      {portfolioGoals && portfolioGoals.length > 0 ? (
+        <div className="rounded-2xl border border-indigo-100 bg-gradient-to-r from-blue-50/70 via-indigo-50/40 to-sky-50/60 p-5 shadow-xs space-y-3">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="flex items-center gap-2.5">
+              <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-indigo-600 text-white text-sm font-bold shadow-xs">
+                🎯
               </span>
-              <ul className="text-xs text-zinc-700 space-y-1 list-disc list-inside">
-                {investTargets.map((t, idx) => (
-                  <li key={idx}>{t}</li>
-                ))}
-              </ul>
-            </div>
-            <div>
-              <span className="block text-xs font-semibold text-rose-800 mb-1">
-                สินทรัพย์หรือหมวดที่ยกเว้น (ไม่ลงทุน):
-              </span>
-              <ul className="text-xs text-zinc-700 space-y-1 list-disc list-inside">
-                {excludeTargets.map((t, idx) => (
-                  <li key={idx}>{t}</li>
-                ))}
-              </ul>
-            </div>
-          </div>
-        </div>
-
-        {/* Section 4 & 5: Methods & Horizon */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div className="p-4 rounded-xl bg-sky-50/30 border border-sky-100 space-y-2">
-            <h3 className="text-sm font-bold text-zinc-900">
-              ⚙️ 4. วิธีการลงทุน (Methods)
-            </h3>
-            <span className="block text-xs font-semibold text-zinc-600">วิธีการหลัก:</span>
-            <ul className="text-xs text-zinc-700 space-y-1 list-disc list-inside">
-              {primaryMethods.map((m, idx) => (
-                <li key={idx}>{m}</li>
-              ))}
-            </ul>
-            {secondaryMethods.length > 0 && (
-              <>
-                <span className="block text-xs font-semibold text-zinc-600 pt-1">วิธีการเสริม:</span>
-                <ul className="text-xs text-zinc-700 space-y-1 list-disc list-inside">
-                  {secondaryMethods.map((m, idx) => (
-                    <li key={idx}>{m}</li>
-                  ))}
-                </ul>
-              </>
-            )}
-          </div>
-
-          <div className="p-4 rounded-xl bg-sky-50/30 border border-sky-100 space-y-2">
-            <label htmlFor="horizon-input" className="block text-sm font-bold text-zinc-900">
-              ⏳ 5. กรอบเวลาการลงทุน (Horizon)
-            </label>
-            <input
-              id="horizon-input"
-              type="text"
-              disabled={isReadOnly}
-              value={horizon}
-              onChange={(e) => setHorizon(e.target.value)}
-              placeholder="เช่น 5-10 ปี หรือ ระยะยาวต่อเนื่อง"
-              className="w-full rounded-lg border border-zinc-200 bg-white p-2.5 text-xs text-zinc-800 focus:outline-none focus:ring-2 focus:ring-sky-400 disabled:bg-zinc-50"
-            />
-          </div>
-        </div>
-
-        {/* Section 6: Asset Allocation & Rebalance */}
-        <div className="p-4 rounded-xl bg-sky-50/30 border border-sky-100 space-y-3">
-          <div className="flex items-center justify-between">
-            <h3 className="text-sm font-bold text-zinc-900">
-              🥧 6. การจัดสรรสินทรัพย์และรอบ Rebalance
-            </h3>
-            <div className="flex items-center gap-1.5 text-xs">
-              <label htmlFor="rebalance-input" className="text-zinc-500 font-medium">รอบปรับสมดุล:</label>
-              <input
-                id="rebalance-input"
-                type="text"
-                disabled={isReadOnly}
-                value={rebalanceFreq}
-                onChange={(e) => setRebalanceFreq(e.target.value)}
-                className="w-24 rounded border border-zinc-200 px-2 py-0.5 text-xs font-bold text-zinc-800"
-              />
-            </div>
-          </div>
-          <p className="text-xs text-zinc-500">
-            สัดส่วนเป้าหมายรวม 100% ซึ่งจะใช้เป็นฐานสร้าง Purpose Buckets ในขั้นตอนถัดไป
-          </p>
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 pt-1">
-            {allocationRows.map((row, idx) => (
-              <div key={idx} className="p-2.5 rounded-lg bg-white border border-sky-200/70 text-xs">
-                <span className="font-semibold text-zinc-800 block truncate">{row.category || (row as any).category_name || (row as any).allocation_id}</span>
-                <span className="text-sm font-extrabold text-sky-700">{row.target_percent}%</span>
+              <div>
+                <h3 className="text-sm font-extrabold text-indigo-950">
+                  เป้าหมายทางการเงินที่เชื่อมโยง ({portfolioGoals.length} เป้าหมาย)
+                </h3>
+                <p className="text-xs text-indigo-800/80">
+                  นโยบาย 8 หัวข้อนี้ถูกคำนวณและออกแบบเพื่อขับเคลื่อนและปกป้องเป้าหมายเหล่านี้โดยตรง
+                </p>
               </div>
-            ))}
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+            {portfolioGoals.map((g, idx) => {
+              const goalTypeLabels: Record<string, string> = {
+                nav_target: 'มูลค่าพอร์ต',
+                cash_target: 'เงินสด / สำรอง',
+                passive_income_ytd: 'กระแสเงินสด',
+                bucket_target: 'Bucket',
+              }
+              const typeLabel = goalTypeLabels[g.goal_type] || g.goal_type || 'เป้าหมาย'
+
+              return (
+                <div
+                  key={g.name || idx}
+                  className="rounded-xl border border-indigo-100/80 bg-white/95 p-4 shadow-xs space-y-2 hover:border-indigo-300 transition-colors"
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <span className="font-bold text-xs text-zinc-900 line-clamp-1" title={g.name}>
+                      {g.name}
+                    </span>
+                    <span className="rounded-md bg-indigo-50 px-2 py-0.5 text-[10px] font-bold text-indigo-700 shrink-0 border border-indigo-100">
+                      {typeLabel}
+                    </span>
+                  </div>
+
+                  <div className="flex items-baseline justify-between text-xs">
+                    <span className="text-zinc-500 text-[11px]">เป้าหมาย:</span>
+                    <span className="font-extrabold text-indigo-700 text-sm">
+                      {Number(g.target_amount_thb || 0).toLocaleString('th-TH')} บาท
+                    </span>
+                  </div>
+
+                  <div className="flex items-center justify-between text-[11px] text-zinc-500">
+                    <span>กรอบเวลา:</span>
+                    <span className="font-semibold text-zinc-700">
+                      {g.deadline ? `${g.deadline} ${g.deadline_days_left ? `(เหลือ ${Math.round(g.deadline_days_left / 365)} ปี)` : ''}` : 'ไม่ระบุวัน'}
+                    </span>
+                  </div>
+
+                  {typeof g.progress_pct === 'number' && (
+                    <div className="space-y-1 pt-1 border-t border-zinc-100">
+                      <div className="flex justify-between text-[10px]">
+                        <span className="text-zinc-500">ความคืบหน้า</span>
+                        <span className="font-bold text-zinc-800">{g.progress_pct.toFixed(1)}%</span>
+                      </div>
+                      <div className="h-2 w-full rounded-full bg-zinc-100 overflow-hidden">
+                        <div
+                          className="h-full rounded-full bg-gradient-to-r from-indigo-500 to-sky-500 transition-all"
+                          style={{ width: `${Math.min(100, Math.max(0, g.progress_pct))}%` }}
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )
+            })}
           </div>
         </div>
-
-        {/* Section 7: Role Models */}
-        <div className="p-4 rounded-xl bg-sky-50/30 border border-sky-100 space-y-2">
-          <h3 className="text-sm font-bold text-zinc-900">
-            👤 7. นักลงทุนที่ใช้เป็นต้นแบบ (Role Models)
-          </h3>
-          <ul className="text-xs text-zinc-700 space-y-1 list-disc list-inside">
-            {roleModels.map((rm, idx) => (
-              <li key={idx}>{rm}</li>
-            ))}
-          </ul>
+      ) : (
+        <div className="rounded-xl border border-amber-200 bg-amber-50/60 p-4 text-xs text-amber-900 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <span>ℹ️</span>
+            <span>ยังไม่มีเป้าหมายพอร์ตที่ระบุไว้ในระบบ (สามารถตั้งค่าในหน้า Portfolio Goals เพื่อให้นโยบายผูกกับเป้าหมายจริงได้)</span>
+          </div>
         </div>
+      )}
 
-        {/* Section 8: Non-actions (>= 3) */}
-        <div className="p-4 rounded-xl bg-rose-50/30 border border-rose-100 space-y-3">
+      {/* 8 Sections Main Container */}
+      <div className="space-y-6">
+
+        {/* SECTION 1: Basic Policy */}
+        <div className="rounded-2xl border border-sky-100 bg-white p-6 shadow-sm space-y-3">
           <div className="flex items-center justify-between">
-            <h3 className="text-sm font-bold text-rose-900">
-              🚫 8. สิ่งที่จะไม่ทำเด็ดขาด (Non-Actions อย่างน้อย 3 ข้อ)
-            </h3>
-            <span
-              className={`text-xs font-bold px-2 py-0.5 rounded-full ${
-                nonActions.length >= 3 ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'
-              }`}
-            >
-              {nonActions.length}/3 ข้อ
+            <div className="flex items-center gap-2">
+              <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-sky-100 text-sky-700 text-sm font-bold">
+                1
+              </span>
+              <h2 className="text-base font-extrabold text-zinc-900">
+                นโยบายพื้นฐาน (Basic Policy)
+              </h2>
+            </div>
+            <span className="text-xs text-zinc-400 font-medium hidden sm:inline">
+              สูตร: [เป้าหมายตัวเลขจริง] + [กลยุทธ์ขับเคลื่อน] + [กรอบคุมความเสี่ยง]
             </span>
           </div>
+
           <p className="text-xs text-zinc-500">
-            วินัยและขอบเขตการตัดสินใจที่ช่วยป้องกันความผิดพลาดร้ายแรงในชีวิตจริง
+            เจตนารมณ์หลักและหลักปรัชญาที่ยึดถือในการจัดพอร์ต เพื่อให้คุณมีทิศทางที่ชัดเจนในทุกสภาวะตลาด
           </p>
 
-          <div className="space-y-2">
-            {nonActions.map((na, idx) => (
-              <div
-                key={idx}
-                className="flex items-center justify-between gap-2 p-2.5 rounded-lg bg-white border border-rose-200 text-xs text-zinc-800"
-              >
-                <span>• {na}</span>
-                {(!isConfirmed || isEditing) && (
+          {!isReadOnly ? (
+            <AutoResizeTextarea
+              id="basic-policy-input"
+              minRows={3}
+              value={basicPolicy}
+              onChange={(e) => setBasicPolicy(e.target.value)}
+              placeholder="ระบุนโยบายพื้นฐาน เช่น ลงทุนระยะยาว 10 ปีเพื่อบรรลุเป้าหมายพอร์ต 10 ล้านบาท..."
+              className="rounded-xl border border-zinc-300 bg-white p-3.5 text-sm text-zinc-800 leading-relaxed focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-200 shadow-2xs"
+            />
+          ) : (
+            <div className="rounded-xl border border-sky-100 bg-sky-50/40 p-4 sm:p-5">
+              <p className="text-sm sm:text-base font-semibold text-zinc-800 leading-relaxed">
+                “{basicPolicy}”
+              </p>
+            </div>
+          )}
+        </div>
+
+        {/* SECTION 2: Risk Limits */}
+        <div className="rounded-2xl border border-sky-100 bg-white p-6 shadow-sm space-y-4">
+          <div className="flex items-center gap-2">
+            <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-sky-100 text-sky-700 text-sm font-bold">
+              2
+            </span>
+            <h2 className="text-base font-extrabold text-zinc-900">
+              ระดับความเสี่ยงที่ยอมรับได้ (Risk Limits)
+            </h2>
+          </div>
+
+          <p className="text-xs text-zinc-500">
+            กรอบการคุมความเสี่ยงสูงสุด เพื่อให้คุณสามารถถือครองสินทรัพย์ได้อย่างสบายใจในวันที่ตลาดผันผวน
+          </p>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="rounded-xl border border-sky-100 bg-sky-50/30 p-4 space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-zinc-700">MDD สูงสุดต่อปี (Maximum Drawdown)</span>
+                <span className="text-[10px] font-semibold text-sky-700 bg-sky-100 px-2 py-0.5 rounded-full">
+                  พอร์ตโดยรวม
+                </span>
+              </div>
+              <p className="text-[11px] text-zinc-500 leading-tight">
+                ผลขาดทุนสูงสุดจากจุดพีคในรอบปีที่ยอมรับได้ โดยไม่ตื่นตระหนกขายทิ้ง
+              </p>
+              {!isReadOnly ? (
+                <div className="flex items-center gap-2 pt-1">
+                  <input
+                    id="mdd-input"
+                    type="number"
+                    step="0.5"
+                    value={mddPercent}
+                    onChange={(e) => setMddPercent(e.target.value)}
+                    className="w-32 rounded-lg border border-zinc-300 bg-white px-3 py-2 text-base font-black text-sky-700 focus:outline-none focus:ring-2 focus:ring-sky-300"
+                  />
+                  <span className="text-sm font-bold text-zinc-600">%</span>
+                </div>
+              ) : (
+                <div className="text-2xl font-black text-sky-700 pt-1">
+                  {mddPercent}%
+                </div>
+              )}
+            </div>
+
+            <div className="rounded-xl border border-sky-100 bg-sky-50/30 p-4 space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-zinc-700">ขีดจำกัดผลขาดทุนต่อ 1 รายการ</span>
+                <span className="text-[10px] font-semibold text-rose-700 bg-rose-100 px-2 py-0.5 rounded-full">
+                  Max Loss / Trade
+                </span>
+              </div>
+              <p className="text-[11px] text-zinc-500 leading-tight">
+                ความเสียหายสูงสุดที่ยอมรับได้ต่อการซื้อขาย 1 ไม้ เพื่อป้องกันพอร์ตเสียหายหนัก
+              </p>
+              {!isReadOnly ? (
+                <div className="flex items-center gap-2 pt-1">
+                  <input
+                    id="max-loss-input"
+                    type="number"
+                    step="0.1"
+                    value={maxLossPerTrade}
+                    onChange={(e) => setMaxLossPerTrade(e.target.value)}
+                    className="w-32 rounded-lg border border-zinc-300 bg-white px-3 py-2 text-base font-black text-rose-700 focus:outline-none focus:ring-2 focus:ring-rose-300"
+                  />
+                  <span className="text-sm font-bold text-zinc-600">% ของพอร์ต</span>
+                </div>
+              ) : (
+                <div className="text-2xl font-black text-rose-700 pt-1">
+                  {maxLossPerTrade}% <span className="text-xs font-semibold text-zinc-500">ของพอร์ต</span>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* SECTION 3: Invest & Exclude Targets */}
+        <div className="rounded-2xl border border-sky-100 bg-white p-6 shadow-sm space-y-4">
+          <div className="flex items-center gap-2">
+            <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-sky-100 text-sky-700 text-sm font-bold">
+              3
+            </span>
+            <h2 className="text-base font-extrabold text-zinc-900">
+              เป้าหมายการลงทุน (Invest & Exclude Targets)
+            </h2>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+            {/* Invest Targets */}
+            <div className="rounded-xl border border-emerald-200/80 bg-emerald-50/30 p-4 space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className="text-base">📈</span>
+                  <span className="text-sm font-bold text-emerald-900">สินทรัพย์ที่เลือกลงทุน (Invest Targets)</span>
+                </div>
+                <span className="text-xs font-bold text-emerald-800 bg-emerald-100 px-2 py-0.5 rounded-full">
+                  {investTargets.length} รายการ
+                </span>
+              </div>
+
+              <div className="space-y-2">
+                {investTargets.map((t, idx) => (
+                  <div
+                    key={idx}
+                    className="flex items-center justify-between gap-2 rounded-lg bg-white border border-emerald-200/70 p-2.5 text-xs text-zinc-800 shadow-2xs"
+                  >
+                    <span className="font-medium">• {t}</span>
+                    {!isReadOnly && (
+                      <button
+                        type="button"
+                        onClick={() => setInvestTargets(investTargets.filter((_, i) => i !== idx))}
+                        className="text-zinc-400 hover:text-rose-600 p-1"
+                        title="ลบรายการนี้"
+                      >
+                        ✕
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+
+              {!isReadOnly && (
+                <div className="flex gap-2 pt-1">
+                  <input
+                    type="text"
+                    value={newInvestTarget}
+                    onChange={(e) => setNewInvestTarget(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && handleAddInvestTarget()}
+                    placeholder="เพิ่มสินทรัพย์ที่ลงทุน..."
+                    className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-1.5 text-xs text-zinc-800 focus:outline-none focus:ring-2 focus:ring-emerald-300"
+                  />
                   <button
                     type="button"
-                    onClick={() => handleRemoveNonAction(idx)}
-                    className="text-rose-500 hover:text-rose-700 font-bold px-1.5"
+                    onClick={handleAddInvestTarget}
+                    className="rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-emerald-700 shrink-0"
+                  >
+                    + เพิ่ม
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* Exclude Targets */}
+            <div className="rounded-xl border border-rose-200/80 bg-rose-50/30 p-4 space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className="text-base">🚫</span>
+                  <span className="text-sm font-bold text-rose-900">สินทรัพย์ที่ไม่แตะต้อง (Exclude Targets)</span>
+                </div>
+                <span className="text-xs font-bold text-rose-800 bg-rose-100 px-2 py-0.5 rounded-full">
+                  {excludeTargets.length} รายการ
+                </span>
+              </div>
+
+              <div className="space-y-2">
+                {excludeTargets.map((t, idx) => (
+                  <div
+                    key={idx}
+                    className="flex items-center justify-between gap-2 rounded-lg bg-white border border-rose-200/70 p-2.5 text-xs text-zinc-800 shadow-2xs"
+                  >
+                    <span className="font-medium">• {t}</span>
+                    {!isReadOnly && (
+                      <button
+                        type="button"
+                        onClick={() => setExcludeTargets(excludeTargets.filter((_, i) => i !== idx))}
+                        className="text-zinc-400 hover:text-rose-600 p-1"
+                        title="ลบรายการนี้"
+                      >
+                        ✕
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+
+              {!isReadOnly && (
+                <div className="flex gap-2 pt-1">
+                  <input
+                    type="text"
+                    value={newExcludeTarget}
+                    onChange={(e) => setNewExcludeTarget(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && handleAddExcludeTarget()}
+                    placeholder="เพิ่มสินทรัพย์ที่ยกเว้น..."
+                    className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-1.5 text-xs text-zinc-800 focus:outline-none focus:ring-2 focus:ring-rose-300"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleAddExcludeTarget}
+                    className="rounded-lg bg-rose-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-rose-700 shrink-0"
+                  >
+                    + เพิ่ม
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* SECTION 4 & 5: Methods & Horizon */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+          {/* Section 4: Methods */}
+          <div className="rounded-2xl border border-sky-100 bg-white p-6 shadow-sm space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-sky-100 text-sky-700 text-sm font-bold">
+                  4
+                </span>
+                <h2 className="text-base font-extrabold text-zinc-900">
+                  วิธีการลงทุน (Methods)
+                </h2>
+              </div>
+              <span className="text-xs font-bold text-sky-800 bg-sky-100 px-2 py-0.5 rounded-full">
+                {primaryMethods.length + secondaryMethods.length} กลยุทธ์
+              </span>
+            </div>
+
+            {/* Primary Methods */}
+            <div className="space-y-2">
+              <span className="text-xs font-bold text-zinc-700 block">🔹 วิธีการหลัก (Primary Methods):</span>
+              <div className="space-y-1.5">
+                {primaryMethods.map((m, idx) => (
+                  <div
+                    key={idx}
+                    className="flex items-center justify-between gap-2 rounded-lg bg-sky-50/50 border border-sky-100 p-2.5 text-xs text-zinc-800"
+                  >
+                    <span>• {m}</span>
+                    {!isReadOnly && (
+                      <button
+                        type="button"
+                        onClick={() => setPrimaryMethods(primaryMethods.filter((_, i) => i !== idx))}
+                        className="text-zinc-400 hover:text-rose-600 p-1"
+                      >
+                        ✕
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+
+              {!isReadOnly && (
+                <div className="flex gap-2 pt-1">
+                  <input
+                    type="text"
+                    value={newPrimaryMethod}
+                    onChange={(e) => setNewPrimaryMethod(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && handleAddPrimaryMethod()}
+                    placeholder="เพิ่มวิธีการหลัก..."
+                    className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-1.5 text-xs text-zinc-800 focus:outline-none focus:ring-2 focus:ring-sky-300"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleAddPrimaryMethod}
+                    className="rounded-lg bg-sky-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-sky-700 shrink-0"
+                  >
+                    + เพิ่ม
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* Secondary Methods */}
+            <div className="space-y-2 pt-2 border-t border-zinc-100">
+              <span className="text-xs font-bold text-zinc-700 block">🔸 วิธีการเสริม (Secondary Methods):</span>
+              <div className="space-y-1.5">
+                {secondaryMethods.map((m, idx) => (
+                  <div
+                    key={idx}
+                    className="flex items-center justify-between gap-2 rounded-lg bg-zinc-50 border border-zinc-200 p-2.5 text-xs text-zinc-800"
+                  >
+                    <span>• {m}</span>
+                    {!isReadOnly && (
+                      <button
+                        type="button"
+                        onClick={() => setSecondaryMethods(secondaryMethods.filter((_, i) => i !== idx))}
+                        className="text-zinc-400 hover:text-rose-600 p-1"
+                      >
+                        ✕
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+
+              {!isReadOnly && (
+                <div className="flex gap-2 pt-1">
+                  <input
+                    type="text"
+                    value={newSecondaryMethod}
+                    onChange={(e) => setNewSecondaryMethod(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && handleAddSecondaryMethod()}
+                    placeholder="เพิ่มวิธีการเสริม..."
+                    className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-1.5 text-xs text-zinc-800 focus:outline-none focus:ring-2 focus:ring-sky-300"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleAddSecondaryMethod}
+                    className="rounded-lg bg-zinc-700 px-3 py-1.5 text-xs font-bold text-white hover:bg-zinc-800 shrink-0"
+                  >
+                    + เพิ่ม
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Section 5: Horizon */}
+          <div className="rounded-2xl border border-sky-100 bg-white p-6 shadow-sm space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-sky-100 text-sky-700 text-sm font-bold">
+                  5
+                </span>
+                <h2 className="text-base font-extrabold text-zinc-900">
+                  กรอบเวลาการลงทุน (Horizon)
+                </h2>
+              </div>
+              {horizon ? (
+                <span className="text-xs font-bold text-sky-800 bg-sky-100 px-2 py-0.5 rounded-full">
+                  ✓ กำหนดแล้ว
+                </span>
+              ) : null}
+            </div>
+
+            <p className="text-xs text-zinc-500">
+              ระยะเวลาที่ตั้งใจจะถือครองและสะสมสินทรัพย์เพื่อรองรับเป้าหมายชีวิต
+            </p>
+
+            {!isReadOnly ? (
+              <div className="space-y-2">
+                <AutoResizeTextarea
+                  id="horizon-input"
+                  minRows={2}
+                  value={horizon}
+                  onChange={(e) => setHorizon(e.target.value)}
+                  placeholder="เช่น ระยะยาว 10 ปี (ถึงปี 2036 ตามเป้าหมายพอร์ต 10 ล้าน)"
+                  className="rounded-xl border border-zinc-300 bg-white p-3.5 text-sm text-zinc-800 focus:outline-none focus:ring-2 focus:ring-sky-300 shadow-2xs leading-relaxed"
+                />
+                <div className="flex flex-wrap gap-1.5 pt-1">
+                  {['ระยะยาว 10 ปีขึ้นไป', 'ระยะกลาง-ยาว 5-7 ปี', 'ระยะสั้น-กลาง 1-3 ปี'].map((preset) => (
+                    <button
+                      key={preset}
+                      type="button"
+                      onClick={() => setHorizon(preset)}
+                      className="rounded-lg bg-zinc-100 px-2.5 py-1 text-[11px] font-semibold text-zinc-700 hover:bg-zinc-200"
+                    >
+                      {preset}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <div className="rounded-xl border border-sky-100 bg-sky-50/40 p-4 flex items-center gap-3">
+                <span className="text-2xl">⏳</span>
+                <div>
+                  <span className="text-xs text-zinc-500 font-semibold block">กรอบเวลาที่กำหนด:</span>
+                  <span className="text-sm font-bold text-zinc-900">{horizon || 'ไม่ได้ระบุ'}</span>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* SECTION 6: Asset Allocation & Rebalance */}
+        <div className="rounded-2xl border border-sky-100 bg-white p-6 shadow-sm space-y-4">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="flex items-center gap-2">
+              <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-sky-100 text-sky-700 text-sm font-bold">
+                6
+              </span>
+              <h2 className="text-base font-extrabold text-zinc-900">
+                การจัดสรรสินทรัพย์และรอบ Rebalance (Asset Allocation)
+              </h2>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-zinc-500 font-semibold">ผลรวมสัดส่วน:</span>
+              <span
+                className={`rounded-full px-3 py-0.5 text-xs font-black border ${
+                  isAllocation100
+                    ? 'bg-emerald-100 text-emerald-800 border-emerald-300'
+                    : 'bg-rose-100 text-rose-800 border-rose-300 animate-pulse'
+                }`}
+              >
+                {totalAllocation.toFixed(1)}% / 100%
+              </span>
+            </div>
+          </div>
+
+          <p className="text-xs text-zinc-500">
+            สัดส่วนการแบ่งสรรเงินลงทุนตามหมวดสินทรัพย์ และระบุเป้าหมายที่แต่ละหมวดรองรับ เพื่อนำไปแปลงเป็น Purpose Buckets ต่อไป
+          </p>
+
+          {/* Visual Stacked Bar Chart */}
+          <div className="h-4 w-full rounded-full bg-zinc-100 overflow-hidden flex shadow-inner">
+            {allocationRows.map((row, idx) => {
+              const pct = Math.max(0, parseFloat(row.target_percent) || 0)
+              if (pct <= 0) return null
+              const colorClass = ALLOCATION_BAR_COLORS[idx % ALLOCATION_BAR_COLORS.length]
+              return (
+                <div
+                  key={idx}
+                  className={`h-full ${colorClass} transition-all`}
+                  style={{ width: `${pct}%` }}
+                  title={`${row.category || (row as any).category_name}: ${pct}%`}
+                />
+              )
+            })}
+          </div>
+
+          {/* Allocation Rows Cards/Editors */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 pt-1">
+            {allocationRows.map((row, idx) => {
+              const badgeClass = ALLOCATION_PALETTE[idx % ALLOCATION_PALETTE.length]
+              return (
+                <div
+                  key={row.allocation_id || idx}
+                  className="rounded-xl border border-zinc-200/90 bg-white p-4 shadow-2xs space-y-2 relative group"
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    {!isReadOnly ? (
+                      <input
+                        type="text"
+                        value={row.category || (row as any).category_name || ''}
+                        onChange={(e) => handleUpdateAllocationRow(idx, 'category', e.target.value)}
+                        placeholder="ชื่อหมวดสินทรัพย์"
+                        className="text-xs font-bold text-zinc-800 rounded border border-zinc-200 px-2 py-1 w-full focus:outline-none focus:ring-1 focus:ring-sky-400"
+                      />
+                    ) : (
+                      <span className="font-extrabold text-xs text-zinc-900 truncate">
+                        {row.category || (row as any).category_name}
+                      </span>
+                    )}
+
+                    {!isReadOnly ? (
+                      <div className="flex items-center gap-1 shrink-0">
+                        <input
+                          type="number"
+                          step="1"
+                          value={row.target_percent}
+                          onChange={(e) => handleUpdateAllocationRow(idx, 'target_percent', e.target.value)}
+                          className="w-16 rounded border border-zinc-200 px-2 py-1 text-xs font-black text-sky-700 text-right focus:outline-none focus:ring-1 focus:ring-sky-400"
+                        />
+                        <span className="text-xs font-bold text-zinc-500">%</span>
+                      </div>
+                    ) : (
+                      <span className={`px-2 py-0.5 rounded-md text-xs font-black shrink-0 ${badgeClass}`}>
+                        {row.target_percent}%
+                      </span>
+                    )}
+                  </div>
+
+                  {!isReadOnly ? (
+                    <AutoResizeTextarea
+                      minRows={2}
+                      value={row.role_description || ''}
+                      onChange={(e) => handleUpdateAllocationRow(idx, 'role_description', e.target.value)}
+                      placeholder="บทบาทในพอร์ต เช่น รองรับเป้าหมายพอร์ต 10 ล้าน..."
+                      className="rounded border border-zinc-200 p-2 text-[11px] text-zinc-700 focus:outline-none focus:ring-1 focus:ring-sky-400"
+                    />
+                  ) : (
+                    <p className="text-[11px] text-zinc-600 leading-tight">
+                      {row.role_description || 'ไม่มีคำอธิบายบทบาท'}
+                    </p>
+                  )}
+
+                  {!isReadOnly && (
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveAllocationRow(idx)}
+                      className="absolute top-2 right-2 text-zinc-300 hover:text-rose-600 text-xs p-1"
+                      title="ลบหมวดนี้"
+                    >
+                      ✕
+                    </button>
+                  )}
+                </div>
+              )
+            })}
+          </div>
+
+          {!isReadOnly && (
+            <button
+              type="button"
+              onClick={handleAddAllocationRow}
+              className="rounded-xl border border-dashed border-sky-300 bg-sky-50/50 py-2.5 px-4 text-xs font-bold text-sky-700 w-full hover:bg-sky-100 transition-colors"
+            >
+              + เพิ่มหมวดสินทรัพย์
+            </button>
+          )}
+
+          {/* Rebalance Frequency Setting */}
+          <div className="pt-3 border-t border-zinc-100 flex flex-wrap items-center justify-between gap-3">
+            <div className="flex items-center gap-2 flex-1 min-w-[280px]">
+              <span className="text-xs font-bold text-zinc-700 shrink-0">รอบและความถี่ Rebalance:</span>
+              {!isReadOnly ? (
+                <input
+                  type="text"
+                  value={rebalanceFreq}
+                  onChange={(e) => setRebalanceFreq(e.target.value)}
+                  placeholder="เช่น ทุก 6 เดือน หรือเบี่ยงเบนเกิน 5%"
+                  className="rounded-lg border border-zinc-300 px-3 py-1.5 text-xs text-zinc-800 font-semibold focus:outline-none focus:ring-1 focus:ring-sky-400 flex-1 min-w-[200px]"
+                />
+              ) : (
+                <span className="rounded-lg bg-sky-50 px-3 py-1 text-xs font-bold text-sky-800 border border-sky-100">
+                  {rebalanceFreq}
+                </span>
+              )}
+            </div>
+
+            {!isReadOnly && (
+              <div className="flex items-center gap-1 text-[11px]">
+                <span className="text-zinc-400">เลือกด่วน:</span>
+                {['ทุก 6 เดือน หรือเบี่ยงเบน ±5%', 'รายปี', 'ทุกไตรมาส'].map((preset) => (
+                  <button
+                    key={preset}
+                    type="button"
+                    onClick={() => setRebalanceFreq(preset)}
+                    className="rounded bg-zinc-100 px-2 py-0.5 font-medium text-zinc-600 hover:bg-zinc-200"
+                  >
+                    {preset}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* SECTION 7: Role Models */}
+        <div className="rounded-2xl border border-sky-100 bg-white p-6 shadow-sm space-y-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-sky-100 text-sky-700 text-sm font-bold">
+                7
+              </span>
+              <h2 className="text-base font-extrabold text-zinc-900">
+                นักลงทุนต้นแบบและหลักการที่ยึดถือ (Role Models)
+              </h2>
+            </div>
+            <span className="text-xs font-bold text-sky-800 bg-sky-100 px-2.5 py-0.5 rounded-full">
+              {roleModels.length} ท่าน/แนวทาง
+            </span>
+          </div>
+
+          <div className="space-y-2">
+            {roleModels.map((rm, idx) => (
+              <div
+                key={idx}
+                className="flex items-center justify-between gap-2 rounded-xl bg-gradient-to-r from-zinc-50 to-sky-50/30 border border-zinc-200 p-3 text-xs text-zinc-800 font-medium"
+              >
+                <div className="flex items-center gap-2">
+                  <span className="text-base">👤</span>
+                  <span>{rm}</span>
+                </div>
+                {!isReadOnly && (
+                  <button
+                    type="button"
+                    onClick={() => setRoleModels(roleModels.filter((_, i) => i !== idx))}
+                    className="text-zinc-400 hover:text-rose-600 p-1"
                   >
                     ✕
                   </button>
@@ -513,25 +1115,25 @@ export default function InvestmentAxisEditor({
             ))}
           </div>
 
-          {(!isConfirmed || isEditing) && (
-            <div className="flex items-center gap-2 pt-1">
-              <input
-                type="text"
-                value={newNonAction}
-                onChange={(e) => setNewNonAction(e.target.value)}
+          {!isReadOnly && (
+            <div className="flex gap-2 pt-1">
+              <AutoResizeTextarea
+                minRows={1}
+                value={newRoleModel}
+                onChange={(e) => setNewRoleModel(e.target.value)}
                 onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
+                  if (e.key === 'Enter' && !e.shiftKey) {
                     e.preventDefault()
-                    handleAddNonAction()
+                    handleAddRoleModel()
                   }
                 }}
-                placeholder="พิมพ์สิ่งที่จะไม่ทำ เช่น ไม่กู้เงินมาเทรด, ไม่ซื้อตามข่าวลือ..."
-                className="flex-1 rounded-lg border border-zinc-200 bg-white p-2 text-xs text-zinc-800 focus:outline-none focus:ring-2 focus:ring-rose-400"
+                placeholder="เพิ่มนักลงทุนต้นแบบ เช่น John Bogle (การลงทุนต้นทุนต่ำผ่านดัชนีระยะยาว)..."
+                className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-xs text-zinc-800 focus:outline-none focus:ring-2 focus:ring-sky-300"
               />
               <button
                 type="button"
-                onClick={handleAddNonAction}
-                className="rounded-lg bg-rose-600 px-3.5 py-2 text-xs font-bold text-white hover:bg-rose-700"
+                onClick={handleAddRoleModel}
+                className="rounded-lg bg-sky-600 px-4 py-2 text-xs font-bold text-white hover:bg-sky-700 shrink-0"
               >
                 + เพิ่ม
               </button>
@@ -539,67 +1141,183 @@ export default function InvestmentAxisEditor({
           )}
         </div>
 
-        {/* Action Bar */}
-        <div className="pt-6 border-t border-sky-100 flex flex-col sm:flex-row items-center justify-between gap-4">
-          <div className="text-xs text-zinc-500">
-            {statusText ? (
-              <span className="flex items-center gap-2 text-sky-700 font-semibold animate-pulse">
-                <span className="h-2 w-2 rounded-full bg-sky-500" />
-                {statusText}
+        {/* SECTION 8: Non-Actions (>= 3) */}
+        <div className="rounded-2xl border border-rose-200 bg-white p-6 shadow-sm space-y-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-rose-100 text-rose-700 text-sm font-bold">
+                8
               </span>
-            ) : isConfirmed && !isEditing ? (
-              <span className="text-emerald-700 font-semibold">
-                ✓ ยืนยันแกนหลักเรียบร้อยแล้ว แผนพอร์ตยังไม่เปลี่ยนจนกว่าจะกดสร้างและใช้ Buckets
-              </span>
-            ) : clientIssues.length > 0 ? (
-              <span className="text-amber-700 font-semibold">
-                ⚠️ ยังไม่ครบ: {clientIssues.join(', ')}
-              </span>
-            ) : (
-              <span className="text-emerald-700 font-semibold">
-                ✓ ตรวจสอบครบ 8 หัวข้อแล้ว พร้อมยืนยันแกนหลักการลงทุน
-              </span>
-            )}
+              <h2 className="text-base font-extrabold text-rose-950">
+                สิ่งที่จะไม่ทำเด็ดขาด (Non-Actions อย่างน้อย 3 ข้อ)
+              </h2>
+            </div>
+            <span
+              className={`text-xs font-bold px-3 py-1 rounded-full ${
+                nonActions.length >= 3 ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800 animate-pulse'
+              }`}
+            >
+              {nonActions.length >= 3
+                ? `✓ ${nonActions.length} ข้อ (ครบตามเกณฑ์)`
+                : `${nonActions.length}/3 ข้อ (ขาดอีก ${3 - nonActions.length} ข้อ)`}
+            </span>
           </div>
 
-          <div className="flex items-center gap-3 w-full sm:w-auto">
-            {(!isConfirmed || isEditing) && (
-              <>
-                <button
-                  type="button"
-                  onClick={handleSaveDraft}
-                  disabled={loading}
-                  className="rounded-xl border border-sky-300 bg-sky-50 px-4 py-2.5 text-xs sm:text-sm font-bold text-sky-700 hover:bg-sky-100 active:scale-98 transition-all"
-                >
-                  💾 บันทึกร่างแกนหลัก
-                </button>
+          <p className="text-xs text-zinc-500">
+            กฎเหล็กเชิงพฤติกรรมเพื่อป้องกันความผิดพลาดและปกป้องเงินทุน ไม่ให้ทำลายเป้าหมายทางการเงินของคุณ
+          </p>
 
-                <button
-                  type="button"
-                  onClick={() => handleConfirm(false)}
-                  disabled={!canConfirm}
-                  className="rounded-xl border border-emerald-300 bg-emerald-50 px-5 py-2.5 text-xs sm:text-sm font-bold text-emerald-800 hover:bg-emerald-100 active:scale-98 transition-all disabled:opacity-50"
-                >
-                  ✓ {isConfirmed ? 'ยืนยันการแก้ไขแกนหลัก' : 'ยืนยันแกนหลักของพอร์ตนี้'}
-                </button>
-              </>
-            )}
+          <div className="space-y-2.5">
+            {nonActions.map((na, idx) => (
+              <div
+                key={idx}
+                className="flex items-start justify-between gap-3 p-3.5 rounded-xl bg-rose-50/50 border border-rose-200 text-xs sm:text-sm text-rose-950 font-medium shadow-2xs"
+              >
+                {editingNonActionIdx === idx ? (
+                  <div className="flex-1 space-y-2">
+                    <AutoResizeTextarea
+                      minRows={2}
+                      value={editingNonActionText}
+                      onChange={(e) => setEditingNonActionText(e.target.value)}
+                      className="rounded-lg border border-rose-300 bg-white p-2.5 text-xs sm:text-sm text-zinc-900 focus:outline-none focus:ring-2 focus:ring-rose-400"
+                    />
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => handleSaveEditNonAction(idx)}
+                        className="rounded-lg bg-rose-600 px-3 py-1 text-xs font-bold text-white hover:bg-rose-700"
+                      >
+                        ✓ บันทึก
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleCancelEditNonAction}
+                        className="rounded-lg border border-zinc-200 px-3 py-1 text-xs font-semibold text-zinc-600 hover:bg-zinc-50"
+                      >
+                        ยกเลิก
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    <div className="flex items-start gap-2.5 flex-1 min-w-0">
+                      <span className="text-rose-600 font-bold shrink-0 mt-0.5">🚫</span>
+                      <span className="leading-relaxed break-words">{na}</span>
+                    </div>
+                    {!isReadOnly && (
+                      <div className="flex items-center gap-1 shrink-0">
+                        <button
+                          type="button"
+                          onClick={() => handleStartEditNonAction(idx, na)}
+                          className="text-zinc-400 hover:text-sky-600 p-1"
+                          title="แก้ไขข้อนี้"
+                        >
+                          ✏️
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveNonAction(idx)}
+                          className="text-zinc-400 hover:text-rose-600 p-1"
+                          title="ลบข้อนี้"
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
+            ))}
+          </div>
 
+          {!isReadOnly && (
+            <div className="flex items-start gap-2 pt-2">
+              <AutoResizeTextarea
+                id="non-action-input"
+                minRows={2}
+                value={newNonAction}
+                onChange={(e) => setNewNonAction(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault()
+                    handleAddNonAction()
+                  }
+                }}
+                placeholder="เพิ่มกฎเหล็กข้อห้าม เช่น ห้ามดึงเงินจากเป้าหมายสำรองฉุกเฉินไปเสี่ยงเด็ดขาด..."
+                className="rounded-xl border border-zinc-200 bg-white p-3 text-xs text-zinc-800 focus:outline-none focus:ring-2 focus:ring-rose-300 leading-relaxed shadow-2xs"
+              />
+              <button
+                type="button"
+                onClick={handleAddNonAction}
+                className="rounded-xl bg-rose-600 px-5 py-3 text-xs font-bold text-white hover:bg-rose-700 shrink-0 shadow-2xs"
+              >
+                + เพิ่มกฎเหล็ก
+              </button>
+            </div>
+          )}
+        </div>
+
+      </div>
+
+      {/* Action Footer Buttons */}
+      <div className="rounded-2xl border border-sky-100 bg-white p-6 shadow-sm flex flex-wrap items-center justify-between gap-4">
+        <div>
+          {statusText ? (
+            <span className="text-xs font-semibold text-sky-700 animate-pulse">
+              ⏳ {statusText}
+            </span>
+          ) : (
+            <span className="text-xs text-zinc-500">
+              {isConfirmed && !isEditing
+                ? 'แกนหลักการลงทุนนี้ได้รับการยืนยันแล้ว สามารถดำเนินการจัด Purpose Buckets ได้'
+                : 'เมื่อตรวจทานทั้ง 8 หัวข้อครบถ้วนแล้ว ให้กดยืนยันแกนหลักการลงทุน'}
+            </span>
+          )}
+        </div>
+
+        <div className="flex flex-wrap items-center gap-3">
+          {(!isConfirmed || isEditing) && (
             <button
               type="button"
-              onClick={() => {
-                if (isConfirmed && !isEditing) {
-                  onProceedToBuckets()
-                } else {
-                  handleConfirm(true)
-                }
-              }}
-              disabled={loading || ((!isConfirmed || isEditing) && !canConfirm)}
-              className="rounded-xl bg-gradient-to-r from-sky-600 to-blue-600 px-6 py-2.5 text-xs sm:text-sm font-bold text-white shadow-md shadow-sky-500/20 hover:from-sky-700 hover:to-blue-700 active:scale-98 transition-all flex items-center gap-1.5 disabled:opacity-50"
+              onClick={handleSaveDraft}
+              disabled={loading}
+              className="rounded-xl border border-sky-300 bg-sky-50 px-5 py-2.5 text-xs font-bold text-sky-700 hover:bg-sky-100 active:scale-98 transition-all disabled:opacity-50"
             >
-              <span>สร้าง Buckets จากแกนหลัก →</span>
+              💾 บันทึกแบบร่าง
             </button>
-          </div>
+          )}
+
+          {(!isConfirmed || isEditing) && (
+            <button
+              type="button"
+              onClick={() => handleConfirm(false)}
+              disabled={!canConfirm}
+              className="rounded-xl border border-emerald-300 bg-emerald-50 px-5 py-2.5 text-xs font-bold text-emerald-800 shadow-sm hover:bg-emerald-100 active:scale-98 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              ✓ ยืนยันแกนหลักการลงทุน
+            </button>
+          )}
+
+          {(!isConfirmed || isEditing) && (
+            <button
+              type="button"
+              onClick={() => handleConfirm(true)}
+              disabled={!canConfirm}
+              className="rounded-xl bg-emerald-600 px-6 py-2.5 text-xs font-bold text-white shadow-sm hover:bg-emerald-700 active:scale-98 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              🚀 ยืนยันและไปขั้นจัด Buckets ทันที →
+            </button>
+          )}
+
+          {isConfirmed && !isEditing && (
+            <button
+              type="button"
+              onClick={onProceedToBuckets}
+              className="rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 px-6 py-2.5 text-xs font-bold text-white shadow-md shadow-purple-500/20 hover:from-purple-700 hover:to-indigo-700 active:scale-98 transition-all"
+            >
+              🚀 ไปขั้นจัด Purpose Buckets →
+            </button>
+          )}
         </div>
       </div>
     </div>

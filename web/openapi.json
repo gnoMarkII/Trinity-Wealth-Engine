@@ -491,6 +491,96 @@
         }
       }
     },
+    "/api/portfolio/actual/holdings/ai-recommend-buckets": {
+      "post": {
+        "summary": "Recommend Holding Buckets Endpoint",
+        "operationId": "recommend_holding_buckets_endpoint_api_portfolio_actual_holdings_ai_recommend_buckets_post",
+        "parameters": [
+          {
+            "name": "portfolio_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "default",
+              "title": "Portfolio Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HoldingsBucketRecommendationResponseDTO"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/portfolio/actual/holdings/batch-bucket-map": {
+      "put": {
+        "summary": "Batch Reassign Holding Buckets Endpoint",
+        "operationId": "batch_reassign_holding_buckets_endpoint_api_portfolio_actual_holdings_batch_bucket_map_put",
+        "parameters": [
+          {
+            "name": "portfolio_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "default",
+              "title": "Portfolio Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BatchReassignHoldingsRequestDTO"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ActualPortfolioStateDTO"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/portfolio/actual/holdings/batch-delete": {
       "post": {
         "summary": "Batch Remove Holdings",
@@ -3473,6 +3563,233 @@
         }
       }
     },
+    "/api/portfolio/arr-gold/emails": {
+      "get": {
+        "tags": [
+          "ARR Gold Sync"
+        ],
+        "summary": "Search Arr Gold Emails Endpoint",
+        "operationId": "search_arr_gold_emails_endpoint_api_portfolio_arr_gold_emails_get",
+        "parameters": [
+          {
+            "name": "query",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "Query"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 50,
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ArrGoldEmailListResponseDTO"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/portfolio/arr-gold/scan/email": {
+      "post": {
+        "tags": [
+          "ARR Gold Sync"
+        ],
+        "summary": "Scan Email Endpoint",
+        "operationId": "scan_email_endpoint_api_portfolio_arr_gold_scan_email_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ArrGoldScanEmailRequestDTO"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ArrGoldScanResponseDTO"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/portfolio/arr-gold/staged/{scan_id}": {
+      "get": {
+        "tags": [
+          "ARR Gold Sync"
+        ],
+        "summary": "Get Staged Endpoint",
+        "operationId": "get_staged_endpoint_api_portfolio_arr_gold_staged__scan_id__get",
+        "parameters": [
+          {
+            "name": "scan_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Scan Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ArrGoldScanResponseDTO"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/portfolio/arr-gold/commit/{scan_id}": {
+      "post": {
+        "tags": [
+          "ARR Gold Sync"
+        ],
+        "summary": "Commit Staged Endpoint",
+        "operationId": "commit_staged_endpoint_api_portfolio_arr_gold_commit__scan_id__post",
+        "parameters": [
+          {
+            "name": "scan_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Scan Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ArrGoldCommitRequestDTO"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ArrGoldCommitResponseDTO"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/portfolio/arr-gold/scan/batch-stream": {
+      "post": {
+        "tags": [
+          "ARR Gold Sync"
+        ],
+        "summary": "Scan Batch Stream Endpoint",
+        "operationId": "scan_batch_stream_endpoint_api_portfolio_arr_gold_scan_batch_stream_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ArrGoldBatchScanRequestDTO"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/agents/dispatch": {
       "post": {
         "summary": "Dispatch Job",
@@ -6199,7 +6516,7 @@
           "Investor Essence & Axis"
         ],
         "summary": "Start Session",
-        "description": "Starts a new adaptive interview session and generates Question 1.",
+        "description": "Starts a new adaptive interview session, clears downstream planning data, and generates Question 1.",
         "operationId": "start_session_api_investor_essence_sessions_post",
         "requestBody": {
           "content": {
@@ -6218,6 +6535,58 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/SessionResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/investor/reset-principles": {
+      "post": {
+        "tags": [
+          "Investor Essence & Axis"
+        ],
+        "summary": "Reset Principles",
+        "description": "Explicitly resets and clears downstream Investment Axis and Purpose Bucket plans.",
+        "operationId": "reset_principles_api_investor_reset_principles_post",
+        "parameters": [
+          {
+            "name": "portfolio_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Portfolio Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Reset Principles Api Investor Reset Principles Post"
                 }
               }
             }
@@ -6547,6 +6916,59 @@
         }
       }
     },
+    "/api/investor/essence/sessions/{session_id}/clarification": {
+      "post": {
+        "tags": [
+          "Investor Essence & Axis"
+        ],
+        "summary": "Request Clarification",
+        "description": "Generates a clarification question on an unresolved topic.",
+        "operationId": "request_clarification_api_investor_essence_sessions__session_id__clarification_post",
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Session Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ClarificationRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GeneratedQuestionSchema"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/investor/essence/sessions/{session_id}/summary/claims/{claim_id}": {
       "put": {
         "tags": [
@@ -6780,6 +7202,49 @@
         }
       }
     },
+    "/api/investor/financial-context/sync-goals": {
+      "post": {
+        "tags": [
+          "Investor Essence & Axis"
+        ],
+        "summary": "Sync Financial Context From Goals",
+        "description": "Auto-populates financial context from portfolio goals and holdings snapshot.",
+        "operationId": "sync_financial_context_from_goals_api_investor_financial_context_sync_goals_post",
+        "parameters": [
+          {
+            "name": "portfolio_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Portfolio Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FinancialContextResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/investor/investment-axis/drafts": {
       "post": {
         "tags": [
@@ -6805,6 +7270,57 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/AxisDraftResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/investor/investment-axis/drafts/latest": {
+      "get": {
+        "tags": [
+          "Investor Essence & Axis"
+        ],
+        "summary": "Get Latest Axis Draft",
+        "description": "Retrieves the most recent investment axis draft for a portfolio.",
+        "operationId": "get_latest_axis_draft_api_investor_investment_axis_drafts_latest_get",
+        "parameters": [
+          {
+            "name": "portfolio_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Portfolio Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/AxisDraftResponse"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "title": "Response Get Latest Axis Draft Api Investor Investment Axis Drafts Latest Get"
                 }
               }
             }
@@ -7046,6 +7562,57 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/BucketPlanDraftResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/investor/bucket-plans/latest": {
+      "get": {
+        "tags": [
+          "Investor Essence & Axis"
+        ],
+        "summary": "Get Latest Bucket Plan",
+        "description": "Retrieves the most recent bucket plan draft for a portfolio.",
+        "operationId": "get_latest_bucket_plan_api_investor_bucket_plans_latest_get",
+        "parameters": [
+          {
+            "name": "portfolio_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Portfolio Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/BucketPlanDraftResponse"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "title": "Response Get Latest Bucket Plan Api Investor Bucket Plans Latest Get"
                 }
               }
             }
@@ -7812,6 +8379,30 @@
               }
             ],
             "title": "Price Refresh Info"
+          },
+          "allocation_policy": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Allocation Policy"
+          },
+          "allocation_plan_origin": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Allocation Plan Origin"
           }
         },
         "type": "object",
@@ -8049,6 +8640,26 @@
           "payload_hash": {
             "type": "string",
             "title": "Payload Hash"
+          },
+          "preview_id": {
+            "type": "string",
+            "title": "Preview Id",
+            "default": ""
+          },
+          "draft_id": {
+            "type": "string",
+            "title": "Draft Id",
+            "default": ""
+          },
+          "draft_revision": {
+            "type": "integer",
+            "title": "Draft Revision",
+            "default": 1
+          },
+          "source_refs": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Source Refs"
           }
         },
         "type": "object",
@@ -8348,10 +8959,425 @@
               }
             ],
             "title": "Idempotency Key"
+          },
+          "expected_draft_revision": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expected Draft Revision"
+          },
+          "expected_checkpoint_sequence": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expected Checkpoint Sequence"
+          },
+          "expected_checkpoint_state_hash": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expected Checkpoint State Hash"
+          },
+          "preview_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Preview Id"
+          },
+          "payload_hash": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Payload Hash"
           }
         },
         "type": "object",
         "title": "ApplyBucketPlanRequest"
+      },
+      "ArrGoldBatchScanRequestDTO": {
+        "properties": {
+          "password": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Password"
+          },
+          "force_rescan": {
+            "type": "boolean",
+            "title": "Force Rescan",
+            "default": false
+          },
+          "portfolio_id": {
+            "type": "string",
+            "title": "Portfolio Id",
+            "default": "default"
+          }
+        },
+        "type": "object",
+        "title": "ArrGoldBatchScanRequestDTO"
+      },
+      "ArrGoldCommitRequestDTO": {
+        "properties": {
+          "portfolio_id": {
+            "type": "string",
+            "title": "Portfolio Id",
+            "default": "default"
+          },
+          "selected_item_ids": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Selected Item Ids"
+          }
+        },
+        "type": "object",
+        "title": "ArrGoldCommitRequestDTO"
+      },
+      "ArrGoldCommitResponseDTO": {
+        "properties": {
+          "ok": {
+            "type": "boolean",
+            "title": "Ok",
+            "default": true
+          },
+          "imported_count": {
+            "type": "integer",
+            "title": "Imported Count"
+          },
+          "state": {
+            "$ref": "#/components/schemas/ActualPortfolioStateDTO"
+          }
+        },
+        "type": "object",
+        "required": [
+          "imported_count",
+          "state"
+        ],
+        "title": "ArrGoldCommitResponseDTO"
+      },
+      "ArrGoldEmailListResponseDTO": {
+        "properties": {
+          "emails": {
+            "items": {
+              "$ref": "#/components/schemas/ArrGoldEmailMetadataDTO"
+            },
+            "type": "array",
+            "title": "Emails",
+            "default": []
+          }
+        },
+        "type": "object",
+        "title": "ArrGoldEmailListResponseDTO"
+      },
+      "ArrGoldEmailMetadataDTO": {
+        "properties": {
+          "message_id": {
+            "type": "string",
+            "title": "Message Id"
+          },
+          "attachment_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Attachment Id"
+          },
+          "subject": {
+            "type": "string",
+            "title": "Subject"
+          },
+          "sender": {
+            "type": "string",
+            "title": "Sender"
+          },
+          "received_at": {
+            "type": "string",
+            "title": "Received At"
+          },
+          "filename": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Filename"
+          },
+          "size_bytes": {
+            "type": "integer",
+            "title": "Size Bytes",
+            "default": 0
+          }
+        },
+        "type": "object",
+        "required": [
+          "message_id",
+          "subject",
+          "sender",
+          "received_at"
+        ],
+        "title": "ArrGoldEmailMetadataDTO"
+      },
+      "ArrGoldScanEmailRequestDTO": {
+        "properties": {
+          "message_id": {
+            "type": "string",
+            "title": "Message Id"
+          },
+          "attachment_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Attachment Id"
+          },
+          "subject": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Subject"
+          },
+          "password": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Password"
+          }
+        },
+        "type": "object",
+        "required": [
+          "message_id"
+        ],
+        "title": "ArrGoldScanEmailRequestDTO"
+      },
+      "ArrGoldScanResponseDTO": {
+        "properties": {
+          "scan_id": {
+            "type": "string",
+            "title": "Scan Id"
+          },
+          "item_count": {
+            "type": "integer",
+            "title": "Item Count"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ArrGoldStagedItemDTO"
+            },
+            "type": "array",
+            "title": "Items",
+            "default": []
+          }
+        },
+        "type": "object",
+        "required": [
+          "scan_id",
+          "item_count"
+        ],
+        "title": "ArrGoldScanResponseDTO"
+      },
+      "ArrGoldStagedItemDTO": {
+        "properties": {
+          "item_id": {
+            "type": "string",
+            "title": "Item Id"
+          },
+          "trade_date": {
+            "type": "string",
+            "title": "Trade Date"
+          },
+          "settlement_date": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Settlement Date"
+          },
+          "symbol": {
+            "type": "string",
+            "title": "Symbol"
+          },
+          "action": {
+            "type": "string",
+            "title": "Action"
+          },
+          "units": {
+            "type": "string",
+            "title": "Units"
+          },
+          "price": {
+            "type": "string",
+            "title": "Price"
+          },
+          "gross_amount": {
+            "type": "string",
+            "title": "Gross Amount"
+          },
+          "fees": {
+            "$ref": "#/components/schemas/ArrGoldStagedItemFeeDTO"
+          },
+          "net_amount": {
+            "type": "string",
+            "title": "Net Amount"
+          },
+          "currency": {
+            "type": "string",
+            "title": "Currency",
+            "default": "USD"
+          },
+          "exchange_rate": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Exchange Rate"
+          },
+          "confirmation_no": {
+            "type": "string",
+            "title": "Confirmation No"
+          },
+          "order_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Order Id"
+          },
+          "source": {
+            "type": "string",
+            "title": "Source",
+            "default": "ARR_GOLD"
+          },
+          "fingerprint": {
+            "type": "string",
+            "title": "Fingerprint"
+          },
+          "line_index": {
+            "type": "integer",
+            "title": "Line Index",
+            "default": 0
+          },
+          "cash_adjusted": {
+            "type": "boolean",
+            "title": "Cash Adjusted",
+            "default": false
+          },
+          "asset_type": {
+            "type": "string",
+            "title": "Asset Type",
+            "default": "Gold"
+          }
+        },
+        "type": "object",
+        "required": [
+          "item_id",
+          "trade_date",
+          "symbol",
+          "action",
+          "units",
+          "price",
+          "gross_amount",
+          "net_amount",
+          "confirmation_no",
+          "fingerprint"
+        ],
+        "title": "ArrGoldStagedItemDTO"
+      },
+      "ArrGoldStagedItemFeeDTO": {
+        "properties": {
+          "commission": {
+            "type": "string",
+            "title": "Commission",
+            "default": "0.00"
+          },
+          "vat": {
+            "type": "string",
+            "title": "Vat",
+            "default": "0.00"
+          },
+          "other_fees": {
+            "type": "string",
+            "title": "Other Fees",
+            "default": "0.00"
+          },
+          "fee_currency": {
+            "type": "string",
+            "title": "Fee Currency",
+            "default": "USD"
+          }
+        },
+        "type": "object",
+        "title": "ArrGoldStagedItemFeeDTO"
       },
       "AssetAllocationDTO": {
         "properties": {
@@ -8794,6 +9820,20 @@
         },
         "type": "object",
         "title": "BatchAssignBucketRequestDTO"
+      },
+      "BatchReassignHoldingsRequestDTO": {
+        "properties": {
+          "assignments": {
+            "items": {
+              "$ref": "#/components/schemas/HoldingBucketAssignmentItemDTO"
+            },
+            "type": "array",
+            "title": "Assignments",
+            "default": []
+          }
+        },
+        "type": "object",
+        "title": "BatchReassignHoldingsRequestDTO"
       },
       "BatchRemoveHoldingsRequestDTO": {
         "properties": {
@@ -9272,6 +10312,35 @@
         ],
         "title": "ClaimSchema"
       },
+      "ClarificationRequest": {
+        "properties": {
+          "unresolved_topic": {
+            "type": "string",
+            "title": "Unresolved Topic"
+          },
+          "expected_revision": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expected Revision"
+          },
+          "prompt_version": {
+            "type": "string",
+            "title": "Prompt Version",
+            "default": "1.0"
+          }
+        },
+        "type": "object",
+        "required": [
+          "unresolved_topic"
+        ],
+        "title": "ClarificationRequest"
+      },
       "CommodityVolSnapshotSchema": {
         "properties": {
           "index_symbol": {
@@ -9396,6 +10465,17 @@
               }
             ],
             "title": "Idempotency Key"
+          },
+          "expected_draft_revision": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expected Draft Revision"
           }
         },
         "type": "object",
@@ -12040,6 +13120,47 @@
             ],
             "title": "Experience Description"
           },
+          "monthly_investable_contribution": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Monthly Investable Contribution"
+          },
+          "essential_monthly_expense": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Essential Monthly Expense"
+          },
+          "reserves_outside_portfolio": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reserves Outside Portfolio"
+          },
+          "facts": {
+            "additionalProperties": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "object",
+            "title": "Facts"
+          },
           "unknown_fields": {
             "items": {
               "type": "string"
@@ -12059,8 +13180,7 @@
           },
           "readiness_issues": {
             "items": {
-              "additionalProperties": true,
-              "type": "object"
+              "$ref": "#/components/schemas/ValidationIssueSchema"
             },
             "type": "array",
             "title": "Readiness Issues"
@@ -12988,6 +14108,103 @@
         },
         "type": "object",
         "title": "HTTPValidationError"
+      },
+      "HoldingBucketAssignmentItemDTO": {
+        "properties": {
+          "symbol": {
+            "type": "string",
+            "title": "Symbol"
+          },
+          "bucket_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bucket Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "symbol"
+        ],
+        "title": "HoldingBucketAssignmentItemDTO"
+      },
+      "HoldingBucketRecommendationItemDTO": {
+        "properties": {
+          "symbol": {
+            "type": "string",
+            "title": "Symbol"
+          },
+          "asset_type": {
+            "type": "string",
+            "title": "Asset Type"
+          },
+          "current_bucket_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Current Bucket Id"
+          },
+          "recommended_bucket_id": {
+            "type": "string",
+            "title": "Recommended Bucket Id"
+          },
+          "is_changed": {
+            "type": "boolean",
+            "title": "Is Changed"
+          },
+          "reason": {
+            "type": "string",
+            "title": "Reason"
+          }
+        },
+        "type": "object",
+        "required": [
+          "symbol",
+          "asset_type",
+          "recommended_bucket_id",
+          "is_changed",
+          "reason"
+        ],
+        "title": "HoldingBucketRecommendationItemDTO"
+      },
+      "HoldingsBucketRecommendationResponseDTO": {
+        "properties": {
+          "recommendations": {
+            "items": {
+              "$ref": "#/components/schemas/HoldingBucketRecommendationItemDTO"
+            },
+            "type": "array",
+            "title": "Recommendations",
+            "default": []
+          },
+          "summary": {
+            "type": "string",
+            "title": "Summary",
+            "default": ""
+          },
+          "total_unassigned": {
+            "type": "integer",
+            "title": "Total Unassigned",
+            "default": 0
+          },
+          "total_mismatched": {
+            "type": "integer",
+            "title": "Total Mismatched",
+            "default": 0
+          }
+        },
+        "type": "object",
+        "title": "HoldingsBucketRecommendationResponseDTO"
       },
       "IncomeRequestDTO": {
         "properties": {
@@ -17192,6 +18409,112 @@
             },
             "type": "array",
             "title": "Source Axis Allocation Ids"
+          },
+          "linked_goal_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Linked Goal Name"
+          },
+          "eligible_assets": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Eligible Assets"
+          },
+          "cash_inflow_routing_pct": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cash Inflow Routing Pct"
+          },
+          "action_rules": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Action Rules"
+          },
+          "target_amount": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target Amount"
+          },
+          "minimum_amount": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Minimum Amount"
+          },
+          "need_by_date": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Need By Date"
+          },
+          "inflow_route_mode": {
+            "type": "string",
+            "title": "Inflow Route Mode",
+            "default": "fixed_ratio"
+          },
+          "inflow_priority": {
+            "type": "integer",
+            "title": "Inflow Priority",
+            "default": 1
+          },
+          "when_full_redirect_bucket_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "When Full Redirect Bucket Id"
+          },
+          "goal_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Goal Id"
+          },
+          "schema_version": {
+            "type": "string",
+            "title": "Schema Version",
+            "default": "2.0"
           }
         },
         "type": "object",
@@ -19960,6 +21283,22 @@
             "type": "string",
             "title": "Prompt Version",
             "default": "1.0"
+          },
+          "portfolio_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Portfolio Id"
+          },
+          "clear_downstream": {
+            "type": "boolean",
+            "title": "Clear Downstream",
+            "default": true
           }
         },
         "type": "object",
@@ -21703,6 +23042,39 @@
             ],
             "title": "Experience Description"
           },
+          "monthly_investable_contribution": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Monthly Investable Contribution"
+          },
+          "essential_monthly_expense": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Essential Monthly Expense"
+          },
+          "reserves_outside_portfolio": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reserves Outside Portfolio"
+          },
           "unknown_fields": {
             "anyOf": [
               {
@@ -21975,6 +23347,61 @@
           "type"
         ],
         "title": "ValidationError"
+      },
+      "ValidationIssueSchema": {
+        "properties": {
+          "code": {
+            "type": "string",
+            "title": "Code"
+          },
+          "severity": {
+            "type": "string",
+            "title": "Severity"
+          },
+          "field_path": {
+            "type": "string",
+            "title": "Field Path"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          },
+          "details": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Details"
+          },
+          "issue": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Issue"
+          },
+          "level": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Level"
+          }
+        },
+        "type": "object",
+        "required": [
+          "code",
+          "severity",
+          "field_path",
+          "message"
+        ],
+        "title": "ValidationIssueSchema"
       },
       "ValuationTargetsDTO": {
         "properties": {

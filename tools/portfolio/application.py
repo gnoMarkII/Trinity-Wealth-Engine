@@ -16,6 +16,7 @@ from tools.portfolio.services.batch_trade_import_service import BatchTradeImport
 from tools.portfolio.services.dime_sync_service import DimeSyncService
 from tools.portfolio.services.wealthx_sync_service import WealthXSyncService
 from tools.portfolio.services.scbam_sync_service import SCBAMSyncService
+from tools.portfolio.services.arr_gold_sync_service import ArrGoldSyncService
 
 
 class PortfolioApplication:
@@ -35,6 +36,7 @@ class PortfolioApplication:
         dime_sync_service: Optional[DimeSyncService] = None,
         wealthx_sync_service: Optional[WealthXSyncService] = None,
         scbam_sync_service: Optional[SCBAMSyncService] = None,
+        arr_gold_sync_service: Optional[ArrGoldSyncService] = None,
     ) -> None:
         self.state_service = state_service
         self.trading_service = trading_service
@@ -48,3 +50,4 @@ class PortfolioApplication:
         self.dime_sync_service = dime_sync_service
         self.wealthx_sync_service = wealthx_sync_service
         self.scbam_sync_service = scbam_sync_service
+        self.arr_gold_sync_service = arr_gold_sync_service

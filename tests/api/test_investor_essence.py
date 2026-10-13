@@ -104,6 +104,21 @@ class FakePortfolioPlanningPort(PortfolioPlanningPort):
             warnings=[],
         )
 
+    def get_goals(self, portfolio_id: str):
+        return [
+            {
+                "name": "พอร์ต 10 ล้านบาท",
+                "goal_type": "nav_target",
+                "target_amount_thb": 10000000.0,
+                "current_amount_thb": 1500000.0,
+                "progress_pct": 15.0,
+                "deadline": "2036-12-31",
+                "notes": "เพื่ออิสรภาพทางการเงิน",
+                "portfolio_id": portfolio_id,
+            }
+        ]
+
+
 
 def _build_10_proposals() -> list[QuestionProposal]:
     return [
@@ -163,6 +178,7 @@ def essence_services():
         axis_generator=axis_gen,
         clock=clock,
         id_gen=id_gen,
+        portfolio_planning=portfolio_port,
     )
     bucket_planning_service = BucketPlanningService(
         uow_factory=uow_factory,

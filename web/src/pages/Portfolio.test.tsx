@@ -108,8 +108,9 @@ describe('Portfolio Page', () => {
     })
 
     expect(screen.getByText(/Total Portfolio NAV/i)).toBeInTheDocument()
-    expect(screen.getByText('Core Equities')).toBeInTheDocument()
+    expect(screen.getAllByText('Core Equities').length).toBeGreaterThanOrEqual(1)
   })
+
 
   it('switches to Holdings tab when tab control is clicked', async () => {
     render(

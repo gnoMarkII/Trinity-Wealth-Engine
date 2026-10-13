@@ -278,3 +278,46 @@ class TestInvestmentAxisValidation:
                 draft=draft,
                 confirmed_at_iso="2026-10-08T11:00:00Z",
             )
+
+
+def test_create_axis_draft_passes_portfolio_goals():
+    from application.investor_essence.investment_axis_service import InvestmentAxisService
+    from application.investor_essence.testing.fakes import (
+        FakeAxisGenerator,
+        FakeClock,
+        FakeIdGenerator,
+        FakePortfolioPlanningAdapter,
+        FakeInvestorRuntimeUowFactory,
+    )
+
+    uow_factory = FakeInvestorRuntimeUowFactory()
+    with uow_factory.open() as uow:
+        uow.planning.set_confirmed_pointer("workspace", "investor_essence", "ref:v1:note1:hash1", None)
+        uow.commit()
+
+    goals_data = [
+        {
+            "name": "พอร์ต 10 ล้านบาท",
+            "goal_type": "nav_target",
+            "target_amount_thb": 10000000.0,
+            "deadline": "2036-12-31",
+            "notes": "อิสรภาพทางการเงิน",
+        }
+    ]
+    planning_adapter = FakePortfolioPlanningAdapter(goals=goals_data)
+    axis_gen = FakeAxisGenerator()
+
+    service = InvestmentAxisService(
+        uow_factory=uow_factory,
+        axis_generator=axis_gen,
+        clock=FakeClock(),
+        id_gen=FakeIdGenerator(),
+        portfolio_planning=planning_adapter,
+    )
+
+    view = service.create_axis_draft("port_main")
+    assert view.portfolio_id == "port_main"
+    assert len(axis_gen.call_history) == 1
+    call = axis_gen.call_history[0]
+    assert call["goals"] == goals_data
+

@@ -13,6 +13,7 @@ from core.investor_essence.models import (
     SessionStatus,
 )
 from core.investor_essence.interview import EssenceSession
+from core.investor_essence.evidence_builder import build_evidence_snapshot_from_session
 from application.investor_essence.dto import (
     EvidenceSnapshot,
     SessionView,
@@ -100,7 +101,13 @@ class InterviewService:
         self._clock = clock  # type: ignore[assignment]
         self._id_gen = id_gen  # type: ignore[assignment]
 
-    def start_session(self, scope: str = "workspace", prompt_version: str = "1.0") -> SessionView:
+    def start_session(
+        self,
+        scope: str = "workspace",
+        prompt_version: str = "1.0",
+        portfolio_id: Optional[str] = None,
+        clear_downstream: bool = True,
+    ) -> SessionView:
         """Starts a new interview session and generates the first question."""
         session_id = self._id_gen.new_id()
         now_iso = self._clock.now_utc()
@@ -146,10 +153,27 @@ class InterviewService:
         session.add_question(q1)
 
         with self._uow_factory.open() as uow:
+            if clear_downstream:
+                uow.planning.clear_planning_data(
+                    portfolio_id=portfolio_id,
+                    clear_essence=True,
+                )
             uow.sessions.save(session)
             uow.commit()
 
         return _to_session_view(session)
+
+    def reset_principles(
+        self,
+        portfolio_id: Optional[str] = None,
+    ) -> None:
+        """Wipes downstream Axis and Bucket plans, resetting principles state."""
+        with self._uow_factory.open() as uow:
+            uow.planning.clear_planning_data(
+                portfolio_id=portfolio_id,
+                clear_essence=True,
+            )
+            uow.commit()
 
     def get_session(self, session_id: str) -> Optional[SessionView]:
         with self._uow_factory.open() as uow:
@@ -240,29 +264,7 @@ class InterviewService:
             if next_seq > 10:
                 raise ValidationFailedError("Cannot exceed 10 base interview questions")
 
-            qa_history_dict = []
-            coverage_topics: List[str] = []
-            for q, a in active_qa:
-                coverage_topics.extend(q.coverage_topics)
-                qa_history_dict.append({
-                    "question_id": q.question_id,
-                    "sequence_no": q.sequence_no,
-                    "text": q.text,
-                    "answer": {
-                        "kind": a.answer_kind.value if a else None,
-                        "option_id": a.option_id if a else None,
-                        "free_text": a.free_text if a else None,
-                    } if a else None,
-                })
-
-            evidence = EvidenceSnapshot(
-                session_id=session_id,
-                branch_id=session.active_branch_id,
-                revision=session.revision,
-                context_hash=session.compute_context_hash(),
-                qa_pairs=qa_history_dict,
-                coverage_topics=list(set(coverage_topics)),
-            )
+            evidence = build_evidence_snapshot_from_session(session)
 
             proposal = self._generator.generate_next_question(evidence, prompt_version=prompt_version)
             options = [

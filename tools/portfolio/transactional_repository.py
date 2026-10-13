@@ -72,6 +72,7 @@ class TransactionalPortfolioUnitOfWork(PortfolioUnitOfWork):
         self,
         state: PortfolioState,
         ledger_change: Optional[Union[LedgerChange, PortfolioMutation]] = None,
+        command_receipt: Optional[Dict[str, Any]] = None,
     ) -> None:
         change = _change(ledger_change)
         rows = [dict(row) for row in self.ledger_rows]
@@ -84,6 +85,7 @@ class TransactionalPortfolioUnitOfWork(PortfolioUnitOfWork):
             state.model_dump(mode="json"),
             ledger_rows=rows,
             expected_sequence=self.sequence,
+            command_receipt=command_receipt,
         )
         self.sequence += 1
         self.ledger_rows = rows

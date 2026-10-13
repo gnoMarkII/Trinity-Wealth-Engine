@@ -1,9 +1,10 @@
 """FastAPI Sub-router for Portfolio CRUD, State, Buckets, and Allocation Targets."""
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 
 from api.auth import require_session
 from api.dependencies import get_portfolio_service
 from tools.portfolio.service import PortfolioService
+from tools.portfolio.services.bucket_ai_service import recommend_holding_buckets
 from api.schemas import (
     PortfolioMetaDTO,
     CreatePortfolioRequestDTO,
@@ -14,6 +15,8 @@ from api.schemas import (
     UpsertAllocationTargetsRequestDTO,
     AssignBucketRequestDTO,
     BatchAssignBucketRequestDTO,
+    BatchReassignHoldingsRequestDTO,
+    HoldingsBucketRecommendationResponseDTO,
     BatchRemoveHoldingsRequestDTO,
 )
 from api.routers.portfolio.common import handle_portfolio_exceptions
@@ -126,6 +129,34 @@ def batch_assign_holding_buckets(
 ) -> ActualPortfolioStateDTO:
     with handle_portfolio_exceptions():
         state = service.structured_batch_assign_holding_buckets(payload.symbols, payload.bucket_id, portfolio_id=portfolio_id)
+        return ActualPortfolioStateDTO.model_validate(state.model_dump(exclude_none=True))
+
+
+@router.post("/api/portfolio/actual/holdings/ai-recommend-buckets", response_model=HoldingsBucketRecommendationResponseDTO)
+def recommend_holding_buckets_endpoint(
+    portfolio_id: str = "default",
+    service: PortfolioService = Depends(get_portfolio_service),
+) -> HoldingsBucketRecommendationResponseDTO:
+    with handle_portfolio_exceptions():
+        state = service.get_structured_portfolio_state(portfolio_id=portfolio_id)
+        try:
+            return recommend_holding_buckets(state)
+        except Exception as exc:
+            raise HTTPException(
+                status_code=503,
+                detail=f"ระบบ AI แนะนำกลุ่มกลยุทธ์ไม่พร้อมใช้งาน: {exc}",
+            ) from exc
+
+
+@router.put("/api/portfolio/actual/holdings/batch-bucket-map", response_model=ActualPortfolioStateDTO)
+def batch_reassign_holding_buckets_endpoint(
+    payload: BatchReassignHoldingsRequestDTO,
+    portfolio_id: str = "default",
+    service: PortfolioService = Depends(get_portfolio_service),
+) -> ActualPortfolioStateDTO:
+    with handle_portfolio_exceptions():
+        assignments = {item.symbol: item.bucket_id for item in payload.assignments}
+        state = service.structured_batch_reassign_holding_buckets(assignments, portfolio_id=portfolio_id)
         return ActualPortfolioStateDTO.model_validate(state.model_dump(exclude_none=True))
 
 

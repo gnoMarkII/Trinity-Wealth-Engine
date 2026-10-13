@@ -301,6 +301,21 @@ CREATE TABLE IF NOT EXISTS investor_confirmed_refs (
     confirmed_at TEXT NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS investor_confirmed_snapshots (
+    snapshot_id TEXT PRIMARY KEY,
+    scope TEXT NOT NULL,
+    scope_id TEXT NOT NULL,
+    kind TEXT NOT NULL,
+    source_id TEXT NOT NULL,
+    source_revision INTEGER NOT NULL,
+    content_hash TEXT NOT NULL,
+    snapshot_json TEXT NOT NULL,
+    confirmed_at_iso TEXT NOT NULL,
+    created_at REAL NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_investor_confirmed_snapshots_lookup 
+ON investor_confirmed_snapshots(scope, scope_id, kind, confirmed_at_iso DESC);
+
 CREATE TABLE IF NOT EXISTS investor_operations (
     operation_id TEXT PRIMARY KEY,
     task_type TEXT NOT NULL,
@@ -397,7 +412,10 @@ def _migrate_columns(conn: sqlite3.Connection) -> None:
     พังด้วย "table X has no column named Y" — พบเจอจริงตอน dispatch งานจาก Kanban
     """
     for table, columns in _COLUMN_MIGRATIONS.items():
-        existing = {row["name"] for row in conn.execute(f"PRAGMA table_info({table})")}
+        existing = {
+            (row["name"] if (hasattr(row, "keys") or isinstance(row, dict)) else row[1])
+            for row in conn.execute(f"PRAGMA table_info({table})")
+        }
         for col_name, col_def in columns.items():
             if col_name not in existing:
                 try:

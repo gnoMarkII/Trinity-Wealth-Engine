@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import AutoResizeTextarea from '../../ui/AutoResizeTextarea'
 import type { SessionResponseDTO } from '../../../api/types'
 
 interface EssenceInterviewProps {
@@ -9,7 +10,9 @@ interface EssenceInterviewProps {
     freeText?: string | null,
   ) => Promise<void>
   onAdvanceNext?: () => Promise<void>
+  onSummarize?: () => Promise<void>
   onPause: () => void
+  onRestart?: () => Promise<void> | void
   loading: boolean
   statusText?: string | null
 }
@@ -27,7 +30,9 @@ export default function EssenceInterview({
   session,
   onRecordAndNext,
   onAdvanceNext,
+  onSummarize,
   onPause,
+  onRestart,
   loading,
   statusText,
 }: EssenceInterviewProps) {
@@ -39,6 +44,38 @@ export default function EssenceInterview({
   const [showFreeTextInput, setShowFreeTextInput] = useState<boolean>(false)
 
   if (!currentQ) {
+    if (session.answers_count >= 10 || session.is_complete || session.status === 'summary_pending') {
+      return (
+        <div className="max-w-xl mx-auto rounded-2xl border border-sky-100 bg-white p-8 text-center shadow-xs space-y-5">
+          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-emerald-50 text-2xl text-emerald-600">
+            ✨
+          </div>
+          <div>
+            <h3 className="text-base font-bold text-zinc-900">
+              ตอบคำถามครบ 10 ข้อเรียบร้อยแล้ว
+            </h3>
+            <p className="text-xs text-zinc-500 mt-1 max-w-sm mx-auto leading-relaxed">
+              คำตอบของคุณได้รับการบันทึกครบถ้วนแล้ว กดปุ่มด้านล่างเพื่อเริ่มการวิเคราะห์และสังเคราะห์แก่นแท้การลงทุน
+            </p>
+          </div>
+          <div>
+            <button
+              type="button"
+              onClick={onSummarize}
+              disabled={loading}
+              className="rounded-xl bg-gradient-to-r from-sky-600 to-blue-600 px-6 py-3 text-xs font-bold text-white shadow-sm hover:from-sky-700 hover:to-blue-700 disabled:opacity-50 transition-all cursor-pointer inline-flex items-center gap-2"
+            >
+              {loading ? (
+                <span>{statusText || 'กำลังสังเคราะห์แก่นแท้...'}</span>
+              ) : (
+                <span>✨ สังเคราะห์แก่นแท้การลงทุน</span>
+              )}
+            </button>
+          </div>
+        </div>
+      )
+    }
+
     const nextSeq = (session.answers_count || 0) + 1
     return (
       <div className="max-w-xl mx-auto rounded-2xl border border-sky-100 bg-white p-8 text-center shadow-xs space-y-5">
@@ -128,7 +165,7 @@ export default function EssenceInterview({
             </span>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
             <span className="text-xs font-semibold text-zinc-400">
               ตอบแล้ว {session.answers_count}/10
             </span>
@@ -136,11 +173,30 @@ export default function EssenceInterview({
               type="button"
               onClick={onPause}
               disabled={loading}
-              className="rounded-lg border border-zinc-200 px-3 py-1 text-xs font-semibold text-zinc-600 hover:bg-zinc-50 active:scale-95 transition-all"
+              className="rounded-lg border border-zinc-200 px-3 py-1 text-xs font-semibold text-zinc-600 hover:bg-zinc-50 active:scale-95 transition-all cursor-pointer"
               title="บันทึกร่างและกลับมาตอบต่อได้ตลอดเวลา"
             >
               พักไว้ก่อน
             </button>
+            {onRestart && (
+              <button
+                type="button"
+                onClick={() => {
+                  if (
+                    window.confirm(
+                      'คุณต้องการเริ่มทำแบบทดสอบใหม่ใช่หรือไม่?\n\nระบบจะล้างข้อมูลแกนหลัก (Axis) และ Buckets เดิมออกทั้งหมดเพื่อเริ่มต้นใหม่',
+                    )
+                  ) {
+                    void onRestart()
+                  }
+                }}
+                disabled={loading}
+                className="rounded-lg border border-rose-200 bg-rose-50/70 px-3 py-1 text-xs font-semibold text-rose-700 hover:bg-rose-100 hover:text-rose-800 active:scale-95 transition-all cursor-pointer"
+                title="เริ่มทำแบบทดสอบใหม่และล้างข้อมูลแกนหลักกับ Buckets เดิม"
+              >
+                🔄 เริ่มใหม่
+              </button>
+            )}
           </div>
         </div>
 
@@ -228,9 +284,9 @@ export default function EssenceInterview({
             <label htmlFor="free-text-input" className="block text-xs font-semibold text-zinc-700">
               อธิบายเพิ่มเติมหรือตอบด้วยคำของฉันเอง:
             </label>
-            <textarea
+            <AutoResizeTextarea
               id="free-text-input"
-              rows={3}
+              minRows={3}
               value={freeText}
               onChange={(e) => {
                 setFreeText(e.target.value)

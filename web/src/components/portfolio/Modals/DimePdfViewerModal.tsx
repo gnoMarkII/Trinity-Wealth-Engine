@@ -6,7 +6,7 @@ import type { DimeBatchScanWarningEvent, DimePdfTextResponseDTO } from '../../..
 interface Props {
   warning: DimeBatchScanWarningEvent
   password?: string
-  source?: 'dime' | 'wealthx' | 'scb'
+  source?: 'dime' | 'wealthx' | 'scb' | 'arr_gold'
   onClose: () => void
 }
 

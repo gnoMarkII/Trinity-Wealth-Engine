@@ -28,7 +28,9 @@ from tools.portfolio.services.batch_trade_import_service import BatchTradeImport
 from tools.portfolio.services.dime_sync_service import DimeSyncService
 from tools.portfolio.services.wealthx_sync_service import WealthXSyncService
 from tools.portfolio.services.scbam_sync_service import SCBAMSyncService
+from tools.portfolio.services.arr_gold_sync_service import ArrGoldSyncService
 from tools.portfolio.ports.thai_fund_port import ThaiFundPricePort
+from tools.portfolio.ports.arr_gold_port import ArrGoldParserPort
 from tools.portfolio.application import PortfolioApplication
 
 
@@ -45,6 +47,7 @@ class PortfolioDependencies:
     email_source: Optional[TradeEmailSourcePort] = None
     parser: Optional[TradeDocumentParserPort] = None
     wealthx_parser: Optional[TradeDocumentParserPort] = None
+    arr_gold_parser: Optional[ArrGoldParserPort] = None
     staging: Optional[TradeStagingPort] = None
     thai_fund_adapter: Optional[ThaiFundPricePort] = None
 
@@ -149,10 +152,12 @@ def build_default_portfolio_dependencies(db_path: Optional[str] = None) -> Portf
     from tools.portfolio.adapters.dime.gmail_imap_adapter import GmailImapSourceAdapter
     from tools.portfolio.adapters.dime.isolated_parser_adapter import IsolatedDimePdfParserAdapter
     from tools.portfolio.adapters.wealthx.wealthx_parser_adapter import WealthXPdfParserAdapter
+    from tools.portfolio.adapters.arr_gold.arr_gold_parser_adapter import ArrGoldParserAdapter
 
     email_source = GmailImapSourceAdapter()
     parser = IsolatedDimePdfParserAdapter()
     wealthx_parser = WealthXPdfParserAdapter()
+    arr_gold_parser = ArrGoldParserAdapter()
     staging = get_default_staging_adapter()
 
     return PortfolioDependencies(
@@ -166,6 +171,7 @@ def build_default_portfolio_dependencies(db_path: Optional[str] = None) -> Portf
         email_source=email_source,
         parser=parser,
         wealthx_parser=wealthx_parser,
+        arr_gold_parser=arr_gold_parser,
         staging=staging,
         thai_fund_adapter=fund_price_provider,
     )
@@ -256,6 +262,15 @@ def build_portfolio_application(
             batch_importer=batch_import_service,
         )
 
+    arr_gold_sync_service = None
+    if resolved_deps.email_source and getattr(resolved_deps, "arr_gold_parser", None) and resolved_deps.staging:
+        arr_gold_sync_service = ArrGoldSyncService(
+            email_source=resolved_deps.email_source,
+            parser=resolved_deps.arr_gold_parser,
+            staging=resolved_deps.staging,
+            batch_import_service=batch_import_service,
+        )
+
     return PortfolioApplication(
         state_service=state_service,
         trading_service=trading_service,
@@ -269,6 +284,7 @@ def build_portfolio_application(
         dime_sync_service=dime_sync_service,
         wealthx_sync_service=wealthx_sync_service,
         scbam_sync_service=scbam_sync_service,
+        arr_gold_sync_service=arr_gold_sync_service,
     )
 
 

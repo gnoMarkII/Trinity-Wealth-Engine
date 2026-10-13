@@ -182,5 +182,20 @@ class EssenceSession:
             }
             canonical_items.append(item)
 
+        for c in self.clarifications:
+            ca = self.clarification_answers.get(c.question_id)
+            c_item = {
+                "question_id": c.question_id,
+                "sequence_no": c.sequence_no,
+                "text": c.text,
+                "options": [{"key": opt.option_key, "text": opt.text} for opt in c.options],
+                "answer": {
+                    "kind": ca.answer_kind.value if ca else None,
+                    "option_id": ca.option_id if ca else None,
+                    "free_text": ca.free_text if ca else None,
+                } if ca else None,
+            }
+            canonical_items.append(c_item)
+
         serialized = json.dumps(canonical_items, sort_keys=True, ensure_ascii=False)
         return hashlib.sha256(serialized.encode("utf-8")).hexdigest()

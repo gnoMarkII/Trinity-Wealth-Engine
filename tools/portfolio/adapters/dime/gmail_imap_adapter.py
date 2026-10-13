@@ -391,8 +391,8 @@ class GmailImapSourceAdapter(TradeEmailSourcePort):
                         from_addr = _decode_mime_words(msg.get("From"))
                         date_str = msg.get("Date", "")
 
-                        # Filter: Purchase confirmations ONLY
-                        if "ยืนยันการทำรายการซื้อกองทุน" not in subj:
+                        # Filter: Order confirmations from SCBAM Fund Click (BUY / SELL / SWITCH)
+                        if "ยืนยันการทำรายการ" not in subj:
                             continue
 
                         if query and (query.lower() not in subj.lower()):
@@ -423,6 +423,120 @@ class GmailImapSourceAdapter(TradeEmailSourcePort):
                 raise
             log.warning("Error during Gmail SCBAM search: %s", e)
             raise ValueError(f"ไม่สามารถค้นหาอีเมล SCBAM ใน Gmail ได้: {e}") from e
+        finally:
+            try:
+                mail.close()
+            except Exception:
+                pass
+            try:
+                mail.logout()
+            except Exception:
+                pass
+
+    def search_arr_gold_emails(
+        self,
+        query: str = "",
+        limit: Optional[int] = None,
+        since_date: Optional[str] = None,
+    ) -> List[TradeDocumentMetadata]:
+        username = self.username or os.getenv("GMAIL_IMAP_USER", "")
+        clean_user = username.strip() if username else ""
+        if not self.username or not self.password:
+            log.warning("Gmail credentials not provided; returning empty search results.")
+            return []
+
+        mail = self._get_connection()
+        try:
+            mail.select("INBOX", readonly=True)
+            base_crit = '(FROM "arrgoldtrading.com")'
+
+            if since_date:
+                try:
+                    if len(since_date) == 10 and since_date[4] == "-" and since_date[7] == "-":
+                        dt = datetime.strptime(since_date, "%Y-%m-%d")
+                        imap_date = dt.strftime("%d-%b-%Y")
+                    else:
+                        imap_date = since_date
+                    search_crit = f'({base_crit} SINCE {imap_date})'
+                except Exception:
+                    search_crit = base_crit
+            else:
+                search_crit = base_crit
+
+            try:
+                typ, data = mail.uid("SEARCH", "CHARSET", "UTF-8", search_crit)
+            except Exception:
+                typ, data = mail.uid("SEARCH", None, search_crit)
+
+            if typ != "OK" or not data or not data[0]:
+                return []
+
+            uids = data[0].split()
+            uids.reverse()
+
+            results: List[TradeDocumentMetadata] = []
+            chunk_size = 50
+            for i in range(0, len(uids), chunk_size):
+                chunk = uids[i : i + chunk_size]
+                uid_set = b",".join(chunk)
+                typ, fetch_res = mail.uid("FETCH", uid_set, "(UID X-GM-MSGID RFC822.HEADER)")
+                if typ != "OK" or not fetch_res:
+                    continue
+
+                for item in fetch_res:
+                    if isinstance(item, tuple):
+                        header_blob = item[0]
+                        body_bytes = item[1]
+                        raw_meta = header_blob + b"\n" + (body_bytes if isinstance(body_bytes, bytes) else b"")
+                        m_uid = re.search(rb"UID\s+(\d+)", raw_meta)
+                        m_msgid = re.search(rb"X-GM-MSGID\s+(\d+)", raw_meta)
+
+                        uid_str = m_uid.group(1).decode("ascii") if m_uid else ""
+                        x_gm_msgid = m_msgid.group(1).decode("ascii") if m_msgid else uid_str
+
+                        if not uid_str:
+                            continue
+
+                        msg = email.message_from_bytes(body_bytes)
+                        subj = _decode_mime_words(msg.get("Subject"))
+                        from_addr = _decode_mime_words(msg.get("From"))
+                        date_str = msg.get("Date", "")
+
+                        # Filter: Include Buy Gold, Sell Gold, and Daily Report Statements
+                        is_trade_order = "buy gold" in subj.lower() or "sell gold" in subj.lower() or "ซื้อทองคำ" in subj or "ขายทองคำ" in subj
+                        is_daily_statement = "daily report statement" in subj.lower() or "สรุปรายการซื้อขายประจำวัน" in subj
+
+                        if not (is_trade_order or is_daily_statement):
+                            continue
+
+                        if query and (query.lower() not in subj.lower()):
+                            continue
+
+                        results.append(TradeDocumentMetadata(
+                            message_id=x_gm_msgid,
+                            attachment_id=f"{uid_str}_att0",
+                            subject=subj,
+                            sender=from_addr,
+                            received_at=date_str,
+                            filename=f"arr_gold_{x_gm_msgid}.pdf" if is_daily_statement else f"arr_gold_{x_gm_msgid}.html",
+                            size_bytes=2048,
+                            x_gm_msgid=x_gm_msgid,
+                            uid=uid_str,
+                            account_email=clean_user,
+                        ))
+
+                        if limit is not None and limit > 0 and len(results) >= limit:
+                            return results
+
+            return results
+        except imaplib.IMAP4.error as e:
+            log.warning("IMAP error during ARR Gold search: %s", e)
+            raise ValueError(f"เกิดข้อผิดพลาดจากระบบ Gmail IMAP: {e}") from e
+        except Exception as e:
+            if isinstance(e, ValueError):
+                raise
+            log.warning("Error during Gmail ARR Gold search: %s", e)
+            raise ValueError(f"ไม่สามารถค้นหาอีเมล ARR Gold ใน Gmail ได้: {e}") from e
         finally:
             try:
                 mail.close()

@@ -11,10 +11,16 @@ from core.investor_essence.investment_axis import (
     build_confirmed_axis,
     validate_axis_completeness,
 )
+from core.investor_essence.financial_context import (
+    extract_years_from_text,
+    update_readiness,
+)
 from core.investor_essence.models import (
     AllocationBasis,
     AllocationPlanRow,
     ArtifactRef,
+    ConfirmedSnapshotRecord,
+    FinancialContextSnapshot,
     InvestmentAxisDraft,
     NumericPolicyField,
     NumericPolicyOrigin,
@@ -35,6 +41,7 @@ from application.investor_essence.ports import (
     IdGeneratorPort,
     InvestorRuntimeUowFactory,
     KnowledgeWritePort,
+    PortfolioPlanningPort,
 )
 
 logger = logging.getLogger(__name__)
@@ -104,6 +111,7 @@ class InvestmentAxisService:
         id_gen: IdGeneratorPort,
         reader_port: Optional[ConfirmedKnowledgeReaderPort] = None,
         knowledge_write: Optional[KnowledgeWritePort] = None,
+        portfolio_planning: Optional[PortfolioPlanningPort] = None,
     ) -> None:
         self._uow_factory = uow_factory
         self._axis_generator = axis_generator
@@ -111,6 +119,7 @@ class InvestmentAxisService:
         self._id_gen = id_gen
         self._reader_port = reader_port
         self._knowledge_write = knowledge_write
+        self._portfolio_planning = portfolio_planning
 
     def create_axis_draft(
         self,
@@ -138,20 +147,38 @@ class InvestmentAxisService:
             }
 
             accepted_claims: List[Dict[str, Any]] = []
-            curr_session = uow.sessions.get_current("workspace")
-            if curr_session:
-                draft_summary = uow.sessions.get_summary(curr_session.session_id)
-                if draft_summary:
-                    accepted_claims = [
-                        {"claim_id": c.claim_id, "text": c.effective_text}
-                        for c in draft_summary.claims
-                        if c.is_accepted
-                    ]
+            essence_snap = uow.planning.get_confirmed_snapshot("workspace", "investor_essence")
+            if essence_snap and "accepted_claims" in essence_snap:
+                accepted_claims = [
+                    {
+                        "claim_id": c.get("claim_id", ""),
+                        "text": c.get("effective_text") or c.get("text", ""),
+                    }
+                    for c in essence_snap["accepted_claims"]
+                ]
+            else:
+                curr_session = uow.sessions.get_current("workspace")
+                if curr_session:
+                    draft_summary = uow.sessions.get_summary(curr_session.session_id)
+                    if draft_summary:
+                        accepted_claims = [
+                            {"claim_id": c.claim_id, "text": c.effective_text}
+                            for c in draft_summary.claims
+                            if c.is_accepted
+                        ]
+
+            goals: List[Dict[str, Any]] = []
+            if self._portfolio_planning:
+                try:
+                    goals = self._portfolio_planning.get_goals(portfolio_id)
+                except Exception as e:
+                    logger.warning("Failed to retrieve goals for axis draft (portfolio %s): %s", portfolio_id, e)
 
             proposal = self._axis_generator.generate_axis(
                 accepted_claims=accepted_claims,
                 financial_context=ctx_dict,
                 prompt_version=prompt_version,
+                goals=goals,
             )
 
             risk_limits_dict: Dict[str, NumericPolicyField] = {}
@@ -183,6 +210,9 @@ class InvestmentAxisService:
             parts = essence_pointer.split(":")
             note_id = parts[2] if len(parts) > 2 else "latest"
             c_hash = parts[3] if len(parts) > 3 else "hash"
+            if essence_snap:
+                note_id = essence_snap.get("confirmation_id") or note_id
+                c_hash = essence_snap.get("content_hash") or c_hash
 
             draft = InvestmentAxisDraft(
                 draft_id=draft_id,
@@ -374,6 +404,38 @@ class InvestmentAxisService:
                 created_at_iso=draft.created_at_iso,
             )
 
+            if "investment_horizon" in updates and inv_hor:
+                extracted_years = extract_years_from_text(inv_hor)
+                if extracted_years:
+                    ctx = uow.planning.get_context_snapshot(draft.portfolio_id)
+                    if ctx and (ctx.horizon_years is None or "horizon_years" in ctx.unknown_fields):
+                        unknown_f = [f for f in ctx.unknown_fields if f != "horizon_years"]
+                        synced_ctx = update_readiness(
+                            FinancialContextSnapshot(
+                                snapshot_id=ctx.snapshot_id,
+                                portfolio_id=ctx.portfolio_id,
+                                horizon_years=extracted_years,
+                                target_use_amount=ctx.target_use_amount,
+                                target_use_range=ctx.target_use_range,
+                                target_use_timeline=ctx.target_use_timeline or inv_hor,
+                                emergency_reserves_amount=ctx.emergency_reserves_amount,
+                                emergency_reserves_months=ctx.emergency_reserves_months,
+                                obligations_monthly=ctx.obligations_monthly,
+                                obligations_description=ctx.obligations_description,
+                                withdrawal_frequency=ctx.withdrawal_frequency,
+                                withdrawal_amount=ctx.withdrawal_amount,
+                                experience_description=ctx.experience_description,
+                                monthly_investable_contribution=ctx.monthly_investable_contribution,
+                                essential_monthly_expense=ctx.essential_monthly_expense,
+                                reserves_outside_portfolio=ctx.reserves_outside_portfolio,
+                                unknown_fields=unknown_f,
+                                as_of=ctx.as_of,
+                                source="synced_from_axis_horizon",
+                                portfolio_checkpoint_refs=ctx.portfolio_checkpoint_refs,
+                            )
+                        )
+                        uow.planning.save_context_snapshot(synced_ctx)
+
             uow.planning.save_axis_draft(updated_draft)
             uow.commit()
             return _to_axis_view(updated_draft)
@@ -382,11 +444,69 @@ class InvestmentAxisService:
         self,
         draft_id: str,
         idempotency_key: str = "",
+        expected_draft_revision: Optional[int] = None,
     ) -> ConfirmationView:
         with self._uow_factory.open() as uow:
             draft = uow.planning.get_axis_draft(draft_id)
             if not draft:
                 raise ResourceNotFoundError("InvestmentAxisDraft", draft_id)
+
+            if expected_draft_revision is not None and draft.revision != expected_draft_revision:
+                raise RevisionConflictError(
+                    resource_id=draft.draft_id,
+                    expected_revision=expected_draft_revision,
+                    actual_revision=draft.revision,
+                )
+
+            # Check financial context readiness
+            ctx = uow.planning.get_context_snapshot(draft.portfolio_id)
+            if ctx and not ctx.is_ready_for_numeric_policy and self._portfolio_planning:
+                extracted_years = extract_years_from_text(draft.investment_horizon) or Decimal("10")
+                now_iso = self._clock.now_utc()
+                try:
+                    goals = self._portfolio_planning.get_goals(draft.portfolio_id)
+                except Exception:
+                    goals = []
+
+                target_amt = ctx.target_use_amount
+                if target_amt is None and goals:
+                    main_g = max(goals, key=lambda g: float(g.get("target_amount_thb") or 0))
+                    if main_g.get("target_amount_thb"):
+                        target_amt = Decimal(str(int(float(main_g["target_amount_thb"]))))
+
+                reserves = ctx.emergency_reserves_amount or Decimal("200000")
+                reserves_m = ctx.emergency_reserves_months or Decimal("6")
+                obligations = ctx.obligations_monthly or Decimal("0")
+
+                healed_snap = FinancialContextSnapshot(
+                    snapshot_id=ctx.snapshot_id,
+                    portfolio_id=draft.portfolio_id,
+                    horizon_years=ctx.horizon_years if ctx.horizon_years is not None else extracted_years,
+                    target_use_amount=target_amt,
+                    target_use_range=ctx.target_use_range,
+                    target_use_timeline=ctx.target_use_timeline or draft.investment_horizon,
+                    emergency_reserves_amount=reserves,
+                    emergency_reserves_months=reserves_m,
+                    obligations_monthly=obligations,
+                    obligations_description=ctx.obligations_description or "ไม่มีภาระผูกพันกระทบพอร์ตนี้",
+                    withdrawal_frequency=ctx.withdrawal_frequency or "ไม่มีการถอน (เน้นสะสมมูลค่าระยะยาว)",
+                    withdrawal_amount=ctx.withdrawal_amount or Decimal("0"),
+                    experience_description=ctx.experience_description or "หุ้น กองทุนรวม ทองคำ",
+                    monthly_investable_contribution=ctx.monthly_investable_contribution,
+                    essential_monthly_expense=ctx.essential_monthly_expense,
+                    reserves_outside_portfolio=ctx.reserves_outside_portfolio,
+                    unknown_fields=[],
+                    as_of=now_iso,
+                    source="axis_auto_reconciled",
+                    portfolio_checkpoint_refs=ctx.portfolio_checkpoint_refs,
+                )
+                ctx = update_readiness(healed_snap)
+                uow.planning.save_context_snapshot(ctx)
+
+            if ctx and not ctx.is_ready_for_numeric_policy:
+                blocking_issues = [i.message for i in ctx.readiness_issues if i.severity == "blocking"]
+                if blocking_issues:
+                    raise AxisIncompleteError([f"Financial context blocking: {b}" for b in blocking_issues])
 
             scope = f"portfolio:{draft.portfolio_id}"
             req_hash = hashlib.sha256(f"confirm_axis:{draft_id}".encode("utf-8")).hexdigest()
@@ -416,7 +536,7 @@ class InvestmentAxisService:
                         value=v.value,
                         unit=v.unit,
                         calculation_basis=v.calculation_basis,
-                        origin=NumericPolicyOrigin.USER_INPUT,
+                        origin=v.origin,  # preserve AI_PROPOSED / USER_INPUT provenance
                         source_refs=v.source_refs,
                         assumptions=v.assumptions,
                         confirmed_text_revision=v.confirmed_text_revision,
@@ -512,7 +632,23 @@ class InvestmentAxisService:
                 "role_models": list(draft.role_models),
                 "non_actions": list(draft.non_actions),
                 "confirmed_at_iso": now_iso,
+                "artifact_id": conf_id,
             }
+
+            # Persist immutable confirmed snapshot
+            record = ConfirmedSnapshotRecord(
+                snapshot_id=conf_id,
+                scope=scope,
+                scope_id=draft.portfolio_id,
+                kind="investment_axis",
+                source_id=draft.draft_id,
+                source_revision=draft.revision,
+                content_hash=confirmed.content_hash,
+                snapshot_json=json.dumps(confirmed_snapshot, ensure_ascii=False),
+                confirmed_at_iso=now_iso,
+            )
+            uow.planning.save_confirmed_snapshot(record)
+
             cas_ok = uow.planning.set_confirmed_pointer(
                 scope=scope,
                 kind="investment_axis",
@@ -529,19 +665,27 @@ class InvestmentAxisService:
                 )
 
             # 5. Optional Knowledge Broker write
+            artifact_ref_dict = {
+                "document_key": doc_key,
+                "note_id": conf_id,
+                "revision_id": "1",
+                "content_hash": confirmed.content_hash,
+                "artifact_set_hash": confirmed.content_hash,
+            }
             if self._knowledge_write is not None:
                 try:
-                    self._knowledge_write.submit({
-                        "command_id": f"cmd-confirm-axis-{conf_id}",
-                        "idempotency_key": idempotency_key or f"idem-axis-{conf_id}",
-                        "operation": "upsert_note",
-                        "document_key": doc_key,
-                        "entity_type": "investment_axis",
-                        "portfolio_id": draft.portfolio_id,
-                        "content_hash": confirmed.content_hash,
-                        "sections": confirmed.complete_sections,
-                        "confirmed_at": now_iso,
-                    })
+                    from tools.investor_essence.adapters.knowledge_publication_adapter import (
+                        KnowledgePublicationAdapter,
+                    )
+                    pub_adapter = KnowledgePublicationAdapter(self._knowledge_write)
+                    pub_ref = pub_adapter.publish_axis(
+                        confirmation_id=conf_id,
+                        portfolio_id=draft.portfolio_id,
+                        snapshot_dict=confirmed_snapshot,
+                        idempotency_key=idempotency_key,
+                    )
+                    if pub_ref:
+                        artifact_ref_dict = pub_ref
                 except Exception as ex:
                     logger.warning("Optional knowledge write broker axis submission failed: %s", ex)
 
@@ -550,13 +694,7 @@ class InvestmentAxisService:
                 confirmation_id=conf_id,
                 status="committed",
                 accepted_claims_count=len(confirmed.complete_sections),
-                artifact_ref={
-                    "document_key": doc_key,
-                    "note_id": conf_id,
-                    "revision_id": "1",
-                    "content_hash": confirmed.content_hash,
-                    "artifact_set_hash": confirmed.content_hash,
-                },
+                artifact_ref=artifact_ref_dict,
                 message=f"Investment axis confirmed for portfolio {draft.portfolio_id}",
             )
 
@@ -576,12 +714,14 @@ class InvestmentAxisService:
     def get_current_confirmed_axis(self, portfolio_id: str) -> Optional[Dict[str, Any]]:
         with self._uow_factory.open() as uow:
             scope = f"portfolio:{portfolio_id}"
-            snapshot = uow.planning.get_confirmed_snapshot(scope, "investment_axis")
-            if snapshot:
-                return snapshot
             pointer = uow.planning.get_confirmed_pointer(scope, "investment_axis")
             if not pointer:
                 return None
+            snapshot = uow.planning.get_confirmed_snapshot(scope, "investment_axis")
+            if snapshot:
+                res = dict(snapshot)
+                res["pointer"] = pointer
+                return res
             return {
                 "artifact_id": pointer,
                 "scope": scope,

@@ -1,6 +1,6 @@
 from datetime import datetime
 from decimal import Decimal, ROUND_HALF_UP
-from typing import Literal, Optional, List, Dict, Union, Tuple
+from typing import Any, Literal, Optional, List, Dict, Union, Tuple
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from .constants import CASH_THB_SYMBOL, CASH_USD_SYMBOL, CASH_SYMBOL
@@ -186,6 +186,8 @@ class PortfolioState(BaseModel):
     fx_rates: Dict[str, float] = Field(default_factory=lambda: {"USDTHB": 36.5})
     allocation_targets: List[AllocationTarget] = Field(default_factory=default_allocation_targets)
     holdings: List[Holding] = Field(default_factory=list)
+    allocation_policy: Optional[Dict[str, Any]] = None
+    allocation_plan_origin: Optional[Dict[str, Any]] = None
     price_refresh_info: Optional[Dict[str, str]] = None
 
     @field_validator("last_updated", mode="before")

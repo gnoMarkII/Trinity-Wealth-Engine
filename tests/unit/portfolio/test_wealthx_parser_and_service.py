@@ -147,6 +147,70 @@ def test_parse_wealthx_text_to_dicts_multi_row():
     assert r2["confirmation_no"] == "DN 202603270119"
 
 
+SAMPLE_WEALTHX_CREDIT_NOTE_ISO = """
+ใบยืนยัน / ใบเสร็จรับเงิน / ใบกำกับภาษี
+Confirmation / Receipt / Tax Invoice
+บริษัทหลักทรัพย์ เวลท์เอกซ์ จำกัด    WealthX Securities Co., Ltd.
+เลขที่เอกสาร / Settlement No.                             เลขที่ใบกำกับภาษี /
+CN 202610050163                              WEALTHX20261005001590
+วันที่ได้ NAV / NAV Date                  วันที่ครบกำหนดชำระ / Settlement Date
+2026-10-02                                         2026-10-05
+คำสั่ง: ขาย / สับเปลี่ยนออก / โอนออก (ข้อมูล ณ วันที่ 2026-10-02)
+   ชื่อกองทุน                         บลจ.             ประเภทคำสั่ง           เลขที่อ้างอิงรายการ           จำนวนหน่วย            ราคาต่อหน่วย             ภาษีมูลค่าเพิ่ม (บาท)                   (บาท)
+   Fund Code                          AMC                  Type                Reference No.                No. of Unit             Unit Price            Fee (VAT Included)           Amount (Baht)
+   TLWORLD-X                       TALISAM                 SELL                      SWO                    3,904.0733                11.6203                           136.65               45,366.50
+                                                                             239261001024459
+                                                                                       7
+                                                                                                  รวมมูลค่าขาย (บาท) / Total Amount (Baht)                     45,366.50
+"""
+
+SAMPLE_WEALTHX_DEBIT_NOTE_ISO = """
+ใบยืนยัน / ใบเสร็จรับเงิน / ใบกำกับภาษี
+Confirmation / Receipt / Tax Invoice
+บริษัทหลักทรัพย์ เวลท์เอกซ์ จำกัด    WealthX Securities Co., Ltd.
+เลขที่เอกสาร / Settlement No.                             เลขที่ใบกำกับภาษี /
+DN 202610071865                              WEALTHX20261007002134
+วันที่ได้ NAV / NAV Date                  วันที่ครบกำหนดชำระ / Settlement Date
+2026-10-05                                         2026-10-05
+คำสั่ง: ซื้อ / สับเปลี่ยนเข้า / โอนเข้า (ข้อมูล ณ วันที่ 2026-10-05)
+   ชื่อกองทุน                         บลจ.             ประเภทคำสั่ง            เลขที่อ้างอิงรายการ           จำนวนหน่วย           ราคาต่อหน่วย              ภาษีมูลค่าเพิ่ม (บาท)                   (บาท)
+   Fund Code                          AMC                  Type                Reference No.                No. of Unit             Unit Price            Fee (VAT Included)            Amount (Baht)
+   TLWORLDXUS-X                    TALISAM                  BUY                       SWI                    4,466.6135                10.1568                           268.00              45,366.50
+                                                                             239261001024459
+                                                                                       7
+                                                                                                  รวมมูลค่าซื้อ (บาท) / Total Amount (Baht)                   45,366.50
+"""
+
+
+def test_parse_wealthx_credit_note_iso_dates():
+    items = _parse_wealthx_text_to_dicts(SAMPLE_WEALTHX_CREDIT_NOTE_ISO)
+    assert len(items) == 1
+    r = items[0]
+    assert r["confirmation_no"] == "CN 202610050163"
+    assert r["order_id"] == "2392610010244597"
+    assert r["trade_date"] == "2026-10-02"
+    assert r["settlement_date"] == "2026-10-05"
+    assert r["symbol"] == "TLWORLD-X"
+    assert r["action"] == "SELL"
+    assert r["units"] == "3904.0733"
+    assert r["price"] == "11.6203"
+    assert r["net_amount"] == "45366.50"
+
+
+def test_parse_wealthx_debit_note_iso_dates():
+    items = _parse_wealthx_text_to_dicts(SAMPLE_WEALTHX_DEBIT_NOTE_ISO)
+    assert len(items) == 1
+    r = items[0]
+    assert r["confirmation_no"] == "DN 202610071865"
+    assert r["order_id"] == "2392610010244597"
+    assert r["trade_date"] == "2026-10-05"
+    assert r["settlement_date"] == "2026-10-05"
+    assert r["symbol"] == "TLWORLDXUS-X"
+    assert r["action"] == "BUY"
+    assert r["units"] == "4466.6135"
+    assert r["price"] == "10.1568"
+    assert r["net_amount"] == "45366.50"
+
 
 class MockWealthXEmailSource(TradeEmailSourcePort):
     def __init__(self, emails, pdf_map):

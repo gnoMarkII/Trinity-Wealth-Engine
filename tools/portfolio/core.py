@@ -1,4 +1,4 @@
-from typing import Optional, List, Tuple, Literal
+from typing import Optional, List, Tuple, Literal, Dict
 import frontmatter
 from tools.portfolio import get_default_service
 from tools.portfolio.domain.models import (
@@ -102,6 +102,13 @@ def structured_batch_assign_holding_buckets(
 ) -> PortfolioState:
     return get_default_service().structured_batch_assign_holding_buckets(
         symbols=symbols, bucket_id=bucket_id, portfolio_id=portfolio_id
+    )
+
+def structured_batch_reassign_holding_buckets(
+    assignments: Dict[str, Optional[str]], portfolio_id: str = "default"
+) -> PortfolioState:
+    return get_default_service().structured_batch_reassign_holding_buckets(
+        assignments=assignments, portfolio_id=portfolio_id
     )
 
 def structured_batch_remove_holdings(

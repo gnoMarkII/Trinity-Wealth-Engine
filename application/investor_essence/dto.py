@@ -28,15 +28,7 @@ class QuestionProposal:
     is_clarification: bool = False
 
 
-@dataclass(frozen=True)
-class EvidenceSnapshot:
-    """Frozen input context of prior Q&A passed to LLM."""
-    session_id: str
-    branch_id: str
-    revision: int
-    context_hash: str
-    qa_pairs: List[Dict[str, Any]]
-    coverage_topics: List[str]
+from core.investor_essence.models import EvidenceSnapshot
 
 
 @dataclass(frozen=True)
@@ -105,6 +97,18 @@ class PurposeBucketProposal:
     bucket_id: Optional[str] = None
     source_value_ids: List[str] = field(default_factory=list)
     source_axis_allocation_ids: List[str] = field(default_factory=list)
+    linked_goal_name: Optional[str] = None
+    eligible_assets: List[str] = field(default_factory=list)
+    cash_inflow_routing_pct: Optional[str] = None
+    action_rules: List[str] = field(default_factory=list)
+    target_amount: Optional[str] = None
+    minimum_amount: Optional[str] = None
+    need_by_date: Optional[str] = None
+    inflow_route_mode: str = "fixed_ratio"
+    inflow_priority: int = 1
+    when_full_redirect_bucket_id: Optional[str] = None
+    goal_id: Optional[str] = None
+    schema_version: str = "2.0"
 
 
 @dataclass(frozen=True)
@@ -127,6 +131,9 @@ NumericPolicyFieldProposal = NumericPolicyFieldDTO
 AllocationPlanRowProposal = AllocationRowDTO
 
 
+from core.investor_essence.models import HoldingPlanningSnapshot
+
+
 @dataclass(frozen=True)
 class PortfolioPlanningSnapshot:
     """Consistent point-in-time snapshot of portfolio state & checkpoint."""
@@ -140,6 +147,7 @@ class PortfolioPlanningSnapshot:
     as_of: str
     targets: List[Dict[str, Any]]
     holdings_summary: List[Dict[str, Any]]
+    holdings: List[HoldingPlanningSnapshot] = field(default_factory=list)
 
 
 @dataclass(frozen=True)
@@ -162,6 +170,10 @@ class AllocationPreview:
     after_allocation: Dict[str, Any]
     issues: List[str]
     payload_hash: str
+    preview_id: str = ""
+    draft_id: str = ""
+    draft_revision: int = 1
+    source_refs: Dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass(frozen=True)
@@ -176,6 +188,9 @@ class ApplyAllocationCommand:
     remapping: List[Dict[str, Any]]
     accepted_policy_snapshot: Dict[str, Any]
     source_refs: Dict[str, str]
+    expected_draft_revision: Optional[int] = None
+    preview_id: Optional[str] = None
+    idempotency_key: Optional[str] = None
 
 
 @dataclass(frozen=True)
@@ -255,6 +270,10 @@ class FinancialContextView:
     withdrawal_frequency: Optional[str] = None
     withdrawal_amount: Optional[str] = None
     experience_description: Optional[str] = None
+    monthly_investable_contribution: Optional[str] = None
+    essential_monthly_expense: Optional[str] = None
+    reserves_outside_portfolio: Optional[str] = None
+    facts: Dict[str, Dict[str, Any]] = field(default_factory=dict)
     unknown_fields: List[str] = field(default_factory=list)
     as_of: str = ""
     source: str = "user_reported"

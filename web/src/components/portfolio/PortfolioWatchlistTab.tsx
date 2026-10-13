@@ -56,16 +56,16 @@ export default function PortfolioWatchlistTab({ portfolioId, items, lastUpdated,
       </div>
 
       <div className="rounded-2xl border border-sky-100 bg-panel shadow-sm overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm">
+        <div className="overflow-x-auto custom-scrollbar">
+          <table className="w-full text-left text-sm min-w-[700px]">
             <thead>
-              <tr className="border-b border-sky-100 bg-zinc-50/80 text-xs font-semibold uppercase tracking-wider text-zinc-500">
-                <th className="px-6 py-3.5">Symbol</th>
-                <th className="px-6 py-3.5">Asset Type</th>
-                <th className="px-6 py-3.5 text-right">Target Price</th>
-                <th className="px-6 py-3.5">Added Date</th>
-                <th className="px-6 py-3.5">Notes</th>
-                <th className="px-6 py-3.5 text-right">Actions</th>
+              <tr className="border-b border-sky-100 bg-zinc-50/80 text-xs font-semibold uppercase tracking-wider text-zinc-500 whitespace-nowrap">
+                <th className="px-6 py-3.5 whitespace-nowrap">Symbol</th>
+                <th className="px-6 py-3.5 whitespace-nowrap">Asset Type</th>
+                <th className="px-6 py-3.5 text-right whitespace-nowrap">Target Price</th>
+                <th className="px-6 py-3.5 whitespace-nowrap">Added Date</th>
+                <th className="px-6 py-3.5 whitespace-nowrap">Notes</th>
+                <th className="px-6 py-3.5 text-right whitespace-nowrap">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-sky-50">

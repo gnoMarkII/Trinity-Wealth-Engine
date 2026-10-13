@@ -49,6 +49,12 @@ class TradeEmailSourcePort(ABC):
         """Search email inbox for SCBAM Fund Click confirmation emails."""
         pass
 
+    def search_arr_gold_emails(
+        self, query: str = "", limit: Optional[int] = None, since_date: Optional[str] = None
+    ) -> List[TradeDocumentMetadata]:
+        """Search email inbox for ARR Gold Trading confirmation emails."""
+        return []
+
     @abstractmethod
     def fetch_pdf_attachment(self, message_id: str, attachment_id: str) -> bytes:
         """Fetch raw bytes of a PDF attachment given message and attachment ID."""

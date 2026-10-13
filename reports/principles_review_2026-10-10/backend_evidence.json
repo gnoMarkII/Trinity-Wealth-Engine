@@ -1,0 +1,211 @@
+{
+  "checks": 16,
+  "results": [
+    {
+      "case": "adaptive_question_loses_selected_option_text",
+      "defect_reproduced": true,
+      "observed": {
+        "payload_for_q2": {
+          "question_id": "q_audit-1_1",
+          "sequence_no": 1,
+          "text": "คุณอยากให้เงินช่วยอะไรในชีวิตมากที่สุด?",
+          "answer": {
+            "kind": "choice",
+            "option_id": "opt_1_a",
+            "free_text": null
+          }
+        }
+      }
+    },
+    {
+      "case": "batch_confirmed_claims_lost_at_axis",
+      "defect_reproduced": true,
+      "observed": {
+        "confirmed_count": 2,
+        "axis_accepted_claims": [],
+        "current_essence_response_keys": [
+          "kind",
+          "pointer",
+          "scope"
+        ]
+      }
+    },
+    {
+      "case": "financial_context_fields_lost_at_axis",
+      "defect_reproduced": true,
+      "observed": {
+        "missing": [
+          "target_use_timeline",
+          "emergency_reserves_months",
+          "withdrawal_amount",
+          "withdrawal_frequency",
+          "experience_description",
+          "obligations_description"
+        ]
+      }
+    },
+    {
+      "case": "form_placeholder_values_fail_backend",
+      "defect_reproduced": true,
+      "observed": {
+        "failures": [
+          {
+            "field": "horizon_years",
+            "input": "5-10 ปี",
+            "error": "decimal.InvalidOperation"
+          },
+          {
+            "field": "emergency_reserves_months",
+            "input": "6 เดือน",
+            "error": "decimal.InvalidOperation"
+          },
+          {
+            "field": "target_use_amount",
+            "input": "500,000 บาท",
+            "error": "decimal.InvalidOperation"
+          }
+        ]
+      }
+    },
+    {
+      "case": "unknown_horizon_missing_reserves_still_ready",
+      "defect_reproduced": true,
+      "observed": {
+        "ready": true,
+        "issues": 0
+      }
+    },
+    {
+      "case": "invalid_risk_numbers_and_units_pass_axis",
+      "defect_reproduced": true,
+      "observed": {
+        "issues": []
+      }
+    },
+    {
+      "case": "axis_content_hash_ignores_allocation",
+      "defect_reproduced": true,
+      "observed": {
+        "equal_content_hash": true
+      }
+    },
+    {
+      "case": "holdings_value_and_weight_are_zero_in_bucket_prompt",
+      "defect_reproduced": true,
+      "observed": {
+        "source_value_thb": 900000,
+        "prompt_holding": {
+          "symbol": "TEST",
+          "weight_percent": "0",
+          "value_thb": "0"
+        }
+      }
+    },
+    {
+      "case": "default_remapping_unassigns_existing_holdings",
+      "defect_reproduced": true,
+      "observed": {
+        "remapping": [
+          {
+            "old_bucket_id": "core_equities",
+            "target_bucket_id": null,
+            "affected_holding_count": 1
+          }
+        ]
+      }
+    },
+    {
+      "case": "bucket_provenance_uses_placeholder_hashes",
+      "defect_reproduced": true,
+      "observed": {
+        "axis_ref": {
+          "document_key": "investment-axis-synthetic-A",
+          "note_id": "latest",
+          "revision_id": "1",
+          "content_hash": "hash",
+          "artifact_set_hash": "hash"
+        },
+        "essence_ref": {
+          "document_key": "investor-essence-synthetic-A",
+          "note_id": "latest",
+          "revision_id": "1",
+          "content_hash": "hash",
+          "artifact_set_hash": "hash"
+        }
+      }
+    },
+    {
+      "case": "inconsistent_matrix_and_180_percent_dca_pass_validation",
+      "defect_reproduced": true,
+      "observed": {
+        "is_valid": true,
+        "bucket_targets": [
+          "90",
+          "10"
+        ],
+        "mapping_weights": [
+          {
+            "axis_allocation_id": "alloc-1",
+            "bucket_id": "b-growth",
+            "portfolio_weight_percent": "70.00"
+          },
+          {
+            "axis_allocation_id": "alloc-2",
+            "bucket_id": "b-safety",
+            "portfolio_weight_percent": "30.00"
+          }
+        ],
+        "dca_sum": 180
+      }
+    },
+    {
+      "case": "invalid_matrix_is_forwarded_to_apply",
+      "defect_reproduced": true,
+      "observed": {
+        "apply_called": true
+      }
+    },
+    {
+      "case": "practical_policy_metadata_discarded_by_portfolio_apply",
+      "defect_reproduced": true,
+      "observed": {
+        "persisted_target_fields": [
+          "bucket_id",
+          "color",
+          "name",
+          "target_percent"
+        ],
+        "holding_bucket_after_apply": null
+      }
+    },
+    {
+      "case": "nonexistent_remapping_destination_is_committed",
+      "defect_reproduced": true,
+      "observed": {
+        "holding_bucket": "missing-bucket",
+        "target_bucket_ids": [
+          "b-growth",
+          "b-safety"
+        ]
+      }
+    },
+    {
+      "case": "production_knowledge_broker_rejects_confirmation_but_success_reported",
+      "defect_reproduced": true,
+      "observed": {
+        "broker_rejects_dict": true,
+        "api_status": "committed",
+        "message": "Investor essence confirmed and published successfully"
+      }
+    },
+    {
+      "case": "portfolio_committed_runtime_failed_retry_cannot_recover",
+      "defect_reproduced": true,
+      "observed": {
+        "portfolio_sequence": 2,
+        "retry_conflicted": true,
+        "portfolio_receipt_lookup": null
+      }
+    }
+  ]
+}

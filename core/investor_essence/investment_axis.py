@@ -39,24 +39,59 @@ def validate_axis_completeness(draft: InvestmentAxisDraft) -> List[str]:
         errors.append("Section 1 (นโยบายพื้นฐาน): ต้องระบุข้อความนโยบายพื้นฐาน")
 
     # 2. Risk Limits (support canonical and alias keys)
-    mdd = draft.risk_limits.get("mdd_max_annual") or draft.risk_limits.get("mdd_percent")
+    mdd = (
+        draft.risk_limits.get("mdd_max_annual")
+        or draft.risk_limits.get("mdd_percent")
+        or draft.risk_limits.get("max_drawdown_percent")
+    )
     if mdd is None or mdd.value is None or not mdd.is_confirmed:
         errors.append("Section 2 (ระดับความเสี่ยง): ต้องระบุและยืนยันค่า MDD สูงสุดต่อปี")
+    elif mdd.unit == "%":
+        try:
+            mdd_dec = Decimal(str(mdd.value))
+            if not (Decimal("0") <= mdd_dec <= Decimal("100")):
+                errors.append(f"Section 2 (ระดับความเสี่ยง): ค่า MDD สูงสุดต่อปีต้องอยู่ระหว่าง 0% ถึง 100% (ปัจจุบัน {mdd.value}%)")
+        except Exception:
+            errors.append(f"Section 2 (ระดับความเสี่ยง): ค่า MDD ต้องเป็นตัวเลขที่ถูกต้อง (ปัจจุบัน '{mdd.value}')")
 
-    trade_limit = draft.risk_limits.get("max_loss_per_trade") or draft.risk_limits.get("max_loss_per_trade_percent")
-    if trade_limit is None or trade_limit.value is None or not trade_limit.is_confirmed:
+    trade_limit = (
+        draft.risk_limits.get("max_loss_per_trade")
+        or draft.risk_limits.get("max_loss_per_trade_percent")
+        or draft.risk_limits.get("max_single_loss_percent")
+    )
+    if trade_limit is None:
         errors.append("Section 2 (ระดับความเสี่ยง): ต้องระบุและยืนยันขีดจำกัดผลขาดทุนต่อ 1 การซื้อขาย")
+    else:
+        is_na = (
+            trade_limit.unit == "not_applicable"
+            or trade_limit.calculation_basis == "not_applicable"
+            or "not_applicable" in (trade_limit.assumptions or "").lower()
+        )
+        if not is_na:
+            if trade_limit.value is None or not trade_limit.is_confirmed:
+                errors.append("Section 2 (ระดับความเสี่ยง): ต้องระบุและยืนยันขีดจำกัดผลขาดทุนต่อ 1 การซื้อขาย")
+            elif trade_limit.unit == "%":
+                try:
+                    tl_dec = Decimal(str(trade_limit.value))
+                    if not (Decimal("0") <= tl_dec <= Decimal("100")):
+                        errors.append(f"Section 2 (ระดับความเสี่ยง): ขีดจำกัดขาดทุนต่อการซื้อขายต้องอยู่ระหว่าง 0% ถึง 100% (ปัจจุบัน {trade_limit.value}%)")
+                except Exception:
+                    errors.append(f"Section 2 (ระดับความเสี่ยง): ค่าขีดจำกัดขาดทุนต่อการซื้อขายต้องเป็นตัวเลขที่ถูกต้อง (ปัจจุบัน '{trade_limit.value}')")
 
     # 3. Targets (invest / exclude)
-    if not draft.invest_targets:
+    invest_t = [t.strip() for t in draft.invest_targets if t.strip()]
+    if not invest_t:
         errors.append("Section 3 (เป้าหมาย): ต้องระบุรายการสินทรัพย์หรือหมวดที่ลงทุน")
-    if not draft.exclude_targets:
+    exclude_t = [t.strip() for t in draft.exclude_targets if t.strip()]
+    if not exclude_t:
         errors.append("Section 3 (เป้าหมาย): ต้องระบุรายการสินทรัพย์หรือหมวดที่ไม่ลงทุน")
 
     # 4. Methods (primary / secondary)
-    if not draft.primary_methods:
+    prim_m = [m.strip() for m in draft.primary_methods if m.strip()]
+    if not prim_m:
         errors.append("Section 4 (วิธีการ): ต้องระบุวิธีการลงทุนหลัก")
-    if not draft.secondary_methods:
+    sec_m = [m.strip() for m in draft.secondary_methods if m.strip()]
+    if not sec_m:
         errors.append("Section 4 (วิธีการ): ต้องระบุวิธีการลงทุนเสริม")
 
     # 5. Horizon
@@ -69,6 +104,14 @@ def validate_axis_completeness(draft: InvestmentAxisDraft) -> List[str]:
     if not draft.allocation_rows:
         errors.append("Section 6 (การจัดสรรสินทรัพย์): ต้องมีสัดส่วนการจัดสรรสินทรัพย์อย่างน้อย 1 หมวด")
     else:
+        alloc_ids = set()
+        for r in draft.allocation_rows:
+            if r.allocation_id in alloc_ids:
+                errors.append(f"Section 6 (การจัดสรรสินทรัพย์): allocation_id ซ้ำกัน ({r.allocation_id})")
+            alloc_ids.add(r.allocation_id)
+            if r.target_percent < Decimal("0.00"):
+                errors.append(f"Section 6 (การจัดสรรสินทรัพย์): สัดส่วนหมวด '{r.category_name}' ต้องไม่ติดลบ ({r.target_percent}%)")
+
         total_percent = sum((r.target_percent for r in draft.allocation_rows), Decimal("0.00"))
         variance = abs(total_percent - HUNDRED_PERCENT)
         if variance > PERCENT_TOLERANCE:
@@ -77,7 +120,8 @@ def validate_axis_completeness(draft: InvestmentAxisDraft) -> List[str]:
             )
 
     # 7. Role Models
-    if not draft.role_models:
+    rm = [r.strip() for r in draft.role_models if r.strip()]
+    if not rm:
         errors.append("Section 7 (นักลงทุนต้นแบบ): ต้องระบุนักลงทุนต้นแบบหรือระบุว่าไม่ยึดบุคคลใดเป็นต้นแบบ")
 
     # 8. Non-actions (at least 3 unique)
@@ -123,8 +167,24 @@ def build_confirmed_axis(
         "non_actions": draft.non_actions,
     }
 
-    serialized = json.dumps(complete_sections, sort_keys=True, ensure_ascii=False)
-    content_hash = hashlib.sha256(serialized.encode("utf-8")).hexdigest()
+    from core.investor_essence.models import compute_semantic_hash
+
+    semantic_payload: Dict[str, Any] = {
+        "sections": complete_sections,
+        "allocation_basis": draft.allocation_basis.value,
+        "allocation_rows": [
+            {
+                "allocation_id": r.allocation_id,
+                "category_name": r.category_name,
+                "target_percent": str(r.target_percent),
+                "role_description": r.role_description,
+            }
+            for r in draft.allocation_rows
+        ],
+        "essence_ref": draft.essence_ref.content_hash,
+        "context_ref": draft.context_ref,
+    }
+    content_hash = compute_semantic_hash(semantic_payload)
 
     return ConfirmedInvestmentAxis(
         confirmation_id=confirmation_id,

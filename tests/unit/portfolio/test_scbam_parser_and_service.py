@@ -44,6 +44,25 @@ SAMPLE_SCBAM_HTML_SP500 = """
 </html>
 """
 
+SAMPLE_SCBAM_HTML_FUTURE_ADV = """
+<!DOCTYPE html>
+<html>
+<body>
+<div style="font-family: sans-serif;">
+  <h2>ยืนยันการทำรายการซื้อกองทุน</h2>
+  <table>
+    <tr><td>วันที่ทำรายการ:</td><td>26/12/2025 เวลา 15:58:25 น.</td></tr>
+    <tr><td>วันที่คำสั่งมีผล:</td><td>31/12/2099</td></tr>
+    <tr><td>เลขที่รายการ:</td><td>ADV-2025-12-26-15.58.25.068380</td></tr>
+    <tr><td>เลขที่บัญชีกองทุน:</td><td>000027893865</td></tr>
+    <tr><td>กองทุน:</td><td>SCBS&P500E (กองทุนเปิดไทยพาณิชย์หุ้นยูเอส (ชนิดช่องทางอิเล็กทรอนิกส์))</td></tr>
+    <tr><td>จำนวนเงิน:</td><td>35,000.00 บาท</td></tr>
+  </table>
+</div>
+</body>
+</html>
+"""
+
 SAMPLE_SCBAM_HTML_GVALUE = """
 <!DOCTYPE html>
 <html>
@@ -312,12 +331,12 @@ def test_scbam_single_email_scan():
 
 
 def test_scbam_quarantine_advance_orders():
-    """Verify that orders starting with ADV- are quarantined with warning and not staged."""
+    """Verify that orders starting with ADV- whose effective date is in the future are quarantined with warning."""
     email_source = MockSCBAMEmailSource({
-        "msg_adv": SAMPLE_SCBAM_HTML_SP500,  # Contains ADV-2025-12-26...
+        "msg_adv": SAMPLE_SCBAM_HTML_FUTURE_ADV,  # Contains ADV- with future date 2099-12-31
     })
     price_port = MockThaiFundPriceAdapter({
-        ("SCBS&P500E", "2025-12-29"): 40.3609,
+        ("SCBS&P500E", "2099-12-31"): 40.3609,
     })
     staging = InMemoryStagingAdapter()
     batch_importer = MockBatchTradeImporter()
@@ -349,7 +368,50 @@ def test_scbam_quarantine_advance_orders():
     assert len(complete_data["warnings"]) == 1
     assert "Advance Order" in complete_data["warnings"][0]["reason"]
 
-    # Single scan raises ValueError
+    # Single scan raises ValueError for future advance order
     with pytest.raises(ValueError, match="Advance Order"):
         service.scan_scbam_email("msg_adv")
+
+
+def test_scbam_advance_orders_executed_past_date_staged():
+    """Verify that advance orders whose effective date has arrived are staged as valid trades."""
+    email_source = MockSCBAMEmailSource({
+        "msg_adv_past": SAMPLE_SCBAM_HTML_SP500,  # Effective date 2025-12-29 (past date)
+    })
+    price_port = MockThaiFundPriceAdapter({
+        ("SCBS&P500E", "2025-12-29"): 40.3609,
+    })
+    staging = InMemoryStagingAdapter()
+    batch_importer = MockBatchTradeImporter()
+
+    service = SCBAMSyncService(
+        email_source=email_source,
+        price_port=price_port,
+        staging=staging,
+        batch_importer=batch_importer,
+    )
+
+    events_raw = "".join(list(service.stream_scbam_sync(portfolio_id="test_port")))
+    complete_data = None
+    for block in events_raw.split("\n\n"):
+        if "event: complete" in block:
+            for line in block.split("\n"):
+                if line.startswith("data:"):
+                    complete_data = json.loads(line[5:].strip())
+
+    assert complete_data is not None
+    assert complete_data["item_count"] == 1
+    assert len(complete_data["warnings"]) == 0
+    item = complete_data["items"][0]
+    assert item["symbol"] == "SCBS&P500E"
+    assert item["order_id"] == "SCB-ADV-2025-12-26-15.58.25.068380"
+    assert item["units"] == "867.175905"
+    assert item["gross_amount"] == "35000.00"
+
+    # Single scan succeeds for past advance order
+    scan_id, single_items = service.scan_scbam_email("msg_adv_past")
+    assert len(single_items) == 1
+    assert single_items[0].symbol == "SCBS&P500E"
+    assert single_items[0].gross_amount == Decimal("35000.00")
+
 

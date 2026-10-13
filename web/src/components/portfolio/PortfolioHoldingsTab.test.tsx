@@ -113,4 +113,82 @@ describe('PortfolioHoldingsTab', () => {
     expect(screen.getByText(/Trading Journal & Activity Log สำหรับ \[AAPL\]/i)).toBeInTheDocument()
     expect(screen.getByText(/ซื้อเพิ่มที่แนวรับ 180 USD/i)).toBeInTheDocument()
   })
+
+  it('renders unassigned banner when holdings have missing bucket_id and handles filter toggle', () => {
+    const unassignedHoldingsList = [
+      ...holdings,
+      {
+        symbol: 'NVDA',
+        asset_type: 'US_STOCK',
+        units: 2,
+        bucket_id: null,
+        avg_cost_usd: 120,
+        avg_cost_thb: 4200,
+        current_price_usd: 130,
+        current_price_thb: 4550,
+        market_value_thb: 9100,
+        unrealized_pnl_percent: 8.33,
+        unrealized_pnl_value: 700,
+        market_cap_tier: 'Mega',
+        yield_on_cost: 0.1,
+        company_name: 'NVIDIA Corp.',
+        pe_ratio: 45.0,
+        eps: 2.8,
+        payout_ratio: 5,
+        market_cap_value: 3000000000000,
+        dividend_per_share: 0.16,
+        dividend_yield: 0.12,
+        accumulated_dividend_thb: null,
+        fundamentals_updated_at: 1721123456,
+      },
+    ]
+
+    render(
+      <PortfolioHoldingsTab
+        portfolioId="default"
+        holdings={unassignedHoldingsList}
+        selectedBucket={null}
+        onClearBucketFilter={vi.fn()}
+      />
+    )
+
+    expect(screen.getByText(/พบสินทรัพย์ที่ยังไม่ได้จัดหมวดหมู่ \(Unassigned\)/i)).toBeInTheDocument()
+    expect(screen.getByText(/1 รายการ/i)).toBeInTheDocument()
+    expect(screen.getByText(/จัดหมวดหมู่ทันที \(1\)/i)).toBeInTheDocument()
+
+    // Test filter toggle
+    const toggleBtn = screen.getByRole('button', { name: /กรองเฉพาะ Unassigned/i })
+    fireEvent.click(toggleBtn)
+
+    expect(screen.getByText('NVDA')).toBeInTheDocument()
+    expect(screen.queryByText('AAPL')).not.toBeInTheDocument()
+    expect(screen.queryByText('MSFT')).not.toBeInTheDocument()
+  })
+
+  it('displays policy compatibility warning when holding asset_type is not in eligible_assets', () => {
+    const policy = {
+      purpose_buckets: [
+        {
+          bucket_id: 'CORE',
+          name: 'Core Equities',
+          eligible_assets: ['BOND', 'GOLD'], // AAPL is US_STOCK, so it should trigger ineligible warning
+          target_percent: 60,
+        },
+      ],
+    }
+
+    render(
+      <PortfolioHoldingsTab
+        portfolioId="default"
+        holdings={holdings}
+        selectedBucket={null}
+        onClearBucketFilter={vi.fn()}
+        targets={[{ bucket_id: 'CORE', name: 'Core Equities', target_percent: 60, color: '#3B82F6' }]}
+        allocationPolicy={policy}
+      />
+    )
+
+    expect(screen.getByText(/⚠️ นอกเกณฑ์แนะนำ/i)).toBeInTheDocument()
+  })
 })
+

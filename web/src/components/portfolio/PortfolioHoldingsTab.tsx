@@ -14,6 +14,7 @@ interface Props {
   selectedBucket: string | null
   onClearBucketFilter: () => void
   targets?: AllocationTargetDTO[]
+  allocationPolicy?: ActualPortfolioStateDTO['allocation_policy']
   onSuccess?: (state: ActualPortfolioStateDTO) => void
   journalRows?: JournalEntryDTO[]
   journalKeyword?: string
@@ -23,7 +24,7 @@ interface Props {
   onViewTransactions?: (symbol: string) => void
 }
 
-type SortField = 'symbol' | 'asset_type' | 'units' | 'market_value_thb' | 'unrealized_pnl_percent' | 'pe_ratio' | 'yield_on_cost'
+type SortField = 'symbol' | 'asset_type' | 'bucket_id' | 'units' | 'market_value_thb' | 'unrealized_pnl_percent' | 'pe_ratio' | 'yield_on_cost'
 
 export default function PortfolioHoldingsTab({
   portfolioId,
@@ -31,6 +32,7 @@ export default function PortfolioHoldingsTab({
   selectedBucket,
   onClearBucketFilter,
   targets = [],
+  allocationPolicy,
   onSuccess,
   journalRows = [],
   journalKeyword = '',
@@ -42,6 +44,7 @@ export default function PortfolioHoldingsTab({
   const [sortField, setSortField] = useState<SortField>('market_value_thb')
   const [sortAsc, setSortAsc] = useState<boolean>(false)
   const [selectedSymbols, setSelectedSymbols] = useState<Set<string>>(new Set())
+  const [filterOnlyUnassigned, setFilterOnlyUnassigned] = useState(false)
 
   const [expandedSymbol, setExpandedSymbol] = useState<string | null>(null)
   const [journalModalOpen, setJournalModalOpen] = useState(false)
@@ -78,11 +81,27 @@ export default function PortfolioHoldingsTab({
     }
   }
 
-  // Filter holdings by URL/selected bucket
+  // Unassigned holdings calculation (WP13 Task 9)
+  const unassignedHoldings = useMemo(
+    () => holdings.filter((h) => !h.bucket_id || h.bucket_id.trim() === ''),
+    [holdings]
+  )
+  const unassignedTotalValue = useMemo(
+    () => unassignedHoldings.reduce((sum, h) => sum + (h.market_value_thb || 0), 0),
+    [unassignedHoldings]
+  )
+
+  // Filter holdings by URL/selected bucket and unassigned toggle
   const filteredHoldings = useMemo(() => {
-    if (!selectedBucket) return holdings
-    return holdings.filter((h) => h.bucket_id === selectedBucket)
-  }, [holdings, selectedBucket])
+    let list = holdings
+    if (selectedBucket) {
+      list = list.filter((h) => h.bucket_id === selectedBucket)
+    }
+    if (filterOnlyUnassigned) {
+      list = list.filter((h) => !h.bucket_id || h.bucket_id.trim() === '')
+    }
+    return list
+  }, [holdings, selectedBucket, filterOnlyUnassigned])
 
   // Sort holdings
   const sortedHoldings = useMemo(() => {
@@ -140,6 +159,50 @@ export default function PortfolioHoldingsTab({
 
   return (
     <div className="space-y-4">
+      {/* Unassigned Holdings Banner (WP13 Task 9) */}
+      {unassignedHoldings.length > 0 && !selectedBucket && (
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 rounded-2xl border border-amber-300 bg-gradient-to-r from-amber-50/90 via-white to-orange-50/70 p-4 shadow-sm animate-fade-in">
+          <div className="flex items-start gap-3">
+            <span className="text-2xl shrink-0 mt-0.5">⚠️</span>
+            <div>
+              <div className="text-sm font-bold text-amber-950 flex items-center gap-2">
+                <span>พบสินทรัพย์ที่ยังไม่ได้จัดหมวดหมู่ (Unassigned)</span>
+                <span className="rounded-full bg-amber-200/90 px-2 py-0.5 text-xs font-bold text-amber-900">
+                  {unassignedHoldings.length} รายการ
+                </span>
+              </div>
+              <p className="text-xs text-amber-800/90 mt-0.5">
+                มีสินทรัพย์มูลค่ารวม <strong className="font-bold text-amber-950">{formatTHB(unassignedTotalValue)}</strong> ที่ยังไม่ได้กำหนด Strategy Bucket
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 shrink-0 w-full sm:w-auto justify-end">
+            <button
+              type="button"
+              onClick={() => setFilterOnlyUnassigned(!filterOnlyUnassigned)}
+              className={`rounded-xl px-3 py-1.5 text-xs font-bold transition-all border ${
+                filterOnlyUnassigned
+                  ? 'bg-amber-200 border-amber-400 text-amber-950'
+                  : 'bg-white border-amber-300 text-amber-900 hover:bg-amber-100'
+              }`}
+            >
+              {filterOnlyUnassigned ? 'แสดงทั้งหมด' : 'กรองเฉพาะ Unassigned'}
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setSelectedSymbols(new Set(unassignedHoldings.map((h) => h.symbol)))
+                setBatchAssignModalOpen(true)
+              }}
+              className="rounded-xl bg-amber-600 px-3.5 py-1.5 text-xs font-bold text-white shadow-sm hover:bg-amber-700 active:scale-98 transition-all flex items-center gap-1.5"
+            >
+              <FolderIcon className="h-3.5 w-3.5" />
+              <span>จัดหมวดหมู่ทันที ({unassignedHoldings.length})</span>
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Bucket Filter Active Banner */}
       {selectedBucket && (
         <div className="flex items-center justify-between rounded-xl border border-sky-200 bg-sky-50/80 px-4 py-3 text-sm text-sky-900 shadow-sm animate-fade-in">
@@ -227,10 +290,10 @@ export default function PortfolioHoldingsTab({
           </div>
         </div>
 
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm min-w-[1050px]">
+        <div className="overflow-x-auto custom-scrollbar">
+          <table className="w-full text-left text-sm min-w-[1180px]">
             <thead>
-              <tr className="border-b border-sky-100 bg-zinc-50/90 font-bold uppercase tracking-wider text-xs sm:text-sm text-zinc-700">
+              <tr className="border-b border-sky-100 bg-zinc-50/90 font-bold uppercase tracking-wider text-xs text-zinc-700 whitespace-nowrap">
                 <th className="w-10 px-4 py-3.5 text-center">
                   <input
                     type="checkbox"
@@ -240,30 +303,33 @@ export default function PortfolioHoldingsTab({
                     className="h-4 w-4 rounded border-sky-300 text-flow-blue focus:ring-flow-cyan"
                   />
                 </th>
-                <th className="px-4 py-3.5 cursor-pointer select-none hover:text-flow-blue" onClick={() => handleSort('symbol')}>
+                <th className="px-4 py-3.5 cursor-pointer select-none hover:text-flow-blue whitespace-nowrap" onClick={() => handleSort('symbol')}>
                   Symbol / Company {renderSortIndicator('symbol')}
                 </th>
-                <th className="px-4 py-3.5 cursor-pointer select-none hover:text-flow-blue" onClick={() => handleSort('asset_type')}>
-                  Type / Bucket {renderSortIndicator('asset_type')}
+                <th className="px-4 py-3.5 cursor-pointer select-none hover:text-flow-blue whitespace-nowrap" onClick={() => handleSort('asset_type')}>
+                  Type {renderSortIndicator('asset_type')}
                 </th>
-                <th className="px-4 py-3.5 text-right cursor-pointer select-none hover:text-flow-blue" onClick={() => handleSort('units')}>
+                <th className="px-4 py-3.5 cursor-pointer select-none hover:text-flow-blue whitespace-nowrap" onClick={() => handleSort('bucket_id')}>
+                  Strategy Bucket {renderSortIndicator('bucket_id')}
+                </th>
+                <th className="px-4 py-3.5 text-right cursor-pointer select-none hover:text-flow-blue whitespace-nowrap" onClick={() => handleSort('units')}>
                   Shares / Avg Cost {renderSortIndicator('units')}
                 </th>
-                <th className="px-4 py-3.5 text-right">Current Price</th>
-                <th className="px-4 py-3.5 text-right cursor-pointer select-none hover:text-flow-blue" onClick={() => handleSort('market_value_thb')}>
+                <th className="px-4 py-3.5 text-right whitespace-nowrap">Current Price</th>
+                <th className="px-4 py-3.5 text-right cursor-pointer select-none hover:text-flow-blue whitespace-nowrap" onClick={() => handleSort('market_value_thb')}>
                   Market Value (THB) {renderSortIndicator('market_value_thb')}
                 </th>
-                <th className="px-4 py-3.5 text-right cursor-pointer select-none hover:text-flow-blue" onClick={() => handleSort('unrealized_pnl_percent')}>
+                <th className="px-4 py-3.5 text-right cursor-pointer select-none hover:text-flow-blue whitespace-nowrap" onClick={() => handleSort('unrealized_pnl_percent')}>
                   Unrealized PnL {renderSortIndicator('unrealized_pnl_percent')}
                 </th>
-                <th className="px-4 py-3.5 text-right cursor-pointer select-none hover:text-flow-blue" onClick={() => handleSort('pe_ratio')}>
+                <th className="px-4 py-3.5 text-right cursor-pointer select-none hover:text-flow-blue whitespace-nowrap" onClick={() => handleSort('pe_ratio')}>
                   P/E & EPS {renderSortIndicator('pe_ratio')}
                 </th>
-                <th className="px-4 py-3.5 text-right cursor-pointer select-none hover:text-flow-blue" onClick={() => handleSort('yield_on_cost')}>
+                <th className="px-4 py-3.5 text-right cursor-pointer select-none hover:text-flow-blue whitespace-nowrap" onClick={() => handleSort('yield_on_cost')}>
                   Yield on Cost & Div {renderSortIndicator('yield_on_cost')}
                 </th>
-                <th className="px-4 py-3.5 text-center">Tier & Updated</th>
-                <th className="px-3 py-3.5 text-center">Actions</th>
+                <th className="px-4 py-3.5 text-center whitespace-nowrap">Tier & Updated</th>
+                <th className="px-3 py-3.5 text-center whitespace-nowrap">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-sky-50">
@@ -295,31 +361,71 @@ export default function PortfolioHoldingsTab({
                       <td className="px-4 py-4 align-top">
                         <div className="font-extrabold text-zinc-900 text-base tracking-tight font-mono">{h.symbol}</div>
                         <div className="mt-0.5 text-xs text-zinc-500 line-clamp-1 font-medium">
-                          {h.company_name || 'N/A'}
+                          {h.company_name || (h.asset_type === 'Gold' ? 'ARR Paotang Gold 99.99%' : 'N/A')}
                         </div>
                       </td>
 
-                      {/* Col 2: Asset Type (Line 1) + Bucket Name / ID (Line 2) */}
-                      <td className="px-4 py-4 align-top">
-                        <span className="inline-block rounded-md bg-sky-50 border border-sky-100 px-2.5 py-0.5 text-xs font-bold text-sky-800">
-                          {h.asset_type}
+                      {/* Col 2: Asset Type */}
+                      <td className="px-4 py-4 align-top whitespace-nowrap">
+                        <span className={`inline-block rounded-md px-2.5 py-1 text-xs font-bold ${
+                          h.asset_type === 'Gold'
+                            ? 'bg-amber-100/80 border border-amber-300 text-amber-900'
+                            : h.asset_type === 'Fund'
+                            ? 'bg-purple-50 border border-purple-100 text-purple-800'
+                            : 'bg-sky-50 border border-sky-100 text-sky-800'
+                        }`}>
+                          {h.asset_type === 'Gold' ? '🥇 Gold' : h.asset_type}
                         </span>
-                        <div className="mt-1 text-xs font-medium text-zinc-600 line-clamp-1">
-                          {bucketDisplayName ? (
-                            <span>
-                              {bucketDisplayName}{' '}
-                              <span className="font-mono text-zinc-400 text-xs">({h.bucket_id})</span>
+                      </td>
+
+                      {/* Col 3: Strategy Bucket */}
+                      <td className="px-4 py-4 align-top whitespace-nowrap">
+                        {h.bucket_id ? (
+                          <div className="flex flex-col items-start gap-1">
+                            <span className="font-semibold text-zinc-900 text-xs sm:text-sm">
+                              {bucketDisplayName || h.bucket_id}
                             </span>
-                          ) : (
-                            <span className="font-mono text-zinc-400">{h.bucket_id || 'unassigned'}</span>
-                          )}
-                        </div>
+                            {(() => {
+                              const pb = allocationPolicy?.purpose_buckets?.find(
+                                (p) => p.bucket_id === h.bucket_id
+                              )
+                              if (
+                                pb?.eligible_assets &&
+                                pb.eligible_assets.length > 0 &&
+                                !pb.eligible_assets.includes(h.asset_type) &&
+                                !pb.eligible_assets.includes('All')
+                              ) {
+                                return (
+                                  <span
+                                    className="text-[10px] text-amber-800 bg-amber-100/80 rounded px-1.5 py-0.5 font-medium whitespace-nowrap"
+                                    title={`ประเภทสินทรัพย์ ${h.asset_type} ไม่อยู่ในรายชื่อสินทรัพย์ที่แนะนำสำหรับ Bucket นี้`}
+                                  >
+                                    ⚠️ นอกเกณฑ์แนะนำ
+                                  </span>
+                                )
+                              }
+                              return null
+                            })()}
+                          </div>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => setEditingHolding(h)}
+                            className="inline-flex items-center gap-1 rounded bg-amber-100/90 hover:bg-amber-200 text-amber-900 px-2 py-0.5 text-[11px] font-bold shadow-2xs transition-colors whitespace-nowrap"
+                            title="คลิกเพื่อกำหนด Bucket ให้กับสินทรัพย์นี้"
+                          >
+                            <span>⚠️ ยังไม่ระบุหมวด</span>
+                          </button>
+                        )}
                       </td>
 
                       {/* Col 3: Shares/Units (Line 1) + Avg Cost (Line 2) */}
                       <td className="px-4 py-4 text-right align-top tabular-nums">
                         <div className="font-extrabold text-zinc-900 text-base font-mono">
                           {h.units.toLocaleString('en-US', { maximumFractionDigits: 4 })}
+                          {h.asset_type === 'Gold' && (
+                            <span className="text-xs font-semibold text-amber-800 ml-1">Oz</span>
+                          )}
                         </div>
                         <div className="mt-0.5 text-xs text-zinc-500 font-medium">
                           Avg: <span className="font-bold text-zinc-800 font-mono">{formatPrice(h.avg_cost_usd, h.avg_cost_thb)}</span>
@@ -467,7 +573,7 @@ export default function PortfolioHoldingsTab({
 
                     {expandedSymbol === h.symbol && (
                       <tr className="bg-sky-50/70 border-b border-sky-200 animate-fade-in">
-                        <td colSpan={11} className="px-6 py-5" aria-label="Journal Details">
+                        <td colSpan={12} className="px-6 py-5" aria-label="Journal Details">
                           <div className="rounded-xl border border-sky-200 bg-white p-4 shadow-sm space-y-4 text-left">
                             <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-sky-100 pb-3 gap-2">
                               <div className="flex items-center gap-2">

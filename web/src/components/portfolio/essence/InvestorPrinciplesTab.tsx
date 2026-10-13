@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useInvestorPrinciples } from '../../../hooks/useInvestorPrinciples'
 import EssenceInterview from './EssenceInterview'
 import EssenceResult from './EssenceResult'
@@ -34,6 +34,7 @@ export default function InvestorPrinciplesTab({
     startNewSession,
     recordAndNext,
     advanceNextQuestion,
+    generateSummary,
     rateClaim,
 
     editClaim,
@@ -45,6 +46,7 @@ export default function InvestorPrinciplesTab({
     axisDraft,
     confirmedAxis,
     saveFinancialContext,
+    syncFinancialContextFromGoals,
     generateAxisDraft,
     updateAxis,
     confirmAxis,
@@ -56,10 +58,26 @@ export default function InvestorPrinciplesTab({
     generateBucketPlan,
     updateBucketPlan,
     applyBucketPlan,
+
+    // Portfolio Goals
+    portfolioGoals,
   } = useInvestorPrinciples({ portfolioId, onPortfolioChangeNeeded })
 
   const [bucketSubStep, setBucketSubStep] = useState<'editor' | 'review'>('editor')
   const [axisSubStep, setAxisSubStep] = useState<'context' | 'axis'>('axis')
+
+  useEffect(() => {
+    setBucketSubStep('editor')
+    setAxisSubStep('axis')
+  }, [portfolioId])
+
+  const handleSelectMilestone = (m: 'essence' | 'axis' | 'buckets') => {
+    setActiveMilestone(m)
+    const mainEl = document.querySelector('main')
+    if (mainEl) {
+      mainEl.scrollTo({ top: 0, behavior: 'smooth' })
+    }
+  }
 
   if (loading) {
     return (
@@ -71,19 +89,27 @@ export default function InvestorPrinciplesTab({
   }
 
   // Stepper badges
-  const essenceBadge = confirmedEssence
+  const isInterviewInProgress = !!(session && !session.is_complete)
+
+  const essenceBadge = isInterviewInProgress
+    ? { label: `ตอบแล้ว ${session.answers_count}/10`, style: 'bg-sky-100 text-sky-800' }
+    : confirmedEssence
     ? { label: '✓ ยืนยันแล้ว', style: 'bg-emerald-100 text-emerald-800' }
     : session
     ? { label: `ตอบแล้ว ${session.answers_count}/10`, style: 'bg-sky-100 text-sky-800' }
     : { label: 'ยังไม่เริ่ม', style: 'bg-zinc-100 text-zinc-600' }
 
-  const axisBadge = confirmedAxis
+  const axisBadge = isInterviewInProgress
+    ? { label: 'รอเริ่ม', style: 'bg-zinc-100 text-zinc-500' }
+    : confirmedAxis
     ? { label: '✓ ยืนยันแล้ว', style: 'bg-emerald-100 text-emerald-800' }
     : axisDraft
     ? { label: 'ร่างนโยบาย', style: 'bg-amber-100 text-amber-800' }
     : { label: 'รอเริ่ม', style: 'bg-zinc-100 text-zinc-500' }
 
-  const bucketsBadge = applyReceipt
+  const bucketsBadge = isInterviewInProgress
+    ? { label: 'รอเริ่ม', style: 'bg-zinc-100 text-zinc-500' }
+    : applyReceipt
     ? { label: '✓ นำไปใช้แล้ว', style: 'bg-emerald-100 text-emerald-800' }
     : bucketPlan
     ? { label: 'ร่าง Buckets', style: 'bg-purple-100 text-purple-800' }
@@ -93,7 +119,7 @@ export default function InvestorPrinciplesTab({
     <div className="space-y-6">
       {/* Error alert */}
       {error && (
-        <div className="flex items-center justify-between rounded-xl border border-rose-200 bg-rose-50 p-4 text-xs font-semibold text-rose-800 shadow-xs">
+        <div className="flex items-center justify-between rounded-xl border border-rose-200 bg-rose-50 p-3 text-xs font-semibold text-rose-800 shadow-xs">
           <span>⚠️ {error}</span>
           <button
             type="button"
@@ -106,12 +132,12 @@ export default function InvestorPrinciplesTab({
       )}
 
       {/* Milestone Stepper Bar */}
-      <div className="rounded-2xl border border-sky-100 bg-white p-3 shadow-xs">
+      <div className="rounded-2xl border border-sky-100 bg-white p-2.5 shadow-xs">
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
           {/* Milestone 1 */}
           <button
             type="button"
-            onClick={() => setActiveMilestone('essence')}
+            onClick={() => handleSelectMilestone('essence')}
             className={`p-3 rounded-xl text-left transition-all flex items-center justify-between gap-2 ${
               activeMilestone === 'essence'
                 ? 'bg-sky-50/80 border border-sky-300 ring-2 ring-sky-400/20'
@@ -141,7 +167,7 @@ export default function InvestorPrinciplesTab({
           {/* Milestone 2 */}
           <button
             type="button"
-            onClick={() => setActiveMilestone('axis')}
+            onClick={() => handleSelectMilestone('axis')}
             className={`p-3 rounded-xl text-left transition-all flex items-center justify-between gap-2 ${
               activeMilestone === 'axis'
                 ? 'bg-sky-50/80 border border-sky-300 ring-2 ring-sky-400/20'
@@ -171,7 +197,7 @@ export default function InvestorPrinciplesTab({
           {/* Milestone 3 */}
           <button
             type="button"
-            onClick={() => setActiveMilestone('buckets')}
+            onClick={() => handleSelectMilestone('buckets')}
             className={`p-3 rounded-xl text-left transition-all flex items-center justify-between gap-2 ${
               activeMilestone === 'buckets'
                 ? 'bg-sky-50/80 border border-sky-300 ring-2 ring-sky-400/20'
@@ -243,7 +269,9 @@ export default function InvestorPrinciplesTab({
                 session={session}
                 onRecordAndNext={recordAndNext}
                 onAdvanceNext={advanceNextQuestion}
+                onSummarize={generateSummary}
                 onPause={() => {}}
+                onRestart={startNewSession}
                 loading={actionLoading}
                 statusText={actionStatusText}
               />
@@ -257,6 +285,7 @@ export default function InvestorPrinciplesTab({
                 onExcludeClaim={excludeClaim}
                 onConfirmBatch={confirmEssenceBatch}
                 onRestart={startNewSession}
+                onRetrySummary={generateSummary}
                 loading={actionLoading}
                 statusText={actionStatusText}
               />
@@ -267,19 +296,21 @@ export default function InvestorPrinciplesTab({
         {/* MILESTONE 2: INVESTMENT AXIS */}
         {activeMilestone === 'axis' && (
           <div>
-            {!confirmedEssence ? (
+            {!confirmedEssence || isInterviewInProgress ? (
               <div className="max-w-xl mx-auto rounded-2xl border border-amber-200 bg-amber-50/70 p-8 text-center space-y-4">
                 <span className="text-3xl">🧭</span>
                 <h3 className="text-lg font-bold text-amber-900">
                   กรุณาค้นหาและยืนยันแก่นแท้การลงทุนก่อน
                 </h3>
                 <p className="text-xs text-amber-800 leading-relaxed">
-                  แกนหลักการลงทุน (Investment Axis) ต้องอ้างอิงแก่นแท้ที่คุณได้ตรวจและยืนยันแล้ว
+                  {isInterviewInProgress
+                    ? 'กำลังอยู่ระหว่างทำแบบทดสอบค้นหาแก่นแท้ เมื่อตอบครบ 10 ข้อและยืนยันแก่นแท้แล้ว จึงจะสามารถสร้างแกนหลักได้'
+                    : 'แกนหลักการลงทุน (Investment Axis) ต้องอ้างอิงแก่นแท้ที่คุณได้ตรวจและยืนยันแล้ว'}
                 </p>
                 <button
                   type="button"
                   onClick={() => setActiveMilestone('essence')}
-                  className="rounded-xl bg-amber-600 px-5 py-2 text-xs font-bold text-white hover:bg-amber-700"
+                  className="rounded-xl bg-amber-600 px-5 py-2 text-xs font-bold text-white hover:bg-amber-700 cursor-pointer"
                 >
                   ไปที่ขั้นค้นหาแก่นแท้
                 </button>
@@ -288,10 +319,16 @@ export default function InvestorPrinciplesTab({
               <FinancialContextForm
                 financialContext={financialContext}
                 portfolioId={portfolioId}
+                portfolioGoals={portfolioGoals}
                 onSave={saveFinancialContext}
+                onSyncGoals={syncFinancialContextFromGoals}
                 onProceedToDraft={async () => {
-                  await generateAxisDraft()
-                  setAxisSubStep('axis')
+                  try {
+                    await generateAxisDraft()
+                    setAxisSubStep('axis')
+                  } catch {
+                    // Stay on context if generation fails
+                  }
                 }}
                 loading={actionLoading}
                 statusText={actionStatusText}
@@ -311,9 +348,11 @@ export default function InvestorPrinciplesTab({
                   axisDraft={axisDraft}
                   confirmedAxis={confirmedAxis}
                   portfolioId={portfolioId}
+                  portfolioGoals={portfolioGoals}
                   onUpdateDraft={updateAxis}
                   onConfirmAxis={confirmAxis}
-                  onProceedToBuckets={() => setActiveMilestone('buckets')}
+                  onProceedToBuckets={() => handleSelectMilestone('buckets')}
+                  onRegenerateDraft={generateAxisDraft}
                   loading={actionLoading}
                   statusText={actionStatusText}
                 />
@@ -325,21 +364,23 @@ export default function InvestorPrinciplesTab({
         {/* MILESTONE 3: PURPOSE BUCKETS */}
         {activeMilestone === 'buckets' && (
           <div>
-            {!confirmedAxis ? (
+            {!confirmedAxis || isInterviewInProgress ? (
               <div className="max-w-xl mx-auto rounded-2xl border border-amber-200 bg-amber-50/70 p-8 text-center space-y-4">
                 <span className="text-3xl">🔒</span>
                 <h3 className="text-lg font-bold text-amber-900">
                   ต้องยืนยันแกนหลักการลงทุนของพอร์ตนี้ก่อน
                 </h3>
                 <p className="text-xs text-amber-800 leading-relaxed">
-                  ปุ่มสร้าง Buckets จากแกนหลักจะเปิดใช้เมื่อมีแกนหลักฉบับยืนยันครบ 8 หัวข้อแล้ว
+                  {isInterviewInProgress
+                    ? 'กำลังอยู่ระหว่างทำแบบทดสอบค้นหาแก่นแท้ กรุณาทำแบบทดสอบและสร้างแกนหลักให้เรียบร้อยก่อน'
+                    : 'ปุ่มสร้าง Buckets จากแกนหลักจะเปิดใช้เมื่อมีแกนหลักฉบับยืนยันครบ 8 หัวข้อแล้ว'}
                 </p>
                 <button
                   type="button"
-                  onClick={() => setActiveMilestone('axis')}
-                  className="rounded-xl bg-amber-600 px-5 py-2 text-xs font-bold text-white hover:bg-amber-700"
+                  onClick={() => handleSelectMilestone(isInterviewInProgress ? 'essence' : 'axis')}
+                  className="rounded-xl bg-amber-600 px-5 py-2 text-xs font-bold text-white hover:bg-amber-700 cursor-pointer"
                 >
-                  ไปที่ขั้นแกนหลักการลงทุน
+                  {isInterviewInProgress ? 'ไปที่ขั้นค้นหาแก่นแท้' : 'ไปที่ขั้นแกนหลักการลงทุน'}
                 </button>
               </div>
             ) : !bucketPlan ? (
@@ -371,6 +412,7 @@ export default function InvestorPrinciplesTab({
                 portfolioId={portfolioId}
                 onUpdateDraft={updateBucketPlan}
                 onProceedToReview={() => setBucketSubStep('review')}
+                onRegenerateBuckets={generateBucketPlan}
                 loading={actionLoading}
                 statusText={actionStatusText}
               />

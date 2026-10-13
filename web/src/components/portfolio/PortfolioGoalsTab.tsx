@@ -9,10 +9,20 @@ interface Props {
   generatedAt: string | null
   portfolios?: import('../../api/types').PortfolioMetaDTO[]
   selectedPortfolioId?: string
+  allocationPolicy?: import('../../api/types').ActualPortfolioStateDTO['allocation_policy']
+  bucketSummaries?: import('../../api/types').BucketAllocationSummaryDTO[]
   onSuccess?: (res: ActualGoalsResponseDTO) => void
 }
 
-export default function PortfolioGoalsTab({ goals, generatedAt, portfolios = [], selectedPortfolioId = 'default', onSuccess }: Props) {
+export default function PortfolioGoalsTab({
+  goals,
+  generatedAt,
+  portfolios = [],
+  selectedPortfolioId = 'default',
+  allocationPolicy,
+  bucketSummaries = [],
+  onSuccess,
+}: Props) {
   const [modalOpen, setModalOpen] = useState(false)
   const [editingGoal, setEditingGoal] = useState<ActualGoalItemDTO | null>(null)
 
@@ -74,7 +84,7 @@ export default function PortfolioGoalsTab({ goals, generatedAt, portfolios = [],
       </div>
 
       {/* Goals Grid */}
-      <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+      <div className="grid grid-cols-1 md:grid-cols-2 2xl:grid-cols-3 gap-5">
         {goals.map((goal) => {
           const progress = Math.max(0, Math.min(100, goal.progress_pct))
           const isCompleted = progress >= 100
@@ -83,48 +93,54 @@ export default function PortfolioGoalsTab({ goals, generatedAt, portfolios = [],
           return (
             <div
               key={goal.name}
-              className="flex flex-col justify-between rounded-2xl border border-sky-100 bg-panel p-6 shadow-sm transition-all hover:shadow-md relative group"
+              className="flex flex-col justify-between rounded-2xl border border-sky-100 bg-panel p-5 sm:p-6 shadow-sm transition-all hover:shadow-md relative group"
             >
               <div>
-                <div className="flex items-start justify-between gap-2">
-                  <div>
-                    <h4 className="font-bold text-zinc-900 text-base">{goal.name}</h4>
-                    <span className="inline-block mt-0.5 rounded bg-zinc-100 px-1.5 py-0.5 text-[10px] font-medium text-zinc-600">
-                      📁 พอร์ต: {linkedPortName}
+                {/* Header Top Bar: Badges & Actions */}
+                <div className="flex items-center justify-between gap-2 pb-2.5 border-b border-sky-100/70">
+                  <div className="flex items-center gap-1.5 flex-wrap min-w-0">
+                    {getGoalTypeBadge(goal.goal_type, goal.bucket_id)}
+                    <span className="inline-flex items-center gap-1 rounded-full bg-zinc-100/80 px-2 py-0.5 text-[11px] font-medium text-zinc-600 truncate max-w-[180px]">
+                      📁 {linkedPortName}
                     </span>
                   </div>
-                  <div className="flex items-center gap-1">
-                    {getGoalTypeBadge(goal.goal_type, goal.bucket_id)}
-                    {onSuccess && (
-                      <div className="flex items-center gap-1 ml-1 opacity-80 group-hover:opacity-100 transition-opacity">
-                        <button
-                          type="button"
-                          onClick={() => setEditingGoal(goal)}
-                          className="rounded p-1 text-zinc-400 hover:bg-sky-50 hover:text-flow-blue"
-                          title="แก้ไขเป้าหมาย"
-                        >
-                          ✏️
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleDelete(goal.name)}
-                          className="rounded p-1 text-zinc-400 hover:bg-rose-50 hover:text-rose-600"
-                          title="ลบเป้าหมาย"
-                        >
-                          🗑️
-                        </button>
-                      </div>
-                    )}
-                  </div>
+                  {onSuccess && (
+                    <div className="flex items-center gap-1 shrink-0 opacity-80 group-hover:opacity-100 transition-opacity">
+                      <button
+                        type="button"
+                        onClick={() => setEditingGoal(goal)}
+                        className="rounded-lg p-1.5 text-zinc-400 hover:bg-sky-50 hover:text-flow-blue transition-colors"
+                        title="แก้ไขเป้าหมาย"
+                      >
+                        ✏️
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleDelete(goal.name)}
+                        className="rounded-lg p-1.5 text-zinc-400 hover:bg-rose-50 hover:text-rose-600 transition-colors"
+                        title="ลบเป้าหมาย"
+                      >
+                        🗑️
+                      </button>
+                    </div>
+                  )}
                 </div>
 
-                <div className="mt-5 space-y-2">
-                  <div className="flex items-baseline justify-between text-sm">
-                    <span className="text-zinc-500">ความคืบหน้า</span>
-                    <span className="font-extrabold text-zinc-900">{progress.toFixed(1)}%</span>
+                {/* Header Title: Full Width */}
+                <div className="mt-3">
+                  <h4 className="font-extrabold text-zinc-900 text-base sm:text-lg leading-snug tracking-tight">
+                    {goal.name}
+                  </h4>
+                </div>
+
+                {/* Progress Bar & Percentage */}
+                <div className="mt-4 space-y-1.5">
+                  <div className="flex items-baseline justify-between text-xs sm:text-sm">
+                    <span className="text-zinc-500 font-medium">ความคืบหน้า</span>
+                    <span className="font-extrabold text-zinc-900 font-mono text-sm sm:text-base">{progress.toFixed(1)}%</span>
                   </div>
                   {/* Progress Bar */}
-                  <div className="h-3 w-full overflow-hidden rounded-full bg-sky-100/60 p-0.5">
+                  <div className="h-2.5 w-full overflow-hidden rounded-full bg-sky-100/60 p-0.5">
                     <div
                       className={`h-full rounded-full transition-all duration-500 ${
                         isCompleted
@@ -140,21 +156,74 @@ export default function PortfolioGoalsTab({ goals, generatedAt, portfolios = [],
                   </div>
                 </div>
 
-                <div className="mt-4 grid grid-cols-2 gap-2 rounded-xl bg-sky-50/60 p-3.5 border border-sky-100/60">
-                  <div>
-                    <span className="text-zinc-500 font-medium block text-xs mb-0.5">Current Amount</span>
-                    <span className="font-bold font-sans tabular-nums text-sm sm:text-base text-zinc-900">{formatTHB(goal.current_amount_thb)}</span>
+                {/* Current & Target Amount Box */}
+                <div className="mt-4 grid grid-cols-2 gap-3 rounded-xl bg-sky-50/60 p-3.5 border border-sky-100/60">
+                  <div className="min-w-0">
+                    <span className="text-zinc-500 font-medium block text-[11px] mb-0.5">Current Amount</span>
+                    <span className="font-bold font-sans tabular-nums text-sm sm:text-base text-zinc-900 block truncate" title={formatTHB(goal.current_amount_thb)}>
+                      {formatTHB(goal.current_amount_thb)}
+                    </span>
                   </div>
-                  <div className="text-right">
-                    <span className="text-zinc-500 font-medium block text-xs mb-0.5">Target Amount</span>
-                    <span className="font-bold font-sans tabular-nums text-sm sm:text-base text-flow-blue">{formatTHB(goal.target_amount_thb)}</span>
+                  <div className="min-w-0 text-right">
+                    <span className="text-zinc-500 font-medium block text-[11px] mb-0.5">Target Amount</span>
+                    <span className="font-extrabold font-sans tabular-nums text-sm sm:text-base text-flow-blue block truncate" title={formatTHB(goal.target_amount_thb)}>
+                      {formatTHB(goal.target_amount_thb)}
+                    </span>
                   </div>
                 </div>
+
+                {/* Linked Purpose Bucket & Funding Attribution (WP13 Task 9) */}
+                {goal.bucket_id && (
+                  <div className="mt-3.5 rounded-xl border border-purple-100 bg-purple-50/50 p-3 text-xs">
+                    {(() => {
+                      const linkedBucket = allocationPolicy?.purpose_buckets?.find(
+                        (pb) => pb.bucket_id === goal.bucket_id
+                      )
+                      const bucketSummary = bucketSummaries?.find(
+                        (bs) => bs.bucket_id === goal.bucket_id
+                      )
+                      return (
+                        <>
+                          <div className="flex items-center justify-between gap-2">
+                            <div className="flex items-center gap-1.5 min-w-0">
+                              <span className="text-sm">🎯</span>
+                              <span className="font-bold text-purple-950 truncate">
+                                {linkedBucket?.name || goal.bucket_id}
+                              </span>
+                              {linkedBucket?.role && (
+                                <span className="rounded bg-purple-100 px-1.5 py-0.5 text-[10px] text-purple-800">
+                                  {linkedBucket.role}
+                                </span>
+                              )}
+                            </div>
+                            {bucketSummary && (
+                              <span className="font-mono font-bold text-purple-900 tabular-nums shrink-0">
+                                {formatTHB(bucketSummary.actual_value_thb)}
+                              </span>
+                            )}
+                          </div>
+                          {bucketSummary && (
+                            <div className="mt-1 flex items-center justify-between text-[11px] text-purple-700/90 font-medium">
+                              <span>สัดส่วนในพอร์ต: {bucketSummary.actual_percent.toFixed(1)}%</span>
+                              {goal.target_amount_thb > 0 && (
+                                <span>
+                                  ทุนสนับสนุนเป้าหมาย:{' '}
+                                  {((bucketSummary.actual_value_thb / goal.target_amount_thb) * 100).toFixed(1)}%
+                                </span>
+                              )}
+                            </div>
+                          )}
+                        </>
+                      )
+                    })()}
+                  </div>
+                )}
 
                 {goal.notes && (
                   <p className="mt-3 text-xs text-zinc-500 italic line-clamp-2">“{goal.notes}”</p>
                 )}
               </div>
+
 
               <div className="mt-5 border-t border-sky-100 pt-3 flex items-center justify-between text-xs">
                 <div>

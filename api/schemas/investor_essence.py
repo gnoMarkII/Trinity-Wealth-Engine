@@ -2,7 +2,33 @@
 from __future__ import annotations
 
 from typing import Any, Dict, List, Optional
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
+
+
+class ValidationIssueSchema(BaseModel):
+    code: str
+    severity: str  # blocking | warning | info
+    field_path: str
+    message: str
+    details: Dict[str, Any] = Field(default_factory=dict)
+    issue: Optional[str] = None
+    level: Optional[str] = None
+
+    @model_validator(mode="after")
+    def populate_compat_aliases(self) -> "ValidationIssueSchema":
+        if not self.issue:
+            object.__setattr__(self, "issue", self.message)
+        if not self.level:
+            object.__setattr__(self, "level", self.severity)
+        return self
+
+
+class SourceRefSchema(BaseModel):
+    kind: str  # question | session | user_input | holding | goal | external
+    ref_id: str
+    revision: Optional[int] = None
+    quote: Optional[str] = None
+    as_of: Optional[str] = None
 
 
 class ContentOptionSchema(BaseModel):
@@ -55,6 +81,8 @@ class SessionResponse(BaseModel):
 class StartSessionRequest(BaseModel):
     scope: str = Field(default="workspace")
     prompt_version: str = Field(default="1.0")
+    portfolio_id: Optional[str] = None
+    clear_downstream: bool = Field(default=True)
 
 
 class RecordAnswerRequest(BaseModel):
@@ -65,6 +93,12 @@ class RecordAnswerRequest(BaseModel):
 
 
 class AdvanceQuestionRequest(BaseModel):
+    expected_revision: Optional[int] = None
+    prompt_version: str = Field(default="1.0")
+
+
+class ClarificationRequest(BaseModel):
+    unresolved_topic: str
     expected_revision: Optional[int] = None
     prompt_version: str = Field(default="1.0")
 
@@ -162,10 +196,14 @@ class FinancialContextResponse(BaseModel):
     withdrawal_frequency: Optional[str] = None
     withdrawal_amount: Optional[str] = None
     experience_description: Optional[str] = None
+    monthly_investable_contribution: Optional[str] = None
+    essential_monthly_expense: Optional[str] = None
+    reserves_outside_portfolio: Optional[str] = None
+    facts: Dict[str, Dict[str, Any]] = Field(default_factory=dict)
     unknown_fields: List[str] = Field(default_factory=list)
     as_of: str = ""
     source: str = "user_reported"
-    readiness_issues: List[Dict[str, Any]] = Field(default_factory=list)
+    readiness_issues: List[ValidationIssueSchema] = Field(default_factory=list)
     is_ready_for_numeric_policy: bool = False
 
 
@@ -181,6 +219,9 @@ class UpdateFinancialContextRequest(BaseModel):
     withdrawal_frequency: Optional[str] = None
     withdrawal_amount: Optional[str] = None
     experience_description: Optional[str] = None
+    monthly_investable_contribution: Optional[str] = None
+    essential_monthly_expense: Optional[str] = None
+    reserves_outside_portfolio: Optional[str] = None
     unknown_fields: Optional[List[str]] = None
 
 
@@ -230,6 +271,7 @@ class UpdateAxisDraftRequest(BaseModel):
 
 class ConfirmAxisRequest(BaseModel):
     idempotency_key: Optional[str] = None
+    expected_draft_revision: Optional[int] = None
 
 
 class CreateBucketPlanRequest(BaseModel):
@@ -245,6 +287,18 @@ class PurposeBucketSchema(BaseModel):
     target_percent: str
     source_value_ids: List[str] = Field(default_factory=list)
     source_axis_allocation_ids: List[str] = Field(default_factory=list)
+    linked_goal_name: Optional[str] = None
+    eligible_assets: List[str] = Field(default_factory=list)
+    cash_inflow_routing_pct: Optional[str] = None
+    action_rules: List[str] = Field(default_factory=list)
+    target_amount: Optional[str] = None
+    minimum_amount: Optional[str] = None
+    need_by_date: Optional[str] = None
+    inflow_route_mode: str = Field(default="fixed_ratio")
+    inflow_priority: int = Field(default=1)
+    when_full_redirect_bucket_id: Optional[str] = None
+    goal_id: Optional[str] = None
+    schema_version: str = Field(default="2.0")
 
 
 class MappingWeightSchema(BaseModel):
@@ -294,10 +348,19 @@ class AllocationPreviewResponse(BaseModel):
     after_allocation: Dict[str, Any]
     issues: List[str]
     payload_hash: str
+    preview_id: str = ""
+    draft_id: str = ""
+    draft_revision: int = 1
+    source_refs: Dict[str, Any] = Field(default_factory=dict)
 
 
 class ApplyBucketPlanRequest(BaseModel):
     idempotency_key: Optional[str] = None
+    expected_draft_revision: Optional[int] = None
+    expected_checkpoint_sequence: Optional[int] = None
+    expected_checkpoint_state_hash: Optional[str] = None
+    preview_id: Optional[str] = None
+    payload_hash: Optional[str] = None
 
 
 class AllocationApplyReceiptResponse(BaseModel):

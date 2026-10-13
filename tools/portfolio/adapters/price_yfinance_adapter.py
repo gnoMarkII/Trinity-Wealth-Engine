@@ -23,7 +23,10 @@ _PRICE_FETCH_TIMEOUT = 6.0
 
 
 def _yf_symbol(symbol: str, currency: str) -> str:
-    """แปลง symbol -> ticker ที่ yfinance รู้จัก (THB -> เติม .BK)"""
+    """แปลง symbol -> ticker ที่ yfinance รู้จัก (THB -> เติม .BK, Gold -> GC=F)"""
+    sym = (symbol or "").strip().upper()
+    if sym in ("GOLD-99.99", "GOLD", "XAU", "GOLD99.99"):
+        return "GC=F"
     if currency == "THB" and not symbol.endswith(".BK"):
         return f"{symbol}.BK"
     return symbol
@@ -188,7 +191,7 @@ class PriceYFinanceAdapter(MarketPricePort):
         results: Dict[str, str] = {}
 
         def _process_one(h: Holding):
-            if h.asset_type in ("Cash", "Fund"):
+            if h.asset_type in ("Cash", "Fund", "Gold"):
                 return
             if not force and h.fundamentals_updated_at is not None:
                 if now - h.fundamentals_updated_at < FUNDAMENTALS_TTL_SECONDS:

@@ -9,6 +9,7 @@ from typing import Any, Dict, List, Optional
 
 from core.investor_essence.claims import build_confirmation_snapshot
 from core.investor_essence.models import (
+    ConfirmedSnapshotRecord,
     SessionStatus,
 )
 from application.investor_essence.dto import ConfirmationView
@@ -132,13 +133,67 @@ class ConfirmationService:
                 "artifact_set_hash": content_hash,
             }
 
-            # 5. CAS Update on Planning Repository
+            snapshot_dict = {
+                "confirmation_id": confirmation_id,
+                "session_id": session_id,
+                "statement": summary.statement,
+                "accepted_claims": [
+                    {
+                        "claim_id": c.claim_id,
+                        "text": c.text,
+                        "effective_text": c.effective_text,
+                        "final_text": c.effective_text,
+                        "source_kind": c.source_kind.value,
+                        "fit_rating": c.fit_rating.value if c.fit_rating else "exact",
+                        "text_revision": c.text_revision,
+                        "evidence_refs": [
+                            {
+                                "answer_id": er.answer_id,
+                                "question_id": er.question_id,
+                                "revision": er.revision,
+                                "quote": er.quote,
+                                "evidence_type": er.evidence_type.value,
+                            }
+                            for er in c.evidence_refs
+                        ],
+                    }
+                    for c in snapshot.accepted_claims
+                ],
+                "unresolved_topics": list(snapshot.unresolved_topics),
+                "coverage_report": [
+                    {
+                        "topic": ci.topic,
+                        "status": ci.status,
+                        "supporting_answer_ids": ci.supporting_answer_ids,
+                    }
+                    for ci in summary.coverage_report
+                ],
+                "content_hash": content_hash,
+                "confirmed_at_iso": now_iso,
+            }
+
+            # 5. Persist immutable confirmed snapshot
+            record = ConfirmedSnapshotRecord(
+                snapshot_id=confirmation_id,
+                scope="workspace",
+                scope_id="workspace",
+                kind="investor_essence",
+                source_id=session_id,
+                source_revision=summary.revision,
+                content_hash=content_hash,
+                snapshot_json=json.dumps(snapshot_dict, ensure_ascii=False),
+                confirmed_at_iso=now_iso,
+            )
+            uow.planning.save_confirmed_snapshot(record)
+
+            # 6. CAS Update on Planning Repository
             current_pointer = uow.planning.get_confirmed_pointer("workspace", "investor_essence")
             cas_ok = uow.planning.set_confirmed_pointer(
                 scope="workspace",
                 kind="investor_essence",
                 artifact_ref=artifact_ref_str,
                 expected_ref=current_pointer,
+                snapshot=snapshot_dict,
             )
             if not cas_ok:
                 actual_pointer = uow.planning.get_confirmed_pointer("workspace", "investor_essence")
@@ -151,17 +206,17 @@ class ConfirmationService:
             # 6. Optional Knowledge Write Broker call
             if self._knowledge_write is not None:
                 try:
-                    self._knowledge_write.submit({
-                        "command_id": f"cmd-confirm-essence-{confirmation_id}",
-                        "idempotency_key": idempotency_key or f"idem-{confirmation_id}",
-                        "operation": "upsert_note",
-                        "document_key": doc_key,
-                        "entity_type": "investor_essence",
-                        "content_hash": content_hash,
-                        "claims": serialized_claims,
-                        "unresolved_topics": snapshot.unresolved_topics,
-                        "confirmed_at": now_iso,
-                    })
+                    from tools.investor_essence.adapters.knowledge_publication_adapter import (
+                        KnowledgePublicationAdapter,
+                    )
+                    pub_adapter = KnowledgePublicationAdapter(self._knowledge_write)
+                    pub_ref = pub_adapter.publish_essence(
+                        confirmation_id=confirmation_id,
+                        snapshot_dict=snapshot_dict,
+                        idempotency_key=idempotency_key,
+                    )
+                    if pub_ref:
+                        artifact_ref_dict = pub_ref
                 except Exception as e:
                     logger.warning("Optional knowledge write broker submission failed: %s", e)
 
@@ -198,6 +253,13 @@ class ConfirmationService:
             pointer = uow.planning.get_confirmed_pointer("workspace", "investor_essence")
             if not pointer:
                 return None
+            snapshot = uow.planning.get_confirmed_snapshot("workspace", "investor_essence")
+            if snapshot:
+                res = dict(snapshot)
+                res["scope"] = "workspace"
+                res["kind"] = "investor_essence"
+                res["pointer"] = pointer
+                return res
             return {
                 "scope": "workspace",
                 "kind": "investor_essence",

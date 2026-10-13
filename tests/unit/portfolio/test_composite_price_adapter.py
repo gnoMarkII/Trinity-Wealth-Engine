@@ -146,3 +146,27 @@ def test_trading_service_sync_market_prices_with_composite(mock_equity_provider,
     assert "[SYNC] updated prices: refreshed 2/2" in msg
     assert "(" not in msg  # No failure parenthetical since 2/2 succeeded
 
+
+def test_yf_symbol_mapping_for_gold():
+    from tools.portfolio.adapters.price_yfinance_adapter import _yf_symbol
+    assert _yf_symbol("GOLD-99.99", "USD") == "GC=F"
+    assert _yf_symbol("GOLD", "USD") == "GC=F"
+    assert _yf_symbol("XAU", "USD") == "GC=F"
+    assert _yf_symbol("AAPL", "USD") == "AAPL"
+    assert _yf_symbol("CPALL", "THB") == "CPALL.BK"
+
+
+def test_price_yfinance_adapter_skips_gold_fundamentals():
+    from tools.portfolio.adapters.price_yfinance_adapter import PriceYFinanceAdapter
+    adapter = PriceYFinanceAdapter()
+    state = PortfolioState(
+        last_updated="2026-09-06T00:00:00Z",
+        holdings=[
+            Holding(symbol="GOLD-99.99", asset_type="Gold", units=1.0, avg_cost_usd=4000.0),
+        ]
+    )
+    # Should skip Gold without error
+    results = adapter.fetch_fundamentals(state)
+    assert "GOLD-99.99" not in results
+
+

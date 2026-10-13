@@ -26,6 +26,7 @@ from core.investor_essence.models import (
     BucketRemappingItem,
     ContentOption,
     CoverageItem,
+    ConfirmedSnapshotRecord,
     EssenceClaim,
     EssenceConfirmationSnapshot,
     EssenceSummaryDraft,
@@ -845,76 +846,175 @@ class SqlitePlanningRepository(PlanningRepositoryPort):
             "SELECT artifact_ref_json, snapshot_json, confirmed_at FROM investor_confirmed_refs WHERE pointer_key = ?",
             (pointer_key,),
         ).fetchone()
-        if not row:
-            return None
+        if row:
+            art_ref, raw_snap, conf_at = row[0], row[1], row[2]
+            if raw_snap and raw_snap != "{}":
+                try:
+                    snap = json.loads(raw_snap)
+                    if snap and isinstance(snap, dict):
+                        return snap
+                except Exception:
+                    pass
 
-        art_ref, raw_snap, conf_at = row[0], row[1], row[2]
-        if raw_snap and raw_snap != "{}":
+        # Check investor_confirmed_snapshots table
+        scope_id = scope.replace("portfolio:", "") if scope.startswith("portfolio:") else "workspace"
+        rec = self.get_latest_confirmed_snapshot(scope, scope_id, kind)
+        if rec and rec.snapshot_json and rec.snapshot_json != "{}":
             try:
-                snap = json.loads(raw_snap)
+                snap = json.loads(rec.snapshot_json)
                 if snap and isinstance(snap, dict):
                     return snap
             except Exception:
                 pass
 
-        # Backwards compatibility / recovery for historical pointer records with empty snapshot_json
-        if kind == "investment_axis":
-            port_id = scope.replace("portfolio:", "")
-            draft = self.get_latest_axis_draft(port_id)
-            if draft:
-                recovered_snapshot = {
-                    "artifact_id": art_ref,
-                    "portfolio_id": port_id,
-                    "essence_ref": {
-                        "document_key": draft.essence_ref.document_key,
-                        "note_id": draft.essence_ref.note_id,
-                        "revision_id": draft.essence_ref.revision_id,
-                        "content_hash": draft.essence_ref.content_hash,
-                        "artifact_set_hash": draft.essence_ref.artifact_set_hash,
-                    },
-                    "basic_policy": draft.basic_policy,
-                    "risk_limits": {
-                        k: {
-                            "field_id": v.field_id,
-                            "value": str(v.value) if v.value is not None else None,
-                            "unit": v.unit,
-                            "calculation_basis": v.calculation_basis,
-                            "origin": v.origin.value,
-                            "is_confirmed": v.is_confirmed,
-                        }
-                        for k, v in draft.risk_limits.items()
-                    },
-                    "invest_targets": list(draft.invest_targets),
-                    "exclude_targets": list(draft.exclude_targets),
-                    "primary_methods": list(draft.primary_methods),
-                    "secondary_methods": list(draft.secondary_methods),
-                    "investment_horizon": draft.investment_horizon,
-                    "allocation_basis": draft.allocation_basis.value,
-                    "allocation_rows": [
-                        {
-                            "allocation_id": r.allocation_id,
-                            "category": r.category_name,
-                            "category_name": r.category_name,
-                            "target_percent": str(r.target_percent),
-                            "role_description": r.role_description,
-                        }
-                        for r in draft.allocation_rows
-                    ],
-                    "rebalance_frequency": draft.rebalance_frequency,
-                    "role_models": list(draft.role_models),
-                    "non_actions": list(draft.non_actions),
-                    "confirmed_at_iso": conf_at or "",
-                }
-                try:
-                    self._conn.execute(
-                        "UPDATE investor_confirmed_refs SET snapshot_json = ? WHERE pointer_key = ?",
-                        (json.dumps(recovered_snapshot, ensure_ascii=False), pointer_key),
-                    )
-                except Exception:
-                    pass
-                return recovered_snapshot
-
         return None
+
+    def save_confirmed_snapshot(self, snapshot_record: ConfirmedSnapshotRecord) -> None:
+        now_ts = time.time()
+        self._conn.execute(
+            "INSERT INTO investor_confirmed_snapshots "
+            "(snapshot_id, scope, scope_id, kind, source_id, source_revision, content_hash, "
+            "snapshot_json, confirmed_at_iso, created_at) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            (
+                snapshot_record.snapshot_id,
+                snapshot_record.scope,
+                snapshot_record.scope_id,
+                snapshot_record.kind,
+                snapshot_record.source_id,
+                snapshot_record.source_revision,
+                snapshot_record.content_hash,
+                snapshot_record.snapshot_json,
+                snapshot_record.confirmed_at_iso,
+                snapshot_record.created_at or now_ts,
+            ),
+        )
+
+    def get_confirmed_snapshot_by_id(self, snapshot_id: str) -> Optional[ConfirmedSnapshotRecord]:
+        row = self._conn.execute(
+            "SELECT snapshot_id, scope, scope_id, kind, source_id, source_revision, content_hash, "
+            "snapshot_json, confirmed_at_iso, created_at "
+            "FROM investor_confirmed_snapshots WHERE snapshot_id = ?",
+            (snapshot_id,),
+        ).fetchone()
+        if not row:
+            return None
+        return ConfirmedSnapshotRecord(
+            snapshot_id=row[0],
+            scope=row[1],
+            scope_id=row[2],
+            kind=row[3],
+            source_id=row[4],
+            source_revision=row[5],
+            content_hash=row[6],
+            snapshot_json=row[7],
+            confirmed_at_iso=row[8],
+            created_at=row[9],
+        )
+
+    def get_latest_confirmed_snapshot(
+        self, scope: str, scope_id: str, kind: str
+    ) -> Optional[ConfirmedSnapshotRecord]:
+        row = self._conn.execute(
+            "SELECT snapshot_id, scope, scope_id, kind, source_id, source_revision, content_hash, "
+            "snapshot_json, confirmed_at_iso, created_at "
+            "FROM investor_confirmed_snapshots "
+            "WHERE scope = ? AND scope_id = ? AND kind = ? "
+            "ORDER BY confirmed_at_iso DESC, created_at DESC LIMIT 1",
+            (scope, scope_id, kind),
+        ).fetchone()
+        if not row:
+            return None
+        return ConfirmedSnapshotRecord(
+            snapshot_id=row[0],
+            scope=row[1],
+            scope_id=row[2],
+            kind=row[3],
+            source_id=row[4],
+            source_revision=row[5],
+            content_hash=row[6],
+            snapshot_json=row[7],
+            confirmed_at_iso=row[8],
+            created_at=row[9],
+        )
+
+    def list_confirmed_snapshots(
+        self, scope: str, scope_id: str, kind: str
+    ) -> List[ConfirmedSnapshotRecord]:
+        rows = self._conn.execute(
+            "SELECT snapshot_id, scope, scope_id, kind, source_id, source_revision, content_hash, "
+            "snapshot_json, confirmed_at_iso, created_at "
+            "FROM investor_confirmed_snapshots "
+            "WHERE scope = ? AND scope_id = ? AND kind = ? "
+            "ORDER BY confirmed_at_iso DESC, created_at DESC",
+            (scope, scope_id, kind),
+        ).fetchall()
+        return [
+            ConfirmedSnapshotRecord(
+                snapshot_id=r[0],
+                scope=r[1],
+                scope_id=r[2],
+                kind=r[3],
+                source_id=r[4],
+                source_revision=r[5],
+                content_hash=r[6],
+                snapshot_json=r[7],
+                confirmed_at_iso=r[8],
+                created_at=r[9],
+            )
+            for r in rows
+        ]
+
+    def clear_planning_data(
+        self, portfolio_id: Optional[str] = None, clear_essence: bool = False
+    ) -> None:
+        if clear_essence:
+            # Starting a new test / clearing essence wipes all downstream Axis and Buckets across the workspace
+            self._conn.execute(
+                "DELETE FROM investor_plan_drafts WHERE draft_type IN ('axis', 'bucket')"
+            )
+            self._conn.execute(
+                "DELETE FROM investor_confirmed_refs WHERE ref_type IN ('investment_axis', 'investor_essence') "
+                "OR pointer_key IN ('workspace:investor_essence', 'portfolio:default:investment_axis') "
+                "OR pointer_key LIKE 'portfolio:%:investment_axis'"
+            )
+            self._conn.execute(
+                "DELETE FROM investor_confirmed_snapshots WHERE kind IN ('investment_axis', 'investor_essence')"
+            )
+            self._conn.execute(
+                "DELETE FROM investor_command_receipts WHERE use_case IN ('confirm_essence', 'confirm_axis', 'apply_bucket_plan', 'preview_bucket_plan')"
+            )
+        else:
+            if portfolio_id:
+                self._conn.execute(
+                    "DELETE FROM investor_plan_drafts WHERE portfolio_id = ? AND draft_type IN ('axis', 'bucket')",
+                    (portfolio_id,),
+                )
+                self._conn.execute(
+                    "DELETE FROM investor_confirmed_refs WHERE pointer_key = ?",
+                    (f"portfolio:{portfolio_id}:investment_axis",),
+                )
+                self._conn.execute(
+                    "DELETE FROM investor_confirmed_snapshots WHERE kind = 'investment_axis' AND (scope_id = ? OR scope = ?)",
+                    (portfolio_id, f"portfolio:{portfolio_id}"),
+                )
+                self._conn.execute(
+                    "DELETE FROM investor_command_receipts WHERE scope = ? AND use_case IN ('confirm_axis', 'apply_bucket_plan', 'preview_bucket_plan')",
+                    (f"portfolio:{portfolio_id}",),
+                )
+            else:
+                self._conn.execute(
+                    "DELETE FROM investor_plan_drafts WHERE draft_type IN ('axis', 'bucket')"
+                )
+                self._conn.execute(
+                    "DELETE FROM investor_confirmed_refs WHERE ref_type = 'investment_axis' OR pointer_key LIKE 'portfolio:%:investment_axis'"
+                )
+                self._conn.execute(
+                    "DELETE FROM investor_confirmed_snapshots WHERE kind = 'investment_axis'"
+                )
+                self._conn.execute(
+                    "DELETE FROM investor_command_receipts WHERE use_case IN ('confirm_axis', 'apply_bucket_plan', 'preview_bucket_plan')"
+                )
 
     def set_confirmed_pointer(
         self,

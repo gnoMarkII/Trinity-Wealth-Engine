@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import AutoResizeTextarea from '../../ui/AutoResizeTextarea'
 import type { SummaryResponseDTO, ConfirmedEssenceDTO } from '../../../api/types'
 
 interface EssenceResultProps {
@@ -9,6 +10,7 @@ interface EssenceResultProps {
   onExcludeClaim: (claimId: string) => Promise<void>
   onConfirmBatch: (proceedToAxis: boolean) => Promise<void>
   onRestart: () => void
+  onRetrySummary?: () => Promise<void>
   loading: boolean
   statusText?: string | null
 }
@@ -27,12 +29,47 @@ export default function EssenceResult({
   onExcludeClaim,
   onConfirmBatch,
   onRestart,
+  onRetrySummary,
   loading,
   statusText,
 }: EssenceResultProps) {
   const [editingClaimId, setEditingClaimId] = useState<string | null>(null)
   const [editText, setEditText] = useState<string>('')
   const [expandedEvidenceId, setExpandedEvidenceId] = useState<string | null>(null)
+
+  if (!summary && !confirmedEssence) {
+    return (
+      <div className="max-w-xl mx-auto rounded-2xl border border-sky-100 bg-white p-8 text-center shadow-xs space-y-5">
+        <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-sky-50 text-2xl text-sky-600">
+          ⏳
+        </div>
+        <div>
+          <h3 className="text-base font-bold text-zinc-900">
+            ยังไม่มีข้อสรุปแก่นแท้
+          </h3>
+          <p className="text-xs text-zinc-500 mt-1 max-w-sm mx-auto leading-relaxed">
+            ระบบยังไม่ได้สร้างบทสรุปแก่นแท้ หรือเกิดข้อผิดพลาดในการประมวลผลก่อนหน้า
+          </p>
+        </div>
+        {onRetrySummary && (
+          <div>
+            <button
+              type="button"
+              onClick={onRetrySummary}
+              disabled={loading}
+              className="rounded-xl bg-gradient-to-r from-sky-600 to-blue-600 px-6 py-3 text-xs font-bold text-white shadow-sm hover:from-sky-700 hover:to-blue-700 disabled:opacity-50 transition-all cursor-pointer inline-flex items-center gap-2"
+            >
+              {loading ? (
+                <span>{statusText || 'กำลังประมวลผล...'}</span>
+              ) : (
+                <span>🔄 สังเคราะห์แก่นแท้ใหม่</span>
+              )}
+            </button>
+          </div>
+        )}
+      </div>
+    )
+  }
 
   // Determine whether we're showing confirmed view or review draft
   const isConfirmed = !!confirmedEssence && (!summary || confirmedEssence.artifact_id)
@@ -154,8 +191,8 @@ export default function EssenceResult({
                     <div className="flex-1 min-w-0 space-y-2">
                       {isEditing ? (
                         <div className="space-y-2">
-                          <textarea
-                            rows={2}
+                          <AutoResizeTextarea
+                            minRows={2}
                             value={editText}
                             onChange={(e) => setEditText(e.target.value)}
                             className="w-full rounded-lg border border-purple-300 bg-white p-2.5 text-sm text-zinc-800 focus:outline-none focus:ring-2 focus:ring-purple-400"

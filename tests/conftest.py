@@ -49,10 +49,7 @@ def _snapshot_protected_dirs():
                 if f.is_file() and ".obsidian" not in f.parts and "cache" not in f.parts:
                     try:
                         stat = f.stat()
-                        if stat.st_size > 1024 * 1024:
-                            content_hash = f"size:{stat.st_size}-mtime:{stat.st_mtime_ns}"
-                        else:
-                            content_hash = hashlib.sha256(f.read_bytes()).hexdigest()
+                        content_hash = f"size:{stat.st_size}-mtime:{stat.st_mtime_ns}"
                         snapshot[str(f.resolve())] = content_hash
                     except Exception:
                         pass

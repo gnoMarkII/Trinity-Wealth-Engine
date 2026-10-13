@@ -41,35 +41,38 @@ const TABS = [
   {
     key: 'overview',
     label: (
-      <span className="flex items-center gap-2 text-sm sm:text-base font-semibold">
-        <ChartBarIcon className="w-4 h-4 sm:w-5 sm:h-5 text-flow-blue shrink-0" />
-        <span>Strategy Buckets & Allocation</span>
+      <span className="flex items-center gap-1.5 text-xs sm:text-sm font-semibold whitespace-nowrap">
+        <ChartBarIcon className="w-4 h-4 text-flow-blue shrink-0" />
+        <span>Strategy Buckets</span>
+        <span className="hidden 2xl:inline">& Allocation</span>
       </span>
     ),
   },
   {
     key: 'principles',
     label: (
-      <span className="flex items-center gap-2 text-sm sm:text-base font-semibold">
-        <span className="text-base shrink-0">🧭</span>
-        <span>หลักการลงทุน (Principles)</span>
+      <span className="flex items-center gap-1.5 text-xs sm:text-sm font-semibold whitespace-nowrap">
+        <span className="text-sm shrink-0">🧭</span>
+        <span>หลักการลงทุน</span>
+        <span className="hidden 2xl:inline"> (Principles)</span>
       </span>
     ),
   },
   {
     key: 'holdings',
     label: (
-      <span className="flex items-center gap-2 text-sm sm:text-base font-semibold">
-        <BriefcaseIcon className="w-4 h-4 sm:w-5 sm:h-5 text-emerald-600 shrink-0" />
-        <span>Holdings & Trading Journal</span>
+      <span className="flex items-center gap-1.5 text-xs sm:text-sm font-semibold whitespace-nowrap">
+        <BriefcaseIcon className="w-4 h-4 text-emerald-600 shrink-0" />
+        <span>Holdings</span>
+        <span className="hidden 2xl:inline"> & Trading Journal</span>
       </span>
     ),
   },
   {
     key: 'transactions',
     label: (
-      <span className="flex items-center gap-2 text-sm sm:text-base font-semibold">
-        <TradeIcon className="w-4 h-4 sm:w-5 sm:h-5 text-sky-500 shrink-0" />
+      <span className="flex items-center gap-1.5 text-xs sm:text-sm font-semibold whitespace-nowrap">
+        <TradeIcon className="w-4 h-4 text-sky-500 shrink-0" />
         <span>Transactions</span>
       </span>
     ),
@@ -77,8 +80,8 @@ const TABS = [
   {
     key: 'incomes',
     label: (
-      <span className="flex items-center gap-2 text-sm sm:text-base font-semibold">
-        <IncomeIcon className="w-4 h-4 sm:w-5 sm:h-5 text-emerald-500 shrink-0" />
+      <span className="flex items-center gap-1.5 text-xs sm:text-sm font-semibold whitespace-nowrap">
+        <IncomeIcon className="w-4 h-4 text-emerald-500 shrink-0" />
         <span>Dividends & Income</span>
       </span>
     ),
@@ -86,8 +89,8 @@ const TABS = [
   {
     key: 'watchlist',
     label: (
-      <span className="flex items-center gap-2 text-sm sm:text-base font-semibold">
-        <WatchlistIcon className="w-4 h-4 sm:w-5 sm:h-5 text-amber-500 shrink-0" />
+      <span className="flex items-center gap-1.5 text-xs sm:text-sm font-semibold whitespace-nowrap">
+        <WatchlistIcon className="w-4 h-4 text-amber-500 shrink-0" />
         <span>Watchlist</span>
       </span>
     ),
@@ -95,9 +98,9 @@ const TABS = [
   {
     key: 'calendar',
     label: (
-      <span className="flex items-center gap-2 text-sm sm:text-base font-semibold">
-        <span className="text-base shrink-0">📅</span>
-        <span>Corporate Calendar</span>
+      <span className="flex items-center gap-1.5 text-xs sm:text-sm font-semibold whitespace-nowrap">
+        <span className="text-sm shrink-0">📅</span>
+        <span>Calendar</span>
       </span>
     ),
   },
@@ -339,21 +342,28 @@ export default function Portfolio() {
   return (
     <div className="animate-page-in space-y-6 pb-14">
       {/* Page Header with Multi-Portfolio Selector — Hero Banner Card */}
-      <div className="flow-panel rounded-2xl border border-sky-100/80 p-5 md:p-6 shadow-sm bg-gradient-to-r from-white/90 via-sky-50/40 to-blue-50/30 backdrop-blur-md flex flex-col justify-between gap-4 md:flex-row md:items-center">
+      <div className="flow-panel rounded-2xl border border-sky-100/80 p-5 md:p-6 shadow-sm bg-gradient-to-r from-white/90 via-sky-50/40 to-blue-50/30 backdrop-blur-md flex flex-col justify-between gap-3 xl:flex-row xl:items-center">
         {/* Left: Branding & Title */}
         <div className="space-y-1.5 max-w-xl">
-          <h1 className="text-2xl md:text-3xl lg:text-4xl font-extrabold tracking-tight text-zinc-900">
-            Actual Portfolio Hub
-          </h1>
+          <div className="flex items-center gap-2">
+            <h1 className="text-xl sm:text-2xl lg:text-3xl font-extrabold tracking-tight text-zinc-900">
+              Actual Portfolio Hub
+            </h1>
+            {activeTab === 'principles' && (
+              <span className="rounded-full bg-sky-100 px-2.5 py-0.5 text-[10px] font-bold text-sky-800 whitespace-nowrap">
+                🧭 Principles & Purpose Buckets
+              </span>
+            )}
+          </div>
           <p className="text-xs md:text-sm text-zinc-500 font-medium leading-relaxed">
             ศูนย์กลางติดตามพอร์ตการลงทุนจริง (Actual Portfolio) พร้อมกลยุทธ์สัดส่วน การจัดกลุ่ม Bucket และระบบบันทึก Trading Journal
           </p>
         </div>
 
         {/* Right: Portfolio Selector & Action Toolbar */}
-        <div className="flex flex-col items-stretch md:items-end gap-3 shrink-0">
+        <div className="flex flex-col items-stretch xl:items-end gap-2.5 w-full xl:w-auto min-w-0">
           {/* Portfolio Selector Pill */}
-          <div className="flex w-full items-center justify-between gap-2 bg-white/95 backdrop-blur border border-sky-200/90 shadow-xs rounded-xl px-3.5 py-1.5 transition-all hover:border-sky-300">
+          <div className="flex flex-wrap sm:flex-nowrap w-full items-center justify-between gap-2 bg-white/95 backdrop-blur border border-sky-200/90 shadow-xs rounded-xl px-3 py-1.5 transition-all hover:border-sky-300">
             <span className="text-xs sm:text-sm font-bold text-zinc-600 flex items-center gap-1.5 shrink-0">
               <span>📁</span> พอร์ต:
             </span>
@@ -364,7 +374,7 @@ export default function Portfolio() {
                 nextParams.set('portfolio_id', e.target.value)
                 setSearchParams(nextParams)
               }}
-              className="flex-1 min-w-0 rounded-lg border border-sky-200 bg-sky-50/60 px-3 py-1.5 text-xs sm:text-sm font-bold text-zinc-800 shadow-xs focus:outline-none focus:ring-2 focus:ring-sky-400 cursor-pointer hover:bg-white transition-colors"
+              className="flex-1 min-w-0 rounded-lg border border-sky-200 bg-sky-50/60 px-2.5 py-1 text-xs sm:text-sm font-bold text-zinc-800 shadow-xs focus:outline-none focus:ring-2 focus:ring-sky-400 cursor-pointer hover:bg-white transition-colors"
             >
               {portfolios.length > 0 ? (
                 portfolios.map((p) => (
@@ -376,71 +386,75 @@ export default function Portfolio() {
                 <option value="default">พอร์ตลงทุนหลัก (Default)</option>
               )}
             </select>
-            <button
-              type="button"
-              onClick={handleOpenRenameModal}
-              className="shrink-0 rounded-lg bg-sky-100/80 px-2.5 py-1.5 text-xs sm:text-sm font-bold text-sky-700 hover:bg-sky-600 hover:text-white active:scale-95 transition-all flex items-center gap-1"
-              title="แก้ไขชื่อพอร์ตนี้"
-            >
-              ✏️
-            </button>
-            <button
-              type="button"
-              onClick={() => setCreatePortModalOpen(true)}
-              className="shrink-0 rounded-lg bg-emerald-600 px-3.5 py-1.5 text-xs sm:text-sm font-bold text-white shadow-xs hover:bg-emerald-700 active:scale-95 transition-all flex items-center gap-1"
-              title="สร้างพอร์ตใหม่"
-            >
-              <span>+ พอร์ตใหม่</span>
-            </button>
-            {selectedPortfolioId !== 'default' && (
+            <div className="flex items-center gap-1.5 shrink-0">
               <button
                 type="button"
-                onClick={handleDeletePortfolio}
-                className="shrink-0 rounded-lg bg-rose-100/80 px-2.5 py-1.5 text-xs sm:text-sm font-bold text-rose-700 hover:bg-rose-600 hover:text-white active:scale-95 transition-all"
-                title="ลบพอร์ตนี้"
+                onClick={handleOpenRenameModal}
+                className="shrink-0 rounded-lg bg-sky-100/80 px-2.5 py-1 text-xs sm:text-sm font-bold text-sky-700 hover:bg-sky-600 hover:text-white active:scale-95 transition-all flex items-center gap-1"
+                title="แก้ไขชื่อพอร์ตนี้"
               >
-                🗑️
+                ✏️
               </button>
-            )}
+              <button
+                type="button"
+                onClick={() => setCreatePortModalOpen(true)}
+                className="shrink-0 rounded-lg bg-emerald-600 px-2.5 py-1 text-xs sm:text-sm font-bold text-white shadow-xs hover:bg-emerald-700 active:scale-95 transition-all flex items-center gap-1"
+                title="สร้างพอร์ตใหม่"
+              >
+                <span>+ พอร์ตใหม่</span>
+              </button>
+              {selectedPortfolioId !== 'default' && (
+                <button
+                  type="button"
+                  onClick={handleDeletePortfolio}
+                  className="shrink-0 rounded-lg bg-rose-100/80 px-2 py-1 text-xs sm:text-sm font-bold text-rose-700 hover:bg-rose-600 hover:text-white active:scale-95 transition-all"
+                  title="ลบพอร์ตนี้"
+                >
+                  🗑️
+                </button>
+              )}
+            </div>
           </div>
 
-          {/* Action Toolbar */}
-          <div className="flex flex-wrap items-center justify-between md:justify-end gap-2 sm:gap-2.5 w-full">
-            <button
-              type="button"
-              onClick={() => setTradeModalOpen(true)}
-              className="rounded-xl bg-gradient-to-r from-sky-500 to-blue-600 px-4 py-2 sm:py-2.5 text-xs sm:text-sm font-bold text-white shadow-md shadow-sky-500/20 hover:from-sky-600 hover:to-blue-700 hover:shadow-lg hover:shadow-sky-500/30 active:scale-98 transition-all flex items-center gap-1.5 sm:gap-2 whitespace-nowrap"
-            >
-              <TradeIcon className="w-4 h-4 text-white shrink-0" />
-              <span>บันทึกเทรด (Trade)</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => setCashFlowModalOpen(true)}
-              className="rounded-xl border border-sky-200/90 bg-white/90 px-3.5 sm:px-4 py-2 sm:py-2.5 text-xs sm:text-sm font-bold text-zinc-700 shadow-xs hover:bg-sky-50/90 hover:border-sky-300 active:scale-98 transition-all flex items-center gap-1.5 whitespace-nowrap"
-            >
-              <CashFlowIcon className="w-4 h-4 text-emerald-600 shrink-0" />
-              <span>ฝาก/ถอน (Cash)</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => setIncomeModalOpen(true)}
-              className="rounded-xl border border-sky-200/90 bg-white/90 px-3.5 sm:px-4 py-2 sm:py-2.5 text-xs sm:text-sm font-bold text-zinc-700 shadow-xs hover:bg-sky-50/90 hover:border-sky-300 active:scale-98 transition-all flex items-center gap-1.5 whitespace-nowrap"
-            >
-              <IncomeIcon className="w-4 h-4 text-emerald-600 shrink-0" />
-              <span>ปันผล/รายรับ (Income)</span>
-            </button>
-            <div className="h-5 w-px bg-sky-200/60 mx-0.5 hidden sm:block" />
-            <button
-              type="button"
-              onClick={() => setResetModalOpen(true)}
-              className="rounded-xl border border-rose-200/70 bg-rose-50/60 px-3 sm:px-3.5 py-2 sm:py-2.5 text-xs sm:text-sm font-bold text-rose-600 shadow-xs hover:bg-rose-600 hover:text-white active:scale-98 transition-all flex items-center gap-1.5 whitespace-nowrap"
-              title="ล้างข้อมูลพอร์ตทั้งหมดกลับเป็นค่าเริ่มต้น"
-            >
-              <ResetIcon className="w-4 h-4 shrink-0" />
-              <span>ล้างพอร์ต</span>
-            </button>
-          </div>
+          {/* Action Toolbar — Only shown on portfolio tracking / transactions / overview tabs */}
+          {activeTab !== 'principles' && (
+            <div className="flex flex-wrap items-center justify-start xl:justify-end gap-2 sm:gap-2.5 w-full">
+              <button
+                type="button"
+                onClick={() => setTradeModalOpen(true)}
+                className="rounded-xl bg-gradient-to-r from-sky-500 to-blue-600 px-3 sm:px-3.5 py-1.5 sm:py-2 text-xs sm:text-sm font-bold text-white shadow-md shadow-sky-500/20 hover:from-sky-600 hover:to-blue-700 hover:shadow-lg hover:shadow-sky-500/30 active:scale-98 transition-all flex items-center gap-1.5 whitespace-nowrap"
+              >
+                <TradeIcon className="w-4 h-4 text-white shrink-0" />
+                <span>บันทึกเทรด (Trade)</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setCashFlowModalOpen(true)}
+                className="rounded-xl border border-sky-200/90 bg-white/90 px-3 sm:px-3.5 py-1.5 sm:py-2 text-xs sm:text-sm font-bold text-zinc-700 shadow-xs hover:bg-sky-50/90 hover:border-sky-300 active:scale-98 transition-all flex items-center gap-1.5 whitespace-nowrap"
+              >
+                <CashFlowIcon className="w-4 h-4 text-emerald-600 shrink-0" />
+                <span>ฝาก/ถอน (Cash)</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setIncomeModalOpen(true)}
+                className="rounded-xl border border-sky-200/90 bg-white/90 px-3 sm:px-3.5 py-1.5 sm:py-2 text-xs sm:text-sm font-bold text-zinc-700 shadow-xs hover:bg-sky-50/90 hover:border-sky-300 active:scale-98 transition-all flex items-center gap-1.5 whitespace-nowrap"
+              >
+                <IncomeIcon className="w-4 h-4 text-emerald-600 shrink-0" />
+                <span>ปันผล/รายรับ (Income)</span>
+              </button>
+              <div className="h-5 w-px bg-sky-200/60 mx-0.5 hidden sm:block" />
+              <button
+                type="button"
+                onClick={() => setResetModalOpen(true)}
+                className="rounded-xl border border-rose-200/70 bg-rose-50/60 px-2.5 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm font-bold text-rose-600 shadow-xs hover:bg-rose-600 hover:text-white active:scale-98 transition-all flex items-center gap-1.5 whitespace-nowrap"
+                title="ล้างข้อมูลพอร์ตทั้งหมดกลับเป็นค่าเริ่มต้น"
+              >
+                <ResetIcon className="w-4 h-4 shrink-0" />
+                <span>ล้างพอร์ต</span>
+              </button>
+            </div>
+          )}
         </div>
       </div>
 
@@ -549,115 +563,121 @@ export default function Portfolio() {
         </div>
       )}
 
-      {/* Summary Cards */}
-      <PortfolioSummaryCards
-        summary={portfolioState?.summary ?? null}
-        lastUpdated={portfolioState?.last_updated ?? null}
-        loading={loading}
-        refreshingPrices={refreshingPrices}
-        priceRefreshInfo={portfolioState?.price_refresh_info ?? null}
-        onRefreshPrices={() => void fetchAllData(true)}
-        performanceRows={performanceRows}
-      />
+      {/* Summary Cards & Executive Dashboard — Display on portfolio tracking/operations tabs, hidden on Principles workspace */}
+      {activeTab !== 'principles' && (
+        <>
+          <PortfolioSummaryCards
+            summary={portfolioState?.summary ?? null}
+            lastUpdated={portfolioState?.last_updated ?? null}
+            loading={loading}
+            refreshingPrices={refreshingPrices}
+            priceRefreshInfo={portfolioState?.price_refresh_info ?? null}
+            onRefreshPrices={() => void fetchAllData(true)}
+            performanceRows={performanceRows}
+          />
 
-      {/* Top-Level Executive Section: Goals & Performance */}
-      <div className="rounded-2xl border border-sky-100 bg-gradient-to-b from-sky-50/40 via-white to-panel p-5 shadow-sm transition-all">
-        <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center border-b border-sky-100 pb-4">
-          <div className="flex items-center gap-3">
-            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-flow-blue/10 text-flow-blue">
-              <ChartBarIcon className="h-5 w-5" />
-            </span>
-            <div>
-              <h2 className="text-base font-extrabold tracking-tight text-zinc-900 flex items-center gap-2">
-                <span>Executive Dashboard: Goals & Performance</span>
-                <span className="rounded-full bg-flow-cyan/20 px-2.5 py-0.5 text-[10px] font-bold text-flow-blue uppercase tracking-wider">
-                  Top-Level Metrics
+          {/* Top-Level Executive Section: Goals & Performance */}
+          <div className="rounded-2xl border border-sky-100 bg-gradient-to-b from-sky-50/40 via-white to-panel p-5 shadow-sm transition-all">
+            <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center border-b border-sky-100 pb-4">
+              <div className="flex items-center gap-3">
+                <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-flow-blue/10 text-flow-blue">
+                  <ChartBarIcon className="h-5 w-5" />
                 </span>
-              </h2>
-              <p className="text-xs text-zinc-500 mt-0.5">
-                ติดตามความคืบหน้าเป้าหมายพอร์ต และประวัติการเติบโตของ NAV Snapshot ได้ทันทีจากทุกมุมมอง
-              </p>
+                <div>
+                  <h2 className="text-base font-extrabold tracking-tight text-zinc-900 flex items-center gap-2">
+                    <span>Executive Dashboard: Goals & Performance</span>
+                    <span className="rounded-full bg-flow-cyan/20 px-2.5 py-0.5 text-[10px] font-bold text-flow-blue uppercase tracking-wider">
+                      Top-Level Metrics
+                    </span>
+                  </h2>
+                  <p className="text-xs text-zinc-500 mt-0.5">
+                    ติดตามความคืบหน้าเป้าหมายพอร์ต และประวัติการเติบโตของ NAV Snapshot ได้ทันทีจากทุกมุมมอง
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setExecutiveTab('goals')
+                    if (!executiveExpanded) setExecutiveExpanded(true)
+                  }}
+                  className={`rounded-xl px-3.5 py-1.5 text-xs font-bold transition-all flex items-center gap-1.5 ${
+                    executiveTab === 'goals' && executiveExpanded
+                      ? 'bg-flow-blue text-white shadow-md'
+                      : 'bg-white text-zinc-600 hover:bg-sky-50 border border-sky-200'
+                  }`}
+                >
+                  <GoalIcon className="w-3.5 h-3.5" />
+                  <span>Goals ({goalsResponse?.goals.length ?? 0})</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setExecutiveTab('performance')
+                    if (!executiveExpanded) setExecutiveExpanded(true)
+                  }}
+                  className={`rounded-xl px-3.5 py-1.5 text-xs font-bold transition-all flex items-center gap-1.5 ${
+                    executiveTab === 'performance' && executiveExpanded
+                      ? 'bg-flow-blue text-white shadow-md'
+                      : 'bg-white text-zinc-600 hover:bg-sky-50 border border-sky-200'
+                  }`}
+                >
+                  <ChartBarIcon className="w-3.5 h-3.5" />
+                  <span>Performance Analytics</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setExecutiveExpanded(!executiveExpanded)}
+                  className="rounded-xl border border-sky-200 bg-white p-1.5 text-zinc-500 hover:bg-sky-50 hover:text-zinc-900 transition-colors ml-1"
+                  title={executiveExpanded ? 'ย่อส่วน Executive Dashboard' : 'ขยายส่วน Executive Dashboard'}
+                >
+                  {executiveExpanded ? '🔼' : '🔽'}
+                </button>
+              </div>
             </div>
-          </div>
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={() => {
-                setExecutiveTab('goals')
-                if (!executiveExpanded) setExecutiveExpanded(true)
-              }}
-              className={`rounded-xl px-3.5 py-1.5 text-xs font-bold transition-all flex items-center gap-1.5 ${
-                executiveTab === 'goals' && executiveExpanded
-                  ? 'bg-flow-blue text-white shadow-md'
-                  : 'bg-white text-zinc-600 hover:bg-sky-50 border border-sky-200'
-              }`}
-            >
-              <GoalIcon className="w-3.5 h-3.5" />
-              <span>Goals ({goalsResponse?.goals.length ?? 0})</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setExecutiveTab('performance')
-                if (!executiveExpanded) setExecutiveExpanded(true)
-              }}
-              className={`rounded-xl px-3.5 py-1.5 text-xs font-bold transition-all flex items-center gap-1.5 ${
-                executiveTab === 'performance' && executiveExpanded
-                  ? 'bg-flow-blue text-white shadow-md'
-                  : 'bg-white text-zinc-600 hover:bg-sky-50 border border-sky-200'
-              }`}
-            >
-              <ChartBarIcon className="w-3.5 h-3.5" />
-              <span>Performance Analytics</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => setExecutiveExpanded(!executiveExpanded)}
-              className="rounded-xl border border-sky-200 bg-white p-1.5 text-zinc-500 hover:bg-sky-50 hover:text-zinc-900 transition-colors ml-1"
-              title={executiveExpanded ? 'ย่อส่วน Executive Dashboard' : 'ขยายส่วน Executive Dashboard'}
-            >
-              {executiveExpanded ? '🔼' : '🔽'}
-            </button>
-          </div>
-        </div>
 
-        {executiveExpanded && (
-          <div className="mt-5 animate-fade-in">
-            {executiveTab === 'goals' ? (
-              <PortfolioGoalsTab
-                goals={goalsResponse?.goals ?? []}
-                generatedAt={goalsResponse?.generated_at ?? null}
-                portfolios={portfolios}
-                selectedPortfolioId={selectedPortfolioId}
-                onSuccess={(res) => setGoalsResponse(res)}
-              />
-            ) : (
-              <PortfolioAnalyticsTab
-                performanceRows={performanceRows}
-                daysRange={daysRange}
-                onChangeDaysRange={setDaysRange}
-                holdings={portfolioState?.holdings ?? []}
-                cashBalanceThb={
-                  portfolioState?.summary?.total_value_thb != null
-                    ? Math.max(
-                        0,
-                        portfolioState.summary.total_value_thb -
-                          (portfolioState.holdings ?? []).reduce(
-                            (acc, h) => acc + (h.market_value_thb || 0),
-                            0
+            {executiveExpanded && (
+              <div className="mt-5 animate-fade-in">
+                {executiveTab === 'goals' ? (
+                  <PortfolioGoalsTab
+                    goals={goalsResponse?.goals ?? []}
+                    generatedAt={goalsResponse?.generated_at ?? null}
+                    portfolios={portfolios}
+                    selectedPortfolioId={selectedPortfolioId}
+                    allocationPolicy={portfolioState?.allocation_policy}
+                    bucketSummaries={allocationsResponse?.summaries ?? []}
+                    onSuccess={(res) => setGoalsResponse(res)}
+                  />
+                ) : (
+                  <PortfolioAnalyticsTab
+                    performanceRows={performanceRows}
+                    daysRange={daysRange}
+                    onChangeDaysRange={setDaysRange}
+                    holdings={portfolioState?.holdings ?? []}
+                    cashBalanceThb={
+                      portfolioState?.summary?.total_value_thb != null
+                        ? Math.max(
+                            0,
+                            portfolioState.summary.total_value_thb -
+                              (portfolioState.holdings ?? []).reduce(
+                                (acc, h) => acc + (h.market_value_thb || 0),
+                                0
+                              )
                           )
-                      )
-                    : undefined
-                }
-              />
+                        : undefined
+                    }
+                  />
+                )}
+              </div>
             )}
           </div>
-        )}
-      </div>
+        </>
+      )}
 
       {/* Tabs Control */}
       <div className="pt-2">
-        <SegmentedControl options={TABS} value={activeTab} onChange={handleTabChange} />
+        <SegmentedControl options={TABS} value={activeTab} onChange={handleTabChange} wrap={false} />
       </div>
 
       {/* Tab Panels */}
@@ -668,6 +688,9 @@ export default function Portfolio() {
             targets={portfolioState?.allocation_targets ?? []}
             summaries={allocationsResponse?.summaries ?? []}
             warning={allocationsResponse?.warning ?? null}
+            holdings={portfolioState?.holdings ?? []}
+            allocationPolicy={portfolioState?.allocation_policy}
+            allocationPlanOrigin={portfolioState?.allocation_plan_origin}
             onSelectBucket={handleSelectBucket}
             onSuccess={handlePortfolioStateSuccess}
             onOpenTradeModal={() => setTradeModalOpen(true)}
@@ -698,6 +721,7 @@ export default function Portfolio() {
             selectedBucket={selectedBucket}
             onClearBucketFilter={handleClearBucketFilter}
             targets={portfolioState?.allocation_targets ?? []}
+            allocationPolicy={portfolioState?.allocation_policy}
             onSuccess={handlePortfolioStateSuccess}
             journalRows={journalRows}
             journalKeyword={journalKeyword}

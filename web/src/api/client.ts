@@ -15,6 +15,8 @@ import type {
   UpsertAllocationTargetsPayload,
   AssignBucketPayload,
   BatchAssignBucketPayload,
+  BatchReassignHoldingsRequestDTO,
+  HoldingsBucketRecommendationResponseDTO,
   BatchRemoveHoldingsPayload,
   TradePayload,
   CashFlowPayload,
@@ -35,6 +37,8 @@ import type {
   StartSessionRequestDTO,
   RecordAnswerRequestDTO,
   AdvanceQuestionRequestDTO,
+  ClarificationRequestDTO,
+  GeneratedQuestionDTO,
   InterviewConfigDTO,
   SummaryResponseDTO,
   ReviewClaimRequestDTO,
@@ -49,6 +53,7 @@ import type {
   ConfirmedAxisDTO,
   BucketPlanDraftDTO,
   UpdateBucketPlanRequestDTO,
+  ApplyBucketPlanRequestDTO,
   AllocationPreviewDTO,
   AllocationApplyReceiptDTO,
 } from './types'
@@ -353,6 +358,21 @@ export const api = {
       method: 'PUT',
       body: JSON.stringify(payload),
     }),
+
+  recommendHoldingBuckets: (portfolioId: string = 'default') =>
+    request<HoldingsBucketRecommendationResponseDTO>(
+      `/api/portfolio/actual/holdings/ai-recommend-buckets?portfolio_id=${encodeURIComponent(portfolioId)}`,
+      { method: 'POST' }
+    ),
+
+  batchReassignHoldingBuckets: (payload: BatchReassignHoldingsRequestDTO, portfolioId: string = 'default') =>
+    request<ActualPortfolioStateDTO>(
+      `/api/portfolio/actual/holdings/batch-bucket-map?portfolio_id=${encodeURIComponent(portfolioId)}`,
+      {
+        method: 'PUT',
+        body: JSON.stringify(payload),
+      }
+    ),
 
   batchRemoveHoldings: (payload: BatchRemoveHoldingsPayload, portfolioId: string) =>
     request<ActualPortfolioStateDTO>(`/api/portfolio/actual/holdings/batch-delete?portfolio_id=${encodeURIComponent(portfolioId)}`, {
@@ -845,6 +865,109 @@ export const api = {
     }
   },
 
+  getArrGoldEmails: (query?: string, limit?: number) => {
+    const params = new URLSearchParams()
+    if (query) params.set('query', query)
+    if (limit) params.set('limit', String(limit))
+    return request<import('./types').ArrGoldEmailListResponseDTO>(`/api/portfolio/arr-gold/emails?${params.toString()}`)
+  },
+
+  scanArrGoldEmail: (messageId: string, attachmentId?: string, subject?: string) =>
+    request<import('./types').ArrGoldScanResponseDTO>('/api/portfolio/arr-gold/scan/email', {
+      method: 'POST',
+      body: JSON.stringify({ message_id: messageId, attachment_id: attachmentId, subject }),
+    }),
+
+  getStagedArrGoldTrades: (scanId: string) =>
+    request<import('./types').ArrGoldScanResponseDTO>(`/api/portfolio/arr-gold/staged/${encodeURIComponent(scanId)}`),
+
+  commitArrGoldTrades: (scanId: string, portfolioId: string = 'default', selectedItemIds?: string[]) =>
+    request<import('./types').ArrGoldCommitResponseDTO>(`/api/portfolio/arr-gold/commit/${encodeURIComponent(scanId)}`, {
+      method: 'POST',
+      body: JSON.stringify({ portfolio_id: portfolioId, selected_item_ids: selectedItemIds }),
+    }),
+
+  streamBatchArrGoldSync: async (
+    payload: { portfolio_id?: string; force_rescan?: boolean },
+    callbacks: {
+      onProgress?: (data: { message?: string; current?: number; total?: number; percent?: number; subject?: string }) => void
+      onWarning?: (data: { type?: string; message?: string; subject?: string }) => void
+      onComplete?: (data: { message?: string; total?: number; imported?: number }) => void
+      onError?: (err: Error) => void
+    },
+    signal?: AbortSignal
+  ) => {
+    const res = await fetch('/api/portfolio/arr-gold/scan/batch-stream', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(payload),
+      credentials: 'same-origin',
+      signal,
+    })
+
+    if (!res.ok) {
+      let msg = 'Sync failed'
+      try {
+        const err = await res.json()
+        msg = err.detail || msg
+      } catch {}
+      throw new Error(msg)
+    }
+
+    if (!res.body) {
+      throw new Error('ReadableStream not supported')
+    }
+
+    const reader = res.body.getReader()
+    const decoder = new TextDecoder()
+    let buffer = ''
+
+    try {
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+
+        buffer += decoder.decode(value, { stream: true })
+        const lines = buffer.split('\n\n')
+        buffer = lines.pop() || ''
+
+        for (const block of lines) {
+          if (!block.trim() || block.startsWith(':')) continue
+          let eventType = 'message'
+          let dataStr = ''
+
+          for (const line of block.split('\n')) {
+            if (line.startsWith('event:')) {
+              eventType = line.replace('event:', '').trim()
+            } else if (line.startsWith('data:')) {
+              dataStr = line.replace('data:', '').trim()
+            }
+          }
+
+          if (!dataStr) continue
+          try {
+            const data = JSON.parse(dataStr)
+            if (eventType === 'progress') {
+              callbacks.onProgress?.(data)
+            } else if (eventType === 'warning') {
+              callbacks.onWarning?.(data)
+            } else if (eventType === 'complete') {
+              callbacks.onComplete?.(data)
+            } else if (eventType === 'error') {
+              callbacks.onError?.(new Error(data.message || data.detail || 'Sync encountered an error'))
+            }
+          } catch (err) {
+            console.error('Failed to parse SSE event:', err, block)
+          }
+        }
+      }
+    } finally {
+      reader.releaseLock()
+    }
+  },
+
 
 
   getFxRate: (date?: string, portfolioId: string = 'default') => {
@@ -1009,6 +1132,14 @@ export const api = {
       body: JSON.stringify(payload ?? {}),
     }),
 
+  resetPrinciples: (portfolioId?: string) =>
+    request<{ ok: boolean; message: string }>(
+      portfolioId
+        ? `/api/investor/reset-principles?portfolio_id=${encodeURIComponent(portfolioId)}`
+        : '/api/investor/reset-principles',
+      { method: 'POST' },
+    ),
+
   getCurrentEssenceSession: (scope: string = 'workspace') =>
     request<SessionResponseDTO>(`/api/investor/essence/sessions/current?scope=${encodeURIComponent(scope)}`),
 
@@ -1045,6 +1176,15 @@ export const api = {
   getEssenceSummary: (sessionId: string) =>
     request<SummaryResponseDTO>(`/api/investor/essence/sessions/${encodeURIComponent(sessionId)}/summary`),
 
+  requestClarification: (sessionId: string, payload: ClarificationRequestDTO) =>
+    request<GeneratedQuestionDTO>(
+      `/api/investor/essence/sessions/${encodeURIComponent(sessionId)}/clarification`,
+      {
+        method: 'POST',
+        body: JSON.stringify(payload),
+      },
+    ),
+
   reviewEssenceClaim: (sessionId: string, claimId: string, payload: ReviewClaimRequestDTO) =>
     request<SummaryResponseDTO>(
       `/api/investor/essence/sessions/${encodeURIComponent(sessionId)}/summary/claims/${encodeURIComponent(claimId)}`,
@@ -1075,6 +1215,14 @@ export const api = {
       {
         method: 'PUT',
         body: JSON.stringify(payload),
+      },
+    ),
+
+  syncFinancialContextFromGoals: (portfolioId: string) =>
+    request<FinancialContextDTO>(
+      `/api/investor/financial-context/sync-goals?portfolio_id=${encodeURIComponent(portfolioId)}`,
+      {
+        method: 'POST',
       },
     ),
 
@@ -1139,13 +1287,15 @@ export const api = {
   previewBucketPlan: (draftId: string) =>
     request<AllocationPreviewDTO>(`/api/investor/bucket-plans/${encodeURIComponent(draftId)}/preview`),
 
-  applyBucketPlan: (draftId: string, idempotencyKey?: string) =>
-    request<AllocationApplyReceiptDTO>(
+  applyBucketPlan: (draftId: string, req?: string | ApplyBucketPlanRequestDTO) => {
+    const payload = typeof req === 'string' ? { idempotency_key: req } : req || {}
+    return request<AllocationApplyReceiptDTO>(
       `/api/investor/bucket-plans/${encodeURIComponent(draftId)}/apply`,
       {
         method: 'POST',
-        body: JSON.stringify({ idempotency_key: idempotencyKey }),
+        body: JSON.stringify(payload),
       },
-    ),
+    )
+  },
 }
 

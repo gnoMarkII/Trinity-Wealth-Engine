@@ -30,7 +30,7 @@ from tools.portfolio.domain.models import (
 from tools.portfolio.ports.trade_ingestion_port import TradeDocumentParserPort
 
 MAX_PDF_BYTES = 10 * 1024 * 1024  # 10 MB limit
-PARSER_TIMEOUT_SECONDS = 5.0      # 5 seconds wall-clock limit
+PARSER_TIMEOUT_SECONDS = float(os.getenv("DIME_PARSER_TIMEOUT_SECONDS", "10.0"))
 
 
 def _worker_parse_pdf(pdf_bytes: bytes, password: Optional[str], queue: Any) -> None:

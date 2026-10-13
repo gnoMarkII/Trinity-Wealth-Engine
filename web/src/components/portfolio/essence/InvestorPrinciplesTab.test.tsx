@@ -86,4 +86,26 @@ describe('InvestorPrinciplesTab', () => {
       expect(screen.getByText(/ต้องยืนยันแกนหลักการลงทุนของพอร์ตนี้ก่อน/i)).toBeInTheDocument()
     })
   })
+
+  it('scrolls main to top smoothly when Milestone 3 is clicked', async () => {
+    const scrollToMock = vi.fn()
+    const main = document.createElement('main')
+    main.scrollTo = scrollToMock
+    document.body.appendChild(main)
+
+    render(<InvestorPrinciplesTab portfolioId="default" />)
+
+    await waitFor(() => {
+      expect(screen.getByText('ออกแบบ Buckets')).toBeInTheDocument()
+    })
+
+    const bucketsTabBtn = screen.getByText('ออกแบบ Buckets').closest('button')!
+    fireEvent.click(bucketsTabBtn)
+
+    await waitFor(() => {
+      expect(scrollToMock).toHaveBeenCalledWith({ top: 0, behavior: 'smooth' })
+    })
+
+    document.body.removeChild(main)
+  })
 })

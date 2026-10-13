@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import ContextManager, Optional, List, Dict, Union
+from typing import ContextManager, Optional, List, Dict, Union, Any
 from tools.portfolio.domain.models import PortfolioState, PortfolioMeta
 from tools.portfolio.domain.ledger_change import LedgerChange
 from tools.portfolio.domain.mutation import PortfolioMutation
@@ -28,6 +28,7 @@ class PortfolioUnitOfWork(ContextManager["PortfolioUnitOfWork"], ABC):
         self,
         state: PortfolioState,
         ledger_change: Optional[Union[LedgerChange, PortfolioMutation]] = None,
+        command_receipt: Optional[Dict[str, Any]] = None,
     ) -> None:
         """Crash-consistent recoverable commit writing Master + Ledger + System Journal + Sidecars."""
         ...

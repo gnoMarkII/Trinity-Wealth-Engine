@@ -601,6 +601,43 @@ export interface ActualPortfolioStateDTO {
   allocation_targets: AllocationTargetDTO[]
   holdings: ActualHoldingDTO[]
   price_refresh_info: Record<string, string> | null
+  allocation_policy?: {
+    draft_id?: string
+    allocation_basis?: string
+    purpose_buckets?: Array<{
+      bucket_id: string
+      name: string
+      role?: string
+      target_percent: string | number
+      target_amount?: string | number | null
+      minimum_amount?: string | number | null
+      need_by_date?: string | null
+      cash_inflow_routing_pct?: string | null
+      inflow_route_mode?: string
+      inflow_priority?: number
+      when_full_redirect_bucket_id?: string | null
+      action_rules?: string[]
+      eligible_assets?: string[]
+      color?: string
+    }>
+    mapping_weights?: Array<{
+      axis_allocation_id: string
+      bucket_id: string
+      portfolio_weight_percent: string | number
+    }>
+    applied_at_iso?: string
+  } | null
+  allocation_plan_origin?: {
+    applied_draft_id?: string
+    command_id?: string
+    essence_ref?: string
+    axis_ref?: string
+    context_ref?: string
+    allocation_basis?: string
+    applied_at_iso?: string
+    targets_hash?: string
+    is_modified_since_apply?: boolean
+  } | null
 }
 
 export interface BucketAllocationSummaryDTO {
@@ -686,6 +723,31 @@ export interface AssignBucketPayload {
 export interface BatchAssignBucketPayload {
   symbols: string[]
   bucket_id?: string | null
+}
+
+export interface HoldingBucketAssignmentItemDTO {
+  symbol: string
+  bucket_id?: string | null
+}
+
+export interface BatchReassignHoldingsRequestDTO {
+  assignments: HoldingBucketAssignmentItemDTO[]
+}
+
+export interface HoldingBucketRecommendationItemDTO {
+  symbol: string
+  asset_type: string
+  current_bucket_id?: string | null
+  recommended_bucket_id: string
+  is_changed: boolean
+  reason: string
+}
+
+export interface HoldingsBucketRecommendationResponseDTO {
+  recommendations: HoldingBucketRecommendationItemDTO[]
+  summary: string
+  total_unassigned: number
+  total_mismatched: number
 }
 
 export interface BatchRemoveHoldingsPayload {
@@ -1406,6 +1468,62 @@ export interface SCBAMBatchScanCompleteEvent {
   skipped_synced_count: number
   message?: string
 }
+
+export interface ArrGoldEmailMetadataDTO {
+  message_id: string
+  attachment_id?: string | null
+  subject: string
+  sender: string
+  received_at: string
+  filename?: string | null
+  size_bytes: number
+}
+
+export interface ArrGoldEmailListResponseDTO {
+  emails: ArrGoldEmailMetadataDTO[]
+}
+
+export interface ArrGoldStagedItemFeeDTO {
+  commission: string
+  vat: string
+  other_fees: string
+  fee_currency: string
+}
+
+export interface ArrGoldStagedItemDTO {
+  item_id: string
+  trade_date: string
+  settlement_date?: string | null
+  symbol: string
+  action: string
+  units: string
+  price: string
+  gross_amount: string
+  fees: ArrGoldStagedItemFeeDTO
+  net_amount: string
+  currency: string
+  exchange_rate?: string | null
+  confirmation_no: string
+  order_id?: string | null
+  source: string
+  fingerprint: string
+  line_index: number
+  cash_adjusted: boolean
+  asset_type?: string
+}
+
+export interface ArrGoldScanResponseDTO {
+  scan_id: string
+  item_count: number
+  items: ArrGoldStagedItemDTO[]
+}
+
+export interface ArrGoldCommitResponseDTO {
+  ok: boolean
+  imported_count: number
+  state: ActualPortfolioStateDTO
+}
+
 
 
 export interface TransactionSummaryDTO {
@@ -2273,6 +2391,8 @@ export interface SessionResponseDTO {
 export interface StartSessionRequestDTO {
   scope?: string
   prompt_version?: string
+  portfolio_id?: string | null
+  clear_downstream?: boolean
 }
 
 export interface RecordAnswerRequestDTO {
@@ -2283,6 +2403,12 @@ export interface RecordAnswerRequestDTO {
 }
 
 export interface AdvanceQuestionRequestDTO {
+  expected_revision?: number | null
+  prompt_version?: string
+}
+
+export interface ClarificationRequestDTO {
+  unresolved_topic: string
   expected_revision?: number | null
   prompt_version?: string
 }
@@ -2366,11 +2492,27 @@ export interface ConfirmedEssenceDTO {
   confirmed_at_iso: string
 }
 
-export interface ReadinessIssueDTO {
-  field?: string
-  issue: string
-  level: 'blocking' | 'warning' | string
+export interface SourceRefDTO {
+  kind: 'question' | 'session' | 'user_input' | 'holding' | 'goal' | 'external' | string
+  ref_id: string
+  revision?: number | null
+  quote?: string | null
+  as_of?: string | null
 }
+
+export interface ValidationIssueDTO {
+  code: string
+  severity: 'blocking' | 'warning' | 'info' | string
+  field_path: string
+  message: string
+  details?: Record<string, any>
+  // Backward compatibility aliases
+  field?: string
+  issue?: string
+  level?: 'blocking' | 'warning' | string
+}
+
+export type ReadinessIssueDTO = ValidationIssueDTO
 
 export interface FinancialContextDTO {
   snapshot_id: string
@@ -2386,6 +2528,10 @@ export interface FinancialContextDTO {
   withdrawal_frequency?: string | null
   withdrawal_amount?: string | null
   experience_description?: string | null
+  monthly_investable_contribution?: string | null
+  essential_monthly_expense?: string | null
+  reserves_outside_portfolio?: string | null
+  facts?: Record<string, any>
   unknown_fields: string[]
   as_of: string
   source: string
@@ -2405,6 +2551,9 @@ export interface UpdateFinancialContextRequestDTO {
   withdrawal_frequency?: string | null
   withdrawal_amount?: string | null
   experience_description?: string | null
+  monthly_investable_contribution?: string | null
+  essential_monthly_expense?: string | null
+  reserves_outside_portfolio?: string | null
   unknown_fields?: string[] | null
 }
 
@@ -2414,6 +2563,9 @@ export interface AllocationRowDTO {
   min_percent?: string | null
   max_percent?: string | null
   notes?: string | null
+  allocation_id?: string
+  category_name?: string
+  role_description?: string
 }
 
 export interface AxisDraftDTO {
@@ -2461,6 +2613,7 @@ export interface UpdateAxisDraftRequestDTO {
 
 export interface ConfirmAxisRequestDTO {
   idempotency_key?: string
+  expected_draft_revision?: number | null
 }
 
 export interface ConfirmedAxisDTO {
@@ -2490,6 +2643,18 @@ export interface PurposeBucketDTO {
   target_percent: string
   source_value_ids: string[]
   source_axis_allocation_ids: string[]
+  linked_goal_name?: string | null
+  eligible_assets?: string[]
+  cash_inflow_routing_pct?: string | null
+  action_rules?: string[]
+  target_amount?: string | null
+  minimum_amount?: string | null
+  need_by_date?: string | null
+  inflow_route_mode?: 'fixed_ratio' | 'priority_fill'
+  inflow_priority?: number
+  when_full_redirect_bucket_id?: string | null
+  goal_id?: string | null
+  schema_version?: string
 }
 
 export interface MappingWeightDTO {
@@ -2548,6 +2713,19 @@ export interface AllocationPreviewDTO {
   after_allocation: Record<string, any>
   issues: string[]
   payload_hash: string
+  preview_id?: string
+  draft_id?: string
+  draft_revision?: number
+  source_refs?: Record<string, any>
+}
+
+export interface ApplyBucketPlanRequestDTO {
+  idempotency_key?: string
+  expected_draft_revision?: number
+  expected_checkpoint_sequence?: number
+  expected_checkpoint_state_hash?: string
+  preview_id?: string
+  payload_hash?: string
 }
 
 export interface AllocationApplyReceiptDTO {

@@ -21,12 +21,14 @@ from api.schemas.investor_essence import (
     ApplyBucketPlanRequest,
     AxisDraftResponse,
     BucketPlanDraftResponse,
+    ClarificationRequest,
     ConfirmAxisRequest,
     ConfirmEssenceRequest,
     ConfirmationResponse,
     CreateAxisDraftRequest,
     CreateBucketPlanRequest,
     FinancialContextResponse,
+    GeneratedQuestionSchema,
     InterviewConfigResponse,
     RecordAnswerRequest,
     ReviewClaimRequest,
@@ -105,13 +107,29 @@ def start_session(
     request: StartSessionRequest,
     service: InterviewService = Depends(get_interview_service),
 ) -> SessionResponse:
-    """Starts a new adaptive interview session and generates Question 1."""
+    """Starts a new adaptive interview session, clears downstream planning data, and generates Question 1."""
     try:
         view = service.start_session(
             scope=request.scope,
             prompt_version=request.prompt_version,
+            portfolio_id=request.portfolio_id,
+            clear_downstream=request.clear_downstream,
         )
         return SessionResponse.model_validate(view, from_attributes=True)
+    except Exception as exc:
+        _handle_error(exc)
+        raise exc
+
+
+@router.post("/reset-principles", status_code=status.HTTP_200_OK)
+def reset_principles(
+    portfolio_id: Optional[str] = Query(default=None),
+    service: InterviewService = Depends(get_interview_service),
+) -> Dict[str, Any]:
+    """Explicitly resets and clears downstream Investment Axis and Purpose Bucket plans."""
+    try:
+        service.reset_principles(portfolio_id=portfolio_id)
+        return {"ok": True, "message": "Cleared downstream axis and bucket planning data"}
     except Exception as exc:
         _handle_error(exc)
         raise exc
@@ -234,6 +252,26 @@ def get_summary(
     return SummaryResponse.model_validate(view, from_attributes=True)
 
 
+@router.post("/essence/sessions/{session_id}/clarification", response_model=GeneratedQuestionSchema)
+def request_clarification(
+    session_id: str,
+    request: ClarificationRequest,
+    service: ClaimReviewService = Depends(get_claim_review_service),
+) -> GeneratedQuestionSchema:
+    """Generates a clarification question on an unresolved topic."""
+    try:
+        res = service.request_clarification(
+            session_id=session_id,
+            unresolved_topic=request.unresolved_topic,
+            expected_revision=request.expected_revision,
+            prompt_version=request.prompt_version,
+        )
+        return GeneratedQuestionSchema.model_validate(res)
+    except Exception as exc:
+        _handle_error(exc)
+        raise exc
+
+
 @router.put("/essence/sessions/{session_id}/summary/claims/{claim_id}", response_model=SummaryResponse)
 def review_claim(
     session_id: str,
@@ -349,6 +387,20 @@ def update_financial_context(
         raise exc
 
 
+@router.post("/financial-context/sync-goals", response_model=FinancialContextResponse)
+def sync_financial_context_from_goals(
+    portfolio_id: str = Query(...),
+    service: FinancialContextService = Depends(get_financial_context_service),
+) -> FinancialContextResponse:
+    """Auto-populates financial context from portfolio goals and holdings snapshot."""
+    try:
+        view = service.sync_from_goals(portfolio_id=portfolio_id)
+        return FinancialContextResponse.model_validate(view, from_attributes=True)
+    except Exception as exc:
+        _handle_error(exc)
+        raise exc
+
+
 @router.post("/investment-axis/drafts", response_model=AxisDraftResponse, status_code=status.HTTP_201_CREATED)
 def create_axis_draft(
     request: CreateAxisDraftRequest,
@@ -422,8 +474,13 @@ def confirm_investment_axis(
 ) -> ConfirmationResponse:
     """Validates 8 sections, non-actions >= 3, and numeric constraints, then sets confirmed pointer."""
     idempotency_key = request.idempotency_key if request and request.idempotency_key else ""
+    expected_draft_rev = request.expected_draft_revision if request else None
     try:
-        view = service.confirm_axis(draft_id=draft_id, idempotency_key=idempotency_key)
+        view = service.confirm_axis(
+            draft_id=draft_id,
+            idempotency_key=idempotency_key,
+            expected_draft_revision=expected_draft_rev,
+        )
         return ConfirmationResponse.model_validate(view, from_attributes=True)
     except Exception as exc:
         _handle_error(exc)
@@ -531,6 +588,10 @@ def preview_bucket_plan(
             after_allocation=preview.after_allocation,
             issues=preview.issues,
             payload_hash=preview.payload_hash,
+            preview_id=preview.preview_id,
+            draft_id=preview.draft_id,
+            draft_revision=preview.draft_revision,
+            source_refs=preview.source_refs,
         )
     except Exception as exc:
         _handle_error(exc)
@@ -546,7 +607,14 @@ def apply_bucket_plan(
     """Atomically commits new targets and remaps holdings in a single Portfolio transaction."""
     idempotency_key = request.idempotency_key if request and request.idempotency_key else ""
     try:
-        receipt = service.apply_bucket_plan(draft_id=draft_id, idempotency_key=idempotency_key)
+        receipt = service.apply_bucket_plan(
+            draft_id=draft_id,
+            idempotency_key=idempotency_key,
+            expected_draft_revision=request.expected_draft_revision if request else None,
+            expected_checkpoint_sequence=request.expected_checkpoint_sequence if request else None,
+            expected_checkpoint_state_hash=request.expected_checkpoint_state_hash if request else None,
+            preview_id=request.preview_id if request else None,
+        )
         return AllocationApplyReceiptResponse(
             command_id=receipt.command_id,
             portfolio_id=receipt.portfolio_id,

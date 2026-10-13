@@ -82,6 +82,7 @@ class PortfolioService:
         self._dime_sync_service = self._app.dime_sync_service
         self._wealthx_sync_service = self._app.wealthx_sync_service
         self._scbam_sync_service = self._app.scbam_sync_service
+        self._arr_gold_sync_service = self._app.arr_gold_sync_service
 
     # =========================================================================
     # 0. Portfolio Lifecycle & Management
@@ -128,6 +129,13 @@ class PortfolioService:
     ) -> PortfolioState:
         return self._state_service.structured_batch_assign_holding_buckets(
             symbols=symbols, bucket_id=bucket_id, portfolio_id=portfolio_id
+        )
+
+    def structured_batch_reassign_holding_buckets(
+        self, assignments: Dict[str, Optional[str]], portfolio_id: str = "default"
+    ) -> PortfolioState:
+        return self._state_service.structured_batch_reassign_holding_buckets(
+            assignments=assignments, portfolio_id=portfolio_id
         )
 
     def structured_batch_remove_holdings(

@@ -26,6 +26,7 @@ from api.routers.portfolio import router as portfolio_router
 from api.routers.dime_sync import router as dime_sync_router
 from api.routers.wealthx_sync import router as wealthx_sync_router
 from api.routers.scb_sync import router as scb_sync_router
+from api.routers.arr_gold_sync import router as arr_gold_sync_router
 from api.routers.equity import router as equity_router
 from api.routers.equity.router_ohlcv import router as ohlcv_router
 from api.routers.knowledge_writes import router as knowledge_writes_router
@@ -133,6 +134,7 @@ app.include_router(portfolio_router)
 app.include_router(dime_sync_router)
 app.include_router(wealthx_sync_router)
 app.include_router(scb_sync_router)
+app.include_router(arr_gold_sync_router)
 app.include_router(agents_router)
 app.include_router(routes_kanban.router)
 app.include_router(routes_debug.router)

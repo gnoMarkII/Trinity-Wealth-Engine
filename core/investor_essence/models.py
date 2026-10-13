@@ -10,11 +10,28 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from decimal import Decimal
 from enum import Enum
+import json
 from typing import Any, Dict, List, Optional
 
 SCHEMA_VERSION: int = 1
 PERCENT_TOLERANCE: Decimal = Decimal("0.01")
 HUNDRED_PERCENT: Decimal = Decimal("100.00")
+
+
+class SourceRefKind(str, Enum):
+    CONFIRMED_SNAPSHOT = "confirmed_snapshot"
+    CONTEXT_SNAPSHOT = "context_snapshot"
+    GOAL_REVISION = "goal_revision"
+    PUBLISHED_VAULT_ARTIFACT = "published_vault_artifact"
+
+
+@dataclass(frozen=True)
+class SourceRef:
+    """Explicit typed pointer to a confirmed snapshot, context snapshot, goal, or vault artifact."""
+    ref_type: str  # confirmed_snapshot | context_snapshot | goal_revision | published_vault_artifact
+    ref_id: str
+    revision: Optional[int] = None
+    content_hash: Optional[str] = None
 
 
 class EvidenceType(str, Enum):
@@ -135,6 +152,17 @@ class EvidenceRef:
 
 
 @dataclass(frozen=True)
+class EvidenceSnapshot:
+    """Frozen input context of prior Q&A passed to LLM."""
+    session_id: str
+    branch_id: str
+    revision: int
+    context_hash: str
+    qa_pairs: List[Dict[str, Any]]
+    coverage_topics: List[str]
+
+
+@dataclass(frozen=True)
 class EssenceClaim:
     """Single bulleted summary claim extracted from interview Q&A."""
     claim_id: str
@@ -211,12 +239,68 @@ class NumericPolicyField:
 
 
 @dataclass(frozen=True)
-class FinancialReadinessIssue:
-    """Audited issue in financial context preventing numeric policy confirmation."""
+class ValidationIssue:
+    """Unified validation issue across UI and API."""
     code: str
-    severity: str  # blocking | warning
-    message: str
+    severity: str  # blocking | warning | info
     field_path: str
+    message: str
+    details: Dict[str, Any] = field(default_factory=dict)
+
+
+# Backward-compatible alias
+FinancialReadinessIssue = ValidationIssue
+
+
+@dataclass(frozen=True)
+class FinancialFact:
+    """Typed financial context fact with explicit status and provenance."""
+    field_key: str
+    status: str  # known | none | unknown
+    value_numeric: Optional[Decimal] = None
+    value_text: Optional[str] = None
+    range_text: Optional[str] = None
+    unit: str = ""
+    source: str = "user_reported"
+    as_of: str = ""
+
+
+@dataclass(frozen=True)
+class GoalFundingLink:
+    """Typed goal funding link with funding scope and target."""
+    goal_id: str
+    name: str
+    funding_scope: str  # portfolio | investor_overall
+    funding_amount_thb: Decimal
+    priority: int = 1
+    deadline: Optional[str] = None
+
+
+@dataclass(frozen=True)
+class HoldingPlanningSnapshot:
+    """Typed point-in-time holding snapshot used for bucket planning."""
+    holding_id: str
+    symbol: str
+    asset_type: str
+    market_value_thb: Decimal
+    weight_percent: Decimal
+    existing_bucket_id: Optional[str] = None
+    currency: str = "THB"
+
+
+@dataclass(frozen=True)
+class ConfirmedSnapshotRecord:
+    """Immutable persistent confirmation record in investor_confirmed_snapshots."""
+    snapshot_id: str
+    scope: str  # workspace | portfolio
+    scope_id: str  # workspace id or portfolio_id
+    kind: str  # essence | axis | context | bucket_policy
+    source_id: str
+    source_revision: int
+    content_hash: str
+    snapshot_json: str
+    confirmed_at_iso: str
+    created_at: float = 0.0
 
 
 @dataclass(frozen=True)
@@ -235,6 +319,10 @@ class FinancialContextSnapshot:
     withdrawal_frequency: Optional[str] = None
     withdrawal_amount: Optional[Decimal] = None
     experience_description: Optional[str] = None
+    monthly_investable_contribution: Optional[Decimal] = None
+    essential_monthly_expense: Optional[Decimal] = None
+    reserves_outside_portfolio: Optional[Decimal] = None
+    facts: Dict[str, FinancialFact] = field(default_factory=dict)
     unknown_fields: List[str] = field(default_factory=list)
     as_of: str = ""
     source: str = "user_reported"
@@ -303,6 +391,18 @@ class PurposeBucketDraft:
     target_percent: Decimal
     source_value_ids: List[str] = field(default_factory=list)
     source_axis_allocation_ids: List[str] = field(default_factory=list)
+    linked_goal_name: Optional[str] = None
+    eligible_assets: List[str] = field(default_factory=list)
+    cash_inflow_routing_pct: Optional[str] = None
+    action_rules: List[str] = field(default_factory=list)
+    target_amount: Optional[Decimal] = None
+    minimum_amount: Optional[Decimal] = None
+    need_by_date: Optional[str] = None
+    inflow_route_mode: str = "fixed_ratio"
+    inflow_priority: int = 1
+    when_full_redirect_bucket_id: Optional[str] = None
+    goal_id: Optional[str] = None
+    schema_version: str = "2.0"
 
 
 @dataclass(frozen=True)
@@ -353,3 +453,40 @@ class AllocationPlanOrigin:
     applied_at_iso: str
     targets_hash: str
     is_modified_since_apply: bool = False
+
+
+def compute_semantic_hash(payload: Any) -> str:
+    """Computes deterministic SHA-256 hash over canonicalized semantic payload.
+
+    Excludes non-semantic ephemeral fields (request_id, timestamps, status text)
+    and normalizes Decimals to 2 decimal places.
+    """
+    import hashlib
+
+    def _canonicalize(obj: Any) -> Any:
+        if isinstance(obj, Decimal):
+            return f"{obj:.2f}"
+        if isinstance(obj, dict):
+            ignored_keys = {
+                "request_id",
+                "idempotency_key",
+                "timestamp",
+                "created_at",
+                "created_at_iso",
+                "updated_at",
+                "statusText",
+                "status_text",
+                "message",
+            }
+            return {
+                k: _canonicalize(v)
+                for k, v in sorted(obj.items())
+                if k not in ignored_keys
+            }
+        if isinstance(obj, (list, tuple)):
+            return [_canonicalize(x) for x in obj]
+        return obj
+
+    canonical = _canonicalize(payload)
+    serialized = json.dumps(canonical, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
+    return hashlib.sha256(serialized.encode("utf-8")).hexdigest()

@@ -388,18 +388,18 @@ export default function PortfolioIncomesTab({
 
           {/* Holdings Received Dividend Table */}
           <div className="rounded-2xl border border-sky-100 bg-panel shadow-sm overflow-hidden">
-            <div className="overflow-x-auto">
+            <div className="overflow-x-auto custom-scrollbar">
               <table className="w-full text-left text-sm min-w-[950px]">
-                <thead className="border-b border-sky-100 bg-sky-50/80 text-xs sm:text-sm font-bold uppercase tracking-wider text-zinc-700">
+                <thead className="border-b border-sky-100 bg-sky-50/80 text-xs font-bold uppercase tracking-wider text-zinc-700 whitespace-nowrap">
                   <tr>
-                    <th className="px-4 py-3.5">สัญลักษณ์</th>
-                    <th className="px-3 py-3.5">ประเภท</th>
-                    <th className="px-3 py-3.5 text-right">จำนวนหน่วย (Units)</th>
-                    <th className="px-3 py-3.5 text-right">ปันผลต่อหุ้น (DPS)</th>
-                    <th className="px-3 py-3.5 text-right">Dividend Yield</th>
-                    <th className="px-3 py-3.5 text-right font-bold text-emerald-700">เงินปันผลที่ได้รับ (Net Received)</th>
-                    <th className="px-3 py-3.5 text-center">สถานะที่มา (Source)</th>
-                    <th className="px-4 py-3.5 text-center">รายละเอียด</th>
+                    <th className="px-4 py-3.5 whitespace-nowrap">สัญลักษณ์</th>
+                    <th className="px-3 py-3.5 whitespace-nowrap">ประเภท</th>
+                    <th className="px-3 py-3.5 text-right whitespace-nowrap">จำนวนหน่วย (Units)</th>
+                    <th className="px-3 py-3.5 text-right whitespace-nowrap">ปันผลต่อหุ้น (DPS)</th>
+                    <th className="px-3 py-3.5 text-right whitespace-nowrap">Dividend Yield</th>
+                    <th className="px-3 py-3.5 text-right font-bold text-emerald-700 whitespace-nowrap">เงินปันผลที่ได้รับ (Net Received)</th>
+                    <th className="px-3 py-3.5 text-center whitespace-nowrap">สถานะที่มา (Source)</th>
+                    <th className="px-4 py-3.5 text-center whitespace-nowrap">รายละเอียด</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-sky-100/60 font-sans">
@@ -596,18 +596,18 @@ export default function PortfolioIncomesTab({
 
           {/* Upcoming Schedule Table */}
           <div className="rounded-2xl border border-amber-100 bg-panel shadow-sm overflow-hidden">
-            <div className="overflow-x-auto">
+            <div className="overflow-x-auto custom-scrollbar">
               <table className="w-full text-left text-sm min-w-[950px]">
-                <thead className="border-b border-amber-100 bg-amber-50/80 text-xs sm:text-sm font-bold uppercase tracking-wider text-zinc-700">
+                <thead className="border-b border-amber-100 bg-amber-50/80 text-xs font-bold uppercase tracking-wider text-zinc-700 whitespace-nowrap">
                   <tr>
-                    <th className="px-4 py-3.5">สัญลักษณ์</th>
-                    <th className="px-3 py-3.5">วัน XD (Ex-Date)</th>
-                    <th className="px-3 py-3.5">วันจ่ายเงินจริง (Pay Date)</th>
-                    <th className="px-3 py-3.5 text-center">นับถอยหลัง</th>
-                    <th className="px-3 py-3.5 text-right">จำนวนหน่วย</th>
-                    <th className="px-3 py-3.5 text-right">DPS (ปันผล/หุ้น)</th>
-                    <th className="px-3 py-3.5 text-right">WHT</th>
-                    <th className="px-4 py-3.5 text-right font-bold text-amber-700">สุทธิคาดการณ์ (Est. Net)</th>
+                    <th className="px-4 py-3.5 whitespace-nowrap">สัญลักษณ์</th>
+                    <th className="px-3 py-3.5 whitespace-nowrap">วัน XD (Ex-Date)</th>
+                    <th className="px-3 py-3.5 whitespace-nowrap">วันจ่ายเงินจริง (Pay Date)</th>
+                    <th className="px-3 py-3.5 text-center whitespace-nowrap">นับถอยหลัง</th>
+                    <th className="px-3 py-3.5 text-right whitespace-nowrap">จำนวนหน่วย</th>
+                    <th className="px-3 py-3.5 text-right whitespace-nowrap">DPS (ปันผล/หุ้น)</th>
+                    <th className="px-3 py-3.5 text-right whitespace-nowrap">WHT</th>
+                    <th className="px-4 py-3.5 text-right font-bold text-amber-700 whitespace-nowrap">สุทธิคาดการณ์ (Est. Net)</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-amber-100/60 font-sans">

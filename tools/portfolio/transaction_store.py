@@ -84,6 +84,20 @@ class PortfolioTransactionStore:
                 );
                 CREATE INDEX IF NOT EXISTS idx_portfolio_events_stream
                     ON portfolio_events(portfolio_id, sequence);
+                CREATE TABLE IF NOT EXISTS portfolio_command_receipts (
+                    portfolio_id TEXT NOT NULL,
+                    use_case TEXT NOT NULL,
+                    idempotency_key TEXT NOT NULL,
+                    request_hash TEXT NOT NULL,
+                    command_id TEXT NOT NULL,
+                    checkpoint_sequence INTEGER NOT NULL,
+                    checkpoint_state_hash TEXT NOT NULL,
+                    result_json TEXT NOT NULL,
+                    created_at TEXT NOT NULL,
+                    PRIMARY KEY(portfolio_id, use_case, idempotency_key)
+                );
+                CREATE INDEX IF NOT EXISTS idx_portfolio_receipts_cmd
+                    ON portfolio_command_receipts(portfolio_id, command_id);
                 """
             )
 
@@ -95,6 +109,7 @@ class PortfolioTransactionStore:
         *,
         event_id: Optional[str] = None,
         expected_sequence: Optional[int] = None,
+        command_receipt: Optional[Mapping[str, Any]] = None,
     ) -> int:
         portfolio_id = str(portfolio_id or "").strip()
         event_type = str(event_type or "").strip()
@@ -129,6 +144,26 @@ class PortfolioTransactionStore:
                 "INSERT INTO portfolio_events(event_id, portfolio_id, sequence, event_type, payload_json, occurred_at) VALUES (?, ?, ?, ?, ?, ?)",
                 (event_id, portfolio_id, sequence, event_type, payload_json, now),
             )
+            if command_receipt and command_receipt.get("idempotency_key"):
+                conn.execute(
+                    """
+                    INSERT OR REPLACE INTO portfolio_command_receipts
+                    (portfolio_id, use_case, idempotency_key, request_hash, command_id,
+                     checkpoint_sequence, checkpoint_state_hash, result_json, created_at)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    """,
+                    (
+                        str(portfolio_id),
+                        str(command_receipt.get("use_case", "apply_allocation")),
+                        str(command_receipt.get("idempotency_key", "")),
+                        str(command_receipt.get("request_hash", "")),
+                        str(command_receipt.get("command_id", "")),
+                        sequence,
+                        str(command_receipt.get("checkpoint_state_hash", "")),
+                        _canonical(command_receipt.get("result", {})),
+                        now,
+                    ),
+                )
             conn.commit()
         return sequence
 
@@ -140,6 +175,7 @@ class PortfolioTransactionStore:
         ledger_rows: Optional[list[Mapping[str, Any]]] = None,
         event_id: Optional[str] = None,
         expected_sequence: Optional[int] = None,
+        command_receipt: Optional[Mapping[str, Any]] = None,
     ) -> int:
         return self.append_event(
             portfolio_id,
@@ -150,7 +186,70 @@ class PortfolioTransactionStore:
             },
             event_id=event_id,
             expected_sequence=expected_sequence,
+            command_receipt=command_receipt,
         )
+
+    def get_command_receipt(
+        self,
+        portfolio_id: str,
+        use_case: str,
+        idempotency_key: str,
+    ) -> Optional[dict[str, Any]]:
+        with self._connect() as conn:
+            row = conn.execute(
+                """
+                SELECT portfolio_id, use_case, idempotency_key, request_hash,
+                       command_id, checkpoint_sequence, checkpoint_state_hash,
+                       result_json, created_at
+                FROM portfolio_command_receipts
+                WHERE portfolio_id=? AND use_case=? AND idempotency_key=?
+                """,
+                (str(portfolio_id), str(use_case), str(idempotency_key)),
+            ).fetchone()
+            if not row:
+                return None
+            return {
+                "portfolio_id": str(row["portfolio_id"]),
+                "use_case": str(row["use_case"]),
+                "idempotency_key": str(row["idempotency_key"]),
+                "request_hash": str(row["request_hash"]),
+                "command_id": str(row["command_id"]),
+                "checkpoint_sequence": int(row["checkpoint_sequence"]),
+                "checkpoint_state_hash": str(row["checkpoint_state_hash"]),
+                "result": json.loads(str(row["result_json"])),
+                "created_at": str(row["created_at"]),
+            }
+
+    def get_command_receipt_by_command_id(
+        self,
+        portfolio_id: str,
+        command_id: str,
+    ) -> Optional[dict[str, Any]]:
+        with self._connect() as conn:
+            row = conn.execute(
+                """
+                SELECT portfolio_id, use_case, idempotency_key, request_hash,
+                       command_id, checkpoint_sequence, checkpoint_state_hash,
+                       result_json, created_at
+                FROM portfolio_command_receipts
+                WHERE portfolio_id=? AND command_id=?
+                ORDER BY checkpoint_sequence DESC LIMIT 1
+                """,
+                (str(portfolio_id), str(command_id)),
+            ).fetchone()
+            if not row:
+                return None
+            return {
+                "portfolio_id": str(row["portfolio_id"]),
+                "use_case": str(row["use_case"]),
+                "idempotency_key": str(row["idempotency_key"]),
+                "request_hash": str(row["request_hash"]),
+                "command_id": str(row["command_id"]),
+                "checkpoint_sequence": int(row["checkpoint_sequence"]),
+                "checkpoint_state_hash": str(row["checkpoint_state_hash"]),
+                "result": json.loads(str(row["result_json"])),
+                "created_at": str(row["created_at"]),
+            }
 
     def events(self, portfolio_id: str, *, through_sequence: Optional[int] = None) -> list[dict[str, Any]]:
         query = "SELECT * FROM portfolio_events WHERE portfolio_id=?"

@@ -370,12 +370,14 @@ def get_financial_context_service():
     """Dependency provider for FinancialContextService."""
     from api.db.investor_essence_adapters import SqliteInvestorRuntimeUowFactory
     from application.investor_essence import FinancialContextService
+    from tools.investor_essence.adapters.portfolio_planning_adapter import PortfolioPlanningAdapter
     from tools.investor_essence.adapters.system_adapter import SystemClockAdapter, UuidGeneratorAdapter
 
     return FinancialContextService(
         uow_factory=SqliteInvestorRuntimeUowFactory(),
         clock=SystemClockAdapter(),
         id_gen=UuidGeneratorAdapter(),
+        portfolio_port=PortfolioPlanningAdapter(),
     )
 
 
@@ -384,6 +386,7 @@ def get_investment_axis_service():
     from api.db.investor_essence_adapters import SqliteInvestorRuntimeUowFactory
     from application.investor_essence import InvestmentAxisService
     from tools.investor_essence.adapters.llm_adapter import LlmInvestorEssenceAdapter
+    from tools.investor_essence.adapters.portfolio_planning_adapter import PortfolioPlanningAdapter
     from tools.investor_essence.adapters.system_adapter import SystemClockAdapter, UuidGeneratorAdapter
 
     knowledge_write_port = None
@@ -398,6 +401,7 @@ def get_investment_axis_service():
         clock=SystemClockAdapter(),
         id_gen=UuidGeneratorAdapter(),
         knowledge_write=knowledge_write_port,
+        portfolio_planning=PortfolioPlanningAdapter(),
     )
 
 

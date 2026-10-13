@@ -244,6 +244,7 @@ class LlmInvestorEssenceAdapter(
         accepted_claims: List[Dict[str, Any]],
         financial_context: Dict[str, Any],
         prompt_version: str,
+        goals: Optional[List[Dict[str, Any]]] = None,
     ) -> AxisProposal:
         skill_prompt = _read_prompt("SKILL.md")
         stage_prompt = _read_prompt("INVESTMENT_AXIS.md")
@@ -252,9 +253,10 @@ class LlmInvestorEssenceAdapter(
         context_data = {
             "accepted_claims": accepted_claims,
             "financial_context": financial_context,
+            "goals": goals or [],
             "prompt_version": prompt_version,
         }
-        user = f"ข้อมูลแก่นแท้ที่ยืนยันและบริบทการเงิน:\n```json\n{json.dumps(context_data, ensure_ascii=False, indent=2)}\n```\n\nกรุณาร่างแกนหลักการลงทุนครบ 8 หัวข้อ"
+        user = f"ข้อมูลแก่นแท้ที่ยืนยัน บริบทการเงิน และเป้าหมายพอร์ต (Goals):\n```json\n{json.dumps(context_data, ensure_ascii=False, indent=2)}\n```\n\nกรุณาร่างแกนหลักการลงทุนครบทั้ง 8 หัวข้อ โดยผูกโยงกับเป้าหมาย (Goals) และเงื่อนไขที่เป็นรูปธรรมอย่างเคร่งครัด"
 
         parsed = self._invoke_and_parse(system, user)
 
@@ -300,6 +302,8 @@ class LlmInvestorEssenceAdapter(
         self,
         confirmed_axis: Dict[str, Any],
         prompt_version: str,
+        portfolio_goals: Optional[List[Dict[str, Any]]] = None,
+        portfolio_snapshot: Optional[Dict[str, Any]] = None,
         accepted_claims: Optional[List[Dict[str, Any]]] = None,
     ) -> BucketPlanProposal:
         skill_prompt = _read_prompt("SKILL.md")
@@ -308,10 +312,12 @@ class LlmInvestorEssenceAdapter(
 
         context_data = {
             "confirmed_axis": confirmed_axis,
+            "portfolio_goals": portfolio_goals or [],
+            "portfolio_snapshot": portfolio_snapshot or {},
             "accepted_claims": accepted_claims or [],
             "prompt_version": prompt_version,
         }
-        user = f"ข้อมูลแกนหลักและแก่นแท้:\n```json\n{json.dumps(context_data, ensure_ascii=False, indent=2)}\n```\n\nกรุณาร่าง Purpose Buckets พร้อม matrix การจัดสรร"
+        user = f"ข้อมูลแกนหลัก เป้าหมายทางการเงิน และสถานะพอร์ต:\n```json\n{json.dumps(context_data, ensure_ascii=False, indent=2)}\n```\n\nกรุณาร่าง Purpose Buckets ที่ผูกกับเป้าหมายจริง พร้อมกฎปฏิบัติและ matrix การจัดสรร"
 
         parsed = self._invoke_and_parse(system, user)
 
@@ -325,6 +331,10 @@ class LlmInvestorEssenceAdapter(
                 target_percent=str(b.get("target_percent", "0")),
                 source_value_ids=b.get("source_value_ids", []),
                 source_axis_allocation_ids=b.get("source_axis_allocation_ids", []),
+                linked_goal_name=b.get("linked_goal_name"),
+                eligible_assets=b.get("eligible_assets", []),
+                cash_inflow_routing_pct=str(b.get("cash_inflow_routing_pct")) if b.get("cash_inflow_routing_pct") is not None else None,
+                action_rules=b.get("action_rules", []),
             )
             for b in raw_buckets
         ]
@@ -341,7 +351,7 @@ class LlmInvestorEssenceAdapter(
 
         return BucketPlanProposal(
             purpose_buckets=purpose_buckets,
-            allocation_basis=parsed.get("allocation_basis", "asset_class"),
+            allocation_basis=parsed.get("allocation_basis", "purpose"),
             mapping_weights=mapping_weights,
             constraints=parsed.get("constraints", []),
         )

@@ -14,6 +14,7 @@ import type {
   AllocationPreviewDTO,
   AllocationApplyReceiptDTO,
   InterviewConfigDTO,
+  ActualGoalItemDTO,
 } from '../api/types'
 
 export type PrinciplesMilestone = 'essence' | 'axis' | 'buckets'
@@ -51,7 +52,13 @@ export function useInvestorPrinciples({
   const [preview, setPreview] = useState<AllocationPreviewDTO | null>(null)
   const [applyReceipt, setApplyReceipt] = useState<AllocationApplyReceiptDTO | null>(null)
 
+  // Portfolio Goals
+  const [portfolioGoals, setPortfolioGoals] = useState<ActualGoalItemDTO[]>([])
+
   const isMountedRef = useRef(true)
+  const prevPortfolioIdRef = useRef<string>(portfolioId)
+  const portfolioFetchGenRef = useRef<number>(0)
+
   useEffect(() => {
     isMountedRef.current = true
     return () => {
@@ -59,89 +66,167 @@ export function useInvestorPrinciples({
     }
   }, [])
 
+  // Immediately isolate and reset portfolio-scoped state when portfolioId changes
+  useEffect(() => {
+    if (prevPortfolioIdRef.current !== portfolioId) {
+      prevPortfolioIdRef.current = portfolioId
+      portfolioFetchGenRef.current += 1
+      setFinancialContext(null)
+      setAxisDraft(null)
+      setConfirmedAxis(null)
+      setBucketPlan(null)
+      setPreview(null)
+      setApplyReceipt(null)
+      setPortfolioGoals([])
+    }
+  }, [portfolioId])
+
   // ---------------------------------------------------------------------------
   // Initial Data Fetching
   // ---------------------------------------------------------------------------
   const refreshAll = useCallback(async () => {
+    const currentGen = ++portfolioFetchGenRef.current
+    const targetPortfolioId = portfolioId
+
     setLoading(true)
     setError(null)
     try {
-      // 1. Load interview config & current confirmed essence
+      // 1. Load interview config & current confirmed essence (workspace-scoped)
       const [configRes, currEssence] = await Promise.allSettled([
         api.getInterviewConfig(),
         api.getCurrentConfirmedEssence(),
       ])
 
-      if (configRes.status === 'fulfilled') {
-        setInterviewConfig(configRes.value)
-      }
-      if (currEssence.status === 'fulfilled') {
-        setConfirmedEssence(currEssence.value as ConfirmedEssenceDTO)
-      } else {
-        setConfirmedEssence(null)
+      if (isMountedRef.current) {
+        if (configRes.status === 'fulfilled') {
+          setInterviewConfig(configRes.value)
+        }
+        if (currEssence.status === 'fulfilled') {
+          setConfirmedEssence(currEssence.value as ConfirmedEssenceDTO)
+        } else {
+          setConfirmedEssence(null)
+        }
       }
 
-      // 2. Try loading active session
+      // 2. Try loading active session (workspace-scoped)
+      let activeSession: SessionResponseDTO | null = null
       try {
         const sessRes = await api.getCurrentEssenceSession('workspace')
-        setSession(sessRes)
-        if (sessRes.is_complete) {
-          try {
-            const sumRes = await api.getEssenceSummary(sessRes.session_id)
-            setSummary(sumRes)
-          } catch {
-            setSummary(null)
+        if (isMountedRef.current) {
+          activeSession = sessRes
+          setSession(sessRes)
+          if (sessRes.is_complete) {
+            try {
+              const sumRes = await api.getEssenceSummary(sessRes.session_id)
+              if (isMountedRef.current) setSummary(sumRes)
+            } catch {
+              if (isMountedRef.current) setSummary(null)
+            }
           }
         }
       } catch {
-        setSession(null)
-        setSummary(null)
+        if (isMountedRef.current) {
+          setSession(null)
+          setSummary(null)
+        }
       }
 
-      // 3. Try loading confirmed axis & financial context for this portfolio
-      if (portfolioId) {
-        try {
-          const fc = await api.getFinancialContext(portfolioId)
-          setFinancialContext(fc)
-        } catch {
-          setFinancialContext(null)
-        }
-
-        try {
-          const ca = await api.getCurrentConfirmedAxis(portfolioId)
-          setConfirmedAxis(ca as ConfirmedAxisDTO)
-        } catch {
+      // If an interview is currently in progress, downstream planning data must NOT be loaded or shown
+      if (activeSession && !activeSession.is_complete) {
+        if (isMountedRef.current && currentGen === portfolioFetchGenRef.current) {
+          setConfirmedEssence(null)
           setConfirmedAxis(null)
+          setAxisDraft(null)
+          setBucketPlan(null)
+          setPreview(null)
+          setApplyReceipt(null)
         }
+        return
+      }
 
+      // 3. Try loading portfolio-scoped data for this portfolio
+      if (targetPortfolioId) {
         try {
-          const draft = await api.getLatestAxisDraft(portfolioId)
-          if (draft) {
-            setAxisDraft(draft)
+          const fc = await api.getFinancialContext(targetPortfolioId)
+          if (isMountedRef.current && currentGen === portfolioFetchGenRef.current) {
+            setFinancialContext(fc || null)
           }
         } catch {
-          // ignore draft fetch error
+          if (isMountedRef.current && currentGen === portfolioFetchGenRef.current) {
+            setFinancialContext(null)
+          }
         }
 
         try {
-          const bp = await api.getLatestBucketPlan(portfolioId)
-          if (bp) {
-            setBucketPlan(bp)
-            try {
-              const prev = await api.previewBucketPlan(bp.draft_id)
-              setPreview(prev)
-            } catch {
-              // ignore preview error
+          const ca = await api.getCurrentConfirmedAxis(targetPortfolioId)
+          if (isMountedRef.current && currentGen === portfolioFetchGenRef.current) {
+            setConfirmedAxis((ca as ConfirmedAxisDTO) || null)
+          }
+        } catch {
+          if (isMountedRef.current && currentGen === portfolioFetchGenRef.current) {
+            setConfirmedAxis(null)
+          }
+        }
+
+        try {
+          const draft = await api.getLatestAxisDraft(targetPortfolioId)
+          if (isMountedRef.current && currentGen === portfolioFetchGenRef.current) {
+            setAxisDraft(draft || null)
+          }
+        } catch {
+          if (isMountedRef.current && currentGen === portfolioFetchGenRef.current) {
+            setAxisDraft(null)
+          }
+        }
+
+        try {
+          const bp = await api.getLatestBucketPlan(targetPortfolioId)
+          if (isMountedRef.current && currentGen === portfolioFetchGenRef.current) {
+            setBucketPlan(bp || null)
+            if (bp) {
+              try {
+                const prev = await api.previewBucketPlan(bp.draft_id)
+                if (isMountedRef.current && currentGen === portfolioFetchGenRef.current) {
+                  setPreview(prev || null)
+                }
+              } catch {
+                if (isMountedRef.current && currentGen === portfolioFetchGenRef.current) {
+                  setPreview(null)
+                }
+              }
+            } else {
+              setPreview(null)
             }
           }
         } catch {
-          // ignore bucket fetch error
+          if (isMountedRef.current && currentGen === portfolioFetchGenRef.current) {
+            setBucketPlan(null)
+            setPreview(null)
+          }
+        }
+
+        try {
+          const goalsRes = await api.getActualGoals()
+          if (isMountedRef.current && currentGen === portfolioFetchGenRef.current) {
+            if (goalsRes?.goals && goalsRes.goals.length > 0) {
+              setPortfolioGoals(goalsRes.goals)
+            } else {
+              const fallbackRes = await api.getActualGoals(targetPortfolioId)
+              setPortfolioGoals(fallbackRes?.goals || [])
+            }
+          }
+        } catch {
+          if (isMountedRef.current && currentGen === portfolioFetchGenRef.current) {
+            setPortfolioGoals([])
+          }
         }
       }
     } catch (err: any) {
-      setError(err?.message || 'เกิดข้อผิดพลาดในการโหลดข้อมูลหลักการลงทุน')
+      if (isMountedRef.current && currentGen === portfolioFetchGenRef.current) {
+        setError(err?.message || 'เกิดข้อผิดพลาดในการโหลดข้อมูลหลักการลงทุน')
+      }
     } finally {
-      if (isMountedRef.current) {
+      if (isMountedRef.current && currentGen === portfolioFetchGenRef.current) {
         setLoading(false)
       }
     }
@@ -159,9 +244,20 @@ export function useInvestorPrinciples({
     setActionStatusText('กำลังเตรียมชุดคำถามแรก...')
     setError(null)
     try {
-      const newSess = await api.startEssenceSession({ scope: 'workspace', prompt_version: '1.0' })
+      const newSess = await api.startEssenceSession({
+        scope: 'workspace',
+        prompt_version: '1.0',
+        portfolio_id: portfolioId,
+        clear_downstream: true,
+      })
       setSession(newSess)
       setSummary(null)
+      setConfirmedEssence(null)
+      setAxisDraft(null)
+      setConfirmedAxis(null)
+      setBucketPlan(null)
+      setPreview(null)
+      setApplyReceipt(null)
       setActiveMilestone('essence')
     } catch (err: any) {
       setError(err?.message || 'ไม่สามารถเริ่มการค้นหาแก่นแท้ได้')
@@ -169,7 +265,26 @@ export function useInvestorPrinciples({
       setActionLoading(false)
       setActionStatusText(null)
     }
-  }, [])
+  }, [portfolioId])
+
+  const resetPrinciples = useCallback(async () => {
+    setActionLoading(true)
+    setActionStatusText('กำลังล้างข้อมูลแกนหลักและ Buckets...')
+    setError(null)
+    try {
+      await api.resetPrinciples(portfolioId)
+      setConfirmedAxis(null)
+      setAxisDraft(null)
+      setBucketPlan(null)
+      setPreview(null)
+      setApplyReceipt(null)
+    } catch (err: any) {
+      setError(err?.message || 'ไม่สามารถล้างข้อมูลแกนหลักและ Buckets ได้')
+    } finally {
+      setActionLoading(false)
+      setActionStatusText(null)
+    }
+  }, [portfolioId])
 
   const recordAndNext = useCallback(
     async (
@@ -233,6 +348,26 @@ export function useInvestorPrinciples({
       setSession(nextSess)
     } catch (err: any) {
       setError(err?.message || 'เกิดข้อผิดพลาดในการสร้างคำถามถัดไป')
+    } finally {
+      setActionLoading(false)
+      setActionStatusText(null)
+    }
+  }, [session])
+
+  const generateSummary = useCallback(async () => {
+    if (!session) return
+    setActionLoading(true)
+    setActionStatusText('กำลังวิเคราะห์และสังเคราะห์แก่นแท้การลงทุน...')
+    setError(null)
+    try {
+      const sumRes = await api.summarizeEssence(session.session_id, {
+        expected_revision: session.revision,
+      })
+      setSummary(sumRes)
+      const finalizedSess = await api.getEssenceSession(session.session_id)
+      setSession(finalizedSess)
+    } catch (err: any) {
+      setError(err?.message || 'เกิดข้อผิดพลาดในการสังเคราะห์แก่นแท้')
     } finally {
       setActionLoading(false)
       setActionStatusText(null)
@@ -339,15 +474,22 @@ export function useInvestorPrinciples({
   // ---------------------------------------------------------------------------
   const saveFinancialContext = useCallback(
     async (updates: UpdateFinancialContextRequestDTO) => {
-      if (!portfolioId) return
+      if (!portfolioId) {
+        const err = new Error('กรุณาเลือกพอร์ตการลงทุน')
+        setError(err.message)
+        throw err
+      }
       setActionLoading(true)
       setActionStatusText('กำลังบันทึกบริบททางการเงิน...')
       setError(null)
       try {
         const fc = await api.updateFinancialContext(portfolioId, updates)
         setFinancialContext(fc)
+        return fc
       } catch (err: any) {
-        setError(err?.message || 'ไม่สามารถบันทึกบริบททางการเงินได้')
+        const msg = err?.message || 'ไม่สามารถบันทึกบริบททางการเงินได้'
+        setError(msg)
+        throw err
       } finally {
         setActionLoading(false)
         setActionStatusText(null)
@@ -356,16 +498,46 @@ export function useInvestorPrinciples({
     [portfolioId],
   )
 
+  const syncFinancialContextFromGoals = useCallback(async () => {
+    if (!portfolioId) {
+      const err = new Error('กรุณาเลือกพอร์ตการลงทุน')
+      setError(err.message)
+      throw err
+    }
+    setActionLoading(true)
+    setActionStatusText('กำลังซิงค์ข้อมูลจากเป้าหมาย (Goals)...')
+    setError(null)
+    try {
+      const fc = await api.syncFinancialContextFromGoals(portfolioId)
+      setFinancialContext(fc)
+      return fc
+    } catch (err: any) {
+      const msg = err?.message || 'ไม่สามารถซิงค์ข้อมูลจากเป้าหมายได้'
+      setError(msg)
+      throw err
+    } finally {
+      setActionLoading(false)
+      setActionStatusText(null)
+    }
+  }, [portfolioId])
+
   const generateAxisDraft = useCallback(async () => {
-    if (!portfolioId) return
+    if (!portfolioId) {
+      const err = new Error('กรุณาเลือกพอร์ตการลงทุน')
+      setError(err.message)
+      throw err
+    }
     setActionLoading(true)
     setActionStatusText('กำลังร่างแกนหลักการลงทุนครบ 8 หัวข้อตามคำสั่งสอง...')
     setError(null)
     try {
       const draft = await api.createAxisDraft(portfolioId)
       setAxisDraft(draft)
+      return draft
     } catch (err: any) {
-      setError(err?.message || 'ไม่สามารถสร้างร่างแกนหลักการลงทุนได้')
+      const msg = err?.message || 'ไม่สามารถสร้างร่างแกนหลักการลงทุนได้'
+      setError(msg)
+      throw err
     } finally {
       setActionLoading(false)
       setActionStatusText(null)
@@ -375,23 +547,27 @@ export function useInvestorPrinciples({
   const updateAxis = useCallback(
     async (updates: UpdateAxisDraftRequestDTO) => {
       let draft = axisDraft
-      if (!draft && portfolioId) {
+      if (portfolioId) {
         try {
-          draft = await api.getLatestAxisDraft(portfolioId)
-          if (draft) setAxisDraft(draft)
+          const latest = await api.getLatestAxisDraft(portfolioId)
+          if (latest) {
+            draft = latest
+            setAxisDraft(latest)
+          }
         } catch {
           // ignore
         }
       }
-      if (!draft && portfolioId) {
-        try {
-          draft = await api.createAxisDraft(portfolioId)
-          setAxisDraft(draft)
-        } catch {
-          // ignore
-        }
+      if (!draft) {
+        const err = new Error('ไม่พบแบบร่างแกนหลักสำหรับพอร์ตนี้')
+        setError(err.message)
+        throw err
       }
-      if (!draft) return
+      if (draft.portfolio_id !== portfolioId) {
+        const err = new Error(`ข้อมูลร่างแกนหลักไม่ตรงกับพอร์ตปัจจุบัน (${draft.portfolio_id} !== ${portfolioId})`)
+        setError(err.message)
+        throw err
+      }
       setActionLoading(true)
       setError(null)
       try {
@@ -400,8 +576,19 @@ export function useInvestorPrinciples({
           expected_revision: draft.revision,
         })
         setAxisDraft(updated)
+        return updated
       } catch (err: any) {
-        setError(err?.message || 'ไม่สามารถแก้ไขร่างแกนหลักได้')
+        if (portfolioId) {
+          try {
+            const latest = await api.getLatestAxisDraft(portfolioId)
+            if (latest) setAxisDraft(latest)
+          } catch {
+            // ignore
+          }
+        }
+        const msg = err?.message || 'ไม่สามารถแก้ไขร่างแกนหลักได้'
+        setError(msg)
+        throw err
       } finally {
         setActionLoading(false)
       }
@@ -410,23 +597,36 @@ export function useInvestorPrinciples({
   )
 
   const confirmAxis = useCallback(
-    async (proceedToBuckets: boolean = false) => {
-      let draft = axisDraft
-      if (!draft && portfolioId) {
+    async (proceedToBuckets: boolean = false, targetDraft?: AxisDraftDTO) => {
+      let draft = targetDraft || axisDraft
+      if (portfolioId) {
         try {
-          draft = await api.getLatestAxisDraft(portfolioId)
-          if (draft) setAxisDraft(draft)
+          const latest = await api.getLatestAxisDraft(portfolioId)
+          if (latest) {
+            draft = latest
+            setAxisDraft(latest)
+          }
         } catch {
           // ignore
         }
       }
-      if (!draft) return
+      if (!draft) {
+        const err = new Error('ไม่พบแบบร่างแกนหลักสำหรับพอร์ตนี้')
+        setError(err.message)
+        throw err
+      }
+      if (draft.portfolio_id !== portfolioId) {
+        const err = new Error(`ข้อมูลร่างแกนหลักไม่ตรงกับพอร์ตปัจจุบัน (${draft.portfolio_id} !== ${portfolioId})`)
+        setError(err.message)
+        throw err
+      }
       setActionLoading(true)
       setActionStatusText('กำลังตรวจสอบความครบถ้วนและยืนยันแกนหลักการลงทุน...')
       setError(null)
       try {
         await api.confirmInvestmentAxis(draft.draft_id, {
           idempotency_key: `confirm_axis_${draft.draft_id}_${draft.revision}`,
+          expected_draft_revision: draft.revision,
         })
         const refreshed = await api.getCurrentConfirmedAxis(portfolioId)
         setConfirmedAxis(refreshed as ConfirmedAxisDTO)
@@ -434,8 +634,19 @@ export function useInvestorPrinciples({
         if (proceedToBuckets) {
           setActiveMilestone('buckets')
         }
+        return refreshed as ConfirmedAxisDTO
       } catch (err: any) {
-        setError(err?.message || 'เกิดข้อผิดพลาดในการยืนยันแกนหลัก')
+        if (portfolioId) {
+          try {
+            const latest = await api.getLatestAxisDraft(portfolioId)
+            if (latest) setAxisDraft(latest)
+          } catch {
+            // ignore
+          }
+        }
+        const msg = err?.message || 'เกิดข้อผิดพลาดในการยืนยันแกนหลัก'
+        setError(msg)
+        throw err
       } finally {
         setActionLoading(false)
         setActionStatusText(null)
@@ -448,18 +659,30 @@ export function useInvestorPrinciples({
   // Milestone 3 Actions: Purpose Buckets
   // ---------------------------------------------------------------------------
   const generateBucketPlan = useCallback(async () => {
-    if (!portfolioId) return
+    if (!portfolioId) {
+      const err = new Error('กรุณาเลือกพอร์ตการลงทุน')
+      setError(err.message)
+      throw err
+    }
     setActionLoading(true)
     setActionStatusText('กำลังออกแบบ Purpose Buckets และสัดส่วนจากแกนหลัก...')
     setError(null)
+    setApplyReceipt(null)
     try {
       const plan = await api.createBucketPlan(portfolioId)
       setBucketPlan(plan)
       // Automatically load preview
-      const prev = await api.previewBucketPlan(plan.draft_id)
-      setPreview(prev)
+      try {
+        const prev = await api.previewBucketPlan(plan.draft_id)
+        setPreview(prev)
+      } catch {
+        setPreview(null)
+      }
+      return plan
     } catch (err: any) {
-      setError(err?.message || 'ไม่สามารถสร้างร่าง Purpose Buckets ได้')
+      const msg = err?.message || 'ไม่สามารถสร้างร่าง Purpose Buckets ได้'
+      setError(msg)
+      throw err
     } finally {
       setActionLoading(false)
       setActionStatusText(null)
@@ -468,7 +691,16 @@ export function useInvestorPrinciples({
 
   const updateBucketPlan = useCallback(
     async (updates: UpdateBucketPlanRequestDTO) => {
-      if (!bucketPlan) return
+      if (!bucketPlan) {
+        const err = new Error('ไม่พบแบบร่าง Purpose Buckets สำหรับพอร์ตนี้')
+        setError(err.message)
+        throw err
+      }
+      if (bucketPlan.portfolio_id !== portfolioId) {
+        const err = new Error(`ไม่สามารถแก้ไข Buckets: ข้อมูลแบบร่างเป็นของพอร์ต ${bucketPlan.portfolio_id} ไม่ตรงกับพอร์ตปัจจุบัน ${portfolioId}`)
+        setError(err.message)
+        throw err
+      }
       setActionLoading(true)
       setError(null)
       try {
@@ -478,50 +710,84 @@ export function useInvestorPrinciples({
         })
         setBucketPlan(updated)
         // Refresh preview with new values
-        const prev = await api.previewBucketPlan(bucketPlan.draft_id)
-        setPreview(prev)
+        try {
+          const prev = await api.previewBucketPlan(bucketPlan.draft_id)
+          setPreview(prev)
+        } catch {
+          setPreview(null)
+        }
+        return updated
       } catch (err: any) {
-        setError(err?.message || 'ไม่สามารถปรับเปลี่ยน Purpose Buckets ได้')
+        const msg = err?.message || 'ไม่สามารถปรับเปลี่ยน Purpose Buckets ได้'
+        setError(msg)
+        throw err
       } finally {
         setActionLoading(false)
       }
     },
-    [bucketPlan],
+    [bucketPlan, portfolioId],
   )
 
   const loadPreview = useCallback(async () => {
     if (!bucketPlan) return
+    if (bucketPlan.portfolio_id !== portfolioId) {
+      const err = new Error('แบบร่างไม่ตรงกับพอร์ตปัจจุบัน')
+      setError(err.message)
+      throw err
+    }
     setActionLoading(true)
     setError(null)
     try {
       const prev = await api.previewBucketPlan(bucketPlan.draft_id)
       setPreview(prev)
+      return prev
     } catch (err: any) {
-      setError(err?.message || 'ไม่สามารถดูตัวอย่างการจัดสัดส่วนได้')
+      const msg = err?.message || 'ไม่สามารถดูตัวอย่างการจัดสัดส่วนได้'
+      setError(msg)
+      throw err
     } finally {
       setActionLoading(false)
     }
-  }, [bucketPlan])
+  }, [bucketPlan, portfolioId])
 
   const applyBucketPlan = useCallback(
     async (idempotencyKey?: string) => {
-      if (!bucketPlan) return
+      if (!bucketPlan) {
+        const err = new Error('ไม่พบแบบร่าง Purpose Buckets')
+        setError(err.message)
+        throw err
+      }
+      if (bucketPlan.portfolio_id !== portfolioId) {
+        const err = new Error(`ไม่สามารถนำไปใช้: แบบร่างเป็นของพอร์ต ${bucketPlan.portfolio_id} ไม่ตรงกับ ${portfolioId}`)
+        setError(err.message)
+        throw err
+      }
       setActionLoading(true)
       setActionStatusText('กำลังนำ Purpose Buckets ไปใช้กับพอร์ตการลงทุนอย่างปลอดภัย...')
       setError(null)
       try {
         const key = idempotencyKey || `apply_plan_${bucketPlan.draft_id}_${bucketPlan.revision}`
-        const receipt = await api.applyBucketPlan(bucketPlan.draft_id, key)
+        const receipt = await api.applyBucketPlan(bucketPlan.draft_id, {
+          idempotency_key: key,
+          expected_draft_revision: bucketPlan.revision,
+          expected_checkpoint_sequence: preview?.checkpoint_sequence,
+          expected_checkpoint_state_hash: preview?.checkpoint_state_hash,
+          preview_id: preview?.preview_id,
+          payload_hash: preview?.payload_hash,
+        })
         setApplyReceipt(receipt)
         onPortfolioChangeNeeded?.()
+        return receipt
       } catch (err: any) {
-        setError(err?.message || 'เกิดข้อผิดพลาดในการนำ Buckets ไปใช้กับพอร์ต')
+        const msg = err?.message || 'เกิดข้อผิดพลาดในการนำ Buckets ไปใช้กับพอร์ต'
+        setError(msg)
+        throw err
       } finally {
         setActionLoading(false)
         setActionStatusText(null)
       }
     },
-    [bucketPlan, onPortfolioChangeNeeded],
+    [bucketPlan, portfolioId, preview, onPortfolioChangeNeeded],
   )
 
   return {
@@ -541,8 +807,10 @@ export function useInvestorPrinciples({
     summary,
     confirmedEssence,
     startNewSession,
+    resetPrinciples,
     recordAndNext,
     advanceNextQuestion,
+    generateSummary,
     rateClaim,
 
     editClaim,
@@ -554,6 +822,7 @@ export function useInvestorPrinciples({
     axisDraft,
     confirmedAxis,
     saveFinancialContext,
+    syncFinancialContextFromGoals,
     generateAxisDraft,
     updateAxis,
     confirmAxis,
@@ -567,6 +836,9 @@ export function useInvestorPrinciples({
     loadPreview,
     applyBucketPlan,
     resetApplyReceipt: () => setApplyReceipt(null),
+
+    // Portfolio Goals
+    portfolioGoals,
 
     // Refresh
     refreshAll,

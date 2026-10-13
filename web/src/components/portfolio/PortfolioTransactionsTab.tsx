@@ -442,51 +442,51 @@ export default function PortfolioTransactionsTab({
 
       {/* Main Table */}
       <div className="overflow-hidden rounded-2xl border border-sky-100 bg-panel shadow-sm backdrop-blur-sm">
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto custom-scrollbar">
           <table className="w-full text-left text-sm border-collapse min-w-[1050px]">
             <thead>
-              <tr className="border-b border-sky-100 bg-sky-50/80 text-zinc-700 font-bold uppercase tracking-wider text-xs sm:text-sm select-none">
-                <th className="py-3.5 px-4 w-12 text-center">#</th>
-                <th className="py-3.5 px-4 w-28">Operation</th>
+              <tr className="border-b border-sky-100 bg-sky-50/80 text-zinc-700 font-bold uppercase tracking-wider text-xs select-none whitespace-nowrap">
+                <th className="py-3.5 px-4 w-12 text-center whitespace-nowrap">#</th>
+                <th className="py-3.5 px-4 w-28 whitespace-nowrap">Operation</th>
                 <th
-                  className="py-3.5 px-4 cursor-pointer hover:text-flow-blue transition-colors"
+                  className="py-3.5 px-4 cursor-pointer hover:text-flow-blue transition-colors whitespace-nowrap"
                   onClick={() => handleSort('symbol')}
                 >
                   Holding {renderSortIndicator('symbol')}
                 </th>
                 <th
-                  className="py-3.5 px-4 cursor-pointer hover:text-flow-blue transition-colors"
+                  className="py-3.5 px-4 cursor-pointer hover:text-flow-blue transition-colors whitespace-nowrap"
                   onClick={() => handleSort('timestamp')}
                 >
                   Date {renderSortIndicator('timestamp')}
                 </th>
                 <th
-                  className="py-3.5 px-4 text-right cursor-pointer hover:text-flow-blue transition-colors"
+                  className="py-3.5 px-4 text-right cursor-pointer hover:text-flow-blue transition-colors whitespace-nowrap"
                   onClick={() => handleSort('units')}
                 >
                   Shares {renderSortIndicator('units')}
                 </th>
                 <th
-                  className="py-3.5 px-4 text-right cursor-pointer hover:text-flow-blue transition-colors"
+                  className="py-3.5 px-4 text-right cursor-pointer hover:text-flow-blue transition-colors whitespace-nowrap"
                   onClick={() => handleSort('price')}
                 >
                   Price {renderSortIndicator('price')}
                 </th>
-                <th className="py-3.5 px-4 text-right">Fee / Tax</th>
+                <th className="py-3.5 px-4 text-right whitespace-nowrap">Fee / Tax</th>
                 <th
-                  className="py-3.5 px-4 text-right cursor-pointer hover:text-flow-blue transition-colors"
+                  className="py-3.5 px-4 text-right cursor-pointer hover:text-flow-blue transition-colors whitespace-nowrap"
                   onClick={() => handleSort('cost_thb')}
                 >
                   Summ {renderSortIndicator('cost_thb')}
                 </th>
                 <th
-                  className="py-3.5 px-4 text-right cursor-pointer hover:text-flow-blue transition-colors"
+                  className="py-3.5 px-4 text-right cursor-pointer hover:text-flow-blue transition-colors whitespace-nowrap"
                   onClick={() => handleSort('realized_pnl_thb')}
                 >
                   Realized PnL {renderSortIndicator('realized_pnl_thb')}
                 </th>
-                <th className="py-3.5 px-4 min-w-[220px]">Note</th>
-                <th className="py-3.5 px-4 w-16 text-center">Action</th>
+                <th className="py-3.5 px-4 min-w-[220px] whitespace-nowrap">Note</th>
+                <th className="py-3.5 px-4 w-16 text-center whitespace-nowrap">Action</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-sky-50">

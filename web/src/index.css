@@ -18,11 +18,13 @@ html,
 body,
 #root {
   height: 100%;
+  overflow: hidden;
 }
 
 body {
   @apply bg-white text-zinc-900 antialiased;
   margin: 0;
+  overflow: hidden;
 }
 
 .flow-theme {
@@ -250,8 +252,36 @@ body {
 }
 
 .custom-scrollbar {
-  scrollbar-color: #d4d4d8 #f4f4f5;
+  scrollbar-color: #cbd5e1 #f8fafc;
   scrollbar-width: thin;
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: #f8fafc;
+  border-radius: 9999px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 9999px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* ซ่อน scrollbar แต่ยังคง scroll ได้ */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }
 
 /* ข้อความแนวตั้งบนแท็บ References ขอบขวาจอ (Macro.tsx) */

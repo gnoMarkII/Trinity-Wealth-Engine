@@ -28,7 +28,7 @@ from tools.portfolio.domain.models import (
 from tools.portfolio.ports.trade_ingestion_port import TradeDocumentParserPort
 
 MAX_PDF_BYTES = 10 * 1024 * 1024  # 10 MB limit
-PARSER_TIMEOUT_SECONDS = 5.0      # 5 seconds wall-clock limit
+PARSER_TIMEOUT_SECONDS = float(os.getenv("WEALTHX_PARSER_TIMEOUT_SECONDS", "10.0"))
 
 
 def _worker_parse_wealthx_pdf(pdf_bytes: bytes, password: Optional[str], queue: Any) -> None:
@@ -86,10 +86,10 @@ def _parse_wealthx_text_to_dicts(text: str) -> List[Dict[str, Any]]:
     1. Table Format with multi-row confirmation (e.g. DN 2026xxxxxxx)
     2. Single Form Format (Confirmation Note with colon-separated key-values)
     """
-    # 1. Settlement No. (Confirmation No.)
+    # 1. Settlement No. (Confirmation No. - supports DN for Buy, CN for Sell/Credit)
     conf_no = ""
     settle_match = re.search(
-        r"\b(DN\s*\d{10,14})\b",
+        r"\b((?:DN|CN)\s*\d{10,14})\b",
         text,
         re.IGNORECASE,
     )
@@ -97,7 +97,7 @@ def _parse_wealthx_text_to_dicts(text: str) -> List[Dict[str, Any]]:
         conf_no = re.sub(r"\s+", " ", settle_match.group(1).strip())
     else:
         doc_match = re.search(
-            r"(?:เลขที่เอกสาร|เลขที่ใบยืนยัน|Settlement\s*No\.?|Confirmation\s*No\.?)[^:\n]*:\s*([A-Za-z0-9\-_]+(?:\s+[A-Za-z0-9\-_]+)*)",
+            r"(?:เลขที่เอกสาร|เลขที่ใบยืนยัน|Settlement\s*No\.?|Confirmation\s*No\.?)[^:\n]*:?\s*([A-Za-z0-9\-_]+(?:\s+[A-Za-z0-9\-_]+)*)",
             text,
             re.IGNORECASE,
         )
@@ -106,23 +106,40 @@ def _parse_wealthx_text_to_dicts(text: str) -> List[Dict[str, Any]]:
         else:
             raise ValueError("ไม่พบเลขที่ใบยืนยัน (Settlement No.) ในเอกสาร PDF ของ WealthX")
 
-    # 2. Dates
+    # 2. Dates (supports both DD/MM/YYYY and YYYY-MM-DD ISO formats)
     trade_date = ""
     settlement_date = None
-    dates = re.findall(r"\b(\d{2}/\d{2}/\d{4})\b", text)
-    if len(dates) >= 2:
-        d1, m1, y1 = dates[0].split("/")
-        d2, m2, y2 = dates[1].split("/")
-        trade_date = f"{y1}-{m1}-{d1}"
-        settlement_date = f"{y2}-{m2}-{d2}"
-    elif len(dates) == 1:
-        d1, m1, y1 = dates[0].split("/")
-        trade_date = f"{y1}-{m1}-{d1}"
+    dates_dmy = re.findall(r"\b(\d{2}/\d{2}/\d{4})\b", text)
+    dates_ymd = re.findall(r"\b(\d{4}-\d{2}-\d{2})\b", text)
+
+    if dates_dmy:
+        if len(dates_dmy) >= 2:
+            d1, m1, y1 = dates_dmy[0].split("/")
+            d2, m2, y2 = dates_dmy[1].split("/")
+            trade_date = f"{y1}-{m1}-{d1}"
+            settlement_date = f"{y2}-{m2}-{d2}"
+        else:
+            d1, m1, y1 = dates_dmy[0].split("/")
+            trade_date = f"{y1}-{m1}-{d1}"
+    elif dates_ymd:
+        if len(dates_ymd) >= 2:
+            trade_date = dates_ymd[0]
+            settlement_date = dates_ymd[1]
+        else:
+            trade_date = dates_ymd[0]
     else:
-        trade_match = re.search(r"(?:วันที่ส่งคำ[า]?สั่ง|Trade\s*Date)[^\d\n]*(\d{2}/\d{2}/\d{4})", text, re.IGNORECASE)
+        trade_match = re.search(
+            r"(?:วันที่ส่งคำ[า]?สั่ง|Trade\s*Date|วันที่ได้\s*NAV|NAV\s*Date)[^\d\n]*(\d{2}/\d{2}/\d{4}|\d{4}-\d{2}-\d{2})",
+            text,
+            re.IGNORECASE,
+        )
         if trade_match:
-            d, m, y = trade_match.group(1).split("/")
-            trade_date = f"{y}-{m}-{d}"
+            raw_d = trade_match.group(1)
+            if "/" in raw_d:
+                d, m, y = raw_d.split("/")
+                trade_date = f"{y}-{m}-{d}"
+            else:
+                trade_date = raw_d
         else:
             raise ValueError("ไม่พบวันที่ส่งคำสั่ง (Trade Date) ในเอกสาร PDF ของ WealthX")
 
@@ -141,7 +158,7 @@ def _parse_wealthx_text_to_dicts(text: str) -> List[Dict[str, Any]]:
             current_chunk = [line]
             in_table = True
         elif in_table:
-            if any(k in line for k in ["รวมมูลค่า", "Total Buy", "Total Sell", "Total Fee"]):
+            if any(k in line for k in ["รวมมูลค่า", "Total Buy", "Total Sell", "Total Fee", "Total Amount"]):
                 if current_chunk:
                     row_chunks.append(current_chunk)
                     current_chunk = []
@@ -169,7 +186,7 @@ def _parse_wealthx_text_to_dicts(text: str) -> List[Dict[str, Any]]:
             
             # Action
             action = "BUY"
-            if any(w in full_chunk_text for w in ["SELL", "RED", "ขาย"]):
+            if any(w in full_chunk_text for w in ["SELL", "RED", "ขาย", "SWO", "สับเปลี่ยนออก"]):
                 action = "SELL"
                 
             # Order ID (Reference No.) - 16 digits starting with 239 or fallback
@@ -222,7 +239,7 @@ def _parse_wealthx_text_to_dicts(text: str) -> List[Dict[str, Any]]:
 
             symbol = (sym_part1 + sym_part2).strip()
             if not symbol or len(symbol) < 3:
-                broad_sym = re.search(r"\b(TLWORLD-X|TLNDQINCOME-UH-X|LHGRID|[A-Z0-9\-]{4,20})\b", full_chunk_text)
+                broad_sym = re.search(r"\b(TLWORLD-X|TLNDQINCOME-UH-X|TLWORLDXUS-X|LHGRID|[A-Z0-9\-]{4,20})\b", full_chunk_text)
                 symbol = broad_sym.group(1) if broad_sym else "UNKNOWN"
 
             fp_raw = f"{conf_no}|{order_id}|{symbol}|{action}|{units}|{price}|{trade_date}|{net_amount}"
@@ -258,7 +275,7 @@ def _parse_wealthx_text_to_dicts(text: str) -> List[Dict[str, Any]]:
 
     # Fallback for Form Format (Single trade per PDF with explicit key-value fields)
     action = "BUY"
-    if re.search(r"\b(SELL|RED|ขาย|ขายคืน)\b", text, re.IGNORECASE):
+    if re.search(r"\b(SELL|RED|ขาย|ขายคืน|SWO|สับเปลี่ยนออก)\b", text, re.IGNORECASE):
         action = "SELL"
 
     units = None
@@ -313,7 +330,7 @@ def _parse_wealthx_text_to_dicts(text: str) -> List[Dict[str, Any]]:
     if sym_paren:
         symbol = sym_paren.group(1).upper()
     else:
-        broad_sym = re.search(r"\b(TLWORLD-X|TLNDQINCOME-UH-X|LHGRID|[A-Z0-9\-]{4,20})\b", text)
+        broad_sym = re.search(r"\b(TLWORLD-X|TLNDQINCOME-UH-X|TLWORLDXUS-X|LHGRID|[A-Z0-9\-]{4,20})\b", text)
         if broad_sym:
             symbol = broad_sym.group(1)
         else:

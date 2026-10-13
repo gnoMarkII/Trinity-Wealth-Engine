@@ -9,7 +9,7 @@ interface BucketApplyReviewProps {
   draft: BucketPlanDraftDTO
   preview: AllocationPreviewDTO | null
   applyReceipt: AllocationApplyReceiptDTO | null
-  onApply: () => Promise<void>
+  onApply: () => Promise<any>
   onBack: () => void
   onGoToOverview: () => void
   loading: boolean
@@ -78,6 +78,9 @@ export default function BucketApplyReview({
   const validatedTargets = preview?.validated_targets ?? []
   const affectedHoldings = preview?.affected_holdings ?? []
   const issues = preview?.issues ?? []
+  const hasIssues = issues.length > 0
+  const isStalePreview = Boolean(preview?.draft_revision && preview.draft_revision !== draft.revision)
+  const canApply = Boolean(preview) && !hasIssues && !isStalePreview && confirmedSafe && !loading
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
@@ -107,6 +110,22 @@ export default function BucketApplyReview({
           </button>
         </div>
 
+        {/* Missing Preview Alert */}
+        {!preview && (
+          <div className="mt-4 rounded-xl border border-rose-200 bg-rose-50 p-3.5 text-xs text-rose-900 space-y-1">
+            <span className="font-bold">❌ ยังไม่มีผลการจำลอง (Preview):</span>
+            <p>กรุณากลับไปที่ขั้นตอนก่อนหน้าเพื่อประมวลผลการจำลองสัดส่วนก่อนนำไปใช้กับพอร์ต</p>
+          </div>
+        )}
+
+        {/* Stale Preview Alert (WP11) */}
+        {isStalePreview && (
+          <div className="mt-4 rounded-xl border border-rose-200 bg-rose-50 p-3.5 text-xs text-rose-900 space-y-1">
+            <span className="font-bold">⚠️ ตัวอย่างไม่ตรงกับแบบร่างล่าสุด (Stale Preview):</span>
+            <p>แบบร่างได้รับการแก้ไข (ฉบับ #{draft.revision}) หลังจากประมวลผลตัวอย่าง (ฉบับ #{preview?.draft_revision}) กรุณากลับไปประมวลผลตัวอย่างใหม่ก่อนยืนยัน</p>
+          </div>
+        )}
+
         {/* Validation Issues Alert */}
         {issues.length > 0 && (
           <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-3.5 text-xs text-amber-900 space-y-1">
@@ -125,23 +144,33 @@ export default function BucketApplyReview({
             🎯 สัดส่วนเป้าหมายชุดใหม่ (Validated Purpose Targets)
           </h3>
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
-            {validatedTargets.map((t) => (
-              <div
-                key={t.bucket_id}
-                className="p-3.5 rounded-xl border border-sky-100 bg-sky-50/30 flex items-center justify-between"
-              >
-                <div className="flex items-center gap-2 min-w-0">
-                  <span
-                    className="w-3.5 h-3.5 rounded-full shrink-0"
-                    style={{ backgroundColor: t.color || '#3b82f6' }}
-                  />
-                  <span className="text-xs font-bold text-zinc-800 truncate">{t.name}</span>
+            {validatedTargets.map((t) => {
+              const pb = (draft.purpose_buckets || []).find((b) => b.bucket_id === t.bucket_id)
+              return (
+                <div
+                  key={t.bucket_id}
+                  className="p-3.5 rounded-xl border border-sky-100 bg-sky-50/30 flex items-center justify-between"
+                >
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span
+                      className="w-3.5 h-3.5 rounded-full shrink-0"
+                      style={{ backgroundColor: t.color || '#3b82f6' }}
+                    />
+                    <div className="min-w-0">
+                      <span className="text-xs font-bold text-zinc-800 truncate block">{t.name}</span>
+                      {pb?.linked_goal_name && (
+                        <span className="text-[10px] text-purple-700 font-semibold block truncate">
+                          🎯 {pb.linked_goal_name}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  <span className="text-sm font-extrabold text-sky-700 shrink-0">
+                    {t.target_percent}%
+                  </span>
                 </div>
-                <span className="text-sm font-extrabold text-sky-700 shrink-0">
-                  {t.target_percent}%
-                </span>
-              </div>
-            ))}
+              )
+            })}
           </div>
         </div>
 
@@ -212,10 +241,17 @@ export default function BucketApplyReview({
 
           <button
             type="button"
-            onClick={onApply}
-            disabled={!confirmedSafe || loading}
+            onClick={async () => {
+              if (!canApply) return
+              try {
+                await onApply()
+              } catch {
+                // Handled
+              }
+            }}
+            disabled={!canApply}
             className={`w-full sm:w-auto px-7 py-3 rounded-xl font-bold text-sm text-white shadow-md transition-all flex items-center justify-center gap-2 ${
-              confirmedSafe && !loading
+              canApply
                 ? 'bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 shadow-emerald-500/25 active:scale-98 cursor-pointer'
                 : 'bg-zinc-300 text-zinc-500 cursor-not-allowed shadow-none'
             }`}

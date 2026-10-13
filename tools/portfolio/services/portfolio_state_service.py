@@ -142,6 +142,27 @@ class PortfolioStateService:
             uow.commit(state, LedgerChange(kind="unchanged"))
             return state
 
+    def structured_batch_reassign_holding_buckets(
+        self, assignments: Dict[str, Optional[str]], portfolio_id: str = "default"
+    ) -> PortfolioState:
+        pid = validate_portfolio_id(portfolio_id)
+        with self.repo.unit_of_work(pid) as uow:
+            state = uow.load_state()
+            valid_bucket_ids = {t.bucket_id for t in state.allocation_targets}
+            clean_assignments = {s.strip().upper(): b for s, b in assignments.items()}
+            for sym, b_id in clean_assignments.items():
+                if b_id is not None and b_id not in valid_bucket_ids:
+                    raise ValueError(f"ไม่พบ bucket_id '{b_id}' ใน allocation targets")
+            found = 0
+            for h in state.holdings:
+                if h.symbol in clean_assignments:
+                    h.bucket_id = clean_assignments[h.symbol]
+                    found += 1
+            if found == 0 and assignments:
+                raise ValueError("ไม่พบสินทรัพย์ตามที่ระบุในพอร์ต")
+            uow.commit(state, LedgerChange(kind="unchanged"))
+            return state
+
     def structured_batch_remove_holdings(
         self, symbols: List[str], portfolio_id: str = "default"
     ) -> PortfolioState:
@@ -170,6 +191,10 @@ class PortfolioStateService:
             if abs(total_pct - 100.0) > 0.01:
                 raise ValueError(f"ผลรวม target_percent ({total_pct:.1f}%) ต้องเท่ากับ 100%")
             state.allocation_targets = targets
+            if state.allocation_plan_origin:
+                origin = dict(state.allocation_plan_origin)
+                origin["is_modified_since_apply"] = True
+                state.allocation_plan_origin = origin
             uow.commit(state, LedgerChange(kind="unchanged"))
             return state
 

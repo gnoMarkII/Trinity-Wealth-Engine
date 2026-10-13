@@ -75,6 +75,9 @@ class ActualPortfolioStateDTO(BaseModel):
     allocation_targets: list[AllocationTargetDTO] = []
     holdings: list[ActualHoldingDTO] = []
     price_refresh_info: Optional[dict[str, str]] = None
+    allocation_policy: Optional[dict[str, Any]] = None
+    allocation_plan_origin: Optional[dict[str, Any]] = None
+
 
 
 class BucketAllocationSummaryDTO(BaseModel):
@@ -177,6 +180,31 @@ class AssignBucketRequestDTO(BaseModel):
 class BatchAssignBucketRequestDTO(BaseModel):
     symbols: list[str] = []
     bucket_id: Optional[str] = None
+
+
+class HoldingBucketAssignmentItemDTO(BaseModel):
+    symbol: str
+    bucket_id: Optional[str] = None
+
+
+class BatchReassignHoldingsRequestDTO(BaseModel):
+    assignments: list[HoldingBucketAssignmentItemDTO] = []
+
+
+class HoldingBucketRecommendationItemDTO(BaseModel):
+    symbol: str
+    asset_type: str
+    current_bucket_id: Optional[str] = None
+    recommended_bucket_id: str
+    is_changed: bool
+    reason: str
+
+
+class HoldingsBucketRecommendationResponseDTO(BaseModel):
+    recommendations: list[HoldingBucketRecommendationItemDTO] = []
+    summary: str = ""
+    total_unassigned: int = 0
+    total_mismatched: int = 0
 
 
 class BatchRemoveHoldingsRequestDTO(BaseModel):

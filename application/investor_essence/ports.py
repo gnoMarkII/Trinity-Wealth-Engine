@@ -10,6 +10,7 @@ from core.investor_essence.interview import EssenceSession
 from core.investor_essence.models import (
     ArtifactRef,
     BucketPlanDraft,
+    ConfirmedSnapshotRecord,
     EssenceSummaryDraft,
     FinancialContextSnapshot,
     InvestmentAxisDraft,
@@ -39,7 +40,7 @@ class SessionRepositoryPort(Protocol):
 
 
 class PlanningRepositoryPort(Protocol):
-    """Persistence port for financial context, drafts, and confirmed pointers."""
+    """Persistence port for financial context, drafts, confirmed snapshots, and pointers."""
     def save_context_snapshot(self, snapshot: FinancialContextSnapshot) -> None: ...
     def get_context_snapshot(self, portfolio_id: str) -> Optional[FinancialContextSnapshot]: ...
     def save_axis_draft(self, draft: InvestmentAxisDraft) -> None: ...
@@ -58,6 +59,17 @@ class PlanningRepositoryPort(Protocol):
         expected_ref: Optional[str],
         snapshot: Optional[Dict[str, Any]] = None,
     ) -> bool: ...
+    def save_confirmed_snapshot(self, snapshot_record: ConfirmedSnapshotRecord) -> None: ...
+    def get_confirmed_snapshot_by_id(self, snapshot_id: str) -> Optional[ConfirmedSnapshotRecord]: ...
+    def get_latest_confirmed_snapshot(
+        self, scope: str, scope_id: str, kind: str
+    ) -> Optional[ConfirmedSnapshotRecord]: ...
+    def list_confirmed_snapshots(
+        self, scope: str, scope_id: str, kind: str
+    ) -> List[ConfirmedSnapshotRecord]: ...
+    def clear_planning_data(
+        self, portfolio_id: Optional[str] = None, clear_essence: bool = False
+    ) -> None: ...
 
 
 class OperationRepositoryPort(Protocol):
@@ -145,13 +157,18 @@ class AxisGeneratorPort(Protocol):
         accepted_claims: List[Dict[str, Any]],
         financial_context: Dict[str, Any],
         prompt_version: str,
+        goals: Optional[List[Dict[str, Any]]] = None,
     ) -> AxisProposal: ...
 
 
 class BucketGeneratorPort(Protocol):
     """Port to LLM adapter proposing target purpose buckets from axis policy."""
     def generate_buckets(
-        self, confirmed_axis: Dict[str, Any], prompt_version: str
+        self,
+        confirmed_axis: Dict[str, Any],
+        prompt_version: str,
+        portfolio_goals: Optional[List[Dict[str, Any]]] = None,
+        portfolio_snapshot: Optional[Dict[str, Any]] = None,
     ) -> BucketPlanProposal: ...
 
 
@@ -168,12 +185,13 @@ class KnowledgeWritePort(Protocol):
 
 
 class PortfolioPlanningPort(Protocol):
-    """Bridge port to Portfolio subsystem for snapshot, preview, apply, and repair."""
+    """Bridge port to Portfolio subsystem for snapshot, preview, apply, goals, and repair."""
     def snapshot(self, portfolio_id: str) -> PortfolioPlanningSnapshot: ...
     def preview(self, command: PreviewAllocationCommand) -> AllocationPreview: ...
     def apply(self, command: ApplyAllocationCommand) -> AllocationApplyReceipt: ...
     def get_apply_receipt(self, portfolio_id: str, command_id: str) -> Optional[AllocationApplyReceipt]: ...
     def repair_projection(self, portfolio_id: str, command_id: str) -> AllocationApplyReceipt: ...
+    def get_goals(self, portfolio_id: str) -> List[Dict[str, Any]]: ...
 
 
 class ClockPort(Protocol):

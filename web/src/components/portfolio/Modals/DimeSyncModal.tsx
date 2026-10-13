@@ -17,7 +17,7 @@ interface Props {
 }
 
 export default function DimeSyncModal({ portfolioId, onClose, onSuccess }: Props) {
-  const [activeSource, setActiveSource] = useState<'dime' | 'wealthx' | 'scb'>('dime')
+  const [activeSource, setActiveSource] = useState<'dime' | 'wealthx' | 'scb' | 'arr_gold'>('dime')
   const [activeTab, setActiveTab] = useState<'upload' | 'email'>('upload')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
@@ -75,10 +75,10 @@ export default function DimeSyncModal({ portfolioId, onClose, onSuccess }: Props
 
   const fileInputRef = useRef<HTMLInputElement>(null)
 
-  const handleSourceChange = (src: 'dime' | 'wealthx' | 'scb') => {
+  const handleSourceChange = (src: 'dime' | 'wealthx' | 'scb' | 'arr_gold') => {
     if (src === activeSource) return
     setActiveSource(src)
-    if (src === 'scb') {
+    if (src === 'scb' || src === 'arr_gold') {
       setActiveTab('email')
     }
     setEmails([])
@@ -106,6 +106,12 @@ export default function DimeSyncModal({ portfolioId, onClose, onSuccess }: Props
         setEmails(res.emails || [])
         if (res.emails.length === 0) {
           setError('ไม่พบอีเมลยืนยันการทำรายการซื้อกองทุนจาก SCBAM (fundclick.scbam@scb.co.th) ในกล่องข้อความ')
+        }
+      } else if (activeSource === 'arr_gold') {
+        const res = await api.getArrGoldEmails(emailQuery.trim() || undefined, 20)
+        setEmails((res.emails as any) || [])
+        if (res.emails.length === 0) {
+          setError('ไม่พบอีเมลยืนยันการซื้อขายทองคำจาก ARR (noreply@arrgoldtrading.com) ในกล่องข้อความ')
         }
       } else {
         const res = await api.getDimeEmails(emailQuery.trim() || undefined, 15)
@@ -153,8 +159,10 @@ export default function DimeSyncModal({ portfolioId, onClose, onSuccess }: Props
         ? await api.scanWealthXEmail(em.message_id, em.attachment_id, password.trim() || undefined)
         : activeSource === 'scb'
         ? await api.scanScbEmail(em.message_id, portfolioId)
+        : activeSource === 'arr_gold'
+        ? await api.scanArrGoldEmail(em.message_id, em.attachment_id || undefined, em.subject)
         : await api.scanDimeEmail(em.message_id, em.attachment_id, password.trim() || undefined)
-      setStagedResult(res)
+      setStagedResult(res as any)
     } catch (err: any) {
       setError(err?.message || 'ไม่สามารถดาวน์โหลดและวิเคราะห์ไฟล์แนบจากอีเมลได้')
     } finally {
@@ -178,20 +186,31 @@ export default function DimeSyncModal({ portfolioId, onClose, onSuccess }: Props
         setWarnings((prev) => [...prev, data])
       },
       onComplete: (data: any) => {
-        setStagedResult({
-          scan_id: data.scan_id,
-          item_count: data.item_count,
-          items: data.items,
-        })
+        if (data.items && data.items.length > 0) {
+          setStagedResult({
+            scan_id: data.scan_id || '',
+            item_count: data.item_count || data.items.length,
+            items: data.items,
+          })
+        } else {
+          setStagedResult(null)
+        }
         if (data.warnings && data.warnings.length > 0) {
           setWarnings(data.warnings)
         }
         const alreadyInPort = (data.skipped_synced_count || 0) + (data.already_in_portfolio_count || 0)
-        if (data.item_count === 0 && alreadyInPort > 0) {
+        const imported = data.imported || 0
+
+        if (imported > 0) {
+          setSuccessMessage(`ซิงค์ข้อมูลสำเร็จ: นำเข้ารายการซื้อขาย ${imported} รายการเรียบร้อยแล้ว`)
+          api.getActualPortfolioState(false, false, portfolioId).then((st) => onSuccess(st)).catch(() => {})
+        } else if ((!data.items || data.items.length === 0) && alreadyInPort > 0) {
           setSuccessMessage(`ซิงค์ข้อมูลเรียบร้อยแล้ว: รายการทั้งหมด (${alreadyInPort} รายการ) ได้รับการบันทึกลงสมุดบัญชีแล้ว (ไม่มีรายการใหม่)`)
         } else if (data.item_count > 0) {
           const inPortMsg = alreadyInPort > 0 ? ` (ข้าม ${alreadyInPort} รายการเดิมในพอร์ต)` : ''
           setSuccessMessage(`พบ ${data.item_count} รายการใหม่/กู้คืนที่พร้อมนำเข้า${inPortMsg}`)
+        } else if (data.message) {
+          setSuccessMessage(data.message)
         }
       },
       onError: (err: any) => {
@@ -213,6 +232,14 @@ export default function DimeSyncModal({ portfolioId, onClose, onSuccess }: Props
         await api.streamBatchScbSync(
           {
             portfolio_id: portfolioId,
+          },
+          callbacks
+        )
+      } else if (activeSource === 'arr_gold') {
+        await api.streamBatchArrGoldSync(
+          {
+            portfolio_id: portfolioId,
+            force_rescan: forceRescan,
           },
           callbacks
         )
@@ -242,6 +269,8 @@ export default function DimeSyncModal({ portfolioId, onClose, onSuccess }: Props
         ? await api.commitWealthXTrades(stagedResult.scan_id, portfolioId, selectedItemIds)
         : activeSource === 'scb'
         ? await api.commitScbTrades(stagedResult.scan_id, portfolioId, selectedItemIds)
+        : activeSource === 'arr_gold'
+        ? await api.commitArrGoldTrades(stagedResult.scan_id, portfolioId, selectedItemIds)
         : await api.commitDimeTrades(stagedResult.scan_id, portfolioId, selectedItemIds)
       setSuccessMessage(`นำเข้ารายการสำเร็จเรียบร้อยแล้ว จำนวน ${res.imported_count} รายการ`)
       setTimeout(() => {
@@ -303,12 +332,14 @@ export default function DimeSyncModal({ portfolioId, onClose, onSuccess }: Props
                     ? 'WealthX กองทุนรวมไทย'
                     : activeSource === 'scb'
                     ? 'SCB (Thai Funds)'
+                    : activeSource === 'arr_gold'
+                    ? 'ARR Gold เป๋าตัง (USD)'
                     : 'Dime! สหรัฐฯ/กองทุน'}
                 </span>
               </span>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
               {/* Dime Card */}
               <div
                 onClick={() => handleSourceChange('dime')}
@@ -437,6 +468,49 @@ export default function DimeSyncModal({ portfolioId, onClose, onSuccess }: Props
                   </div>
                 </div>
               </div>
+
+              {/* ARR Gold Card */}
+              <div
+                onClick={() => handleSourceChange('arr_gold')}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter' || event.key === ' ') {
+                    event.preventDefault()
+                    handleSourceChange('arr_gold')
+                  }
+                }}
+                role="button"
+                tabIndex={0}
+                aria-pressed={activeSource === 'arr_gold'}
+                aria-label="Select ARR Gold broker source"
+                className={`p-3.5 rounded-2xl border transition-all cursor-pointer ${
+                  activeSource === 'arr_gold'
+                    ? 'border-amber-400 bg-amber-50/80 shadow-sm ring-2 ring-amber-400/40'
+                    : 'border-zinc-200 bg-white/70 hover:bg-zinc-50 opacity-75'
+                }`}
+              >
+                <div className="flex items-center gap-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white shadow-2xs text-lg border border-amber-200">
+                    🥇
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center justify-between">
+                      <h4 className="text-xs sm:text-sm font-bold text-zinc-900">ARR Gold</h4>
+                      <span
+                        className={`text-[10px] font-bold px-2 py-0.5 rounded-md ${
+                          activeSource === 'arr_gold'
+                            ? 'bg-amber-100 text-amber-900'
+                            : 'bg-zinc-100 text-zinc-600'
+                        }`}
+                      >
+                        {activeSource === 'arr_gold' ? 'กำลังเลือก' : 'เลือก'}
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-zinc-500 truncate">
+                      เป๋าตัง Gold Wallet • ทองคำ 99.99% (USD)
+                    </p>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         )}
@@ -524,7 +598,7 @@ export default function DimeSyncModal({ portfolioId, onClose, onSuccess }: Props
                             >
                               {activeSource === 'scb' ? '📧 ดูอีเมล' : '📄 ดูเอกสาร PDF'}
                             </button>
-                            {activeSource !== 'scb' && w.message_id && w.attachment_id && (
+                            {activeSource !== 'scb' && activeSource !== 'arr_gold' && w.message_id && w.attachment_id && (
                               <a
                                 href={
                                   activeSource === 'wealthx'
@@ -561,6 +635,8 @@ export default function DimeSyncModal({ portfolioId, onClose, onSuccess }: Props
                         ? 'WealthX Confirmation (กองทุนรวมไทย)'
                         : activeSource === 'scb'
                         ? 'SCBAM Fund Click (กองทุนรวมไทย)'
+                        : activeSource === 'arr_gold'
+                        ? 'ARR Gold Trading (เป๋าตัง Gold Wallet)'
                         : 'Dime! Confirmation (KKP Securities)'}
                     </strong>
                   </span>
@@ -629,6 +705,10 @@ export default function DimeSyncModal({ portfolioId, onClose, onSuccess }: Props
                               <span className="rounded bg-violet-50 border border-violet-200 px-1.5 py-0.5 text-[10px] font-semibold text-violet-700">
                                 Fund
                               </span>
+                            ) : it.asset_type === 'Gold' ? (
+                              <span className="rounded bg-amber-50 border border-amber-200 px-1.5 py-0.5 text-[10px] font-semibold text-amber-700">
+                                Gold
+                              </span>
                             ) : (
                               <span className="rounded bg-sky-50 border border-sky-200 px-1.5 py-0.5 text-[10px] font-semibold text-sky-700">
                                 Stock
@@ -688,7 +768,7 @@ export default function DimeSyncModal({ portfolioId, onClose, onSuccess }: Props
           /* Selection / Input Stage */
           <div className="space-y-4">
             {/* Flow-Themed Segmented Tabs */}
-            {activeSource !== 'scb' && (
+            {activeSource !== 'scb' && activeSource !== 'arr_gold' && (
               <div className="flex rounded-2xl bg-sky-100/60 p-1 border border-sky-200/60">
                 <button
                   type="button"
@@ -716,7 +796,17 @@ export default function DimeSyncModal({ portfolioId, onClose, onSuccess }: Props
             )}
 
             {/* Password input for protected PDFs */}
-            {activeSource !== 'scb' ? (
+            {activeSource === 'arr_gold' ? (
+              <div className="rounded-2xl border border-amber-200 bg-amber-50/60 p-3.5 text-xs text-amber-950 flex items-center gap-2.5 shadow-2xs">
+                <span className="text-base">🥇</span>
+                <div>
+                  <span className="font-semibold">ARR Paotang Gold Wallet (Direct Email Confirmation):</span>{' '}
+                  <span className="text-amber-900">
+                    คำสั่งซื้อขายทองคำ 99.99% ส่งตรงจาก <code className="font-mono text-amber-950 bg-white/80 px-1 py-0.5 rounded border border-amber-200">noreply@arrgoldtrading.com</code> เป็นอีเมล HTML จึงไม่ต้องใช้รหัสผ่าน PDF
+                  </span>
+                </div>
+              </div>
+            ) : activeSource !== 'scb' ? (
               <div className="rounded-2xl border border-sky-100 bg-sky-50/40 p-3.5">
                 <div className="flex items-center justify-between mb-1.5">
                   <label htmlFor="dime-pdf-password" className="block text-xs font-bold text-sky-950">
@@ -759,7 +849,7 @@ export default function DimeSyncModal({ portfolioId, onClose, onSuccess }: Props
             )}
 
             {/* Upload Tab */}
-            {activeTab === 'upload' && activeSource !== 'scb' && (
+            {activeTab === 'upload' && activeSource !== 'scb' && activeSource !== 'arr_gold' && (
               <div className="space-y-3 animate-fade-in">
                 <div
                   onClick={() => fileInputRef.current?.click()}
@@ -831,6 +921,8 @@ export default function DimeSyncModal({ portfolioId, onClose, onSuccess }: Props
                             ? 'ซิงค์ใบยืนยัน WealthX ทั้งหมดอัตโนมัติ (Sync All)'
                             : activeSource === 'scb'
                             ? 'ซิงค์คำสั่งซื้อ SCBAM ทั้งหมดอัตโนมัติ (Sync All)'
+                            : activeSource === 'arr_gold'
+                            ? 'ซิงค์รายการซื้อขาย ARR Gold ทั้งหมดอัตโนมัติ (Sync All)'
                             : 'ซิงค์ข้อมูลทั้งหมดอัตโนมัติ (Sync All Confirmation Notes)'}
                         </span>
                       </h4>
@@ -839,6 +931,8 @@ export default function DimeSyncModal({ portfolioId, onClose, onSuccess }: Props
                           ? 'สแกนและดึงใบยืนยันการซื้อขายกองทุนรวมทั้งหมดจาก WealthX (noreply@wealthx.co) ใน Gmail'
                           : activeSource === 'scb'
                           ? 'สแกนและดึงคำสั่งซื้อกองทุนรวมทั้งหมดจาก SCBAM Fund Click (fundclick.scbam@scb.co.th) ใน Gmail พร้อมคำนวณหน่วยลงทุนจาก NAV ย้อนหลังอัตโนมัติ'
+                          : activeSource === 'arr_gold'
+                          ? 'สแกนและดึงคำสั่งซื้อขายทองคำ 99.99% (USD) ทั้งหมดจาก ARR Paotang Gold Wallet (noreply@arrgoldtrading.com) ใน Gmail อัตโนมัติ'
                           : 'สแกนและดึงเอกสารยืนยันการซื้อขายทั้งหมดจาก Dime ใน Gmail ด้วย Smart Incremental Sync'}
                       </p>
                     </div>
@@ -922,6 +1016,8 @@ export default function DimeSyncModal({ portfolioId, onClose, onSuccess }: Props
                         ? 'คำค้นหา เช่น ใบยืนยัน หรือชื่อกองทุน เช่น TLWORLD-X (เว้นว่างเพื่อค้นหาล่าสุด)'
                         : activeSource === 'scb'
                         ? 'คำค้นหา เช่น ยืนยันการทำรายการซื้อ หรือชื่อกองทุน เช่น SCBS&P500E (เว้นว่างเพื่อค้นหาล่าสุด)'
+                        : activeSource === 'arr_gold'
+                        ? 'คำค้นหา เช่น ซื้อทองคำ หรือ ขายทองคำ หรือเลขที่อ้างอิง B26... (เว้นว่างเพื่อค้นหาล่าสุด)'
                         : 'คำค้นหา เช่น Dime Confirmation หรือชื่อหุ้น (เว้นว่างเพื่อค้นหาล่าสุด)'
                     }
                     className="flex-1 rounded-xl border border-sky-200 bg-white px-3.5 py-2 text-xs text-zinc-900 focus:ring-2 focus:ring-flow-blue/20 focus:border-flow-blue focus:outline-none transition-all"
