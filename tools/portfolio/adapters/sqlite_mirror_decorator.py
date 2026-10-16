@@ -181,7 +181,7 @@ class SqliteMirroredPortfolioRepository(PortfolioRepositoryPort):
             ledger_sha = _compute_sha256(ledger_file)
             mtime_ns = master_file.stat().st_mtime_ns if master_file.exists() else 0
 
-            state_json = json.dumps(state.model_dump(exclude_none=True), ensure_ascii=False)
+            state_json = json.dumps(state.model_dump(mode="json", exclude_none=True), ensure_ascii=False)
             synced_at = time.time()
 
             with _get_connection(self.db_path) as conn:

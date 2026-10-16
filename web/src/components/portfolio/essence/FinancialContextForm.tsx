@@ -10,6 +10,7 @@ import { formatTHB } from '../../../utils/formatters'
 interface FinancialContextFormProps {
   financialContext: FinancialContextDTO | null
   portfolioId: string
+  portfolioName?: string
   portfolioGoals?: ActualGoalItemDTO[]
   onSave: (updates: UpdateFinancialContextRequestDTO) => Promise<any>
   onSyncGoals?: () => Promise<any>
@@ -21,6 +22,7 @@ interface FinancialContextFormProps {
 export default function FinancialContextForm({
   financialContext,
   portfolioId,
+  portfolioName,
   portfolioGoals = [],
   onSave,
   onSyncGoals,
@@ -28,17 +30,28 @@ export default function FinancialContextForm({
   loading,
   statusText,
 }: FinancialContextFormProps) {
+  const displayName = portfolioName || (portfolioId === 'default' ? 'พอร์ตลงทุนหลัก' : portfolioId)
+  const matchedGoal = portfolioGoals.find((g) => g.portfolio_id === portfolioId)
+
   // Field States
-  const [horizonYears, setHorizonYears] = useState(financialContext?.horizon_years || '10')
-  const [targetUseAmount, setTargetUseAmount] = useState(financialContext?.target_use_amount || '')
+  const [horizonYears, setHorizonYears] = useState(
+    financialContext?.horizon_years ||
+      (matchedGoal?.deadline_days_left
+        ? String(Math.max(1, Math.round(matchedGoal.deadline_days_left / 365.25)))
+        : '')
+  )
+  const [targetUseAmount, setTargetUseAmount] = useState(
+    financialContext?.target_use_amount ||
+      (matchedGoal?.target_amount_thb ? String(matchedGoal.target_amount_thb) : '')
+  )
   const [targetUseTimeline, setTargetUseTimeline] = useState(
-    financialContext?.target_use_timeline || '',
+    financialContext?.target_use_timeline || matchedGoal?.name || '',
   )
   const [emergencyReservesAmount, setEmergencyReservesAmount] = useState(
-    financialContext?.emergency_reserves_amount || '200000',
+    financialContext?.emergency_reserves_amount || '0',
   )
   const [emergencyReservesMonths, setEmergencyReservesMonths] = useState(
-    financialContext?.emergency_reserves_months || '6',
+    financialContext?.emergency_reserves_months || '0',
   )
   const [obligationsMonthly, setObligationsMonthly] = useState(
     financialContext?.obligations_monthly || '0',
@@ -75,11 +88,19 @@ export default function FinancialContextForm({
 
   useEffect(() => {
     if (financialContext) {
-      setHorizonYears(financialContext.horizon_years || '10')
-      setTargetUseAmount(financialContext.target_use_amount || '')
-      setTargetUseTimeline(financialContext.target_use_timeline || '')
-      setEmergencyReservesAmount(financialContext.emergency_reserves_amount || '200000')
-      setEmergencyReservesMonths(financialContext.emergency_reserves_months || '6')
+      setHorizonYears(
+        financialContext.horizon_years ||
+          (matchedGoal?.deadline_days_left
+            ? String(Math.max(1, Math.round(matchedGoal.deadline_days_left / 365.25)))
+            : '')
+      )
+      setTargetUseAmount(
+        financialContext.target_use_amount ||
+          (matchedGoal?.target_amount_thb ? String(matchedGoal.target_amount_thb) : '')
+      )
+      setTargetUseTimeline(financialContext.target_use_timeline || matchedGoal?.name || '')
+      setEmergencyReservesAmount(financialContext.emergency_reserves_amount || '0')
+      setEmergencyReservesMonths(financialContext.emergency_reserves_months || '0')
       setObligationsMonthly(financialContext.obligations_monthly || '0')
       setObligationsDescription(financialContext.obligations_description || '')
       setWithdrawalFrequency(financialContext.withdrawal_frequency || '')
@@ -90,19 +111,19 @@ export default function FinancialContextForm({
       setReservesOutsidePortfolio(financialContext.reserves_outside_portfolio || '')
       setUnknownFields(financialContext.unknown_fields || [])
     }
-  }, [financialContext])
+  }, [financialContext, matchedGoal])
 
   const handleSave = async () => {
-    const cleanHorizon = (horizonYears || '').replace(/[^0-9.]/g, '') || '10'
+    const cleanHorizon = (horizonYears || '').replace(/[^0-9.]/g, '') || (matchedGoal?.deadline_days_left ? String(Math.max(1, Math.round(matchedGoal.deadline_days_left / 365.25))) : '')
     const filteredUnknown = (unknownFields || []).filter(
       (f) => f !== 'horizon_years' && f !== 'emergency_reserves' && f !== 'obligations',
     )
     await onSave({
       horizon_years: cleanHorizon,
-      target_use_amount: targetUseAmount || null,
-      target_use_timeline: targetUseTimeline || null,
-      emergency_reserves_amount: emergencyReservesAmount || '200000',
-      emergency_reserves_months: emergencyReservesMonths || '6',
+      target_use_amount: targetUseAmount || (matchedGoal?.target_amount_thb ? String(matchedGoal.target_amount_thb) : null),
+      target_use_timeline: targetUseTimeline || matchedGoal?.name || null,
+      emergency_reserves_amount: emergencyReservesAmount || '0',
+      emergency_reserves_months: emergencyReservesMonths || '0',
       obligations_monthly: obligationsMonthly || '0',
       obligations_description: obligationsDescription || null,
       withdrawal_frequency: withdrawalFrequency || null,
@@ -146,14 +167,8 @@ export default function FinancialContextForm({
     return formatTHB(num)
   }
 
-  // Find linked goal name from portfolioGoals if available
-  const matchedGoal = portfolioGoals.find(
-    (g) =>
-      g.portfolio_id === portfolioId ||
-      g.goal_type === 'nav_target' ||
-      g.goal_type === 'bucket_target',
-  )
-  const displayGoalName = targetUseTimeline || matchedGoal?.name || 'เป้าหมายความมั่งคั่งระยะยาว'
+  // Linked goal display text
+  const displayGoalName = targetUseTimeline || matchedGoal?.name || 'ยังไม่มีการผูกเป้าหมายเฉพาะพอร์ตนี้'
 
   const readinessIssues = financialContext?.readiness_issues ?? []
   const isReady = financialContext?.is_ready_for_numeric_policy ?? true
@@ -173,7 +188,7 @@ export default function FinancialContextForm({
                   บริบททางการเงินเฉพาะพอร์ตนี้ (Financial Context)
                 </h2>
                 <span className="rounded-full bg-sky-50 border border-sky-200/80 px-2.5 py-0.5 text-[11px] font-bold text-sky-700">
-                  พอร์ต: {portfolioId}
+                  พอร์ต: {displayName}
                 </span>
               </div>
               <p className="text-xs text-zinc-500 mt-1">
@@ -190,7 +205,7 @@ export default function FinancialContextForm({
               onClick={handleSyncGoals}
               disabled={loading || syncing}
               className="inline-flex items-center gap-1.5 rounded-xl border border-sky-200 bg-sky-50/70 px-3.5 py-2 text-xs font-bold text-sky-700 hover:bg-sky-100 hover:text-sky-800 active:scale-95 transition-all cursor-pointer disabled:opacity-50 self-start sm:self-auto shrink-0 shadow-2xs"
-              title="ดึงเป้าหมายล่าสุดจากระบบ Portfolio Goals"
+              title={`ดึงเป้าหมายล่าสุดจากระบบ Portfolio Goals เฉพาะพอร์ต ${displayName}`}
             >
               <span className={syncing ? 'animate-spin' : ''}>🔄</span>
               <span>{syncing ? 'กำลังซิงค์...' : 'ดึงข้อมูลจาก Goals ใหม่'}</span>
@@ -249,7 +264,11 @@ export default function FinancialContextForm({
               </span>
             </div>
             <div className="text-lg font-black text-zinc-900 tracking-tight">
-              {formatAmountDisplay(targetUseAmount, '10,000,000.00 ฿')}
+              {targetUseAmount
+                ? formatAmountDisplay(targetUseAmount)
+                : matchedGoal?.target_amount_thb
+                ? formatTHB(matchedGoal.target_amount_thb)
+                : 'ยังไม่ระบุเป้าหมาย'}
             </div>
             <p className="text-[11px] text-zinc-500 truncate" title={displayGoalName}>
               {displayGoalName}
@@ -267,12 +286,14 @@ export default function FinancialContextForm({
               </span>
             </div>
             <div className="text-lg font-black text-zinc-900 tracking-tight">
-              {horizonYears || '10'} ปี
+              {horizonYears ? `${horizonYears} ปี` : 'ยังไม่ระบุ'}
             </div>
             <p className="text-[11px] text-zinc-500">
               {horizonYears && parseInt(horizonYears) > 5
                 ? 'เน้นพลังทบต้นระยะยาว'
-                : 'กรอบเวลาปานกลาง'}
+                : horizonYears && parseInt(horizonYears) > 0
+                ? 'กรอบเวลาปานกลาง'
+                : 'รอระบุกรอบเวลา'}
             </p>
           </div>
 
@@ -287,10 +308,16 @@ export default function FinancialContextForm({
               </span>
             </div>
             <div className="text-lg font-black text-zinc-900 tracking-tight">
-              {formatAmountDisplay(emergencyReservesAmount, '200,000.00 ฿')}
+              {emergencyReservesAmount && emergencyReservesAmount !== '0'
+                ? formatAmountDisplay(emergencyReservesAmount)
+                : reservesOutsidePortfolio
+                ? 'สำรองนอกพอร์ต'
+                : '0.00 ฿'}
             </div>
-            <p className="text-[11px] text-zinc-500">
-              ครอบคลุม ~{emergencyReservesMonths || '6'} เดือนของค่าใช้จ่าย
+            <p className="text-[11px] text-zinc-500 truncate" title={reservesOutsidePortfolio || (emergencyReservesMonths && emergencyReservesMonths !== '0' ? `ครอบคลุม ~${emergencyReservesMonths} เดือนของค่าใช้จ่าย` : 'ไม่มีเงินสำรองในพอร์ตนี้')}>
+              {reservesOutsidePortfolio || (emergencyReservesMonths && emergencyReservesMonths !== '0'
+                ? `ครอบคลุม ~${emergencyReservesMonths} เดือนของค่าใช้จ่าย`
+                : 'ไม่มีเงินสำรองในพอร์ตนี้')}
             </p>
           </div>
 

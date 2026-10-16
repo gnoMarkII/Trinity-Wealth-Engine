@@ -2,6 +2,7 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { describe, expect, it, vi, beforeEach } from 'vitest'
 import PortfolioTransactionsTab from './PortfolioTransactionsTab'
 import { api } from '../../api/client'
+import type { TransactionListResponseDTO } from '../../api/types'
 
 vi.mock('../../api/client', () => ({
   api: {
@@ -11,6 +12,7 @@ vi.mock('../../api/client', () => ({
     deleteTransaction: vi.fn(),
     voidTransaction: vi.fn(),
     getFxRate: vi.fn(),
+    getPvdDocumentUrl: vi.fn(() => '/pvd-document'),
   },
 }))
 
@@ -55,6 +57,52 @@ describe('PortfolioTransactionsTab', () => {
       realized_pnl_thb: 200.0,
       notes: 'Take profit PTT',
     },
+    {
+      transaction_id: 'pvd_20260930_sinsa_fi',
+      timestamp: '2026-09-30 00:00:00',
+      symbol: 'PVD_SINSA_FI',
+      action: 'PVD_SNAPSHOT',
+      units: 12.5,
+      price: 100,
+      currency: 'THB',
+      cost_thb: 0,
+      realized_pnl_thb: null,
+      notes: 'PVD statement snapshot',
+      gross_amount: '1250.00',
+      net_amount: '1250.00',
+      commission: '0.00',
+      vat: '0.00',
+      other_fees: '0.00',
+      fee_currency: 'THB',
+      confirmation_no: 'a'.repeat(64),
+      source: 'BBLAM_PVD',
+      fingerprint: 'b'.repeat(64),
+      asset_type: 'PVD',
+      bucket_id: 'retirement_pvd',
+      reconciliation_adjustment: '0.00',
+      pvd_metadata_json: JSON.stringify({
+        payload_version: 1,
+        fund_code: 'BBLAM',
+        member_hash: 'c'.repeat(64),
+        masked_member_id: '***1234',
+        as_of_date: '2026-09-30',
+        period_start: null,
+        period_end: null,
+        total_contribution: '250.00',
+        total_nav: '1250.00',
+        member_principal: '100.00',
+        member_benefit: '50.00',
+        employer_principal: '50.00',
+        employer_benefit: '50.00',
+        employer_vesting_percent: '100',
+        member_vested_amount: '150.00',
+        employer_vested_amount: '100.00',
+        source_pdf_sha256: 'd'.repeat(64),
+        semantic_fingerprint: 'a'.repeat(64),
+        archive_id: 'd'.repeat(64),
+        reconciliation_adjustment: '0.00',
+      }),
+    },
   ]
 
   const mockSummary = {
@@ -75,7 +123,7 @@ describe('PortfolioTransactionsTab', () => {
   })
 
   it('renders transactions table and summary badges from api', async () => {
-    render(<PortfolioTransactionsTab portfolioId="default" />)
+    render(<PortfolioTransactionsTab portfolioId="default" activeView="assets" onViewChange={vi.fn()} />)
 
     await waitFor(() => {
       expect(screen.getAllByText('UNH').length).toBe(2)
@@ -85,8 +133,55 @@ describe('PortfolioTransactionsTab', () => {
     })
   })
 
+  it('keeps one portfolio request and routes PVD snapshots to the statement panel', async () => {
+    render(<PortfolioTransactionsTab portfolioId="default" activeView="pvd" onViewChange={vi.fn()} initialSymbol="PVD_SINSA_FI" />)
+
+    expect(await screen.findByRole('heading', { name: /ประวัติ Statement PVD/ })).toBeInTheDocument()
+    expect(api.getTransactions).toHaveBeenCalledTimes(1)
+    expect(api.getTransactions).toHaveBeenCalledWith('default')
+    expect(screen.getByRole('tab', { name: 'PVD' })).toHaveAttribute('aria-selected', 'true')
+    expect(screen.getAllByText('฿1,250.00')).toHaveLength(2)
+
+    fireEvent.click(screen.getByRole('button', { name: 'ดูรายละเอียด' }))
+    expect(screen.getByRole('row', { name: /SINSA_FI/ })).toBeInTheDocument()
+    expect(api.getPvdDocumentUrl).toHaveBeenCalledWith('d'.repeat(64), 'default')
+
+    const search = screen.getByRole('searchbox', { name: 'ค้นหา Statement หรือกองทุน' })
+    fireEvent.change(search, { target: { value: 'SINSA_FI' } })
+    expect(screen.getByRole('heading', { name: /Statement ·/ })).toBeInTheDocument()
+  })
+
+  it('uses accessible arrow-key navigation for the transaction subtabs', async () => {
+    const onViewChange = vi.fn()
+    render(<PortfolioTransactionsTab portfolioId="default" activeView="assets" onViewChange={onViewChange} />)
+    await waitFor(() => expect(api.getTransactions).toHaveBeenCalledTimes(1))
+    const assetsTab = screen.getByRole('tab', { name: 'สินทรัพย์' })
+    fireEvent.keyDown(assetsTab, { key: 'ArrowRight' })
+    expect(onViewChange).toHaveBeenCalledWith('pvd')
+    expect(screen.getByRole('tab', { name: 'PVD' })).toHaveFocus()
+  })
+
+  it('ignores a slower transaction response from the portfolio that was just left', async () => {
+    let resolveOld!: (value: TransactionListResponseDTO) => void
+    let resolveNew!: (value: TransactionListResponseDTO) => void
+    const oldRequest = new Promise<TransactionListResponseDTO>((resolve) => { resolveOld = resolve })
+    const newRequest = new Promise<TransactionListResponseDTO>((resolve) => { resolveNew = resolve })
+    vi.mocked(api.getTransactions).mockImplementation((portfolioId = 'default') => portfolioId === 'old' ? oldRequest : newRequest)
+
+    const result = render(<PortfolioTransactionsTab portfolioId="old" activeView="assets" onViewChange={vi.fn()} />)
+    await waitFor(() => expect(api.getTransactions).toHaveBeenCalledWith('old'))
+    result.rerender(<PortfolioTransactionsTab portfolioId="new" activeView="assets" onViewChange={vi.fn()} />)
+    await waitFor(() => expect(api.getTransactions).toHaveBeenCalledWith('new'))
+
+    resolveNew({ portfolio_id: 'new', transactions: [{ ...mockTransactions[0]!, transaction_id: 'new-tx', symbol: 'NEW' }], summary: mockSummary })
+    expect(await screen.findByText('NEW')).toBeInTheDocument()
+    resolveOld({ portfolio_id: 'old', transactions: mockTransactions, summary: mockSummary })
+    await waitFor(() => expect(screen.queryByText('UNH')).not.toBeInTheDocument())
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+  })
+
   it('calculates Summ column correctly for SELL rows in both Native and THB views', async () => {
-    render(<PortfolioTransactionsTab portfolioId="default" />)
+    render(<PortfolioTransactionsTab portfolioId="default" activeView="assets" onViewChange={vi.fn()} />)
 
     await waitFor(() => {
       expect(screen.getByText('PTT')).toBeInTheDocument()
@@ -104,7 +199,7 @@ describe('PortfolioTransactionsTab', () => {
   })
 
   it('filters transactions by action type', async () => {
-    render(<PortfolioTransactionsTab portfolioId="default" />)
+    render(<PortfolioTransactionsTab portfolioId="default" activeView="assets" onViewChange={vi.fn()} />)
 
     await waitFor(() => {
       expect(screen.getByText('PTT')).toBeInTheDocument()
@@ -140,7 +235,12 @@ describe('PortfolioTransactionsTab', () => {
       notes: 'Updated UNH note via UI',
     })
 
-    render(<PortfolioTransactionsTab portfolioId="default" />)
+    const updatedRows = mockTransactions.map((tx) => tx.transaction_id === 'tx_1' ? { ...tx, notes: 'Updated UNH note via UI' } : tx)
+    vi.mocked(api.getTransactions)
+      .mockResolvedValueOnce({ portfolio_id: 'default', transactions: mockTransactions, summary: mockSummary })
+      .mockResolvedValueOnce({ portfolio_id: 'default', transactions: updatedRows, summary: mockSummary })
+
+    render(<PortfolioTransactionsTab portfolioId="default" activeView="assets" onViewChange={vi.fn()} />)
 
     await waitFor(() => {
       expect(screen.getByText('Initial UNH lot')).toBeInTheDocument()
@@ -171,7 +271,7 @@ describe('PortfolioTransactionsTab', () => {
     vi.mocked(api.editTransaction).mockResolvedValue(mockState)
     const onSuccess = vi.fn()
 
-    render(<PortfolioTransactionsTab portfolioId="default" onSuccess={onSuccess} />)
+    render(<PortfolioTransactionsTab portfolioId="default" activeView="assets" onViewChange={vi.fn()} onSuccess={onSuccess} />)
 
     await waitFor(() => {
       expect(screen.getByText('Take profit PTT')).toBeInTheDocument()
@@ -208,7 +308,7 @@ describe('PortfolioTransactionsTab', () => {
     vi.mocked(api.voidTransaction).mockResolvedValue(mockState)
     const onSuccess = vi.fn()
 
-    render(<PortfolioTransactionsTab portfolioId="default" onSuccess={onSuccess} />)
+    render(<PortfolioTransactionsTab portfolioId="default" activeView="assets" onViewChange={vi.fn()} onSuccess={onSuccess} />)
 
     await waitFor(() => {
       expect(screen.getByText('Take profit PTT')).toBeInTheDocument()

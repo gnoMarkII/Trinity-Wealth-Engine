@@ -619,6 +619,674 @@
         ]
       }
     },
+    "/api/investor/bucket-plans": {
+      "post": {
+        "operationId": "create_bucket_plan_api_investor_bucket_plans_post",
+        "tags": [
+          "Investor Essence & Axis"
+        ],
+        "summary": "Create Bucket Plan",
+        "parameters": [],
+        "has_request_body": true,
+        "responses": [
+          "201",
+          "422"
+        ]
+      }
+    },
+    "/api/investor/bucket-plans/latest": {
+      "get": {
+        "operationId": "get_latest_bucket_plan_api_investor_bucket_plans_latest_get",
+        "tags": [
+          "Investor Essence & Axis"
+        ],
+        "summary": "Get Latest Bucket Plan",
+        "parameters": [
+          {
+            "name": "portfolio_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Portfolio Id"
+            }
+          }
+        ],
+        "has_request_body": false,
+        "responses": [
+          "200",
+          "422"
+        ]
+      }
+    },
+    "/api/investor/bucket-plans/{draft_id}": {
+      "get": {
+        "operationId": "get_bucket_plan_api_investor_bucket_plans__draft_id__get",
+        "tags": [
+          "Investor Essence & Axis"
+        ],
+        "summary": "Get Bucket Plan",
+        "parameters": [
+          {
+            "name": "draft_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Draft Id"
+            }
+          }
+        ],
+        "has_request_body": false,
+        "responses": [
+          "200",
+          "422"
+        ]
+      },
+      "put": {
+        "operationId": "update_bucket_plan_api_investor_bucket_plans__draft_id__put",
+        "tags": [
+          "Investor Essence & Axis"
+        ],
+        "summary": "Update Bucket Plan",
+        "parameters": [
+          {
+            "name": "draft_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Draft Id"
+            }
+          }
+        ],
+        "has_request_body": true,
+        "responses": [
+          "200",
+          "422"
+        ]
+      }
+    },
+    "/api/investor/bucket-plans/{draft_id}/apply": {
+      "post": {
+        "operationId": "apply_bucket_plan_api_investor_bucket_plans__draft_id__apply_post",
+        "tags": [
+          "Investor Essence & Axis"
+        ],
+        "summary": "Apply Bucket Plan",
+        "parameters": [
+          {
+            "name": "draft_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Draft Id"
+            }
+          }
+        ],
+        "has_request_body": true,
+        "responses": [
+          "200",
+          "422"
+        ]
+      }
+    },
+    "/api/investor/bucket-plans/{draft_id}/preview": {
+      "get": {
+        "operationId": "preview_bucket_plan_api_investor_bucket_plans__draft_id__preview_get",
+        "tags": [
+          "Investor Essence & Axis"
+        ],
+        "summary": "Preview Bucket Plan",
+        "parameters": [
+          {
+            "name": "draft_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Draft Id"
+            }
+          }
+        ],
+        "has_request_body": false,
+        "responses": [
+          "200",
+          "422"
+        ]
+      }
+    },
+    "/api/investor/essence/current": {
+      "get": {
+        "operationId": "get_current_essence_api_investor_essence_current_get",
+        "tags": [
+          "Investor Essence & Axis"
+        ],
+        "summary": "Get Current Essence",
+        "parameters": [],
+        "has_request_body": false,
+        "responses": [
+          "200"
+        ]
+      }
+    },
+    "/api/investor/essence/interview-config": {
+      "get": {
+        "operationId": "get_interview_config_api_investor_essence_interview_config_get",
+        "tags": [
+          "Investor Essence & Axis"
+        ],
+        "summary": "Get Interview Config",
+        "parameters": [],
+        "has_request_body": false,
+        "responses": [
+          "200"
+        ]
+      }
+    },
+    "/api/investor/essence/sessions": {
+      "post": {
+        "operationId": "start_session_api_investor_essence_sessions_post",
+        "tags": [
+          "Investor Essence & Axis"
+        ],
+        "summary": "Start Session",
+        "parameters": [],
+        "has_request_body": true,
+        "responses": [
+          "201",
+          "422"
+        ]
+      }
+    },
+    "/api/investor/essence/sessions/current": {
+      "get": {
+        "operationId": "get_current_session_api_investor_essence_sessions_current_get",
+        "tags": [
+          "Investor Essence & Axis"
+        ],
+        "summary": "Get Current Session",
+        "parameters": [
+          {
+            "name": "scope",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "workspace",
+              "title": "Scope"
+            }
+          }
+        ],
+        "has_request_body": false,
+        "responses": [
+          "200",
+          "422"
+        ]
+      }
+    },
+    "/api/investor/essence/sessions/{session_id}": {
+      "get": {
+        "operationId": "get_session_api_investor_essence_sessions__session_id__get",
+        "tags": [
+          "Investor Essence & Axis"
+        ],
+        "summary": "Get Session",
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Session Id"
+            }
+          }
+        ],
+        "has_request_body": false,
+        "responses": [
+          "200",
+          "422"
+        ]
+      }
+    },
+    "/api/investor/essence/sessions/{session_id}/answers/{question_id}": {
+      "put": {
+        "operationId": "record_answer_api_investor_essence_sessions__session_id__answers__question_id__put",
+        "tags": [
+          "Investor Essence & Axis"
+        ],
+        "summary": "Record Answer",
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Session Id"
+            }
+          },
+          {
+            "name": "question_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Question Id"
+            }
+          }
+        ],
+        "has_request_body": true,
+        "responses": [
+          "200",
+          "422"
+        ]
+      }
+    },
+    "/api/investor/essence/sessions/{session_id}/clarification": {
+      "post": {
+        "operationId": "request_clarification_api_investor_essence_sessions__session_id__clarification_post",
+        "tags": [
+          "Investor Essence & Axis"
+        ],
+        "summary": "Request Clarification",
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Session Id"
+            }
+          }
+        ],
+        "has_request_body": true,
+        "responses": [
+          "200",
+          "422"
+        ]
+      }
+    },
+    "/api/investor/essence/sessions/{session_id}/confirm": {
+      "post": {
+        "operationId": "confirm_essence_api_investor_essence_sessions__session_id__confirm_post",
+        "tags": [
+          "Investor Essence & Axis"
+        ],
+        "summary": "Confirm Essence",
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Session Id"
+            }
+          }
+        ],
+        "has_request_body": true,
+        "responses": [
+          "200",
+          "422"
+        ]
+      }
+    },
+    "/api/investor/essence/sessions/{session_id}/next-question": {
+      "post": {
+        "operationId": "advance_next_question_api_investor_essence_sessions__session_id__next_question_post",
+        "tags": [
+          "Investor Essence & Axis"
+        ],
+        "summary": "Advance Next Question",
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Session Id"
+            }
+          }
+        ],
+        "has_request_body": true,
+        "responses": [
+          "200",
+          "422"
+        ]
+      }
+    },
+    "/api/investor/essence/sessions/{session_id}/summarize": {
+      "post": {
+        "operationId": "generate_summary_api_investor_essence_sessions__session_id__summarize_post",
+        "tags": [
+          "Investor Essence & Axis"
+        ],
+        "summary": "Generate Summary",
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Session Id"
+            }
+          }
+        ],
+        "has_request_body": true,
+        "responses": [
+          "200",
+          "422"
+        ]
+      }
+    },
+    "/api/investor/essence/sessions/{session_id}/summary": {
+      "get": {
+        "operationId": "get_summary_api_investor_essence_sessions__session_id__summary_get",
+        "tags": [
+          "Investor Essence & Axis"
+        ],
+        "summary": "Get Summary",
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Session Id"
+            }
+          }
+        ],
+        "has_request_body": false,
+        "responses": [
+          "200",
+          "422"
+        ]
+      }
+    },
+    "/api/investor/essence/sessions/{session_id}/summary/claims/{claim_id}": {
+      "put": {
+        "operationId": "review_claim_api_investor_essence_sessions__session_id__summary_claims__claim_id__put",
+        "tags": [
+          "Investor Essence & Axis"
+        ],
+        "summary": "Review Claim",
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Session Id"
+            }
+          },
+          {
+            "name": "claim_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Claim Id"
+            }
+          }
+        ],
+        "has_request_body": true,
+        "responses": [
+          "200",
+          "422"
+        ]
+      }
+    },
+    "/api/investor/financial-context": {
+      "get": {
+        "operationId": "get_financial_context_api_investor_financial_context_get",
+        "tags": [
+          "Investor Essence & Axis"
+        ],
+        "summary": "Get Financial Context",
+        "parameters": [
+          {
+            "name": "portfolio_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Portfolio Id"
+            }
+          }
+        ],
+        "has_request_body": false,
+        "responses": [
+          "200",
+          "422"
+        ]
+      },
+      "put": {
+        "operationId": "update_financial_context_api_investor_financial_context_put",
+        "tags": [
+          "Investor Essence & Axis"
+        ],
+        "summary": "Update Financial Context",
+        "parameters": [
+          {
+            "name": "portfolio_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Portfolio Id"
+            }
+          }
+        ],
+        "has_request_body": true,
+        "responses": [
+          "200",
+          "422"
+        ]
+      }
+    },
+    "/api/investor/financial-context/sync-goals": {
+      "post": {
+        "operationId": "sync_financial_context_from_goals_api_investor_financial_context_sync_goals_post",
+        "tags": [
+          "Investor Essence & Axis"
+        ],
+        "summary": "Sync Financial Context From Goals",
+        "parameters": [
+          {
+            "name": "portfolio_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Portfolio Id"
+            }
+          }
+        ],
+        "has_request_body": false,
+        "responses": [
+          "200",
+          "422"
+        ]
+      }
+    },
+    "/api/investor/investment-axis/current": {
+      "get": {
+        "operationId": "get_current_axis_api_investor_investment_axis_current_get",
+        "tags": [
+          "Investor Essence & Axis"
+        ],
+        "summary": "Get Current Axis",
+        "parameters": [
+          {
+            "name": "portfolio_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Portfolio Id"
+            }
+          }
+        ],
+        "has_request_body": false,
+        "responses": [
+          "200",
+          "422"
+        ]
+      }
+    },
+    "/api/investor/investment-axis/drafts": {
+      "post": {
+        "operationId": "create_axis_draft_api_investor_investment_axis_drafts_post",
+        "tags": [
+          "Investor Essence & Axis"
+        ],
+        "summary": "Create Axis Draft",
+        "parameters": [],
+        "has_request_body": true,
+        "responses": [
+          "201",
+          "422"
+        ]
+      }
+    },
+    "/api/investor/investment-axis/drafts/latest": {
+      "get": {
+        "operationId": "get_latest_axis_draft_api_investor_investment_axis_drafts_latest_get",
+        "tags": [
+          "Investor Essence & Axis"
+        ],
+        "summary": "Get Latest Axis Draft",
+        "parameters": [
+          {
+            "name": "portfolio_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Portfolio Id"
+            }
+          }
+        ],
+        "has_request_body": false,
+        "responses": [
+          "200",
+          "422"
+        ]
+      }
+    },
+    "/api/investor/investment-axis/drafts/{draft_id}": {
+      "get": {
+        "operationId": "get_axis_draft_api_investor_investment_axis_drafts__draft_id__get",
+        "tags": [
+          "Investor Essence & Axis"
+        ],
+        "summary": "Get Axis Draft",
+        "parameters": [
+          {
+            "name": "draft_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Draft Id"
+            }
+          }
+        ],
+        "has_request_body": false,
+        "responses": [
+          "200",
+          "422"
+        ]
+      },
+      "put": {
+        "operationId": "update_axis_draft_api_investor_investment_axis_drafts__draft_id__put",
+        "tags": [
+          "Investor Essence & Axis"
+        ],
+        "summary": "Update Axis Draft",
+        "parameters": [
+          {
+            "name": "draft_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Draft Id"
+            }
+          }
+        ],
+        "has_request_body": true,
+        "responses": [
+          "200",
+          "422"
+        ]
+      }
+    },
+    "/api/investor/investment-axis/drafts/{draft_id}/confirm": {
+      "post": {
+        "operationId": "confirm_investment_axis_api_investor_investment_axis_drafts__draft_id__confirm_post",
+        "tags": [
+          "Investor Essence & Axis"
+        ],
+        "summary": "Confirm Investment Axis",
+        "parameters": [
+          {
+            "name": "draft_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Draft Id"
+            }
+          }
+        ],
+        "has_request_body": true,
+        "responses": [
+          "200",
+          "422"
+        ]
+      }
+    },
+    "/api/investor/reset-principles": {
+      "post": {
+        "operationId": "reset_principles_api_investor_reset_principles_post",
+        "tags": [
+          "Investor Essence & Axis"
+        ],
+        "summary": "Reset Principles",
+        "parameters": [
+          {
+            "name": "portfolio_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Portfolio Id"
+            }
+          }
+        ],
+        "has_request_body": false,
+        "responses": [
+          "200",
+          "422"
+        ]
+      }
+    },
     "/api/kanban/cards": {
       "get": {
         "operationId": "list_cards_api_kanban_cards_get",
@@ -1365,11 +2033,59 @@
         ]
       }
     },
+    "/api/portfolio/actual/holdings/ai-recommend-buckets": {
+      "post": {
+        "operationId": "recommend_holding_buckets_endpoint_api_portfolio_actual_holdings_ai_recommend_buckets_post",
+        "tags": [],
+        "summary": "Recommend Holding Buckets Endpoint",
+        "parameters": [
+          {
+            "name": "portfolio_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "default",
+              "title": "Portfolio Id"
+            }
+          }
+        ],
+        "has_request_body": false,
+        "responses": [
+          "200",
+          "422"
+        ]
+      }
+    },
     "/api/portfolio/actual/holdings/batch-bucket": {
       "put": {
         "operationId": "batch_assign_holding_buckets_api_portfolio_actual_holdings_batch_bucket_put",
         "tags": [],
         "summary": "Batch Assign Holding Buckets",
+        "parameters": [
+          {
+            "name": "portfolio_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "default",
+              "title": "Portfolio Id"
+            }
+          }
+        ],
+        "has_request_body": true,
+        "responses": [
+          "200",
+          "422"
+        ]
+      }
+    },
+    "/api/portfolio/actual/holdings/batch-bucket-map": {
+      "put": {
+        "operationId": "batch_reassign_holding_buckets_endpoint_api_portfolio_actual_holdings_batch_bucket_map_put",
+        "tags": [],
+        "summary": "Batch Reassign Holding Buckets Endpoint",
         "parameters": [
           {
             "name": "portfolio_id",
@@ -2076,6 +2792,122 @@
         ]
       }
     },
+    "/api/portfolio/arr-gold/commit/{scan_id}": {
+      "post": {
+        "operationId": "commit_staged_endpoint_api_portfolio_arr_gold_commit__scan_id__post",
+        "tags": [
+          "ARR Gold Sync"
+        ],
+        "summary": "Commit Staged Endpoint",
+        "parameters": [
+          {
+            "name": "scan_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Scan Id"
+            }
+          }
+        ],
+        "has_request_body": true,
+        "responses": [
+          "200",
+          "422"
+        ]
+      }
+    },
+    "/api/portfolio/arr-gold/emails": {
+      "get": {
+        "operationId": "search_arr_gold_emails_endpoint_api_portfolio_arr_gold_emails_get",
+        "tags": [
+          "ARR Gold Sync"
+        ],
+        "summary": "Search Arr Gold Emails Endpoint",
+        "parameters": [
+          {
+            "name": "query",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "Query"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 50,
+              "title": "Limit"
+            }
+          }
+        ],
+        "has_request_body": false,
+        "responses": [
+          "200",
+          "422"
+        ]
+      }
+    },
+    "/api/portfolio/arr-gold/scan/batch-stream": {
+      "post": {
+        "operationId": "scan_batch_stream_endpoint_api_portfolio_arr_gold_scan_batch_stream_post",
+        "tags": [
+          "ARR Gold Sync"
+        ],
+        "summary": "Scan Batch Stream Endpoint",
+        "parameters": [],
+        "has_request_body": true,
+        "responses": [
+          "200",
+          "422"
+        ]
+      }
+    },
+    "/api/portfolio/arr-gold/scan/email": {
+      "post": {
+        "operationId": "scan_email_endpoint_api_portfolio_arr_gold_scan_email_post",
+        "tags": [
+          "ARR Gold Sync"
+        ],
+        "summary": "Scan Email Endpoint",
+        "parameters": [],
+        "has_request_body": true,
+        "responses": [
+          "200",
+          "422"
+        ]
+      }
+    },
+    "/api/portfolio/arr-gold/staged/{scan_id}": {
+      "get": {
+        "operationId": "get_staged_endpoint_api_portfolio_arr_gold_staged__scan_id__get",
+        "tags": [
+          "ARR Gold Sync"
+        ],
+        "summary": "Get Staged Endpoint",
+        "parameters": [
+          {
+            "name": "scan_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Scan Id"
+            }
+          }
+        ],
+        "has_request_body": false,
+        "responses": [
+          "200",
+          "422"
+        ]
+      }
+    },
     "/api/portfolio/calendar": {
       "get": {
         "operationId": "get_portfolio_calendar_api_portfolio_calendar_get",
@@ -2375,6 +3207,71 @@
         "has_request_body": false,
         "responses": [
           "200"
+        ]
+      }
+    },
+    "/api/portfolio/pvd/analyze-upload": {
+      "post": {
+        "operationId": "analyze_pvd_upload_api_portfolio_pvd_analyze_upload_post",
+        "tags": [
+          "Portfolio PVD"
+        ],
+        "summary": "Analyze Pvd Upload",
+        "parameters": [],
+        "has_request_body": true,
+        "responses": [
+          "200",
+          "422"
+        ]
+      }
+    },
+    "/api/portfolio/pvd/commit": {
+      "post": {
+        "operationId": "commit_pvd_statement_api_portfolio_pvd_commit_post",
+        "tags": [
+          "Portfolio PVD"
+        ],
+        "summary": "Commit Pvd Statement",
+        "parameters": [],
+        "has_request_body": true,
+        "responses": [
+          "200",
+          "422"
+        ]
+      }
+    },
+    "/api/portfolio/pvd/documents/{archive_id}": {
+      "get": {
+        "operationId": "get_pvd_document_api_portfolio_pvd_documents__archive_id__get",
+        "tags": [
+          "Portfolio PVD"
+        ],
+        "summary": "Get Pvd Document",
+        "parameters": [
+          {
+            "name": "archive_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Archive Id"
+            }
+          },
+          {
+            "name": "portfolio_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "default",
+              "title": "Portfolio Id"
+            }
+          }
+        ],
+        "has_request_body": false,
+        "responses": [
+          "200",
+          "422"
         ]
       }
     },

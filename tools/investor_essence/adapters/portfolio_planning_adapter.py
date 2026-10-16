@@ -312,12 +312,9 @@ class PortfolioPlanningAdapter(PortfolioPlanningPort):
         )
 
     def get_goals(self, portfolio_id: str) -> List[Dict[str, Any]]:
-        """Retrieve structured goals for the investor across portfolios."""
+        """Retrieve structured goals strictly scoped to the specified portfolio."""
         try:
             from tools.portfolio.goals import get_structured_goals
-            all_goals = get_structured_goals(portfolio_id=None)
-            if all_goals:
-                return all_goals
             return get_structured_goals(portfolio_id=portfolio_id)
         except Exception as e:
             logger.warning("Failed to retrieve structured goals for %s: %s", portfolio_id, e)

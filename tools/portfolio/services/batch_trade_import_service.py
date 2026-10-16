@@ -66,6 +66,8 @@ class BatchTradeImportService:
         pid = validate_portfolio_id(portfolio_id)
         if not items:
             return self.repo.load_state(pid)
+        if any(item.action == "PVD_SNAPSHOT" or item.asset_type == "PVD" for item in items):
+            raise ValueError("PVD snapshot ต้อง commit ผ่าน PvdSyncService เท่านั้น")
 
         with self.repo.unit_of_work(pid) as uow:
             state = uow.load_state()

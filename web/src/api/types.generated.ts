@@ -211,6 +211,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/portfolio/actual/holdings/ai-recommend-buckets": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Recommend Holding Buckets Endpoint */
+        post: operations["recommend_holding_buckets_endpoint_api_portfolio_actual_holdings_ai_recommend_buckets_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/portfolio/actual/holdings/batch-bucket-map": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Batch Reassign Holding Buckets Endpoint */
+        put: operations["batch_reassign_holding_buckets_endpoint_api_portfolio_actual_holdings_batch_bucket_map_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/portfolio/actual/holdings/batch-delete": {
         parameters: {
             query?: never;
@@ -827,6 +861,57 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/portfolio/pvd/analyze-upload": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Analyze Pvd Upload */
+        post: operations["analyze_pvd_upload_api_portfolio_pvd_analyze_upload_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/portfolio/pvd/commit": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Commit Pvd Statement */
+        post: operations["commit_pvd_statement_api_portfolio_pvd_commit_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/portfolio/pvd/documents/{archive_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Pvd Document */
+        get: operations["get_pvd_document_api_portfolio_pvd_documents__archive_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/portfolio/dime/emails": {
         parameters: {
             query?: never;
@@ -1195,6 +1280,91 @@ export interface paths {
         get: operations["get_email_html_endpoint_api_portfolio_scb_emails__email_id__html_get"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/portfolio/arr-gold/emails": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Search Arr Gold Emails Endpoint */
+        get: operations["search_arr_gold_emails_endpoint_api_portfolio_arr_gold_emails_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/portfolio/arr-gold/scan/email": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Scan Email Endpoint */
+        post: operations["scan_email_endpoint_api_portfolio_arr_gold_scan_email_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/portfolio/arr-gold/staged/{scan_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Staged Endpoint */
+        get: operations["get_staged_endpoint_api_portfolio_arr_gold_staged__scan_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/portfolio/arr-gold/commit/{scan_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Commit Staged Endpoint */
+        post: operations["commit_staged_endpoint_api_portfolio_arr_gold_commit__scan_id__post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/portfolio/arr-gold/scan/batch-stream": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Scan Batch Stream Endpoint */
+        post: operations["scan_batch_stream_endpoint_api_portfolio_arr_gold_scan_batch_stream_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2343,9 +2513,29 @@ export interface paths {
         put?: never;
         /**
          * Start Session
-         * @description Starts a new adaptive interview session and generates Question 1.
+         * @description Starts a new adaptive interview session, clears downstream planning data, and generates Question 1.
          */
         post: operations["start_session_api_investor_essence_sessions_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/investor/reset-principles": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Reset Principles
+         * @description Explicitly resets and clears downstream Investment Axis and Purpose Bucket plans.
+         */
+        post: operations["reset_principles_api_investor_reset_principles_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2472,6 +2662,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/investor/essence/sessions/{session_id}/clarification": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Request Clarification
+         * @description Generates a clarification question on an unresolved topic.
+         */
+        post: operations["request_clarification_api_investor_essence_sessions__session_id__clarification_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/investor/essence/sessions/{session_id}/summary/claims/{claim_id}": {
         parameters: {
             query?: never;
@@ -2556,6 +2766,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/investor/financial-context/sync-goals": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Sync Financial Context From Goals
+         * @description Auto-populates financial context from portfolio goals and holdings snapshot.
+         */
+        post: operations["sync_financial_context_from_goals_api_investor_financial_context_sync_goals_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/investor/investment-axis/drafts": {
         parameters: {
             query?: never;
@@ -2570,6 +2800,26 @@ export interface paths {
          * @description Generates an 8-section investment policy draft using Command 2 and confirmed essence.
          */
         post: operations["create_axis_draft_api_investor_investment_axis_drafts_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/investor/investment-axis/drafts/latest": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Latest Axis Draft
+         * @description Retrieves the most recent investment axis draft for a portfolio.
+         */
+        get: operations["get_latest_axis_draft_api_investor_investment_axis_drafts_latest_get"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -2654,6 +2904,26 @@ export interface paths {
          * @description Generates 3-5 purpose buckets and multi-dimensional mapping from confirmed axis.
          */
         post: operations["create_bucket_plan_api_investor_bucket_plans_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/investor/bucket-plans/latest": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Latest Bucket Plan
+         * @description Retrieves the most recent bucket plan draft for a portfolio.
+         */
+        get: operations["get_latest_bucket_plan_api_investor_bucket_plans_latest_get"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -2871,9 +3141,12 @@ export interface components {
             dividend_source?: ("synced" | "manual") | null;
             /** Fundamentals Updated At */
             fundamentals_updated_at?: number | null;
+            pvd_valuation?: components["schemas"]["PvdHoldingValuationDTO"] | null;
         };
         /** ActualPortfolioStateDTO */
         ActualPortfolioStateDTO: {
+            /** Name */
+            name?: string | null;
             /** Last Updated */
             last_updated?: string | null;
             /**
@@ -2898,6 +3171,21 @@ export interface components {
             price_refresh_info?: {
                 [key: string]: string;
             } | null;
+            /** Allocation Policy */
+            allocation_policy?: {
+                [key: string]: unknown;
+            } | null;
+            /** Allocation Plan Origin */
+            allocation_plan_origin?: {
+                [key: string]: unknown;
+            } | null;
+            /**
+             * Pvd Statements
+             * @default []
+             */
+            pvd_statements: components["schemas"]["PvdStatementMetadataDTO"][];
+            /** Pvd Import Epoch */
+            pvd_import_epoch?: string | null;
         };
         /** ActualSummaryDTO */
         ActualSummaryDTO: {
@@ -3012,6 +3300,25 @@ export interface components {
             issues: string[];
             /** Payload Hash */
             payload_hash: string;
+            /**
+             * Preview Id
+             * @default
+             */
+            preview_id: string;
+            /**
+             * Draft Id
+             * @default
+             */
+            draft_id: string;
+            /**
+             * Draft Revision
+             * @default 1
+             */
+            draft_revision: number;
+            /** Source Refs */
+            source_refs?: {
+                [key: string]: unknown;
+            };
         };
         /** AllocationTargetDTO */
         AllocationTargetDTO: {
@@ -3106,6 +3413,186 @@ export interface components {
         ApplyBucketPlanRequest: {
             /** Idempotency Key */
             idempotency_key?: string | null;
+            /** Expected Draft Revision */
+            expected_draft_revision?: number | null;
+            /** Expected Checkpoint Sequence */
+            expected_checkpoint_sequence?: number | null;
+            /** Expected Checkpoint State Hash */
+            expected_checkpoint_state_hash?: string | null;
+            /** Preview Id */
+            preview_id?: string | null;
+            /** Payload Hash */
+            payload_hash?: string | null;
+        };
+        /** ArrGoldBatchScanRequestDTO */
+        ArrGoldBatchScanRequestDTO: {
+            /** Password */
+            password?: string | null;
+            /**
+             * Force Rescan
+             * @default false
+             */
+            force_rescan: boolean;
+            /**
+             * Portfolio Id
+             * @default default
+             */
+            portfolio_id: string;
+        };
+        /** ArrGoldCommitRequestDTO */
+        ArrGoldCommitRequestDTO: {
+            /**
+             * Portfolio Id
+             * @default default
+             */
+            portfolio_id: string;
+            /** Selected Item Ids */
+            selected_item_ids?: string[] | null;
+        };
+        /** ArrGoldCommitResponseDTO */
+        ArrGoldCommitResponseDTO: {
+            /**
+             * Ok
+             * @default true
+             */
+            ok: boolean;
+            /** Imported Count */
+            imported_count: number;
+            state: components["schemas"]["ActualPortfolioStateDTO"];
+        };
+        /** ArrGoldEmailListResponseDTO */
+        ArrGoldEmailListResponseDTO: {
+            /**
+             * Emails
+             * @default []
+             */
+            emails: components["schemas"]["ArrGoldEmailMetadataDTO"][];
+        };
+        /** ArrGoldEmailMetadataDTO */
+        ArrGoldEmailMetadataDTO: {
+            /** Message Id */
+            message_id: string;
+            /** Attachment Id */
+            attachment_id?: string | null;
+            /** Subject */
+            subject: string;
+            /** Sender */
+            sender: string;
+            /** Received At */
+            received_at: string;
+            /** Filename */
+            filename?: string | null;
+            /**
+             * Size Bytes
+             * @default 0
+             */
+            size_bytes: number;
+        };
+        /** ArrGoldScanEmailRequestDTO */
+        ArrGoldScanEmailRequestDTO: {
+            /** Message Id */
+            message_id: string;
+            /** Attachment Id */
+            attachment_id?: string | null;
+            /** Subject */
+            subject?: string | null;
+            /** Password */
+            password?: string | null;
+        };
+        /** ArrGoldScanResponseDTO */
+        ArrGoldScanResponseDTO: {
+            /** Scan Id */
+            scan_id: string;
+            /** Item Count */
+            item_count: number;
+            /**
+             * Items
+             * @default []
+             */
+            items: components["schemas"]["ArrGoldStagedItemDTO"][];
+            /**
+             * Warnings
+             * @default []
+             */
+            warnings: unknown[];
+        };
+        /** ArrGoldStagedItemDTO */
+        ArrGoldStagedItemDTO: {
+            /** Item Id */
+            item_id: string;
+            /** Trade Date */
+            trade_date: string;
+            /** Settlement Date */
+            settlement_date?: string | null;
+            /** Symbol */
+            symbol: string;
+            /** Action */
+            action: string;
+            /** Units */
+            units: string;
+            /** Price */
+            price: string;
+            /** Gross Amount */
+            gross_amount: string;
+            fees?: components["schemas"]["ArrGoldStagedItemFeeDTO"];
+            /** Net Amount */
+            net_amount: string;
+            /**
+             * Currency
+             * @default USD
+             */
+            currency: string;
+            /** Exchange Rate */
+            exchange_rate?: string | null;
+            /** Confirmation No */
+            confirmation_no: string;
+            /** Order Id */
+            order_id?: string | null;
+            /**
+             * Source
+             * @default ARR_GOLD
+             */
+            source: string;
+            /** Fingerprint */
+            fingerprint: string;
+            /**
+             * Line Index
+             * @default 0
+             */
+            line_index: number;
+            /**
+             * Cash Adjusted
+             * @default false
+             */
+            cash_adjusted: boolean;
+            /**
+             * Asset Type
+             * @default Gold
+             */
+            asset_type: string;
+        };
+        /** ArrGoldStagedItemFeeDTO */
+        ArrGoldStagedItemFeeDTO: {
+            /**
+             * Commission
+             * @default 0.00
+             */
+            commission: string;
+            /**
+             * Vat
+             * @default 0.00
+             */
+            vat: string;
+            /**
+             * Other Fees
+             * @default 0.00
+             */
+            other_fees: string;
+            /**
+             * Fee Currency
+             * @default USD
+             */
+            fee_currency: string;
         };
         /** AssetAllocationDTO */
         AssetAllocationDTO: {
@@ -3304,6 +3791,14 @@ export interface components {
             /** Bucket Id */
             bucket_id?: string | null;
         };
+        /** BatchReassignHoldingsRequestDTO */
+        BatchReassignHoldingsRequestDTO: {
+            /**
+             * Assignments
+             * @default []
+             */
+            assignments: components["schemas"]["HoldingBucketAssignmentItemDTO"][];
+        };
         /** BatchRemoveHoldingsRequestDTO */
         BatchRemoveHoldingsRequestDTO: {
             /**
@@ -3311,6 +3806,23 @@ export interface components {
              * @default []
              */
             symbols: string[];
+        };
+        /** Body_analyze_pvd_upload_api_portfolio_pvd_analyze_upload_post */
+        Body_analyze_pvd_upload_api_portfolio_pvd_analyze_upload_post: {
+            /** File */
+            file: string;
+            /**
+             * Portfolio Id
+             * @default default
+             */
+            portfolio_id: string;
+            /** Password */
+            password?: string | null;
+            /**
+             * Vesting Percent
+             * @default 100
+             */
+            vesting_percent: string;
         };
         /** Body_scan_upload_pdf_endpoint_api_portfolio_dime_scan_upload_post */
         Body_scan_upload_pdf_endpoint_api_portfolio_dime_scan_upload_post: {
@@ -3480,6 +3992,18 @@ export interface components {
             /** Evidence Refs */
             evidence_refs?: components["schemas"]["EvidenceRefSchema"][];
         };
+        /** ClarificationRequest */
+        ClarificationRequest: {
+            /** Unresolved Topic */
+            unresolved_topic: string;
+            /** Expected Revision */
+            expected_revision?: number | null;
+            /**
+             * Prompt Version
+             * @default 1.0
+             */
+            prompt_version: string;
+        };
         /** CommodityVolSnapshotSchema */
         CommodityVolSnapshotSchema: {
             /**
@@ -3545,6 +4069,8 @@ export interface components {
         ConfirmAxisRequest: {
             /** Idempotency Key */
             idempotency_key?: string | null;
+            /** Expected Draft Revision */
+            expected_draft_revision?: number | null;
         };
         /** ConfirmEssenceRequest */
         ConfirmEssenceRequest: {
@@ -4575,6 +5101,18 @@ export interface components {
             withdrawal_amount?: string | null;
             /** Experience Description */
             experience_description?: string | null;
+            /** Monthly Investable Contribution */
+            monthly_investable_contribution?: string | null;
+            /** Essential Monthly Expense */
+            essential_monthly_expense?: string | null;
+            /** Reserves Outside Portfolio */
+            reserves_outside_portfolio?: string | null;
+            /** Facts */
+            facts?: {
+                [key: string]: {
+                    [key: string]: unknown;
+                };
+            };
             /** Unknown Fields */
             unknown_fields?: string[];
             /**
@@ -4588,9 +5126,7 @@ export interface components {
              */
             source: string;
             /** Readiness Issues */
-            readiness_issues?: {
-                [key: string]: unknown;
-            }[];
+            readiness_issues?: components["schemas"]["ValidationIssueSchema"][];
             /**
              * Is Ready For Numeric Policy
              * @default false
@@ -4925,6 +5461,51 @@ export interface components {
         HTTPValidationError: {
             /** Detail */
             detail?: components["schemas"]["ValidationError"][];
+        };
+        /** HoldingBucketAssignmentItemDTO */
+        HoldingBucketAssignmentItemDTO: {
+            /** Symbol */
+            symbol: string;
+            /** Bucket Id */
+            bucket_id?: string | null;
+        };
+        /** HoldingBucketRecommendationItemDTO */
+        HoldingBucketRecommendationItemDTO: {
+            /** Symbol */
+            symbol: string;
+            /** Asset Type */
+            asset_type: string;
+            /** Current Bucket Id */
+            current_bucket_id?: string | null;
+            /** Recommended Bucket Id */
+            recommended_bucket_id: string;
+            /** Is Changed */
+            is_changed: boolean;
+            /** Reason */
+            reason: string;
+        };
+        /** HoldingsBucketRecommendationResponseDTO */
+        HoldingsBucketRecommendationResponseDTO: {
+            /**
+             * Recommendations
+             * @default []
+             */
+            recommendations: components["schemas"]["HoldingBucketRecommendationItemDTO"][];
+            /**
+             * Summary
+             * @default
+             */
+            summary: string;
+            /**
+             * Total Unassigned
+             * @default 0
+             */
+            total_unassigned: number;
+            /**
+             * Total Mismatched
+             * @default 0
+             */
+            total_mismatched: number;
         };
         /** IncomeRequestDTO */
         IncomeRequestDTO: {
@@ -6730,6 +7311,192 @@ export interface components {
             source_value_ids?: string[];
             /** Source Axis Allocation Ids */
             source_axis_allocation_ids?: string[];
+            /** Linked Goal Name */
+            linked_goal_name?: string | null;
+            /** Eligible Assets */
+            eligible_assets?: string[];
+            /** Cash Inflow Routing Pct */
+            cash_inflow_routing_pct?: string | null;
+            /** Action Rules */
+            action_rules?: string[];
+            /** Target Amount */
+            target_amount?: string | null;
+            /** Minimum Amount */
+            minimum_amount?: string | null;
+            /** Need By Date */
+            need_by_date?: string | null;
+            /**
+             * Inflow Route Mode
+             * @default fixed_ratio
+             */
+            inflow_route_mode: string;
+            /**
+             * Inflow Priority
+             * @default 1
+             */
+            inflow_priority: number;
+            /** When Full Redirect Bucket Id */
+            when_full_redirect_bucket_id?: string | null;
+            /** Goal Id */
+            goal_id?: string | null;
+            /**
+             * Schema Version
+             * @default 2.0
+             */
+            schema_version: string;
+        };
+        /** PvdAnalyzeResponse */
+        PvdAnalyzeResponse: {
+            /** Scan Id */
+            scan_id?: string | null;
+            /** Can Commit */
+            can_commit: boolean;
+            /** Status */
+            status: string;
+            /** Message */
+            message: string;
+            /** Statement */
+            statement?: {
+                [key: string]: unknown;
+            } | null;
+            /** Holdings */
+            holdings?: {
+                [key: string]: unknown;
+            }[];
+            /** Current Nav */
+            current_nav?: string | null;
+            /** New Nav */
+            new_nav?: string | null;
+            /** Delta Nav */
+            delta_nav?: string | null;
+            /**
+             * Vesting Percent
+             * @default 100
+             */
+            vesting_percent: string;
+            /** Vested Amount */
+            vested_amount?: string | null;
+            /** Archive Id */
+            archive_id?: string | null;
+        };
+        /** PvdCommitRequest */
+        PvdCommitRequest: {
+            /** Scan Id */
+            scan_id: string;
+            /** Idempotency Key */
+            idempotency_key: string;
+            /**
+             * Portfolio Id
+             * @default default
+             */
+            portfolio_id: string;
+            /**
+             * Vesting Percent
+             * @default 100
+             */
+            vesting_percent: number | string;
+            /** Selected Item Ids */
+            selected_item_ids?: string[] | null;
+        };
+        /** PvdCommitResponse */
+        PvdCommitResponse: {
+            /** Status */
+            status: string;
+            /** Message */
+            message: string;
+            /** Archive Id */
+            archive_id?: string | null;
+            /** State */
+            state: {
+                [key: string]: unknown;
+            };
+        };
+        /** PvdHoldingValuationDTO */
+        PvdHoldingValuationDTO: {
+            /**
+             * Payload Version
+             * @default 1
+             */
+            payload_version: number;
+            /** Fund Code */
+            fund_code: string;
+            /** Sub Fund Code */
+            sub_fund_code: string;
+            /** Units */
+            units: string;
+            /** Statement Nav */
+            statement_nav: string;
+            /** Statement Market Value */
+            statement_market_value: string;
+            /**
+             * Reconciliation Adjustment
+             * @default 0.00
+             */
+            reconciliation_adjustment: string;
+            /** Cost Basis */
+            cost_basis: string;
+            /**
+             * As Of Date
+             * Format: date
+             */
+            as_of_date: string;
+            /** Statement Fingerprint */
+            statement_fingerprint: string;
+            /** Archive Id */
+            archive_id: string;
+        };
+        /** PvdStatementMetadataDTO */
+        PvdStatementMetadataDTO: {
+            /**
+             * Payload Version
+             * @default 1
+             */
+            payload_version: number;
+            /** Fund Code */
+            fund_code: string;
+            /**
+             * Masked Member Id
+             * @default
+             */
+            masked_member_id: string;
+            /**
+             * As Of Date
+             * Format: date
+             */
+            as_of_date: string;
+            /** Period Start */
+            period_start?: string | null;
+            /** Period End */
+            period_end?: string | null;
+            /** Total Contribution */
+            total_contribution: string;
+            /** Total Nav */
+            total_nav: string;
+            /** Member Principal */
+            member_principal: string;
+            /** Member Benefit */
+            member_benefit: string;
+            /** Employer Principal */
+            employer_principal: string;
+            /** Employer Benefit */
+            employer_benefit: string;
+            /** Employer Vesting Percent */
+            employer_vesting_percent: string;
+            /** Member Vested Amount */
+            member_vested_amount: string;
+            /** Employer Vested Amount */
+            employer_vested_amount: string;
+            /** Source Pdf Sha256 */
+            source_pdf_sha256: string;
+            /** Semantic Fingerprint */
+            semantic_fingerprint: string;
+            /** Archive Id */
+            archive_id: string;
+            /**
+             * Reconciliation Adjustment
+             * @default 0.00
+             */
+            reconciliation_adjustment: string;
         };
         /** QAItemSchema */
         QAItemSchema: {
@@ -7777,6 +8544,13 @@ export interface components {
              * @default 1.0
              */
             prompt_version: string;
+            /** Portfolio Id */
+            portfolio_id?: string | null;
+            /**
+             * Clear Downstream
+             * @default true
+             */
+            clear_downstream: boolean;
         };
         /** SummarizeRequest */
         SummarizeRequest: {
@@ -8146,6 +8920,14 @@ export interface components {
             cash_adjusted?: string | null;
             /** Related Transaction Id */
             related_transaction_id?: string | null;
+            /** Asset Type */
+            asset_type?: string | null;
+            /** Bucket Id */
+            bucket_id?: string | null;
+            /** Pvd Metadata Json */
+            pvd_metadata_json?: string | null;
+            /** Reconciliation Adjustment */
+            reconciliation_adjustment?: string | null;
         };
         /** TransactionListResponseDTO */
         TransactionListResponseDTO: {
@@ -8341,6 +9123,12 @@ export interface components {
             withdrawal_amount?: string | null;
             /** Experience Description */
             experience_description?: string | null;
+            /** Monthly Investable Contribution */
+            monthly_investable_contribution?: string | null;
+            /** Essential Monthly Expense */
+            essential_monthly_expense?: string | null;
+            /** Reserves Outside Portfolio */
+            reserves_outside_portfolio?: string | null;
             /** Unknown Fields */
             unknown_fields?: string[] | null;
         };
@@ -8382,6 +9170,8 @@ export interface components {
             portfolio_id: string | null;
             /** Bucket Id */
             bucket_id?: string | null;
+            /** New Name */
+            new_name?: string | null;
         };
         /** UpsertWatchlistItemRequestDTO */
         UpsertWatchlistItemRequestDTO: {
@@ -8432,6 +9222,25 @@ export interface components {
             input?: unknown;
             /** Context */
             ctx?: Record<string, never>;
+        };
+        /** ValidationIssueSchema */
+        ValidationIssueSchema: {
+            /** Code */
+            code: string;
+            /** Severity */
+            severity: string;
+            /** Field Path */
+            field_path: string;
+            /** Message */
+            message: string;
+            /** Details */
+            details?: {
+                [key: string]: unknown;
+            };
+            /** Issue */
+            issue?: string | null;
+            /** Level */
+            level?: string | null;
         };
         /** ValuationTargetsDTO */
         ValuationTargetsDTO: {
@@ -9058,6 +9867,72 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": components["schemas"]["BatchAssignBucketRequestDTO"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ActualPortfolioStateDTO"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    recommend_holding_buckets_endpoint_api_portfolio_actual_holdings_ai_recommend_buckets_post: {
+        parameters: {
+            query?: {
+                portfolio_id?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HoldingsBucketRecommendationResponseDTO"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    batch_reassign_holding_buckets_endpoint_api_portfolio_actual_holdings_batch_bucket_map_put: {
+        parameters: {
+            query?: {
+                portfolio_id?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BatchReassignHoldingsRequestDTO"];
             };
         };
         responses: {
@@ -10345,6 +11220,105 @@ export interface operations {
             };
         };
     };
+    analyze_pvd_upload_api_portfolio_pvd_analyze_upload_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["Body_analyze_pvd_upload_api_portfolio_pvd_analyze_upload_post"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PvdAnalyzeResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    commit_pvd_statement_api_portfolio_pvd_commit_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PvdCommitRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PvdCommitResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_pvd_document_api_portfolio_pvd_documents__archive_id__get: {
+        parameters: {
+            query?: {
+                portfolio_id?: string;
+            };
+            header?: never;
+            path: {
+                archive_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     search_dime_emails_endpoint_api_portfolio_dime_emails_get: {
         parameters: {
             query?: {
@@ -11055,6 +12029,170 @@ export interface operations {
                 };
                 content: {
                     "text/html": string;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    search_arr_gold_emails_endpoint_api_portfolio_arr_gold_emails_get: {
+        parameters: {
+            query?: {
+                query?: string;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ArrGoldEmailListResponseDTO"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    scan_email_endpoint_api_portfolio_arr_gold_scan_email_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ArrGoldScanEmailRequestDTO"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ArrGoldScanResponseDTO"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_staged_endpoint_api_portfolio_arr_gold_staged__scan_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                scan_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ArrGoldScanResponseDTO"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    commit_staged_endpoint_api_portfolio_arr_gold_commit__scan_id__post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                scan_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ArrGoldCommitRequestDTO"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ArrGoldCommitResponseDTO"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    scan_batch_stream_endpoint_api_portfolio_arr_gold_scan_batch_stream_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ArrGoldBatchScanRequestDTO"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
                 };
             };
             /** @description Validation Error */
@@ -13054,6 +14192,39 @@ export interface operations {
             };
         };
     };
+    reset_principles_api_investor_reset_principles_post: {
+        parameters: {
+            query?: {
+                portfolio_id?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     get_current_session_api_investor_essence_sessions_current_get: {
         parameters: {
             query?: {
@@ -13253,6 +14424,41 @@ export interface operations {
             };
         };
     };
+    request_clarification_api_investor_essence_sessions__session_id__clarification_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                session_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ClarificationRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GeneratedQuestionSchema"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     review_claim_api_investor_essence_sessions__session_id__summary_claims__claim_id__put: {
         parameters: {
             query?: never;
@@ -13412,6 +14618,37 @@ export interface operations {
             };
         };
     };
+    sync_financial_context_from_goals_api_investor_financial_context_sync_goals_post: {
+        parameters: {
+            query: {
+                portfolio_id: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FinancialContextResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     create_axis_draft_api_investor_investment_axis_drafts_post: {
         parameters: {
             query?: never;
@@ -13432,6 +14669,37 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AxisDraftResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_latest_axis_draft_api_investor_investment_axis_drafts_latest_get: {
+        parameters: {
+            query: {
+                portfolio_id: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AxisDraftResponse"] | null;
                 };
             };
             /** @description Validation Error */
@@ -13599,6 +14867,37 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["BucketPlanDraftResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_latest_bucket_plan_api_investor_bucket_plans_latest_get: {
+        parameters: {
+            query: {
+                portfolio_id: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BucketPlanDraftResponse"] | null;
                 };
             };
             /** @description Validation Error */

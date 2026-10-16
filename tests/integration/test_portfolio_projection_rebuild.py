@@ -43,5 +43,9 @@ def test_transaction_source_ledger_replay_is_not_markdown_read(tmp_path: Path) -
     with repo.unit_of_work("default") as uow:
         state = uow.load_state()
         uow.commit(state, LedgerChange(kind="append", row=row))
-    assert repo.read_trade_log("default", symbol="aapl") == [row]
+    result = repo.read_trade_log("default", symbol="aapl")
+    assert len(result) == 1
+    assert result[0]["Transaction_ID"] == result[0]["transaction_id"] == "tx-1"
+    assert result[0]["Symbol"] == result[0]["symbol"] == "AAPL"
+    assert result[0]["Action"] == result[0]["action"] == "BUY"
     assert store.replay_ledger("default") == [row]

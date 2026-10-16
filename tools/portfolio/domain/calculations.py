@@ -184,6 +184,21 @@ def calc_holding_currency(h: Holding) -> str:
 
 def recalc_holding(h: Holding, current_fx: float) -> None:
     """คำนวณ market_value_thb และ unrealized_pnl_percent ให้ holding 1 ตัว."""
+    if h.asset_type == "PVD" and h.pvd_valuation is not None:
+        valuation = h.pvd_valuation
+        adjusted_market_value = valuation.statement_market_value + valuation.reconciliation_adjustment
+        h.units = float(valuation.units)
+        h.current_price_thb = float(valuation.statement_nav)
+        h.avg_cost_thb = float(valuation.cost_basis / valuation.units) if valuation.units else 0.0
+        h.market_value_thb = float(quantize_decimal(adjusted_market_value, MONEY_QUANTUM))
+        h.unrealized_pnl_percent = (
+            round((float(adjusted_market_value - valuation.cost_basis) / float(valuation.cost_basis)) * 100, _PCT_DP)
+            if valuation.cost_basis
+            else 0.0
+        )
+        h.accumulated_dividend_thb = None
+        return
+
     if h.asset_type == "Cash":
         if h.symbol == CASH_USD_SYMBOL:
             h.market_value_thb = round(h.units * current_fx, _MONEY_DP)
@@ -217,6 +232,9 @@ def compute_total_cost(state: PortfolioState, current_fx: float) -> float:
     """รวมต้นทุนทุก holding ใน THB."""
     total = 0.0
     for h in state.holdings:
+        if h.asset_type == "PVD" and h.pvd_valuation is not None:
+            total += float(h.pvd_valuation.cost_basis)
+            continue
         if h.asset_type == "Cash":
             if h.symbol == CASH_USD_SYMBOL:
                 total += h.units * current_fx
@@ -239,6 +257,13 @@ def recalc_summary(state: PortfolioState, current_fx: float) -> None:
         total_value += h.market_value_thb
         if h.asset_type == "Cash":
             continue
+        if h.asset_type == "PVD" and h.pvd_valuation is not None:
+            total_unrealized += float(
+                h.pvd_valuation.statement_market_value
+                + h.pvd_valuation.reconciliation_adjustment
+                - h.pvd_valuation.cost_basis
+            )
+            continue
         if h.avg_cost_usd is not None and h.current_price_usd is not None:
             total_unrealized += (h.current_price_usd - h.avg_cost_usd) * h.units * current_fx
         elif h.avg_cost_thb is not None and h.current_price_thb is not None:
@@ -259,6 +284,19 @@ def recalc_fundamentals_derived(state: PortfolioState) -> None:
             setattr(h, "unrealized_pnl_value", 0.0)
             if h.bucket_id is None:
                 h.bucket_id = "cash"
+            continue
+
+        if h.asset_type == "PVD" and h.pvd_valuation is not None:
+            setattr(h, "market_cap_tier", "N/A")
+            setattr(h, "yield_on_cost", None)
+            setattr(h, "unrealized_pnl_value", round(float(
+                h.pvd_valuation.statement_market_value
+                + h.pvd_valuation.reconciliation_adjustment
+                - h.pvd_valuation.cost_basis
+            ), _MONEY_DP))
+            h.dividend_rounds = []
+            h.accumulated_dividend_thb = None
+            h.upcoming_dividend_thb = None
             continue
 
         # Market cap tier
@@ -471,6 +509,23 @@ def _replay_symbol_trades(
             r["Units"] = f"{units:g}"
             # Preserve full precision price string if available
             r["Price"] = str(r.get("Price") or f"{price:.2f}")
+            updated_rows.append(r)
+
+        elif action == "PVD_SNAPSHOT":
+            # A PVD row represents a complete statement target. It is never a
+            # cash-moving purchase and must not be accumulated like BUY.
+            try:
+                target_units = Decimal(str(r.get("Units") or 0))
+                target_cost = Decimal(str(r.get("Cost_THB") or 0))
+            except Exception as exc:
+                raise ValueError(f"Invalid PVD snapshot row for {symbol}: {exc}") from exc
+            if target_units < 0 or target_cost < 0:
+                raise ValueError(f"Negative PVD snapshot for {symbol}")
+            units_held_dec = target_units
+            cumulative_cost_native_dec = target_cost
+            avg_cost_native_dec = target_cost / target_units if target_units else Decimal("0")
+            total_realized_pnl_thb_dec = Decimal("0")
+            r["Realized_PnL_THB"] = ""
             updated_rows.append(r)
 
         elif action == "SELL":

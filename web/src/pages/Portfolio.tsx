@@ -24,6 +24,8 @@ import IncomeModal from '../components/portfolio/Modals/IncomeModal'
 import ResetConfirmModal from '../components/portfolio/Modals/ResetConfirmModal'
 import PortfolioCalendarTab from '../components/portfolio/PortfolioCalendarTab'
 import PortfolioTransactionsTab from '../components/portfolio/PortfolioTransactionsTab'
+import type { TransactionView } from '../lib/pvdStatementHistory'
+import { getPvdValuationContext } from '../lib/pvdPresentation'
 import PortfolioIncomesTab from '../components/portfolio/PortfolioIncomesTab'
 import InvestorPrinciplesTab from '../components/portfolio/essence/InvestorPrinciplesTab'
 import {
@@ -113,6 +115,16 @@ export default function Portfolio() {
   const selectedBucket = searchParams.get('bucket') || null
   const selectedSymbol = searchParams.get('symbol') || null
   const selectedPortfolioId = searchParams.get('portfolio_id') || 'default'
+  const explicitTransactionView = searchParams.get('tx_view')
+  const inferredTransactionView: TransactionView = selectedSymbol?.trim().toUpperCase().startsWith('PVD_') ? 'pvd' : 'assets'
+  const selectedTransactionView: TransactionView = explicitTransactionView === 'assets' || explicitTransactionView === 'pvd'
+    ? explicitTransactionView
+    : inferredTransactionView
+  const transactionFilterSymbol = selectedSymbol && ((selectedTransactionView === 'pvd') === selectedSymbol.trim().toUpperCase().startsWith('PVD_'))
+    ? selectedSymbol
+    : null
+  const selectedPortfolioIdRef = useRef(selectedPortfolioId)
+  selectedPortfolioIdRef.current = selectedPortfolioId
 
   // Multi-Portfolio state
   const [portfolios, setPortfolios] = useState<PortfolioMetaDTO[]>([])
@@ -126,6 +138,9 @@ export default function Portfolio() {
 
   // Portfolio details state
   const [portfolioState, setPortfolioState] = useState<ActualPortfolioStateDTO | null>(null)
+  const currentPortfolioMeta = portfolios.find((p) => p.id === selectedPortfolioId)
+  const currentPortfolioName = currentPortfolioMeta?.name || portfolioState?.name || (selectedPortfolioId === 'default' ? 'พอร์ตลงทุนหลัก' : selectedPortfolioId)
+  const pvdContext = getPvdValuationContext(portfolioState?.holdings ?? [], portfolioState?.pvd_statements ?? [])
   const [allocationsResponse, setAllocationsResponse] = useState<BucketAllocationResponseDTO | null>(null)
   const [watchlistState, setWatchlistState] = useState<ActualWatchlistStateDTO | null>(null)
   const [goalsResponse, setGoalsResponse] = useState<ActualGoalsResponseDTO | null>(null)
@@ -149,6 +164,9 @@ export default function Portfolio() {
   const handlePortfolioStateSuccess = (newState: ActualPortfolioStateDTO) => {
     setPortfolioState(newState)
     const myFetchId = ++fetchIdRef.current
+    api.listPortfolios().then((ports) => {
+      if (fetchIdRef.current === myFetchId) setPortfolios(ports)
+    }).catch(() => {})
     api.getActualBucketAllocations(selectedPortfolioId).then((allocRes) => {
       if (fetchIdRef.current === myFetchId) setAllocationsResponse(allocRes)
     }).catch(() => {})
@@ -255,6 +273,9 @@ export default function Portfolio() {
   const handleTabChange = (key: string) => {
     const nextParams = new URLSearchParams(searchParams)
     nextParams.set('tab', key)
+    nextParams.delete('symbol')
+    if (key === 'transactions') nextParams.set('tx_view', 'assets')
+    else nextParams.delete('tx_view')
     setSearchParams(nextParams)
   }
 
@@ -274,7 +295,17 @@ export default function Portfolio() {
   const handleViewTransactionsForSymbol = (symbol: string) => {
     const nextParams = new URLSearchParams(searchParams)
     nextParams.set('tab', 'transactions')
+    nextParams.set('tx_view', symbol.trim().toUpperCase().startsWith('PVD_') ? 'pvd' : 'assets')
     nextParams.set('symbol', symbol)
+    setSearchParams(nextParams)
+  }
+
+  const handleTransactionViewChange = (view: TransactionView) => {
+    const nextParams = new URLSearchParams(searchParams)
+    nextParams.set('tab', 'transactions')
+    nextParams.set('tx_view', view)
+    const symbol = nextParams.get('symbol')?.trim().toUpperCase()
+    if (symbol && ((view === 'pvd') !== symbol.startsWith('PVD_'))) nextParams.delete('symbol')
     setSearchParams(nextParams)
   }
 
@@ -416,45 +447,43 @@ export default function Portfolio() {
             </div>
           </div>
 
-          {/* Action Toolbar — Only shown on portfolio tracking / transactions / overview tabs */}
-          {activeTab !== 'principles' && (
-            <div className="flex flex-wrap items-center justify-start xl:justify-end gap-2 sm:gap-2.5 w-full">
-              <button
-                type="button"
-                onClick={() => setTradeModalOpen(true)}
-                className="rounded-xl bg-gradient-to-r from-sky-500 to-blue-600 px-3 sm:px-3.5 py-1.5 sm:py-2 text-xs sm:text-sm font-bold text-white shadow-md shadow-sky-500/20 hover:from-sky-600 hover:to-blue-700 hover:shadow-lg hover:shadow-sky-500/30 active:scale-98 transition-all flex items-center gap-1.5 whitespace-nowrap"
-              >
-                <TradeIcon className="w-4 h-4 text-white shrink-0" />
-                <span>บันทึกเทรด (Trade)</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setCashFlowModalOpen(true)}
-                className="rounded-xl border border-sky-200/90 bg-white/90 px-3 sm:px-3.5 py-1.5 sm:py-2 text-xs sm:text-sm font-bold text-zinc-700 shadow-xs hover:bg-sky-50/90 hover:border-sky-300 active:scale-98 transition-all flex items-center gap-1.5 whitespace-nowrap"
-              >
-                <CashFlowIcon className="w-4 h-4 text-emerald-600 shrink-0" />
-                <span>ฝาก/ถอน (Cash)</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setIncomeModalOpen(true)}
-                className="rounded-xl border border-sky-200/90 bg-white/90 px-3 sm:px-3.5 py-1.5 sm:py-2 text-xs sm:text-sm font-bold text-zinc-700 shadow-xs hover:bg-sky-50/90 hover:border-sky-300 active:scale-98 transition-all flex items-center gap-1.5 whitespace-nowrap"
-              >
-                <IncomeIcon className="w-4 h-4 text-emerald-600 shrink-0" />
-                <span>ปันผล/รายรับ (Income)</span>
-              </button>
-              <div className="h-5 w-px bg-sky-200/60 mx-0.5 hidden sm:block" />
-              <button
-                type="button"
-                onClick={() => setResetModalOpen(true)}
-                className="rounded-xl border border-rose-200/70 bg-rose-50/60 px-2.5 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm font-bold text-rose-600 shadow-xs hover:bg-rose-600 hover:text-white active:scale-98 transition-all flex items-center gap-1.5 whitespace-nowrap"
-                title="ล้างข้อมูลพอร์ตทั้งหมดกลับเป็นค่าเริ่มต้น"
-              >
-                <ResetIcon className="w-4 h-4 shrink-0" />
-                <span>ล้างพอร์ต</span>
-              </button>
-            </div>
-          )}
+          {/* Action Toolbar — Available across all tabs */}
+          <div className="flex flex-wrap items-center justify-start xl:justify-end gap-2 sm:gap-2.5 w-full">
+            <button
+              type="button"
+              onClick={() => setTradeModalOpen(true)}
+              className="rounded-xl bg-gradient-to-r from-sky-500 to-blue-600 px-3 sm:px-3.5 py-1.5 sm:py-2 text-xs sm:text-sm font-bold text-white shadow-md shadow-sky-500/20 hover:from-sky-600 hover:to-blue-700 hover:shadow-lg hover:shadow-sky-500/30 active:scale-98 transition-all flex items-center gap-1.5 whitespace-nowrap"
+            >
+              <TradeIcon className="w-4 h-4 text-white shrink-0" />
+              <span>บันทึกเทรด (Trade)</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setCashFlowModalOpen(true)}
+              className="rounded-xl border border-sky-200/90 bg-white/90 px-3 sm:px-3.5 py-1.5 sm:py-2 text-xs sm:text-sm font-bold text-zinc-700 shadow-xs hover:bg-sky-50/90 hover:border-sky-300 active:scale-98 transition-all flex items-center gap-1.5 whitespace-nowrap"
+            >
+              <CashFlowIcon className="w-4 h-4 text-emerald-600 shrink-0" />
+              <span>ฝาก/ถอน (Cash)</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setIncomeModalOpen(true)}
+              className="rounded-xl border border-sky-200/90 bg-white/90 px-3 sm:px-3.5 py-1.5 sm:py-2 text-xs sm:text-sm font-bold text-zinc-700 shadow-xs hover:bg-sky-50/90 hover:border-sky-300 active:scale-98 transition-all flex items-center gap-1.5 whitespace-nowrap"
+            >
+              <IncomeIcon className="w-4 h-4 text-emerald-600 shrink-0" />
+              <span>ปันผล/รายรับ (Income)</span>
+            </button>
+            <div className="h-5 w-px bg-sky-200/60 mx-0.5 hidden sm:block" />
+            <button
+              type="button"
+              onClick={() => setResetModalOpen(true)}
+              className="rounded-xl border border-rose-200/70 bg-rose-50/60 px-2.5 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm font-bold text-rose-600 shadow-xs hover:bg-rose-600 hover:text-white active:scale-98 transition-all flex items-center gap-1.5 whitespace-nowrap"
+              title="ล้างข้อมูลพอร์ตทั้งหมดกลับเป็นค่าเริ่มต้น"
+            >
+              <ResetIcon className="w-4 h-4 shrink-0" />
+              <span>ล้างพอร์ต</span>
+            </button>
+          </div>
         </div>
       </div>
 
@@ -569,10 +598,13 @@ export default function Portfolio() {
           <PortfolioSummaryCards
             summary={portfolioState?.summary ?? null}
             lastUpdated={portfolioState?.last_updated ?? null}
+            holdings={portfolioState?.holdings ?? []}
+            pvdContext={pvdContext}
             loading={loading}
             refreshingPrices={refreshingPrices}
             priceRefreshInfo={portfolioState?.price_refresh_info ?? null}
             onRefreshPrices={() => void fetchAllData(true)}
+            onViewPvdStatements={() => handleTransactionViewChange('pvd')}
             performanceRows={performanceRows}
           />
 
@@ -647,7 +679,10 @@ export default function Portfolio() {
                     selectedPortfolioId={selectedPortfolioId}
                     allocationPolicy={portfolioState?.allocation_policy}
                     bucketSummaries={allocationsResponse?.summaries ?? []}
-                    onSuccess={(res) => setGoalsResponse(res)}
+                    onSuccess={(res) => {
+                      setGoalsResponse(res)
+                      api.getActualGoals().then((gRes) => setGoalsResponse(gRes)).catch(() => {})
+                    }}
                   />
                 ) : (
                   <PortfolioAnalyticsTab
@@ -705,6 +740,7 @@ export default function Portfolio() {
         {activeTab === 'principles' && (
           <InvestorPrinciplesTab
             portfolioId={selectedPortfolioId}
+            portfolioName={currentPortfolioName}
             onPortfolioChangeNeeded={() => void fetchAllData(false)}
             onNavigateToOverview={() => {
               const nextParams = new URLSearchParams(searchParams)
@@ -716,13 +752,16 @@ export default function Portfolio() {
 
         {activeTab === 'holdings' && (
           <PortfolioHoldingsTab
+            key={selectedPortfolioId}
             portfolioId={selectedPortfolioId}
             holdings={portfolioState?.holdings ?? []}
             selectedBucket={selectedBucket}
             onClearBucketFilter={handleClearBucketFilter}
             targets={portfolioState?.allocation_targets ?? []}
             allocationPolicy={portfolioState?.allocation_policy}
-            onSuccess={handlePortfolioStateSuccess}
+            onSuccess={(newState) => {
+              if (selectedPortfolioIdRef.current === selectedPortfolioId) handlePortfolioStateSuccess(newState)
+            }}
             journalRows={journalRows}
             journalKeyword={journalKeyword}
             onChangeJournalKeyword={setJournalKeyword}
@@ -734,12 +773,17 @@ export default function Portfolio() {
 
         {activeTab === 'transactions' && (
           <PortfolioTransactionsTab
+            key={selectedPortfolioId}
             portfolioId={selectedPortfolioId}
-            initialSymbol={selectedSymbol}
+            activeView={selectedTransactionView}
+            onViewChange={handleTransactionViewChange}
+            initialSymbol={transactionFilterSymbol}
             holdings={portfolioState?.holdings}
             onClearSymbolFilter={handleClearSymbolFilter}
             onOpenTradeModal={() => setTradeModalOpen(true)}
-            onSuccess={handlePortfolioStateSuccess}
+            onSuccess={(newState) => {
+              if (selectedPortfolioIdRef.current === selectedPortfolioId) handlePortfolioStateSuccess(newState)
+            }}
           />
         )}
 

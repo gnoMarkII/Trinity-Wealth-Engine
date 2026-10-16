@@ -147,7 +147,7 @@ class PortfolioTransactionStore:
             if command_receipt and command_receipt.get("idempotency_key"):
                 conn.execute(
                     """
-                    INSERT OR REPLACE INTO portfolio_command_receipts
+                    INSERT INTO portfolio_command_receipts
                     (portfolio_id, use_case, idempotency_key, request_hash, command_id,
                      checkpoint_sequence, checkpoint_state_hash, result_json, created_at)
                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)

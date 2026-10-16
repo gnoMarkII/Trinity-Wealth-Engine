@@ -140,9 +140,16 @@ class InvestmentAxisService:
                 "portfolio_id": portfolio_id,
                 "horizon_years": str(ctx.horizon_years) if ctx and ctx.horizon_years is not None else None,
                 "target_use_amount": str(ctx.target_use_amount) if ctx and ctx.target_use_amount is not None else None,
+                "target_use_timeline": ctx.target_use_timeline if ctx else None,
                 "target_use_range": ctx.target_use_range if ctx else None,
                 "emergency_reserves_amount": str(ctx.emergency_reserves_amount) if ctx and ctx.emergency_reserves_amount is not None else None,
+                "emergency_reserves_months": str(ctx.emergency_reserves_months) if ctx and ctx.emergency_reserves_months is not None else None,
+                "reserves_outside_portfolio": ctx.reserves_outside_portfolio if ctx else None,
                 "obligations_monthly": str(ctx.obligations_monthly) if ctx and ctx.obligations_monthly is not None else None,
+                "obligations_description": ctx.obligations_description if ctx else None,
+                "withdrawal_frequency": ctx.withdrawal_frequency if ctx else None,
+                "withdrawal_amount": str(ctx.withdrawal_amount) if ctx and ctx.withdrawal_amount is not None else None,
+                "monthly_investable_contribution": str(ctx.monthly_investable_contribution) if ctx and ctx.monthly_investable_contribution is not None else None,
                 "unknown_fields": ctx.unknown_fields if ctx else [],
             }
 

@@ -65,6 +65,8 @@ class PriceYFinanceAdapter(MarketPricePort):
     def fetch_price(self, symbol: str, currency: Literal["THB", "USD"]) -> Optional[float]:
         if currency not in ("THB", "USD"):
             raise ValueError(f"currency ต้องเป็น 'THB' หรือ 'USD' (got '{currency}')")
+        if symbol.strip().upper().startswith("PVD_"):
+            return None
         yf_sym = _yf_symbol(symbol, currency)
         return _fetch_last_price(yf_sym)
 
@@ -134,7 +136,15 @@ class PriceYFinanceAdapter(MarketPricePort):
     def refresh_portfolio_prices(self, state: PortfolioState) -> Dict[str, str]:
 
         targets = []
+        pvd_results: Dict[str, str] = {}
         for h in state.holdings:
+            if h.asset_type == "PVD" or h.symbol.upper().startswith("PVD_"):
+                valuation = h.pvd_valuation
+                pvd_results[h.symbol] = (
+                    f"Statement NAV {valuation.statement_nav} THB ({valuation.as_of_date.isoformat()})"
+                    if valuation is not None else "Statement NAV unavailable"
+                )
+                continue
             if h.asset_type in ("Cash", "Fund"):
                 continue
             if h.avg_cost_usd is not None:
@@ -143,9 +153,10 @@ class PriceYFinanceAdapter(MarketPricePort):
                 targets.append((h, h.symbol, "THB"))
 
         if not targets:
-            return {}
+            state.price_refresh_info = pvd_results
+            return pvd_results
 
-        results: Dict[str, str] = {}
+        results: Dict[str, str] = dict(pvd_results)
         fx_rate, fx_source = self.fetch_fx_rate()
         state.fx_rates["USDTHB"] = fx_rate
         results["USDTHB"] = f"{fx_rate:.4f} ({fx_source})"
@@ -191,7 +202,7 @@ class PriceYFinanceAdapter(MarketPricePort):
         results: Dict[str, str] = {}
 
         def _process_one(h: Holding):
-            if h.asset_type in ("Cash", "Fund", "Gold"):
+            if h.asset_type in ("Cash", "Fund", "Gold", "PVD") or h.symbol.upper().startswith("PVD_"):
                 return
             if not force and h.fundamentals_updated_at is not None:
                 if now - h.fundamentals_updated_at < FUNDAMENTALS_TTL_SECONDS:

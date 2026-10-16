@@ -1,4 +1,4 @@
-import { render, screen, fireEvent } from '@testing-library/react'
+import { render, screen, fireEvent, within } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import PortfolioHoldingsTab from './PortfolioHoldingsTab'
 
@@ -154,7 +154,7 @@ describe('PortfolioHoldingsTab', () => {
 
     expect(screen.getByText(/พบสินทรัพย์ที่ยังไม่ได้จัดหมวดหมู่ \(Unassigned\)/i)).toBeInTheDocument()
     expect(screen.getByText(/1 รายการ/i)).toBeInTheDocument()
-    expect(screen.getByText(/จัดหมวดหมู่ทันที \(1\)/i)).toBeInTheDocument()
+    expect(screen.getByText(/จัดหมวดหมู่สินทรัพย์ทั่วไป \(1\)/i)).toBeInTheDocument()
 
     // Test filter toggle
     const toggleBtn = screen.getByRole('button', { name: /กรองเฉพาะ Unassigned/i })
@@ -189,6 +189,109 @@ describe('PortfolioHoldingsTab', () => {
     )
 
     expect(screen.getByText(/⚠️ นอกเกณฑ์แนะนำ/i)).toBeInTheDocument()
+  })
+
+  it('shows PVD NAV and statement date while excluding synthetic returns and mutation actions', () => {
+    const pvdHolding = {
+      ...holdings[0]!,
+      symbol: 'SINSA_FI',
+      asset_type: 'PVD',
+      bucket_id: 'retirement_pvd',
+      units: 123.4567,
+      avg_cost_thb: 8.5,
+      current_price_thb: 10.25,
+      market_value_thb: 1265.43,
+      unrealized_pnl_percent: 23.38,
+      unrealized_pnl_value: 240.12,
+      pvd_valuation: {
+        payload_version: 1,
+        fund_code: 'SINSA_FI',
+        sub_fund_code: 'SINSA_FI',
+        units: '123.4567',
+        statement_nav: '10.25',
+        statement_market_value: '1265.43',
+        reconciliation_adjustment: '0.00',
+        cost_basis: '1025.31',
+        as_of_date: '2026-06-30',
+        statement_fingerprint: 'synthetic',
+        archive_id: 'synthetic',
+      },
+    }
+    render(
+      <PortfolioHoldingsTab
+        portfolioId="pvd-test"
+        holdings={[holdings[0]!, pvdHolding]}
+        selectedBucket={null}
+        onClearBucketFilter={vi.fn()}
+        onSuccess={vi.fn()}
+        onViewTransactions={vi.fn()}
+      />
+    )
+
+    expect(screen.getByText('Statement มียอดเงินต้นรวม จึงยังแสดงต้นทุนและผลตอบแทนจริงรายกองไม่ได้')).toBeInTheDocument()
+    expect(screen.getByTitle('ไม่มีต้นทุนซื้อจริงรายกองจาก Statement')).toHaveTextContent('—')
+    expect(screen.getByText('NAV ตาม Statement · 2026-06-30')).toBeInTheDocument()
+    expect(screen.getByText('ดูผลประโยชน์รวมตาม Statement')).toBeInTheDocument()
+    expect(screen.getByRole('checkbox', { name: 'Select SINSA_FI' })).not.toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Statement' })).toHaveAttribute('title', 'ดูประวัติ Statement ของ SINSA_FI')
+    expect(screen.getAllByTitle('แก้ไข / ปรับปรุงข้อมูล')).toHaveLength(1)
+    expect(screen.getAllByTitle('ลบ Holding ออกจากพอร์ต')).toHaveLength(1)
+
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Select all holdings' }))
+    expect(screen.getByText('2 Selected')).toBeInTheDocument()
+    expect(screen.getByRole('checkbox', { name: 'Select SINSA_FI' })).toBeChecked()
+  })
+
+  it('includes unassigned PVD in the Unassigned batch shortcut', () => {
+    const pvdUnassigned = { ...holdings[0]!, symbol: 'SINSA_FI', asset_type: 'PVD', bucket_id: null }
+    const regularUnassigned = { ...holdings[0]!, bucket_id: null }
+    render(
+      <PortfolioHoldingsTab
+        portfolioId="mixed-test"
+        holdings={[regularUnassigned, pvdUnassigned]}
+        selectedBucket={null}
+        onClearBucketFilter={vi.fn()}
+        onSuccess={vi.fn()}
+      />
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: /จัดหมวดหมู่สินทรัพย์ทั่วไป \(2\)/i }))
+    const dialog = screen.getByRole('dialog')
+    expect(within(dialog).getByText(/AAPL/)).toBeInTheDocument()
+    expect(within(dialog).getByText(/SINSA_FI/)).toBeInTheDocument()
+    expect(screen.getByRole('checkbox', { name: 'Select SINSA_FI' })).not.toBeDisabled()
+  })
+
+  it('closes a batch modal and clears selection when a selected holding is removed', () => {
+    const onSuccess = vi.fn()
+    const regularHolding = { ...holdings[0]!, symbol: 'ASSET_TO_REMOVE' }
+    const { rerender } = render(
+      <PortfolioHoldingsTab
+        portfolioId="scope-test"
+        holdings={[regularHolding]}
+        selectedBucket={null}
+        onClearBucketFilter={vi.fn()}
+        onSuccess={onSuccess}
+      />
+    )
+
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Select ASSET_TO_REMOVE' }))
+    fireEvent.click(screen.getByRole('button', { name: /เปลี่ยน Bucket \(1\)/i }))
+    expect(screen.getByRole('dialog')).toBeInTheDocument()
+
+    rerender(
+      <PortfolioHoldingsTab
+        portfolioId="scope-test"
+        holdings={[]}
+        selectedBucket={null}
+        onClearBucketFilter={vi.fn()}
+        onSuccess={onSuccess}
+      />
+    )
+
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    expect(screen.getByRole('status')).toHaveTextContent(/ยกเลิกการเลือกแล้ว/)
+    expect(screen.queryByText('1 Selected')).not.toBeInTheDocument()
   })
 })
 

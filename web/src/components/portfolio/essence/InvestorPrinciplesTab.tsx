@@ -9,15 +9,18 @@ import BucketApplyReview from './BucketApplyReview'
 
 interface InvestorPrinciplesTabProps {
   portfolioId: string
+  portfolioName?: string
   onPortfolioChangeNeeded?: () => void
   onNavigateToOverview?: () => void
 }
 
 export default function InvestorPrinciplesTab({
   portfolioId,
+  portfolioName,
   onPortfolioChangeNeeded,
   onNavigateToOverview,
 }: InvestorPrinciplesTabProps) {
+  const displayName = portfolioName || (portfolioId === 'default' ? 'พอร์ตลงทุนหลัก' : portfolioId)
   const {
     activeMilestone,
     setActiveMilestone,
@@ -156,7 +159,7 @@ export default function InvestorPrinciplesTab({
                 <span className="block text-xs font-bold text-zinc-900 truncate">
                   ค้นหาแก่นแท้ (Essence)
                 </span>
-                <span className="text-[11px] text-zinc-500 truncate block">สำรวจเป้าหมายและค่านิยม</span>
+                <span className="text-[11px] text-zinc-500 truncate block">สำรวจเป้าหมายและค่านิยม · ใช้ร่วมกันทุกพอร์ต</span>
               </div>
             </div>
             <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 ${essenceBadge.style}`}>
@@ -186,7 +189,7 @@ export default function InvestorPrinciplesTab({
                 <span className="block text-xs font-bold text-zinc-900 truncate">
                   สร้างแกนหลัก (Axis)
                 </span>
-                <span className="text-[11px] text-zinc-500 truncate block">นโยบาย 8 หัวข้อ + สิ่งที่ไม่ทำ</span>
+                <span className="text-[11px] text-zinc-500 truncate block">นโยบาย 8 หัวข้อ · เฉพาะพอร์ต {displayName}</span>
               </div>
             </div>
             <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 ${axisBadge.style}`}>
@@ -216,7 +219,7 @@ export default function InvestorPrinciplesTab({
                 <span className="block text-xs font-bold text-zinc-900 truncate">
                   ออกแบบ Buckets
                 </span>
-                <span className="text-[11px] text-zinc-500 truncate block">จัดกลุ่มพอร์ตตามบทบาทเงิน</span>
+                <span className="text-[11px] text-zinc-500 truncate block">จัดกลุ่มพอร์ตตามบทบาทเงิน · เฉพาะพอร์ต {displayName}</span>
               </div>
             </div>
             <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 ${bucketsBadge.style}`}>
@@ -319,6 +322,7 @@ export default function InvestorPrinciplesTab({
               <FinancialContextForm
                 financialContext={financialContext}
                 portfolioId={portfolioId}
+                portfolioName={displayName}
                 portfolioGoals={portfolioGoals}
                 onSave={saveFinancialContext}
                 onSyncGoals={syncFinancialContextFromGoals}
@@ -348,6 +352,7 @@ export default function InvestorPrinciplesTab({
                   axisDraft={axisDraft}
                   confirmedAxis={confirmedAxis}
                   portfolioId={portfolioId}
+                  portfolioName={displayName}
                   portfolioGoals={portfolioGoals}
                   onUpdateDraft={updateAxis}
                   onConfirmAxis={confirmAxis}
@@ -410,6 +415,7 @@ export default function InvestorPrinciplesTab({
               <EssenceBucketBuilder
                 draft={bucketPlan}
                 portfolioId={portfolioId}
+                portfolioName={displayName}
                 onUpdateDraft={updateBucketPlan}
                 onProceedToReview={() => setBucketSubStep('review')}
                 onRegenerateBuckets={generateBucketPlan}

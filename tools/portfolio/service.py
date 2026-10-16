@@ -548,6 +548,7 @@ class PortfolioService:
         notes: Optional[str] = None,
         portfolio_id: str = "default",
         bucket_id: Optional[str] = None,
+        new_name: Optional[str] = None,
     ) -> List[Dict]:
         return self._goal_service.structured_upsert_goal(
             name=name,
@@ -558,6 +559,7 @@ class PortfolioService:
             notes=notes,
             portfolio_id=portfolio_id,
             bucket_id=bucket_id,
+            new_name=new_name,
         )
 
     def structured_remove_goal(self, name: str, portfolio_id: Optional[str] = None) -> List[Dict]:

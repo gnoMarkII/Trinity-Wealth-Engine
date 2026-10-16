@@ -46,6 +46,10 @@ _TRADES_LOG_HEADER = [
     "Fingerprint",
     "Cash_Adjusted",
     "Related_Transaction_ID",
+    "Asset_Type",
+    "Bucket_ID",
+    "PVD_Metadata_JSON",
+    "Reconciliation_Adjustment",
 ]
 
 _LOCK_TIMEOUT = 15.0  # seconds

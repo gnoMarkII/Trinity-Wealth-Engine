@@ -1,4 +1,4 @@
-import { useState, useMemo, Fragment } from 'react'
+import { useState, useMemo, Fragment, useEffect } from 'react'
 import type { ActualHoldingDTO, AllocationTargetDTO, ActualPortfolioStateDTO, JournalEntryDTO } from '../../api/types'
 import { formatTHB } from '../../utils/formatters'
 import { api } from '../../api/client'
@@ -7,6 +7,7 @@ import HoldingCorrectionModal from './Modals/HoldingCorrectionModal'
 import JournalModal from './Modals/JournalModal'
 import Modal from '../ui/Modal'
 import { TradeIcon, EditIcon, DeleteIcon, FolderIcon, JournalIcon } from './icons/PortfolioIcons'
+import { isPvdHolding, isValidIsoDate } from '../../lib/pvdPresentation'
 
 interface Props {
   portfolioId: string
@@ -54,13 +55,68 @@ export default function PortfolioHoldingsTab({
   const [batchAssignModalOpen, setBatchAssignModalOpen] = useState(false)
   const [editingHolding, setEditingHolding] = useState<ActualHoldingDTO | null>(null)
   const [batchDeleteLoading, setBatchDeleteLoading] = useState(false)
+  const [selectionNotice, setSelectionNotice] = useState<string | null>(null)
+
+  const currentHoldingBySymbol = useMemo(
+    () => new Map(holdings.map((holding) => [holding.symbol, holding])),
+    [holdings],
+  )
+
+  useEffect(() => {
+    const invalidSelectedSymbols = Array.from(selectedSymbols).filter((symbol) => {
+      const currentHolding = currentHoldingBySymbol.get(symbol)
+      return !currentHolding
+    })
+    if (invalidSelectedSymbols.length > 0) {
+      setSelectedSymbols(new Set())
+      setBatchAssignModalOpen(false)
+      setSelectionNotice('ยกเลิกการเลือกแล้ว เพราะรายการในพอร์ตเปลี่ยน')
+    }
+
+    if (editingHolding) {
+      const currentHolding = currentHoldingBySymbol.get(editingHolding.symbol)
+      if (!currentHolding || isPvdHolding(currentHolding)) setEditingHolding(null)
+    }
+    if (batchAssignModalOpen && Array.from(selectedSymbols).some((symbol) => !currentHoldingBySymbol.get(symbol))) {
+      setBatchAssignModalOpen(false)
+    }
+  }, [holdings, currentHoldingBySymbol, selectedSymbols, editingHolding, batchAssignModalOpen])
+
+  const getValidatedSelectedSymbolsForAssign = (): string[] | null => {
+    const symbols = Array.from(selectedSymbols)
+    const invalidSymbols = symbols.filter((symbol) => !currentHoldingBySymbol.get(symbol))
+    if (symbols.length === 0 || invalidSymbols.length > 0) {
+      setSelectionNotice('รายการที่เลือกเปลี่ยนไป กรุณาเลือกสินทรัพย์ใหม่ก่อนทำรายการ')
+      return null
+    }
+    return symbols
+  }
+
+  const getValidatedSelectedSymbolsForDelete = (): string[] | null => {
+    const symbols = Array.from(selectedSymbols)
+    const invalidSymbols = symbols.filter((symbol) => {
+      const holding = currentHoldingBySymbol.get(symbol)
+      return !holding || isPvdHolding(holding)
+    })
+    if (symbols.length === 0 || invalidSymbols.length > 0) {
+      setSelectionNotice('รายการที่เลือกมี PVD รวมอยู่ ซึ่งอัปเดตจาก Statement จึงลบรายกองไม่ได้')
+      return null
+    }
+    return symbols
+  }
+
+  const openBatchAssignModal = () => {
+    if (getValidatedSelectedSymbolsForAssign()) setBatchAssignModalOpen(true)
+  }
 
   const handleBatchDelete = async () => {
     if (!onSuccess) return
-    if (!window.confirm(`คุณแน่ใจหรือไม่ว่าต้องการลบสินทรัพย์ที่เลือก ${selectedSymbols.size} รายการนี้ออกจากพอร์ต?`)) return
+    const symbols = getValidatedSelectedSymbolsForDelete()
+    if (!symbols) return
+    if (!window.confirm(`คุณแน่ใจหรือไม่ว่าต้องการลบสินทรัพย์ที่เลือก ${symbols.length} รายการนี้ออกจากพอร์ต?`)) return
     setBatchDeleteLoading(true)
     try {
-      const state = await api.batchRemoveHoldings({ symbols: Array.from(selectedSymbols) }, portfolioId)
+      const state = await api.batchRemoveHoldings({ symbols }, portfolioId)
       setSelectedSymbols(new Set())
       onSuccess(state)
     } catch (err: any) {
@@ -72,6 +128,11 @@ export default function PortfolioHoldingsTab({
 
   const handleRemoveSingle = async (symbol: string) => {
     if (!onSuccess) return
+    const holding = currentHoldingBySymbol.get(symbol)
+    if (!holding || isPvdHolding(holding)) {
+      setSelectionNotice('ยอด PVD อัปเดตจาก Statement จึงลบรายกองไม่ได้')
+      return
+    }
     if (!window.confirm(`คุณแน่ใจหรือไม่ว่าต้องการลบ ${symbol} ออกจากพอร์ต?`)) return
     try {
       const state = await api.removeHolding(symbol, portfolioId)
@@ -85,6 +146,10 @@ export default function PortfolioHoldingsTab({
   const unassignedHoldings = useMemo(
     () => holdings.filter((h) => !h.bucket_id || h.bucket_id.trim() === ''),
     [holdings]
+  )
+  const assignableUnassignedHoldings = useMemo(
+    () => unassignedHoldings,
+    [unassignedHoldings],
   )
   const unassignedTotalValue = useMemo(
     () => unassignedHoldings.reduce((sum, h) => sum + (h.market_value_thb || 0), 0),
@@ -103,11 +168,20 @@ export default function PortfolioHoldingsTab({
     return list
   }, [holdings, selectedBucket, filterOnlyUnassigned])
 
+  useEffect(() => {
+    const visibleSymbols = new Set(filteredHoldings.map((holding) => holding.symbol))
+    if (Array.from(selectedSymbols).some((symbol) => !visibleSymbols.has(symbol))) {
+      setSelectedSymbols(new Set())
+      setBatchAssignModalOpen(false)
+      setSelectionNotice('ยกเลิกการเลือกแล้ว เพราะตัวกรองรายการเปลี่ยน')
+    }
+  }, [filteredHoldings, selectedSymbols])
+
   // Sort holdings
   const sortedHoldings = useMemo(() => {
     return [...filteredHoldings].sort((a, b) => {
-      let valA: any = a[sortField]
-      let valB: any = b[sortField]
+      let valA: any = sortField === 'unrealized_pnl_percent' && isPvdHolding(a) ? null : a[sortField]
+      let valB: any = sortField === 'unrealized_pnl_percent' && isPvdHolding(b) ? null : b[sortField]
 
       if (valA === null || valA === undefined) valA = -Infinity
       if (valB === null || valB === undefined) valB = -Infinity
@@ -119,6 +193,13 @@ export default function PortfolioHoldingsTab({
     })
   }, [filteredHoldings, sortField, sortAsc])
 
+  const selectableHoldings = useMemo(
+    () => sortedHoldings,
+    [sortedHoldings],
+  )
+  const selectedVisibleCount = selectableHoldings.filter((holding) => selectedSymbols.has(holding.symbol)).length
+  const allVisibleSelectableSelected = selectableHoldings.length > 0 && selectedVisibleCount === selectableHoldings.length
+
   const handleSort = (field: SortField) => {
     if (sortField === field) {
       setSortAsc(!sortAsc)
@@ -129,14 +210,17 @@ export default function PortfolioHoldingsTab({
   }
 
   const toggleSelectAll = () => {
-    if (selectedSymbols.size === sortedHoldings.length) {
+    if (allVisibleSelectableSelected) {
       setSelectedSymbols(new Set())
     } else {
-      setSelectedSymbols(new Set(sortedHoldings.map((h) => h.symbol)))
+      setSelectedSymbols(new Set(selectableHoldings.map((h) => h.symbol)))
     }
+    setSelectionNotice(null)
   }
 
   const toggleSelect = (symbol: string) => {
+    const holding = currentHoldingBySymbol.get(symbol)
+    if (!holding) return
     const next = new Set(selectedSymbols)
     if (next.has(symbol)) {
       next.delete(symbol)
@@ -144,6 +228,7 @@ export default function PortfolioHoldingsTab({
       next.add(symbol)
     }
     setSelectedSymbols(next)
+    setSelectionNotice(null)
   }
 
   const formatPrice = (usd: number | null, thb: number | null) => {
@@ -173,6 +258,7 @@ export default function PortfolioHoldingsTab({
               </div>
               <p className="text-xs text-amber-800/90 mt-0.5">
                 มีสินทรัพย์มูลค่ารวม <strong className="font-bold text-amber-950">{formatTHB(unassignedTotalValue)}</strong> ที่ยังไม่ได้กำหนด Strategy Bucket
+                {unassignedHoldings.some(isPvdHolding) && <span className="block mt-1">รายการ PVD เป็นแบบอ่านอย่างเดียวและอัปเดตผ่าน Statement</span>}
               </p>
             </div>
           </div>
@@ -191,15 +277,26 @@ export default function PortfolioHoldingsTab({
             <button
               type="button"
               onClick={() => {
-                setSelectedSymbols(new Set(unassignedHoldings.map((h) => h.symbol)))
+                const symbols = assignableUnassignedHoldings.map((holding) => holding.symbol)
+                if (symbols.length === 0) return
+                setSelectedSymbols(new Set(symbols))
+                setSelectionNotice(null)
                 setBatchAssignModalOpen(true)
               }}
-              className="rounded-xl bg-amber-600 px-3.5 py-1.5 text-xs font-bold text-white shadow-sm hover:bg-amber-700 active:scale-98 transition-all flex items-center gap-1.5"
+              disabled={assignableUnassignedHoldings.length === 0}
+              title={assignableUnassignedHoldings.length === 0 ? 'ไม่มีสินทรัพย์ทั่วไปที่จัดหมวดหมู่ได้' : undefined}
+              className="rounded-xl bg-amber-600 px-3.5 py-1.5 text-xs font-bold text-white shadow-sm hover:bg-amber-700 active:scale-98 transition-all flex items-center gap-1.5 disabled:cursor-not-allowed disabled:opacity-50"
             >
               <FolderIcon className="h-3.5 w-3.5" />
-              <span>จัดหมวดหมู่ทันที ({unassignedHoldings.length})</span>
+              <span>จัดหมวดหมู่สินทรัพย์ทั่วไป ({assignableUnassignedHoldings.length})</span>
             </button>
           </div>
+        </div>
+      )}
+
+      {selectionNotice && (
+        <div role="status" className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-2 text-xs font-semibold text-amber-900">
+          {selectionNotice}
         </div>
       )}
 
@@ -225,24 +322,24 @@ export default function PortfolioHoldingsTab({
       )}
 
       {/* Floating Action Bar (Visible when selections made) */}
-      {selectedSymbols.size > 0 && (
+      {selectedVisibleCount > 0 && (
         <div className="sticky top-4 z-20 flex items-center justify-between rounded-xl border border-sky-200 bg-zinc-900 px-5 py-3 text-white shadow-xl animate-bounce-short">
           <div className="flex items-center gap-3">
             <span className="rounded-full bg-flow-cyan px-3 py-0.5 text-xs font-extrabold text-zinc-900">
-              {selectedSymbols.size} Selected
+              {selectedVisibleCount} Selected
             </span>
             <span className="text-xs text-zinc-300">
-              เลือกสินทรัพย์เพื่อดำเนินการแบบกลุ่ม (Batch Actions)
+              เลือกสินทรัพย์ทั่วไปเพื่อดำเนินการแบบกลุ่ม (Batch Actions)
             </span>
           </div>
           <div className="flex items-center gap-2">
             <button
               type="button"
-              onClick={() => setBatchAssignModalOpen(true)}
+              onClick={openBatchAssignModal}
               className="rounded-lg bg-flow-blue px-3 py-1.5 text-xs font-bold text-white shadow-md hover:bg-sky-600 transition-colors flex items-center gap-1.5"
             >
               <FolderIcon className="h-3.5 w-3.5" />
-              <span>เปลี่ยน Bucket ({selectedSymbols.size})</span>
+              <span>เปลี่ยน Bucket ({selectedVisibleCount})</span>
             </button>
             <button
               type="button"
@@ -251,11 +348,11 @@ export default function PortfolioHoldingsTab({
               className="rounded-lg bg-rose-600 px-3 py-1.5 text-xs font-bold text-white shadow-md hover:bg-rose-700 disabled:opacity-50 transition-colors flex items-center gap-1.5"
             >
               <DeleteIcon className="h-3.5 w-3.5" />
-              <span>{batchDeleteLoading ? 'กำลังลบ...' : `ลบที่เลือก (${selectedSymbols.size})`}</span>
+              <span>{batchDeleteLoading ? 'กำลังลบ...' : `ลบที่เลือก (${selectedVisibleCount})`}</span>
             </button>
             <button
               type="button"
-              onClick={() => setSelectedSymbols(new Set())}
+              onClick={() => { setSelectedSymbols(new Set()); setSelectionNotice(null) }}
               className="rounded-lg bg-zinc-800 px-2.5 py-1.5 text-xs font-medium text-zinc-300 hover:bg-zinc-700"
             >
               ยกเลิก
@@ -272,6 +369,11 @@ export default function PortfolioHoldingsTab({
             <p className="text-xs text-zinc-500">
               ตารางแสดง 12-Column ครบถ้วน พร้อมรายละเอียด 2-line Stacked Grid (ข้อมูลหลักและข้อมูลพื้นฐานบริษัท)
             </p>
+            {holdings.some(isPvdHolding) && (
+              <p className="mt-1 text-xs font-medium text-teal-800">
+                Statement มียอดเงินต้นรวม จึงยังแสดงต้นทุนและผลตอบแทนจริงรายกองไม่ได้
+              </p>
+            )}
           </div>
           <div className="flex items-center gap-2">
             {onSuccessJournal && (
@@ -298,8 +400,11 @@ export default function PortfolioHoldingsTab({
                   <input
                     type="checkbox"
                     aria-label="Select all holdings"
-                    checked={sortedHoldings.length > 0 && selectedSymbols.size === sortedHoldings.length}
+                    checked={allVisibleSelectableSelected}
+                    ref={(input) => { if (input) input.indeterminate = selectedVisibleCount > 0 && !allVisibleSelectableSelected }}
+                    disabled={selectableHoldings.length === 0}
                     onChange={toggleSelectAll}
+                    title={selectableHoldings.length === 0 ? 'ไม่มีสินทรัพย์ทั่วไปที่เลือกได้' : undefined}
                     className="h-4 w-4 rounded border-sky-300 text-flow-blue focus:ring-flow-cyan"
                   />
                 </th>
@@ -334,8 +439,16 @@ export default function PortfolioHoldingsTab({
             </thead>
             <tbody className="divide-y divide-sky-50">
               {sortedHoldings.map((h) => {
+                const isPvd = isPvdHolding(h)
                 const isSelected = selectedSymbols.has(h.symbol)
                 const isPos = (h.unrealized_pnl_percent ?? 0) >= 0
+                const statementNav = Number(h.pvd_valuation?.statement_nav)
+                const displayStatementNav = h.pvd_valuation?.statement_nav && Number.isFinite(statementNav)
+                  ? statementNav.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 4 })
+                  : 'N/A'
+                const statementDate = isValidIsoDate(h.pvd_valuation?.as_of_date)
+                  ? h.pvd_valuation.as_of_date
+                  : 'ไม่ทราบวันที่ Statement'
                 const symbolEntries = (journalRows || []).filter((e) => e.content.includes(h.symbol))
                 const bucketTarget = targets.find((t) => t.bucket_id === h.bucket_id)
                 const bucketDisplayName = bucketTarget ? bucketTarget.name : null
@@ -382,9 +495,18 @@ export default function PortfolioHoldingsTab({
                       <td className="px-4 py-4 align-top whitespace-nowrap">
                         {h.bucket_id ? (
                           <div className="flex flex-col items-start gap-1">
-                            <span className="font-semibold text-zinc-900 text-xs sm:text-sm">
-                              {bucketDisplayName || h.bucket_id}
-                            </span>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setSelectedSymbols(new Set([h.symbol]))
+                                setBatchAssignModalOpen(true)
+                              }}
+                              className="font-semibold text-zinc-900 text-xs sm:text-sm hover:text-flow-blue transition-colors text-left flex items-center gap-1 group"
+                              title="คลิกเพื่อเปลี่ยน Bucket ให้กับสินทรัพย์นี้"
+                            >
+                              <span>{bucketDisplayName || h.bucket_id}</span>
+                              <span className="text-[11px] text-zinc-400 group-hover:text-flow-blue">✎</span>
+                            </button>
                             {(() => {
                               const pb = allocationPolicy?.purpose_buckets?.find(
                                 (p) => p.bucket_id === h.bucket_id
@@ -410,7 +532,14 @@ export default function PortfolioHoldingsTab({
                         ) : (
                           <button
                             type="button"
-                            onClick={() => setEditingHolding(h)}
+                            onClick={() => {
+                              if (isPvd) {
+                                setSelectedSymbols(new Set([h.symbol]))
+                                setBatchAssignModalOpen(true)
+                              } else {
+                                setEditingHolding(h)
+                              }
+                            }}
                             className="inline-flex items-center gap-1 rounded bg-amber-100/90 hover:bg-amber-200 text-amber-900 px-2 py-0.5 text-[11px] font-bold shadow-2xs transition-colors whitespace-nowrap"
                             title="คลิกเพื่อกำหนด Bucket ให้กับสินทรัพย์นี้"
                           >
@@ -428,17 +557,25 @@ export default function PortfolioHoldingsTab({
                           )}
                         </div>
                         <div className="mt-0.5 text-xs text-zinc-500 font-medium">
-                          Avg: <span className="font-bold text-zinc-800 font-mono">{formatPrice(h.avg_cost_usd, h.avg_cost_thb)}</span>
+                          Avg: {isPvd ? (
+                            <span className="font-bold text-zinc-400 font-mono" title="ไม่มีต้นทุนซื้อจริงรายกองจาก Statement">—</span>
+                          ) : (
+                            <span className="font-bold text-zinc-800 font-mono">{formatPrice(h.avg_cost_usd, h.avg_cost_thb)}</span>
+                          )}
                         </div>
                       </td>
 
                       {/* Col 4: Current Price (Line 1) + Currency tag (Line 2) */}
                       <td className="px-4 py-4 text-right align-top tabular-nums">
                         <div className="font-extrabold text-zinc-900 text-base font-mono">
-                          {formatPrice(h.current_price_usd, h.current_price_thb)}
+                          {isPvd
+                            ? displayStatementNav
+                            : formatPrice(h.current_price_usd, h.current_price_thb)}
                         </div>
-                        <div className="mt-0.5 text-xs text-zinc-400 font-semibold uppercase">
-                          {h.current_price_usd !== null && h.current_price_usd !== undefined ? 'USD' : 'THB'}
+                        <div className="mt-0.5 text-xs text-zinc-400 font-semibold">
+                          {isPvd
+                            ? `NAV ตาม Statement · ${statementDate}`
+                            : h.current_price_usd !== null && h.current_price_usd !== undefined ? 'USD' : 'THB'}
                         </div>
                       </td>
 
@@ -448,6 +585,10 @@ export default function PortfolioHoldingsTab({
                           {formatTHB(h.market_value_thb)}
                         </div>
                         <div className="mt-0.5 text-xs text-zinc-500 font-medium">
+                          {isPvd ? (
+                            <span>มูลค่าตาม Statement</span>
+                          ) : (
+                          <>
                           Cap:{' '}
                           <span className="text-zinc-600 font-mono">
                             {h.market_cap_value
@@ -456,12 +597,19 @@ export default function PortfolioHoldingsTab({
                                 : formatPrice(null, h.market_cap_value / 1e9) + 'B')
                               : 'N/A'}
                           </span>
+                          </>
+                          )}
                         </div>
                       </td>
 
                       {/* Col 6: Unrealized PnL % (Line 1) + Unrealized PnL Value (Line 2) */}
                       <td className="px-4 py-4 text-right align-top tabular-nums">
-                        {h.unrealized_pnl_percent !== null ? (
+                        {isPvd ? (
+                          <span className="text-zinc-400 text-sm" title="ดูผลประโยชน์รวมตาม Statement">
+                            <span className="block font-bold" aria-label="ไม่มีผลตอบแทนจริงรายกอง">—</span>
+                            <span className="mt-0.5 block text-[11px]">ดูผลประโยชน์รวมตาม Statement</span>
+                          </span>
+                        ) : h.unrealized_pnl_percent !== null ? (
                           <>
                             <div className={`font-extrabold text-base font-mono ${isPos ? 'text-emerald-600' : 'text-rose-600'}`}>
                               {isPos ? '+' : ''}
@@ -539,25 +687,27 @@ export default function PortfolioHoldingsTab({
                               type="button"
                               onClick={() => onViewTransactions(h.symbol)}
                               className="h-8 px-2.5 rounded-lg border border-emerald-200 bg-emerald-50 text-xs font-bold text-emerald-700 hover:bg-emerald-600 hover:text-white transition-all flex items-center justify-center gap-1 shadow-2xs"
-                              title={`ดูประวัติ Transactions ของ ${h.symbol}`}
+                              title={isPvd ? `ดูประวัติ Statement ของ ${h.symbol}` : `ดูประวัติ Transactions ของ ${h.symbol}`}
                             >
                               <TradeIcon className="h-4 w-4" />
-                              <span>เทรด</span>
+                              <span>{isPvd ? 'Statement' : 'เทรด'}</span>
                             </button>
                           )}
 
                           {/* Edit Button */}
-                          <button
-                            type="button"
-                            onClick={() => setEditingHolding(h)}
-                            className="h-8 w-8 rounded-lg border border-sky-200 bg-sky-50 text-flow-blue hover:bg-flow-blue hover:text-white transition-all flex items-center justify-center shadow-2xs"
-                            title="แก้ไข / ปรับปรุงข้อมูล"
-                          >
-                            <EditIcon className="h-4 w-4" />
-                          </button>
+                          {!isPvd && (
+                            <button
+                              type="button"
+                              onClick={() => setEditingHolding(h)}
+                              className="h-8 w-8 rounded-lg border border-sky-200 bg-sky-50 text-flow-blue hover:bg-flow-blue hover:text-white transition-all flex items-center justify-center shadow-2xs"
+                              title="แก้ไข / ปรับปรุงข้อมูล"
+                            >
+                              <EditIcon className="h-4 w-4" />
+                            </button>
+                          )}
 
                           {/* Delete Button */}
-                          {onSuccess && (
+                          {onSuccess && !isPvd && (
                             <button
                               type="button"
                               onClick={() => handleRemoveSingle(h.symbol)}

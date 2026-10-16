@@ -114,6 +114,9 @@ class PortfolioLedgerService:
             if not target_row:
                 raise ValueError(f"ไม่พบ transaction id '{tx_id}'")
 
+            if str(target_row.get("Action") or target_row.get("action") or "").upper() == "PVD_SNAPSHOT":
+                raise ValueError("PVD snapshot transactions are immutable; import a newer statement instead")
+
             # Check if this is a Dime import and caller is attempting to edit economic fields
             is_dime = str(target_row.get("Source") or "").strip().upper() == "DIME"
             if is_dime and any(x is not None for x in (timestamp, units, price, fx_rate)):
@@ -229,6 +232,9 @@ class PortfolioLedgerService:
             )
             if not target_row:
                 raise ValueError(f"ไม่พบ transaction id '{tx_id}'")
+
+            if str(target_row.get("Action") or target_row.get("action") or "").upper() == "PVD_SNAPSHOT":
+                raise ValueError("PVD snapshot transactions cannot be voided; import a newer statement instead")
 
             action = str(target_row.get("Action") or target_row.get("action") or "BUY").upper()
             rel_tx_id = str(target_row.get("Related_Transaction_ID") or target_row.get("related_transaction_id") or "")

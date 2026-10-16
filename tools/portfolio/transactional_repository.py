@@ -7,6 +7,7 @@ never used as the transaction log after the stream has been bootstrapped.
 """
 from __future__ import annotations
 
+import uuid
 from typing import Any, Dict, List, Optional, Union
 
 from tools.portfolio.domain.ledger_change import LedgerChange
@@ -109,7 +110,20 @@ class TransactionalPortfolioRepository(PortfolioRepositoryPort):
         events = self.store.events(portfolio_id)
         if not events:
             return None
-        return PortfolioState.model_validate(self.store.replay(portfolio_id))
+        last_delete = max((i for i, event in enumerate(events) if event["event_type"] == "portfolio_deleted"), default=-1)
+        last_snapshot = max((i for i, event in enumerate(events) if event["event_type"] == "state_snapshot"), default=-1)
+        if last_delete > last_snapshot:
+            return None
+        state_dict = self.store.replay(portfolio_id)
+        state = PortfolioState.model_validate(state_dict)
+        if not state.name:
+            try:
+                underlying_state = self.underlying_repo.load_state(portfolio_id)
+                if underlying_state and underlying_state.name:
+                    state.name = underlying_state.name
+            except Exception:
+                pass
+        return state
 
     def _ledger_or_legacy(self, portfolio_id: str, underlying_uow: PortfolioUnitOfWork) -> list[dict[str, Any]]:
         events = self.store.events(portfolio_id)
@@ -148,8 +162,15 @@ class TransactionalPortfolioRepository(PortfolioRepositoryPort):
         return rows
 
     def backup_and_reset_clean_slate(self, portfolio_id: str = "default") -> PortfolioState:
-        state = self.underlying_repo.backup_and_reset_clean_slate(portfolio_id)
         pid = validate_portfolio_id(portfolio_id)
+        state = self.underlying_repo.backup_and_reset_clean_slate(pid)
+        # A full reset invalidates every PVD scan staged against the previous epoch.
+        state.pvd_import_epoch = uuid.uuid4().hex
+        with self.underlying_repo.unit_of_work(pid) as uow:
+            projected = uow.load_state()
+            projected.pvd_import_epoch = state.pvd_import_epoch
+            uow.commit(projected, LedgerChange(kind="unchanged"))
+        state = projected
         self.store.append_state(pid, state.model_dump(mode="json"), ledger_rows=[], expected_sequence=self.store.checkpoint(pid).sequence)
         return state
 
@@ -173,9 +194,28 @@ class TransactionalPortfolioRepository(PortfolioRepositoryPort):
         )
 
     def rename_portfolio(self, portfolio_id: str, new_name: str) -> PortfolioMeta:
-        meta = self.underlying_repo.rename_portfolio(portfolio_id, new_name)
-        self.load_state(meta.id)
+        pid = validate_portfolio_id(portfolio_id)
+        meta = self.underlying_repo.rename_portfolio(pid, new_name)
+        projected = self.underlying_repo.load_state(pid)
+        projected.name = meta.name
+        self.store.append_state(
+            pid,
+            projected.model_dump(mode="json"),
+            ledger_rows=self.store.replay_ledger(pid) if self.store.events(pid) else self.underlying_repo.read_trade_log(pid),
+            expected_sequence=self.store.checkpoint(pid).sequence,
+        )
         return meta
 
     def portfolio_exists(self, portfolio_id: str) -> bool:
-        return self.underlying_repo.portfolio_exists(portfolio_id)
+        pid = validate_portfolio_id(portfolio_id)
+        if pid == "default":
+            return True
+        events = self.store.events(pid)
+        if events:
+            last_delete = max((i for i, event in enumerate(events) if event["event_type"] == "portfolio_deleted"), default=-1)
+            last_snapshot = max((i for i, event in enumerate(events) if event["event_type"] == "state_snapshot"), default=-1)
+            if last_delete > last_snapshot:
+                return False
+            if last_snapshot >= 0:
+                return True
+        return self.underlying_repo.portfolio_exists(pid)

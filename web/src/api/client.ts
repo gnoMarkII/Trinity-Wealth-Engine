@@ -482,6 +482,45 @@ export const api = {
     return request<import('./types').DimeEmailListResponseDTO>(`/api/portfolio/dime/emails?${params.toString()}`)
   },
 
+  analyzePvdUpload: async (pdfFile: File, portfolioId: string, password: string, vestingPercent: number) => {
+    const formData = new FormData()
+    formData.append('file', pdfFile)
+    formData.append('portfolio_id', portfolioId)
+    formData.append('vesting_percent', String(vestingPercent))
+    if (password !== '') formData.append('password', password)
+    const res = await fetch('/api/portfolio/pvd/analyze-upload', {
+      method: 'POST',
+      body: formData,
+      credentials: 'same-origin',
+    })
+    if (!res.ok) {
+      let msg = 'PVD statement analysis failed'
+      try {
+        const err = await res.json()
+        msg = err.detail || msg
+      } catch {}
+      throw new Error(msg)
+    }
+    return (await res.json()) as import('./types').PvdAnalyzeResponseDTO
+  },
+
+  commitPvdStatement: (payload: {
+    scan_id: string
+    idempotency_key: string
+    portfolio_id: string
+    vesting_percent: number
+    selected_item_ids?: string[]
+  }) =>
+    request<import('./types').PvdCommitResponseDTO>('/api/portfolio/pvd/commit', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+
+  getPvdDocumentUrl: (archiveId: string, portfolioId: string = 'default') => {
+    const params = new URLSearchParams({ portfolio_id: portfolioId })
+    return `/api/portfolio/pvd/documents/${encodeURIComponent(archiveId)}?${params.toString()}`
+  },
+
   scanDimeEmail: (messageId: string, attachmentId: string, password?: string) =>
     request<import('./types').DimeScanResponseDTO>('/api/portfolio/dime/scan/email', {
       method: 'POST',

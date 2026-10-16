@@ -15,9 +15,12 @@ export default function BatchAssignBucketModal({ portfolioId, symbols, targets, 
   const [selectedBucketId, setSelectedBucketId] = useState<string>(targets[0]?.bucket_id || '')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (symbols.length === 0) {
+      setError('เลือกสินทรัพย์ที่จัดการได้ก่อน')
+      return
+    }
     setLoading(true)
     setError(null)
     try {
@@ -88,7 +91,7 @@ export default function BatchAssignBucketModal({ portfolioId, symbols, targets, 
           </button>
           <button
             type="submit"
-            disabled={loading}
+            disabled={loading || symbols.length === 0}
             className="rounded-xl bg-flow-blue px-5 py-2 text-xs font-bold text-white shadow-md hover:bg-sky-600 disabled:opacity-50"
           >
             {loading ? 'กำลังบันทึก...' : 'ยืนยันการเปลี่ยน Bucket'}

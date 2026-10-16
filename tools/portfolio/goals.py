@@ -366,6 +366,7 @@ def structured_upsert_goal(
     notes: str | None = None,
     portfolio_id: str = "default",
     bucket_id: str | None = None,
+    new_name: str | None = None,
 ) -> list[dict]:
     nm = name.strip()
     if not nm:
@@ -389,13 +390,33 @@ def structured_upsert_goal(
         post, state = _load_or_init_goals()
         today = datetime.now().strftime("%Y-%m-%d")
         existing_idx = next(
-            (i for i, g in enumerate(state.goals) if g.name == nm), None
+            (i for i, g in enumerate(state.goals) if g.name == nm and g.portfolio_id == portfolio_id), None
         )
-        preserved_date = (
-            state.goals[existing_idx].created_date if existing_idx is not None else today
-        )
+        if existing_idx is None:
+            existing_idx = next(
+                (i for i, g in enumerate(state.goals) if g.name == nm), None
+            )
+        if existing_idx is not None:
+            final_name = new_name.strip() if new_name and new_name.strip() and new_name.strip() != nm else nm
+            duplicate = next(
+                (g for i, g in enumerate(state.goals) if g.name == final_name and g.portfolio_id == portfolio_id and i != existing_idx),
+                None,
+            )
+            if duplicate:
+                raise ValueError(f"เป้าหมายชื่อ '{final_name}' มีอยู่แล้วในพอร์ตนี้")
+            preserved_date = state.goals[existing_idx].created_date
+        else:
+            final_name = new_name.strip() if new_name and new_name.strip() else nm
+            duplicate = next(
+                (g for g in state.goals if g.name == final_name and g.portfolio_id == portfolio_id),
+                None,
+            )
+            if duplicate:
+                raise ValueError(f"เป้าหมายชื่อ '{final_name}' มีอยู่แล้วในพอร์ตนี้")
+            preserved_date = today
+
         new_goal = GoalItem(
-            name=nm,
+            name=final_name,
             goal_type=goal_type,
             target_amount_thb=target_amount_thb,
             deadline=deadline,
@@ -419,9 +440,9 @@ def structured_remove_goal(name: str, portfolio_id: str | None = None) -> list[d
         raise ValueError("name ต้องไม่ว่าง")
     with _goals_lock:
         post, state = _load_or_init_goals()
-        existing = next((g for g in state.goals if g.name == nm), None)
+        existing = next((g for g in state.goals if g.name == nm and (portfolio_id is None or g.portfolio_id == portfolio_id)), None)
         if existing is None:
             raise ValueError(f"ไม่พบเป้าหมาย '{nm}'")
         state.goals.remove(existing)
         _save_goals(post, state)
-    return get_structured_goals(portfolio_id=portfolio_id)
+    return get_structured_goals(portfolio_id=None)

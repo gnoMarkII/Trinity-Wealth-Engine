@@ -570,6 +570,43 @@ export interface ActualHoldingDTO {
   dividend_rounds?: DividendRoundDTO[]
   dividend_source?: 'synced' | 'manual' | null
   fundamentals_updated_at: number | null
+  pvd_valuation?: PvdHoldingValuationDTO | null
+}
+
+export interface PvdHoldingValuationDTO {
+  payload_version: number
+  fund_code: string
+  sub_fund_code: string
+  units: string
+  statement_nav: string
+  statement_market_value: string
+  reconciliation_adjustment: string
+  cost_basis: string
+  as_of_date: string
+  statement_fingerprint: string
+  archive_id: string
+}
+
+export interface PvdStatementMetadataDTO {
+  payload_version: number
+  fund_code: string
+  masked_member_id: string
+  as_of_date: string
+  period_start: string | null
+  period_end: string | null
+  total_contribution: string
+  total_nav: string
+  member_principal: string
+  member_benefit: string
+  employer_principal: string
+  employer_benefit: string
+  employer_vesting_percent: string
+  member_vested_amount: string
+  employer_vested_amount: string
+  source_pdf_sha256: string
+  semantic_fingerprint: string
+  archive_id: string
+  reconciliation_adjustment: string
 }
 
 export interface ActualSummaryDTO {
@@ -595,11 +632,14 @@ export const DEFAULT_ALLOCATION_TARGETS: AllocationTargetDTO[] = [
 ]
 
 export interface ActualPortfolioStateDTO {
+  name?: string | null
   last_updated: string | null
   fx_rates: Record<string, number>
   summary: ActualSummaryDTO
   allocation_targets: AllocationTargetDTO[]
   holdings: ActualHoldingDTO[]
+  pvd_statements?: PvdStatementMetadataDTO[]
+  pvd_import_epoch?: string | null
   price_refresh_info: Record<string, string> | null
   allocation_policy?: {
     draft_id?: string
@@ -807,6 +847,7 @@ export interface UpsertGoalPayload {
   notes?: string | null
   portfolio_id?: string | null
   bucket_id?: string | null
+  new_name?: string | null
 }
 
 export interface AppendJournalPayload {
@@ -1191,6 +1232,42 @@ export interface TransactionItemDTO {
   fingerprint?: string | null
   cash_adjusted?: string | null
   related_transaction_id?: string | null
+  asset_type?: string | null
+  bucket_id?: string | null
+  pvd_metadata_json?: string | null
+  reconciliation_adjustment?: string | null
+}
+
+export interface PvdAnalyzeResponseDTO {
+  scan_id: string | null
+  can_commit: boolean
+  status: string
+  message: string
+  statement: Record<string, unknown> | null
+  holdings: Array<{
+    fund_code: string
+    name: string
+    units: string
+    statement_nav: string
+    statement_market_value: string
+    reconciliation_adjustment: string
+    adjusted_valuation: string
+    allocated_cost: string
+    unrealized_pnl: string
+  }>
+  current_nav: string | null
+  new_nav: string | null
+  delta_nav: string | null
+  vesting_percent: string
+  vested_amount: string | null
+  archive_id: string | null
+}
+
+export interface PvdCommitResponseDTO {
+  status: string
+  message: string
+  archive_id: string | null
+  state: ActualPortfolioStateDTO
 }
 
 export interface DimeEmailMetadataDTO {

@@ -2474,6 +2474,138 @@
         }
       }
     },
+    "/api/portfolio/pvd/analyze-upload": {
+      "post": {
+        "tags": [
+          "Portfolio PVD"
+        ],
+        "summary": "Analyze Pvd Upload",
+        "operationId": "analyze_pvd_upload_api_portfolio_pvd_analyze_upload_post",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_analyze_pvd_upload_api_portfolio_pvd_analyze_upload_post"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PvdAnalyzeResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/portfolio/pvd/commit": {
+      "post": {
+        "tags": [
+          "Portfolio PVD"
+        ],
+        "summary": "Commit Pvd Statement",
+        "operationId": "commit_pvd_statement_api_portfolio_pvd_commit_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PvdCommitRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PvdCommitResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/portfolio/pvd/documents/{archive_id}": {
+      "get": {
+        "tags": [
+          "Portfolio PVD"
+        ],
+        "summary": "Get Pvd Document",
+        "operationId": "get_pvd_document_api_portfolio_pvd_documents__archive_id__get",
+        "parameters": [
+          {
+            "name": "archive_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Archive Id"
+            }
+          },
+          {
+            "name": "portfolio_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "default",
+              "title": "Portfolio Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/portfolio/dime/emails": {
       "get": {
         "tags": [
@@ -8315,6 +8447,16 @@
               }
             ],
             "title": "Fundamentals Updated At"
+          },
+          "pvd_valuation": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PvdHoldingValuationDTO"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "type": "object",
@@ -8328,6 +8470,17 @@
       },
       "ActualPortfolioStateDTO": {
         "properties": {
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
           "last_updated": {
             "anyOf": [
               {
@@ -8403,6 +8556,25 @@
               }
             ],
             "title": "Allocation Plan Origin"
+          },
+          "pvd_statements": {
+            "items": {
+              "$ref": "#/components/schemas/PvdStatementMetadataDTO"
+            },
+            "type": "array",
+            "title": "Pvd Statements",
+            "default": []
+          },
+          "pvd_import_epoch": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pvd Import Epoch"
           }
         },
         "type": "object",
@@ -9225,6 +9397,12 @@
             "type": "array",
             "title": "Items",
             "default": []
+          },
+          "warnings": {
+            "items": {},
+            "type": "array",
+            "title": "Warnings",
+            "default": []
           }
         },
         "type": "object",
@@ -9848,6 +10026,41 @@
         },
         "type": "object",
         "title": "BatchRemoveHoldingsRequestDTO"
+      },
+      "Body_analyze_pvd_upload_api_portfolio_pvd_analyze_upload_post": {
+        "properties": {
+          "file": {
+            "type": "string",
+            "contentMediaType": "application/octet-stream",
+            "title": "File"
+          },
+          "portfolio_id": {
+            "type": "string",
+            "title": "Portfolio Id",
+            "default": "default"
+          },
+          "password": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Password"
+          },
+          "vesting_percent": {
+            "type": "string",
+            "title": "Vesting Percent",
+            "default": "100"
+          }
+        },
+        "type": "object",
+        "required": [
+          "file"
+        ],
+        "title": "Body_analyze_pvd_upload_api_portfolio_pvd_analyze_upload_post"
       },
       "Body_scan_upload_pdf_endpoint_api_portfolio_dime_scan_upload_post": {
         "properties": {
@@ -18527,6 +18740,402 @@
         ],
         "title": "PurposeBucketSchema"
       },
+      "PvdAnalyzeResponse": {
+        "properties": {
+          "scan_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scan Id"
+          },
+          "can_commit": {
+            "type": "boolean",
+            "title": "Can Commit"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          },
+          "statement": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Statement"
+          },
+          "holdings": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Holdings"
+          },
+          "current_nav": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Current Nav"
+          },
+          "new_nav": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "New Nav"
+          },
+          "delta_nav": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Delta Nav"
+          },
+          "vesting_percent": {
+            "type": "string",
+            "title": "Vesting Percent",
+            "default": "100"
+          },
+          "vested_amount": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Vested Amount"
+          },
+          "archive_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Archive Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "can_commit",
+          "status",
+          "message"
+        ],
+        "title": "PvdAnalyzeResponse"
+      },
+      "PvdCommitRequest": {
+        "properties": {
+          "scan_id": {
+            "type": "string",
+            "title": "Scan Id"
+          },
+          "idempotency_key": {
+            "type": "string",
+            "title": "Idempotency Key"
+          },
+          "portfolio_id": {
+            "type": "string",
+            "title": "Portfolio Id",
+            "default": "default"
+          },
+          "vesting_percent": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+              }
+            ],
+            "title": "Vesting Percent",
+            "default": "100"
+          },
+          "selected_item_ids": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Selected Item Ids"
+          }
+        },
+        "type": "object",
+        "required": [
+          "scan_id",
+          "idempotency_key"
+        ],
+        "title": "PvdCommitRequest"
+      },
+      "PvdCommitResponse": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          },
+          "archive_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Archive Id"
+          },
+          "state": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "State"
+          }
+        },
+        "type": "object",
+        "required": [
+          "status",
+          "message",
+          "state"
+        ],
+        "title": "PvdCommitResponse"
+      },
+      "PvdHoldingValuationDTO": {
+        "properties": {
+          "payload_version": {
+            "type": "integer",
+            "title": "Payload Version",
+            "default": 1
+          },
+          "fund_code": {
+            "type": "string",
+            "title": "Fund Code"
+          },
+          "sub_fund_code": {
+            "type": "string",
+            "title": "Sub Fund Code"
+          },
+          "units": {
+            "type": "string",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Units"
+          },
+          "statement_nav": {
+            "type": "string",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Statement Nav"
+          },
+          "statement_market_value": {
+            "type": "string",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Statement Market Value"
+          },
+          "reconciliation_adjustment": {
+            "type": "string",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Reconciliation Adjustment",
+            "default": "0.00"
+          },
+          "cost_basis": {
+            "type": "string",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Cost Basis"
+          },
+          "as_of_date": {
+            "type": "string",
+            "format": "date",
+            "title": "As Of Date"
+          },
+          "statement_fingerprint": {
+            "type": "string",
+            "title": "Statement Fingerprint"
+          },
+          "archive_id": {
+            "type": "string",
+            "title": "Archive Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "fund_code",
+          "sub_fund_code",
+          "units",
+          "statement_nav",
+          "statement_market_value",
+          "cost_basis",
+          "as_of_date",
+          "statement_fingerprint",
+          "archive_id"
+        ],
+        "title": "PvdHoldingValuationDTO"
+      },
+      "PvdStatementMetadataDTO": {
+        "properties": {
+          "payload_version": {
+            "type": "integer",
+            "title": "Payload Version",
+            "default": 1
+          },
+          "fund_code": {
+            "type": "string",
+            "title": "Fund Code"
+          },
+          "masked_member_id": {
+            "type": "string",
+            "title": "Masked Member Id",
+            "default": ""
+          },
+          "as_of_date": {
+            "type": "string",
+            "format": "date",
+            "title": "As Of Date"
+          },
+          "period_start": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Period Start"
+          },
+          "period_end": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Period End"
+          },
+          "total_contribution": {
+            "type": "string",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Total Contribution"
+          },
+          "total_nav": {
+            "type": "string",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Total Nav"
+          },
+          "member_principal": {
+            "type": "string",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Member Principal"
+          },
+          "member_benefit": {
+            "type": "string",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Member Benefit"
+          },
+          "employer_principal": {
+            "type": "string",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Employer Principal"
+          },
+          "employer_benefit": {
+            "type": "string",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Employer Benefit"
+          },
+          "employer_vesting_percent": {
+            "type": "string",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Employer Vesting Percent"
+          },
+          "member_vested_amount": {
+            "type": "string",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Member Vested Amount"
+          },
+          "employer_vested_amount": {
+            "type": "string",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Employer Vested Amount"
+          },
+          "source_pdf_sha256": {
+            "type": "string",
+            "title": "Source Pdf Sha256"
+          },
+          "semantic_fingerprint": {
+            "type": "string",
+            "title": "Semantic Fingerprint"
+          },
+          "archive_id": {
+            "type": "string",
+            "title": "Archive Id"
+          },
+          "reconciliation_adjustment": {
+            "type": "string",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Reconciliation Adjustment",
+            "default": "0.00"
+          }
+        },
+        "type": "object",
+        "required": [
+          "fund_code",
+          "as_of_date",
+          "total_contribution",
+          "total_nav",
+          "member_principal",
+          "member_benefit",
+          "employer_principal",
+          "employer_benefit",
+          "employer_vesting_percent",
+          "member_vested_amount",
+          "employer_vested_amount",
+          "source_pdf_sha256",
+          "semantic_fingerprint",
+          "archive_id"
+        ],
+        "title": "PvdStatementMetadataDTO"
+      },
       "QAItemSchema": {
         "properties": {
           "question_id": {
@@ -22337,6 +22946,50 @@
               }
             ],
             "title": "Related Transaction Id"
+          },
+          "asset_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Asset Type"
+          },
+          "bucket_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bucket Id"
+          },
+          "pvd_metadata_json": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pvd Metadata Json"
+          },
+          "reconciliation_adjustment": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reconciliation Adjustment"
           }
         },
         "type": "object",
@@ -23189,6 +23842,17 @@
               }
             ],
             "title": "Bucket Id"
+          },
+          "new_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "New Name"
           }
         },
         "type": "object",

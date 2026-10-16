@@ -23,6 +23,7 @@ from api.routers.agents_router import router as agents_router
 from api.routers.notebooklm_router import router as notebooklm_router
 from api.routers.health_router import router as health_router
 from api.routers.portfolio import router as portfolio_router
+from api.routers.pvd_sync import router as pvd_sync_router
 from api.routers.dime_sync import router as dime_sync_router
 from api.routers.wealthx_sync import router as wealthx_sync_router
 from api.routers.scb_sync import router as scb_sync_router
@@ -131,6 +132,7 @@ async def security_and_cache_headers(request, call_next):
 
 app.include_router(auth.router)
 app.include_router(portfolio_router)
+app.include_router(pvd_sync_router)
 app.include_router(dime_sync_router)
 app.include_router(wealthx_sync_router)
 app.include_router(scb_sync_router)

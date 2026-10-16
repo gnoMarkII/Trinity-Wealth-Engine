@@ -87,7 +87,7 @@ class PortfolioStateService:
         except Timeout:
             return json.dumps({"error": f"portfolio lock timeout for '{portfolio_id}'"}, ensure_ascii=False)
 
-        dump = state.model_dump(exclude_none=True)
+        dump = state.model_dump(mode="json", exclude_none=True)
         if refresh_info or getattr(state, "price_refresh_info", None):
             dump["_price_refresh"] = refresh_info or getattr(state, "price_refresh_info", {})
         return json.dumps(dump, ensure_ascii=False, indent=2)
@@ -132,6 +132,8 @@ class PortfolioStateService:
                 if bucket_id not in valid_bucket_ids:
                     raise ValueError(f"ไม่พบ bucket_id '{bucket_id}' ใน allocation targets")
             sym_set = {s.strip().upper() for s in symbols}
+            if any(h.asset_type == "PVD" and h.symbol.upper() in sym_set for h in state.holdings):
+                raise ValueError("PVD holdings ไม่สามารถเปลี่ยน bucket จากรายการทั่วไปได้")
             found = 0
             for h in state.holdings:
                 if h.symbol in sym_set:
@@ -153,6 +155,8 @@ class PortfolioStateService:
             for sym, b_id in clean_assignments.items():
                 if b_id is not None and b_id not in valid_bucket_ids:
                     raise ValueError(f"ไม่พบ bucket_id '{b_id}' ใน allocation targets")
+            if any(h.asset_type == "PVD" and h.symbol.upper() in clean_assignments for h in state.holdings):
+                raise ValueError("PVD holdings ไม่สามารถเปลี่ยน bucket จากรายการทั่วไปได้")
             found = 0
             for h in state.holdings:
                 if h.symbol in clean_assignments:
@@ -170,6 +174,8 @@ class PortfolioStateService:
         with self.repo.unit_of_work(pid) as uow:
             state = uow.load_state()
             sym_set = {s.strip().upper() for s in symbols}
+            if any(h.asset_type == "PVD" and h.symbol.upper() in sym_set for h in state.holdings):
+                raise ValueError("PVD holding ลบจากรายการทั่วไปไม่ได้; ใช้การ reset พอร์ตเต็มรูปแบบ")
             before_len = len(state.holdings)
             state.holdings = [h for h in state.holdings if h.symbol not in sym_set]
             if len(state.holdings) == before_len and symbols:
@@ -190,7 +196,7 @@ class PortfolioStateService:
             total_pct = sum(t.target_percent for t in targets)
             if abs(total_pct - 100.0) > 0.01:
                 raise ValueError(f"ผลรวม target_percent ({total_pct:.1f}%) ต้องเท่ากับ 100%")
-            state.allocation_targets = targets
+            state.allocation_targets = list(targets)
             if state.allocation_plan_origin:
                 origin = dict(state.allocation_plan_origin)
                 origin["is_modified_since_apply"] = True

@@ -29,6 +29,8 @@ class CompositeMarketPriceAdapter(MarketPricePort):
 
     def _is_fund(self, symbol: str, asset_type: Optional[str] = None) -> bool:
         """Determine if a holding/symbol should be treated as a Thai mutual fund."""
+        if asset_type == "PVD" or symbol.strip().upper().startswith("PVD_"):
+            return False
         if asset_type == "Fund":
             return True
         return self.fund_provider.has_fund(symbol)
@@ -37,6 +39,8 @@ class CompositeMarketPriceAdapter(MarketPricePort):
         """Fetch latest price / NAV for a single symbol."""
         if currency not in ("THB", "USD"):
             raise ValueError(f"currency ต้องเป็น 'THB' หรือ 'USD' (got '{currency}')")
+        if symbol.strip().upper().startswith("PVD_"):
+            return None
 
         if currency == "THB" and self._is_fund(symbol):
             nav_data = self.fund_provider.fetch_nav(symbol)
@@ -54,7 +58,15 @@ class CompositeMarketPriceAdapter(MarketPricePort):
     def refresh_portfolio_prices(self, state: PortfolioState) -> Dict[str, str]:
         """Batch refresh latest prices/NAVs for all holdings in a portfolio state."""
         targets = []
+        results: Dict[str, str] = {}
         for h in state.holdings:
+            if h.asset_type == "PVD" or h.symbol.upper().startswith("PVD_"):
+                valuation = h.pvd_valuation
+                results[h.symbol] = (
+                    f"Statement NAV {valuation.statement_nav} THB ({valuation.as_of_date.isoformat()})"
+                    if valuation is not None else "Statement NAV unavailable"
+                )
+                continue
             if h.asset_type == "Cash" or h.status == "archived" or h.units <= 0:
                 continue
             is_fund = self._is_fund(h.symbol, h.asset_type)
@@ -62,9 +74,9 @@ class CompositeMarketPriceAdapter(MarketPricePort):
             targets.append((h, h.symbol, ccy, is_fund))
 
         if not targets:
-            return {}
+            state.price_refresh_info = results
+            return results
 
-        results: Dict[str, str] = {}
         fx_rate, fx_source = self.fetch_fx_rate()
         state.fx_rates["USDTHB"] = fx_rate
         results["USDTHB"] = f"{fx_rate:.4f} ({fx_source})"
@@ -127,13 +139,27 @@ class CompositeMarketPriceAdapter(MarketPricePort):
         for h in state.holdings:
             if h.asset_type == "Cash":
                 continue
+            if h.asset_type == "PVD" or h.symbol.upper().startswith("PVD_"):
+                results[h.symbol] = "PVD statement valuation (no fundamentals)"
+                continue
             if self._is_fund(h.symbol, h.asset_type):
                 results[h.symbol] = "Fund (no stock ratios)"
             else:
                 equity_holdings.append(h)
 
         if equity_holdings:
-            equity_results = self.equity_provider.fetch_fundamentals(state, force=force)
+            # Pass a state containing only eligible equity holdings across the
+            # provider boundary, then copy its derived fields back by symbol.
+            filtered_state = state.model_copy(deep=True)
+            filtered_state.holdings = [h for h in filtered_state.holdings if h.asset_type not in ("Cash", "PVD") and not h.symbol.upper().startswith("PVD_") and h.asset_type != "Fund"]
+            equity_results = self.equity_provider.fetch_fundamentals(filtered_state, force=force)
+            updated = {h.symbol: h for h in filtered_state.holdings}
+            for holding in state.holdings:
+                source = updated.get(holding.symbol)
+                if source is None:
+                    continue
+                for field in ("company_name", "pe_ratio", "eps", "payout_ratio", "market_cap_value", "dividend_per_share", "dividend_yield", "fundamentals_updated_at"):
+                    setattr(holding, field, getattr(source, field))
             # Merge equity results while keeping fund annotations
             for k, v in equity_results.items():
                 if k not in results:

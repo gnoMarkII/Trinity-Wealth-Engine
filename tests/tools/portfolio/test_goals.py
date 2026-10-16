@@ -105,6 +105,57 @@ class TestGoals:
         post2 = frontmatter.load(goals_path)
         assert post2.metadata["goals"][0]["created_date"] == original_date
 
+    def test_structured_upsert_goal_rename_preserves_created_date(self, isolated_portfolio):
+        from tools.portfolio.goals import structured_upsert_goal, get_structured_goals
+        structured_upsert_goal(
+            name="Old Goal",
+            goal_type="nav_target",
+            target_amount_thb=1_000_000.0,
+            portfolio_id="default",
+        )
+        from tools.portfolio.goals import _load_or_init_goals
+        _, state_before = _load_or_init_goals()
+        orig_created_date = next(g.created_date for g in state_before.goals if g.name == "Old Goal")
+
+        # Rename to "New Goal"
+        updated_goals = structured_upsert_goal(
+            name="Old Goal",
+            new_name="New Goal",
+            goal_type="nav_target",
+            target_amount_thb=1_500_000.0,
+            portfolio_id="default",
+        )
+        assert not any(g["name"] == "Old Goal" for g in updated_goals)
+        new_g = next(g for g in updated_goals if g["name"] == "New Goal")
+        assert new_g["target_amount_thb"] == 1_500_000.0
+
+        _, state_after = _load_or_init_goals()
+        renamed_item = next(g for g in state_after.goals if g.name == "New Goal")
+        assert renamed_item.created_date == orig_created_date
+
+    def test_structured_upsert_goal_rename_duplicate_raises(self, isolated_portfolio):
+        from tools.portfolio.goals import structured_upsert_goal
+        structured_upsert_goal(
+            name="Goal A",
+            goal_type="nav_target",
+            target_amount_thb=1_000_000.0,
+            portfolio_id="default",
+        )
+        structured_upsert_goal(
+            name="Goal B",
+            goal_type="cash_target",
+            target_amount_thb=500_000.0,
+            portfolio_id="default",
+        )
+        with pytest.raises(ValueError, match="มีอยู่แล้ว"):
+            structured_upsert_goal(
+                name="Goal A",
+                new_name="Goal B",
+                goal_type="nav_target",
+                target_amount_thb=1_000_000.0,
+                portfolio_id="default",
+            )
+
     def test_remove_goal(self, isolated_portfolio):
         pt = isolated_portfolio
         pt.set_goal.invoke({"name": "Del", "goal_type": "nav_target", "target_amount_thb": 1e6})

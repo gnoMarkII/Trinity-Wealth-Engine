@@ -122,6 +122,22 @@ def get_portfolio_application() -> PortfolioApplication:
     return build_portfolio_application()
 
 
+def get_pvd_sync_service():
+    """Compose the PVD use case with the portfolio transaction source and shared staging store."""
+    from tools.archivist.vault_paths import VaultPaths
+    from tools.portfolio.adapters.bblam_pvd.bblam_pvd_pdf_parser_adapter import BblamPvdPdfParserAdapter
+    from tools.portfolio.adapters.bblam_pvd.local_filesystem_pvd_archive_adapter import LocalFilesystemPvdArchiveAdapter
+    from tools.portfolio.services.pvd_sync_service import PvdSyncService
+
+    deps = build_default_portfolio_dependencies()
+    return PvdSyncService(
+        repo=deps.repo,
+        parser=BblamPvdPdfParserAdapter(),
+        archive=LocalFilesystemPvdArchiveAdapter(VaultPaths(_get_vault_path())),
+        staging=deps.staging,
+    )
+
+
 def get_job_service() -> JobApplicationService:
     """Dependency provider for JobApplicationService."""
     return JobApplicationService(repo=SqliteJobRepositoryAdapter())

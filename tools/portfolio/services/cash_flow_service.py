@@ -297,13 +297,15 @@ class PortfolioCashFlowService:
                 holding
                 for holding in state.holdings
                 if holding.asset_type != "Cash"
+                and holding.asset_type != "PVD"
+                and not holding.symbol.upper().startswith("PVD_")
                 and holding.status == "active"
                 and holding.dividend_source != "manual"
             ]
             skipped_manual = [
                 holding.symbol
                 for holding in state.holdings
-                if holding.asset_type != "Cash" and holding.dividend_source == "manual"
+                if holding.asset_type not in ("Cash", "PVD") and not holding.symbol.upper().startswith("PVD_") and holding.dividend_source == "manual"
             ]
             if not targets:
                 return {

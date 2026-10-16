@@ -1337,6 +1337,31 @@
       ],
       "return_annotation": "PortfolioState"
     },
+    "structured_batch_reassign_holding_buckets": {
+      "name": "structured_batch_reassign_holding_buckets",
+      "docstring": null,
+      "parameters": [
+        {
+          "name": "self",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "<EMPTY>",
+          "annotation": "empty"
+        },
+        {
+          "name": "assignments",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "<EMPTY>",
+          "annotation": "Dict"
+        },
+        {
+          "name": "portfolio_id",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "default",
+          "annotation": "str"
+        }
+      ],
+      "return_annotation": "PortfolioState"
+    },
     "structured_batch_remove_holdings": {
       "name": "structured_batch_remove_holdings",
       "docstring": null,
@@ -1779,6 +1804,12 @@
         },
         {
           "name": "bucket_id",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": null,
+          "annotation": "Optional"
+        },
+        {
+          "name": "new_name",
           "kind": "POSITIONAL_OR_KEYWORD",
           "default": null,
           "annotation": "Optional"

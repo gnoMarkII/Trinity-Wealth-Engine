@@ -47,6 +47,7 @@ from .paths import (
     get_pending_manifest_path,
     get_holdings_dir,
     get_journal_filepath,
+    get_performance_filepath,
     get_vault_path,
     _TRADES_LOG_HEADER,
     _LOCK_TIMEOUT,
@@ -366,6 +367,9 @@ class MarkdownVaultRepositoryAdapter(PortfolioRepositoryPort):
 
             # Create backup before wiping
             portfolio_file = get_portfolio_filepath(pid)
+            trades_file = get_trades_log_filepath(pid)
+            journal_file = get_journal_filepath(pid)
+            perf_file = get_performance_filepath(pid)
             holdings_dir = get_holdings_dir(pid)
             backups_dir = portfolio_file.parent / ".backups"
             timestamp = time.strftime("%Y%m%d_%H%M%S")
@@ -375,6 +379,12 @@ class MarkdownVaultRepositoryAdapter(PortfolioRepositoryPort):
                 backup_dest.mkdir(parents=True, exist_ok=True)
                 if portfolio_file.exists():
                     shutil.copy2(portfolio_file, backup_dest / portfolio_file.name)
+                if trades_file.exists():
+                    shutil.copy2(trades_file, backup_dest / trades_file.name)
+                if journal_file.exists():
+                    shutil.copy2(journal_file, backup_dest / journal_file.name)
+                if perf_file.exists():
+                    shutil.copy2(perf_file, backup_dest / perf_file.name)
                 if holdings_dir.exists():
                     dest_holdings = backup_dest / "Holdings"
                     dest_holdings.mkdir(parents=True, exist_ok=True)
@@ -392,10 +402,12 @@ class MarkdownVaultRepositoryAdapter(PortfolioRepositoryPort):
                         pass
 
             new_state = PortfolioState(
+                name=state.name,
+                base_currency=state.base_currency or "THB",
                 last_updated=_now_iso(),
                 summary=Summary(),
                 allocation_targets=default_allocation_targets(),
-                fx_rates={"USDTHB": 36.5},
+                fx_rates=state.fx_rates or {"USDTHB": 36.5},
                 holdings=[
                     Holding(symbol=CASH_THB_SYMBOL, asset_type="Cash", units=0.0, market_value_thb=0.0),
                     Holding(symbol=CASH_USD_SYMBOL, asset_type="Cash", units=0.0, market_value_thb=0.0),
@@ -527,7 +539,7 @@ class MarkdownVaultRepositoryAdapter(PortfolioRepositoryPort):
     def _serialize_state_to_md(self, state: PortfolioState, portfolio_id: str = "default") -> str:
         recalc_all(state)
         state.last_updated = _now_iso()
-        dump = state.model_dump(exclude_none=True)
+        dump = state.model_dump(mode="json", exclude_none=True)
 
         ordered: dict = {}
         if state.name:

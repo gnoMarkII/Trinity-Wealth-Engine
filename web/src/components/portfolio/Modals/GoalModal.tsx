@@ -33,18 +33,25 @@ export default function GoalModal({ initialGoal, existingNames = [], portfolios 
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!name.trim() || !targetAmountThb || parseFloat(targetAmountThb) <= 0) {
+    const trimmedName = name.trim()
+    if (!trimmedName || !targetAmountThb || parseFloat(targetAmountThb) <= 0) {
       setError('กรุณาระบุชื่อเป้าหมาย และจำนวนเป้าหมาย THB ที่มากกว่า 0')
       return
     }
-    if (!isEdit && existingNames.includes(name.trim())) {
+    const isNameChanged = isEdit && initialGoal && trimmedName !== initialGoal.name
+    if (!isEdit && existingNames.includes(trimmedName)) {
       setError('ชื่อเป้าหมายนี้มีอยู่แล้ว — ใช้ปุ่มแก้ไขแทน หรือตั้งชื่ออื่นเพื่อไม่ให้ไปทับเป้าหมายเดิม')
+      return
+    }
+    if (isNameChanged && existingNames.includes(trimmedName)) {
+      setError('ชื่อเป้าหมายนี้มีอยู่แล้ว — กรุณาตั้งชื่ออื่นเพื่อไม่ให้ซ้ำกับเป้าหมายเดิม')
       return
     }
     setLoading(true)
     setError(null)
     try {
-      const res = await api.upsertGoal(name.trim(), {
+      const targetName = isEdit && initialGoal ? initialGoal.name : trimmedName
+      const res = await api.upsertGoal(targetName, {
         goal_type: goalType,
         target_amount_thb: parseFloat(targetAmountThb),
         deadline: deadline || null,
@@ -52,6 +59,7 @@ export default function GoalModal({ initialGoal, existingNames = [], portfolios 
         notes: notes.trim() || null,
         portfolio_id: portfolioId,
         bucket_id: goalType === 'bucket_target' ? bucketId || null : null,
+        new_name: isNameChanged ? trimmedName : undefined,
       })
       onSuccess(res)
       onClose()
@@ -97,7 +105,6 @@ export default function GoalModal({ initialGoal, existingNames = [], portfolios 
           type="text"
           value={name}
           onChange={(e) => setName(e.target.value)}
-          disabled={isEdit}
           placeholder="e.g. พอร์ต 10 ล้านแรก, เงินสำรองฉุกเฉิน 100k"
           className="font-bold"
           required

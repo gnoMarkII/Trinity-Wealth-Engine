@@ -160,3 +160,40 @@ def test_actual_transactions_route_and_note_update(authed_client, isolated_api_p
     r2 = authed_client.get("/api/portfolio/actual/transactions")
     assert r2.status_code == 200
     assert r2.json()["transactions"][0]["notes"] == "Updated note via API"
+
+
+def test_actual_transactions_keeps_pvd_rows_without_changing_buy_sell_summary(authed_client, monkeypatch):
+    """Existing transaction consumers still receive their ordinary trade totals."""
+    import json
+
+    base = {"Timestamp": "2026-09-30 00:00:00", "Currency": "THB", "Notes": ""}
+    metadata = json.dumps({"as_of_date": "2026-09-30", "total_nav": "1250.00"})
+    rows = [
+        dict(base, Transaction_ID="stock-buy", Symbol="PTT", Action="BUY", Units="100", Price="35", Cost_THB="3500.00", Realized_PnL_THB=""),
+        dict(base, Transaction_ID="stock-sell", Symbol="PTT", Action="SELL", Units="20", Price="40", Cost_THB="700.00", Realized_PnL_THB="100.00"),
+        dict(base, Transaction_ID="pvd-snapshot", Symbol="PVD_SINSA_FI", Action="PVD_SNAPSHOT", Units="123.4567", Price="10.1234", Cost_THB="900.00", Realized_PnL_THB="", Gross_Amount="1250.00", Reconciliation_Adjustment="0.01", Source="BBLAM_PVD", Asset_Type="PVD", Cash_Adjusted="NO", PVD_Metadata_JSON=metadata),
+    ]
+    service = MagicMock()
+    service.get_structured_trades_log.return_value = rows
+    monkeypatch.setitem(app.dependency_overrides, get_portfolio_service, lambda: service)
+
+    response = authed_client.get("/api/portfolio/actual/transactions?portfolio_id=mixed")
+    assert response.status_code == 200
+    data = response.json()
+    service.get_structured_trades_log.assert_called_once_with(portfolio_id="mixed", symbol=None)
+    assert data["portfolio_id"] == "mixed"
+    assert data["summary"] == {
+        "total_buy_count": 1,
+        "total_sell_count": 1,
+        "total_buy_thb": 3500.0,
+        "total_sell_thb": 800.0,
+        "total_realized_pnl_thb": 100.0,
+    }
+    assert len(data["transactions"]) == 3
+    pvd = next(row for row in data["transactions"] if row["action"] == "PVD_SNAPSHOT")
+    assert pvd["gross_amount"] == "1250.00"
+    assert pvd["pvd_metadata_json"] == metadata
+    assert pvd["asset_type"] == "PVD"
+    assert pvd["cash_adjusted"] == "NO"
+    assert pvd["reconciliation_adjustment"] == "0.01"
+    assert next(row for row in data["transactions"] if row["transaction_id"] == "stock-buy")["reconciliation_adjustment"] is None

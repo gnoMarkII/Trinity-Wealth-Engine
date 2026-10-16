@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { fireEvent, render, screen } from '@testing-library/react'
 import { describe, it, expect, vi } from 'vitest'
 import PortfolioAnalyticsTab from './PortfolioAnalyticsTab'
 import type { PerformanceSnapshotDTO, ActualHoldingDTO } from '../../api/types'
@@ -172,5 +172,31 @@ describe('PortfolioAnalyticsTab Component (Phase 4)', () => {
 
     expect(screen.getByText(/Coverage Warning:/i)).toBeInTheDocument()
     expect(screen.getByText(/Breakdown sum 110000 differs from Total NAV 120000/i)).toBeInTheDocument()
+  })
+
+  it('keeps PVD in the treemap value while omitting allocated return and using a neutral color', () => {
+    const pvdHolding = {
+      ...mockHoldings[0]!,
+      symbol: 'SINSA_FI',
+      asset_type: 'PVD',
+      market_value_thb: 1265.43,
+      unrealized_pnl_percent: 23.38,
+      unrealized_pnl_value: 240.12,
+    }
+    render(
+      <PortfolioAnalyticsTab
+        performanceRows={[]}
+        daysRange={30}
+        onChangeDaysRange={vi.fn()}
+        holdings={[pvdHolding]}
+      />
+    )
+
+    const pvdCell = screen.getByRole('button', { name: /SINSA_FI: 1,265\.43 THB/ })
+    expect(pvdCell.querySelector('rect')).toHaveAttribute('fill', '#64748b')
+    fireEvent.focus(pvdCell)
+    expect(screen.getByText('Class: PVD')).toBeInTheDocument()
+    expect(screen.getByText(/Share:/)).toBeInTheDocument()
+    expect(screen.queryByText(/Return:/)).not.toBeInTheDocument()
   })
 })

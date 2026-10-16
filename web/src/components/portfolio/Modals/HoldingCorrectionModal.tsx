@@ -1,8 +1,10 @@
 import { useState } from 'react'
 import FormModal, { FormField, FormInput, FormSelect } from './FormModal'
+import Modal from '../../ui/Modal'
 import { EditIcon } from '../icons/PortfolioIcons'
 import { api } from '../../../api/client'
 import type { AllocationTargetDTO, ActualHoldingDTO, ActualPortfolioStateDTO } from '../../../api/types'
+import { isPvdHolding, isValidIsoDate } from '../../../lib/pvdPresentation'
 
 interface Props {
   portfolioId: string
@@ -29,6 +31,10 @@ export default function HoldingCorrectionModal({ portfolioId, holding, targets, 
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (isPvdHolding(holding)) {
+      setError('ยอด PVD อัปเดตจาก Statement จึงแก้ไขรายกองไม่ได้')
+      return
+    }
     setLoading(true)
     setError(null)
     try {
@@ -47,6 +53,33 @@ export default function HoldingCorrectionModal({ portfolioId, holding, targets, 
     } finally {
       setLoading(false)
     }
+  }
+
+  if (isPvdHolding(holding)) {
+    const asOfDate = holding.pvd_valuation?.as_of_date
+    return (
+      <Modal titleId="correction-modal-title" onClose={onClose} panelClassName="max-w-md rounded-2xl border border-teal-100 bg-white p-6 shadow-2xl">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h2 id="correction-modal-title" className="text-base font-bold text-zinc-900">ข้อมูล PVD แบบอ่านอย่างเดียว</h2>
+            <p className="mt-1 font-mono text-sm text-teal-800">{holding.symbol}</p>
+          </div>
+          <button type="button" onClick={onClose} className="text-zinc-400 hover:text-zinc-700" aria-label="ปิดหน้าต่าง">✕</button>
+        </div>
+        <p className="mt-4 rounded-lg border border-teal-100 bg-teal-50 p-3 text-sm text-teal-900">
+          ยอด PVD อัปเดตจาก Statement จึงแก้ไขรายกองไม่ได้
+        </p>
+        <dl className="mt-4 grid grid-cols-2 gap-3 text-sm">
+          <dt className="text-zinc-500">หน่วย</dt><dd className="text-right font-mono">{holding.units.toLocaleString()}</dd>
+          <dt className="text-zinc-500">มูลค่า</dt><dd className="text-right font-mono">{holding.market_value_thb.toLocaleString()}</dd>
+          <dt className="text-zinc-500">วันที่ Statement</dt>
+          <dd className="text-right font-mono">{isValidIsoDate(asOfDate) ? asOfDate : 'ไม่ทราบวันที่ Statement'}</dd>
+        </dl>
+        <div className="mt-5 flex justify-end">
+          <button type="button" onClick={onClose} className="rounded-lg border border-zinc-300 px-4 py-2 text-sm font-semibold text-zinc-700 hover:bg-zinc-50">ปิด</button>
+        </div>
+      </Modal>
+    )
   }
 
   return (

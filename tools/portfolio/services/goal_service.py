@@ -64,13 +64,26 @@ class PortfolioGoalService:
         notes: Optional[str] = None,
         portfolio_id: str = "default",
         bucket_id: Optional[str] = None,
+        new_name: Optional[str] = None,
     ) -> List[Dict]:
         state = self.goals_repo.load_goals(portfolio_id=None)
         clean_name = name.strip()
         existing = next(
             (g for g in state.goals if g.name == clean_name and g.portfolio_id == portfolio_id), None
         )
+        if existing is None:
+            existing = next((g for g in state.goals if g.name == clean_name), None)
+
         if existing:
+            final_name = new_name.strip() if new_name and new_name.strip() and new_name.strip() != clean_name else clean_name
+            duplicate = next(
+                (g for g in state.goals if g.name == final_name and g.portfolio_id == portfolio_id and g is not existing),
+                None,
+            )
+            if duplicate:
+                raise ValueError(f"เป้าหมายชื่อ '{final_name}' มีอยู่แล้วในพอร์ตนี้")
+            existing.name = final_name
+            existing.portfolio_id = portfolio_id
             existing.goal_type = goal_type
             existing.target_amount_thb = target_amount_thb
             existing.deadline = deadline
@@ -78,9 +91,16 @@ class PortfolioGoalService:
             existing.notes = notes
             existing.bucket_id = bucket_id
         else:
+            final_name = new_name.strip() if new_name and new_name.strip() else clean_name
+            duplicate = next(
+                (g for g in state.goals if g.name == final_name and g.portfolio_id == portfolio_id),
+                None,
+            )
+            if duplicate:
+                raise ValueError(f"เป้าหมายชื่อ '{final_name}' มีอยู่แล้วในพอร์ตนี้")
             state.goals.append(
                 GoalItem(
-                    name=clean_name,
+                    name=final_name,
                     goal_type=goal_type,
                     target_amount_thb=target_amount_thb,
                     deadline=deadline,
@@ -92,7 +112,7 @@ class PortfolioGoalService:
                 )
             )
         self.goals_repo.save_goals(state)
-        return self.get_structured_goals(portfolio_id=portfolio_id)
+        return self.get_structured_goals(portfolio_id=None)
 
     def structured_remove_goal(self, name: str, portfolio_id: Optional[str] = None) -> List[Dict]:
         clean_name = name.strip()
@@ -103,4 +123,4 @@ class PortfolioGoalService:
             if not (g.name == clean_name and (portfolio_id is None or g.portfolio_id == portfolio_id))
         ]
         self.goals_repo.save_goals(state)
-        return self.get_structured_goals(portfolio_id=portfolio_id)
+        return self.get_structured_goals(portfolio_id=None)

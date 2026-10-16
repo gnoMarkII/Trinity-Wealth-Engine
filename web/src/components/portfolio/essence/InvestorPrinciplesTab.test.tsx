@@ -108,4 +108,14 @@ describe('InvestorPrinciplesTab', () => {
 
     document.body.removeChild(main)
   })
+
+  it('renders custom portfolioName on milestone 2 and 3 cards instead of raw portfolioId', async () => {
+    render(<InvestorPrinciplesTab portfolioId="port_b9daad" portfolioName="กองทุนสำรองเลี้ยงชีพ" />)
+
+    await waitFor(() => {
+      const elements = screen.getAllByText(/เฉพาะพอร์ต กองทุนสำรองเลี้ยงชีพ/i)
+      expect(elements.length).toBeGreaterThanOrEqual(2)
+    })
+    expect(screen.queryByText(/เฉพาะพอร์ต port_b9daad/i)).not.toBeInTheDocument()
+  })
 })

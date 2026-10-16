@@ -147,7 +147,18 @@ export function useInvestorPrinciples({
       // 3. Try loading portfolio-scoped data for this portfolio
       if (targetPortfolioId) {
         try {
-          const fc = await api.getFinancialContext(targetPortfolioId)
+          let fc = await api.getFinancialContext(targetPortfolioId)
+          // Auto-sync from goals if financial context is still in default_initial state
+          if (fc && fc.source === 'default_initial') {
+            try {
+              const synced = await api.syncFinancialContextFromGoals(targetPortfolioId)
+              if (synced && synced.target_use_amount) {
+                fc = synced
+              }
+            } catch {
+              // keep fc if sync fails
+            }
+          }
           if (isMountedRef.current && currentGen === portfolioFetchGenRef.current) {
             setFinancialContext(fc || null)
           }
@@ -206,14 +217,9 @@ export function useInvestorPrinciples({
         }
 
         try {
-          const goalsRes = await api.getActualGoals()
+          const goalsRes = await api.getActualGoals(targetPortfolioId)
           if (isMountedRef.current && currentGen === portfolioFetchGenRef.current) {
-            if (goalsRes?.goals && goalsRes.goals.length > 0) {
-              setPortfolioGoals(goalsRes.goals)
-            } else {
-              const fallbackRes = await api.getActualGoals(targetPortfolioId)
-              setPortfolioGoals(fallbackRes?.goals || [])
-            }
+            setPortfolioGoals(goalsRes?.goals || [])
           }
         } catch {
           if (isMountedRef.current && currentGen === portfolioFetchGenRef.current) {

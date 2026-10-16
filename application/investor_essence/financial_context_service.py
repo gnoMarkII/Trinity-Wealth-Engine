@@ -156,8 +156,9 @@ class FinancialContextService:
                 derived["emergency_reserves_amount"] = cash_balance
                 derived["emergency_reserves_months"] = Decimal("3")
             else:
-                derived["emergency_reserves_amount"] = Decimal("200000")
-                derived["emergency_reserves_months"] = Decimal("6")
+                derived["emergency_reserves_amount"] = Decimal("0")
+                derived["emergency_reserves_months"] = Decimal("0")
+                derived["reserves_outside_portfolio"] = "จัดสรรเงินสำรองฉุกเฉินแยกไว้ภายนอกหรือพอร์ตอื่น"
 
             # 3. Withdrawal plan & obligations defaults
             derived["withdrawal_frequency"] = "ไม่มีการถอน (เน้นสะสมมูลค่าระยะยาว)"
@@ -228,6 +229,9 @@ class FinancialContextService:
                 withdrawal_frequency=derived.get("withdrawal_frequency"),
                 withdrawal_amount=derived.get("withdrawal_amount"),
                 experience_description=derived.get("experience_description"),
+                reserves_outside_portfolio=derived.get("reserves_outside_portfolio"),
+                monthly_investable_contribution=derived.get("monthly_investable_contribution"),
+                essential_monthly_expense=derived.get("essential_monthly_expense"),
                 unknown_fields=derived.get("unknown_fields", []),
                 as_of=now_iso,
                 source="auto_synced_from_goals",

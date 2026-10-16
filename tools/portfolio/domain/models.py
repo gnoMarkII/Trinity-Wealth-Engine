@@ -1,7 +1,7 @@
 from datetime import datetime
 from decimal import Decimal, ROUND_HALF_UP
 from typing import Any, Literal, Optional, List, Dict, Union, Tuple
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from .constants import CASH_THB_SYMBOL, CASH_USD_SYMBOL, CASH_SYMBOL
 
@@ -39,7 +39,7 @@ class TradeImportItem(BaseModel):
     trade_date: str
     settlement_date: Optional[str] = None
     symbol: str
-    action: Literal["BUY", "SELL"]
+    action: Literal["BUY", "SELL", "PVD_SNAPSHOT"]
     units: Decimal
     price: Decimal
     gross_amount: Decimal
@@ -54,6 +54,19 @@ class TradeImportItem(BaseModel):
     line_index: int = 0
     cash_adjusted: bool = True
     asset_type: str = "Stock"
+    bucket_id: Optional[str] = None
+    pvd_metadata_json: Optional[str] = None
+
+    @model_validator(mode="after")
+    def validate_pvd_snapshot(self):
+        if self.action == "PVD_SNAPSHOT":
+            if self.source != "BBLAM_PVD" or self.asset_type != "PVD":
+                raise ValueError("PVD_SNAPSHOT is reserved for BBLAM_PVD assets")
+            if self.currency.upper() != "THB" or self.cash_adjusted:
+                raise ValueError("PVD_SNAPSHOT must use THB and must not adjust cash")
+            if not self.pvd_metadata_json:
+                raise ValueError("PVD_SNAPSHOT requires PVD metadata")
+        return self
 
     @property
     def transaction_identity(self) -> Tuple[str, str]:
@@ -135,6 +148,7 @@ class Holding(BaseModel):
     dividend_source: Optional[Literal["synced", "manual"]] = None
     bucket_id: Optional[str] = None
     fundamentals_updated_at: Optional[float] = None
+    pvd_valuation: Optional["PvdHoldingValuation"] = None
 
     company_name: Optional[str] = None
     pe_ratio: Optional[float] = None
@@ -189,6 +203,8 @@ class PortfolioState(BaseModel):
     allocation_policy: Optional[Dict[str, Any]] = None
     allocation_plan_origin: Optional[Dict[str, Any]] = None
     price_refresh_info: Optional[Dict[str, str]] = None
+    pvd_statements: List["PvdStatementMetadata"] = Field(default_factory=list)
+    pvd_import_epoch: Optional[str] = None
 
     @field_validator("last_updated", mode="before")
     @classmethod
@@ -291,4 +307,12 @@ class JournalEntry(BaseModel):
     date: str
     content: str
     portfolio_id: str = "default"
+
+
+# Late binding keeps the PVD value objects independent from the general
+# portfolio contracts while still giving persisted state typed metadata.
+from .pvd_models import PvdHoldingValuation, PvdStatementMetadata  # noqa: E402
+
+Holding.model_rebuild()
+PortfolioState.model_rebuild()
 

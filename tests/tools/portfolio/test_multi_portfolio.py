@@ -256,3 +256,120 @@ def test_journal_entries_land_in_correct_portfolio_not_default(isolated_portfoli
     # default journal ต้องไม่มีข้อมูลของ emergency_fund ปนอยู่ (ไฟล์ไม่มีอยู่เลยหรือไม่มีคำว่า PTT)
     if default_journal_path.exists():
         assert "PTT" not in default_journal_path.read_text(encoding="utf-8")
+
+
+def test_reset_clean_slate_preserves_portfolio_name_and_backs_up_trades(isolated_portfolio):
+    """การ RESET พอร์ตต้องคงชื่อพอร์ตที่ผู้ใช้ตั้งไว้ (ไม่กลายเป็น portfolio_id)
+    และต้องสำรองทั้ง Portfolio_Holdings.md และ Trades_Log.csv ไว้ใน .backups เสมอ
+    """
+    import tools.portfolio.core as core
+    import tools.portfolio.trading as trading
+
+    pid = "pvd_retirement"
+    port_name = "กองทุนสำรองเลี้ยงชีพ"
+    core.create_portfolio(name=port_name, portfolio_id=pid)
+
+    # บันทึกเงินฝากและเทรด
+    trading.structured_manage_cash_flow(
+        amount=500_000.0, action="deposit", currency="THB", portfolio_id=pid
+    )
+    trading.structured_execute_trade(
+        symbol="PTT", asset_type="Stock", action="buy", units=1000, price=35.0,
+        currency="THB", portfolio_id=pid
+    )
+
+    state_before = core.get_structured_portfolio_state(portfolio_id=pid)
+    assert any(h.symbol == "PTT" for h in state_before.holdings)
+
+    # สั่ง Reset clean slate
+    new_state = core.structured_reset_clean_slate(portfolio_id=pid)
+
+    # 1. ยืนยันว่า new_state และ list_portfolios ยังคงรักษาชื่อพอร์ตภาษาไทยไว้
+    assert new_state.name == port_name
+    portfolios = core.list_portfolios()
+    matched = next((p for p in portfolios if p.id == pid), None)
+    assert matched is not None
+    assert matched.name == port_name
+
+    # 2. ยืนยันว่า holdings ถูก reset สะอาด
+    assert len(new_state.holdings) == 2
+    assert all(h.symbol in ("CASH_THB", "CASH_USD") for h in new_state.holdings)
+
+    # 3. ยืนยันว่า .backups สำรองทั้ง Portfolio_Holdings.md และ Trades_Log.csv
+    portfolio_file = core._get_portfolio_filepath(pid)
+    backups_dir = portfolio_file.parent / ".backups"
+    assert backups_dir.exists()
+    backup_subdirs = sorted(backups_dir.glob("*"))
+    assert len(backup_subdirs) >= 1
+    latest_backup = backup_subdirs[-1]
+    assert (latest_backup / "Portfolio_Holdings.md").exists()
+    assert (latest_backup / "Trades_Log.csv").exists()
+    assert (latest_backup / "Holdings" / "PTT.md").exists()
+
+    # 4. ตรวจสอบว่า Trades_Log.csv ปัจจุบันถูกล้าง (ไม่มีรายการ PTT อยู่)
+    current_trades_path = trading._get_trades_log_filepath(pid)
+    assert current_trades_path.exists()
+    assert "PTT" not in current_trades_path.read_text(encoding="utf-8")
+
+
+def test_rename_goal_in_portfolio_and_cross_portfolio_isolation(isolated_portfolio):
+    """ทดสอบการเปลี่ยนชื่อเป้าหมาย:
+    1. เปลี่ยนชื่อสำเร็จและคง created_date เดิม
+    2. ชนกับชื่อเป้าหมายในพอร์ตเดียวกันต้อง raise ValueError
+    3. ตั้งชื่อซ้ำกับเป้าหมายในอีกพอร์ตหนึ่งได้โดยไม่ชนกัน
+    """
+    import tools.portfolio.core as core
+    import tools.portfolio.goals as goals
+
+    core.create_portfolio(name="พอร์ตเกษียณ", portfolio_id="retire")
+
+    # สร้างเป้าหมายใน default
+    goals.structured_upsert_goal(
+        name="Target 1",
+        goal_type="nav_target",
+        target_amount_thb=1_000_000.0,
+        portfolio_id="default",
+    )
+    goals.structured_upsert_goal(
+        name="Target 2",
+        goal_type="cash_target",
+        target_amount_thb=500_000.0,
+        portfolio_id="default",
+    )
+
+    # 1. เปลี่ยนชื่อ Target 1 -> Target 1 Renamed
+    res = goals.structured_upsert_goal(
+        name="Target 1",
+        new_name="Target 1 Renamed",
+        goal_type="nav_target",
+        target_amount_thb=1_200_000.0,
+        portfolio_id="default",
+    )
+    renamed = next((g for g in res if g["name"] == "Target 1 Renamed"), None)
+    assert renamed is not None
+    assert renamed["target_amount_thb"] == 1_200_000.0
+    assert not any(g["name"] == "Target 1" for g in res)
+
+    # 2. เปลี่ยนชื่อไปชน Target 2 ในพอร์ตเดียวกัน -> ต้อง raise ValueError
+    import pytest
+    with pytest.raises(ValueError, match="มีอยู่แล้วในพอร์ตนี้"):
+        goals.structured_upsert_goal(
+            name="Target 1 Renamed",
+            new_name="Target 2",
+            goal_type="nav_target",
+            target_amount_thb=1_200_000.0,
+            portfolio_id="default",
+        )
+
+    # 3. สร้างหรือเปลี่ยนชื่อเป้าหมายในอีกพอร์ตหนึ่งเป็น "Target 2" ได้ ไม่ชน
+    res_retire = goals.structured_upsert_goal(
+        name="Retire Goal",
+        new_name="Target 2",
+        goal_type="nav_target",
+        target_amount_thb=5_000_000.0,
+        portfolio_id="retire",
+    )
+    retire_target = next((g for g in res_retire if g["name"] == "Target 2" and g["portfolio_id"] == "retire"), None)
+    assert retire_target is not None
+    assert retire_target["target_amount_thb"] == 5_000_000.0
+

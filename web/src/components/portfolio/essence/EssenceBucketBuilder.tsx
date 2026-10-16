@@ -10,6 +10,7 @@ import { VIBRANT_BUCKET_PALETTE } from '../../../lib/bucketColors'
 interface EssenceBucketBuilderProps {
   draft: BucketPlanDraftDTO
   portfolioId: string
+  portfolioName?: string
   onUpdateDraft: (updates: UpdateBucketPlanRequestDTO) => Promise<any>
   onProceedToReview: () => void
   onRegenerateBuckets?: () => Promise<any>
@@ -20,12 +21,14 @@ interface EssenceBucketBuilderProps {
 export default function EssenceBucketBuilder({
   draft,
   portfolioId,
+  portfolioName,
   onUpdateDraft,
   onProceedToReview,
   onRegenerateBuckets,
   loading,
   statusText,
 }: EssenceBucketBuilderProps) {
+  const displayName = portfolioName || (portfolioId === 'default' ? 'พอร์ตลงทุนหลัก' : portfolioId)
   const [buckets, setBuckets] = useState<PurposeBucketDTO[]>(draft.purpose_buckets || [])
 
   // Input states for adding new asset or action rule per bucket
@@ -289,7 +292,7 @@ export default function EssenceBucketBuilder({
                 </span>
               </div>
               <p className="text-[11px] text-zinc-600">
-                พอร์ต: <span className="font-bold text-zinc-800">{portfolioId}</span>
+                พอร์ต: <span className="font-bold text-zinc-800">{displayName}</span>
                 {navThb > 0 && (
                   <span className="ml-2 pl-2 border-l border-zinc-300">
                     มูลค่าพอร์ต: <strong className="text-indigo-700">{navThb.toLocaleString('th-TH')} บาท</strong>

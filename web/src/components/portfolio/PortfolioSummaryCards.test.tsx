@@ -1,6 +1,7 @@
 import { render, screen, fireEvent } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import PortfolioSummaryCards, { isPriceRefreshSuccess } from './PortfolioSummaryCards'
+import type { PvdValuationContext } from '../../lib/pvdPresentation'
 
 describe('PortfolioSummaryCards', () => {
   it('renders loading skeletons when loading=true or summary=null', () => {
@@ -124,6 +125,97 @@ describe('PortfolioSummaryCards', () => {
     expect(screen.queryByText(/PG:/i)).not.toBeInTheDocument()
   })
 
+  it('uses statement benefit language and a Statement action for a PVD-only portfolio', () => {
+    const onViewPvdStatements = vi.fn()
+    const pvdContext: PvdValuationContext = {
+      hasPvd: true, hasMarketHoldings: false, hasNonPvdValue: false,
+      dates: ['2026-06-30'], hasUnknownDate: false, hasUnknownValuation: false,
+      latestRecordedStatementDate: '2026-06-30',
+    }
+    const holdings = [{ symbol: 'SINSA_FI', asset_type: 'PVD' }] as any
+    render(
+      <PortfolioSummaryCards
+        summary={{ total_value_thb: 1200, total_cost_basis_thb: 1000, total_unrealized_profit: 200, passive_income_ytd: 0 }}
+        lastUpdated="2026-10-14T16:34:48Z"
+        pvdContext={pvdContext}
+        holdings={holdings}
+        priceRefreshInfo={{ SINSA_FI: 'Statement NAV 12.00 THB (2026-06-30)' }}
+        onViewPvdStatements={onViewPvdStatements}
+        onRefreshPrices={vi.fn()}
+      />
+    )
+
+    expect(screen.getByText('ผลประโยชน์สะสมตาม Statement')).toBeInTheDocument()
+    expect(screen.getByText(/เทียบเงินต้นสะสม · ไม่ใช่ผลตอบแทนรายปี/)).toBeInTheDocument()
+    expect(screen.getAllByText('PVD ตาม Statement ณ 2026-06-30')).toHaveLength(2)
+    expect(screen.getByText(/บันทึกพอร์ตล่าสุด/)).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'ดู/อัปเดต Statement PVD' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /อัปเดตราคาตลาด/ })).not.toBeInTheDocument()
+    expect(screen.queryByText(/อัปเดตราคาสำเร็จ/)).not.toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'ดู/อัปเดต Statement PVD' }))
+    expect(onViewPvdStatements).toHaveBeenCalledTimes(1)
+  })
+
+  it('uses the total portfolio cost denominator for PVD mixed with cash and separates PVD refresh entries', () => {
+    const pvdContext: PvdValuationContext = {
+      hasPvd: true, hasMarketHoldings: false, hasNonPvdValue: true,
+      dates: ['2026-06-30'], hasUnknownDate: false, hasUnknownValuation: false,
+      latestRecordedStatementDate: '2026-06-30',
+    }
+    const holdings = [
+      { symbol: 'SINSA_FI', asset_type: 'PVD' },
+      { symbol: 'CASH_THB', asset_type: 'Cash' },
+    ] as any
+    render(
+      <PortfolioSummaryCards
+        summary={{ total_value_thb: 1300, total_cost_basis_thb: 1100, total_unrealized_profit: 200, passive_income_ytd: 0 }}
+        lastUpdated={null}
+        pvdContext={pvdContext}
+        holdings={holdings}
+        priceRefreshInfo={{ SINSA_FI: 'Statement NAV unavailable' }}
+      />
+    )
+
+    expect(screen.getByText('ผลประโยชน์สะสมรวม')).toBeInTheDocument()
+    expect(screen.getByText(/เทียบต้นทุนรวมพอร์ตตามสูตรเดิม/)).toBeInTheDocument()
+    expect(screen.getByText(/ไม่พบมูลค่า Statement PVD สำหรับบางรายการ/)).toBeInTheDocument()
+    expect(screen.queryByText(/อัปเดตราคาสำเร็จ/)).not.toBeInTheDocument()
+  })
+
+  it('counts market outcomes without treating PVD Statement values as market refresh success', () => {
+    const pvdContext: PvdValuationContext = {
+      hasPvd: true, hasMarketHoldings: true, hasNonPvdValue: true,
+      dates: ['2026-06-30'], hasUnknownDate: false, hasUnknownValuation: false,
+      latestRecordedStatementDate: '2026-06-30',
+    }
+    const holdings = [
+      { symbol: 'SINSA_FI', asset_type: 'PVD' },
+      { symbol: 'SPY', asset_type: 'ETF' },
+    ] as any
+    render(
+      <PortfolioSummaryCards
+        summary={{ total_value_thb: 1300, total_cost_basis_thb: 1100, total_unrealized_profit: 200, passive_income_ytd: 0 }}
+        lastUpdated={null}
+        pvdContext={pvdContext}
+        holdings={holdings}
+        priceRefreshInfo={{
+          SINSA_FI: 'Statement NAV 12.00 THB (2026-06-30)',
+          SPY: 'ok',
+          BAD: 'fetch failed (kept previous)',
+        }}
+        onRefreshPrices={vi.fn()}
+        onViewPvdStatements={vi.fn()}
+      />
+    )
+
+    expect(screen.getByText(/สำเร็จ 1\/2 รายการ/)).toBeInTheDocument()
+    expect(screen.queryByText(/สำเร็จ 1\/3 รายการ/)).not.toBeInTheDocument()
+    expect(screen.queryByText(/SINSA_FI:/)).not.toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'รายละเอียด' }))
+    expect(screen.queryByText(/SINSA_FI:/)).not.toBeInTheDocument()
+    expect(screen.getByText('ok')).toHaveClass('text-emerald-600')
+  })
+
   describe('isPriceRefreshSuccess helper', () => {
     it('returns true for valid price strings and statuses', () => {
       expect(isPriceRefreshSuccess('ok')).toBe(true)
@@ -133,6 +225,8 @@ describe('PortfolioSummaryCards', () => {
       expect(isPriceRefreshSuccess('32.9100 (fallback)')).toBe(true)
       expect(isPriceRefreshSuccess('146.92 USD')).toBe(true)
       expect(isPriceRefreshSuccess('50.00 THB')).toBe(true)
+      expect(isPriceRefreshSuccess('Statement NAV 10.25 THB (2026-06-30)')).toBe(false)
+      expect(isPriceRefreshSuccess('Statement NAV unavailable')).toBe(false)
     })
 
     it('returns false for error and failure statuses', () => {

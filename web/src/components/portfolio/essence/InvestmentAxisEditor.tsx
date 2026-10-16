@@ -12,6 +12,7 @@ interface InvestmentAxisEditorProps {
   axisDraft: AxisDraftDTO | null
   confirmedAxis: ConfirmedAxisDTO | null
   portfolioId: string
+  portfolioName?: string
   portfolioGoals?: ActualGoalItemDTO[]
   onUpdateDraft: (updates: UpdateAxisDraftRequestDTO) => Promise<any>
   onConfirmAxis: (proceedToBuckets: boolean, targetDraft?: AxisDraftDTO) => Promise<any>
@@ -58,6 +59,7 @@ export default function InvestmentAxisEditor({
   axisDraft,
   confirmedAxis,
   portfolioId,
+  portfolioName,
   portfolioGoals,
   onUpdateDraft,
   onConfirmAxis,
@@ -66,6 +68,7 @@ export default function InvestmentAxisEditor({
   loading,
   statusText,
 }: InvestmentAxisEditorProps) {
+  const displayName = portfolioName || (portfolioId === 'default' ? 'พอร์ตลงทุนหลัก' : portfolioId)
   const isConfirmed = !!confirmedAxis
   const [isEditing, setIsEditing] = useState(false)
   const isReadOnly = isConfirmed && !isEditing
@@ -351,7 +354,7 @@ export default function InvestmentAxisEditor({
                 )}
               </div>
               <p className="text-xs text-zinc-600 mt-1">
-                พอร์ต: <span className="font-bold text-zinc-800">{portfolioId}</span> | นโยบาย 8 หัวข้อที่แปลงมาจากแก่นแท้และเชื่อมโยงกับเป้าหมายทางการเงินของคุณ
+                พอร์ต: <span className="font-bold text-zinc-800">{displayName}</span> | นโยบาย 8 หัวข้อที่แปลงมาจากแก่นแท้และเชื่อมโยงกับเป้าหมายทางการเงินของคุณ
               </p>
             </div>
           </div>

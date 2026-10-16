@@ -4,6 +4,7 @@ import { formatTHB } from '../../utils/formatters'
 import { CalendarHeatmap, type HeatmapDay } from '../charts/CalendarHeatmap'
 import { TreemapChart, type TreemapItem } from '../charts/TreemapChart'
 import { StackedAreaChart, type StackedAreaPoint, type StackedAreaCategory } from '../charts/StackedAreaChart'
+import { isPvdHolding } from '../../lib/pvdPresentation'
 
 interface Props {
   performanceRows: PerformanceSnapshotDTO[]
@@ -47,12 +48,14 @@ export default function PortfolioAnalyticsTab({
       holdings.forEach((h) => {
         const val = h.market_value_thb || 0
         if (val > 0) {
+          const isPvd = isPvdHolding(h)
           items.push({
             id: h.symbol,
             label: h.symbol,
             value: val,
             group: h.asset_type || 'Other',
-            return_pct: h.unrealized_pnl_percent ?? undefined,
+            return_pct: isPvd ? undefined : h.unrealized_pnl_percent ?? undefined,
+            ...(isPvd ? { color: '#64748b' } : {}),
           })
         }
       })

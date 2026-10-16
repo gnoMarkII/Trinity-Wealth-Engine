@@ -1,5 +1,6 @@
 import { useState } from 'react'
-import type { ActualSummaryDTO, PerformanceSnapshotDTO } from '../../api/types'
+import type { ActualHoldingDTO, ActualSummaryDTO, PerformanceSnapshotDTO } from '../../api/types'
+import { partitionPriceRefreshInfo, type PvdValuationContext } from '../../lib/pvdPresentation'
 
 interface Props {
   summary: ActualSummaryDTO | null
@@ -8,6 +9,9 @@ interface Props {
   refreshingPrices?: boolean
   priceRefreshInfo?: Record<string, string> | null
   onRefreshPrices?: () => void
+  onViewPvdStatements?: () => void
+  pvdContext?: PvdValuationContext
+  holdings?: ActualHoldingDTO[]
   performanceRows?: PerformanceSnapshotDTO[]
 }
 import { formatTHB } from '../../utils/formatters'
@@ -20,6 +24,7 @@ import { formatTHB } from '../../utils/formatters'
 export function isPriceRefreshSuccess(status: string | undefined | null): boolean {
   if (!status) return false
   const lower = status.toLowerCase()
+  if (lower.trimStart().startsWith('statement nav')) return false
   if (
     lower.includes('fail') ||
     lower.includes('error') ||
@@ -38,6 +43,22 @@ export function isPriceRefreshSuccess(status: string | undefined | null): boolea
   )
 }
 
+function getPvdDateLabel(context: PvdValuationContext): string {
+  const { dates, hasUnknownDate, latestRecordedStatementDate } = context
+  if (dates.length > 1) {
+    const range = `${dates[0]}–${dates[dates.length - 1]}`
+    return hasUnknownDate ? `ข้อมูลวันที่ PVD บางรายการไม่ครบ · วันที่ที่ทราบ ${range}` : `PVD มีหลายวัน Statement · ${range}`
+  }
+  if (dates.length === 1) {
+    return hasUnknownDate ? `ข้อมูลวันที่ PVD บางรายการไม่ครบ · วันที่ที่ทราบ ${dates[0]}` : `PVD ตาม Statement ณ ${dates[0]}`
+  }
+  if (hasUnknownDate) {
+    return `ข้อมูลวันที่ PVD บางรายการไม่ครบ${latestRecordedStatementDate ? ` · Statement ล่าสุดที่บันทึก ${latestRecordedStatementDate}` : ''}`
+  }
+  if (latestRecordedStatementDate) return `Statement ล่าสุดที่บันทึก ${latestRecordedStatementDate}`
+  return 'ไม่ทราบวันที่ Statement'
+}
+
 
 export default function PortfolioSummaryCards({
   summary,
@@ -46,6 +67,9 @@ export default function PortfolioSummaryCards({
   refreshingPrices = false,
   priceRefreshInfo = null,
   onRefreshPrices,
+  onViewPvdStatements,
+  pvdContext,
+  holdings = [],
   performanceRows = [],
 }: Props) {
   const [showDetails, setShowDetails] = useState(false)
@@ -64,6 +88,16 @@ export default function PortfolioSummaryCards({
   const costBasis = summary.total_cost_basis_thb ?? 0
   const pnlPct = costBasis > 0 ? (unrealizedPnL / costBasis) * 100 : null
   const isPositive = unrealizedPnL >= 0
+  const hasPvd = pvdContext?.hasPvd ?? false
+  const hasMarketHoldings = pvdContext?.hasMarketHoldings ?? true
+  const hasNonPvdValue = pvdContext?.hasNonPvdValue ?? !hasPvd
+  const hasUnknownPvdValuation = pvdContext?.hasUnknownValuation ?? false
+  const pvdOnly = hasPvd && !hasNonPvdValue
+  const pvdDateLabel = hasPvd && pvdContext ? getPvdDateLabel(pvdContext) : null
+  const refreshPartition = partitionPriceRefreshInfo(priceRefreshInfo, holdings)
+  const marketRefreshEntries = refreshPartition.marketEntries
+  const pvdRefreshEntries = refreshPartition.pvdEntries
+  const hasUnavailablePvdStatus = pvdRefreshEntries.some(([, status]) => /unavailable|no_data|fail|error/i.test(status))
 
   // เตรียม Sparkline สำหรับ Total NAV
   const sortedSpark = [...performanceRows]
@@ -134,22 +168,23 @@ export default function PortfolioSummaryCards({
           )}
         </div>
         <div className="mt-2 flex items-center justify-between text-xs text-zinc-500 font-medium">
-          <span className="truncate">มูลค่าสุทธิปัจจุบัน (รวมเงินสด)</span>
+          <span className="truncate">{hasPvd ? 'มูลค่าล่าสุดที่บันทึก (รวมเงินสด)' : 'มูลค่าสุทธิปัจจุบัน (รวมเงินสด)'}</span>
           {sortedSpark.length >= 2 && (
             <span className={`font-sans tabular-nums text-xs font-bold shrink-0 ${isSparkPositive ? 'text-emerald-600' : 'text-rose-600'}`}>
               {isSparkPositive ? '▲' : '▼'} 15D
             </span>
           )}
         </div>
+        {pvdDateLabel && <div className="mt-1 text-[11px] leading-snug text-teal-800">{pvdDateLabel}</div>}
       </div>
 
       {/* Card 2: Total Unrealized Profit */}
       <div className="flex flex-col justify-between rounded-2xl border border-sky-100 bg-gradient-to-br from-panel via-panel to-sky-50/40 p-4 sm:p-5 shadow-sm transition-all hover:shadow-md overflow-hidden">
         <div className="flex items-center justify-between text-xs sm:text-sm font-bold uppercase tracking-wider text-zinc-500">
-          <span className="truncate">Unrealized Profit/Loss</span>
+          <span className="truncate">{hasUnknownPvdValuation ? 'ผลต่างมูลค่ารวม' : pvdOnly ? 'ผลประโยชน์สะสมตาม Statement' : hasPvd ? 'ผลประโยชน์สะสมรวม' : 'Unrealized Profit/Loss'}</span>
           <span
             className={`rounded-full px-2 py-0.5 text-xs font-extrabold font-sans tabular-nums shrink-0 ${
-              pnlPct === null
+              pnlPct === null || hasUnknownPvdValuation
                 ? 'bg-zinc-100 text-zinc-500'
                 : isPositive
                   ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
@@ -160,15 +195,23 @@ export default function PortfolioSummaryCards({
           </span>
         </div>
         <div
-          className={`mt-2 text-xl sm:text-2xl 2xl:text-3xl font-extrabold font-sans tabular-nums tracking-tight truncate ${
-            isPositive ? 'text-emerald-600' : 'text-rose-600'
+            className={`mt-2 text-xl sm:text-2xl 2xl:text-3xl font-extrabold font-sans tabular-nums tracking-tight truncate ${
+            hasUnknownPvdValuation ? 'text-zinc-700' : isPositive ? 'text-emerald-600' : 'text-rose-600'
           }`}
           title={`${isPositive ? '+' : ''}${formatTHB(unrealizedPnL)}`}
         >
           {isPositive ? '+' : ''}{formatTHB(unrealizedPnL)}
         </div>
         <div className="mt-2 flex items-center text-xs text-zinc-500 font-medium truncate">
-          <span>กำไร/ขาดทุนที่ยังไม่รับรู้</span>
+          <span>
+            {hasUnknownPvdValuation
+              ? 'ข้อมูล PVD ไม่ครบ จึงยังยืนยันผลประโยชน์ตาม Statement ไม่ได้'
+              : pvdOnly
+                ? `เทียบเงินต้นสะสม · ไม่ใช่ผลตอบแทนรายปี${pvdContext?.hasUnknownDate ? ' · วันที่ Statement บางรายการไม่ครบ' : ''}`
+                : hasPvd
+                  ? 'เทียบต้นทุนรวมพอร์ตตามสูตรเดิม · ไม่ใช่ผลตอบแทนรายปี'
+                  : 'กำไร/ขาดทุนที่ยังไม่รับรู้'}
+          </span>
         </div>
       </div>
 
@@ -199,8 +242,8 @@ export default function PortfolioSummaryCards({
       {/* Card 4: Last Updated & Refresh */}
       <div className="flex flex-col justify-between rounded-2xl border border-sky-100 bg-gradient-to-br from-panel via-panel to-sky-50/40 p-4 sm:p-5 shadow-sm transition-all hover:shadow-md overflow-hidden">
         <div className="flex items-center justify-between text-xs sm:text-sm font-bold uppercase tracking-wider text-zinc-500">
-          <span className="truncate">Market Prices Status</span>
-          {refreshingPrices && (
+          <span className="truncate">{hasPvd ? 'Portfolio Data Status' : 'Market Prices Status'}</span>
+          {refreshingPrices && (!hasPvd || hasMarketHoldings) && (
             <span className="inline-flex items-center gap-1 rounded-full bg-sky-100 px-2 py-0.5 text-[11px] font-bold text-sky-800 animate-pulse shrink-0">
               Refreshing...
             </span>
@@ -209,38 +252,64 @@ export default function PortfolioSummaryCards({
         <div className="mt-2 flex flex-col justify-center overflow-hidden">
           <span
             className="text-xs sm:text-sm font-bold font-sans tabular-nums text-zinc-800 truncate"
-            title={lastUpdated ? new Date(lastUpdated).toLocaleString('th-TH') : 'N/A'}
+            title={lastUpdated ? new Date(lastUpdated).toLocaleString('th-TH') : 'ไม่ทราบ'}
           >
-            {lastUpdated ? new Date(lastUpdated).toLocaleString('th-TH') : 'N/A'}
+            {lastUpdated ? new Date(lastUpdated).toLocaleString('th-TH') : 'ไม่ทราบ'}
           </span>
-          <span className="mt-0.5 text-[11px] sm:text-xs text-zinc-500 font-medium truncate">อัปเดตราคาล่าสุดจาก yfinance</span>
+          <span className="mt-0.5 text-[11px] sm:text-xs text-zinc-500 font-medium">บันทึกพอร์ตล่าสุด · ไม่ใช่เวลาที่ผู้ให้บริการส่งราคา</span>
+          {hasPvd && pvdDateLabel && <span className="mt-1 text-[11px] leading-snug text-teal-800">{pvdDateLabel}</span>}
         </div>
         <div className="mt-2 pt-1">
-          <button
-            type="button"
-            onClick={onRefreshPrices}
-            disabled={refreshingPrices}
-            className="flex w-full items-center justify-center gap-1.5 rounded-xl border border-sky-200 bg-flow-cyan/10 px-3 py-1.5 text-xs font-bold text-flow-blue transition-all hover:bg-flow-cyan/20 disabled:cursor-not-allowed disabled:opacity-50 shadow-xs"
-          >
-            <svg
-              className={`h-3.5 w-3.5 shrink-0 ${refreshingPrices ? 'animate-spin' : ''}`}
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-              strokeWidth={2}
+          {hasPvd && !hasMarketHoldings ? (
+            <button
+              type="button"
+              onClick={onViewPvdStatements}
+              disabled={!onViewPvdStatements}
+              className="flex w-full items-center justify-center gap-1.5 rounded-xl border border-teal-200 bg-teal-50 px-3 py-1.5 text-xs font-bold text-teal-800 transition-all hover:bg-teal-100 disabled:cursor-not-allowed disabled:opacity-50"
             >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99"
-              />
-            </svg>
-            {refreshingPrices ? 'กำลังอัปเดตราคา...' : 'อัปเดตราคาตลาด (Refresh)'}
-          </button>
+              ดู/อัปเดต Statement PVD
+            </button>
+          ) : (
+            <>
+              <button
+                type="button"
+                onClick={onRefreshPrices}
+                disabled={refreshingPrices}
+                className="flex w-full items-center justify-center gap-1.5 rounded-xl border border-sky-200 bg-flow-cyan/10 px-3 py-1.5 text-xs font-bold text-flow-blue transition-all hover:bg-flow-cyan/20 disabled:cursor-not-allowed disabled:opacity-50 shadow-xs"
+              >
+                <svg
+                  className={`h-3.5 w-3.5 shrink-0 ${refreshingPrices ? 'animate-spin' : ''}`}
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  strokeWidth={2}
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99"
+                  />
+                </svg>
+                {refreshingPrices ? 'กำลังอัปเดตราคา...' : 'อัปเดตราคาตลาด (Refresh)'}
+              </button>
+              {hasPvd && (
+                <div className="mt-1.5 text-center">
+                  <button type="button" onClick={onViewPvdStatements} className="text-[11px] font-semibold text-teal-800 underline disabled:opacity-50" disabled={!onViewPvdStatements}>
+                    ดู/อัปเดต Statement PVD
+                  </button>
+                  <p className="mt-0.5 text-[10px] text-zinc-500">การ refresh ราคาตลาดไม่เปลี่ยนยอด PVD</p>
+                </div>
+              )}
+            </>
+          )}
         </div>
+        {hasUnavailablePvdStatus && (
+          <p role="status" className="mt-2 rounded-lg border border-amber-200 bg-amber-50 px-2 py-1.5 text-[10px] font-medium text-amber-800">
+            ไม่พบมูลค่า Statement PVD สำหรับบางรายการ
+          </p>
+        )}
         {(() => {
-          if (!priceRefreshInfo) return null
-          const refreshEntries = Object.entries(priceRefreshInfo)
+          const refreshEntries = marketRefreshEntries
           const totalRefreshCount = refreshEntries.length
           if (totalRefreshCount === 0) return null
 

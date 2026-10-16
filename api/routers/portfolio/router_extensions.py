@@ -98,6 +98,7 @@ def upsert_goal_endpoint(
             notes=payload.notes,
             portfolio_id=getattr(payload, "portfolio_id", "default") or "default",
             bucket_id=getattr(payload, "bucket_id", None),
+            new_name=getattr(payload, "new_name", None),
         )
         return ActualGoalsResponseDTO(
             n_goals=len(goals),
@@ -113,7 +114,7 @@ def remove_goal_endpoint(
     service: PortfolioService = Depends(get_portfolio_service),
 ) -> ActualGoalsResponseDTO:
     with handle_portfolio_exceptions("Goals lock timeout"):
-        goals = service.structured_remove_goal(name, portfolio_id=portfolio_id or "default")
+        goals = service.structured_remove_goal(name, portfolio_id=portfolio_id)
         return ActualGoalsResponseDTO(
             n_goals=len(goals),
             goals=[ActualGoalItemDTO.model_validate(g) for g in goals],

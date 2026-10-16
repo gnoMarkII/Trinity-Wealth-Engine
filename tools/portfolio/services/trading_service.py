@@ -146,6 +146,8 @@ class PortfolioTradingService:
         portfolio_id: str = "default",
     ) -> Tuple[str, PortfolioState]:
         clean_sym = symbol.strip().upper()
+        if asset_type.strip().upper() == "PVD" or clean_sym.startswith("PVD_"):
+            raise ValueError("PVD holdings are maintained from BBLAM statement snapshots")
         if clean_sym in _CASH_SYMBOLS:
             raise ValueError(f"ห้ามเทรด cash sentinel ({clean_sym}) ผ่าน execute_trade — ให้ใช้ manage_cash_flow สำหรับฝาก/ถอนเงินสด")
         if units <= 0:
@@ -367,6 +369,8 @@ class PortfolioTradingService:
             sym = str(item.get("symbol", "")).strip().upper()
             if not sym:
                 return "Error: symbol ว่าง"
+            if str(item.get("asset_type") or "").strip().upper() == "PVD" or sym.startswith("PVD_"):
+                return "Error: PVD holdings ต้องนำเข้าผ่าน BBLAM PVD statement เท่านั้น"
             if sym in _CASH_SYMBOLS:
                 return "Error: ห้ามนำเข้า cash sentinel (CASH_THB/CASH_USD) ผ่าน batch_import_holdings"
             try:
@@ -530,6 +534,8 @@ class PortfolioTradingService:
         portfolio_id: str = "default",
     ) -> Tuple[str, PortfolioState]:
         clean_sym = symbol.strip().upper()
+        if clean_sym.startswith("PVD_"):
+            raise ValueError("PVD holdings are maintained from BBLAM statement snapshots")
         if clean_sym in _CASH_SYMBOLS:
             raise ValueError(f"สินทรัพย์ {clean_sym} เป็น Cash holding ห้ามแก้ไขผ่าน edit_holding — ให้ใช้ manage_cash_flow แทน")
         if units is None and avg_cost is None and accumulated_dividend_thb is None and asset_type is None and bucket_id is None:
@@ -701,6 +707,8 @@ class PortfolioTradingService:
 
     def structured_remove_holding(self, symbol: str, portfolio_id: str = "default") -> PortfolioState:
         clean_sym = symbol.strip().upper()
+        if clean_sym.startswith("PVD_"):
+            raise ValueError("PVD holdings ลบจากรายการทั่วไปไม่ได้; ใช้การ reset พอร์ตเต็มรูปแบบ")
         if clean_sym in _CASH_SYMBOLS:
             raise ValueError("ห้ามลบ cash sentinel")
         pid = validate_portfolio_id(portfolio_id)
@@ -744,6 +752,8 @@ class PortfolioTradingService:
             return state
 
     def structured_batch_remove_holdings(self, symbols: List[str], portfolio_id: str = "default") -> PortfolioState:
+        if any(symbol.strip().upper().startswith("PVD_") for symbol in symbols):
+            raise ValueError("PVD holdings ลบจากรายการทั่วไปไม่ได้; ใช้การ reset พอร์ตเต็มรูปแบบ")
         pid = validate_portfolio_id(portfolio_id)
         with self.repo.unit_of_work(pid) as uow:
             state = uow.load_state()

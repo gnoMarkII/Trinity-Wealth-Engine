@@ -1,6 +1,8 @@
 """Portfolio, Positions, Transactions, and Goals API Schemas."""
 from typing import Any, Literal, Optional
 from pydantic import BaseModel, Field, field_validator, model_validator
+from datetime import date
+from decimal import Decimal
 
 class DividendRoundDTO(BaseModel):
     symbol: str
@@ -16,6 +18,42 @@ class DividendRoundDTO(BaseModel):
     tax_rate: float = 0.0
     net_thb: float = 0.0
     fx_rate: float = 1.0
+
+
+class PvdHoldingValuationDTO(BaseModel):
+    payload_version: int = 1
+    fund_code: str
+    sub_fund_code: str
+    units: Decimal
+    statement_nav: Decimal
+    statement_market_value: Decimal
+    reconciliation_adjustment: Decimal = Decimal("0.00")
+    cost_basis: Decimal
+    as_of_date: date
+    statement_fingerprint: str
+    archive_id: str
+
+
+class PvdStatementMetadataDTO(BaseModel):
+    payload_version: int = 1
+    fund_code: str
+    masked_member_id: str = ""
+    as_of_date: date
+    period_start: Optional[date] = None
+    period_end: Optional[date] = None
+    total_contribution: Decimal
+    total_nav: Decimal
+    member_principal: Decimal
+    member_benefit: Decimal
+    employer_principal: Decimal
+    employer_benefit: Decimal
+    employer_vesting_percent: Decimal
+    member_vested_amount: Decimal
+    employer_vested_amount: Decimal
+    source_pdf_sha256: str
+    semantic_fingerprint: str
+    archive_id: str
+    reconciliation_adjustment: Decimal = Decimal("0.00")
 
 
 class ActualHoldingDTO(BaseModel):
@@ -50,6 +88,7 @@ class ActualHoldingDTO(BaseModel):
     dividend_rounds: list[DividendRoundDTO] = Field(default_factory=list)
     dividend_source: Optional[Literal["synced", "manual"]] = None
     fundamentals_updated_at: Optional[float] = None
+    pvd_valuation: Optional[PvdHoldingValuationDTO] = None
 
 
 class ActualSummaryDTO(BaseModel):
@@ -69,6 +108,7 @@ class AllocationTargetDTO(BaseModel):
 
 
 class ActualPortfolioStateDTO(BaseModel):
+    name: Optional[str] = None
     last_updated: Optional[str] = None
     fx_rates: dict[str, float] = {}
     summary: ActualSummaryDTO
@@ -77,6 +117,8 @@ class ActualPortfolioStateDTO(BaseModel):
     price_refresh_info: Optional[dict[str, str]] = None
     allocation_policy: Optional[dict[str, Any]] = None
     allocation_plan_origin: Optional[dict[str, Any]] = None
+    pvd_statements: list[PvdStatementMetadataDTO] = []
+    pvd_import_epoch: Optional[str] = None
 
 
 
@@ -248,6 +290,10 @@ class TransactionItemDTO(BaseModel):
     fingerprint: Optional[str] = None
     cash_adjusted: Optional[str] = None
     related_transaction_id: Optional[str] = None
+    asset_type: Optional[str] = None
+    bucket_id: Optional[str] = None
+    pvd_metadata_json: Optional[str] = None
+    reconciliation_adjustment: Optional[str] = None
 
     @model_validator(mode="before")
     @classmethod
@@ -373,6 +419,7 @@ class UpsertGoalRequestDTO(BaseModel):
     notes: Optional[str] = None
     portfolio_id: Optional[str] = "default"
     bucket_id: Optional[str] = None
+    new_name: Optional[str] = None
 
 
 class AppendJournalRequestDTO(BaseModel):
