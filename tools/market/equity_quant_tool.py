@@ -37,6 +37,7 @@ from tools.market.quant_scoring import (
     compute_composite_score,
     compute_fcf_quality_score,
     compute_debt_quality_score,
+    compute_net_shareholder_yield,
 )
 from tools.market.peer_valuation import fetch_peer_metrics, compute_peer_relative_score
 from tools.market.earnings_momentum import fetch_earnings_revision_data, compute_earnings_revision_score
@@ -46,7 +47,8 @@ from schemas.macro_schemas import MarketObservable
 from tools.market.dcf_valuation import compute_dcf_valuation, compute_institutional_reverse_dcf
 from tools.market.ownership import compute_smart_money_flags, compute_canonical_insider_conviction
 from tools.market.technical import compute_tactical_setup
-from tools.market.equity_rules_engine import compute_deterministic_scorecard
+from tools.market.sector_kpi_engine import compute_sector_kpis
+from tools.market.equity_rules_engine import compute_deterministic_scorecard, load_latest_macro_regime_context
 from .core import _yf_info
 
 log = get_logger(__name__)
@@ -158,11 +160,12 @@ def compute_equity_quant_signals(ticker: str, market: Literal["TH", "US"] = "US"
         tech, tech_q = compute_technical_indicators(provider_symbol)
 
         company_name = info.get("shortName")
+        peer_sector = info.get("sector")
 
         pe = autopsy.current_pe if (autopsy and autopsy.current_pe is not None) else info.get("trailingPE")
         pb = info.get("priceToBook")
         ev_ebitda = info.get("enterpriseToEbitda")
-        value_score, value_flag = compute_value_score(pe, pb, ev_ebitda)
+        value_score, value_flag = compute_value_score(pe, pb, ev_ebitda, sector=peer_sector)
 
         roe_raw = info.get("returnOnEquity")
         roe_pct = roe_raw * 100 if roe_raw is not None else None
@@ -220,8 +223,7 @@ def compute_equity_quant_signals(ticker: str, market: Literal["TH", "US"] = "US"
         )
 
         # Peer/Sector Relative Valuation — Contextual เท่านั้น ไม่รวมใน composite_score
-        peer_sector = info.get("sector")
-        peer_metrics = fetch_peer_metrics(peer_sector, exclude_ticker=resolved.raw_symbol)
+        peer_metrics = fetch_peer_metrics(peer_sector, exclude_ticker=resolved.raw_symbol, market=market)
         peer_relative_score, pe_vs_peer_avg_pct, peer_count, peer_flag = compute_peer_relative_score(pe, peer_metrics)
 
         # Historical Price Context — Contextual เท่านั้น ไม่รวมใน composite_score (ดู docstring
@@ -368,6 +370,17 @@ def compute_equity_quant_signals(ticker: str, market: Literal["TH", "US"] = "US"
         # Smart Money & Ownership Flags
         smart_money_flags, ownership_flags = compute_smart_money_flags(provider_symbol, info)
 
+        # Net Shareholder Yield (Dividend + Buyback - Dilution)
+        latest_sh = (autopsy.periods[0].shares_outstanding if (autopsy and autopsy.periods) else None) or shares_out
+        prev_sh = (autopsy.periods[1].shares_outstanding if (autopsy and len(autopsy.periods) >= 2) else None)
+        net_buyback_yield_pct, net_shareholder_yield_pct, dilution_flag = compute_net_shareholder_yield(
+            dividend_yield_pct, latest_sh, prev_sh
+        )
+
+        # Declarative Sector KPIs
+        sector_kpis_summary = compute_sector_kpis(peer_sector or "", autopsy.periods if autopsy else [])
+        sector_kpis_dict = sector_kpis_summary.model_dump() if sector_kpis_summary else None
+
         # -------------------------------------------------------------
         # Institutional 4-Pillar Integration
         # -------------------------------------------------------------
@@ -459,6 +472,9 @@ def compute_equity_quant_signals(ticker: str, market: Literal["TH", "US"] = "US"
             consensus_target_low=info.get("targetLowPrice"),
             analyst_count=info.get("numberOfAnalystOpinions"),
             base_revenue_period_type=base_revenue_period_type,
+            roe_pct=roe_pct,
+            book_value_per_share=info.get("bookValue"),
+            dividend_yield_pct=dividend_yield_pct,
         )
 
         # 4. Tactical Setup (S/R, ATR, Stage, Tactical R:R) with shared price history
@@ -474,7 +490,7 @@ def compute_equity_quant_signals(ticker: str, market: Literal["TH", "US"] = "US"
                 *snapshot_flags, value_flag, quality_flag, momentum_flag, *growth_flags, growth_score_flag,
                 dividend_flag, solvency_flag, liquidity_flag, composite_flag, peer_flag,
                 revision_fetch_flag or revision_score_flag, fcf_q_flag, debt_q_flag,
-                *dcf_flags, *ownership_flags, *rdcf_flags, *tac_flags, *ins_flags, *margin_flags,
+                *dcf_flags, *ownership_flags, *rdcf_flags, *tac_flags, *ins_flags, *margin_flags, dilution_flag,
             ] if f
         ]
         for name, q in [
@@ -547,6 +563,9 @@ def compute_equity_quant_signals(ticker: str, market: Literal["TH", "US"] = "US"
             raw_analysis_price=atomic_snapshot.latest_ohlcv_close,
             raw_analysis_price_str=atomic_snapshot.raw_analysis_price_str,
             metric_basis=metric_basis,
+            sector_kpis=sector_kpis_dict,
+            net_buyback_yield_pct=net_buyback_yield_pct,
+            net_shareholder_yield_pct=net_shareholder_yield_pct,
         )
 
         # 6. Guidance Extraction & Verification (Phase 1 & v3.1)
@@ -741,6 +760,7 @@ def compute_equity_quant_signals(ticker: str, market: Literal["TH", "US"] = "US"
         signals.evidence_snapshot = evidence_snapshot
 
         # 6. Deterministic Scorecard & Falsifiers
+        macro_context = load_latest_macro_regime_context()
         scorecard, falsifiers, sc_flags = compute_deterministic_scorecard(
             ticker=resolved.raw_symbol.strip().upper(),
             market=market,
@@ -750,6 +770,7 @@ def compute_equity_quant_signals(ticker: str, market: Literal["TH", "US"] = "US"
             guidance=guidance_context,
             tactical=tactical_setup,
             insider=insider_conviction,
+            macro_context=macro_context,
         )
         signals.deterministic_scorecard = scorecard
         signals.thesis_falsifiers = falsifiers

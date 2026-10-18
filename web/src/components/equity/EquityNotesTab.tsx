@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react'
 import ReactMarkdown from 'react-markdown'
 import { api } from '../../api/client'
 import type { EquityNoteContentDTO, EquityNoteItemDTO, EquityNotesDTO } from '../../api/types'
+import { NewsCardListSkeleton } from '../ui/FlowSkeleton'
 
 interface ParsedNote {
   frontmatter: { key: string; value: string }[] | null
@@ -230,11 +231,7 @@ export const EquityNotesTab: React.FC<EquityNotesTabProps> = ({ ticker }) => {
   }
 
   if (loading) {
-    return (
-      <div className="flex justify-center items-center h-48 text-zinc-500" aria-live="polite">
-        กำลังโหลด Obsidian Notes...
-      </div>
-    )
+    return <NewsCardListSkeleton count={3} label="กำลังโหลด Obsidian Notes..." />
   }
 
   if (error) {
@@ -337,8 +334,15 @@ export const EquityNotesTab: React.FC<EquityNotesTabProps> = ({ ticker }) => {
             {/* Modal Body */}
             <div className="p-6 overflow-y-auto flex-1">
               {contentLoading && (
-                <div className="flex justify-center items-center h-48 text-zinc-500">
-                  กำลังโหลดเนื้อหาโน้ต...
+                <div className="space-y-3 p-4 animate-fade-in" aria-live="polite">
+                  <div className="flex items-center gap-2 text-xs text-sky-700/80 mb-2">
+                    <span className="inline-block h-2 w-2 rounded-full bg-sky-500 animate-ping" />
+                    <span>กำลังโหลดเนื้อหาโน้ต...</span>
+                  </div>
+                  <div className="h-4 w-3/4 rounded animate-shimmer" />
+                  <div className="h-4 w-full rounded animate-shimmer" />
+                  <div className="h-4 w-5/6 rounded animate-shimmer" />
+                  <div className="h-24 w-full rounded-xl animate-shimmer mt-2" />
                 </div>
               )}
 

@@ -53,10 +53,10 @@ export const OptionsOiStrikeLadder: React.FC<OptionsOiStrikeLadderProps> = ({
 
   return (
     <div
-      className={`rounded-2xl border border-sky-100 bg-white/80 p-5 shadow-[0_8px_25px_rgba(14,165,233,0.06)] backdrop-blur-md ${className}`}
+      className={`flow-panel rounded-2xl border border-edge/80 p-6 shadow-sm transition-all animate-card-in ${className}`}
     >
       {/* Header */}
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-sky-100/60 pb-3">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-edge/60 pb-3">
         <div>
           <div className="flex items-center gap-2">
             <h3 className="font-semibold text-zinc-900 tracking-tight">

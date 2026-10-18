@@ -12,6 +12,9 @@ export default {
         surface: 'var(--surface)',
         'surface-strong': 'var(--surface-strong)',
         edge: 'var(--edge)',
+        primary: 'rgb(var(--primary-rgb) / <alpha-value>)',
+        muted: 'rgb(var(--muted-rgb) / <alpha-value>)',
+        accent: 'rgb(var(--accent-rgb) / <alpha-value>)',
         flow: {
           cyan: '#06B6D4',
           sky: '#38BDF8',

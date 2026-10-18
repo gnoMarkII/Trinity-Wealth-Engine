@@ -177,3 +177,16 @@ def trigger_performance_snapshot(
         service.record_performance_snapshot(refresh_prices=refresh_prices, portfolio_id=portfolio_id)
         rows = service.get_structured_performance_history(days=365, portfolio_id=portfolio_id)
         return [PerformanceSnapshotDTO.model_validate(r) for r in rows]
+
+
+@router.post("/api/portfolio/actual/performance/snapshot-all")
+def trigger_performance_snapshot_all(
+    refresh_prices: bool = False,
+    service: PortfolioService = Depends(get_portfolio_service),
+) -> dict[str, str]:
+    with handle_portfolio_exceptions("Performance lock timeout"):
+        results: dict[str, str] = {}
+        for p in service.list_portfolios():
+            msg = service.record_performance_snapshot(refresh_prices=refresh_prices, portfolio_id=p.id)
+            results[p.id] = msg
+        return results

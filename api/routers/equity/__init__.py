@@ -30,6 +30,13 @@ from .router_entity import (
     get_equity_news,
     get_equity_notes,
 )
+from .router_notebooklm import (
+    router as notebooklm_router,
+    export_equity_to_notebooklm,
+    get_latest_equity_notebooklm_export,
+    get_equity_notebooklm_export_by_id,
+    retry_equity_notebooklm_export,
+)
 
 router = APIRouter(
     prefix="/api/equity",
@@ -37,8 +44,9 @@ router = APIRouter(
     dependencies=[Depends(require_session)],
 )
 
-# Crucial: Register meta_router (static paths) before /{ticker} catch-all
+# Crucial: Register meta_router and notebooklm_router before /{ticker} catch-all
 router.include_router(meta_router)
+router.include_router(notebooklm_router)
 router.include_router(research_router)
 router.include_router(entity_router)
 

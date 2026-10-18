@@ -107,73 +107,160 @@ export default function Macro() {
     setLoadingThai(true)
     setLoadingCrypto(true)
 
-    // Parallel calls with individual settled status
-    const [yc, fsi, cot, bis, vol, aucNote, aucBill, debt, thFlow, thGold, thVal, thBreadth, cryptoLiq] =
-      await Promise.allSettled([
-        api.getTreasuryYieldCurve?.(),
-        api.getFinancialStress?.(),
-        api.getMetalsCot?.('gold'),
-        api.getGlobalPolicyRates?.(),
-        api.getCommodityVolatility?.(),
-        api.getTreasuryAuctionDemand?.('Note', '10-Year'),
-        api.getTreasuryAuctionDemand?.('Bill', '13-Week'),
-        api.getNationalDebt?.(30),
-        api.getThaiInvestorFlow?.('SET'),
-        api.getThaiRetailGold?.(),
-        api.getThaiMarketValuation?.('SET'),
-        api.getThaiMarketBreadth?.('SET'),
-        api.getCryptoMacroLiquidity?.(),
-      ])
+    const pYc = Promise.resolve(api.getTreasuryYieldCurve?.())
+      .then((val) => {
+        setYieldCurve(val)
+        setErrorYield(null)
+        return { status: 'fulfilled' as const, value: val }
+      })
+      .catch((err) => {
+        setErrorYield('ไม่สามารถเชื่อมต่อ US Treasury Yield Curve ได้')
+        return { status: 'rejected' as const, reason: err }
+      })
+      .finally(() => setLoadingYield(false))
 
-    if (yc.status === 'fulfilled') {
-      setYieldCurve(yc.value)
-      setErrorYield(null)
-    } else {
-      setErrorYield('ไม่สามารถเชื่อมต่อ US Treasury Yield Curve ได้')
-    }
-    setLoadingYield(false)
+    const pFsi = Promise.resolve(api.getFinancialStress?.())
+      .then((val) => {
+        setFinancialStress(val)
+        setErrorStress(null)
+        return { status: 'fulfilled' as const, value: val }
+      })
+      .catch((err) => {
+        setErrorStress('ไม่สามารถเชื่อมต่อ OFR Financial Stress Index ได้')
+        return { status: 'rejected' as const, reason: err }
+      })
+      .finally(() => setLoadingStress(false))
 
-    if (fsi.status === 'fulfilled') {
-      setFinancialStress(fsi.value)
-      setErrorStress(null)
-    } else {
-      setErrorStress('ไม่สามารถเชื่อมต่อ OFR Financial Stress Index ได้')
-    }
-    setLoadingStress(false)
+    const pCot = Promise.resolve(api.getMetalsCot?.('gold'))
+      .then((val) => {
+        setMetalsCot(val)
+        return { status: 'fulfilled' as const, value: val }
+      })
+      .catch((err) => {
+        setMetalsCot(null)
+        return { status: 'rejected' as const, reason: err }
+      })
 
-    setMetalsCot(cot.status === 'fulfilled' ? cot.value : null)
-    setCommodityVol(vol.status === 'fulfilled' ? vol.value : null)
-    setAuctionDemandNote(aucNote.status === 'fulfilled' ? aucNote.value : null)
-    setAuctionDemandBill(aucBill.status === 'fulfilled' ? aucBill.value : null)
-    setCryptoLiquidity(cryptoLiq.status === 'fulfilled' ? cryptoLiq.value : null)
-    setLoadingCrypto(false)
-    setNationalDebt(debt.status === 'fulfilled' ? debt.value : null)
+    const pBis = Promise.resolve(api.getGlobalPolicyRates?.())
+      .then((val) => {
+        setGlobalPolicyRates(val)
+        setErrorPolicy(null)
+        return { status: 'fulfilled' as const, value: val }
+      })
+      .catch((err) => {
+        setErrorPolicy('ไม่สามารถเชื่อมต่ออัตราดอกเบี้ยนโยบาย BIS ได้')
+        return { status: 'rejected' as const, reason: err }
+      })
+      .finally(() => setLoadingPolicy(false))
 
-    if (bis.status === 'fulfilled') {
-      setGlobalPolicyRates(bis.value)
-      setErrorPolicy(null)
-    } else {
-      setErrorPolicy('ไม่สามารถเชื่อมต่ออัตราดอกเบี้ยนโยบาย BIS ได้')
-    }
-    setLoadingPolicy(false)
+    const pVol = Promise.resolve(api.getCommodityVolatility?.())
+      .then((val) => {
+        setCommodityVol(val)
+        return { status: 'fulfilled' as const, value: val }
+      })
+      .catch((err) => {
+        setCommodityVol(null)
+        return { status: 'rejected' as const, reason: err }
+      })
+
+    const pAucNote = Promise.resolve(api.getTreasuryAuctionDemand?.('Note', '10-Year'))
+      .then((val) => {
+        setAuctionDemandNote(val)
+        return { status: 'fulfilled' as const, value: val }
+      })
+      .catch((err) => {
+        setAuctionDemandNote(null)
+        return { status: 'rejected' as const, reason: err }
+      })
+
+    const pAucBill = Promise.resolve(api.getTreasuryAuctionDemand?.('Bill', '13-Week'))
+      .then((val) => {
+        setAuctionDemandBill(val)
+        return { status: 'fulfilled' as const, value: val }
+      })
+      .catch((err) => {
+        setAuctionDemandBill(null)
+        return { status: 'rejected' as const, reason: err }
+      })
+
+    const pDebt = Promise.resolve(api.getNationalDebt?.(30))
+      .then((val) => {
+        setNationalDebt(val)
+        return { status: 'fulfilled' as const, value: val }
+      })
+      .catch((err) => {
+        setNationalDebt(null)
+        return { status: 'rejected' as const, reason: err }
+      })
+
+    const pCryptoLiq = Promise.resolve(api.getCryptoMacroLiquidity?.())
+      .then((val) => {
+        setCryptoLiquidity(val)
+        return { status: 'fulfilled' as const, value: val }
+      })
+      .catch((err) => {
+        setCryptoLiquidity(null)
+        return { status: 'rejected' as const, reason: err }
+      })
+      .finally(() => setLoadingCrypto(false))
 
     // Thai Observables
-    let thaiErrCount = 0
-    if (thFlow.status === 'fulfilled') setFlow(thFlow.value)
-    else { setFlow(null); thaiErrCount++ }
-    if (thGold.status === 'fulfilled') setGold(thGold.value)
-    else { setGold(null); thaiErrCount++ }
-    if (thVal.status === 'fulfilled') setValuation(thVal.value)
-    else { setValuation(null); thaiErrCount++ }
-    if (thBreadth.status === 'fulfilled') setBreadth(thBreadth.value)
-    else { setBreadth(null); thaiErrCount++ }
+    const pThFlow = Promise.resolve(api.getThaiInvestorFlow?.('SET'))
+      .then((val) => {
+        setFlow(val)
+        return { status: 'fulfilled' as const, value: val }
+      })
+      .catch((err) => {
+        setFlow(null)
+        return { status: 'rejected' as const, reason: err }
+      })
 
-    if (thaiErrCount > 0) {
-      setErrorThai(`มีข้อมูลตลาดไทย ${thaiErrCount} รายการที่ไม่สามารถดึงได้`)
-    } else {
-      setErrorThai(null)
-    }
-    setLoadingThai(false)
+    const pThGold = Promise.resolve(api.getThaiRetailGold?.())
+      .then((val) => {
+        setGold(val)
+        return { status: 'fulfilled' as const, value: val }
+      })
+      .catch((err) => {
+        setGold(null)
+        return { status: 'rejected' as const, reason: err }
+      })
+
+    const pThVal = Promise.resolve(api.getThaiMarketValuation?.('SET'))
+      .then((val) => {
+        setValuation(val)
+        return { status: 'fulfilled' as const, value: val }
+      })
+      .catch((err) => {
+        setValuation(null)
+        return { status: 'rejected' as const, reason: err }
+      })
+
+    const pThBreadth = Promise.resolve(api.getThaiMarketBreadth?.('SET'))
+      .then((val) => {
+        setBreadth(val)
+        return { status: 'fulfilled' as const, value: val }
+      })
+      .catch((err) => {
+        setBreadth(null)
+        return { status: 'rejected' as const, reason: err }
+      })
+
+    Promise.allSettled([pThFlow, pThGold, pThVal, pThBreadth]).then(([f, g, v, b]) => {
+      let thaiErrCount = 0
+      if (f.status === 'fulfilled' && f.value.status === 'rejected') thaiErrCount++
+      if (g.status === 'fulfilled' && g.value.status === 'rejected') thaiErrCount++
+      if (v.status === 'fulfilled' && v.value.status === 'rejected') thaiErrCount++
+      if (b.status === 'fulfilled' && b.value.status === 'rejected') thaiErrCount++
+      if (thaiErrCount > 0) {
+        setErrorThai(`มีข้อมูลตลาดไทย ${thaiErrCount} รายการที่ไม่สามารถดึงได้`)
+      } else {
+        setErrorThai(null)
+      }
+      setLoadingThai(false)
+    })
+
+    const [yc, fsi, cot, bis, vol, aucNote, aucBill, debt, thFlow, thGold, thVal, thBreadth, cryptoLiq] =
+      await Promise.all([pYc, pFsi, pCot, pBis, pVol, pAucNote, pAucBill, pDebt, pThFlow, pThGold, pThVal, pThBreadth, pCryptoLiq])
 
     const providerResults = [yc, fsi, cot, bis, vol, aucNote, aucBill, debt, thFlow, thGold, thVal, thBreadth, cryptoLiq]
     const providerNames = ['US Yield Curve', 'OFR Stress', 'Gold COT', 'Policy Rates', 'Commodity Volatility', '10Y Auction', '13W Auction', 'US Debt', 'SET Flow', 'GTA Gold', 'SET Valuation', 'SET Breadth', 'Crypto Liquidity']

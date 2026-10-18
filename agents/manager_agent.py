@@ -5,7 +5,7 @@ import uuid
 import json
 from datetime import datetime, timezone
 from functools import lru_cache
-from typing import Literal, TypedDict, Optional, Any
+from typing import Annotated, Any, Literal, Optional, TypedDict
 
 from langchain_core.messages import AIMessage, HumanMessage, ToolMessage
 from langchain_core.runnables.config import RunnableConfig
@@ -23,8 +23,14 @@ from agents.strategic_allocator import invoke_strategic_allocator
 from agents.equity_quant_agent import create_equity_quant
 from agents.equity_narrative_agent import create_equity_narrative
 from agents.equity_synthesizer import invoke_equity_synthesizer
-from schemas.macro_schemas import MacroStrategyDirection, MarketObservable
-from schemas.micro_quant_schemas import QuantSignals, EquitySentimentContext, MicroQuantOutput
+from schemas.macro_schemas import MacroStrategyDirection, MarketObservable, QuantScore
+from schemas.micro_quant_schemas import (
+    QuantSignals,
+    EquitySentimentContext,
+    MicroQuantOutput,
+    ThesisDeltaSummary,
+    PortfolioHoldingContext,
+)
 from tools.macro.report_formatter import format_macro_strategy_report, write_strategy_json_sidecar
 from tools.macro.ingest import fetch_and_save_macro_snapshots
 from tools.market.equity_report_formatter import format_equity_analysis_report
@@ -35,7 +41,29 @@ from core.llm_factory import FALLBACK_MODEL, detect_provider, get_llm
 from core.logger import get_logger
 from core.model_registry import get_model_name
 from core.prompt_harness import get_harness
+from core.tool_harness import runaway_guard_scope
 from core.utils import normalize_content
+from core.verification_loop import invoke_react_with_verification, strip_json_envelope
+from agents.pipelines.archivist_helpers import (
+    build_archivist_task_instruction,
+    resolve_archivist_verification_spec,
+)
+from agents.pipelines.macro_helpers import (
+    build_economist_fallback_dict,
+    canonicalize_macro_report_direction,
+    enrich_macro_direction_post_allocation,
+    prepare_allocator_quant_payload,
+    resolve_sector_context_for_economist,
+    resolve_sector_context_for_quant,
+)
+from agents.pipelines.equity_helpers import (
+    build_equity_narrative_fallback_dict,
+    build_fallback_equity_output,
+    build_provisional_equity_output,
+    build_synthesized_equity_output,
+    compute_thesis_delta_from_vault,
+    load_portfolio_holding_context,
+)
 
 log = get_logger(__name__)
 
@@ -117,9 +145,21 @@ class RouteMeta(TypedDict, total=False):
     worker_started_at: float | None
 
 
+
+
+
+def _merge_route_meta(prev: Optional[RouteMeta], next_: Optional[RouteMeta]) -> RouteMeta:
+    """Reducer for route_meta when concurrent graph nodes update in the same step."""
+    if not prev:
+        return next_ or {}
+    if not next_:
+        return prev
+    return {**prev, **next_}
+
+
 class AgentState(MessagesState):
     """MessagesState + routing metadata + pending multi-task queue + replan safety"""
-    route_meta: RouteMeta
+    route_meta: Annotated[RouteMeta, _merge_route_meta]
     task_queue: list[dict]
     replan_count: int
     turn_id: str
@@ -146,6 +186,8 @@ class AgentState(MessagesState):
     equity_save_to_vault: Optional[bool]
     equity_output: Optional[dict[str, Any]]
     equity_news_raw: Optional[str]
+    equity_thesis_delta: Optional[dict]
+    equity_portfolio_context: Optional[dict]
 
 
 # ROUTER_PROMPT ถูกย้ายไปที่ prompts/skills/manager/SKILL.md ผ่านระบบ PromptHarness
@@ -197,9 +239,6 @@ def _is_worker_error(messages: list) -> str | None:
         return content
     return None
 
-
-def _msg_role(m) -> str:
-    return "human" if isinstance(m, HumanMessage) else "assistant"
 
 
 def _has_entity_frontmatter(text: str) -> bool:
@@ -490,80 +529,11 @@ def build_graph(checkpointer=None, note_writer: Optional[KnowledgeNoteWritePort]
         return Command(goto=goto_target, update=state_update)
 
     def prepare_archivist_node(state: AgentState) -> Command[Literal["archivist"]]:
-        meta = state.get("route_meta") or {}
-        source = meta.get("source")
-
-        if source == "macro_intel":
-            last_msg = extract_worker_reply(state["messages"])
-
-            # write_raw_markdown ให้ Archivist LLM ตัดสินใจ filename เอง — พบว่าไม่ deterministic
-            # ข้ามรอบรัน (เช่นวันเดียวกันแต่ตัดสินใจสลับ space/underscore) ทำให้เกิดไฟล์ซ้ำแทนที่จะ
-            # overwrite เดิม (เจอจริงจาก live test ของ equity_intel) — ดึง title จาก YAML มาบังคับ
-            # filename ให้คงที่ทุกรอบแทน ไม่ปล่อยให้ LLM เดาเอง (แก้ที่ instruction ไม่ใช่ tool เพราะ
-            # write_raw_markdown ถูกทดสอบไว้แล้วว่าต้อง preserve filename ตามที่ caller ส่งมาตรงๆ
-            # ทั้งแบบ space และ underscore สำหรับ entity_type อื่น เปลี่ยน tool เองจะพังเทสต์เดิม)
-            from tools.archivist.parser import extract_yaml_frontmatter_value
-            title = extract_yaml_frontmatter_value(last_msg, "title")
-            filename_directive = (
-                f"\nต้องใช้ filename='{title}' เป๊ะๆ ตามนี้เท่านั้น ห้ามดัดแปลง เปลี่ยนช่องว่างเป็นขีดล่าง "
-                f"หรือเปลี่ยนรูปแบบใดๆ ทั้งสิ้น (เพื่อให้ re-run วันเดียวกัน overwrite ไฟล์เดิมแทนสร้างไฟล์ซ้ำ)"
-                if title else ""
-            )
-            task = f"คุณต้องเรียกใช้เครื่องมือ write_raw_markdown เพื่อบันทึกข้อมูลดิบต่อไปนี้ลง Vault ทันที ห้ามตอบกลับเป็นข้อความโดยไม่เรียกใช้เครื่องมือ{filename_directive}\n\n[ข้อมูลดิบ]\n{last_msg}"
-        elif source == "equity_intel":
-            last_msg = extract_worker_reply(state["messages"])
-            from tools.archivist.parser import extract_yaml_frontmatter_value
-            report_title = extract_yaml_frontmatter_value(last_msg, "title")
-
-            news_raw = state.get("equity_news_raw")
-            valid_news = (
-                isinstance(news_raw, str)
-                and news_raw.lstrip().startswith("---")
-                and bool(extract_yaml_frontmatter_value(news_raw, "title"))
-            )
-
-            if valid_news:
-                news_title = extract_yaml_frontmatter_value(news_raw, "title")
-                news_directive = (
-                    f"filename='{news_title}' เป๊ะๆ ตามนี้เท่านั้น ห้ามดัดแปลง เปลี่ยนช่องว่างเป็นขีดล่าง หรือเปลี่ยนรูปแบบใดๆ ทั้งสิ้น"
-                    if news_title else ""
-                )
-                report_directive = (
-                    f"filename='{report_title}' เป๊ะๆ ตามนี้เท่านั้น ห้ามดัดแปลง เปลี่ยนช่องว่างเป็นขีดล่าง หรือเปลี่ยนรูปแบบใดๆ ทั้งสิ้น"
-                    if report_title else ""
-                )
-                directives = (
-                    f"\nคุณต้องเรียกใช้เครื่องมือ write_raw_markdown ทั้งหมด 2 ครั้งเพื่อบันทึกทั้งข่าวหุ้นและบทวิเคราะห์หุ้นดังนี้:\n"
-                    f"1. บันทึกข่าวหุ้นล่าสุดด้วย {news_directive} (เพื่อให้ re-run วันเดียวกัน overwrite ไฟล์เดิมแทนสร้างไฟล์ซ้ำ)\n"
-                    f"[ข้อมูลดิบ - ข่าวหุ้นล่าสุด]\n{news_raw}\n\n"
-                    f"2. บันทึกบทวิเคราะห์หุ้นด้วย {report_directive} (เพื่อให้ re-run วันเดียวกัน overwrite ไฟล์เดิมแทนสร้างไฟล์ซ้ำ)\n"
-                    f"[ข้อมูลดิบ - บทวิเคราะห์หุ้น]\n{last_msg}"
-                )
-                task = f"คุณต้องเรียกใช้เครื่องมือ write_raw_markdown ทั้งหมด 2 ครั้งเพื่อบันทึกข้อมูลดิบลง Vault ทันที ห้ามตอบกลับเป็นข้อความโดยไม่เรียกใช้เครื่องมือ{directives}"
-            else:
-                filename_directive = (
-                    f"\nต้องใช้ filename='{report_title}' เป๊ะๆ ตามนี้เท่านั้น ห้ามดัดแปลง เปลี่ยนช่องว่างเป็นขีดล่าง "
-                    f"หรือเปลี่ยนรูปแบบใดๆ ทั้งสิ้น (เพื่อให้ re-run วันเดียวกัน overwrite ไฟล์เดิมแทนสร้างไฟล์ซ้ำ)"
-                    if report_title else ""
-                )
-                task = f"คุณต้องเรียกใช้เครื่องมือ write_raw_markdown เพื่อบันทึกข้อมูลดิบต่อไปนี้ลง Vault ทันที ห้ามตอบกลับเป็นข้อความโดยไม่เรียกใช้เครื่องมือ{filename_directive}\n\n[ข้อมูลดิบ]\n{last_msg}"
-        else:
-            last_msg = normalize_content(state["messages"][-1].content)
-            msgs = state["messages"]
-            last_human_idx = next(
-                (i for i in range(len(msgs) - 1, -1, -1) if isinstance(msgs[i], HumanMessage) and getattr(msgs[i], "name", None) != "manager"),
-                -1,
-            )
-            raw_user = normalize_content(msgs[last_human_idx].content) if last_human_idx >= 0 else ""
-            mid_drain = any(
-                isinstance(m, AIMessage) and normalize_content(m.content).strip()
-                for m in msgs[last_human_idx + 1:-1]
-            )
-            if not mid_drain and _has_entity_frontmatter(raw_user) and len(raw_user) > len(last_msg) * 2:
-                task = f"บันทึกข้อมูลดิบต่อไปนี้ลง Vault ทันที\n\n[ข้อมูลดิบ]\n{raw_user}"
-            else:
-                task = last_msg
-
+        task = build_archivist_task_instruction(
+            state,
+            extract_reply_fn=extract_worker_reply,
+            has_frontmatter_fn=_has_entity_frontmatter,
+        )
         return Command(
             goto="archivist",
             update={
@@ -623,7 +593,7 @@ def build_graph(checkpointer=None, note_writer: Optional[KnowledgeNoteWritePort]
     def post_quant_node(state: AgentState) -> Command[Literal["macro_economist", "supervisor"]]:
         reply = extract_worker_reply(state["messages"])
         try:
-            parsed = json.loads(reply)
+            parsed = json.loads(strip_json_envelope(reply))
             from schemas.macro_schemas import QuantScore
             validated = QuantScore.model_validate(parsed)
             validated_json = validated.model_dump(mode="json")
@@ -653,10 +623,8 @@ def build_graph(checkpointer=None, note_writer: Optional[KnowledgeNoteWritePort]
 
     def post_economist_node(state: AgentState) -> Command[Literal["strategic_allocator", "supervisor"]]:
         reply = extract_worker_reply(state["messages"])
-        import re
-        reply_clean = re.sub(r'^```(?:json)?\s*|\s*```$', '', reply.strip(), flags=re.MULTILINE)
         try:
-            parsed = json.loads(reply_clean)
+            parsed = json.loads(strip_json_envelope(reply))
             from schemas.macro_schemas import NarrativeContext
             validated = NarrativeContext.model_validate(parsed)
             validated_json = validated.model_dump(mode="json")
@@ -679,16 +647,7 @@ def build_graph(checkpointer=None, note_writer: Optional[KnowledgeNoteWritePort]
             )
         except Exception as e:
             log_worker_result(state.get("turn_id", "unknown"), "macro_economist", f"Validation fallback: {e}\n{reply}", status="warning")
-            from datetime import datetime, timezone
-            fallback_dict = {
-                "evaluated_at": datetime.now(timezone.utc).isoformat(),
-                "dominant_themes": [],
-                "market_sentiment": "neutral",
-                "tail_risks": [],
-                "policy_signals": [],
-                "key_narratives_by_region": {},
-                "sources_summary": f"Data fetch failed: {str(e)}"
-            }
+            fallback_dict = build_economist_fallback_dict(e)
             from schemas.macro_schemas import NarrativeContext
             validated_fallback = NarrativeContext.model_validate(fallback_dict)
             return Command(
@@ -701,175 +660,35 @@ def build_graph(checkpointer=None, note_writer: Optional[KnowledgeNoteWritePort]
             provider = detect_provider(_STRATEGIC_ALLOCATOR_MODEL)
             model = get_llm(provider=provider, model_name=_STRATEGIC_ALLOCATOR_MODEL)
 
-            quant_data = state.get("quant_score", {}) or {}
-            observable_registry: dict[str, MarketObservable] = {}
-            if isinstance(quant_data, dict):
-                for raw in quant_data.get("market_observables", []) or []:
-                    try:
-                        obs = raw if isinstance(raw, MarketObservable) else MarketObservable.model_validate(raw)
-                    except Exception:
-                        continue
-                    observable_registry[obs.observable_id] = obs
-
-            valid_observables = []
-            unverified_observables = []
-            for obs in observable_registry.values():
-                item = {
-                    "observable_id": obs.observable_id,
-                    "asset_bucket": obs.asset_bucket,
-                    "region": obs.region,
-                    "indicator": obs.indicator,
-                    "value": obs.value,
-                    "unit": obs.unit,
-                    "observed_at": obs.observed_at,
-                    "source_file": obs.source_file,
-                    "provider": obs.provider,
-                    "stale_reason": obs.stale_reason,
-                }
-                if obs.is_valid:
-                    valid_observables.append(item)
-                else:
-                    unverified_observables.append(item)
-
-            allocator_quant_data = dict(quant_data) if isinstance(quant_data, dict) else {}
-            # Keep market-price evidence beside, never inside, macro hard-data observables.
-            allocator_quant_data["sector_rotation_context"] = state.get("sector_rotation_context")
-            allocator_quant_data["sector_snapshot_id"] = state.get("sector_rotation_snapshot_id")
-            allocator_quant_data["sector_context_status"] = state.get("sector_context_status")
-            allocator_quant_data["valid_observables"] = valid_observables
-            allocator_quant_data["invalid_observables"] = unverified_observables
-            allocator_quant_data["regional_data_gaps"] = allocator_quant_data.get("data_gaps", [])
-            allocator_quant_data["market_observables_by_validity"] = {
-                "VALID INSTITUTIONAL HARD DATA OBSERVABLES (USE FOR HIGH/MEDIUM CONFIDENCE)": valid_observables,
-                "UNVERIFIED PROXIES & STALE INDICATORS (DO NOT USE FOR CONFIDENCE / LOW CONFIDENCE ONLY)": unverified_observables,
-            }
-            evaluated_source_files = {
-                obs.source_file for obs in observable_registry.values() if obs.source_file
-            }
-            evaluated_date = os.getenv("EVAL_DATE") or str(allocator_quant_data.get("evaluated_at", ""))[:10]
-            if not evaluated_date or len(evaluated_date) != 10:
-                evaluated_date = datetime.now().strftime("%Y-%m-%d")
-            evaluated_source_files.add(f"Macro_Baseline_{evaluated_date}.md")
-            allocator_quant_data["evaluated_source_files"] = sorted(evaluated_source_files)
+            (
+                allocator_quant_data,
+                observable_registry,
+                evaluated_source_files,
+                evaluated_date,
+            ) = prepare_allocator_quant_payload(state)
 
             quant_json = json.dumps(allocator_quant_data, ensure_ascii=False)
             narrative_json = json.dumps(state.get("narrative_context", {}), ensure_ascii=False)
 
-            direction = invoke_strategic_allocator(model, quant_json, narrative_json, observable_registry=observable_registry)
-
-            # Deep-merge Thailand Market Stance: Always preserve quantitative numbers from Terminal V2
-            th_quant = (allocator_quant_data.get("regions", {}).get("Thailand", {}).get("market_stance") or {})
-            th_llm = getattr(direction, "thailand_market_stance", None) or {}
-            merged_stance = dict(th_quant)
-            # Rationale is from LLM if provided, otherwise synthesized from quant + asset allocations
-            ai_rationale = None
-            if isinstance(th_llm, dict):
-                ai_rationale = th_llm.get("rationale")
-                if th_llm.get("observable_refs"):
-                    merged_stance["observable_refs"] = th_llm["observable_refs"]
-            if not ai_rationale:
-                from tools.macro.terminal_observables import synthesize_thai_market_stance_narrative
-                thai_assets_in_dir = [
-                    a for a in getattr(direction, "asset_allocation", []) or []
-                    if getattr(a, "region", "") == "Thailand" or "THB" in getattr(a, "asset_class", "")
-                ]
-                ai_rationale = synthesize_thai_market_stance_narrative(merged_stance, thai_assets_in_dir)
-            merged_stance["rationale"] = ai_rationale
-            if not merged_stance.get("observable_refs"):
-                merged_stance["observable_refs"] = [
-                    oid for oid in [
-                        "obs_set_flow_foreign",
-                        "obs_set_advance_decline_ratio",
-                        "obs_set_valuation_pe",
-                        "obs_gta_gold_bar_sell",
-                        "obs_diff_us_th_policy_rate_bis",
-                    ] if oid in observable_registry
-                ]
-            direction.thailand_market_stance = merged_stance
-
-            # Guarantee SET Equities (Thailand) in asset allocation if Thai quant data exists
-            has_thai_equity = any(
-                a.region == "Thailand" and a.asset_bucket == "equities"
-                for a in getattr(direction, "asset_allocation", []) or []
+            direction = invoke_strategic_allocator(
+                model,
+                quant_json,
+                narrative_json,
+                observable_registry=observable_registry,
             )
-            if not has_thai_equity and th_quant:
-                from schemas.macro_schemas import AssetAllocationView, AssetStance
-                flow_mb = th_quant.get("investor_flow", {}).get("foreign_net_mb")
-                pe = th_quant.get("valuation", {}).get("pe_ratio")
-                ad = th_quant.get("market_breadth", {}).get("advance_decline_ratio")
 
-                has_eligible_data = (flow_mb is not None) or (pe is not None) or (ad is not None)
-                if has_eligible_data:
-                    is_bearish = (
-                        (flow_mb is not None and flow_mb < 0)
-                        or (pe is not None and pe > 17)
-                        or (ad is not None and ad < 0.8)
-                    )
-                    thai_stance = AssetStance.UNDERWEIGHT if is_bearish else AssetStance.NEUTRAL
-                    delta_str = "-2% vs benchmark" if thai_stance == AssetStance.UNDERWEIGHT else "0% vs benchmark"
+            direction = enrich_macro_direction_post_allocation(
+                direction,
+                allocator_quant_data,
+                observable_registry,
+            )
 
-                    support_items = []
-                    obs_refs = []
-                    rationale_parts = []
-
-                    if flow_mb is not None and "obs_set_flow_foreign" in observable_registry:
-                        obs_refs.append("obs_set_flow_foreign")
-                        support_items.append(f"SET Foreign Investor Net Flow {flow_mb:,.2f} THB Mil")
-                        if flow_mb < 0:
-                            rationale_parts.append(f"กระแสเงินทุนต่างชาติขายสุทธิ ({flow_mb:,.1f} ลบ.)")
-                        elif flow_mb > 0:
-                            rationale_parts.append(f"กระแสเงินทุนต่างชาติซื้อสุทธิ (+{flow_mb:,.1f} ลบ.)")
-                        else:
-                            rationale_parts.append("กระแสเงินทุนต่างชาติทรงตัว (0.0 ลบ.)")
-
-                    if ad is not None and "obs_set_advance_decline_ratio" in observable_registry:
-                        obs_refs.append("obs_set_advance_decline_ratio")
-                        support_items.append(f"SET Market Breadth A/D {ad:.2f}x")
-
-                    if pe is not None and "obs_set_valuation_pe" in observable_registry:
-                        obs_refs.append("obs_set_valuation_pe")
-                        support_items.append(f"SET Index P/E {pe:.2f}")
-                        rationale_parts.append(f"ระดับ Valuation P/E อยู่ที่ {pe:.1f}x")
-
-                    if rationale_parts:
-                        constructed_rationale = f"ตลาดหุ้นไทยประเมินจากหลักฐานตลาดทุน: {' และ '.join(rationale_parts)}"
-                    else:
-                        constructed_rationale = "ประเมินสภาวะตลาดหุ้นไทยจากข้อมูลสภาพคล่องและโครงสร้างตลาดทุน"
-
-                    thai_eq_view = AssetAllocationView(
-                        asset_class="SET Equities (Thailand)",
-                        asset_bucket="equities",
-                        region="Thailand",
-                        stance=thai_stance,
-                        rationale=merged_stance.get("rationale") or constructed_rationale,
-                        confidence="medium" if len(obs_refs) >= 2 else "low",
-                        supporting_data=support_items,
-                        observable_refs=obs_refs,
-                        source_refs=["Terminal_V2_Settrade"],
-                        why_not_high="ความมั่นใจอยู่ในระดับปานกลางเนื่องจากอยู่ระหว่างรอการเชื่อมต่อ API มหภาคทางการ (NESDC/MOC)",
-                        allocation_delta=delta_str,
-                        benchmark_ref="SET Index",
-                        time_horizon="1-3 months",
-                    )
-                    if not hasattr(direction, "asset_allocation") or direction.asset_allocation is None:
-                        direction.asset_allocation = []
-                    direction.asset_allocation.append(thai_eq_view)
-
-            # Ensure Cash region is Global
-            for a in getattr(direction, "asset_allocation", []) or []:
-                if a.asset_bucket == "cash" and a.region == "US":
-                    a.region = "Global"
-
-            # Revalidate with registry to ensure all guardrails, sources, and refs are pristine
-            if hasattr(direction, "revalidate_with_registry"):
-                direction = direction.revalidate_with_registry(observable_registry)
-
-            # Preserve cited sources in direction.source_files without blindly dumping all evaluated_sources
-            if not direction.source_files:
-                direction.source_files = [
-                    obs.source_file for obs in observable_registry.values()
-                    if obs.is_valid and obs.source_file
-                ]
+            sector_analysis_data = (state.get("narrative_context", {}) or {}).get("sector_analysis")
+            sector_snapshot_id = (
+                state.get("sector_rotation_snapshot_id")
+                if isinstance(sector_analysis_data, dict)
+                else None
+            )
 
             sidecar_result = write_strategy_json_sidecar(
                 direction,
@@ -881,20 +700,16 @@ def build_graph(checkpointer=None, note_writer: Optional[KnowledgeNoteWritePort]
                 run_id=state.get("macro_task_run_id") or state.get("macro_run_id") or state.get("turn_id"),
                 job_id=state.get("macro_run_id"),
                 run_started_at=state.get("macro_task_started_at") or state.get("macro_run_started_at"),
-                sector_snapshot_id=state.get("sector_rotation_snapshot_id"),
-                sector_analysis=(state.get("narrative_context", {}) or {}).get("sector_analysis"),
+                sector_snapshot_id=sector_snapshot_id,
+                sector_analysis=sector_analysis_data,
                 return_canonical_payload=True,
             )
-            canonical_report = (
-                sidecar_result[1] if isinstance(sidecar_result, tuple)
-                else {**direction.model_dump(mode="json"),
-                      "sector_analysis": (state.get("narrative_context", {}) or {}).get("sector_analysis")}
-            )
 
-            direction_fields = MacroStrategyDirection.model_fields
-            canonical_direction = {key: canonical_report[key] for key in direction_fields if key in canonical_report}
-            direction = MacroStrategyDirection.model_validate(canonical_direction)
-            sector_analysis = canonical_report.get("sector_analysis")
+            direction, canonical_report, sector_analysis = canonicalize_macro_report_direction(
+                direction,
+                sidecar_result,
+                sector_analysis_data,
+            )
             report = format_macro_strategy_report(
                 direction,
                 sector_analysis=sector_analysis,
@@ -949,8 +764,17 @@ def build_graph(checkpointer=None, note_writer: Optional[KnowledgeNoteWritePort]
     # ตรงนั้นอยู่แล้ว พอ input มีข้อความเดียวตั้งแต่ต้นก็ยังถูกต้อง
     def archivist_wrapper(state: AgentState, config: RunnableConfig):
         task_message = state["messages"][-1]
-        result = archivist_graph.invoke({"messages": [task_message]}, config=config)
-        reply = extract_worker_reply(result["messages"])
+        task_content = getattr(task_message, "content", "")
+        req_tools, min_calls = resolve_archivist_verification_spec(state.get("route_meta"), task_content)
+        with runaway_guard_scope():
+            result, reply = invoke_react_with_verification(
+                archivist_graph,
+                [task_message],
+                config=config,
+                extract_reply_fn=extract_worker_reply,
+                required_tools=req_tools,
+                min_tool_calls=min_calls,
+            )
         return {"messages": [AIMessage(content=reply, name="archivist")]}
 
     def bookkeeper_wrapper(state: AgentState, config: RunnableConfig):
@@ -966,58 +790,28 @@ def build_graph(checkpointer=None, note_writer: Optional[KnowledgeNoteWritePort]
     def macro_quant_wrapper(state: AgentState, config: RunnableConfig):
         fetch_and_save_macro_snapshots()
         task_message = state["messages"][-1]
-        snapshot = None
-        sector_context = None
-        config_meta = (config or {}).get("metadata", {}) if isinstance(config, dict) else {}
-        macro_run_id = state.get("macro_run_id") or config_meta.get("job_id") or state.get("turn_id")
-        task_run_id = state.get("macro_task_run_id") or f"{macro_run_id}:{state.get('turn_id', 'task')}:1"
-        try:
-            from tools.macro.sector_rotation.bootstrap import get_sector_rotation_service
-            from tools.macro.sector_rotation.domain.claims import compact_ai_context
-
-            rotation_service = get_sector_rotation_service()
-            snapshot, sector_context_status = rotation_service.pin_for_run(
-                str(task_run_id),
-                job_id=str(macro_run_id) if macro_run_id else None,
-                task_id=str(task_run_id),
-                preferred_snapshot_id=state.get("sector_rotation_snapshot_id"),
-            )
-            if snapshot:
-                sector_context = compact_ai_context(snapshot)
-                has_sector_data = any(row.status != "unavailable" for row in snapshot.rows)
-                complete = snapshot.benchmark_status == "available" and all(row.status == "available" for row in snapshot.rows)
-                sector_context_status = {
-                    **sector_context_status,
-                    "status": "available" if complete else "limited" if has_sector_data else "unavailable",
-                    "reason": None if complete else "partial_sector_coverage" if has_sector_data else "sector_history_unavailable",
-                }
-        except Exception as exc:
-            log.warning("Sector snapshot unavailable; continuing Macro analysis without sector facts: %s", exc)
-            snapshot = None
-            sector_context = None
-            sector_context_status = {"status": "unavailable", "reason": f"snapshot_prepare_failed:{type(exc).__name__}"}
-        if sector_context_status["status"] == "unavailable":
-            sector_context = None
-        quant_instruction = normalize_content(task_message.content)
-        if sector_context:
-            quant_instruction += (
-                "\n\nDeterministic sector rotation evidence for this macro run (cite its values as market evidence; "
-                "do not count ETFs as GDP/CPI hard-data or infer fund flows):\n"
-                + json.dumps(sector_context, ensure_ascii=False)
-            )
-        else:
-            quant_instruction += (
-                "\n\nSector rotation context status: unavailable ("
-                + str(sector_context_status.get("reason") or "no_valid_snapshot")
-                + "). Continue the macro analysis using the other evidence and do not assert sector facts."
-            )
+        raw_instruction = normalize_content(task_message.content)
+        (
+            snapshot,
+            sector_context,
+            sector_context_status,
+            quant_instruction,
+            macro_run_id,
+            task_run_id,
+        ) = resolve_sector_context_for_quant(state, config, raw_instruction)
         from tools.macro.sector_rotation.run_context import sector_run_scope
         with sector_run_scope(str(task_run_id)):
-            result = macro_quant_graph.invoke({"messages": [HumanMessage(content=quant_instruction)]}, config=config)
-        reply = extract_worker_reply(result["messages"])
+            with runaway_guard_scope():
+                result, reply = invoke_react_with_verification(
+                    macro_quant_graph,
+                    [HumanMessage(content=quant_instruction)],
+                    config=config,
+                    extract_reply_fn=extract_worker_reply,
+                    schema_cls=QuantScore,
+                )
         return {
             "messages": [AIMessage(content=reply, name="macro_quant")],
-            "macro_run_id": str(macro_run_id) if macro_run_id else None,
+            "macro_run_id": macro_run_id,
             "macro_task_run_id": state.get("macro_task_run_id") or f"{macro_run_id}:{state.get('turn_id', 'task')}:1",
             "sector_rotation_snapshot_id": snapshot.snapshot_id if snapshot else None,
             "sector_rotation_context": sector_context,
@@ -1026,39 +820,7 @@ def build_graph(checkpointer=None, note_writer: Optional[KnowledgeNoteWritePort]
 
     def macro_economist_wrapper(state: AgentState, config: RunnableConfig):
         task_message = state["messages"][-1]
-        sector_snapshot = None
-        sector_context = None
-        sector_context_status = {"status": "unavailable", "reason": "run_binding_missing"}
-        task_run_id = state.get("macro_task_run_id")
-        if task_run_id:
-            from tools.macro.sector_rotation.bootstrap import get_sector_rotation_service
-            from tools.macro.sector_rotation.domain.claims import compact_ai_context
-            try:
-                sector_snapshot, binding = get_sector_rotation_service().pin_for_run(
-                    str(task_run_id),
-                    job_id=str(state.get("macro_run_id")) if state.get("macro_run_id") else None,
-                    task_id=str(task_run_id),
-                )
-                if sector_snapshot is not None:
-                    sector_context = compact_ai_context(sector_snapshot)
-                    has_sector_data = any(row.status != "unavailable" for row in sector_snapshot.rows)
-                    complete = sector_snapshot.benchmark_status == "available" and all(
-                        row.status == "available" for row in sector_snapshot.rows
-                    )
-                    sector_context_status = {
-                        "status": "available" if complete else "limited" if has_sector_data else "unavailable",
-                        "reason": None if complete else "partial_sector_coverage" if has_sector_data else "sector_history_unavailable",
-                        "snapshot_id": sector_snapshot.snapshot_id,
-                    }
-                else:
-                    sector_context_status = {
-                        "status": "unavailable",
-                        "reason": binding.get("unavailable_reason") or binding.get("reason") or "pinned_snapshot_unavailable",
-                    }
-            except Exception as exc:
-                log.warning("Pinned sector evidence unavailable to Macro Economist: %s", exc)
-                sector_snapshot = None
-                sector_context_status = {"status": "unavailable", "reason": f"pinned_snapshot_unavailable:{type(exc).__name__}"}
+        sector_snapshot, sector_context, sector_context_status = resolve_sector_context_for_economist(state)
         result = macro_economist_graph.invoke({
             "messages": [task_message],
             "quant_score": state.get("quant_score") or {},
@@ -1081,8 +843,14 @@ def build_graph(checkpointer=None, note_writer: Optional[KnowledgeNoteWritePort]
     # --- Equity Intel Pipeline ---
     def equity_quant_wrapper(state: AgentState, config: RunnableConfig):
         task_message = state["messages"][-1]
-        result = equity_quant_graph.invoke({"messages": [task_message]}, config=config)
-        reply = extract_worker_reply(result["messages"])
+        with runaway_guard_scope():
+            result, reply = invoke_react_with_verification(
+                equity_quant_graph,
+                [task_message],
+                config=config,
+                extract_reply_fn=extract_worker_reply,
+                schema_cls=QuantSignals,
+            )
         return {"messages": [AIMessage(content=reply, name="equity_quant")]}
 
     def equity_narrative_wrapper(state: AgentState, config: RunnableConfig):
@@ -1107,23 +875,22 @@ def build_graph(checkpointer=None, note_writer: Optional[KnowledgeNoteWritePort]
     def post_equity_quant_node(state: AgentState) -> Command[Literal["equity_narrative", "supervisor"]]:
         reply = extract_worker_reply(state["messages"])
         try:
-            validated = QuantSignals.model_validate(json.loads(reply))
+            validated = QuantSignals.model_validate(json.loads(strip_json_envelope(reply)))
             try:
                 save_equity_quant_snapshot(validated, note_writer=note_writer)
             except Exception as hist_err:
                 log.warning("save_equity_quant_snapshot failed (non-fatal): %s", hist_err)
 
+            thesis_delta_obj = compute_thesis_delta_from_vault(validated.ticker, validated)
+            portfolio_ctx_obj = load_portfolio_holding_context(validated.ticker, validated.market, validated)
+
             # Provisional sidecar persistence: quant signals exist on disk even before narrative LLM call
             try:
                 from tools.market.equity_sidecar import write_equity_sidecar
-                partial_output = MicroQuantOutput(
-                    ticker=validated.ticker,
-                    market=validated.market,
-                    analysis_date=datetime.now().strftime("%Y-%m-%d"),
-                    quant_signals=validated,
-                    sentiment_context=None,
-                    narrative_analysis="รอการประมวลผล Narrative จาก LLM",
-                    base_case_summary="ตัวเลขรีเฟรชแล้ว กำลังสร้าง narrative",
+                partial_output = build_provisional_equity_output(
+                    validated,
+                    thesis_delta=thesis_delta_obj,
+                    portfolio_context=portfolio_ctx_obj,
                 )
                 write_equity_sidecar(partial_output)
             except Exception as sidecar_err:
@@ -1138,6 +905,8 @@ def build_graph(checkpointer=None, note_writer: Optional[KnowledgeNoteWritePort]
                 update={
                     "equity_quant_raw": reply,
                     "equity_quant_score": validated_json,
+                    "equity_thesis_delta": thesis_delta_obj.model_dump(mode="json") if thesis_delta_obj else None,
+                    "equity_portfolio_context": portfolio_ctx_obj.model_dump(mode="json") if portfolio_ctx_obj else None,
                     "route_meta": {"source": "equity_quant", "target": "equity_narrative", "worker_started_at": time.monotonic()},
                 }
             )
@@ -1150,23 +919,25 @@ def build_graph(checkpointer=None, note_writer: Optional[KnowledgeNoteWritePort]
 
     def post_equity_narrative_node(state: AgentState) -> Command[Literal["equity_synthesizer"]]:
         reply = extract_worker_reply(state["messages"])
-        import re
-        reply_clean = re.sub(r'^```(?:json)?\s*|\s*```$', '', reply.strip(), flags=re.MULTILINE)
         try:
-            validated_json = EquitySentimentContext.model_validate(json.loads(reply_clean)).model_dump(mode="json")
+            validated_json = EquitySentimentContext.model_validate(json.loads(strip_json_envelope(reply))).model_dump(mode="json")
             turn_id = state.get("turn_id", "unknown")
             elapsed = _get_elapsed(state.get("route_meta") or {})
             log_worker_result(turn_id, "equity_narrative", reply, status="success", elapsed_sec=elapsed)
         except Exception as e:
             log_worker_result(state.get("turn_id", "unknown"), "equity_narrative", f"Validation fallback: {e}\n{reply}", status="warning")
-            fallback_dict = {
-                "evaluated_at": datetime.now(timezone.utc).isoformat(),
-                "market_sentiment": "neutral",
-                "key_themes": [],
-                "tail_risks": [],
-                "sources_summary": f"Data fetch/parse failed: {str(e)}",
-            }
+            fallback_dict = build_equity_narrative_fallback_dict(e)
             validated_json = EquitySentimentContext.model_validate(fallback_dict).model_dump(mode="json")
+
+        if state.get("equity_save_to_vault", True) and state.get("equity_news_raw"):
+            raw_news = state.get("equity_news_raw", "").strip()
+            if raw_news.startswith("---"):
+                try:
+                    from tools.market.news import save_company_news_to_vault
+                    ticker_hint = (state.get("equity_quant_score") or {}).get("ticker") or ""
+                    save_company_news_to_vault(raw_news, ticker_hint)
+                except Exception as exc:
+                    log.warning("Manager post-narrative save news failed: %s", exc)
 
         return Command(
             goto="equity_synthesizer",
@@ -1178,25 +949,33 @@ def build_graph(checkpointer=None, note_writer: Optional[KnowledgeNoteWritePort]
         )
 
     def equity_synthesizer_node(state: AgentState) -> Command[Literal["post_equity_intel", "supervisor"]]:
+        thesis_delta_data = state.get("equity_thesis_delta")
+        portfolio_context_data = state.get("equity_portfolio_context")
+        thesis_delta_obj = ThesisDeltaSummary.model_validate(thesis_delta_data) if thesis_delta_data else None
+        portfolio_ctx_obj = PortfolioHoldingContext.model_validate(portfolio_context_data) if portfolio_context_data else None
+
         try:
             provider = detect_provider(_EQUITY_SYNTHESIZER_MODEL)
             model = get_llm(provider=provider, model_name=_EQUITY_SYNTHESIZER_MODEL, use_fallback=True)
 
             quant_data = state.get("equity_quant_score", {}) or {}
             narrative_data = state.get("equity_narrative_context", {}) or {}
-            quant_json = json.dumps(quant_data, ensure_ascii=False)
+            synthesizer_quant_payload = {
+                **quant_data,
+                "thesis_delta": thesis_delta_data,
+                "portfolio_context": portfolio_context_data,
+            }
+            quant_json = json.dumps(synthesizer_quant_payload, ensure_ascii=False)
             narrative_json = json.dumps(narrative_data, ensure_ascii=False)
 
             narrative = invoke_equity_synthesizer(model, quant_json, narrative_json)
 
-            output = MicroQuantOutput(
-                ticker=quant_data["ticker"],
-                market=quant_data["market"],
-                analysis_date=datetime.now().strftime("%Y-%m-%d"),
-                quant_signals=QuantSignals.model_validate(quant_data),
-                sentiment_context=EquitySentimentContext.model_validate(narrative_data),
-                narrative_analysis=narrative.narrative_analysis,
-                base_case_summary=narrative.base_case_summary,
+            output = build_synthesized_equity_output(
+                quant_data,
+                narrative_data,
+                narrative,
+                thesis_delta=thesis_delta_obj,
+                portfolio_context=portfolio_ctx_obj,
             )
             report = format_equity_analysis_report(output)
 
@@ -1214,24 +993,14 @@ def build_graph(checkpointer=None, note_writer: Optional[KnowledgeNoteWritePort]
             log_worker_result(state.get("turn_id", "unknown"), "equity_synthesizer", f"LLM Warning/Fallback: {e}", status="warning")
             quant_data = state.get("equity_quant_score", {}) or {}
             narrative_data = state.get("equity_narrative_context", {}) or {}
-            if quant_data and "ticker" in quant_data:
-                # Quant succeeded -> preserve full quant signals and build partial revision
-                fallback_sentiment = EquitySentimentContext(
-                    evaluated_at=datetime.now(timezone.utc).isoformat(),
-                    market_sentiment="neutral",
-                    key_themes=[],
-                    tail_risks=[],
-                    sources_summary=f"LLM synthesis pending/unavailable: {str(e)}",
-                )
-                output = MicroQuantOutput(
-                    ticker=quant_data["ticker"],
-                    market=quant_data.get("market", "US"),
-                    analysis_date=datetime.now().strftime("%Y-%m-%d"),
-                    quant_signals=QuantSignals.model_validate(quant_data),
-                    sentiment_context=EquitySentimentContext.model_validate(narrative_data) if narrative_data else fallback_sentiment,
-                    narrative_analysis=f"ตัวเลขรีเฟรชแล้ว แต่ narrative ยังสร้างไม่ได้ (LLM_UNAVAILABLE: {str(e)})",
-                    base_case_summary="ตัวเลขรีเฟรชแล้ว แต่ narrative ยังสร้างไม่ได้",
-                )
+            output = build_fallback_equity_output(
+                quant_data,
+                narrative_data,
+                e,
+                thesis_delta=thesis_delta_obj,
+                portfolio_context=portfolio_ctx_obj,
+            )
+            if output is not None:
                 report = format_equity_analysis_report(output)
                 return Command(
                     goto="post_equity_intel",

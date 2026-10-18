@@ -65,6 +65,43 @@ def _append_manager_summary(job_repo: JobRepositoryPort, job_id: str, instructio
         job_repo.append_job_log(job_id, "manager_summary", summary, role="reply", label="Manager Summary")
 
 
+def _resolve_stream_input(
+    graph: Any,
+    config: dict[str, Any],
+    fresh_inputs: dict[str, Any],
+    resume_value: Optional[dict[str, Any]] = None,
+) -> Any:
+    """Resolve stream input for a graph run.
+
+    If resume_value is provided (approval flow), wrap it in Command(resume=resume_value).
+    If the graph checkpointer already has an in-flight checkpoint with pending nodes
+    (e.g. recovering from a transient error or job resumption), return None so that
+    LangGraph resumes execution from the next pending node instead of restarting
+    or duplicating the initial input.
+    Otherwise, return fresh_inputs.
+    """
+    if resume_value is not None:
+        from langgraph.types import Command
+
+        return Command(resume=resume_value)
+
+    try:
+        current_state = graph.get_state(config)
+        next_nodes = getattr(current_state, "next", None)
+        state_values = getattr(current_state, "values", None)
+        if (
+            isinstance(next_nodes, (tuple, list))
+            and len(next_nodes) > 0
+            and isinstance(state_values, dict)
+            and len(state_values) > 0
+        ):
+            return None
+    except Exception:
+        pass
+
+    return fresh_inputs
+
+
 def run_job_workflow(
     *,
     state: JobRepositoryPort,
@@ -148,15 +185,10 @@ def run_job_workflow(
             "tags": ["invest-agents", "web-session", flow],
             "metadata": {"run_type": "chain", "session_source": "web", "job_id": job_id},
         }
-        if resume_value is not None:
-            from langgraph.types import Command
-            stream_input = Command(resume=resume_value)
-        else:
-            stream_input = fresh_inputs
-
         def _stream_and_log() -> None:
             nonlocal terminal_status, terminal_error
-            for event in graph.stream(stream_input, config=config, stream_mode="updates"):
+            active_input = _resolve_stream_input(graph, config, fresh_inputs, resume_value)
+            for event in graph.stream(active_input, config=config, stream_mode="updates"):
                 if "__interrupt__" in event:
                     payload = event["__interrupt__"][0].value
                     state.set_job_awaiting_approval(job_id, json.dumps(payload, ensure_ascii=False))
@@ -190,4 +222,4 @@ def run_job_workflow(
             state.update_job_status(job_id, terminal_status, error_message=terminal_error)
 
 
-__all__ = ["run_job_workflow"]
+__all__ = ["run_job_workflow", "_resolve_stream_input"]

@@ -1,7 +1,19 @@
 import { render, screen } from '@testing-library/react'
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
 import { EquityDetail } from './EquityDetail'
 import { mockEquityDetailAAPL } from '../../mocks/equity'
+
+vi.mock('../../api/client', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../api/client')>()
+  return {
+    ...actual,
+    api: {
+      ...actual.api,
+      getEarningsCalls: vi.fn().mockResolvedValue({ items: [] }),
+      getLatestEquityNotebookLMExport: vi.fn().mockResolvedValue(null),
+    },
+  }
+})
 
 describe('EquityDetail', () => {
   it('renders loading state', () => {

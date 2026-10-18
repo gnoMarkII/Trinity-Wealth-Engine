@@ -143,6 +143,15 @@ def _chunk_file(file_path: Path, splitter: RecursiveCharacterTextSplitter) -> tu
 def parse_company_news_items(content: str) -> dict[str, Any]:
     """Parse Company_News markdown content into structured dictionary."""
     ticker = extract_yaml_frontmatter_value(content, "ticker") or ""
+    if not ticker:
+        tickers_val = extract_yaml_frontmatter_value(content, "tickers")
+        if isinstance(tickers_val, list) and tickers_val:
+            ticker = str(tickers_val[0])
+        elif isinstance(tickers_val, str):
+            clean_t = re.sub(r"[\[\]'\"]", "", tickers_val).split(",")
+            if clean_t and clean_t[0].strip():
+                ticker = clean_t[0].strip()
+
     market = extract_yaml_frontmatter_value(content, "market") or "US"
     date_str = extract_yaml_frontmatter_value(content, "date")
     last_updated_str = extract_yaml_frontmatter_value(content, "last_updated")
@@ -187,9 +196,11 @@ def parse_company_news_items(content: str) -> dict[str, Any]:
         m_pub = re.search(r"<!--\s*published_at:\s*([^\s>]+)\s*-->", headline_line)
         pub_iso = m_pub.group(1).strip() if m_pub else None
 
-        source = "N/A"
+        m_src_trailing = re.search(r"\*\*\s*\(([^)]+)\)", headline_line)
+        source = m_src_trailing.group(1).strip() if m_src_trailing else "N/A"
         sources_count = 1
         link = ""
+        summary = ""
         age_hours_fallback = 0
         freshness_reason_fallback = "Unknown age"
 
@@ -212,8 +223,16 @@ def parse_company_news_items(content: str) -> dict[str, Any]:
                         pass
                     if m_age.group(2):
                         freshness_reason_fallback = m_age.group(2).strip()
+            elif "สรุปย่อ:" in ln:
+                m_sum = re.search(r"สรุปย่อ:\s*(.*)", ln)
+                if m_sum:
+                    summary = m_sum.group(1).strip()
             elif "[อ่านต่อ]" in ln:
                 m_link = re.search(r"\[อ่านต่อ\]\((.*?)\)", ln)
+                if m_link:
+                    link = m_link.group(1).strip()
+            elif "ลิงก์:" in ln:
+                m_link = re.search(r"ลิงก์:\s*(https?://\S+)", ln)
                 if m_link:
                     link = m_link.group(1).strip()
 
@@ -229,13 +248,15 @@ def parse_company_news_items(content: str) -> dict[str, Any]:
             "age_hours": age_hours_fallback,
             "freshness_reason": freshness_reason_fallback,
             "sources_count": sources_count,
-            "is_stale": age_hours_fallback > 48
+            "is_stale": age_hours_fallback > 48,
+            "summary": summary if summary else None,
         })
 
     return {
         "ticker": ticker,
         "market": market,
         "date": date_str,
+        "news_date": date_str,
         "last_updated": last_updated_str,
         "items": items
     }

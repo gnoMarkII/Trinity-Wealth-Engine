@@ -19,8 +19,31 @@ export interface CapitalQualityProps {
   solvency_score?: number | null
 }
 
+export interface SectorKpisProps {
+  sector?: string
+  sector_name?: string
+  sector_health_score?: number | null
+  status?: string
+  kpis?: Array<{
+    name: string
+    value: number | null
+    unit?: string
+    benchmark?: string
+    benchmark_status?: string
+    definition?: string
+    period_basis?: string
+  }>
+}
+
 interface Props {
-  reverseDcf?: ReverseDcfProps | null
+  reverseDcf?: (ReverseDcfProps & {
+    alternative_valuation?: any
+    alternative_valuation_model?: string | null
+    alternative_intrinsic_value?: number | null
+    alternative_target_price_12m?: number | null
+    alternative_upside_12m_pct?: number | null
+    market_implied_roe_pct?: number | null
+  }) | null
   dcf?: DCFResultDTO | null
   piotroski?: PiotroskiProps | null
   qualityMetrics?: CapitalQualityProps | null
@@ -30,6 +53,9 @@ interface Props {
   valuationMarginSourceUsed?: string | null
   dcfDiscrepancyWarning?: string | null
   currency?: string
+  netShareholderYieldPct?: number | null
+  netBuybackYieldPct?: number | null
+  sectorKpis?: SectorKpisProps | null
 }
 
 function formatLargeNum(val?: number | null, prefix = '$'): string {
@@ -52,6 +78,9 @@ export default function ValuationWorkbenchCard({
   valuationMarginSourceUsed,
   dcfDiscrepancyWarning,
   currency = '$',
+  netShareholderYieldPct,
+  netBuybackYieldPct,
+  sectorKpis,
 }: Props) {
   // If no valuation data at all
   if (!reverseDcf && !dcf && !piotroski) return null
@@ -323,6 +352,32 @@ export default function ValuationWorkbenchCard({
                   </span>
                 </div>
               )}
+              {(() => {
+                const altModel = reverseDcf.alternative_valuation_model || reverseDcf.alternative_valuation?.model_name
+                const altVal = reverseDcf.alternative_intrinsic_value ?? reverseDcf.alternative_valuation?.intrinsic_value
+                const altUpside = reverseDcf.alternative_upside_12m_pct ?? reverseDcf.alternative_valuation?.upside_pct
+                if (!altModel && altVal == null) return null
+
+                const modelLabel = altModel === 'justified_pbv'
+                  ? 'Justified P/BV (Financials)'
+                  : altModel === 'ddm_yield_spread'
+                  ? 'DDM Yield Spread (REIT)'
+                  : (altModel || 'Alternative Sector Valuation')
+
+                return (
+                  <div className="flex justify-between text-zinc-600 border-b border-edge/30 pb-1.5">
+                    <span>{modelLabel}:</span>
+                    <span className="font-semibold text-emerald-800">
+                      {currency}{altVal != null ? altVal.toFixed(2) : 'N/A'}
+                      {altUpside != null && (
+                        <span className="text-emerald-700 font-bold ml-1">
+                          ({altUpside >= 0 ? '+' : ''}{altUpside.toFixed(1)}%)
+                        </span>
+                      )}
+                    </span>
+                  </div>
+                )
+              })()}
               <div className="flex justify-between text-zinc-600 border-b border-edge/30 pb-1.5">
                 <span>Enterprise Value / Equity Value:</span>
                 <span className="font-semibold text-zinc-900">
@@ -389,7 +444,7 @@ export default function ValuationWorkbenchCard({
       </div>
 
       {/* Forensic Footer: Piotroski F-Score & Capital Quality Strip */}
-      {(piotroski || qualityMetrics) && (
+      {(piotroski || qualityMetrics || netShareholderYieldPct != null) && (
         <div className="rounded-xl border border-sky-200/80 bg-gradient-to-r from-sky-50/70 via-surface to-panel p-4 space-y-3">
           <div className="flex flex-wrap items-center justify-between gap-2 border-b border-sky-200/50 pb-2">
             <div className="flex items-center gap-2">
@@ -412,7 +467,7 @@ export default function ValuationWorkbenchCard({
             )}
           </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 text-xs">
             {/* ROIC */}
             <div className="bg-surface/80 rounded-lg p-2.5 border border-edge/40">
               <span className="text-zinc-400 block text-[10px] uppercase">ROIC (ผลตอบแทนลงทุน)</span>
@@ -444,6 +499,59 @@ export default function ValuationWorkbenchCard({
                 {qualityMetrics?.ocf_to_net_income != null ? `${qualityMetrics.ocf_to_net_income}x` : 'N/A'}
               </span>
             </div>
+
+            {/* Net Shareholder Yield */}
+            <div className="bg-surface/80 rounded-lg p-2.5 border border-edge/40">
+              <span className="text-zinc-400 block text-[10px] uppercase">Shareholder Yield</span>
+              <div className="flex items-baseline gap-1 mt-0.5">
+                <span className={`font-bold text-sm ${netShareholderYieldPct != null && netShareholderYieldPct >= 0 ? 'text-emerald-700' : 'text-zinc-900'}`}>
+                  {netShareholderYieldPct != null ? `${netShareholderYieldPct >= 0 ? '+' : ''}${netShareholderYieldPct.toFixed(1)}%` : 'N/A'}
+                </span>
+                {netBuybackYieldPct != null && (
+                  <span className="text-[10px] text-zinc-500" title={`Net Buyback Yield: ${netBuybackYieldPct.toFixed(1)}%`}>
+                    ({netBuybackYieldPct >= 0 ? '+' : ''}{netBuybackYieldPct.toFixed(1)}%)
+                  </span>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Sector-Specific Operating KPIs */}
+      {sectorKpis?.status === 'available' && sectorKpis.kpis && sectorKpis.kpis.length > 0 && (
+        <div className="rounded-xl border border-sky-200/80 bg-gradient-to-r from-sky-50/70 via-surface to-panel p-4 space-y-3">
+          <div className="flex items-center justify-between border-b border-sky-200/50 pb-2">
+            <div className="flex items-center gap-2">
+              <span className="text-base">🏭</span>
+              <span className="text-xs font-bold uppercase tracking-wider text-sky-900">
+                Sector Operating KPIs ({sectorKpis.sector_name || sectorKpis.sector || 'Industry Baseline'})
+              </span>
+            </div>
+            {sectorKpis.sector_health_score != null && (
+              <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-sky-100 text-sky-800 border border-sky-200">
+                Health Score: {sectorKpis.sector_health_score}/100
+              </span>
+            )}
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-xs">
+            {sectorKpis.kpis.map((k, idx) => (
+              <div key={idx} className="bg-surface/80 rounded-lg p-2.5 border border-edge/40">
+                <span className="text-zinc-400 block text-[10px] uppercase truncate" title={k.definition || k.name}>
+                  {k.name}
+                </span>
+                <div className="flex items-baseline justify-between mt-1">
+                  <span className="font-bold text-zinc-900 text-sm">
+                    {k.value != null ? `${k.value}${k.unit ? (k.unit === 'percent' || k.unit === '%' ? '%' : ` ${k.unit}`) : ''}` : 'N/A'}
+                  </span>
+                  {k.benchmark && (
+                    <span className="text-[10px] text-zinc-500 font-medium">
+                      {k.benchmark}
+                    </span>
+                  )}
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       )}

@@ -24,20 +24,33 @@ import { OptionsOiStrikeLadder } from '../charts/OptionsOiStrikeLadder'
 import { OptionsVolSmile } from '../charts/OptionsVolSmile'
 import { SecFinancialsCard } from './SecFinancialsCard'
 import { SecInsiderTradesCard } from './SecInsiderTradesCard'
+import { EquityNotebookLMExport } from './EquityNotebookLMExport'
+import { EquityDetailSkeleton } from '../ui/FlowSkeleton'
 
 interface EquityDetailProps {
   status: 'loading' | 'error' | 'not-found' | 'success' | 'idle'
   data?: EquityDetailDTO
+  summaryPreview?: import('../../api/types').EquitySummaryDTO
   errorMessage?: string
   onOpenAnalysisModal?: (ticker: string, market?: 'US' | 'TH') => void
   isUpdating?: boolean
+  onNotify?: (message: string, type: 'info' | 'success' | 'error') => void
 }
 
 const eyebrowClass = 'text-xs font-bold uppercase tracking-wider text-sky-700/80'
 const QUANT_STAGGER_STEP_MS = 50
 
-export const EquityDetail: React.FC<EquityDetailProps> = ({ status, data, errorMessage, onOpenAnalysisModal, isUpdating }) => {
+export const EquityDetail: React.FC<EquityDetailProps> = ({
+  status,
+  data,
+  summaryPreview,
+  errorMessage,
+  onOpenAnalysisModal,
+  isUpdating,
+  onNotify,
+}) => {
   const [activeTab, setActiveTab] = useState<'overview' | 'chart' | 'financials' | 'news' | 'notes' | 'earnings-call'>('overview')
+  const [visitedTabs, setVisitedTabs] = useState<Set<string>>(() => new Set(['overview']))
   const [latestEarningsCall, setLatestEarningsCall] = useState<EarningsCallNoteItem | null>(null)
   const [isFactorsExpanded, setIsFactorsExpanded] = useState(false)
   const [isProvenanceDrawerOpen, setIsProvenanceDrawerOpen] = useState(false)
@@ -46,6 +59,31 @@ export const EquityDetail: React.FC<EquityDetailProps> = ({ status, data, errorM
   const [maxPain, setMaxPain] = useState<any | null>(null)
   const [secFinancials, setSecFinancials] = useState<SecCompanyFactsSnapshotDTO | null>(null)
   const [secInsiderTrades, setSecInsiderTrades] = useState<SecInsiderTradeSnapshotDTO | null>(null)
+
+  useEffect(() => {
+    if (data?.ticker) {
+      setVisitedTabs(new Set([activeTab]))
+    }
+  }, [data?.ticker])
+
+  const handleTabSelect = (tab: typeof activeTab) => {
+    setActiveTab(tab)
+    setVisitedTabs((prev) => {
+      const next = new Set(prev)
+      next.add(tab)
+      return next
+    })
+  }
+
+  // Background warmup after ticker loads
+  useEffect(() => {
+    if (!data?.ticker) return
+    const timer = setTimeout(() => {
+      api.getEquityNews?.(data.ticker)?.catch?.(() => {})
+      api.getEquityOHLCV?.(data.ticker, '6mo', '1d')?.catch?.(() => {})
+    }, 150)
+    return () => clearTimeout(timer)
+  }, [data?.ticker])
 
   useEffect(() => {
     if (!data?.ticker) return
@@ -101,14 +139,49 @@ export const EquityDetail: React.FC<EquityDetailProps> = ({ status, data, errorM
   }
 
   if (status === 'loading') {
-    return (
-      <div className="flex justify-center items-center h-64 text-zinc-500" aria-live="polite">
-        <div className="flex items-center gap-3">
-          <span className="w-5 h-5 border-2 border-sky-600 border-t-transparent rounded-full animate-spin" />
-          <span>กำลังโหลดบทวิเคราะห์หุ้น...</span>
+    if (summaryPreview) {
+      return (
+        <div className="space-y-6 animate-fade-in" aria-live="polite">
+          <div className="flex flex-col gap-5 border-b border-edge pb-6 lg:flex-row lg:items-start lg:justify-between">
+            <div className="space-y-2">
+              <div className={eyebrowClass}>Institutional Equity Intelligence</div>
+              <div className="flex flex-wrap items-center gap-3">
+                <h2 className="font-serif text-3xl sm:text-4xl font-semibold tracking-tight text-zinc-900">
+                  {summaryPreview.ticker} <span className="text-zinc-500 font-normal text-lg">({summaryPreview.market})</span>
+                </h2>
+              </div>
+              {summaryPreview.company_name && (
+                <p className="text-zinc-600 font-medium text-sm sm:text-base">{summaryPreview.company_name}</p>
+              )}
+              <div className="flex flex-wrap items-center gap-2 pt-1">
+                <span className={`px-2.5 py-0.5 rounded-full border text-xs font-semibold uppercase tracking-wider ${sentimentClass(summaryPreview.market_sentiment)}`}>
+                  {summaryPreview.market_sentiment}
+                </span>
+                <span className="text-xs text-zinc-400">
+                  ประเมินเมื่อ {new Date(summaryPreview.evaluated_at).toLocaleString('th-TH')}
+                </span>
+              </div>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-4 self-start rounded-2xl border border-edge/80 bg-panel px-5 py-4 shadow-sm shadow-black/5">
+              <div className="flex items-center gap-2">
+                <ScoreRing score={summaryPreview.composite_score} />
+                <div>
+                  <div className="text-[10px] font-bold text-zinc-400 uppercase">Composite</div>
+                  <div className="text-xs font-semibold text-zinc-700">
+                    {summaryPreview.composite_score != null ? `${summaryPreview.composite_score.toFixed(1)}` : 'N/A'}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <EquityDetailSkeleton label="กำลังโหลดบทวิเคราะห์หุ้น..." />
         </div>
-      </div>
-    )
+      )
+    }
+
+    return <EquityDetailSkeleton label="กำลังโหลดบทวิเคราะห์หุ้น..." />
   }
 
   if (status === 'not-found') {
@@ -135,6 +208,12 @@ export const EquityDetail: React.FC<EquityDetailProps> = ({ status, data, errorM
   }
 
   const quant = data.quant_signals || ({} as any)
+  const resolvedCurrentPrice =
+    quant.atomic_market_snapshot?.analysis_price ??
+    (quant as any)?.raw_analysis_price ??
+    quant.tactical_setup?.current_price ??
+    (quant as any)?.current_price ??
+    null
   const currencySymbol = data.market === 'TH' ? '฿' : '$'
   const scorecard = quant.deterministic_scorecard
   const reverseDcf = quant.reverse_dcf_result
@@ -166,6 +245,11 @@ export const EquityDetail: React.FC<EquityDetailProps> = ({ status, data, errorM
               <span className={isUpdating ? 'inline-block animate-spin' : ''}>🔄</span>
               <span>{isUpdating ? 'กำลังวิเคราะห์...' : 'อัปเดตบทวิเคราะห์'}</span>
             </button>
+            <EquityNotebookLMExport
+              ticker={data.ticker}
+              market={data.market || 'US'}
+              onNotify={onNotify}
+            />
           </div>
           {isUpdating && (
             <div className="flex items-center gap-2 rounded-xl border border-amber-200 bg-amber-50/80 px-3 py-1.5 text-xs text-amber-900 font-medium">
@@ -249,7 +333,7 @@ export const EquityDetail: React.FC<EquityDetailProps> = ({ status, data, errorM
       {/* Sub-nav Tab Switcher */}
       <div className="flex border-b border-edge gap-6 text-sm font-medium">
         <button
-          onClick={() => setActiveTab('overview')}
+          onClick={() => handleTabSelect('overview')}
           className={`pb-3 border-b-2 transition-colors flex items-center gap-2 ${
             activeTab === 'overview'
               ? 'border-sky-600 text-sky-600 font-semibold'
@@ -259,7 +343,7 @@ export const EquityDetail: React.FC<EquityDetailProps> = ({ status, data, errorM
           <span>📊 Overview</span>
         </button>
         <button
-          onClick={() => setActiveTab('chart')}
+          onClick={() => handleTabSelect('chart')}
           className={`pb-3 border-b-2 transition-colors flex items-center gap-2 ${
             activeTab === 'chart'
               ? 'border-sky-600 text-sky-600 font-semibold'
@@ -269,7 +353,7 @@ export const EquityDetail: React.FC<EquityDetailProps> = ({ status, data, errorM
           <span>📈 Chart</span>
         </button>
         <button
-          onClick={() => setActiveTab('financials')}
+          onClick={() => handleTabSelect('financials')}
           className={`pb-3 border-b-2 transition-colors flex items-center gap-2 ${
             activeTab === 'financials'
               ? 'border-sky-600 text-sky-600 font-semibold'
@@ -279,7 +363,7 @@ export const EquityDetail: React.FC<EquityDetailProps> = ({ status, data, errorM
           <span>📑 Financials</span>
         </button>
         <button
-          onClick={() => setActiveTab('news')}
+          onClick={() => handleTabSelect('news')}
           className={`pb-3 border-b-2 transition-colors flex items-center gap-2 ${
             activeTab === 'news'
               ? 'border-sky-600 text-sky-600 font-semibold'
@@ -289,7 +373,7 @@ export const EquityDetail: React.FC<EquityDetailProps> = ({ status, data, errorM
           <span>📰 News</span>
         </button>
         <button
-          onClick={() => setActiveTab('notes')}
+          onClick={() => handleTabSelect('notes')}
           className={`pb-3 border-b-2 transition-colors flex items-center gap-2 ${
             activeTab === 'notes'
               ? 'border-sky-600 text-sky-600 font-semibold'
@@ -299,7 +383,7 @@ export const EquityDetail: React.FC<EquityDetailProps> = ({ status, data, errorM
           <span>📓 Notes</span>
         </button>
         <button
-          onClick={() => setActiveTab('earnings-call')}
+          onClick={() => handleTabSelect('earnings-call')}
           className={`pb-3 border-b-2 transition-colors flex items-center gap-2 ${
             activeTab === 'earnings-call'
               ? 'border-sky-600 text-sky-600 font-semibold'
@@ -310,26 +394,46 @@ export const EquityDetail: React.FC<EquityDetailProps> = ({ status, data, errorM
         </button>
       </div>
 
-      {activeTab === 'chart' ? (
-        <EquityChartTab
-          ticker={data.ticker}
-          companyName={data.company_name ?? undefined}
-          market={data.market}
-          currentPrice={(quant as any)?.current_price ?? null}
-        />
-      ) : activeTab === 'financials' ? (
-        <FinancialsTab
-          ticker={data.ticker}
-          market={data.market}
-        />
-      ) : activeTab === 'news' ? (
-        <EquityNews ticker={data.ticker} />
-      ) : activeTab === 'notes' ? (
-        <EquityNotesTab ticker={data.ticker} />
-      ) : activeTab === 'earnings-call' ? (
-        <EarningsCallTab ticker={data.ticker} market={data.market} />
-      ) : (
-        <div className="space-y-8">
+      {visitedTabs.has('chart') && (
+        <div className={activeTab === 'chart' ? 'block animate-fade-in' : 'hidden'}>
+          <EquityChartTab
+            ticker={data.ticker}
+            companyName={data.company_name ?? undefined}
+            market={data.market}
+            currentPrice={resolvedCurrentPrice}
+          />
+        </div>
+      )}
+
+      {visitedTabs.has('financials') && (
+        <div className={activeTab === 'financials' ? 'block animate-fade-in' : 'hidden'}>
+          <FinancialsTab
+            ticker={data.ticker}
+            market={data.market}
+          />
+        </div>
+      )}
+
+      {visitedTabs.has('news') && (
+        <div className={activeTab === 'news' ? 'block animate-fade-in' : 'hidden'}>
+          <EquityNews ticker={data.ticker} />
+        </div>
+      )}
+
+      {visitedTabs.has('notes') && (
+        <div className={activeTab === 'notes' ? 'block animate-fade-in' : 'hidden'}>
+          <EquityNotesTab ticker={data.ticker} />
+        </div>
+      )}
+
+      {visitedTabs.has('earnings-call') && (
+        <div className={activeTab === 'earnings-call' ? 'block animate-fade-in' : 'hidden'}>
+          <EarningsCallTab ticker={data.ticker} market={data.market} />
+        </div>
+      )}
+
+      {visitedTabs.has('overview') && (
+        <div className={activeTab === 'overview' ? 'space-y-8 block animate-fade-in' : 'hidden'}>
           {/* =========================================================
               TIER 1: Executive Investment Thesis Hero Card
              ========================================================= */}
@@ -338,7 +442,10 @@ export const EquityDetail: React.FC<EquityDetailProps> = ({ status, data, errorM
             baseCaseSummary={data.base_case_summary}
             latestEarningsCall={latestEarningsCall}
             atomicSnapshot={quant.atomic_market_snapshot}
-            onViewEarningsCall={() => setActiveTab('earnings-call')}
+            currentPrice={resolvedCurrentPrice}
+            portfolioContext={data.portfolio_context}
+            thesisDelta={data.thesis_delta}
+            onViewEarningsCall={() => handleTabSelect('earnings-call')}
             onOpenProvenance={() => setIsProvenanceDrawerOpen(prev => !prev)}
             hasProvenance={Boolean(evidenceSnapshot)}
           />
@@ -360,6 +467,13 @@ export const EquityDetail: React.FC<EquityDetailProps> = ({ status, data, errorM
               dcf={quant.dcf_result}
               piotroski={quant.piotroski_breakdown}
               dcfDiscrepancyWarning={quant.dcf_discrepancy_warning}
+              gaapOperatingMargin={quant.gaap_operating_margin}
+              nonGaapOperatingMargin={quant.non_gaap_operating_margin}
+              providerEbitMargin={quant.provider_ebit_margin}
+              valuationMarginSourceUsed={quant.valuation_margin_source_used}
+              netShareholderYieldPct={quant.net_shareholder_yield_pct}
+              netBuybackYieldPct={quant.net_buyback_yield_pct}
+              sectorKpis={quant.sector_kpis}
               qualityMetrics={{
                 roic_pct: quant.roic_pct,
                 fcf_margin_pct: quant.fcf_margin_pct,
@@ -404,7 +518,7 @@ export const EquityDetail: React.FC<EquityDetailProps> = ({ status, data, errorM
                   <OptionsOiStrikeLadder
                     symbol={data.ticker}
                     strikes={strikeLadderData}
-                    currentPrice={(quant as any)?.current_price ?? undefined}
+                    currentPrice={resolvedCurrentPrice ?? undefined}
                     maxPainStrike={maxPain?.max_pain_strike ?? undefined}
                     expirationDate={optionsChain?.expiration_date ?? undefined}
                     putCallRatio={optionsChain?.put_call_ratio ?? undefined}
@@ -414,15 +528,13 @@ export const EquityDetail: React.FC<EquityDetailProps> = ({ status, data, errorM
 
               {/* Options Volatility Smile */}
               {optionsChain?.contracts && optionsChain.contracts.length > 0 && (
-                <div className="flow-panel rounded-2xl border border-edge/80 p-5 shadow-xs">
-                  <OptionsVolSmile
-                    symbol={data.ticker}
-                    expiry={optionsChain.expiration_date || 'Current Expiry'}
-                    currentPrice={(quant as any)?.current_price ?? undefined}
-                    contracts={optionsChain.contracts}
-                    asOfDate={optionsChain.as_of}
-                  />
-                </div>
+                <OptionsVolSmile
+                  symbol={data.ticker}
+                  expiry={optionsChain.expiration_date || 'Current Expiry'}
+                  currentPrice={resolvedCurrentPrice ?? undefined}
+                  contracts={optionsChain.contracts}
+                  asOfDate={optionsChain.as_of}
+                />
               )}
             </div>
           )}

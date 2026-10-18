@@ -994,6 +994,11 @@ export interface ReverseDCFResultDTO {
   analyst_count?: number | null
   base_revenue?: number | null
   base_revenue_period_type?: 'annual' | 'quarterly' | 'ttm' | 'unknown' | null
+  alternative_valuation_model?: 'justified_pbv' | 'ddm_yield_spread' | string | null
+  alternative_intrinsic_value?: number | null
+  alternative_target_price_12m?: number | null
+  alternative_upside_12m_pct?: number | null
+  market_implied_roe_pct?: number | null
 }
 
 export interface TacticalSetupDTO {
@@ -1134,6 +1139,9 @@ export interface QuantSignalsDTO {
   historical_gaap_operating_margin?: MarginMetricItemDTO | null
   provider_ebit_margin?: MarginMetricItemDTO | null
   valuation_margin_source_used?: string
+  sector_kpis?: any | null
+  net_buyback_yield_pct?: number | null
+  net_shareholder_yield_pct?: number | null
 }
 
 export interface EquityDetailDTO extends EquitySummaryDTO {
@@ -1144,6 +1152,26 @@ export interface EquityDetailDTO extends EquitySummaryDTO {
   narrative_status?: 'available' | 'unavailable' | 'pending'
   error_code?: string | null
   generated_by: string
+  portfolio_context?: {
+    is_held: boolean
+    portfolio_id?: string
+    units?: number
+    avg_cost?: number | null
+    unrealized_pnl_pct?: number | null
+    current_weight_pct?: number | null
+    bucket_id?: string | null
+    position_action_hint?: string | null
+  } | null
+  thesis_delta?: {
+    previous_analysis_date: string
+    price_change_pct?: number | null
+    conviction_score_delta?: number | null
+    previous_action_stance?: string | null
+    current_action_stance?: string | null
+    target_price_change_pct?: number | null
+    f_score_delta?: number | null
+    breached_falsifiers?: string[]
+  } | null
 }
 
 export interface EquityNewsItemDTO {
@@ -1155,6 +1183,7 @@ export interface EquityNewsItemDTO {
   freshness_reason: string
   is_stale: boolean
   sources_count?: number
+  summary?: string
 }
 
 export interface EquityNewsDTO {
@@ -2408,6 +2437,84 @@ export interface MacroNotebookLMExportStatusDTO {
   counts: Record<string, any>
   source_results: MacroNotebookLMSourceResultDTO[]
   coverage: MacroNotebookLMCoverageDTO
+  warnings: string[]
+  error_code?: string | null
+  error?: string | null
+  can_retry: boolean
+}
+
+// ---------------------------------------------------------
+// Equity NotebookLM Research Companion Export Types
+// ---------------------------------------------------------
+
+export type EquityNotebookLMExportState =
+  | 'queued'
+  | 'running'
+  | 'completed'
+  | 'failed'
+  | 'blocked'
+  | 'partial'
+  | 'ready'
+  | 'ready_with_warnings'
+
+export interface EquityNotebookLMNotebookDTO {
+  notebook_id: string
+  title: string
+  url: string
+  status: string
+  source_count: number
+}
+
+export interface EquityNotebookLMSourceResultDTO {
+  file_name: string
+  title: string
+  status: string
+  source_id?: string | null
+  error?: string | null
+}
+
+export interface EquityNotebookLMCoverageDTO {
+  has_latest_analysis: boolean
+  historical_analyses_count: number
+  has_financials: boolean
+  has_sec_filings: boolean
+  has_insider_trades: boolean
+  earnings_calls_count: number
+  news_count: number
+  has_options_derivatives: boolean
+  has_portfolio_holding: boolean
+  user_notes_count: number
+}
+
+export interface EquityNotebookLMExportRequestDTO {
+  market?: string
+  mode?: 'all_retained'
+}
+
+export interface EquityNotebookLMExportResponseDTO {
+  export_id: string
+  ticker: string
+  market: string
+  job_id?: string | null
+  state: string
+  stage: string
+  message: string
+}
+
+export interface EquityNotebookLMExportStatusDTO {
+  export_id: string
+  ticker: string
+  market: string
+  job_id?: string | null
+  mode: string
+  state: EquityNotebookLMExportState | string
+  stage: string
+  snapshot_at: string
+  bundle_hash: string
+  notebooks: EquityNotebookLMNotebookDTO[]
+  counts: Record<string, any>
+  source_results: EquityNotebookLMSourceResultDTO[]
+  coverage: EquityNotebookLMCoverageDTO
   warnings: string[]
   error_code?: string | null
   error?: string | null

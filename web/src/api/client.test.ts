@@ -1,6 +1,6 @@
 // @vitest-environment node — test ล้วนๆ ไม่แตะ DOM ข้าม jsdom ให้รันเร็วขึ้น
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { api, ApiError, setUnauthorizedHandler } from './client'
+import { api, ApiError, cachedGet, invalidateApiCache, setUnauthorizedHandler } from './client'
 
 function mockFetchOnce(response: Partial<Response> & { jsonBody?: unknown }) {
   const { jsonBody, ...rest } = response
@@ -18,6 +18,7 @@ function mockFetchOnce(response: Partial<Response> & { jsonBody?: unknown }) {
 afterEach(() => {
   vi.unstubAllGlobals()
   setUnauthorizedHandler(null)
+  invalidateApiCache()
 })
 
 describe('api client', () => {
@@ -185,5 +186,30 @@ describe('api client', () => {
     expect(url).toBe('/api/equity/TSM/earnings-calls')
     expect(res.total_count).toBe(1)
     expect(res.items[0]?.period).toBe('Q4 2024')
+  })
+
+  it('cachedGet ให้ผลลัพธ์จาก cache เมื่อเรียกซ้ำและ invalidateApiCache เคลียร์ค่า', async () => {
+    const fetchMock = mockFetchOnce({ jsonBody: { value: 42 } })
+    const res1 = await cachedGet<{ value: number }>('/api/test-cache', 60_000, undefined, true)
+    expect(res1.value).toBe(42)
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+
+    // Call again, should hit cache without calling fetch
+    const res2 = await cachedGet<{ value: number }>('/api/test-cache', 60_000, undefined, true)
+    expect(res2.value).toBe(42)
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+
+    // Invalidate and call again, should fetch
+    invalidateApiCache('/api/test-cache')
+    await cachedGet<{ value: number }>('/api/test-cache', 60_000, undefined, true)
+    expect(fetchMock).toHaveBeenCalledTimes(2)
+  })
+
+  it('prefetchEquityTicker เรียก getEquityDetail และ getEquityNews ล่วงหน้า', async () => {
+    const fetchMock = mockFetchOnce({ jsonBody: {} })
+    api.prefetchEquityTicker('NVDA')
+    // Wait for async dispatch
+    await Promise.resolve()
+    expect(fetchMock).toHaveBeenCalled()
   })
 })

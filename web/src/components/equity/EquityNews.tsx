@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import { api } from '../../api/client'
 import type { EquityNewsDTO, NewsDiscoverySnapshotDTO } from '../../api/types'
+import { NewsCardListSkeleton } from '../ui/FlowSkeleton'
 
 interface EquityNewsProps {
   ticker: string
@@ -9,85 +10,96 @@ interface EquityNewsProps {
 export const EquityNews: React.FC<EquityNewsProps> = ({ ticker }) => {
   const [news, setNews] = useState<EquityNewsDTO | null>(null)
   const [discoveryNews, setDiscoveryNews] = useState<NewsDiscoverySnapshotDTO | null>(null)
-  const [loading, setLoading] = useState<boolean>(true)
+  const [loadingPrimary, setLoadingPrimary] = useState<boolean>(true)
+  const [loadingDiscovery, setLoadingDiscovery] = useState<boolean>(true)
   const [error, setError] = useState<string | null>(null)
   const [is404, setIs404] = useState<boolean>(false)
 
   useEffect(() => {
     let isMounted = true
-    const fetchNews = async () => {
-      setLoading(true)
-      setError(null)
-      setIs404(false)
-      try {
-        const data = await api.getEquityNews(ticker)
-        if (isMounted) {
-          setNews(data)
-        }
-      } catch (err: any) {
-        if (isMounted) {
-          if (err.status === 404 || err.message?.includes('404')) {
-            setIs404(true)
-          } else {
-            setError(err.message || 'ไม่สามารถโหลดข้อมูลข่าวได้')
-          }
-        }
-      } finally {
-        if (isMounted) {
-          setLoading(false)
-        }
-      }
-    }
+    setNews(null)
+    setDiscoveryNews(null)
+    setLoadingPrimary(true)
+    setLoadingDiscovery(true)
+    setError(null)
+    setIs404(false)
 
-    fetchNews()
-
-    // Secondary RSS discovery candidate aggregation
-    api.getEquityNewsDiscovery?.(ticker)
-      .then((res) => {
-        if (isMounted) setDiscoveryNews(res)
+    // Stage 1: Load Vault News (~20ms) decoupled
+    api.getEquityNews(ticker)
+      .then((data) => {
+        if (!isMounted) return
+        setNews(data)
       })
-      .catch(() => {})
+      .catch((err) => {
+        if (!isMounted) return
+        if (err?.status === 404 || err?.message?.includes('404')) {
+          setIs404(true)
+        } else {
+          setError(err?.message || 'ไม่สามารถโหลดข้อมูลข่าวได้')
+        }
+      })
+      .finally(() => {
+        if (isMounted) setLoadingPrimary(false)
+      })
+
+    // Stage 2: Load RSS News Discovery (1-4s) decoupled
+    if (api.getEquityNewsDiscovery) {
+      api.getEquityNewsDiscovery(ticker)
+        .then((res) => {
+          if (!isMounted) return
+          if (res) setDiscoveryNews(res)
+        })
+        .catch(() => {
+          // Soft fail for discovery
+        })
+        .finally(() => {
+          if (isMounted) setLoadingDiscovery(false)
+        })
+    } else {
+      setLoadingDiscovery(false)
+    }
 
     return () => {
       isMounted = false
     }
   }, [ticker])
 
-  if (loading) {
-    return (
-      <div className="flex justify-center items-center h-48 text-zinc-500" aria-live="polite">
-        กำลังโหลดข่าวสาร...
-      </div>
-    )
-  }
-
-  if (is404 || (!news && !error)) {
-    return (
-      <div className="flex flex-col justify-center items-center h-64 bg-surface rounded-xl border border-dashed border-edge p-8 text-center">
-        <svg className="w-12 h-12 text-zinc-400 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z" />
-        </svg>
-        <h3 className="text-lg font-medium text-zinc-900 mb-1">ยังไม่มีข้อมูลข่าวสำหรับหุ้นตัวนี้ในระบบ</h3>
-        <p className="text-zinc-500 max-w-md text-sm">
-          สามารถสั่งงานผ่านผู้จัดการ (Manager Agent) ในระบบเพื่อเริ่มต้นดึงข่าวและวิเคราะห์หุ้นตัวนี้ได้
-        </p>
-      </div>
-    )
-  }
-
-  if (error) {
-    return (
-      <div className="flex flex-col justify-center items-center h-48 bg-red-50 rounded-xl border border-red-200 p-6 text-center text-red-600" role="alert">
-        <h3 className="text-base font-medium mb-1">เกิดข้อผิดพลาด</h3>
-        <p className="text-sm">{error}</p>
-      </div>
-    )
-  }
-
   const hasNews = Boolean(news && news.items && news.items.length > 0)
   const hasDiscovery = Boolean(discoveryNews && discoveryNews.items && discoveryNews.items.length > 0)
 
+  // While primary news is still loading, or while discovery is loading without any primary news
+  if ((loadingPrimary && !hasDiscovery) || (loadingDiscovery && !hasNews && !hasDiscovery && !error && is404)) {
+    return <NewsCardListSkeleton count={3} label="กำลังโหลดข่าวสาร..." />
+  }
+
   if (!hasNews && !hasDiscovery) {
+    if (loadingDiscovery) {
+      return <NewsCardListSkeleton count={3} label="กำลังโหลดข่าวสาร..." />
+    }
+
+    if (is404 || (!news && !error)) {
+      return (
+        <div className="flex flex-col justify-center items-center h-64 bg-surface rounded-xl border border-dashed border-edge p-8 text-center">
+          <svg className="w-12 h-12 text-zinc-400 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z" />
+          </svg>
+          <h3 className="text-lg font-medium text-zinc-900 mb-1">ยังไม่มีข้อมูลข่าวสำหรับหุ้นตัวนี้ในระบบ</h3>
+          <p className="text-zinc-500 max-w-md text-sm">
+            สามารถสั่งงานผ่านผู้จัดการ (Manager Agent) ในระบบเพื่อเริ่มต้นดึงข่าวและวิเคราะห์หุ้นตัวนี้ได้
+          </p>
+        </div>
+      )
+    }
+
+    if (error) {
+      return (
+        <div className="flex flex-col justify-center items-center h-48 bg-red-50 rounded-xl border border-red-200 p-6 text-center text-red-600" role="alert">
+          <h3 className="text-base font-medium mb-1">เกิดข้อผิดพลาด</h3>
+          <p className="text-sm">{error}</p>
+        </div>
+      )
+    }
+
     return (
       <div className="bg-surface rounded-xl border border-edge p-6 text-center text-zinc-500 text-sm">
         ไม่พบรายการข่าวสารในระบบ
@@ -129,6 +141,12 @@ export const EquityNews: React.FC<EquityNewsProps> = ({ ticker }) => {
                     )}
                   </div>
 
+                  {item.summary && (
+                    <p className="text-xs text-zinc-600 line-clamp-2 leading-relaxed">
+                      {item.summary}
+                    </p>
+                  )}
+
                   <div className="flex flex-wrap items-center gap-3 text-xs text-zinc-500">
                     <span className="font-medium text-zinc-700">ที่มา: {item.source}</span>
                     {item.sources_count && item.sources_count > 1 && (
@@ -158,6 +176,29 @@ export const EquityNews: React.FC<EquityNewsProps> = ({ ticker }) => {
                 )}
               </div>
             ))}
+          </div>
+        </div>
+      )}
+
+      {/* RSS Discovery Loading Shimmer while Vault news is already displayed */}
+      {hasNews && loadingDiscovery && (
+        <div className="space-y-4 rounded-xl border border-sky-100 bg-sky-50/20 p-5 animate-fade-in">
+          <div className="flex flex-wrap items-baseline justify-between gap-2 border-b border-sky-200/60 pb-3">
+            <div>
+              <h4 className="text-xs font-bold uppercase tracking-wider text-sky-800 flex items-center gap-2">
+                <span>RSS News Discovery Candidates</span>
+                <span className="rounded-full bg-sky-100 text-sky-800 text-[10px] font-bold px-2 py-0.5 border border-sky-200">
+                  SECONDARY RSS
+                </span>
+              </h4>
+              <p className="mt-0.5 text-[11px] text-sky-700/80 font-medium animate-pulse">
+                กำลังดึงข่าวเพิ่มเติมจาก RSS Feeds...
+              </p>
+            </div>
+          </div>
+          <div className="grid grid-cols-1 gap-3">
+            <div className="h-16 rounded-lg border border-edge bg-panel/60 p-3.5 animate-shimmer" />
+            <div className="h-16 rounded-lg border border-edge bg-panel/60 p-3.5 animate-shimmer" />
           </div>
         </div>
       )}

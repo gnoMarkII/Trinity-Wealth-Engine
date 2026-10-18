@@ -293,5 +293,19 @@ describe('PortfolioHoldingsTab', () => {
     expect(screen.getByRole('status')).toHaveTextContent(/ยกเลิกการเลือกแล้ว/)
     expect(screen.queryByText('1 Selected')).not.toBeInTheDocument()
   })
+
+  it('renders skeleton shimmer when loading is true and holdings are empty', () => {
+    const { container } = render(
+      <PortfolioHoldingsTab
+        portfolioId="loading-test"
+        holdings={[]}
+        selectedBucket={null}
+        onClearBucketFilter={vi.fn()}
+        loading={true}
+      />
+    )
+    expect(container.querySelectorAll('.animate-pulse').length).toBeGreaterThanOrEqual(1)
+    expect(screen.queryByText(/ยังไม่มีสินทรัพย์ในพอร์ตการลงทุน/i)).not.toBeInTheDocument()
+  })
 })
 

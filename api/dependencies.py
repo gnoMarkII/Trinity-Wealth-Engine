@@ -217,6 +217,76 @@ def build_macro_notebooklm_export_service(
     )
 
 
+def get_equity_notebooklm_export_service(
+    request: Request,
+) -> "EquityNotebookLMExportService":
+    """Dependency provider for EquityNotebookLMExportService."""
+    queue = getattr(request.app.state, "notebooklm_job_queue", None)
+    return build_equity_notebooklm_export_service(queue=queue)
+
+
+def build_equity_notebooklm_export_service(
+    queue: Any = None,
+) -> "EquityNotebookLMExportService":
+    from application.equity.notebooklm_export_service import EquityNotebookLMExportService
+    from tools.market.adapters.equity_corpus_adapter import EquityCorpusAdapter
+    from tools.market.notebooklm_bundle_builder import EquityExportBundleBuilder
+    from api.db.adapters import SqliteEquityExportRepositoryAdapter
+    from tools.content.notebooklm.research_export_pipeline import (
+        NotebookLMEquityExportPipelineAdapter,
+    )
+
+    def _get_portfolio_holding(sym: str):
+        try:
+            svc = get_portfolio_service()
+            state = svc.get_structured_portfolio_state(refresh_prices=False)
+            if not state or not getattr(state, "holdings", None):
+                return None
+
+            clean_sym = sym.replace(".BK", "").strip().upper()
+            target_holding = None
+            for h in state.holdings:
+                h_sym = getattr(h, "symbol", "").replace(".BK", "").strip().upper()
+                if h_sym == clean_sym or getattr(h, "symbol", "").strip().upper() == sym.strip().upper():
+                    target_holding = h
+                    break
+
+            if not target_holding or getattr(target_holding, "units", 0) <= 0:
+                return {
+                    "is_held": False,
+                    "units": 0.0,
+                    "avg_cost": None,
+                    "unrealized_pnl_pct": None,
+                    "current_weight_pct": 0.0,
+                    "bucket_id": None,
+                }
+
+            total_val = getattr(state.summary, "total_value_thb", 0.0) if state.summary else 0.0
+            market_val = getattr(target_holding, "market_value_thb", 0.0)
+            weight_pct = round((market_val / total_val * 100.0), 2) if total_val > 0 else 0.0
+            avg_cost = getattr(target_holding, "avg_cost_usd", None) or getattr(target_holding, "avg_cost_thb", None)
+            pnl_pct = getattr(target_holding, "unrealized_pnl_percent", None)
+
+            return {
+                "is_held": True,
+                "units": float(getattr(target_holding, "units", 0.0)),
+                "avg_cost": float(avg_cost) if avg_cost is not None else None,
+                "unrealized_pnl_pct": float(pnl_pct) if pnl_pct is not None else None,
+                "current_weight_pct": float(weight_pct),
+                "bucket_id": getattr(target_holding, "bucket_id", None),
+            }
+        except Exception:
+            return None
+
+    return EquityNotebookLMExportService(
+        corpus_reader=EquityCorpusAdapter(portfolio_provider=_get_portfolio_holding),
+        bundle_builder=EquityExportBundleBuilder(),
+        repo=SqliteEquityExportRepositoryAdapter(),
+        dispatcher=_JobQueueDispatchAdapter(queue),
+        pipeline=NotebookLMEquityExportPipelineAdapter(),
+    )
+
+
 def get_ohlcv_service() -> OHLCVQueryService:
     """Dependency provider for the canonical OHLCV query service."""
     return _OHLCV_SERVICE

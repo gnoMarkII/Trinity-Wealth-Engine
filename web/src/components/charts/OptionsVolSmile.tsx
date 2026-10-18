@@ -130,13 +130,14 @@ export const OptionsVolSmile: React.FC<OptionsVolSmileProps> = ({
 
   if (!hasSufficientQuotes) {
     return (
-      <div className={`rounded-xl border border-slate-800 bg-slate-900/80 p-6 text-center ${className}`}>
-        {title && <h4 className="text-sm font-semibold text-slate-300">{title}</h4>}
-        <div className="mt-3 text-sm font-medium text-amber-400">
-          ⚠️ Insufficient implied volatility quotes to render smile (unavailable)
+      <div className={`flow-panel rounded-2xl border border-edge/80 p-6 text-center ${className}`}>
+        {title && <h4 className="text-sm font-semibold text-zinc-900">{title}</h4>}
+        <div className="mt-2 inline-flex items-center gap-2 rounded-full border border-amber-300 bg-amber-50 px-3.5 py-1 text-xs font-semibold text-amber-800">
+          <span>⚠️</span>
+          <span>Insufficient implied volatility quotes to render smile (unavailable)</span>
         </div>
-        <p className="mt-2 text-xs text-slate-500">
-          Options chain for {symbol} ({expiry}) does not contain at least 3 valid IV strikes. Values are not artificially interpolated.
+        <p className="mt-2.5 text-xs text-zinc-500 max-w-lg mx-auto">
+          Options chain for <span className="font-semibold text-zinc-700">{symbol}</span> ({expiry}) does not contain at least 3 valid IV strikes. Values are not artificially interpolated.
         </p>
       </div>
     )
@@ -145,19 +146,19 @@ export const OptionsVolSmile: React.FC<OptionsVolSmileProps> = ({
   const currentPriceX = currentPrice && currentPrice >= minStrike && currentPrice <= maxStrike ? getX(currentPrice) : null
 
   return (
-    <div className={`relative rounded-xl border border-slate-800 bg-slate-900/90 p-5 shadow-lg backdrop-blur-sm ${className}`}>
-      <div className="mb-4 flex flex-wrap items-baseline justify-between gap-2 border-b border-slate-800/80 pb-3">
+    <div className={`flow-panel rounded-2xl border border-edge/80 p-6 shadow-sm transition-all animate-card-in ${className}`}>
+      <div className="mb-4 flex flex-wrap items-baseline justify-between gap-2 border-b border-edge/60 pb-3">
         <div>
-          <h3 className="text-base font-semibold text-slate-100">
+          <h3 className="text-base font-semibold text-zinc-900">
             {title || `${symbol} Implied Volatility Smile`}
           </h3>
-          <p className="text-xs text-slate-400">
-            Expiry: <span className="font-semibold text-slate-200">{expiry}</span> (Single Expiry View)
+          <p className="text-xs text-zinc-500 mt-0.5">
+            Expiry: <span className="font-semibold text-zinc-700">{expiry}</span> (Single Expiry View)
             {asOfDate && <span> • As of: {asOfDate}</span>}
           </p>
         </div>
         <div className="text-right">
-          <span className="inline-flex items-center rounded-md border border-amber-800/60 bg-amber-950/40 px-2 py-0.5 text-[11px] text-amber-400">
+          <span className="inline-flex items-center rounded-full border border-amber-300 bg-amber-50 px-2.5 py-0.5 text-[11px] font-medium text-amber-800">
             ⏱ Delayed by {delayMinutes}m (Cboe)
           </span>
         </div>
@@ -166,22 +167,22 @@ export const OptionsVolSmile: React.FC<OptionsVolSmileProps> = ({
       {/* Legend */}
       <div className="mb-3 flex flex-wrap items-center gap-5 text-xs">
         <div className="flex items-center gap-1.5">
-          <span className="h-0.5 w-4 bg-emerald-400" />
-          <span className="text-slate-300">Call Implied Volatility (IV)</span>
+          <span className="h-1.5 w-4 rounded-full bg-emerald-600" />
+          <span className="text-zinc-600 font-medium">Call Implied Volatility (IV)</span>
         </div>
         <div className="flex items-center gap-1.5">
-          <span className="h-0.5 w-4 bg-amber-400" />
-          <span className="text-slate-300">Put Implied Volatility (IV)</span>
+          <span className="h-1.5 w-4 rounded-full bg-amber-600" />
+          <span className="text-zinc-600 font-medium">Put Implied Volatility (IV)</span>
         </div>
         {currentPrice && (
           <div className="flex items-center gap-1.5">
-            <span className="h-0.5 w-3 border-t border-dashed border-sky-400" />
-            <span className="text-slate-300">Spot Price (${currentPrice.toFixed(2)})</span>
+            <span className="h-0.5 w-3 border-t-2 border-dashed border-sky-600" />
+            <span className="text-zinc-600 font-medium">Spot Price (${currentPrice.toFixed(2)})</span>
           </div>
         )}
       </div>
 
-      <div className="relative w-full overflow-hidden rounded-lg border border-slate-800 bg-slate-950">
+      <div className="relative w-full overflow-hidden rounded-xl border border-edge/60 bg-surface/60">
         <svg
           viewBox={`0 0 ${width} ${height}`}
           className="h-full w-full select-none"
@@ -195,8 +196,8 @@ export const OptionsVolSmile: React.FC<OptionsVolSmileProps> = ({
             const ivVal = minIv + frac * ivSpan
             return (
               <g key={`y-${idx}`}>
-                <line x1={padLeft} y1={y} x2={width - padRight} y2={y} stroke="#1e293b" strokeDasharray="3 3" />
-                <text x={padLeft - 8} y={y + 4} textAnchor="end" fontSize="10" fill="#64748b">
+                <line x1={padLeft} y1={y} x2={width - padRight} y2={y} stroke="#e2e8f0" strokeDasharray="3 3" />
+                <text x={padLeft - 8} y={y + 4} textAnchor="end" fontSize="10" fill="#64748b" className="font-mono">
                   {ivVal.toFixed(1)}%
                 </text>
               </g>
@@ -211,11 +212,11 @@ export const OptionsVolSmile: React.FC<OptionsVolSmileProps> = ({
                 y1={padTop}
                 x2={currentPriceX}
                 y2={padTop + plotHeight}
-                stroke="#38bdf8"
+                stroke="#0284c7"
                 strokeWidth={1.5}
                 strokeDasharray="4 4"
               />
-              <text x={currentPriceX} y={padTop - 8} textAnchor="middle" fontSize="10" fill="#38bdf8" fontWeight="600">
+              <text x={currentPriceX} y={padTop - 8} textAnchor="middle" fontSize="10" fill="#0284c7" fontWeight="600" className="font-mono">
                 Spot: ${currentPrice?.toFixed(2)}
               </text>
             </g>
@@ -223,23 +224,23 @@ export const OptionsVolSmile: React.FC<OptionsVolSmileProps> = ({
 
           {/* Curves */}
           {callPath && (
-            <path d={callPath} fill="none" stroke="#10b981" strokeWidth={2.5} strokeLinecap="round" />
+            <path d={callPath} fill="none" stroke="#059669" strokeWidth={2.5} strokeLinecap="round" />
           )}
           {putPath && (
-            <path d={putPath} fill="none" stroke="#f59e0b" strokeWidth={2.5} strokeLinecap="round" />
+            <path d={putPath} fill="none" stroke="#d97706" strokeWidth={2.5} strokeLinecap="round" />
           )}
 
           {/* Dots on strikes */}
           {callPoints.map((pt, i) => (
-            <circle key={`cp-${i}`} cx={pt.x} cy={pt.y} r={3} fill="#10b981" stroke="#064e3b" strokeWidth={1} />
+            <circle key={`cp-${i}`} cx={pt.x} cy={pt.y} r={3} fill="#059669" stroke="#047857" strokeWidth={1} />
           ))}
           {putPoints.map((pt, i) => (
-            <circle key={`pp-${i}`} cx={pt.x} cy={pt.y} r={3} fill="#f59e0b" stroke="#78350f" strokeWidth={1} />
+            <circle key={`pp-${i}`} cx={pt.x} cy={pt.y} r={3} fill="#d97706" stroke="#b45309" strokeWidth={1} />
           ))}
 
           {/* X Axis Strike Labels */}
           {sortedStrikes.filter((_, idx) => idx % Math.ceil(sortedStrikes.length / 8) === 0).map((s, idx) => (
-            <text key={`x-${idx}`} x={getX(s)} y={height - 12} textAnchor="middle" fontSize="10" fill="#64748b">
+            <text key={`x-${idx}`} x={getX(s)} y={height - 12} textAnchor="middle" fontSize="10" fill="#64748b" className="font-mono">
               ${s.toFixed(0)}
             </text>
           ))}
@@ -284,27 +285,27 @@ export const OptionsVolSmile: React.FC<OptionsVolSmileProps> = ({
 
         {hoveredStrike && (
           <div
-            className="pointer-events-none absolute z-20 -translate-x-1/2 -translate-y-full transform rounded-lg border border-slate-700 bg-slate-900/95 p-3 text-xs shadow-xl backdrop-blur-md"
+            className="pointer-events-none absolute z-20 -translate-x-1/2 -translate-y-full transform rounded-xl border border-edge/80 bg-surface/95 p-3 text-xs shadow-md backdrop-blur-md"
             style={{
               left: Math.min(width - 120, Math.max(padLeft + 60, hoveredStrike.x)),
               top: padTop + 35,
             }}
           >
-            <div className="border-b border-slate-800 pb-1 font-semibold text-slate-100">
+            <div className="border-b border-edge/60 pb-1 font-bold text-zinc-900 font-mono">
               Strike: ${hoveredStrike.strike.toFixed(2)}
             </div>
             <div className="mt-1.5 space-y-1 text-[11px]">
-              <div className="flex items-center justify-between gap-4 text-emerald-400">
+              <div className="flex items-center justify-between gap-4 text-emerald-700">
                 <span>Call IV:</span>
-                <span className="font-mono font-semibold">
+                <span className="font-mono font-bold">
                   {hoveredStrike.callIv !== undefined && hoveredStrike.callIv !== null
                     ? `${hoveredStrike.callIv.toFixed(1)}%`
                     : 'N/A'}
                 </span>
               </div>
-              <div className="flex items-center justify-between gap-4 text-amber-400">
+              <div className="flex items-center justify-between gap-4 text-amber-700">
                 <span>Put IV:</span>
-                <span className="font-mono font-semibold">
+                <span className="font-mono font-bold">
                   {hoveredStrike.putIv !== undefined && hoveredStrike.putIv !== null
                     ? `${hoveredStrike.putIv.toFixed(1)}%`
                     : 'N/A'}

@@ -1,0 +1,21 @@
+{
+  "permissions": {
+    "deny": [
+      "Read(.env)",
+      "Read(.env.*)",
+      "Write(.env)",
+      "Write(.env.*)",
+      "Write(tests/fixtures/manifest_openapi_schema.json)",
+      "Write(tests/fixtures/manifest_langchain_tools.json)",
+      "Write(.git/hooks/**)"
+    ]
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "command": "python .claude/hooks/guard_pre_tool.py"
+      }
+    ]
+  }
+}

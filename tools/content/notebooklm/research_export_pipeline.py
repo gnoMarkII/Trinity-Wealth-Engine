@@ -16,6 +16,7 @@ from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional
 
 from application.macro.notebooklm_export_ports import MacroExportPipelinePort
+from application.equity.notebooklm_export_ports import EquityExportPipelinePort
 from core.logger import get_logger
 from tools.content.notebooklm import adapter
 from tools.content.notebooklm.research_export_manifest import (
@@ -37,6 +38,7 @@ async def run_research_export_pipeline(
     export_id: str,
     *,
     title: Optional[str] = None,
+    subject_label: str = "Macro",
     on_step: Optional[Callable[[str, str], None]] = None,
 ) -> Dict[str, Any]:
     """Uploads all sources from bundle_dir to a dedicated NotebookLM research notebook."""
@@ -71,7 +73,7 @@ async def run_research_export_pipeline(
 
         # 1. Create or reuse Notebook
         if not manifest.notebook_id:
-            default_title = f"Macro Research — {inventory.get('snapshot_at', _utc_now_iso())[:16]}"
+            default_title = f"{subject_label} Research — {inventory.get('snapshot_at', _utc_now_iso())[:16]}"
             nb_title = title or default_title
             resp = await adapter.call_tool(session, "notebook_create", {"title": nb_title})
             notebook_id = resp.get("notebook_id")
@@ -186,7 +188,7 @@ async def run_research_export_pipeline(
         has_warnings = bool(inventory.get("warnings"))
         if failed_count == 0 and uploaded_count == total_sources:
             manifest.status = "ready_with_warnings" if has_warnings else "ready"
-            on_step("complete", f"ส่งข้อมูล Macro ทั้งหมด {total_sources} แหล่งข้อมูลเรียบร้อยแล้ว")
+            on_step("complete", f"ส่งข้อมูล {subject_label} ทั้งหมด {total_sources} แหล่งข้อมูลเรียบร้อยแล้ว")
         elif uploaded_count > 0:
             manifest.status = "partial"
             on_step("partial", f"ส่งข้อมูลสำเร็จ {uploaded_count}/{total_sources} แหล่งข้อมูล (บางรายการติดขัด)")
@@ -222,5 +224,25 @@ class NotebookLMResearchExportPipelineAdapter(MacroExportPipelinePort):
             bundle_dir=bundle_dir,
             export_id=export_id,
             title=title,
+            subject_label="Macro",
+            on_step=on_step,
+        )
+
+
+class NotebookLMEquityExportPipelineAdapter(EquityExportPipelinePort):
+    """Adapter implementing EquityExportPipelinePort using the local MCP runner."""
+
+    async def execute_export(
+        self,
+        export_id: str,
+        bundle_dir: Path,
+        title: Optional[str] = None,
+        on_step: Optional[Callable[[str, str], None]] = None,
+    ) -> Dict[str, Any]:
+        return await run_research_export_pipeline(
+            bundle_dir=bundle_dir,
+            export_id=export_id,
+            title=title,
+            subject_label="Equity",
             on_step=on_step,
         )

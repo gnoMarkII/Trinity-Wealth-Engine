@@ -17,7 +17,6 @@ import PortfolioOverviewTab from '../components/portfolio/PortfolioOverviewTab'
 import PortfolioHoldingsTab from '../components/portfolio/PortfolioHoldingsTab'
 import PortfolioWatchlistTab from '../components/portfolio/PortfolioWatchlistTab'
 import PortfolioGoalsTab from '../components/portfolio/PortfolioGoalsTab'
-import PortfolioAnalyticsTab from '../components/portfolio/PortfolioAnalyticsTab'
 import TradeModal from '../components/portfolio/Modals/TradeModal'
 import CashFlowModal from '../components/portfolio/Modals/CashFlowModal'
 import IncomeModal from '../components/portfolio/Modals/IncomeModal'
@@ -28,6 +27,7 @@ import type { TransactionView } from '../lib/pvdStatementHistory'
 import { getPvdValuationContext } from '../lib/pvdPresentation'
 import PortfolioIncomesTab from '../components/portfolio/PortfolioIncomesTab'
 import InvestorPrinciplesTab from '../components/portfolio/essence/InvestorPrinciplesTab'
+import { TopLoadingRibbon } from '../components/ui/FlowSkeleton'
 import {
   TradeIcon,
   CashFlowIcon,
@@ -126,6 +126,15 @@ export default function Portfolio() {
   const selectedPortfolioIdRef = useRef(selectedPortfolioId)
   selectedPortfolioIdRef.current = selectedPortfolioId
 
+  // Tab Keep-Alive: Keep mounted tabs alive to prevent DOM teardown and enable 0ms instant tab switching
+  const [mountedTabs, setMountedTabs] = useState<Record<string, boolean>>(() => ({
+    [activeTab]: true,
+  }))
+
+  useEffect(() => {
+    setMountedTabs((prev) => (prev[activeTab] ? prev : { ...prev, [activeTab]: true }))
+  }, [activeTab])
+
   // Multi-Portfolio state
   const [portfolios, setPortfolios] = useState<PortfolioMetaDTO[]>([])
   const [createPortModalOpen, setCreatePortModalOpen] = useState(false)
@@ -152,7 +161,6 @@ export default function Portfolio() {
   const [journalKeyword, setJournalKeyword] = useState<string>('')
 
   // Top-Level Executive Dashboard state
-  const [executiveTab, setExecutiveTab] = useState<'goals' | 'performance'>('goals')
   const [executiveExpanded, setExecutiveExpanded] = useState<boolean>(true)
 
   // Modals state
@@ -196,27 +204,60 @@ export default function Portfolio() {
       }
       setError(null)
 
-      const [ports, pState, allocRes, wState, gRes] = await Promise.all([
-        api.listPortfolios(),
-        api.getActualPortfolioState(refreshPrices, refreshPrices, selectedPortfolioId),
-        api.getActualBucketAllocations(selectedPortfolioId),
-        api.getActualWatchlist(selectedPortfolioId),
-        // Goals ไม่กรองตามพอร์ตที่เลือกอยู่ — โชว์ทุกเป้าหมายจากทุกพอร์ตรวมกันเสมอ (ดู badge ในการ์ด)
-        api.getActualGoals(),
-      ])
+      const portPromise = api.listPortfolios()
+        .then((ports) => {
+          if (fetchIdRef.current === myFetchId) setPortfolios(ports)
+        })
+        .catch((err) => {
+          console.warn('Failed to load portfolio list:', err)
+        })
 
-      if (fetchIdRef.current !== myFetchId) return // มี fetch ใหม่กว่าแซงไปแล้ว ทิ้งผลลัพธ์นี้
+      const statePromise = api.getActualPortfolioState(refreshPrices, refreshPrices, selectedPortfolioId)
+        .then((pState) => {
+          if (fetchIdRef.current === myFetchId) {
+            setPortfolioState(pState)
+            if (!refreshPrices) {
+              setLoading(false)
+            }
+          }
+        })
+        .catch((err) => {
+          if (fetchIdRef.current === myFetchId) {
+            setError(err?.message || 'ไม่สามารถโหลดข้อมูล Actual Portfolio ได้')
+          }
+        })
 
-      setPortfolios(ports)
-      setPortfolioState(pState)
-      setAllocationsResponse(allocRes)
-      setWatchlistState(wState)
-      setGoalsResponse(gRes)
+      const allocPromise = api.getActualBucketAllocations(selectedPortfolioId)
+        .then((allocRes) => {
+          if (fetchIdRef.current === myFetchId) setAllocationsResponse(allocRes)
+        })
+        .catch((err) => {
+          console.warn('Failed to load bucket allocations:', err)
+        })
+
+      const watchlistPromise = Promise.resolve(api.getActualWatchlist(selectedPortfolioId))
+        .then((wState) => {
+          if (fetchIdRef.current !== myFetchId) return
+          setWatchlistState(wState)
+        })
+        .catch(() => {})
+
+      const goalsPromise = Promise.resolve(api.getActualGoals())
+        .then((gRes) => {
+          if (fetchIdRef.current !== myFetchId) return
+          setGoalsResponse(gRes)
+        })
+        .catch(() => {})
+
+      await Promise.allSettled([portPromise, statePromise, allocPromise, watchlistPromise, goalsPromise])
 
       if (refreshPrices) {
-        api.getActualPerformance(daysRange, selectedPortfolioId).then((rows) => {
-          if (fetchIdRef.current === myFetchId) setPerformanceRows(rows)
-        }).catch(() => {})
+        try {
+          const perf = await api.getActualPerformance(daysRange, selectedPortfolioId)
+          if (fetchIdRef.current === myFetchId) setPerformanceRows(perf)
+        } catch {
+          // ignore
+        }
       }
     } catch (err: any) {
       if (fetchIdRef.current !== myFetchId) return
@@ -372,6 +413,13 @@ export default function Portfolio() {
 
   return (
     <div className="animate-page-in space-y-6 pb-14">
+      {/* Background SWR Loading Indicator — Subtle, non-blocking */}
+      {loading && portfolioState && (
+        <div className="rounded-xl overflow-hidden shadow-xs">
+          <TopLoadingRibbon label="กำลังอัปเดตข้อมูลพอร์ตล่าสุด..." />
+        </div>
+      )}
+
       {/* Page Header with Multi-Portfolio Selector — Hero Banner Card */}
       <div className="flow-panel rounded-2xl border border-sky-100/80 p-5 md:p-6 shadow-sm bg-gradient-to-r from-white/90 via-sky-50/40 to-blue-50/30 backdrop-blur-md flex flex-col justify-between gap-3 xl:flex-row xl:items-center">
         {/* Left: Branding & Title */}
@@ -592,221 +640,192 @@ export default function Portfolio() {
         </div>
       )}
 
-      {/* Summary Cards & Executive Dashboard — Display on portfolio tracking/operations tabs, hidden on Principles workspace */}
-      {activeTab !== 'principles' && (
-        <>
-          <PortfolioSummaryCards
-            summary={portfolioState?.summary ?? null}
-            lastUpdated={portfolioState?.last_updated ?? null}
-            holdings={portfolioState?.holdings ?? []}
-            pvdContext={pvdContext}
-            loading={loading}
-            refreshingPrices={refreshingPrices}
-            priceRefreshInfo={portfolioState?.price_refresh_info ?? null}
-            onRefreshPrices={() => void fetchAllData(true)}
-            onViewPvdStatements={() => handleTransactionViewChange('pvd')}
-            performanceRows={performanceRows}
-          />
+      {/* Summary Cards & Executive Dashboard */}
+      <PortfolioSummaryCards
+        summary={portfolioState?.summary ?? null}
+        lastUpdated={portfolioState?.last_updated ?? null}
+        holdings={portfolioState?.holdings ?? []}
+        pvdContext={pvdContext}
+        loading={loading}
+        refreshingPrices={refreshingPrices}
+        priceRefreshInfo={portfolioState?.price_refresh_info ?? null}
+        onRefreshPrices={() => void fetchAllData(true)}
+        onViewPvdStatements={() => handleTransactionViewChange('pvd')}
+        performanceRows={performanceRows}
+      />
 
-          {/* Top-Level Executive Section: Goals & Performance */}
-          <div className="rounded-2xl border border-sky-100 bg-gradient-to-b from-sky-50/40 via-white to-panel p-5 shadow-sm transition-all">
-            <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center border-b border-sky-100 pb-4">
-              <div className="flex items-center gap-3">
-                <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-flow-blue/10 text-flow-blue">
-                  <ChartBarIcon className="h-5 w-5" />
+      {/* Top-Level Executive Goals Section */}
+      <div className="rounded-2xl border border-sky-100 bg-gradient-to-b from-sky-50/40 via-white to-panel p-5 shadow-sm transition-all">
+        <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center border-b border-sky-100 pb-4">
+          <div className="flex items-center gap-3">
+            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-flow-blue/10 text-flow-blue">
+              <GoalIcon className="h-5 w-5" />
+            </span>
+            <div>
+              <h2 className="text-base font-extrabold tracking-tight text-zinc-900 flex items-center gap-2">
+                <span>Portfolio Goals & Targets</span>
+                <span className="rounded-full bg-flow-cyan/20 px-2.5 py-0.5 text-[10px] font-bold text-flow-blue uppercase tracking-wider">
+                  {goalsResponse?.goals.length ?? 0} Goals
                 </span>
-                <div>
-                  <h2 className="text-base font-extrabold tracking-tight text-zinc-900 flex items-center gap-2">
-                    <span>Executive Dashboard: Goals & Performance</span>
-                    <span className="rounded-full bg-flow-cyan/20 px-2.5 py-0.5 text-[10px] font-bold text-flow-blue uppercase tracking-wider">
-                      Top-Level Metrics
-                    </span>
-                  </h2>
-                  <p className="text-xs text-zinc-500 mt-0.5">
-                    ติดตามความคืบหน้าเป้าหมายพอร์ต และประวัติการเติบโตของ NAV Snapshot ได้ทันทีจากทุกมุมมอง
-                  </p>
-                </div>
-              </div>
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setExecutiveTab('goals')
-                    if (!executiveExpanded) setExecutiveExpanded(true)
-                  }}
-                  className={`rounded-xl px-3.5 py-1.5 text-xs font-bold transition-all flex items-center gap-1.5 ${
-                    executiveTab === 'goals' && executiveExpanded
-                      ? 'bg-flow-blue text-white shadow-md'
-                      : 'bg-white text-zinc-600 hover:bg-sky-50 border border-sky-200'
-                  }`}
-                >
-                  <GoalIcon className="w-3.5 h-3.5" />
-                  <span>Goals ({goalsResponse?.goals.length ?? 0})</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setExecutiveTab('performance')
-                    if (!executiveExpanded) setExecutiveExpanded(true)
-                  }}
-                  className={`rounded-xl px-3.5 py-1.5 text-xs font-bold transition-all flex items-center gap-1.5 ${
-                    executiveTab === 'performance' && executiveExpanded
-                      ? 'bg-flow-blue text-white shadow-md'
-                      : 'bg-white text-zinc-600 hover:bg-sky-50 border border-sky-200'
-                  }`}
-                >
-                  <ChartBarIcon className="w-3.5 h-3.5" />
-                  <span>Performance Analytics</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setExecutiveExpanded(!executiveExpanded)}
-                  className="rounded-xl border border-sky-200 bg-white p-1.5 text-zinc-500 hover:bg-sky-50 hover:text-zinc-900 transition-colors ml-1"
-                  title={executiveExpanded ? 'ย่อส่วน Executive Dashboard' : 'ขยายส่วน Executive Dashboard'}
-                >
-                  {executiveExpanded ? '🔼' : '🔽'}
-                </button>
-              </div>
+              </h2>
+              <p className="text-xs text-zinc-500 mt-0.5">
+                ติดตามความคืบหน้าเป้าหมายทางการเงินและสัดส่วนสินทรัพย์ตามกลยุทธ์
+              </p>
             </div>
-
-            {executiveExpanded && (
-              <div className="mt-5 animate-fade-in">
-                {executiveTab === 'goals' ? (
-                  <PortfolioGoalsTab
-                    goals={goalsResponse?.goals ?? []}
-                    generatedAt={goalsResponse?.generated_at ?? null}
-                    portfolios={portfolios}
-                    selectedPortfolioId={selectedPortfolioId}
-                    allocationPolicy={portfolioState?.allocation_policy}
-                    bucketSummaries={allocationsResponse?.summaries ?? []}
-                    onSuccess={(res) => {
-                      setGoalsResponse(res)
-                      api.getActualGoals().then((gRes) => setGoalsResponse(gRes)).catch(() => {})
-                    }}
-                  />
-                ) : (
-                  <PortfolioAnalyticsTab
-                    performanceRows={performanceRows}
-                    daysRange={daysRange}
-                    onChangeDaysRange={setDaysRange}
-                    holdings={portfolioState?.holdings ?? []}
-                    cashBalanceThb={
-                      portfolioState?.summary?.total_value_thb != null
-                        ? Math.max(
-                            0,
-                            portfolioState.summary.total_value_thb -
-                              (portfolioState.holdings ?? []).reduce(
-                                (acc, h) => acc + (h.market_value_thb || 0),
-                                0
-                              )
-                          )
-                        : undefined
-                    }
-                  />
-                )}
-              </div>
-            )}
           </div>
-        </>
-      )}
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setExecutiveExpanded(!executiveExpanded)}
+              className="rounded-xl border border-sky-200 bg-white px-3.5 py-1.5 text-xs font-bold text-zinc-600 hover:bg-sky-50 hover:text-zinc-900 transition-colors flex items-center gap-1.5 shadow-2xs"
+              title={executiveExpanded ? 'ย่อส่วน Goals' : 'ขยายส่วน Goals'}
+            >
+              <GoalIcon className="w-3.5 h-3.5" />
+              <span>Goals ({goalsResponse?.goals.length ?? 0})</span>
+              <span className="ml-0.5">{executiveExpanded ? '🔼' : '🔽'}</span>
+            </button>
+          </div>
+        </div>
+
+        {executiveExpanded && (
+          <div className="mt-5 animate-fade-in">
+            <PortfolioGoalsTab
+              goals={goalsResponse?.goals ?? []}
+              generatedAt={goalsResponse?.generated_at ?? null}
+              portfolios={portfolios}
+              selectedPortfolioId={selectedPortfolioId}
+              allocationPolicy={portfolioState?.allocation_policy}
+              bucketSummaries={allocationsResponse?.summaries ?? []}
+              onSuccess={(res) => {
+                setGoalsResponse(res)
+                api.getActualGoals().then((gRes) => setGoalsResponse(gRes)).catch(() => {})
+              }}
+            />
+          </div>
+        )}
+      </div>
 
       {/* Tabs Control */}
       <div className="pt-2">
         <SegmentedControl options={TABS} value={activeTab} onChange={handleTabChange} wrap={false} />
       </div>
 
-      {/* Tab Panels */}
+      {/* Tab Panels with Keep-Alive */}
       <div className="mt-4">
-        {activeTab === 'overview' && (
-          <PortfolioOverviewTab
-            portfolioId={selectedPortfolioId}
-            targets={portfolioState?.allocation_targets ?? []}
-            summaries={allocationsResponse?.summaries ?? []}
-            warning={allocationsResponse?.warning ?? null}
-            holdings={portfolioState?.holdings ?? []}
-            allocationPolicy={portfolioState?.allocation_policy}
-            allocationPlanOrigin={portfolioState?.allocation_plan_origin}
-            onSelectBucket={handleSelectBucket}
-            onSuccess={handlePortfolioStateSuccess}
-            onOpenTradeModal={() => setTradeModalOpen(true)}
-            onNavigateToPrinciples={() => {
-              const nextParams = new URLSearchParams(searchParams)
-              nextParams.set('tab', 'principles')
-              setSearchParams(nextParams)
-            }}
-          />
+        {mountedTabs['overview'] && (
+          <div className={activeTab === 'overview' ? 'block' : 'hidden'}>
+            <PortfolioOverviewTab
+              portfolioId={selectedPortfolioId}
+              loading={loading}
+              targets={portfolioState?.allocation_targets ?? []}
+              summaries={allocationsResponse?.summaries ?? []}
+              warning={allocationsResponse?.warning ?? null}
+              holdings={portfolioState?.holdings ?? []}
+              allocationPolicy={portfolioState?.allocation_policy}
+              allocationPlanOrigin={portfolioState?.allocation_plan_origin}
+              performanceRows={performanceRows}
+              daysRange={daysRange}
+              onChangeDaysRange={setDaysRange}
+              onSnapshotTriggered={() => {
+                api.getActualPerformance(daysRange, selectedPortfolioId).then((rows) => {
+                  setPerformanceRows(rows)
+                }).catch(() => {})
+              }}
+              onSelectBucket={handleSelectBucket}
+              onSuccess={handlePortfolioStateSuccess}
+              onOpenTradeModal={() => setTradeModalOpen(true)}
+              onNavigateToPrinciples={() => {
+                const nextParams = new URLSearchParams(searchParams)
+                nextParams.set('tab', 'principles')
+                setSearchParams(nextParams)
+              }}
+            />
+          </div>
         )}
 
-        {activeTab === 'principles' && (
-          <InvestorPrinciplesTab
-            portfolioId={selectedPortfolioId}
-            portfolioName={currentPortfolioName}
-            onPortfolioChangeNeeded={() => void fetchAllData(false)}
-            onNavigateToOverview={() => {
-              const nextParams = new URLSearchParams(searchParams)
-              nextParams.set('tab', 'overview')
-              setSearchParams(nextParams)
-            }}
-          />
+        {mountedTabs['principles'] && (
+          <div className={activeTab === 'principles' ? 'block' : 'hidden'}>
+            <InvestorPrinciplesTab
+              portfolioId={selectedPortfolioId}
+              portfolioName={currentPortfolioName}
+              onPortfolioChangeNeeded={() => void fetchAllData(false)}
+              onNavigateToOverview={() => {
+                const nextParams = new URLSearchParams(searchParams)
+                nextParams.set('tab', 'overview')
+                setSearchParams(nextParams)
+              }}
+            />
+          </div>
         )}
 
-        {activeTab === 'holdings' && (
-          <PortfolioHoldingsTab
-            key={selectedPortfolioId}
-            portfolioId={selectedPortfolioId}
-            holdings={portfolioState?.holdings ?? []}
-            selectedBucket={selectedBucket}
-            onClearBucketFilter={handleClearBucketFilter}
-            targets={portfolioState?.allocation_targets ?? []}
-            allocationPolicy={portfolioState?.allocation_policy}
-            onSuccess={(newState) => {
-              if (selectedPortfolioIdRef.current === selectedPortfolioId) handlePortfolioStateSuccess(newState)
-            }}
-            journalRows={journalRows}
-            journalKeyword={journalKeyword}
-            onChangeJournalKeyword={setJournalKeyword}
-            onSuccessJournal={(entries) => setJournalRows(entries)}
-            onOpenTradeModal={() => setTradeModalOpen(true)}
-            onViewTransactions={handleViewTransactionsForSymbol}
-          />
+        {mountedTabs['holdings'] && (
+          <div className={activeTab === 'holdings' ? 'block' : 'hidden'}>
+            <PortfolioHoldingsTab
+              key={selectedPortfolioId}
+              loading={loading}
+              portfolioId={selectedPortfolioId}
+              holdings={portfolioState?.holdings ?? []}
+              selectedBucket={selectedBucket}
+              onClearBucketFilter={handleClearBucketFilter}
+              targets={portfolioState?.allocation_targets ?? []}
+              allocationPolicy={portfolioState?.allocation_policy}
+              onSuccess={(newState) => {
+                if (selectedPortfolioIdRef.current === selectedPortfolioId) handlePortfolioStateSuccess(newState)
+              }}
+              journalRows={journalRows}
+              journalKeyword={journalKeyword}
+              onChangeJournalKeyword={setJournalKeyword}
+              onSuccessJournal={(entries) => setJournalRows(entries)}
+              onOpenTradeModal={() => setTradeModalOpen(true)}
+              onViewTransactions={handleViewTransactionsForSymbol}
+            />
+          </div>
         )}
 
-        {activeTab === 'transactions' && (
-          <PortfolioTransactionsTab
-            key={selectedPortfolioId}
-            portfolioId={selectedPortfolioId}
-            activeView={selectedTransactionView}
-            onViewChange={handleTransactionViewChange}
-            initialSymbol={transactionFilterSymbol}
-            holdings={portfolioState?.holdings}
-            onClearSymbolFilter={handleClearSymbolFilter}
-            onOpenTradeModal={() => setTradeModalOpen(true)}
-            onSuccess={(newState) => {
-              if (selectedPortfolioIdRef.current === selectedPortfolioId) handlePortfolioStateSuccess(newState)
-            }}
-          />
+        {mountedTabs['transactions'] && (
+          <div className={activeTab === 'transactions' ? 'block' : 'hidden'}>
+            <PortfolioTransactionsTab
+              key={selectedPortfolioId}
+              portfolioId={selectedPortfolioId}
+              activeView={selectedTransactionView}
+              onViewChange={handleTransactionViewChange}
+              initialSymbol={transactionFilterSymbol}
+              holdings={portfolioState?.holdings}
+              onClearSymbolFilter={handleClearSymbolFilter}
+              onOpenTradeModal={() => setTradeModalOpen(true)}
+              onSuccess={(newState) => {
+                if (selectedPortfolioIdRef.current === selectedPortfolioId) handlePortfolioStateSuccess(newState)
+              }}
+            />
+          </div>
         )}
 
-        {activeTab === 'incomes' && (
-          <PortfolioIncomesTab
-            state={portfolioState}
-            selectedPortfolioId={selectedPortfolioId}
-            onSuccess={handlePortfolioStateSuccess}
-            onOpenIncomeModal={() => setIncomeModalOpen(true)}
-          />
+        {mountedTabs['incomes'] && (
+          <div className={activeTab === 'incomes' ? 'block' : 'hidden'}>
+            <PortfolioIncomesTab
+              state={portfolioState}
+              selectedPortfolioId={selectedPortfolioId}
+              onSuccess={handlePortfolioStateSuccess}
+              onOpenIncomeModal={() => setIncomeModalOpen(true)}
+            />
+          </div>
         )}
 
-        {activeTab === 'watchlist' && (
-          <PortfolioWatchlistTab
-            portfolioId={selectedPortfolioId}
-            items={watchlistState?.items ?? []}
-            lastUpdated={watchlistState?.last_updated ?? null}
-            onSuccess={(wState) => setWatchlistState(wState)}
-          />
+        {mountedTabs['watchlist'] && (
+          <div className={activeTab === 'watchlist' ? 'block' : 'hidden'}>
+            <PortfolioWatchlistTab
+              portfolioId={selectedPortfolioId}
+              items={watchlistState?.items ?? []}
+              lastUpdated={watchlistState?.last_updated ?? null}
+              onSuccess={(wState) => setWatchlistState(wState)}
+            />
+          </div>
         )}
 
-        {activeTab === 'calendar' && (
-          <PortfolioCalendarTab selectedPortfolioId={selectedPortfolioId} />
+        {mountedTabs['calendar'] && (
+          <div className={activeTab === 'calendar' ? 'block' : 'hidden'}>
+            <PortfolioCalendarTab selectedPortfolioId={selectedPortfolioId} />
+          </div>
         )}
       </div>
 

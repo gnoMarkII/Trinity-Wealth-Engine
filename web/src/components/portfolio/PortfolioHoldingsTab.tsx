@@ -8,12 +8,14 @@ import JournalModal from './Modals/JournalModal'
 import Modal from '../ui/Modal'
 import { TradeIcon, EditIcon, DeleteIcon, FolderIcon, JournalIcon } from './icons/PortfolioIcons'
 import { isPvdHolding, isValidIsoDate } from '../../lib/pvdPresentation'
+import { PortfolioHoldingsSkeleton } from '../ui/FlowSkeleton'
 
 interface Props {
   portfolioId: string
   holdings: ActualHoldingDTO[]
   selectedBucket: string | null
   onClearBucketFilter: () => void
+  loading?: boolean
   targets?: AllocationTargetDTO[]
   allocationPolicy?: ActualPortfolioStateDTO['allocation_policy']
   onSuccess?: (state: ActualPortfolioStateDTO) => void
@@ -32,6 +34,7 @@ export default function PortfolioHoldingsTab({
   holdings,
   selectedBucket,
   onClearBucketFilter,
+  loading = false,
   targets = [],
   allocationPolicy,
   onSuccess,
@@ -240,6 +243,10 @@ export default function PortfolioHoldingsTab({
   const renderSortIndicator = (field: SortField) => {
     if (sortField !== field) return <span className="opacity-20 ml-1">⇅</span>
     return <span className="text-flow-blue ml-1 font-bold">{sortAsc ? '▲' : '▼'}</span>
+  }
+
+  if (loading && holdings.length === 0) {
+    return <PortfolioHoldingsSkeleton />
   }
 
   return (

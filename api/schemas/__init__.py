@@ -6,3 +6,4 @@ from api.schemas.portfolio import *
 from api.schemas.equity import *
 from api.schemas.financials import *
 from api.schemas.macro_notebooklm import *
+from api.schemas.equity_notebooklm import *

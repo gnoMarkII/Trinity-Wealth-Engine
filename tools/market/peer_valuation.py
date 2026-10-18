@@ -29,6 +29,20 @@ _SECTOR_PEER_BASKETS: Dict[str, List[str]] = {
     "Industrials": ["CAT", "HON", "UNP"],
 }
 
+_TH_SECTOR_PEER_BASKETS: Dict[str, List[str]] = {
+    "Energy": ["PTT.BK", "PTTEP.BK", "TOP.BK", "BANPU.BK"],
+    "Financial Services": ["KBANK.BK", "SCB.BK", "BBL.BK", "KTB.BK"],
+    "Communication Services": ["ADVANC.BK", "TRUE.BK", "INTUCH.BK"],
+    "Consumer Defensive": ["CPALL.BK", "CBG.BK", "OSP.BK", "CPF.BK"],
+    "Consumer Cyclical": ["CRC.BK", "HMPRO.BK", "MINT.BK", "GLOBAL.BK"],
+    "Healthcare": ["BDMS.BK", "BH.BK", "BCH.BK", "CHG.BK"],
+    "Industrials": ["AOT.BK", "BEM.BK", "BTS.BK"],
+    "Basic Materials": ["SCC.BK", "PTTGC.BK", "IVL.BK"],
+    "Technology": ["DELTA.BK", "HANA.BK", "KCE.BK", "COM7.BK"],
+    "Real Estate": ["CPN.BK", "AP.BK", "LH.BK", "SPALI.BK"],
+    "Utilities": ["GULF.BK", "GPSC.BK", "BGRIM.BK", "RATCH.BK"],
+}
+
 _MIN_VALID_PEERS = 2
 
 # TTL cache แยกของไฟล์นี้ (ไม่แชร์กับ equity_quant_tool.py) — peer เดิมถูกเรียกซ้ำบ่อยข้าม ticker
@@ -64,7 +78,7 @@ def _get_peer_info_cached(symbol: str) -> dict:
 
 
 @traceable(run_type="tool")
-def fetch_peer_metrics(sector: Optional[str], exclude_ticker: str) -> List[dict]:
+def fetch_peer_metrics(sector: Optional[str], exclude_ticker: str, market: str = "US") -> List[dict]:
     """ดึง trailingPE/enterpriseToEbitda ของ peer ใน sector basket เดียวกัน (ตัด self ออก)
 
     Returns:
@@ -72,8 +86,23 @@ def fetch_peer_metrics(sector: Optional[str], exclude_ticker: str) -> List[dict]
     """
     if not sector:
         return []
-    basket = _SECTOR_PEER_BASKETS.get(sector, [])
-    peers = [p for p in basket if p.upper() != exclude_ticker.upper()]
+
+    basket_map = _TH_SECTOR_PEER_BASKETS if (market or "").upper() == "TH" else _SECTOR_PEER_BASKETS
+    basket = basket_map.get(sector, [])
+    if not basket:
+        sec_lower = (sector or "").strip().lower()
+        for k, v in basket_map.items():
+            k_lower = k.lower()
+            if k_lower == sec_lower or sec_lower in k_lower or (sec_lower in ("banking", "banks") and k == "Financial Services"):
+                basket = v
+                break
+
+    sanitized_exclude = exclude_ticker.replace(".BK", "").strip().upper()
+    peers = [
+        p for p in basket
+        if p.upper() != exclude_ticker.strip().upper()
+        and p.replace(".BK", "").strip().upper() != sanitized_exclude
+    ]
 
     results: List[dict] = []
     for peer_symbol in peers:

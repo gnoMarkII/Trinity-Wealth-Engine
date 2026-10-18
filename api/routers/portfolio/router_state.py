@@ -72,16 +72,19 @@ def get_actual_portfolio_state(
     service: PortfolioService = Depends(get_portfolio_service),
 ) -> ActualPortfolioStateDTO:
     with handle_portfolio_exceptions("Portfolio lock timeout (another operation is running)"):
-        state = service.get_structured_portfolio_state(portfolio_id=portfolio_id)
-        needs_fundamentals = fetch_fundamentals or any(
-            h.fundamentals_updated_at is None for h in state.holdings if h.asset_type not in ("Cash", "PVD")
-        )
-        if refresh_prices or needs_fundamentals:
+        if refresh_prices or fetch_fundamentals:
             state = service.get_structured_portfolio_state(
                 refresh_prices=refresh_prices,
-                fetch_fundamentals=needs_fundamentals,
+                fetch_fundamentals=fetch_fundamentals,
                 portfolio_id=portfolio_id,
             )
+            if refresh_prices:
+                try:
+                    service.record_performance_snapshot(refresh_prices=False, portfolio_id=portfolio_id)
+                except Exception:
+                    pass
+        else:
+            state = service.get_structured_portfolio_state(portfolio_id=portfolio_id)
         return ActualPortfolioStateDTO.model_validate(state.model_dump(exclude_none=True))
 
 

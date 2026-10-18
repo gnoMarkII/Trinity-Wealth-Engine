@@ -41,10 +41,15 @@ def compute_value_score(
     pe: Optional[float],
     pb: Optional[float] = None,
     ev_ebitda: Optional[float] = None,
+    sector: Optional[str] = None,
 ) -> Tuple[Optional[float], Optional[str]]:
     """Normalize P/E (หลัก) + P/B + EV/EBITDA (เสริม) เป็นคะแนน 0-100 — P/E ต่ำ = ถูก = คะแนนสูง
-
-    Threshold: P/E<=10 → 100, P/E>=40 → 0 (เชิงเส้น) | P/B<=1 → 100, P/B>=5 → 0 | EV/EBITDA<=8 → 100, >=20 → 0
+    
+    รองรับการปรับเกณฑ์ตามธรรมชาติอุตสาหกรรม (sector-adjusted valuation bands):
+    - Tech / Semi / Software / Healthcare: P/E: 15..50, P/B: 2..10, EV/EBITDA: 12..30
+    - Financial Services / Banks / Insurance: P/E: 7..18, P/B: 0.7..2.2 (ข้าม EV/EBITDA)
+    - Energy / Basic Materials / Cyclicals: P/E: 6..18, P/B: 0.8..2.5, EV/EBITDA: 4..10
+    - Default / General: P/E: 10..40, P/B: 1..5, EV/EBITDA: 8..20
 
     Returns:
         (score, flag) — flag ไม่ใช่ None เมื่อข้อมูลไม่พอ/ผิดปกติ เช่น
@@ -53,17 +58,40 @@ def compute_value_score(
     if pe is not None and pe <= 0:
         return None, "negative_earnings:pe_undefined"
 
+    san_sec = (sector or "").strip().lower()
     sub_scores = []
+
+    if any(k in san_sec for k in ("tech", "software", "semi", "hardware", "health")):
+        pe_best, pe_worst = 15.0, 50.0
+        pb_best, pb_worst = 2.0, 10.0
+        ev_best, ev_worst = 12.0, 30.0
+        use_ev = True
+    elif any(k in san_sec for k in ("financial", "bank", "insurance")):
+        pe_best, pe_worst = 7.0, 18.0
+        pb_best, pb_worst = 0.7, 2.2
+        ev_best, ev_worst = 0.0, 0.0
+        use_ev = False
+    elif any(k in san_sec for k in ("energy", "oil", "gas", "basic material", "cyclical", "mining")):
+        pe_best, pe_worst = 6.0, 18.0
+        pb_best, pb_worst = 0.8, 2.5
+        ev_best, ev_worst = 4.0, 10.0
+        use_ev = True
+    else:
+        pe_best, pe_worst = 10.0, 40.0
+        pb_best, pb_worst = 1.0, 5.0
+        ev_best, ev_worst = 8.0, 20.0
+        use_ev = True
+
     if pe is not None:
-        s = _linear_score(pe, best=10, worst=40)
+        s = _linear_score(pe, best=pe_best, worst=pe_worst)
         if s is not None:
             sub_scores.append(s)
     if pb is not None and pb > 0:
-        s = _linear_score(pb, best=1, worst=5)
+        s = _linear_score(pb, best=pb_best, worst=pb_worst)
         if s is not None:
             sub_scores.append(s)
-    if ev_ebitda is not None and ev_ebitda > 0:
-        s = _linear_score(ev_ebitda, best=8, worst=20)
+    if use_ev and ev_ebitda is not None and ev_ebitda > 0:
+        s = _linear_score(ev_ebitda, best=ev_best, worst=ev_worst)
         if s is not None:
             sub_scores.append(s)
 
@@ -71,6 +99,36 @@ def compute_value_score(
     if score is None:
         return None, "missing_valuation_metrics"
     return score, None
+
+
+@traceable(run_type="parser")
+def compute_net_shareholder_yield(
+    dividend_yield_pct: Optional[float],
+    latest_shares: Optional[float],
+    prev_shares: Optional[float],
+) -> Tuple[Optional[float], Optional[float], Optional[str]]:
+    """Calculates Net Shareholder Yield = Dividend Yield + Net Buyback Yield (reduction in shares).
+
+    Formula:
+        net_buyback_yield_pct = round(((prev_shares - latest_shares) / prev_shares) * 100.0, 2)
+        net_shareholder_yield_pct = round((dividend_yield_pct or 0.0) + (net_buyback_yield_pct or 0.0), 2)
+
+    If dilution exceeds 3% (net_buyback_yield_pct < -3.0), flags 'share_dilution_risk:capital_allocation'.
+    """
+    flag: Optional[str] = None
+    net_buyback: Optional[float] = None
+    if latest_shares is not None and prev_shares is not None and prev_shares > 0 and latest_shares > 0:
+        net_buyback = round(((prev_shares - latest_shares) / prev_shares) * 100.0, 2)
+        if net_buyback < -3.0:
+            flag = "share_dilution_risk:capital_allocation"
+
+    if dividend_yield_pct is None and net_buyback is None:
+        return None, None, None
+
+    div_component = dividend_yield_pct if dividend_yield_pct is not None else 0.0
+    buyback_component = net_buyback if net_buyback is not None else 0.0
+    net_shareholder_yield = round(div_component + buyback_component, 2)
+    return net_buyback, net_shareholder_yield, flag
 
 
 @traceable(run_type="parser")

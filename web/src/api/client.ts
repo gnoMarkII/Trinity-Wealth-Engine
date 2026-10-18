@@ -33,6 +33,9 @@ import type {
   MacroNotebookLMExportRequestDTO,
   MacroNotebookLMExportResponseDTO,
   MacroNotebookLMExportStatusDTO,
+  EquityNotebookLMExportRequestDTO,
+  EquityNotebookLMExportResponseDTO,
+  EquityNotebookLMExportStatusDTO,
   SessionResponseDTO,
   StartSessionRequestDTO,
   RecordAnswerRequestDTO,
@@ -72,7 +75,70 @@ export function setUnauthorizedHandler(handler: (() => void) | null): void {
   unauthorizedHandler = handler
 }
 
+interface CacheEntry<T = unknown> {
+  data: T
+  timestamp: number
+  ttlMs: number
+}
+
+export const apiCache = new Map<string, CacheEntry>()
+export const inFlightGet = new Map<string, Promise<unknown>>()
+
+const isTestMode =
+  typeof import.meta !== 'undefined' && import.meta.env?.MODE === 'test'
+
+export function invalidateApiCache(pathPrefix?: string): void {
+  if (!pathPrefix) {
+    apiCache.clear()
+    return
+  }
+  for (const key of apiCache.keys()) {
+    if (key.startsWith(pathPrefix)) {
+      apiCache.delete(key)
+    }
+  }
+}
+
+export async function cachedGet<T>(
+  path: string,
+  ttlMs: number = 45_000,
+  init?: RequestInit,
+  forceCacheInTest = false
+): Promise<T> {
+  if ((isTestMode && !forceCacheInTest) || init?.cache === 'no-store') {
+    return request<T>(path, init)
+  }
+
+  const now = Date.now()
+  const hit = apiCache.get(path)
+  if (hit && now - hit.timestamp < hit.ttlMs) {
+    return hit.data as T
+  }
+
+  if (!init?.signal) {
+    const existing = inFlightGet.get(path)
+    if (existing) {
+      return existing as Promise<T>
+    }
+  }
+
+  const promise = request<T>(path, init)
+    .then((data) => {
+      apiCache.set(path, { data, timestamp: Date.now(), ttlMs })
+      return data
+    })
+    .finally(() => {
+      inFlightGet.delete(path)
+    })
+
+  if (!init?.signal) {
+    inFlightGet.set(path, promise)
+  }
+  return promise
+}
+
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
+  const method = (init?.method ?? 'GET').toUpperCase()
   const res = await fetch(path, {
     ...init,
     credentials: 'include',
@@ -93,6 +159,9 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
       unauthorizedHandler?.()
     }
     throw new ApiError(res.status, detail)
+  }
+  if (method !== 'GET') {
+    invalidateApiCache()
   }
   if (res.status === 204) return undefined as T
   return (await res.json()) as T
@@ -122,47 +191,58 @@ export const api = {
       { cache: 'no-store' },
     ),
 
-  getEquityLatest: () => request<import('./types').EquitySummaryDTO[]>('/api/equity/latest'),
+  prefetchEquityTicker: (ticker: string) => {
+    if (!ticker) return
+    void api.getEquityDetail(ticker).catch(() => {})
+    void api.getEquityNews(ticker).catch(() => {})
+  },
 
-  getEquityDetail: (ticker: string) => request<import('./types').EquityDetailDTO>(`/api/equity/${encodeURIComponent(ticker)}`),
+  getEquityLatest: () => cachedGet<import('./types').EquitySummaryDTO[]>('/api/equity/latest', 30_000),
 
-  getEquityNews: (ticker: string) => request<import('./types').EquityNewsDTO>(`/api/equity/${encodeURIComponent(ticker)}/news`),
+  getEquityDetail: (ticker: string) => cachedGet<import('./types').EquityDetailDTO>(`/api/equity/${encodeURIComponent(ticker)}`, 60_000),
 
-  getEquityNotes: (ticker: string) => request<import('./types').EquityNotesDTO>(`/api/equity/${encodeURIComponent(ticker)}/notes`),
+  getEquityNews: (ticker: string) => cachedGet<import('./types').EquityNewsDTO>(`/api/equity/${encodeURIComponent(ticker)}/news`, 45_000),
 
-  getEquityNoteContent: (relPath: string) => request<import('./types').EquityNoteContentDTO>(`/api/equity/notes/content?rel_path=${encodeURIComponent(relPath)}`),
+  getEquityNotes: (ticker: string) => cachedGet<import('./types').EquityNotesDTO>(`/api/equity/${encodeURIComponent(ticker)}/notes`, 60_000),
+
+  getEquityNoteContent: (relPath: string) => cachedGet<import('./types').EquityNoteContentDTO>(`/api/equity/notes/content?rel_path=${encodeURIComponent(relPath)}`, 120_000),
 
   getEquityOHLCV: (ticker: string, range: string = '6mo', interval: string = '1d', signal?: AbortSignal) =>
-    request<import('./types').OHLCVResponseDTO>(
+    cachedGet<import('./types').OHLCVResponseDTO>(
       `/api/equity/${encodeURIComponent(ticker)}/ohlcv?range=${encodeURIComponent(range)}&interval=${encodeURIComponent(interval)}`,
+      60_000,
       { signal }
     ),
 
   getValuationTargets: (ticker: string, signal?: AbortSignal) =>
-    request<import('./types').ValuationTargetsDTO>(
+    cachedGet<import('./types').ValuationTargetsDTO>(
       `/api/equity/${encodeURIComponent(ticker)}/valuation-targets`,
+      60_000,
       { signal }
     ),
 
   getInsiderFilings: (ticker: string, range: string = '1y', interval: string = '1d', signal?: AbortSignal) =>
-    request<import('./types').InsiderFilingsResponseDTO>(
+    cachedGet<import('./types').InsiderFilingsResponseDTO>(
       `/api/equity/${encodeURIComponent(ticker)}/insider-filings?range=${encodeURIComponent(range)}&interval=${encodeURIComponent(interval)}`,
+      60_000,
       { signal }
     ),
 
   getAnalystContext: (ticker: string, signal?: AbortSignal) =>
-    request<import('./types').AnalystContextDTO>(
+    cachedGet<import('./types').AnalystContextDTO>(
       `/api/equity/${encodeURIComponent(ticker)}/analyst-context`,
+      60_000,
       { signal }
     ),
 
   getEquityFinancials: (ticker: string, market?: 'US' | 'TH', forceRefresh = false, signal?: AbortSignal) => {
     const params = new URLSearchParams({ force_refresh: String(forceRefresh) })
     if (market) params.set('market', market)
-    return request<import('./types').FinancialStatementsDTO>(
-      `/api/equity/${encodeURIComponent(ticker)}/financials?${params.toString()}`,
-      { signal }
-    )
+    const url = `/api/equity/${encodeURIComponent(ticker)}/financials?${params.toString()}`
+    if (forceRefresh) {
+      return request<import('./types').FinancialStatementsDTO>(url, { signal })
+    }
+    return cachedGet<import('./types').FinancialStatementsDTO>(url, 60_000, { signal })
   },
 
   summarizeEarningsCall: (ticker: string, period: string, transcript: string, signal?: AbortSignal) =>
@@ -285,7 +365,7 @@ export const api = {
   // ---------------------------------------------------------
   // Actual Portfolio Hub Endpoints (Phase 1 & Multi-Portfolio)
   // ---------------------------------------------------------
-  listPortfolios: () => request<import('./types').PortfolioMetaDTO[]>('/api/portfolio/list'),
+  listPortfolios: () => cachedGet<import('./types').PortfolioMetaDTO[]>('/api/portfolio/list', 45_000),
 
   createPortfolio: (name: string, portfolioId?: string) =>
     request<import('./types').PortfolioMetaDTO>('/api/portfolio/create', {
@@ -305,30 +385,39 @@ export const api = {
     }),
 
 
-  getActualPortfolioState: (refreshPrices: boolean = false, fetchFundamentals: boolean = false, portfolioId: string = 'default') =>
-    request<ActualPortfolioStateDTO>(
-      `/api/portfolio/actual/state?refresh_prices=${refreshPrices}&fetch_fundamentals=${fetchFundamentals}&portfolio_id=${encodeURIComponent(portfolioId)}`
-    ),
+  getActualPortfolioState: (refreshPrices: boolean = false, fetchFundamentals: boolean = false, portfolioId: string = 'default') => {
+    const url = `/api/portfolio/actual/state?refresh_prices=${refreshPrices}&fetch_fundamentals=${fetchFundamentals}&portfolio_id=${encodeURIComponent(portfolioId)}`
+    if (refreshPrices || fetchFundamentals) {
+      invalidateApiCache('/api/portfolio')
+      return request<ActualPortfolioStateDTO>(url)
+    }
+    return cachedGet<ActualPortfolioStateDTO>(url, 45_000)
+  },
 
   getActualBucketAllocations: (portfolioId: string = 'default') =>
-    request<BucketAllocationResponseDTO>(`/api/portfolio/actual/allocations?portfolio_id=${encodeURIComponent(portfolioId)}`),
+    cachedGet<BucketAllocationResponseDTO>(`/api/portfolio/actual/allocations?portfolio_id=${encodeURIComponent(portfolioId)}`, 45_000),
 
   getActualWatchlist: (portfolioId: string = 'default') =>
-    request<ActualWatchlistStateDTO>(`/api/portfolio/actual/watchlist?portfolio_id=${encodeURIComponent(portfolioId)}`),
+    cachedGet<ActualWatchlistStateDTO>(`/api/portfolio/actual/watchlist?portfolio_id=${encodeURIComponent(portfolioId)}`, 45_000),
 
   getActualGoals: (portfolioId?: string) => {
     const params = portfolioId ? `?portfolio_id=${encodeURIComponent(portfolioId)}` : ''
-    return request<ActualGoalsResponseDTO>(`/api/portfolio/actual/goals${params}`)
+    return cachedGet<ActualGoalsResponseDTO>(`/api/portfolio/actual/goals${params}`, 45_000)
   },
 
   getActualPerformance: (days?: number, portfolioId: string = 'default') => {
     const params = new URLSearchParams({ portfolio_id: portfolioId })
     if (days !== undefined) params.append('days', days.toString())
-    return request<PerformanceSnapshotDTO[]>(`/api/portfolio/actual/performance?${params.toString()}`)
+    return cachedGet<PerformanceSnapshotDTO[]>(`/api/portfolio/actual/performance?${params.toString()}`, 45_000)
   },
 
   triggerPerformanceSnapshot: (refreshPrices: boolean = false, portfolioId: string = 'default') =>
     request<PerformanceSnapshotDTO[]>(`/api/portfolio/actual/performance/snapshot?refresh_prices=${refreshPrices}&portfolio_id=${encodeURIComponent(portfolioId)}`, {
+      method: 'POST',
+    }),
+
+  triggerPerformanceSnapshotAll: (refreshPrices: boolean = false) =>
+    request<Record<string, string>>(`/api/portfolio/actual/performance/snapshot-all?refresh_prices=${refreshPrices}`, {
       method: 'POST',
     }),
 
@@ -1041,28 +1130,30 @@ export const api = {
   // Terminal V2 Institutional Market Intelligence (Phase 1, 2, 3)
   // ---------------------------------------------------------
   getFinancialStress: () =>
-    request<any>('/api/v2/market/macro/financial-stress'),
+    cachedGet<any>('/api/v2/market/macro/financial-stress', 60_000),
 
   getMetalsCot: (commodity: string = 'gold') =>
-    request<any>(`/api/v2/market/commodities/metals/cot?commodity=${encodeURIComponent(commodity)}`),
+    cachedGet<any>(`/api/v2/market/commodities/metals/cot?commodity=${encodeURIComponent(commodity)}`, 60_000),
 
   getGlobalPolicyRates: () =>
-    request<any>('/api/v2/market/macro/global-policy-rates'),
+    cachedGet<any>('/api/v2/market/macro/global-policy-rates', 60_000),
 
   getNasdaqConsensus: (symbol: string) =>
-    request<any>(`/api/v2/market/equity/consensus/${encodeURIComponent(symbol)}`),
+    cachedGet<any>(`/api/v2/market/equity/consensus/${encodeURIComponent(symbol)}`, 60_000),
 
   getOptionsChain: (symbol: string, expiry?: string) => {
     const params = expiry ? `?expiry=${encodeURIComponent(expiry)}` : ''
-    return request<import('./types').OptionsChainResponseDTO>(
-      `/api/v2/market/equity/options/${encodeURIComponent(symbol)}${params}`
+    return cachedGet<import('./types').OptionsChainResponseDTO>(
+      `/api/v2/market/equity/options/${encodeURIComponent(symbol)}${params}`,
+      60_000
     )
   },
 
   getOptionsMaxPain: (symbol: string, expiry?: string) => {
     const params = expiry ? `?expiry=${encodeURIComponent(expiry)}` : ''
-    return request<import('./types').OptionsMaxPainResponseDTO>(
-      `/api/v2/market/equity/max-pain/${encodeURIComponent(symbol)}${params}`
+    return cachedGet<import('./types').OptionsMaxPainResponseDTO>(
+      `/api/v2/market/equity/max-pain/${encodeURIComponent(symbol)}${params}`,
+      60_000
     )
   },
 
@@ -1071,72 +1162,85 @@ export const api = {
   // ---------------------------------------------------------
   getCommodityVolatility: (symbol?: string) => {
     const params = symbol ? `?symbol=${encodeURIComponent(symbol)}` : ''
-    return request<import('./types').CommodityVolSnapshotDTO[]>(
-      `/api/v2/market/commodities/volatility${params}`
+    return cachedGet<import('./types').CommodityVolSnapshotDTO[]>(
+      `/api/v2/market/commodities/volatility${params}`,
+      60_000
     )
   },
 
   getTreasuryAuctionDemand: (securityType: string, securityTerm: string) =>
-    request<import('./types').AuctionDemandSnapshotDTO>(
-      `/api/v2/market/macro/treasury/auction-demand?security_type=${encodeURIComponent(securityType)}&security_term=${encodeURIComponent(securityTerm)}`
+    cachedGet<import('./types').AuctionDemandSnapshotDTO>(
+      `/api/v2/market/macro/treasury/auction-demand?security_type=${encodeURIComponent(securityType)}&security_term=${encodeURIComponent(securityTerm)}`,
+      60_000
     ),
 
   getSecFinancials: (symbol: string) =>
-    request<import('./types').SecCompanyFactsSnapshotDTO>(
-      `/api/v2/market/equity/sec/financials/${encodeURIComponent(symbol)}`
+    cachedGet<import('./types').SecCompanyFactsSnapshotDTO>(
+      `/api/v2/market/equity/sec/financials/${encodeURIComponent(symbol)}`,
+      60_000
     ),
 
   getSecInsiderTrades: (symbol: string, limit: number = 20) =>
-    request<import('./types').SecInsiderTradeSnapshotDTO>(
-      `/api/v2/market/equity/sec/insider-trades/${encodeURIComponent(symbol)}?limit=${limit}`
+    cachedGet<import('./types').SecInsiderTradeSnapshotDTO>(
+      `/api/v2/market/equity/sec/insider-trades/${encodeURIComponent(symbol)}?limit=${limit}`,
+      60_000
     ),
 
-  getEquityNewsDiscovery: (symbol: string, limit: number = 15) =>
-    request<import('./types').NewsDiscoverySnapshotDTO>(
-      `/api/v2/market/equity/news/${encodeURIComponent(symbol)}?limit=${limit}`
+  getEquityNewsDiscovery: (symbol: string, limit: number = 15, signal?: AbortSignal) =>
+    cachedGet<import('./types').NewsDiscoverySnapshotDTO>(
+      `/api/v2/market/equity/news/${encodeURIComponent(symbol)}?limit=${limit}`,
+      60_000,
+      { signal }
     ),
 
   getNationalDebt: (limit: number = 30) =>
-    request<import('./types').UsNationalDebtDTO[]>(
-      `/api/v2/market/macro/treasury/debt?limit=${limit}`
+    cachedGet<import('./types').UsNationalDebtDTO[]>(
+      `/api/v2/market/macro/treasury/debt?limit=${limit}`,
+      60_000
     ),
 
   // ---------------------------------------------------------
   // Terminal V2 Thailand & Rates Radar
   // ---------------------------------------------------------
   getThaiInvestorFlow: (market: string = 'SET') =>
-    request<import('./types').ThaiFundFlowDTO>(
-      `/api/v2/market/thailand/flow?market=${encodeURIComponent(market)}`
+    cachedGet<import('./types').ThaiFundFlowDTO>(
+      `/api/v2/market/thailand/flow?market=${encodeURIComponent(market)}`,
+      60_000
     ),
 
   getThaiRetailGold: () =>
-    request<import('./types').ThaiRetailGoldDTO>('/api/v2/market/thailand/gold'),
+    cachedGet<import('./types').ThaiRetailGoldDTO>('/api/v2/market/thailand/gold', 60_000),
 
   getThaiMarketValuation: (market: string = 'SET') =>
-    request<import('./types').MarketValuationDTO>(
-      `/api/v2/market/thailand/valuation?market=${encodeURIComponent(market)}`
+    cachedGet<import('./types').MarketValuationDTO>(
+      `/api/v2/market/thailand/valuation?market=${encodeURIComponent(market)}`,
+      60_000
     ),
 
   getThaiMarketBreadth: (market: string = 'SET') =>
-    request<import('./types').MarketBreadthDTO>(
-      `/api/v2/market/thailand/breadth?market=${encodeURIComponent(market)}`
+    cachedGet<import('./types').MarketBreadthDTO>(
+      `/api/v2/market/thailand/breadth?market=${encodeURIComponent(market)}`,
+      60_000
     ),
 
   getTreasuryYieldCurve: (month?: string) => {
     const params = month ? `?month=${encodeURIComponent(month)}` : ''
-    return request<import('./types').TreasuryYieldCurveDTO>(
-      `/api/v2/market/macro/treasury/yield-curve${params}`
+    return cachedGet<import('./types').TreasuryYieldCurveDTO>(
+      `/api/v2/market/macro/treasury/yield-curve${params}`,
+      60_000
     )
   },
 
   getCryptoMacroLiquidity: () =>
-    request<import('./types').CryptoMacroLiquidityDTO>(
-      '/api/v2/market/macro/crypto-liquidity'
+    cachedGet<import('./types').CryptoMacroLiquidityDTO>(
+      '/api/v2/market/macro/crypto-liquidity',
+      60_000
     ),
 
   getStablecoinSupply: () =>
-    request<import('./types').StablecoinSupplyDTO>(
-      '/api/v2/market/crypto/stablecoins'
+    cachedGet<import('./types').StablecoinSupplyDTO>(
+      '/api/v2/market/crypto/stablecoins',
+      60_000
     ),
 
   // ---------------------------------------------------------
@@ -1156,6 +1260,28 @@ export const api = {
 
   retryMacroNotebookLMExport: (exportId: string) =>
     request<MacroNotebookLMExportResponseDTO>(`/api/macro/notebooklm/exports/${encodeURIComponent(exportId)}/retry`, {
+      method: 'POST',
+    }),
+
+  // ---------------------------------------------------------
+  // Equity NotebookLM Research Companion Export
+  // ---------------------------------------------------------
+  exportEquityToNotebookLM: (ticker: string, payload?: EquityNotebookLMExportRequestDTO) =>
+    request<EquityNotebookLMExportResponseDTO>(`/api/equity/${encodeURIComponent(ticker)}/notebooklm/exports`, {
+      method: 'POST',
+      body: JSON.stringify(payload ?? {}),
+    }),
+
+  getLatestEquityNotebookLMExport: (ticker: string, market: string = 'US') =>
+    request<EquityNotebookLMExportStatusDTO | null>(
+      `/api/equity/${encodeURIComponent(ticker)}/notebooklm/exports/latest?market=${encodeURIComponent(market)}`
+    ),
+
+  getEquityNotebookLMExport: (exportId: string) =>
+    request<EquityNotebookLMExportStatusDTO>(`/api/equity/notebooklm/exports/${encodeURIComponent(exportId)}`),
+
+  retryEquityNotebookLMExport: (exportId: string) =>
+    request<EquityNotebookLMExportResponseDTO>(`/api/equity/notebooklm/exports/${encodeURIComponent(exportId)}/retry`, {
       method: 'POST',
     }),
 

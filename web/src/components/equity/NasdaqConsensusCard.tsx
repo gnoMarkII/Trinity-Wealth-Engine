@@ -48,12 +48,12 @@ export const NasdaqConsensusCard: React.FC<NasdaqConsensusCardProps> = ({
   if (coverageStatus === 'no_coverage') {
     return (
       <div
-        className={`rounded-2xl border border-slate-200/80 bg-white/70 p-5 shadow-sm backdrop-blur-md ${className}`}
+        className={`flow-panel rounded-2xl border border-edge/80 p-6 shadow-sm transition-all animate-card-in ${className}`}
       >
-        <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+        <div className="flex items-center justify-between border-b border-edge/60 pb-3">
           <div className="flex items-center gap-2">
             <h3 className="font-semibold text-zinc-900">{symbol} Institutional Consensus</h3>
-            <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-medium text-zinc-500">
+            <span className="rounded-full bg-surface border border-edge px-2 py-0.5 text-[10px] font-medium text-zinc-500">
               No Coverage
             </span>
           </div>
@@ -69,19 +69,19 @@ export const NasdaqConsensusCard: React.FC<NasdaqConsensusCardProps> = ({
 
   return (
     <div
-      className={`rounded-2xl border border-sky-100 bg-white/80 p-5 shadow-[0_8px_25px_rgba(14,165,233,0.06)] backdrop-blur-md ${className}`}
+      className={`flow-panel rounded-2xl border border-edge/80 p-6 shadow-sm transition-all animate-card-in ${className}`}
     >
       {/* Header */}
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-sky-100/60 pb-3">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-edge/60 pb-3">
         <div className="flex items-center gap-2">
           <h3 className="font-semibold text-zinc-900 tracking-tight">
             {symbol} Sell-Side Consensus & Earnings
           </h3>
           <span
-            className={`rounded-full px-2 py-0.5 font-mono text-[10px] font-bold ${
+            className={`rounded-full px-2 py-0.5 font-mono text-[10px] font-bold border ${
               coverageStatus === 'full'
-                ? 'bg-emerald-50 text-emerald-700'
-                : 'bg-amber-50 text-amber-700'
+                ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                : 'bg-amber-50 text-amber-700 border-amber-200'
             }`}
           >
             {coverageStatus.toUpperCase()}

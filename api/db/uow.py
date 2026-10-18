@@ -130,3 +130,12 @@ class DbUnitOfWork:
 
             self._macro_exports = SqliteMacroExportRepositoryAdapter(conn=self.conn)
         return self._macro_exports
+
+    @property
+    def equity_exports(self):
+        """Connection-bound :class:`EquityExportRepositoryPort` adapter."""
+        if getattr(self, "_equity_exports", None) is None:
+            from api.db.adapters import SqliteEquityExportRepositoryAdapter
+
+            self._equity_exports = SqliteEquityExportRepositoryAdapter(conn=self.conn)
+        return self._equity_exports

@@ -104,3 +104,36 @@ class TestToolsPromptsRoot:
         list_pos = result.index("item1")
         rules_pos = result.index("rules after list")
         assert intro_pos < list_pos < rules_pos
+
+
+def test_selective_sections_and_metrics(tmp_path: Path):
+    agent_dir = tmp_path / "selective_agent"
+    agent_dir.mkdir(parents=True)
+
+    (agent_dir / "SKILL.md").write_text("# Core Skill", encoding="utf-8")
+    (agent_dir / "pillars.md").write_text("## Pillars", encoding="utf-8")
+    (agent_dir / "guardrails.md").write_text("## Guardrails", encoding="utf-8")
+    (agent_dir / "extra.md").write_text("## Extra Section", encoding="utf-8")
+
+    harness = PromptHarness("selective_agent", skills_root=tmp_path)
+
+    # 1. Include only pillars (exclude guardrails)
+    p_only = harness.get_system_prompt(include_pillars=True, include_guardrails=False)
+    assert "# Core Skill" in p_only
+    assert "## Pillars" in p_only
+    assert "## Guardrails" not in p_only
+
+    # 2. Include extra sections
+    with_extra = harness.get_system_prompt(
+        include_pillars=False, include_guardrails=False, extra_sections=["extra.md"]
+    )
+    assert "## Extra Section" in with_extra
+    assert "## Pillars" not in with_extra
+
+    # 3. Test prompt metrics
+    metrics = harness.get_prompt_metrics()
+    assert "SKILL.md_chars" in metrics
+    assert "pillars.md_chars" in metrics
+    assert "total_chars" in metrics
+    assert metrics["total_chars"] > 0
+    assert metrics["total_est_tokens"] > 0

@@ -217,6 +217,33 @@ const KNOWN_FLAGS: Record<string, { label: string; subtext?: string; category: F
     subtext: 'งวดเวลาของข้อมูลเปรียบเทียบไม่อยู่ในรอบ 12 เดือนเต็ม',
     category: 'model_methodology',
   },
+
+  // Institutional Upgrades (Market Data, Macro Linkage, DCF Bounds & Capital Allocation)
+  'quote_ohlcv_mismatch:market_data': {
+    label: 'ราคา Quote ล่าสุดไม่ตรงกับราคาปิด OHLCV',
+    subtext: 'ราคาซื้อขายล่าสุดแตกต่างจากราคาปิดสิ้นวันของข้อมูลแท่งเทียน ระบบจึงตรึงการวิเคราะห์ไว้ที่ราคาปิดสิ้นวัน (EOD Close)',
+    category: 'market_warning',
+  },
+  'share_dilution_risk:capital_allocation': {
+    label: 'ความเสี่ยงการเกิด Share Dilution (การเจือจางหุ้น)',
+    subtext: 'บริษัทมีการออกหุ้นเพิ่มทุนหรือหุ้นใหม่มากกว่าการซื้อหุ้นคืน ทำให้จำนวนหุ้นหมุนเวียนเพิ่มขึ้นต่อเนื่อง',
+    category: 'market_warning',
+  },
+  'macro_regime_headwind:scorecard': {
+    label: 'สภาวะมหภาคส่งผลต้าน (Macro Regime Headwind)',
+    subtext: 'สภาวะมหภาค (อัตราดอกเบี้ย, ความผันผวน, หรือสภาพคล่อง) ไม่เอื้อต่อกลุ่มอุตสาหกรรมนี้ ทำให้มีการปรับลดคะแนนความเชื่อมั่น',
+    category: 'market_warning',
+  },
+  'implied_growth_above_upper_bound:dcf': {
+    label: 'อัตราเติบโตแฝง (Implied Growth) สูงกว่ากรอบบน',
+    subtext: 'ราคาตลาดสะท้อนสมมติฐานการเติบโตที่สูงเกินกว่าช่วงปกติของการประเมินมูลค่า DCF',
+    category: 'model_methodology',
+  },
+  'implied_growth_below_lower_bound:dcf': {
+    label: 'อัตราเติบโตแฝง (Implied Growth) ต่ำกว่ากรอบล่าง',
+    subtext: 'ราคาตลาดสะท้อนสมมติฐานการเติบโตที่ต่ำผิดปกติหรือมีส่วนลดมูลค่าสูงมาก',
+    category: 'model_methodology',
+  },
 }
 
 const STALE_REASON_LABELS: Record<string, string> = {

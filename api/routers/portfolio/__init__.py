@@ -64,6 +64,7 @@ from .router_extensions import (
     append_journal_endpoint,
     get_actual_performance,
     trigger_performance_snapshot,
+    trigger_performance_snapshot_all,
 )
 
 router = APIRouter(dependencies=[Depends(require_session)])
@@ -95,6 +96,7 @@ __all__ = [
     "get_actual_goals",
     "get_actual_performance",
     "trigger_performance_snapshot",
+    "trigger_performance_snapshot_all",
     "get_actual_journal",
     "get_actual_transactions",
     "update_transaction_note_endpoint",

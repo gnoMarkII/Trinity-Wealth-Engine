@@ -330,7 +330,7 @@ describe('Portfolio Page', () => {
     await waitFor(() => expect(screen.getByRole('tab', { name: 'PVD' })).toHaveAttribute('aria-selected', 'true'))
   })
 
-  it('renders Top-Level Executive Dashboard and switches between Goals and Performance', async () => {
+  it('renders Goals executive section and Overview Performance Card', async () => {
     vi.mocked(api.getActualGoals).mockResolvedValue({
       n_goals: 1,
       goals: [
@@ -365,18 +365,13 @@ describe('Portfolio Page', () => {
     )
 
     await waitFor(() => {
-      expect(screen.getByText(/Executive Dashboard: Goals & Performance/i)).toBeInTheDocument()
+      expect(screen.getByText(/Portfolio Goals & Targets/i)).toBeInTheDocument()
+      expect(screen.getByText('Retirement Fund')).toBeInTheDocument()
     })
 
-    // By default goals tab is active in the executive section
-    expect(screen.getByText('Retirement Fund')).toBeInTheDocument()
-
-    // Switch to Performance history inside Executive Dashboard
-    const perfBtn = screen.getByRole('button', { name: /Performance Analytics/i })
-    fireEvent.click(perfBtn)
-
+    // Overview Tab renders the streamlined Performance & NAV Growth card
     await waitFor(() => {
-      expect(screen.getByText(/Performance History \(1 จุดข้อมูล\)/i)).toBeInTheDocument()
+      expect(screen.getByText(/ผลการดำเนินงานและการเติบโต/i)).toBeInTheDocument()
       expect(screen.getByText('2026-07-16')).toBeInTheDocument()
     })
   })

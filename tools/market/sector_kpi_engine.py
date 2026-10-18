@@ -44,14 +44,140 @@ def compute_sector_kpis(
             flags=["insufficient_financial_periods"],
         )
 
-    latest = periods[-1]
-    prev = periods[-2] if len(periods) >= 2 else None
+    # Ensure periods are ordered newest to oldest
+    has_dates = all(getattr(p, "fiscal_period_end", None) for p in periods)
+    if has_dates:
+        sorted_periods = sorted(periods, key=lambda p: str(getattr(p, "fiscal_period_end")), reverse=True)
+    else:
+        # If periods[0] has data or no dates, treat periods as either newest-first or oldest-first
+        # In financial_autopsy.py, periods[0] is typically the latest period.
+        sorted_periods = list(periods)
+
+    latest = sorted_periods[0]
+    prev = sorted_periods[1] if len(sorted_periods) >= 2 else None
 
     kpis: list[SectorKPIItem] = []
     scores: list[float] = []
 
-    # 1. Technology / SaaS / Software
-    if any(k in san_sec for k in ("tech", "software", "saas", "internet", "cloud")):
+    # 1. Banking / Financial Services / Insurance
+    if any(k in san_sec for k in ("financial", "bank", "insurance")):
+        latest_net_income = getattr(latest, "net_income", None)
+        latest_equity = getattr(latest, "stockholders_equity", None) or getattr(latest, "total_equity", None)
+        latest_rev = getattr(latest, "total_revenue", None) or getattr(latest, "revenue", None)
+        latest_assets = getattr(latest, "total_assets", None)
+
+        # ROE %
+        roe = (latest_net_income / latest_equity * 100.0) if (latest_net_income is not None and latest_equity and latest_equity > 0) else None
+        kpis.append(SectorKPIItem(
+            name="Return on Equity (ROE %)",
+            value=round(roe, 1) if roe is not None else None,
+            unit="%",
+            benchmark=">= 12% healthy bank ROE",
+            status="available" if roe is not None else "unavailable",
+        ))
+        if roe is not None:
+            scores.append(95.0 if roe >= 15.0 else (75.0 if roe >= 10.0 else 45.0))
+
+        # Net Profit Margin %
+        net_margin = (latest_net_income / latest_rev * 100.0) if (latest_net_income is not None and latest_rev and latest_rev > 0) else None
+        kpis.append(SectorKPIItem(
+            name="Net Profit Margin (%)",
+            value=round(net_margin, 1) if net_margin is not None else None,
+            unit="%",
+            benchmark=">= 25% strong banking margin",
+            status="available" if net_margin is not None else "unavailable",
+        ))
+        if net_margin is not None:
+            scores.append(90.0 if net_margin >= 30.0 else (75.0 if net_margin >= 20.0 else 45.0))
+
+        # Equity-to-Assets %
+        eq_assets = (latest_equity / latest_assets * 100.0) if (latest_equity is not None and latest_assets and latest_assets > 0) else None
+        kpis.append(SectorKPIItem(
+            name="Equity-to-Assets Capital Buffer (%)",
+            value=round(eq_assets, 1) if eq_assets is not None else None,
+            unit="%",
+            benchmark=">= 8% solid capital buffer",
+            status="available" if eq_assets is not None else "unavailable",
+        ))
+        if eq_assets is not None:
+            scores.append(90.0 if eq_assets >= 10.0 else (75.0 if eq_assets >= 7.0 else 40.0))
+
+    # 2. Semiconductors / Hardware
+    elif any(k in san_sec for k in ("semiconductor", "semi", "hardware")):
+        latest_rev = getattr(latest, "total_revenue", None) or getattr(latest, "revenue", None)
+        latest_gp = getattr(latest, "gross_profit", None)
+        latest_capex = getattr(latest, "capital_expenditure", None) or getattr(latest, "capex", None)
+        latest_fcf = getattr(latest, "free_cash_flow", None) or getattr(latest, "fcf", None)
+        latest_ocf = getattr(latest, "operating_cash_flow", None) or getattr(latest, "ocf", None)
+
+        # Gross Margin %
+        gm = (latest_gp / latest_rev * 100.0) if (latest_gp is not None and latest_rev and latest_rev > 0) else None
+        kpis.append(SectorKPIItem(
+            name="Gross Margin (%)",
+            value=round(gm, 1) if gm is not None else None,
+            unit="%",
+            benchmark=">= 50% fabless/semi moat",
+            status="available" if gm is not None else "unavailable",
+        ))
+        if gm is not None:
+            scores.append(95.0 if gm >= 55.0 else (75.0 if gm >= 40.0 else 45.0))
+
+        # CapEx Intensity %
+        capex_int = (abs(latest_capex) / latest_rev * 100.0) if (latest_capex is not None and latest_rev and latest_rev > 0) else None
+        kpis.append(SectorKPIItem(
+            name="CapEx Intensity (CapEx / Revenue %)",
+            value=round(capex_int, 1) if capex_int is not None else None,
+            unit="%",
+            benchmark="< 20% asset-light / 20-35% foundry",
+            status="available" if capex_int is not None else "unavailable",
+        ))
+        if capex_int is not None:
+            scores.append(90.0 if capex_int <= 20.0 else (75.0 if capex_int <= 35.0 else 50.0))
+
+        # FCF Conversion %
+        fcf_conv = (latest_fcf / latest_ocf * 100.0) if (latest_fcf is not None and latest_ocf and latest_ocf > 0) else None
+        kpis.append(SectorKPIItem(
+            name="FCF Conversion (FCF / OCF %)",
+            value=round(fcf_conv, 1) if fcf_conv is not None else None,
+            unit="%",
+            benchmark=">= 50% strong cash conversion",
+            status="available" if fcf_conv is not None else "unavailable",
+        ))
+        if fcf_conv is not None:
+            scores.append(90.0 if fcf_conv >= 60.0 else (75.0 if fcf_conv >= 40.0 else 45.0))
+
+    # 3. Real Estate / REITs
+    elif any(k in san_sec for k in ("real estate", "reit", "property")):
+        latest_rev = getattr(latest, "total_revenue", None) or getattr(latest, "revenue", None)
+        latest_ocf = getattr(latest, "operating_cash_flow", None) or getattr(latest, "ocf", None)
+        latest_div = getattr(latest, "dividends_paid", None)
+
+        # OCF Margin %
+        ocf_m = (latest_ocf / latest_rev * 100.0) if (latest_ocf is not None and latest_rev and latest_rev > 0) else None
+        kpis.append(SectorKPIItem(
+            name="Operating Cash Flow Margin (OCF / Revenue %)",
+            value=round(ocf_m, 1) if ocf_m is not None else None,
+            unit="%",
+            benchmark=">= 40% strong rental cash flow",
+            status="available" if ocf_m is not None else "unavailable",
+        ))
+        if ocf_m is not None:
+            scores.append(90.0 if ocf_m >= 45.0 else (70.0 if ocf_m >= 25.0 else 40.0))
+
+        # Dividend / OCF Coverage %
+        div_cov = (abs(latest_div) / latest_ocf * 100.0) if (latest_div is not None and latest_ocf and latest_ocf > 0) else None
+        kpis.append(SectorKPIItem(
+            name="Dividend / OCF Coverage (%)",
+            value=round(div_cov, 1) if div_cov is not None else None,
+            unit="%",
+            benchmark="<= 90% sustainable distribution",
+            status="available" if div_cov is not None else "unavailable",
+        ))
+        if div_cov is not None:
+            scores.append(90.0 if div_cov <= 85.0 else (70.0 if div_cov <= 100.0 else 35.0))
+
+    # 4. Technology / SaaS / Software
+    elif any(k in san_sec for k in ("tech", "software", "saas", "internet", "cloud")):
         # Rule of 40: Revenue Growth YoY % + FCF Margin %
         latest_rev = getattr(latest, "total_revenue", None) or getattr(latest, "revenue", None)
         prev_rev = getattr(prev, "total_revenue", None) or getattr(prev, "revenue", None) if prev else None
@@ -86,7 +212,7 @@ def compute_sector_kpis(
         if gm is not None:
             scores.append(90.0 if gm >= 70.0 else (70.0 if gm >= 50.0 else 40.0))
 
-    # 2. Retail / Consumer / Goods
+    # 5. Retail / Consumer / Goods
     elif any(k in san_sec for k in ("retail", "consumer", "goods", "commerce")):
         latest_rev = getattr(latest, "total_revenue", None) or getattr(latest, "revenue", None)
         latest_gp = getattr(latest, "gross_profit", None)
@@ -107,7 +233,7 @@ def compute_sector_kpis(
         if dio is not None:
             scores.append(90.0 if dio <= 60.0 else (70.0 if dio <= 100.0 else 40.0))
 
-    # 3. Energy / Industrial / Commodity
+    # 6. Energy / Industrial / Commodity
     elif any(k in san_sec for k in ("energy", "oil", "gas", "mining", "utility", "industrial")):
         latest_ocf = getattr(latest, "operating_cash_flow", None) or getattr(latest, "ocf", None)
         latest_fcf = getattr(latest, "free_cash_flow", None) or getattr(latest, "fcf", None)
@@ -141,7 +267,7 @@ def compute_sector_kpis(
             status="available" if capex_int is not None else "unavailable",
         ))
 
-    # 4. General / Default Sector
+    # 7. General / Default Sector
     else:
         latest_ebit = getattr(latest, "ebit", None) or getattr(latest, "operating_income", None)
         latest_rev = getattr(latest, "total_revenue", None) or getattr(latest, "revenue", None)

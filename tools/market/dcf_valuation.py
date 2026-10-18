@@ -456,6 +456,82 @@ def _calculate_per_share_value(
     return per_share, projections, sum_pv, tv_pv, per_share_exit
 
 
+def compute_sector_alternative_valuation(
+    sector: Optional[str],
+    current_price: float,
+    market: str = "US",
+    roe_pct: Optional[float] = None,
+    book_value_per_share: Optional[float] = None,
+    expected_dividend_per_share: float = 0.0,
+    dividend_yield_pct: Optional[float] = None,
+    beta: Optional[float] = None,
+    macro_registry: Optional[Dict[str, MarketObservable]] = None,
+) -> Tuple[
+    Optional[Literal["justified_pbv", "ddm_yield_spread"]],
+    Optional[float],
+    Optional[float],
+    Optional[float],
+    Optional[float],
+    List[str],
+]:
+    """Computes sector-specific alternative valuation models:
+    - Financial Services / Banks / Insurance: Justified P/BV Model
+    - Real Estate / REITs: Gordon Growth Dividend Discount Model (DDM) & Yield Spread
+    """
+    flags: List[str] = []
+    san_sec = (sector or "").strip().lower()
+    macro_reg = macro_registry or {}
+
+    if market == "TH":
+        th_rf_obs = macro_reg.get("obs_th_10y_yield")
+        rf = float(th_rf_obs.value) if (th_rf_obs and getattr(th_rf_obs, "is_valid", True)) else 2.75
+        th_crp_obs = macro_reg.get("obs_th_crp")
+        crp = float(th_crp_obs.value) if (th_crp_obs and getattr(th_crp_obs, "is_valid", True)) else 1.75
+        us_erp, _ = _extract_obs_erp(macro_reg)
+        erp = us_erp + crp
+    else:
+        dgs10_val, _ = _find_dgs10_in_observables(list(macro_reg.values()))
+        rf = dgs10_val if dgs10_val is not None else 4.25
+        us_erp, _ = _extract_obs_erp(macro_reg)
+        erp = us_erp
+
+    effective_beta = beta if beta is not None else 1.0
+    ke = rf + (effective_beta * erp)
+    ke_dec = ke / 100.0
+    g_terminal = min(0.025, rf / 100.0)
+
+    # 1. Banks & Financials: Justified P/BV
+    if any(k in san_sec for k in ("financial", "bank", "insurance")):
+        if (
+            roe_pct is not None
+            and roe_pct > 0
+            and book_value_per_share is not None
+            and book_value_per_share > 0
+            and ke_dec > g_terminal
+        ):
+            roe_dec = roe_pct / 100.0
+            justified_pbv = max(0.20, min(4.0, (roe_dec - g_terminal) / (ke_dec - g_terminal)))
+            intrinsic_val = round(book_value_per_share * justified_pbv, 2)
+            target_price = round(max(0.0, intrinsic_val * (1.0 + ke_dec) - expected_dividend_per_share), 2)
+            upside = round(((target_price - current_price) / current_price * 100.0), 2) if current_price > 0 else None
+            market_implied_roe = round((g_terminal + (current_price / book_value_per_share) * (ke_dec - g_terminal)) * 100.0, 2)
+            return "justified_pbv", intrinsic_val, target_price, upside, market_implied_roe, flags
+
+    # 2. Real Estate / REITs: DDM
+    elif any(k in san_sec for k in ("real estate", "reit", "property")):
+        d0 = expected_dividend_per_share
+        if d0 <= 0 and dividend_yield_pct is not None and dividend_yield_pct > 0 and current_price > 0:
+            d0 = current_price * (dividend_yield_pct / 100.0)
+
+        if d0 > 0 and ke_dec > g_terminal:
+            intrinsic_val = round((d0 * (1.0 + g_terminal)) / (ke_dec - g_terminal), 2)
+            target_price = round(max(0.0, intrinsic_val * (1.0 + ke_dec) - d0), 2)
+            upside = round(((target_price - current_price) / current_price * 100.0), 2) if current_price > 0 else None
+            return "ddm_yield_spread", intrinsic_val, target_price, upside, None, flags
+
+    return None, None, None, None, None, flags
+
+
 def compute_institutional_reverse_dcf(
     ticker: str,
     market: str,
@@ -481,6 +557,9 @@ def compute_institutional_reverse_dcf(
     consensus_target_low: Optional[float] = None,
     analyst_count: Optional[int] = None,
     base_revenue_period_type: Optional[Literal["annual", "quarterly", "ttm", "unknown"]] = None,
+    roe_pct: Optional[float] = None,
+    book_value_per_share: Optional[float] = None,
+    dividend_yield_pct: Optional[float] = None,
 ) -> Tuple[ReverseDCFResult, List[str]]:
     """คำนวณ Explicit 5-Year Forward DCF และ Bounded Reverse DCF Solver พร้อม Sector Exclusion และ Robust Margin Guards"""
     flags: List[str] = []
@@ -500,7 +579,23 @@ def compute_institutional_reverse_dcf(
 
     # 2. Sector Exclusion
     excluded_sectors = ["financials", "financial services", "real estate", "banks", "insurance", "reit"]
-    if sector and sector.strip().lower() in excluded_sectors:
+    sec_lower = sector.strip().lower() if sector else ""
+    if sector and (
+        sec_lower in excluded_sectors
+        or any(k in sec_lower for k in ("bank", "financial", "insurance", "reit", "real estate"))
+    ):
+        alt_model, alt_intrinsic, alt_target, alt_upside, implied_roe, alt_flags = compute_sector_alternative_valuation(
+            sector=sector,
+            current_price=current_price,
+            market=market,
+            roe_pct=roe_pct,
+            book_value_per_share=book_value_per_share,
+            expected_dividend_per_share=expected_dividend_per_share,
+            dividend_yield_pct=dividend_yield_pct,
+            beta=beta,
+            macro_registry=macro_registry,
+        )
+        flags_out = ["sector_excluded_from_dcf:dcf"] + alt_flags
         return ReverseDCFResult(
             status="not_applicable",
             valuation_verdict="unavailable",
@@ -511,7 +606,12 @@ def compute_institutional_reverse_dcf(
             ebit_margin_fiscal_period=ebit_margin_fiscal_period,
             ebit_margin_period_type=ebit_margin_period_type,
             ebit_margin_source_tier=ebit_margin_source_tier,
-        ), ["sector_excluded_from_dcf:dcf"]
+            alternative_valuation_model=alt_model,
+            alternative_intrinsic_value=alt_intrinsic,
+            alternative_target_price_12m=alt_target,
+            alternative_upside_12m_pct=alt_upside,
+            market_implied_roe_pct=implied_roe,
+        ), flags_out
 
     # 3. Basic Guards
     if current_price <= 0 or shares_outstanding <= 0 or base_revenue <= 0 or beta is None:

@@ -41,6 +41,16 @@ def _fetch_stock_news(ticker: str, market: str) -> str:
         return f"Error fetching news: {e}"
 
 
+def _persist_stock_news(ticker: str, news_text: str) -> None:
+    if not news_text or not news_text.strip().startswith("---"):
+        return
+    try:
+        from tools.market.news import save_company_news_to_vault
+        save_company_news_to_vault(news_text, ticker)
+    except Exception as e:
+        log.warning("Failed to persist stock news to vault for %s: %s", ticker, e)
+
+
 def _search_vault_memories(keyword: str) -> str:
     try:
         from tools.archivist.search import search_memories_with_evidence
@@ -161,16 +171,18 @@ def execute_equity_refresh_workflow(
                 role="reply", label="Persist Warning"
             )
 
+    # -------------------------------------------------------------
+    # Phase 3: equity_news (Fetch raw news & deterministic Vault persistence)
+    # -------------------------------------------------------------
+    news_text = _fetch_stock_news(clean_ticker, market)
+    if payload.save_to_vault:
+        _persist_stock_news(clean_ticker, news_text)
+
     if not payload.narrative_requested:
         provisional_output.narrative_status = "unavailable"
         if payload.save_to_vault:
             write_equity_sidecar(provisional_output)
         return "done", None
-
-    # -------------------------------------------------------------
-    # Phase 3: equity_news (Fetch raw news)
-    # -------------------------------------------------------------
-    news_text = _fetch_stock_news(clean_ticker, market)
 
     # -------------------------------------------------------------
     # Phase 4 & 5: equity_narrative & persist_final

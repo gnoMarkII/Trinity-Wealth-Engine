@@ -72,7 +72,7 @@ async def lifespan(app: FastAPI):
 
     app.state.notebooklm_job_queue = jobs.JobQueue(
         run_fn=notebooklm_worker.notebooklm_run_fn,
-        flows={"notebooklm", "macro_notebooklm"},
+        flows={"notebooklm", "macro_notebooklm", "equity_notebooklm"},
     )
     # Queue objects remain available to request dependencies for compatibility,
     # but no background task or scheduler is started when explicitly disabled
@@ -86,16 +86,25 @@ async def lifespan(app: FastAPI):
         app.state.notebooklm_job_queue.start()
 
     from api.workers.earnings_call_outbox_worker import EarningsCallOutboxWorker
+    from api.workers.portfolio_snapshot_worker import PortfolioDailySnapshotWorker
     app.state.earnings_call_outbox_worker = None
+    app.state.portfolio_snapshot_worker = None
     if workers_enabled:
-        from api.dependencies import get_earnings_call_service
+        from api.dependencies import get_earnings_call_service, get_portfolio_service
 
         app.state.earnings_call_outbox_worker = EarningsCallOutboxWorker(
             service=get_earnings_call_service()
         )
         app.state.earnings_call_outbox_worker.start()
 
+        app.state.portfolio_snapshot_worker = PortfolioDailySnapshotWorker(
+            service=get_portfolio_service()
+        )
+        app.state.portfolio_snapshot_worker.start()
+
     yield
+    if app.state.portfolio_snapshot_worker is not None:
+        await app.state.portfolio_snapshot_worker.stop()
     if app.state.earnings_call_outbox_worker is not None:
         await app.state.earnings_call_outbox_worker.stop()
     await app.state.job_queue.stop()

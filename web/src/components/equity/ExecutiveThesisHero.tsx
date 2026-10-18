@@ -2,6 +2,30 @@ import type { AtomicMarketSnapshotDTO, EarningsCallNoteItem, DeterministicScorec
 
 export interface ScorecardProps extends Omit<Partial<DeterministicScorecardDTO>, 'action_stance'> {
   action_stance?: string
+  macro_alignment_status?: 'tailwind' | 'neutral' | 'headwind' | string
+  macro_headwind_penalty?: number | null
+}
+
+export interface PortfolioContextProp {
+  is_held: boolean
+  portfolio_id?: string
+  units?: number
+  avg_cost?: number | null
+  unrealized_pnl_pct?: number | null
+  current_weight_pct?: number | null
+  bucket_id?: string | null
+  position_action_hint?: string | null
+}
+
+export interface ThesisDeltaProp {
+  previous_analysis_date: string
+  price_change_pct?: number | null
+  conviction_score_delta?: number | null
+  previous_action_stance?: string | null
+  current_action_stance?: string | null
+  target_price_change_pct?: number | null
+  f_score_delta?: number | null
+  breached_falsifiers?: string[]
 }
 
 interface Props {
@@ -10,6 +34,9 @@ interface Props {
   narrativeAnalysis?: string
   latestEarningsCall?: EarningsCallNoteItem | null
   atomicSnapshot?: AtomicMarketSnapshotDTO | null
+  currentPrice?: number | null
+  portfolioContext?: PortfolioContextProp | null
+  thesisDelta?: ThesisDeltaProp | null
   onViewEarningsCall?: () => void
   onOpenProvenance?: () => void
   hasProvenance?: boolean
@@ -71,6 +98,9 @@ export default function ExecutiveThesisHero({
   baseCaseSummary,
   latestEarningsCall,
   atomicSnapshot,
+  currentPrice,
+  portfolioContext,
+  thesisDelta,
   onViewEarningsCall,
   onOpenProvenance,
   hasProvenance = false,
@@ -115,13 +145,44 @@ export default function ExecutiveThesisHero({
             <span className="font-bold text-zinc-900">{readiness != null ? `${readiness.toFixed(1)} / 10` : 'N/A'}</span>
           </div>
 
-          {atomicSnapshot && (
-            <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-sky-50/60 border border-sky-200 text-xs font-medium text-sky-800" title={`Price Source: ${atomicSnapshot.price_source} | Session: ${atomicSnapshot.market_session_status || 'closed'}`}>
-              <span className="text-sky-600 font-normal">Analysis close:</span>
-              <span className="font-bold">{atomicSnapshot.analysis_price != null ? `$${atomicSnapshot.analysis_price.toFixed(2)}` : 'N/A'}</span>
-              <span className="text-[10px] text-sky-500">({atomicSnapshot.analysis_price_as_of})</span>
+          {/* Macro Regime Alignment Badge */}
+          {scorecard?.macro_alignment_status && (
+            <div
+              className={`flex items-center gap-1.5 px-3 py-1 rounded-full border text-xs font-medium ${
+                scorecard.macro_alignment_status === 'tailwind'
+                  ? 'bg-emerald-500/10 text-emerald-800 border-emerald-300'
+                  : scorecard.macro_alignment_status === 'headwind'
+                  ? 'bg-rose-500/10 text-rose-800 border-rose-300'
+                  : 'bg-zinc-100 text-zinc-700 border-zinc-200'
+              }`}
+              title={
+                scorecard.macro_alignment_status === 'headwind' && scorecard.macro_headwind_penalty
+                  ? `Macro Regime Headwind (Penalty: -${scorecard.macro_headwind_penalty} pts applied to Conviction)`
+                  : `Macro Regime Alignment: ${scorecard.macro_alignment_status.toUpperCase()}`
+              }
+            >
+              <span className="text-[11px]">
+                {scorecard.macro_alignment_status === 'tailwind' ? '🌤️' : scorecard.macro_alignment_status === 'headwind' ? '⛈️' : '☁️'}
+              </span>
+              <span className="capitalize font-semibold">{scorecard.macro_alignment_status} Macro</span>
+              {scorecard.macro_headwind_penalty ? (
+                <span className="text-[10px] text-rose-600 font-bold">(-{scorecard.macro_headwind_penalty})</span>
+              ) : null}
             </div>
           )}
+
+          {atomicSnapshot?.analysis_price != null ? (
+            <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-sky-50/60 border border-sky-200 text-xs font-medium text-sky-800" title={`Price Source: ${atomicSnapshot.price_source} | Session: ${atomicSnapshot.market_session_status || 'closed'}`}>
+              <span className="text-sky-600 font-normal">Analysis close:</span>
+              <span className="font-bold">${atomicSnapshot.analysis_price.toFixed(2)}</span>
+              <span className="text-[10px] text-sky-500">({atomicSnapshot.analysis_price_as_of})</span>
+            </div>
+          ) : currentPrice != null ? (
+            <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-sky-50/60 border border-sky-200 text-xs font-medium text-sky-800">
+              <span className="text-sky-600 font-normal">Price:</span>
+              <span className="font-bold">${currentPrice.toFixed(2)}</span>
+            </div>
+          ) : null}
 
           {scorecard?.action_stance_reason && (
             <span className="text-xs text-zinc-500 italic max-w-md truncate">
@@ -177,6 +238,87 @@ export default function ExecutiveThesisHero({
           <span className="px-2 py-0.5 rounded bg-indigo-100 text-indigo-800 text-[10px] font-bold uppercase">
             Decontaminated
           </span>
+        </div>
+      )}
+
+      {/* Breached Falsifiers Banner */}
+      {thesisDelta?.breached_falsifiers && thesisDelta.breached_falsifiers.length > 0 && (
+        <div className="mt-3 rounded-xl border border-rose-300 bg-rose-50/90 p-3 text-xs text-rose-900 flex items-start gap-2 shadow-xs">
+          <span className="text-base">🚨</span>
+          <div>
+            <span className="font-bold">Thesis Invalidation Alert (Breached Falsifiers):</span>
+            <ul className="list-disc list-inside mt-1 space-y-0.5">
+              {thesisDelta.breached_falsifiers.map((f, i) => (
+                <li key={i}>{f}</li>
+              ))}
+            </ul>
+          </div>
+        </div>
+      )}
+
+      {/* Portfolio Context & Thesis Evolution Row */}
+      {(portfolioContext?.is_held || thesisDelta) && (
+        <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-3">
+          {/* Portfolio Position Context */}
+          {portfolioContext?.is_held ? (
+            <div className="rounded-xl border border-sky-200 bg-sky-50/60 p-3 flex items-center justify-between text-xs text-sky-950 shadow-xs">
+              <div className="flex items-center gap-2">
+                <span className="text-lg">💼</span>
+                <div>
+                  <div className="font-bold flex items-center gap-2">
+                    <span>Portfolio Holding</span>
+                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-sky-100 text-sky-800 font-semibold border border-sky-200">
+                      {portfolioContext.position_action_hint?.replace(/_/g, ' ') || 'HELD'}
+                    </span>
+                  </div>
+                  <div className="text-[11px] text-sky-800/80 mt-0.5">
+                    {portfolioContext.units} units @ ${portfolioContext.avg_cost?.toFixed(2)} • Weight: {portfolioContext.current_weight_pct?.toFixed(1)}%
+                  </div>
+                </div>
+              </div>
+              {portfolioContext.unrealized_pnl_pct != null && (
+                <div className={`font-mono font-bold text-sm ${portfolioContext.unrealized_pnl_pct >= 0 ? 'text-emerald-700' : 'text-rose-700'}`}>
+                  {portfolioContext.unrealized_pnl_pct >= 0 ? '+' : ''}{portfolioContext.unrealized_pnl_pct.toFixed(1)}%
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="rounded-xl border border-edge/60 bg-surface/60 p-3 flex items-center gap-2 text-xs text-zinc-500 shadow-xs">
+              <span className="text-lg">💼</span>
+              <span>No current position in active portfolio ({portfolioContext?.position_action_hint?.replace(/_/g, ' ') || 'Not Held'}).</span>
+            </div>
+          )}
+
+          {/* Thesis Evolution Delta */}
+          {thesisDelta && (
+            <div className="rounded-xl border border-edge/80 bg-surface/80 p-3 flex items-center justify-between text-xs text-zinc-800 shadow-xs">
+              <div className="flex items-center gap-2">
+                <span className="text-lg">🔄</span>
+                <div>
+                  <div className="font-bold text-zinc-900 flex items-center gap-1.5">
+                    <span>Thesis Delta</span>
+                    <span className="text-[10px] text-zinc-500 font-normal">vs {thesisDelta.previous_analysis_date}</span>
+                  </div>
+                  <div className="text-[11px] text-zinc-600 mt-0.5 flex items-center gap-3">
+                    {thesisDelta.price_change_pct != null && (
+                      <span>Price: <strong className={thesisDelta.price_change_pct >= 0 ? 'text-emerald-700' : 'text-rose-700'}>{thesisDelta.price_change_pct >= 0 ? '+' : ''}{thesisDelta.price_change_pct.toFixed(1)}%</strong></span>
+                    )}
+                    {thesisDelta.conviction_score_delta != null && (
+                      <span>Conviction: <strong className={thesisDelta.conviction_score_delta >= 0 ? 'text-emerald-700' : 'text-rose-700'}>{thesisDelta.conviction_score_delta >= 0 ? '+' : ''}{thesisDelta.conviction_score_delta.toFixed(1)}</strong></span>
+                    )}
+                    {thesisDelta.f_score_delta != null && thesisDelta.f_score_delta !== 0 && (
+                      <span>F-Score: <strong>{thesisDelta.f_score_delta >= 0 ? '+' : ''}{thesisDelta.f_score_delta}</strong></span>
+                    )}
+                  </div>
+                </div>
+              </div>
+              {thesisDelta.current_action_stance && (
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded border border-edge bg-surface text-zinc-700">
+                  {thesisDelta.previous_action_stance ? `${thesisDelta.previous_action_stance} ➔ ` : ''}{thesisDelta.current_action_stance}
+                </span>
+              )}
+            </div>
+          )}
         </div>
       )}
 

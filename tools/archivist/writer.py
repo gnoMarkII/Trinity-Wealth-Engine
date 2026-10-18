@@ -288,28 +288,41 @@ def _write_raw_markdown_v2(
 
     target_path = vp.note_path(meta, filename=safe_name)
     body = _portableize_wikilinks(body, vault_root, target_path)
+
+    original_entity = _canonical_entity_type(meta.get("entity_type"))
+    companion_artifacts: dict[str, str] = {}
+    if original_entity == "company_news":
+        try:
+            parsed_data = parse_company_news_items(content)
+            json_payload = json.dumps(parsed_data, ensure_ascii=False, indent=2)
+            companion_artifacts[f"{safe_name}.json"] = json_payload
+        except Exception as exc:
+            log.warning("[NEWS COMPANION PREP FAIL] | %s: %s", safe_name, exc)
+
     committed = build_knowledge_note_writer(vault_paths=vp).write_note(
         metadata=meta,
         body=body,
         filename=safe_name,
+        companion_artifacts=companion_artifacts,
     )
     _index_upsert(committed.primary_file)
     _sync_to_catalog(committed.primary_file)
 
-    original_entity = _canonical_entity_type(meta.get("entity_type"))
     if original_entity == "company_news":
-        try:
-            parsed_data = parse_company_news_items(committed.primary_file.read_text(encoding="utf-8"))
-            _atomic_write_text(committed.primary_file.with_suffix(".json"), json.dumps(parsed_data, ensure_ascii=False, indent=2))
-        except Exception as exc:
-            log.warning("[NEWS SIDECAR FAIL] | %s: %s", committed.primary_file.name, exc)
+        sidecar_file = committed.primary_file.with_suffix(".json")
+        if not sidecar_file.exists() and f"{safe_name}.json" in companion_artifacts:
+            try:
+                _atomic_write_text(sidecar_file, companion_artifacts[f"{safe_name}.json"])
+            except Exception as exc:
+                log.warning("[NEWS SIDECAR FAIL] | %s: %s", committed.primary_file.name, exc)
     if original_entity == "youtube_summary":
         _mark_youtube_digest_read(content)
     if "News" in committed.primary_file.parts:
         _mark_news_radar_read(content)
     ticker = meta.get("ticker")
     if ticker:
-        _ensure_stock_entity_stub(committed.primary_file.parent, str(ticker), vault_root=vault_root)
+        stock_target_dir = vault_root / "30_Knowledge_Base" / "Stocks" / str(ticker).upper()
+        _ensure_stock_entity_stub(stock_target_dir, str(ticker), vault_root=vault_root)
     return f"บันทึกสำเร็จ (raw, {'overwritten' if committed.revision > 1 else 'new'}): {committed.primary_file}"
 
 

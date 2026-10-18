@@ -30,6 +30,8 @@ class EquityDetailDTO(EquitySummaryDTO):
     narrative_analysis: str
     base_case_summary: str
     generated_by: str = "equity_intel"
+    portfolio_context: Optional[dict[str, Any]] = None
+    thesis_delta: Optional[dict[str, Any]] = None
 
 
 class EquityNewsItemDTO(BaseModel):

@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import type { ActualHoldingDTO, ActualSummaryDTO, PerformanceSnapshotDTO } from '../../api/types'
 import { partitionPriceRefreshInfo, type PvdValuationContext } from '../../lib/pvdPresentation'
+import { PortfolioSummaryCardsSkeleton } from '../ui/FlowSkeleton'
 
 interface Props {
   summary: ActualSummaryDTO | null
@@ -73,14 +74,11 @@ export default function PortfolioSummaryCards({
   performanceRows = [],
 }: Props) {
   const [showDetails, setShowDetails] = useState(false)
-  if (loading || !summary) {
-    return (
-      <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2 xl:grid-cols-4">
-        {[1, 2, 3, 4].map((i) => (
-          <div key={i} className="h-28 animate-pulse rounded-2xl border border-sky-100 bg-panel/60 p-4 sm:p-5 shadow-sm" />
-        ))}
-      </div>
-    )
+  if (loading) {
+    return <PortfolioSummaryCardsSkeleton />
+  }
+  if (!summary) {
+    return null
   }
 
   const nav = summary.total_value_thb
@@ -275,6 +273,7 @@ export default function PortfolioSummaryCards({
                 type="button"
                 onClick={onRefreshPrices}
                 disabled={refreshingPrices}
+                title="ดึงราคาตลาดล่าสุดของหุ้น/กองทุน พร้อมบันทึก Performance Snapshot ประจำวันนี้"
                 className="flex w-full items-center justify-center gap-1.5 rounded-xl border border-sky-200 bg-flow-cyan/10 px-3 py-1.5 text-xs font-bold text-flow-blue transition-all hover:bg-flow-cyan/20 disabled:cursor-not-allowed disabled:opacity-50 shadow-xs"
               >
                 <svg
@@ -290,7 +289,7 @@ export default function PortfolioSummaryCards({
                     d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99"
                   />
                 </svg>
-                {refreshingPrices ? 'กำลังอัปเดตราคา...' : 'อัปเดตราคาตลาด (Refresh)'}
+                {refreshingPrices ? 'กำลังอัปเดตราคา & Snapshot...' : 'อัปเดตราคาตลาด & Snapshot วันนี้'}
               </button>
               {hasPvd && (
                 <div className="mt-1.5 text-center">
@@ -324,7 +323,7 @@ export default function PortfolioSummaryCards({
                 {isAllRefreshOk ? (
                   <span className="inline-flex items-center gap-1.5 font-medium text-emerald-700">
                     <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
-                    อัปเดตราคาสำเร็จ ({totalRefreshCount} รายการ)
+                    อัปเดตราคาสำเร็จ ({totalRefreshCount} รายการ) & บันทึก Snapshot แล้ว
                   </span>
                 ) : (
                   <span className="inline-flex items-center gap-1.5 font-medium text-amber-700">

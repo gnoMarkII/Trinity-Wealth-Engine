@@ -71,6 +71,16 @@ def notebooklm_run_fn(
             instruction=instruction,
             on_step=lambda node, msg: state_adapter.append_log(job_id, node, msg),
         )
+    elif flow == "equity_notebooklm":
+        from api.dependencies import build_equity_notebooklm_export_service
+
+        equity_export_service = build_equity_notebooklm_export_service()
+        state_adapter = LegacyNotebookLMWorkerStateAdapter()
+        equity_export_service.execute_sync(
+            job_id=job_id,
+            instruction=instruction,
+            on_step=lambda node, msg: state_adapter.append_log(job_id, node, msg),
+        )
     else:
         raise ValueError(f"Unknown flow '{flow}' dispatched to notebooklm worker")
 

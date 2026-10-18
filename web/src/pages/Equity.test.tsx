@@ -6,18 +6,33 @@ import { api } from '../api/client'
 import { mockEquitySummary, mockEquityDetailAAPL } from '../mocks/equity'
 import { normalizeTicker } from './Equity'
 
-vi.mock('../api/client', () => ({
-  api: {
-    getEquityLatest: vi.fn(),
-    getEquityDetail: vi.fn(),
-    getEarningsCalls: vi.fn().mockResolvedValue({ ticker: 'AAPL', total_count: 0, items: [] }),
-    createKanbanCard: vi.fn(),
-    dispatchJob: vi.fn(),
-    getActualPortfolioState: vi.fn(),
-    getActualWatchlist: vi.fn(),
-    getJobStatus: vi.fn(),
-  },
-}))
+vi.mock('../api/client', () => {
+  class MockApiError extends Error {
+    status: number
+    constructor(status: number, message: string) {
+      super(message)
+      this.status = status
+    }
+  }
+
+  return {
+    api: {
+      getEquityLatest: vi.fn(),
+      getEquityDetail: vi.fn(),
+      getEarningsCalls: vi.fn().mockResolvedValue({ ticker: 'AAPL', total_count: 0, items: [] }),
+      createKanbanCard: vi.fn(),
+      dispatchJob: vi.fn(),
+      getActualPortfolioState: vi.fn(),
+      getActualWatchlist: vi.fn(),
+      getJobStatus: vi.fn(),
+      getLatestEquityNotebookLMExport: vi.fn().mockResolvedValue(null),
+      getEquityNotebookLMExport: vi.fn(),
+      exportEquityToNotebookLM: vi.fn(),
+      retryEquityNotebookLMExport: vi.fn(),
+    },
+    ApiError: MockApiError,
+  }
+})
 
 describe('Equity Page & normalizeTicker', () => {
   beforeEach(() => {

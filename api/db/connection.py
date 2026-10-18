@@ -218,6 +218,29 @@ CREATE TABLE IF NOT EXISTS macro_notebooklm_exports (
 CREATE INDEX IF NOT EXISTS idx_macro_export_hash ON macro_notebooklm_exports(content_hash);
 CREATE INDEX IF NOT EXISTS idx_macro_export_created ON macro_notebooklm_exports(created_at DESC);
 
+CREATE TABLE IF NOT EXISTS equity_notebooklm_exports (
+    export_id TEXT PRIMARY KEY,
+    request_key TEXT UNIQUE,
+    ticker TEXT NOT NULL,
+    market TEXT NOT NULL DEFAULT 'US',
+    content_hash TEXT NOT NULL,
+    job_id TEXT,
+    state TEXT NOT NULL DEFAULT 'queued',
+    stage TEXT NOT NULL DEFAULT 'initialized',
+    snapshot_at TEXT NOT NULL,
+    notebook_id TEXT,
+    notebook_url TEXT,
+    manifest_path TEXT,
+    inventory_json TEXT,
+    warnings_json TEXT,
+    error_code TEXT,
+    error_message TEXT,
+    created_at REAL NOT NULL,
+    updated_at REAL NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_equity_export_hash ON equity_notebooklm_exports(ticker, market, content_hash);
+CREATE INDEX IF NOT EXISTS idx_equity_export_created ON equity_notebooklm_exports(ticker, market, created_at DESC);
+
 -- Investor Essence Runtime Tables
 CREATE TABLE IF NOT EXISTS investor_sessions (
     session_id TEXT PRIMARY KEY,

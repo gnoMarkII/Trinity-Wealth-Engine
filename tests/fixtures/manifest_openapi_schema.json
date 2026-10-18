@@ -184,6 +184,56 @@
         ]
       }
     },
+    "/api/equity/notebooklm/exports/{export_id}": {
+      "get": {
+        "operationId": "get_equity_notebooklm_export_by_id_api_equity_notebooklm_exports__export_id__get",
+        "tags": [
+          "equity"
+        ],
+        "summary": "Get export status and manifest source details by export ID",
+        "parameters": [
+          {
+            "name": "export_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Export Id"
+            }
+          }
+        ],
+        "has_request_body": false,
+        "responses": [
+          "200",
+          "422"
+        ]
+      }
+    },
+    "/api/equity/notebooklm/exports/{export_id}/retry": {
+      "post": {
+        "operationId": "retry_equity_notebooklm_export_api_equity_notebooklm_exports__export_id__retry_post",
+        "tags": [
+          "equity"
+        ],
+        "summary": "Retry a failed or partial equity export using its existing frozen bundle",
+        "parameters": [
+          {
+            "name": "export_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Export Id"
+            }
+          }
+        ],
+        "has_request_body": false,
+        "responses": [
+          "202",
+          "422"
+        ]
+      }
+    },
     "/api/equity/notes/content": {
       "get": {
         "operationId": "get_equity_note_content_api_equity_notes_content_get",
@@ -488,6 +538,67 @@
             "schema": {
               "type": "string",
               "title": "Ticker"
+            }
+          }
+        ],
+        "has_request_body": false,
+        "responses": [
+          "200",
+          "422"
+        ]
+      }
+    },
+    "/api/equity/{ticker}/notebooklm/exports": {
+      "post": {
+        "operationId": "export_equity_to_notebooklm_api_equity__ticker__notebooklm_exports_post",
+        "tags": [
+          "equity"
+        ],
+        "summary": "Freeze equity corpus bundle and dispatch to NotebookLM research pipeline",
+        "parameters": [
+          {
+            "name": "ticker",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Ticker"
+            }
+          }
+        ],
+        "has_request_body": true,
+        "responses": [
+          "202",
+          "422"
+        ]
+      }
+    },
+    "/api/equity/{ticker}/notebooklm/exports/latest": {
+      "get": {
+        "operationId": "get_latest_equity_notebooklm_export_api_equity__ticker__notebooklm_exports_latest_get",
+        "tags": [
+          "equity"
+        ],
+        "summary": "Get the most recent NotebookLM export status for a ticker",
+        "parameters": [
+          {
+            "name": "ticker",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Ticker"
+            }
+          },
+          {
+            "name": "market",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "Market identifier (e.g. US, TH)",
+              "default": "US",
+              "title": "Market"
             }
           }
         ],

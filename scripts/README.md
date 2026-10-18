@@ -1,29 +1,35 @@
 # Scripts Directory
 
-โฟลเดอร์นี้รวบรวมสคริปต์สำหรับการปฏิบัติการ ตรวจสอบความพร้อมทางสถาปัตยกรรม (Preflight & Acceptance) และบำรุงรักษา Obsidian Vault V2
+โฟลเดอร์นี้รวบรวมสคริปต์สำหรับการปฏิบัติการ (Operations), ไปป์ไลน์การคำนวณและประมวลผลข้อมูล (Pipelines), การตรวจสอบความถูกต้องทางสถาปัตยกรรม (Architectural Scanners) และเครื่องมืออำนวยความสะดวกในการพัฒนาของ Trinity Wealth Engine
 
-## โครงสร้างสคริปต์ปัจจุบัน (Active Scripts)
+---
 
-### 1. การตรวจสอบและทดสอบประจำการหลัก (R9 / R10 Preflight & Acceptance)
-* `run_vault_r10_preflight.py` — ตรวจสอบสถานะความพร้อมของ Vault ตามมาตรฐาน R10 (Link Graph, Reader, Cleanup)
-* `run_vault_r10_acceptance.py` — Acceptance Suite สำหรับ Milestone R10
-* `run_vault_r9_preflight.py` — Guardrail ตรวจสอบ Architecture Invariants ของ R9 (Deny-by-default, SQLite isolation)
-* `run_vault_r9_acceptance.py` — Acceptance Suite สำหรับ Milestone R9
-* `scan_vault_writers_r9.py` — Deny-by-default Writer Inventory Scanner ตรวจจับ Direct File I/O ที่ผิดกฎสถาปัตยกรรม
-* `observe_vault_r9.py` — เฝ้าระวังความเสถียรของ Vault และสรุปสถานะสุขภาพ
-* `run_vault_r9_cycle.py` — รัน Acceptance Cycle เต็มรูปแบบ
+## สคริปต์ประจำการหลัก (Active Scripts)
 
-### 2. การจัดการ Maintenance และ Rebuild
-* `rebuild_vault_derived_r9.py` — Rebuild Catalog Database และ Vector Manifests
-* `migrate_vault_runtime_layout_r9.py` — จัดการและย้าย Runtime ไว้นอก Vault
-* `backup_vault_platform_r9.py` / `restore_vault_platform_r9.py` — สำรองและกู้คืนโครงสร้าง Vault Platform
-* `rehearse_vault_r9_runbook.py` — ซักซ้อมกระบวนการ Runbook เพื่อความปลอดภัย
+### 1. 🏛️ Architecture & Boundary Scanners (มี Unit / AST Test ควบคุม)
+* `scan_vault_writers_r8.py` — AST scanner ตรวจสอบขอบเขตการเขียน Vault (Deny-by-default write boundary) ควบคุมโดย `tests/architecture/test_vault_write_boundaries.py`
+* `scan_vault_writers_r9.py` — ตรวจสอบ Root construction boundaries และ deny-by-default writer inventory ควบคุมโดย `tests/architecture/test_r9_finalization.py`
+* `apply_live_file_repairs_r3.py` — สคริปต์ซ่อมแซมและปรับโครงสร้าง Frontmatter/Metadata ของ Vault ควบคุมโดย `tests/tools/archivist/test_live_file_repair_r3.py`
+* `audit_macro_page_data.py` — ตรวจสอบ AI lineage integrity และข้อมูล Macro page ควบคุมโดย `tests/tools/macro/test_ai_data_lineage.py`
+* `migrate_investor_principles_v2.py` — ตรวจสอบและย้าย Investor Essence principles ควบคุมโดย `tests/unit/investor_essence/test_d9_migration_and_audit.py`
 
-### 3. ชุดสคริปต์ R10 Tooling
-* `build_concepts_cleanup_r10.py` — สร้าง Change Set สำหรับคลีนโน้ต Concept ที่ไม่ได้ใช้
-* `apply_concepts_cleanup_r10.py` — ดำเนินการย้ายโน้ต Concept ไปยัง Revisions / Archive อย่างปลอดภัย
-* `audit_concepts_r10.py` — ตรวจสอบและรายงานสถานะ Concept Notes
-* `rollback_concepts_cleanup_r10.py` — กู้คืนโน้ต Concept ที่เคยคลีนกลับคืนสภาพเดิม
+### 2. 📊 Macro Intelligence & Pipeline Tooling
+* `run_daily_macro_strategy.py` — สคริปต์รันไปป์ไลน์วิเคราะห์กลยุทธ์ Macro ประจำวัน
+* `recommit_macro_strategy.py` — รันและซิงค์ Macro strategy notes เข้าสู่ระบบ
+* `verify_macro_data_pipeline.py` — ตรวจสอบความสมบูรณ์และสถานะของ Macro Data Pipeline
+* `run_macro_acceptance.py` — Acceptance Suite ตรวจสอบการทำงานแบบ End-to-End ของ Macro
+* `run_macro_notebooklm_acceptance.py` — Acceptance Suite ตรวจสอบการทำงานของ NotebookLM Dataset
+* `audit_macro_notebooklm_export.py` — เครื่องมือตรวจสอบและสรุปผล NotebookLM Export
 
-### 4. โฟลเดอร์ Archive (Historical Milestone Scripts)
-* [scripts/archive/](file:///c:/ChinoDoc/Projects/Claude/invest-agents/scripts/archive/) — รวบรวมสคริปต์ประวัติศาสตร์ในอดีต (R4 – R8) ที่ทำงานเสร็จสิ้นแล้ว เก็บรักษาไว้เป็น Audit Trail โดยมีเอกสารระบุรายละเอียดใน [archive/README.md](file:///c:/ChinoDoc/Projects/Claude/invest-agents/scripts/archive/README.md)
+### 3. 📈 Sector Rotation & Task Scheduling
+* `refresh_sector_rotation.py` — คำนวณและอัปเดตข้อมูล Sector Rotation ประจำวัน (EOD)
+* `register_sector_rotation_task.ps1` — สคริปต์ PowerShell สำหรับลงทะเบียน Scheduled Task บน Windows เพื่อรัน `refresh_sector_rotation.py` ทุกวันอัตโนมัติ
+
+### 4. 🛠️ Development & Schema Management
+* `generate_golden_manifests.py` — เครื่องมืออัปเดต API Route Contract และ Database Schema Manifests (ดูรายละเอียดใน `AGENTS.md`)
+* `export_openapi.py` — ส่งออก OpenAPI Specification สำหรับ Frontend Type Generation (`npm --prefix web run check:types`)
+* `seed_test_data.py` — สำหรับ Seed ข้อมูล Portfolio & Transactions ตัวอย่างลงในฐานข้อมูล
+* `create_negative_fixtures.py` — เครื่องมือสร้าง Negative Fixtures สำหรับการทดสอบ
+* `generate_reference_mappings.py` — สร้างและแมปปิ้งความสัมพันธ์ของ Reference Entities
+* `backfill_images.py` — ย้ายและจัดทำ Index รูปภาพในระบบความรู้
+* `backfill_youtube_insight_metadata.py` — เติมเต็ม Metadata และ Insights จาก YouTube Transcripts

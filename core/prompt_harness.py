@@ -1,7 +1,7 @@
 import os
 import re
 import logging
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, Sequence
 from pathlib import Path
 
 from core.text_utils import repair_mojibake
@@ -77,11 +77,18 @@ class PromptHarness:
             return ""
         return self.format_mustache(content, strict=strict, **kwargs)
 
-    def get_system_prompt(self, strict: bool = True, **kwargs: Any) -> str:
+    def get_system_prompt(
+        self,
+        strict: bool = True,
+        include_pillars: bool = True,
+        include_guardrails: bool = True,
+        extra_sections: Optional[Sequence[str]] = None,
+        **kwargs: Any,
+    ) -> str:
         """
         Composes the main system prompt.
         Looks for SKILL.md (or <AGENT_NAME>_SKILL.md).
-        If pillars.md and/or guardrails.md exist, appends them in sequence.
+        If pillars.md and/or guardrails.md exist and are requested, appends them in sequence.
         """
         # Try SKILL.md first, fallback to <AGENT_NAME.upper()>_SKILL.md
         main_text = self._load_file_with_cache("SKILL.md", required=False)
@@ -92,16 +99,49 @@ class PromptHarness:
         sections = [main_text]
         
         # Check for optional sub-modules (pillars, guardrails)
-        pillars_text = self._load_file_with_cache("pillars.md", required=False)
-        if pillars_text:
-            sections.append(pillars_text)
+        if include_pillars:
+            pillars_text = self._load_file_with_cache("pillars.md", required=False)
+            if pillars_text:
+                sections.append(pillars_text)
             
-        guardrails_text = self._load_file_with_cache("guardrails.md", required=False)
-        if guardrails_text:
-            sections.append(guardrails_text)
+        if include_guardrails:
+            guardrails_text = self._load_file_with_cache("guardrails.md", required=False)
+            if guardrails_text:
+                sections.append(guardrails_text)
+
+        if extra_sections:
+            for extra in extra_sections:
+                extra_text = self._load_file_with_cache(extra, required=False)
+                if extra_text:
+                    sections.append(extra_text)
             
         combined = "\n\n---\n\n".join(sections)
         return self.format_mustache(combined, strict=strict, **kwargs)
+
+    def get_prompt_metrics(self) -> Dict[str, int]:
+        """Calculates character count and estimated token counts for all skill markdown files."""
+        metrics: Dict[str, int] = {}
+        total_chars = 0
+        total_tokens = 0
+
+        if not self.agent_dir.exists():
+            return {"total_chars": 0, "total_est_tokens": 0}
+
+        for path in sorted(self.agent_dir.glob("*.md")):
+            try:
+                content = self._load_file_with_cache(path.name, required=False)
+                chars = len(content)
+                est_tokens = max(1, chars // 4) if chars > 0 else 0
+                metrics[f"{path.name}_chars"] = chars
+                metrics[f"{path.name}_est_tokens"] = est_tokens
+                total_chars += chars
+                total_tokens += est_tokens
+            except Exception as exc:
+                log.warning("Could not read prompt metric for %s: %s", path, exc)
+
+        metrics["total_chars"] = total_chars
+        metrics["total_est_tokens"] = total_tokens
+        return metrics
 
     def get_few_shots_feedback(self, base_feedback: str, strict: bool = True, **kwargs: Any) -> str:
         """

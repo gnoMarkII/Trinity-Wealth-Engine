@@ -401,7 +401,7 @@ export function FinancialsTab({ ticker, market = 'US', currency }: FinancialsTab
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
               <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
             </span>
-            <span className="font-medium text-zinc-300">
+            <span className="font-medium text-zinc-600">
               แหล่งข้อมูล:{' '}
               <span className="text-primary font-semibold">
                 {data.provider === 'edgartools' ? 'SEC EDGAR (10-K / 10-Q / 8-K)' : (data.provider || 'Yahoo Finance')}

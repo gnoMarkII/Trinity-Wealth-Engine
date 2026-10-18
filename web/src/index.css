@@ -12,6 +12,12 @@
   --surface: rgb(248 251 254 / 0.86);
   --surface-strong: rgb(240 249 255 / 0.9);
   --edge: rgb(186 230 253 / 0.9);
+  --primary-rgb: 24 55 76;
+  --muted-rgb: 100 116 139;
+  --accent-rgb: 14 165 233;
+  --primary: rgb(24 55 76);
+  --muted: rgb(100 116 139);
+  --accent: rgb(14 165 233);
 }
 
 html,
@@ -218,7 +224,7 @@ body {
   transform-origin: left;
 }
 
-/* skeleton loading placeholder */
+/* skeleton loading placeholder — โทนสีฟ้า-ขาวกลมกลืนกับ Flow Theme */
 @keyframes shimmer {
   from {
     background-position: 200% 0;
@@ -228,9 +234,26 @@ body {
   }
 }
 .animate-shimmer {
-  background: linear-gradient(90deg, #f4f4f5 25%, #e9e9eb 50%, #f4f4f5 75%);
+  background: linear-gradient(
+    90deg,
+    rgb(241 245 249 / 0.85) 25%,
+    rgb(224 242 254 / 0.95) 50%,
+    rgb(241 245 249 / 0.85) 75%
+  );
   background-size: 200% 100%;
   animation: shimmer 1.4s ease-in-out infinite;
+}
+
+@keyframes progress-ribbon {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(250%);
+  }
+}
+.animate-progress-ribbon {
+  animation: progress-ribbon 1.25s cubic-bezier(0.4, 0, 0.2, 1) infinite;
 }
 
 /* Modern Web Guidance Utilities (Google Chrome Standards) */

@@ -3,7 +3,11 @@
 คำนวณ Core Conviction Score, Execution Readiness Score, Action Stance, Coverage %, และ Thesis Falsifiers
 ด้วย Python 100% (Deterministic Invariant) ปราศจากการสุ่มหรือการประเมินตัวเลขโดย LLM
 """
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Literal, Optional, Tuple
+import json
+import os
+from pathlib import Path
+
 from schemas.micro_quant_schemas import (
     DeterministicScorecard,
     EarningsGuidanceContext,
@@ -16,6 +20,44 @@ from schemas.micro_quant_schemas import (
 )
 
 
+def load_latest_macro_regime_context(vault_path: Optional[Path] = None) -> Optional[dict[str, Any]]:
+    """Loads the latest Macro Strategy Direction output from the Vault (fail-open)."""
+    try:
+        base = vault_path or Path(os.getenv("OBSIDIAN_VAULT_PATH", "memories"))
+        candidate_dirs = [
+            base / "30_Knowledge_Base" / "Macro_Strategy",
+            base / "30_Knowledge_Base" / "Macroeconomics" / "Strategies",
+            base / "10_Macro_Analysis",
+        ]
+        found_files: list[Path] = []
+        for d in candidate_dirs:
+            if d.exists():
+                found_files.extend(d.rglob("Macro_Strategy_Direction_*.json"))
+                latest_f = d / "latest.json"
+                if latest_f.exists():
+                    found_files.append(latest_f)
+
+        if not found_files:
+            return None
+
+        files = sorted(found_files, key=lambda p: p.stat().st_mtime, reverse=True)
+        data = json.loads(files[0].read_text(encoding="utf-8"))
+        regime = data.get("overall_regime") or data.get("regime_name")
+        sector_analysis = data.get("sector_analysis") or {}
+        leading = [str(s).strip().lower() for s in sector_analysis.get("leading_sectors", [])]
+        lagging = [str(s).strip().lower() for s in sector_analysis.get("lagging_sectors", [])]
+        regional_alloc = data.get("regional_allocation") or {}
+
+        return {
+            "overall_regime": regime,
+            "leading_sectors": leading,
+            "lagging_sectors": lagging,
+            "regional_allocation": regional_alloc,
+        }
+    except Exception:
+        return None
+
+
 def compute_deterministic_scorecard(
     ticker: str,
     market: str,
@@ -25,6 +67,7 @@ def compute_deterministic_scorecard(
     guidance: Optional[EarningsGuidanceContext] = None,
     tactical: Optional[TacticalSetup] = None,
     insider: Optional[InsiderConviction] = None,
+    macro_context: Optional[dict[str, Any]] = None,
 ) -> Tuple[DeterministicScorecard, List[ThesisFalsifier], List[str]]:
     """คำนวณคะแนน 4 เสาหลักและสร้าง Thesis Falsifiers พร้อม Source References บังคับ"""
     flags: List[str] = []
@@ -144,6 +187,18 @@ def compute_deterministic_scorecard(
                 val_scores.append(65.0)
             else:
                 val_scores.append(40.0)
+    elif dcf and dcf.status == "not_applicable" and getattr(dcf, "alternative_upside_12m_pct", None) is not None:
+        alt_upside = dcf.alternative_upside_12m_pct
+        if alt_upside >= 30.0:
+            val_scores.append(95.0)
+        elif alt_upside >= 15.0:
+            val_scores.append(80.0)
+        elif alt_upside >= 0.0:
+            val_scores.append(60.0)
+        elif alt_upside >= -15.0:
+            val_scores.append(40.0)
+        else:
+            val_scores.append(20.0)
     elif quant_signals.value_score is not None and dcf_is_actionable:
         val_scores.append(quant_signals.value_score)
 
@@ -416,6 +471,45 @@ def compute_deterministic_scorecard(
     if warnings_list:
         quant_signals.dcf_discrepancy_warning = " | ".join(warnings_list)
 
+    # -------------------------------------------------------------
+    # Macro Top-Down Linkage
+    # -------------------------------------------------------------
+    macro_regime_name: Optional[str] = None
+    macro_status: Literal["tailwind", "neutral", "headwind", "unavailable"] = "unavailable"
+    macro_note: Optional[str] = None
+
+    if macro_context:
+        macro_regime_name = macro_context.get("overall_regime") or macro_context.get("regime_name")
+        leading = [str(s).lower() for s in macro_context.get("leading_sectors", [])]
+        lagging = [str(s).lower() for s in macro_context.get("lagging_sectors", [])]
+        stock_sector = (quant_signals.peer_sector or "").strip().lower()
+
+        is_fragile = (
+            (quant_signals.solvency_score is not None and quant_signals.solvency_score <= 40.0)
+            or (quant_signals.fcf_yield_pct is not None and quant_signals.fcf_yield_pct < 0.0)
+        )
+
+        regime_str = str(macro_regime_name or "").lower()
+        if any(sec in stock_sector for sec in leading) or (
+            any(k in regime_str for k in ("goldilocks", "reflation", "expansion")) and not is_fragile
+        ):
+            macro_status = "tailwind"
+            macro_note = f"หุ้นหรืออุตสาหกรรม ({stock_sector or 'N/A'}) สอดคล้องกับสภาวะมหภาคเชิงบวก ({macro_regime_name or 'Tailwind'})"
+        elif any(sec in stock_sector for sec in lagging) or (
+            any(k in regime_str for k in ("stagflation", "deflation", "slowdown")) and is_fragile
+        ):
+            macro_status = "headwind"
+            macro_note = f"สภาวะมหภาคเป็นอุปสรรค ({macro_regime_name or 'Headwind'}) ร่วมกับงบการเงินเปราะบาง"
+            if is_fragile:
+                execution_readiness = min(6.0, execution_readiness)
+                if "macro_regime_headwind:scorecard" not in data_quality_flags:
+                    data_quality_flags.append("macro_regime_headwind:scorecard")
+                if "macro_regime_headwind:scorecard" not in flags:
+                    flags.append("macro_regime_headwind:scorecard")
+        else:
+            macro_status = "neutral"
+            macro_note = f"สภาวะมหภาคเป็นกลางต่อกลุ่มอุตสาหกรรม ({macro_regime_name or 'Neutral'})"
+
     scorecard = DeterministicScorecard(
         core_conviction_score=core_conviction,
         business_conviction_score=business_conviction,
@@ -438,6 +532,9 @@ def compute_deterministic_scorecard(
         methodology_version="2.1.0",
         reweighting_metadata=reweighting_metadata,
         data_quality_flags=data_quality_flags,
+        macro_regime=macro_regime_name,
+        macro_alignment_status=macro_status,
+        macro_alignment_note=macro_note,
     )
 
     # -------------------------------------------------------------

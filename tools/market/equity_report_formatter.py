@@ -128,6 +128,16 @@ DATA_QUALITY_FLAG_TRANSLATIONS: dict[str, tuple[str, str]] = {
         "จำนวนหุ้นเปรียบเทียบในกลุ่มไม่เพียงพอ",
         "มีหุ้นคู่แข่งในกลุ่มเดียวกันน้อยกว่าเกณฑ์ที่ใช้ประเมิน Peer Relative Score",
     ),
+    # quant_scoring.py
+    "share_dilution_risk:capital_allocation": (
+        "ความเสี่ยงการเพิ่มทุน/Dilution หุ้น",
+        "จำนวนหุ้นชำระแล้วเพิ่มขึ้นมากกว่า 3% YoY ส่งผลกระทบต่อสัดส่วนการถือหุ้นเดิม",
+    ),
+    # equity_rules_engine.py
+    "macro_regime_headwind:scorecard": (
+        "แรงกดดันจากสภาวะมหภาค (Macro Headwind)",
+        "ทิศทางเศรษฐกิจมหภาคและนโยบายการเงินไม่เอื้ออำนวย มีการปรับจำกัดคะแนน Execution Readiness ไม่เกิน 6.0",
+    ),
     # quant_engine.py
     "insufficient_periods:growth": (
         "รอบข้อมูลงบการเงินย้อนหลังไม่เพียงพอ",
@@ -136,6 +146,14 @@ DATA_QUALITY_FLAG_TRANSLATIONS: dict[str, tuple[str, str]] = {
     "non_annual_period_gap:growth": (
         "ระยะเวลาเปรียบเทียบงบการเงินไม่ใช่งวดปีเต็ม",
         "งวดเวลาของข้อมูลเปรียบเทียบไม่อยู่ในรอบ 12 เดือนเต็ม",
+    ),
+    "share_dilution_risk:capital_allocation": (
+        "ความเสี่ยงจากการเพิ่มทุนหรือไดลูทจำนวนหุ้น (>3% YoY)",
+        "จำนวนหุ้นสามัญเพิ่มขึ้นเกิน 3% ต่อปี ส่งผลลดทอนสัดส่วนกำไรต่อหุ้นของผู้ถือหุ้นเดิม",
+    ),
+    "macro_regime_headwind:scorecard": (
+        "สภาวะเศรษฐกิจมหภาคเป็นแรงต้าน (Macro Headwind)",
+        "สภาวะมหภาคปัจจุบันไม่เอื้อต่อหุ้นที่มีภาระหนี้สูงหรือกระแสเงินสดติดลบ จึงปรับลดเพดานความพร้อมในการเข้าลงทุน",
     ),
 }
 
@@ -238,6 +256,55 @@ def format_equity_analysis_report(output: MicroQuantOutput) -> str:
             f"| **Pillar 3: Valuation Margin of Safety** | {sc.valuation_margin_score} / 100 | 30% | 12M DCF Upside & Implied Growth Gap |",
             "",
         ])
+        macro_reg = getattr(sc, "macro_regime", None) or getattr(sc, "macro_regime_name", None)
+        if macro_reg:
+            status_str = getattr(sc, "macro_alignment_status", None) or getattr(sc, "macro_alignment_type", "neutral")
+            lines.extend([
+                f"- **Macro Strategy Linkage:** `{status_str.upper()}` (Regime: {macro_reg})",
+            ])
+            note_str = getattr(sc, "macro_alignment_note", None) or getattr(sc, "macro_recommendation", None)
+            if note_str:
+                lines.append(f"- **Macro Guidance:** {note_str}")
+            lines.append("")
+
+    # -------------------------------------------------------------
+    # 💼 Portfolio Position & Sizing Context
+    # -------------------------------------------------------------
+    if output.portfolio_context:
+        pc = output.portfolio_context
+        held_icon = "🟢 ถือครองอยู่" if pc.is_held else "⚪ ยังไม่มีในพอร์ต"
+        lines.extend([
+            "### 💼 Portfolio Position & Sizing Context\n",
+            f"- **Holding Status:** {held_icon}" + (f" ({pc.units:,.0f} หุ้น)" if pc.is_held else ""),
+            f"- **Position Action Hint:** `{pc.position_action_hint}`",
+        ])
+        if pc.is_held:
+            cost_str = f"${pc.avg_cost:,.2f}" if output.market == "US" else (f"{pc.avg_cost:,.2f} THB" if pc.avg_cost is not None else "N/A")
+            pnl_str = f"{pc.unrealized_pnl_pct:+.2f}%" if pc.unrealized_pnl_pct is not None else "N/A"
+            lines.extend([
+                f"- **Average Cost:** {cost_str} | **Unrealized P&L:** {pnl_str}",
+                f"- **Current Portfolio Weight:** {pc.current_weight_pct:.2f}%",
+            ])
+        lines.append("")
+
+    # -------------------------------------------------------------
+    # 🔄 Thesis Evolution vs. Previous Analysis
+    # -------------------------------------------------------------
+    if output.thesis_delta:
+        td = output.thesis_delta
+        lines.extend([
+            f"### 🔄 Thesis Evolution vs. Previous Run ({td.previous_analysis_date})\n",
+            f"- **Price Change Since Previous Run:** {_fmt(td.price_change_pct)}%",
+            f"- **Conviction Score Delta:** {_fmt(td.conviction_score_delta)} / 10.0",
+            f"- **Action Stance Change:** `{td.previous_action_stance or 'N/A'}` ➔ `{td.current_action_stance or 'N/A'}`",
+            f"- **Target Price Delta:** {_fmt(td.target_price_change_pct)}%",
+            f"- **Piotroski F-Score Delta:** {_fmt(td.f_score_delta)}",
+        ])
+        if td.breached_falsifiers:
+            lines.append("- ⚠️ **Kill-Switches / Invalidation Triggers Breached:**")
+            for b in td.breached_falsifiers:
+                lines.append(f"  - 🔴 {b}")
+        lines.append("")
 
     if q.dcf_discrepancy_warning:
         lines.extend([
@@ -306,6 +373,15 @@ def format_equity_analysis_report(output: MicroQuantOutput) -> str:
             f"- PV of 5Y FCF: ${_fmt_large(rd.sum_pv_5y_fcf, '$')} | PV of Terminal Value: ${_fmt_large(rd.terminal_value_pv, '$')}",
             "",
         ])
+        if getattr(rd, "alternative_valuation_model", None):
+            lines.extend([
+                f"#### 🏛️ Sector Alternative Valuation (`{rd.alternative_valuation_model}`)\n",
+                f"- **Alternative Intrinsic Value Today:** ${_fmt(getattr(rd, 'alternative_intrinsic_value', None))}",
+                f"- **Alternative Target Price (12M):** **${_fmt(rd.alternative_target_price_12m)}** (Upside: {_fmt(rd.alternative_upside_12m_pct)}%)",
+            ])
+            if getattr(rd, "market_implied_roe_pct", None) is not None:
+                lines.append(f"- **Market Implied ROE:** {_fmt(rd.market_implied_roe_pct)}%")
+            lines.append("")
     elif q.dcf_result:
         d = q.dcf_result
         lines.extend([
@@ -367,13 +443,44 @@ def format_equity_analysis_report(output: MicroQuantOutput) -> str:
             lines.append(f"| `{tf.falsifier_id}` | {tf.metric_name}: {tf.condition} | {th_str} | {ref_str} | {tf.narrative_explanation} |")
         lines.append("")
 
+    # -------------------------------------------------------------
+    # 🏭 Sector-Specific Operating KPIs
+    # -------------------------------------------------------------
+    if q.sector_kpis:
+        kpis_list = (
+            q.sector_kpis.get("kpis", [])
+            if isinstance(q.sector_kpis, dict)
+            else (q.sector_kpis if isinstance(q.sector_kpis, list) else [])
+        )
+        if kpis_list:
+            lines.extend([
+                "### 🏭 Sector-Specific Operating KPIs\n",
+                "| KPI / Metric | Value | Reference / Benchmark |",
+                "|---|---|---|",
+            ])
+            for kpi in kpis_list:
+                name = kpi.get("name") if isinstance(kpi, dict) else getattr(kpi, "name", "")
+                val = kpi.get("value") if isinstance(kpi, dict) else getattr(kpi, "value", None)
+                unit = (kpi.get("unit") if isinstance(kpi, dict) else getattr(kpi, "unit", "")) or ""
+                bench = (
+                    kpi.get("benchmark")
+                    if isinstance(kpi, dict)
+                    else getattr(kpi, "benchmark", getattr(kpi, "benchmark_reference", None))
+                )
+                ref_val = f"{bench}" if bench is not None else "N/A"
+                val_str = f"{val}{unit}" if val is not None else "N/A"
+                lines.append(f"| **{name}** | {val_str} | {ref_val} |")
+            lines.append("")
+
     lines.extend([
         "### 📈 Growth Signals\n",
         f"- Revenue Growth YoY: {_fmt(q.revenue_growth_yoy_pct)}%",
         f"- Net Income Growth YoY: {_fmt(q.net_income_growth_yoy_pct)}%",
         "",
-        "### 🎁 Dividend Quality\n",
+        "### 🎁 Dividend Quality & Shareholder Yield\n",
         f"- Dividend Yield: {_fmt(q.dividend_yield_pct)}%",
+        f"- Net Buyback Yield: {_fmt(q.net_buyback_yield_pct)}%",
+        f"- **Net Shareholder Yield:** **{_fmt(q.net_shareholder_yield_pct)}%** (Dividend + Buyback - Dilution)",
         f"- Payout Ratio: {_fmt(q.payout_ratio_pct)}%",
         "> ข้อควรระวัง: หุ้นที่มี Payout Ratio สูงเกิน 100% อาจเป็น Value Trap หรือมีความเสี่ยงในการลดการจ่ายปันผล\n",
         "",

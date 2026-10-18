@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from 'react'
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { api } from '../api/client'
 import type { EquitySummaryDTO, EquityDetailDTO } from '../api/types'
@@ -53,6 +53,26 @@ export default function Equity() {
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [activeDispatchedJob, setActiveDispatchedJob] = useState<{ jobId: string; ticker: string } | null>(null)
   const [toastState, setToastState] = useState<{ message: string; actionLabel?: string; onAction?: () => void } | null>(null)
+
+  const prefetchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const handleStockHover = useCallback((stockTicker?: string) => {
+    if (!stockTicker) return
+    if (prefetchTimerRef.current) clearTimeout(prefetchTimerRef.current)
+    prefetchTimerRef.current = setTimeout(() => {
+      api.prefetchEquityTicker(stockTicker)
+    }, 120)
+  }, [])
+  const handleStockLeave = useCallback(() => {
+    if (prefetchTimerRef.current) {
+      clearTimeout(prefetchTimerRef.current)
+      prefetchTimerRef.current = null
+    }
+  }, [])
+
+  const selectedSummary = useMemo(
+    () => (ticker ? summaries.find((s) => normalizeTicker(s.ticker) === normalizeTicker(ticker)) : undefined),
+    [summaries, ticker]
+  )
 
   const refetchList = useCallback(async () => {
     try {
@@ -224,6 +244,7 @@ export default function Equity() {
         return
       }
 
+      setDetailData((prev) => (prev && normalizeTicker(prev.ticker) === normalizeTicker(ticker) ? prev : undefined))
       try {
         setDetailStatus('loading')
         if (isMockMode) {
@@ -357,6 +378,8 @@ export default function Equity() {
           <button
             type="button"
             onClick={() => navigate(`/equity/${report.ticker.toLowerCase()}`)}
+            onMouseEnter={() => handleStockHover(report.ticker)}
+            onMouseLeave={handleStockLeave}
             style={{ animationDelay: `${Math.min(index * STAGGER_STEP_MS, STAGGER_CAP_MS)}ms` }}
             className={`animate-card-in w-full text-left p-3 rounded-xl border transition-all flex items-center gap-3 group ${
               isSelected
@@ -480,6 +503,8 @@ export default function Equity() {
         <button
           type="button"
           onClick={() => navigate(`/equity/${(report?.ticker || item.symbol).toLowerCase()}`)}
+          onMouseEnter={() => handleStockHover(report?.ticker || item.symbol)}
+          onMouseLeave={handleStockLeave}
           style={{ animationDelay: `${Math.min(index * STAGGER_STEP_MS, STAGGER_CAP_MS)}ms` }}
           className={`w-12 h-14 rounded-xl border flex flex-col items-center justify-between py-1.5 px-0.5 transition-all relative group ${
             isSelected
@@ -801,11 +826,13 @@ export default function Equity() {
             <EquityDetail
               status={detailStatus}
               data={detailData}
+              summaryPreview={selectedSummary}
               errorMessage={detailError}
               isUpdating={Boolean(activeDispatchedJob && ticker && normalizeTicker(ticker) === normalizeTicker(activeDispatchedJob.ticker))}
               onOpenAnalysisModal={(t, m) => {
                 openAnalysisModal(t, m || (detailData?.market as 'US' | 'TH'))
               }}
+              onNotify={(msg) => setToastState({ message: msg })}
             />
           </div>
         )}

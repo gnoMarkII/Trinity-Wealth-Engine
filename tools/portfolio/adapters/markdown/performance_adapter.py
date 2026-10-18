@@ -9,6 +9,7 @@ from tools.archivist.maintenance_guard import assert_write_allowed
 from tools.portfolio.domain.validator import validate_portfolio_id
 from tools.portfolio.ports.performance_port import PerformanceRepositoryPort
 from .paths import get_performance_filepath, _PERFORMANCE_LOG_HEADER
+from filelock import Timeout
 from .repository_adapter import _get_portfolio_lock
 
 log = get_logger(__name__)
@@ -78,12 +79,11 @@ class MarkdownPerformanceAdapter(PerformanceRepositoryPort):
 
     def read_history(self, portfolio_id: str = "default", days: Optional[int] = None) -> List[Dict]:
         pid = validate_portfolio_id(portfolio_id)
-        lock = _get_portfolio_lock(pid)
-        with lock:
-            perf_path = get_performance_filepath(pid)
-            if not perf_path.exists() or perf_path.stat().st_size == 0:
-                return []
+        perf_path = get_performance_filepath(pid)
+        if not perf_path.exists() or perf_path.stat().st_size == 0:
+            return []
 
+        def _do_parse() -> List[Dict]:
             cutoff_date = (datetime.now() - timedelta(days=days)).strftime("%Y-%m-%d") if days else None
             rows: List[Dict] = []
             with perf_path.open("r", encoding="utf-8", newline="") as f:
@@ -104,3 +104,11 @@ class MarkdownPerformanceAdapter(PerformanceRepositoryPort):
                         item["Asset_Class_Values_THB"] = None
                     rows.append(item)
             return rows
+
+        try:
+            lock = _get_portfolio_lock(pid)
+            with lock:
+                return _do_parse()
+        except Timeout:
+            log.warning("Performance read_history timed out waiting for lock on %s; falling back to atomic read", pid)
+            return _do_parse()

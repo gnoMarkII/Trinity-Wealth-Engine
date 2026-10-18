@@ -203,6 +203,7 @@ class PriceYFinanceAdapter(MarketPricePort):
 
         def _process_one(h: Holding):
             if h.asset_type in ("Cash", "Fund", "Gold", "PVD") or h.symbol.upper().startswith("PVD_"):
+                h.fundamentals_updated_at = now
                 return
             if not force and h.fundamentals_updated_at is not None:
                 if now - h.fundamentals_updated_at < FUNDAMENTALS_TTL_SECONDS:

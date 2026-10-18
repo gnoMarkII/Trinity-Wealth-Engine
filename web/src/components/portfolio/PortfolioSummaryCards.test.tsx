@@ -33,7 +33,7 @@ describe('PortfolioSummaryCards', () => {
     const onRefreshMock = vi.fn()
     render(<PortfolioSummaryCards summary={summary} lastUpdated={null} onRefreshPrices={onRefreshMock} />)
 
-    const btn = screen.getByRole('button', { name: /อัปเดตราคาตลาด \(Refresh\)/i })
+    const btn = screen.getByRole('button', { name: /อัปเดตราคาตลาด & Snapshot วันนี้/i })
     fireEvent.click(btn)
     expect(onRefreshMock).toHaveBeenCalledTimes(1)
   })
@@ -47,7 +47,7 @@ describe('PortfolioSummaryCards', () => {
     }
     render(<PortfolioSummaryCards summary={summary} lastUpdated={null} refreshingPrices={true} />)
 
-    const btn = screen.getByRole('button', { name: /กำลังอัปเดตราคา\.\.\./i })
+    const btn = screen.getByRole('button', { name: /กำลังอัปเดตราคา & Snapshot\.\.\./i })
     expect(btn).toBeDisabled()
   })
 

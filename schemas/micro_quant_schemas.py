@@ -120,6 +120,11 @@ class ReverseDCFResult(BaseModel):
     analyst_count: Optional[int] = None
     base_revenue: Optional[float] = None
     base_revenue_period_type: Optional[Literal["annual", "quarterly", "ttm", "unknown"]] = None
+    alternative_valuation_model: Optional[Literal["justified_pbv", "ddm_yield_spread"]] = None
+    alternative_intrinsic_value: Optional[float] = None
+    alternative_target_price_12m: Optional[float] = None
+    alternative_upside_12m_pct: Optional[float] = None
+    market_implied_roe_pct: Optional[float] = None
 
 
 class SmartMoneyFlags(BaseModel):
@@ -291,6 +296,9 @@ class DeterministicScorecard(BaseModel):
     methodology_version: str = "2.0.0"
     reweighting_metadata: Optional[dict[str, Any]] = None
     data_quality_flags: list[str] = Field(default_factory=list)
+    macro_regime: Optional[str] = None
+    macro_alignment_status: Literal["tailwind", "neutral", "headwind", "unavailable"] = "unavailable"
+    macro_alignment_note: Optional[str] = None
 
 
 class QuantSignalsFailureResult(BaseModel):
@@ -410,6 +418,9 @@ class QuantSignals(BaseModel):
     historical_gaap_operating_margin: Optional[MarginMetricItem] = None
     provider_ebit_margin: Optional[MarginMetricItem] = None
     valuation_margin_source_used: str = "Standardized TTM GAAP Operating Margin"
+    sector_kpis: Optional[dict[str, Any]] = None
+    net_buyback_yield_pct: Optional[float] = None
+    net_shareholder_yield_pct: Optional[float] = None
 
 
 class EvidenceItemMetadata(BaseModel):
@@ -554,6 +565,35 @@ class EquityNarrativeOutput(BaseModel):
     base_case_summary: str
 
 
+class ThesisDeltaSummary(BaseModel):
+    previous_analysis_date: str
+    price_change_pct: Optional[float] = None
+    conviction_score_delta: Optional[float] = None
+    previous_action_stance: Optional[str] = None
+    current_action_stance: Optional[str] = None
+    target_price_change_pct: Optional[float] = None
+    f_score_delta: Optional[int] = None
+    breached_falsifiers: list[str] = Field(default_factory=list)
+
+
+class PortfolioHoldingContext(BaseModel):
+    is_held: bool = False
+    portfolio_id: str = "default"
+    units: float = 0.0
+    avg_cost: Optional[float] = None
+    unrealized_pnl_pct: Optional[float] = None
+    current_weight_pct: Optional[float] = None
+    bucket_id: Optional[str] = None
+    position_action_hint: Literal[
+        "INITIATE_NEW",
+        "ADD_TO_WINNER",
+        "AVERAGING_DOWN_CAUTION",
+        "HOLD_FULL_SIZED",
+        "TRIM_OVERWEIGHT",
+        "WAIT_DO_NOT_ENTER",
+    ] = "WAIT_DO_NOT_ENTER"
+
+
 class MicroQuantOutput(BaseModel):
     """ผลลัพธ์สุดท้ายของ equity_intel pipeline — numeric fields มาจาก Python เท่านั้น,
     text fields มาจาก LLM (EquityNarrativeOutput) เท่านั้น ไม่มีการปนกัน"""
@@ -579,4 +619,6 @@ class MicroQuantOutput(BaseModel):
     deterministic_scorecard: Optional[DeterministicScorecard] = None
     thesis_falsifiers: list[ThesisFalsifier] = Field(default_factory=list)
     evidence_snapshot: Optional[AnalysisEvidenceSnapshot] = None
+    thesis_delta: Optional[ThesisDeltaSummary] = None
+    portfolio_context: Optional[PortfolioHoldingContext] = None
 

@@ -1,7 +1,7 @@
 import pytest
 from unittest.mock import patch, MagicMock
 from tools.market.consensus import ingest_stock_consensus
-from tools.market.news import ingest_stock_news
+from tools.market.news import ingest_stock_news, save_company_news_to_vault
 from tools.market.core import _normalize_yf_ticker, _currency_for, _yf_info, _yf_financials, _yf_news, _fmt_number, _fmt_large, _fmt_fin
 
 class TestMarketCoreAddons:
@@ -70,15 +70,56 @@ class TestConsensusAddons:
         assert "## 2. คำแนะนำนักวิเคราะห์ (Recommendations)" not in res
 
 class TestNewsAddons:
+    @patch("tools.market.news._rss_news_candidates")
     @patch("tools.market.news._yf_news")
-    def test_news_exception(self, mock_news):
+    def test_news_exception(self, mock_news, mock_rss):
         mock_news.side_effect = Exception("news error")
-        
+        mock_rss.return_value = MagicMock(items=[])
+
         res = ingest_stock_news.func("AAPL", "US")
         assert "ERROR: ไม่สามารถดึงข่าวของ AAPL (US) ได้:" in res
+        assert "news error" in res
 
+    @patch("tools.market.news._rss_news_candidates")
     @patch("tools.market.news._yf_news")
-    def test_news_empty(self, mock_news):
+    def test_news_empty(self, mock_news, mock_rss):
         mock_news.return_value = []
+        mock_rss.return_value = MagicMock(items=[])
         res = ingest_stock_news.func("AAPL", "US")
         assert "ไม่พบข่าวสำหรับ AAPL (US)" in res
+
+    @patch("tools.market.news._rss_news_candidates")
+    @patch("tools.market.news._yf_news")
+    def test_news_rss_supplement_when_yf_empty(self, mock_news, mock_rss):
+        mock_news.return_value = []
+        fake_item = MagicMock(
+            headline="Apple introduces groundbreaking AI capabilities",
+            publisher="TechCrunch",
+            article_url="https://techcrunch.com/apple-ai",
+            published_at="Sat, 17 Oct 2026 12:00:00 +0000",
+        )
+        mock_rss.return_value = MagicMock(items=[fake_item])
+
+        res = ingest_stock_news.func("AAPL", "US")
+        assert "schema_version: 2" in res
+        assert "AAPL Latest News" in res
+        assert "Apple introduces groundbreaking AI capabilities" in res
+        assert "TechCrunch" in res
+
+    @patch("tools.archivist.writer.write_raw_markdown")
+    def test_save_company_news_to_vault_frontmatter_fallback(self, mock_tool):
+        mock_tool.invoke.return_value = "saved"
+        sample_md = """---
+title: NVDA Latest News 2026-10-18
+ticker: NVDA
+date: 2026-10-18
+---
+# Content
+"""
+        res = save_company_news_to_vault(sample_md)
+        assert res == "saved"
+        mock_tool.invoke.assert_called_once_with({
+            "content": sample_md,
+            "folder_path": "30_Knowledge_Base/News",
+            "filename": "2026-10-18 NVDA Latest News 2026-10-18",
+        })

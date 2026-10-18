@@ -1,15 +1,18 @@
 import { useState, useMemo } from 'react'
-import type { AllocationTargetDTO, BucketAllocationSummaryDTO, ActualPortfolioStateDTO, ActualHoldingDTO } from '../../api/types'
+import type { AllocationTargetDTO, BucketAllocationSummaryDTO, ActualPortfolioStateDTO, ActualHoldingDTO, PerformanceSnapshotDTO } from '../../api/types'
 import { formatTHB } from '../../utils/formatters'
 import BucketTargetModal from './Modals/BucketTargetModal'
 import AiBucketAssignModal from './Modals/AiBucketAssignModal'
 import { TradeIcon } from './icons/PortfolioIcons'
+import PortfolioPerformanceCard from './PortfolioPerformanceCard'
+import { PortfolioOverviewSkeleton } from '../ui/FlowSkeleton'
 
 interface Props {
   portfolioId: string
   targets: AllocationTargetDTO[]
   summaries: BucketAllocationSummaryDTO[]
   warning: string | null
+  loading?: boolean
   holdings?: ActualHoldingDTO[]
   allocationPolicy?: ActualPortfolioStateDTO['allocation_policy']
   allocationPlanOrigin?: ActualPortfolioStateDTO['allocation_plan_origin']
@@ -17,6 +20,10 @@ interface Props {
   onSuccess?: (state: ActualPortfolioStateDTO) => void
   onOpenTradeModal?: () => void
   onNavigateToPrinciples?: () => void
+  performanceRows?: PerformanceSnapshotDTO[]
+  daysRange?: number | undefined
+  onChangeDaysRange?: (days: number | undefined) => void
+  onSnapshotTriggered?: () => void
 }
 
 const DEFAULT_COLORS = [
@@ -40,6 +47,7 @@ export default function PortfolioOverviewTab({
   targets,
   summaries,
   warning,
+  loading = false,
   holdings,
   allocationPolicy,
   allocationPlanOrigin,
@@ -47,6 +55,10 @@ export default function PortfolioOverviewTab({
   onSuccess,
   onOpenTradeModal,
   onNavigateToPrinciples,
+  performanceRows,
+  daysRange,
+  onChangeDaysRange,
+  onSnapshotTriggered,
 }: Props) {
   const [hoveredBucket, setHoveredBucket] = useState<string | null>(null)
   const [targetModalOpen, setTargetModalOpen] = useState(false)
@@ -124,6 +136,9 @@ export default function PortfolioOverviewTab({
       }))
   }, [summaries])
 
+  if (loading && summaries.length === 0) {
+    return <PortfolioOverviewSkeleton />
+  }
 
   return (
     <div className="space-y-6">
@@ -567,6 +582,14 @@ export default function PortfolioOverviewTab({
         </div>
       </div>
 
+      {/* Portfolio Performance & NAV Growth Card (Streamlined Overview Integration) */}
+      <PortfolioPerformanceCard
+        performanceRows={performanceRows ?? []}
+        daysRange={daysRange}
+        onChangeDaysRange={onChangeDaysRange ?? (() => {})}
+        portfolioId={portfolioId}
+        onSnapshotTriggered={onSnapshotTriggered}
+      />
 
       {targetModalOpen && onSuccess && (
         <BucketTargetModal

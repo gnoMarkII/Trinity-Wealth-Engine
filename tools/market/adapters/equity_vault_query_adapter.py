@@ -81,16 +81,22 @@ class EquityVaultQueryAdapter:
             return None
 
     @staticmethod
-    def _date_key(path: Path) -> tuple[str, str]:
-        try:
-            with path.open("r", encoding="utf-8") as handle:
-                payload = json.load(handle)
-            evaluated_at = payload.get("quant_signals", {}).get("evaluated_at", "")
-            if evaluated_at:
-                return str(evaluated_at), path.name
-        except Exception:
-            pass
-        return path.stem.split(" ")[-1], path.name
+    def _date_key(path: Path) -> tuple[str, bool, str]:
+        m = re.search(r"20\d{2}-\d{2}-\d{2}", path.stem)
+        date_str = m.group(0) if m else ""
+        if not date_str:
+            try:
+                with path.open("r", encoding="utf-8") as handle:
+                    payload = json.load(handle)
+                evaluated_at = payload.get("quant_signals", {}).get("evaluated_at", "")
+                if evaluated_at:
+                    date_str = str(evaluated_at)
+            except Exception:
+                pass
+        if not date_str:
+            date_str = path.stem.split(" ")[-1]
+        is_clean = not bool(re.search(r"_[a-f0-9]{6}\.json$", path.name))
+        return date_str, is_clean, path.name
 
     def _sidecar_files(self, ticker: Optional[str] = None) -> list[Path]:
         all_files: list[Path] = []
@@ -146,8 +152,9 @@ class EquityVaultQueryAdapter:
     ) -> Optional[tuple[MicroQuantOutput, Path]]:
         if not files:
             return None
+        sorted_files = sorted(files, key=self._date_key, reverse=True)
         if strict:
-            latest_file = sorted(files, key=self._date_key, reverse=True)[0]
+            latest_file = sorted_files[0]
             try:
                 with latest_file.open("r", encoding="utf-8") as handle:
                     model = self._validate_model(json.load(handle), expected_ticker)
@@ -157,26 +164,16 @@ class EquityVaultQueryAdapter:
                 raise EquityDataCorruptError(str(latest_file))
             return model, latest_file
 
-        valid: list[tuple[MicroQuantOutput, Path]] = []
-        for path in files:
+        for path in sorted_files:
             try:
                 with path.open("r", encoding="utf-8") as handle:
                     model = self._validate_model(json.load(handle), expected_ticker)
                 if model is not None:
-                    valid.append((model, path))
+                    return model, path
             except Exception:
                 log.warning("Skipping malformed Equity sidecar: %s", path)
-        if not valid:
-            return None
-        valid.sort(
-            key=lambda item: (
-                item[0].quant_signals.evaluated_at,
-                not bool(re.search(r"_[a-f0-9]{6}\.json$", item[1].name)),
-                item[1].name,
-            ),
-            reverse=True,
-        )
-        return valid[0]
+
+        return None
 
     @staticmethod
     def _model_detail(model: MicroQuantOutput, sidecar: Path, vault_path: Path) -> dict[str, Any]:
@@ -214,6 +211,8 @@ class EquityVaultQueryAdapter:
             "narrative_analysis": model.narrative_analysis,
             "base_case_summary": model.base_case_summary,
             "generated_by": model.generated_by,
+            "portfolio_context": model.portfolio_context.model_dump() if getattr(model, "portfolio_context", None) else None,
+            "thesis_delta": model.thesis_delta.model_dump() if getattr(model, "thesis_delta", None) else None,
         }
 
     def list_latest(self) -> list[dict[str, Any]]:
@@ -246,25 +245,69 @@ class EquityVaultQueryAdapter:
 
     def get_news(self, ticker: str) -> Optional[dict[str, Any]]:
         clean = self._validate_ticker(ticker)
+        ticker_regex = re.compile(rf"(?<![A-Za-z0-9]){re.escape(clean)}(?![A-Za-z0-9])", re.IGNORECASE)
+
+        # 1. Search Vault V2: 30_Knowledge_Base/News/**
+        v2_news_dir = self.vault_path / "30_Knowledge_Base" / "News"
+        v2_json_files: list[Path] = []
+        v2_md_files: list[Path] = []
+        if v2_news_dir.is_dir():
+            for f in v2_news_dir.rglob("*.json"):
+                if f.is_file() and "news" in f.stem.lower() and ticker_regex.search(f.name):
+                    v2_json_files.append(f)
+            for f in v2_news_dir.rglob("*.md"):
+                if f.is_file() and "news" in f.stem.lower() and ticker_regex.search(f.name):
+                    v2_md_files.append(f)
+
+        # 2. Search Vault V1: 30_Knowledge_Base/Stocks/{clean}/*News*
         stock_dir = self.vault_path / "30_Knowledge_Base" / "Stocks" / clean
-        json_files = list(stock_dir.glob(f"{clean}*News*.json"))
-        md_files = list(stock_dir.glob(f"{clean}*News*.md"))
-        if not json_files and not md_files:
+        v1_json_files: list[Path] = []
+        v1_md_files: list[Path] = []
+        if stock_dir.is_dir():
+            v1_json_files = [f for f in stock_dir.glob("*News*.json") if ticker_regex.search(f.name)]
+            v1_md_files = [f for f in stock_dir.glob("*News*.md") if ticker_regex.search(f.name)]
+
+        all_json_files = v2_json_files + v1_json_files
+        all_md_files = v2_md_files + v1_md_files
+
+        if not all_json_files and not all_md_files:
             return None
 
+        def _file_sort_key(p: Path) -> tuple[str, float]:
+            m = re.search(r"20\d{2}-\d{2}-\d{2}", p.name)
+            date_part = m.group(0) if m else "1970-01-01"
+            return (date_part, p.stat().st_mtime)
+
         raw_data: Optional[dict[str, Any]] = None
-        if json_files:
-            latest_json = max(json_files, key=lambda path: path.stat().st_mtime)
+        fallback_data: Optional[dict[str, Any]] = None
+
+        for json_file in sorted(all_json_files, key=_file_sort_key, reverse=True):
             try:
-                raw_data = json.loads(latest_json.read_text(encoding="utf-8"))
+                candidate = json.loads(json_file.read_text(encoding="utf-8"))
+                if isinstance(candidate, dict):
+                    if candidate.get("items"):
+                        raw_data = candidate
+                        break
+                    if fallback_data is None:
+                        fallback_data = candidate
             except Exception as exc:
-                log.warning("Failed to read Equity news JSON %s: %s", latest_json, exc)
-        if not raw_data and md_files:
-            latest_md = max(md_files, key=lambda path: path.stat().st_mtime)
-            try:
-                raw_data = parse_company_news_items(latest_md.read_text(encoding="utf-8"))
-            except Exception as exc:
-                log.warning("Failed to parse Equity news Markdown %s: %s", latest_md, exc)
+                log.warning("Failed to read Equity news JSON %s: %s", json_file, exc)
+
+        if not raw_data and all_md_files:
+            for md_file in sorted(all_md_files, key=_file_sort_key, reverse=True):
+                try:
+                    candidate = parse_company_news_items(md_file.read_text(encoding="utf-8"))
+                    if isinstance(candidate, dict):
+                        if candidate.get("items"):
+                            raw_data = candidate
+                            break
+                        if fallback_data is None:
+                            fallback_data = candidate
+                except Exception as exc:
+                    log.warning("Failed to parse Equity news Markdown %s: %s", md_file, exc)
+
+        if raw_data is None:
+            raw_data = fallback_data
         if not isinstance(raw_data, dict):
             return None
 
@@ -297,6 +340,7 @@ class EquityVaultQueryAdapter:
                 "freshness_reason": freshness_reason,
                 "is_stale": stale,
                 "sources_count": item.get("sources_count", 1),
+                "summary": item.get("summary", ""),
             })
         return {
             "ticker": raw_data.get("ticker", clean),
@@ -345,6 +389,15 @@ class EquityVaultQueryAdapter:
                 relative = str(path.relative_to(self.vault_path)).replace("\\", "/")
                 if relative in seen or path.name.startswith(".") or path.name == "index.md":
                     continue
+                if cutoff is not None and folder_name in ("News", "YouTube_Summaries"):
+                    m_date = re.search(r"20\d{2}-\d{2}-\d{2}", path.name)
+                    if m_date:
+                        try:
+                            file_dt = datetime.strptime(m_date.group(0), "%Y-%m-%d").replace(tzinfo=timezone.utc)
+                            if file_dt < cutoff:
+                                continue
+                        except ValueError:
+                            pass
                 try:
                     content = path.read_text(encoding="utf-8", errors="ignore")
                     matched_by = None

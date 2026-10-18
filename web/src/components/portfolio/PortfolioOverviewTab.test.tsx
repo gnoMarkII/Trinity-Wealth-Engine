@@ -215,5 +215,20 @@ describe('PortfolioOverviewTab', () => {
     fireEvent.click(aiBtn)
     expect(screen.getByText('จัดกลุ่มสินทรัพย์อัตโนมัติด้วย AI')).toBeInTheDocument()
   })
+
+  it('renders skeleton shimmer when loading is true and summaries are empty', () => {
+    const { container } = render(
+      <PortfolioOverviewTab
+        portfolioId="default"
+        targets={[]}
+        summaries={[]}
+        warning={null}
+        loading={true}
+        onSelectBucket={vi.fn()}
+      />
+    )
+    expect(container.querySelectorAll('.animate-pulse').length).toBeGreaterThanOrEqual(1)
+    expect(screen.queryByText(/ยังไม่มีข้อมูลสัดส่วนพอร์ต/i)).not.toBeInTheDocument()
+  })
 })
 

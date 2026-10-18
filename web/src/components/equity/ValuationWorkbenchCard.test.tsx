@@ -94,4 +94,48 @@ describe('ValuationWorkbenchCard', () => {
     const { container } = render(<ValuationWorkbenchCard />)
     expect(container.firstChild).toBeNull()
   })
+
+  it('renders sector_name and health score in Sector Operating KPIs', () => {
+    render(
+      <ValuationWorkbenchCard
+        reverseDcf={mockReverseDcf}
+        sectorKpis={{
+          status: 'available',
+          sector_name: 'Communication Services',
+          sector_health_score: 90,
+          kpis: [
+            {
+              name: 'Operating (EBIT) Margin',
+              value: 29.9,
+              unit: '%',
+              benchmark: '>= 15% healthy',
+            },
+          ],
+        }}
+      />
+    )
+
+    expect(screen.getByText(/Sector Operating KPIs \(Communication Services\)/i)).toBeInTheDocument()
+    expect(screen.getByText(/Health Score: 90\/100/i)).toBeInTheDocument()
+    expect(screen.getByText('Operating (EBIT) Margin')).toBeInTheDocument()
+    expect(screen.getByText('29.9%')).toBeInTheDocument()
+  })
+
+  it('renders alternative valuation model and intrinsic value', () => {
+    render(
+      <ValuationWorkbenchCard
+        reverseDcf={{
+          ...mockReverseDcf,
+          alternative_valuation_model: 'justified_pbv',
+          alternative_intrinsic_value: 45.5,
+          alternative_upside_12m_pct: 12.3,
+        }}
+      />
+    )
+
+    expect(screen.getByText(/Justified P\/BV \(Financials\):/i)).toBeInTheDocument()
+    expect(screen.getByText(/\$45.50/i)).toBeInTheDocument()
+    expect(screen.getByText(/\(\+12.3%\)/i)).toBeInTheDocument()
+  })
 })
+

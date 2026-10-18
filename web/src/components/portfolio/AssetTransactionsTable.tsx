@@ -496,7 +496,7 @@ export default function AssetTransactionsTable({
 
                 return (
                   <tr
-                    key={tx.transaction_id || `${tx.timestamp}-${idx}`}
+                    key={`${tx.transaction_id || tx.timestamp}-${idx}`}
                     className={`hover:bg-sky-50/40 transition-colors group ${isVoid ? 'opacity-60 bg-zinc-50/40' : ''}`}
                   >
                     <td className="py-3.5 px-4 text-center text-zinc-400 font-mono text-xs">
