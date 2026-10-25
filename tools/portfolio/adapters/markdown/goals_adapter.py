@@ -1,4 +1,5 @@
 from pathlib import Path
+import re
 from typing import Optional
 import frontmatter
 from filelock import FileLock
@@ -49,10 +50,16 @@ def _goal_item_to_md(goal: GoalItem, vault_root: Path) -> str:
     ]
     if goal.deadline is not None:
         lines.append(f'deadline: "{goal.deadline}"')
-    if goal.portfolio_id:
-        lines.append(f'portfolio_id: "{goal.portfolio_id}"')
+    if goal.years_from_now is not None:
+        lines.append(f"years_from_now: {goal.years_from_now}")
     if goal.bucket_id:
         lines.append(f'bucket_id: "{goal.bucket_id}"')
+    if getattr(goal, "priority_tier", None):
+        lines.append(f'priority_tier: "{goal.priority_tier}"')
+    if getattr(goal, "flexibility", None):
+        lines.append(f'flexibility: "{goal.flexibility}"')
+    if getattr(goal, "monthly_savings_thb", None) is not None:
+        lines.append(f"monthly_savings_thb: {goal.monthly_savings_thb}")
     if goal.notes is not None:
         notes_escaped = goal.notes.replace('"', '\\"')
         lines.append(f'notes: "{notes_escaped}"')
@@ -126,7 +133,7 @@ class MarkdownGoalsAdapter(GoalsRepositoryPort):
         live: set[str] = set()
 
         for goal in state.goals:
-            safe = goal.name.replace("/", "_").replace(" ", "_")
+            safe = re.sub(r'[\\/*?:"<>|]', '_', goal.name).strip().replace(" ", "_")
             _atomic_write_to(GOALS_ITEMS_DIR / f"{safe}.md", _goal_item_to_md(goal, get_vault_path()))
             live.add(safe)
 

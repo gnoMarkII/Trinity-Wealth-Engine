@@ -1,6 +1,6 @@
-﻿"""PortfolioWatchlistService — Watchlist CRUD operations."""
+"""PortfolioWatchlistService — Watchlist CRUD operations."""
 import json
-from typing import Optional
+from typing import Optional, List
 
 from tools.portfolio.domain.models import WatchlistState, WatchlistItem, _now_iso
 from tools.portfolio.domain.validator import validate_portfolio_id
@@ -14,7 +14,18 @@ class PortfolioWatchlistService:
         self.watchlist_repo = watchlist_repo
 
     def add_to_watchlist(
-        self, symbol: str, asset_type: str, target_price: Optional[float] = None, notes: str = "", portfolio_id: str = "default"
+        self,
+        symbol: str,
+        asset_type: str,
+        target_price: Optional[float] = None,
+        notes: str = "",
+        portfolio_id: str = "default",
+        suggested_bucket_id: Optional[str] = None,
+        applied_bucket_name: Optional[str] = None,
+        target_price_basis: Optional[str] = None,
+        target_currency: Optional[str] = None,
+        evaluation_ref: Optional[str] = None,
+        source_refs: Optional[list] = None,
     ) -> str:
         from filelock import Timeout
         from tools.tool_errors import LOCK_TIMEOUT
@@ -35,6 +46,20 @@ class PortfolioWatchlistService:
                     item.target_price = target_price
                 if notes:
                     item.notes = notes
+                if suggested_bucket_id:
+                    item.suggested_bucket_id = suggested_bucket_id
+                if applied_bucket_name:
+                    item.applied_bucket_name = applied_bucket_name
+                if target_price_basis:
+                    item.target_price_basis = target_price_basis
+                if target_currency:
+                    item.target_currency = target_currency
+                if evaluation_ref:
+                    item.evaluation_ref = evaluation_ref
+                if source_refs:
+                    merged_refs = set(getattr(item, "source_refs", []) or [])
+                    merged_refs.update(source_refs)
+                    item.source_refs = list(merged_refs)
             else:
                 state.items.append(
                     WatchlistItem(
@@ -43,6 +68,12 @@ class PortfolioWatchlistService:
                         target_price=target_price,
                         notes=notes or None,
                         added_date=_now_iso()[:10],
+                        suggested_bucket_id=suggested_bucket_id,
+                        applied_bucket_name=applied_bucket_name,
+                        target_price_basis=target_price_basis,
+                        target_currency=target_currency,
+                        evaluation_ref=evaluation_ref,
+                        source_refs=source_refs or [],
                     )
                 )
             self.watchlist_repo.save_watchlist(state, pid)
@@ -93,7 +124,18 @@ class PortfolioWatchlistService:
         return self.watchlist_repo.load_watchlist(portfolio_id)
 
     def structured_upsert_watchlist_item(
-        self, symbol: str, asset_type: str, target_price: Optional[float] = None, notes: str = "", portfolio_id: str = "default"
+        self,
+        symbol: str,
+        asset_type: str,
+        target_price: Optional[float] = None,
+        notes: str = "",
+        portfolio_id: str = "default",
+        suggested_bucket_id: Optional[str] = None,
+        applied_bucket_name: Optional[str] = None,
+        target_price_basis: Optional[str] = None,
+        target_currency: Optional[str] = None,
+        evaluation_ref: Optional[str] = None,
+        source_refs: Optional[List[str]] = None,
     ) -> WatchlistState:
         clean_sym = symbol.strip().upper()
         if not clean_sym:
@@ -104,10 +146,17 @@ class PortfolioWatchlistService:
         item = next((it for it in state.items if it.symbol == clean_sym), None)
         if item:
             item.asset_type = asset_type
-            if target_price is not None:
-                item.target_price = target_price
-            if notes:
-                item.notes = notes
+            item.target_price = target_price
+            item.notes = notes or None
+            item.suggested_bucket_id = suggested_bucket_id or None
+            item.applied_bucket_name = applied_bucket_name or None
+            item.target_price_basis = target_price_basis or None
+            item.target_currency = target_currency or None
+            item.evaluation_ref = evaluation_ref or None
+            if source_refs:
+                merged_refs = set(getattr(item, "source_refs", []) or [])
+                merged_refs.update(source_refs)
+                item.source_refs = list(merged_refs)
         else:
             state.items.append(
                 WatchlistItem(
@@ -116,6 +165,12 @@ class PortfolioWatchlistService:
                     target_price=target_price,
                     notes=notes or None,
                     added_date=_now_iso()[:10],
+                    suggested_bucket_id=suggested_bucket_id,
+                    applied_bucket_name=applied_bucket_name,
+                    target_price_basis=target_price_basis,
+                    target_currency=target_currency,
+                    evaluation_ref=evaluation_ref,
+                    source_refs=source_refs or [],
                 )
             )
         self.watchlist_repo.save_watchlist(state, portfolio_id)

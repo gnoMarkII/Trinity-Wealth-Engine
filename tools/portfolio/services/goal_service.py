@@ -65,7 +65,29 @@ class PortfolioGoalService:
         portfolio_id: str = "default",
         bucket_id: Optional[str] = None,
         new_name: Optional[str] = None,
+        priority_tier: Literal["needs", "wants", "wishes"] = "wants",
+        flexibility: Literal["none", "timeline_flexible", "amount_flexible", "fully_flexible"] = "none",
+        monthly_savings_thb: float = 0.0,
     ) -> List[Dict]:
+        if target_amount_thb <= 0:
+            raise ValueError("target_amount_thb ต้องมากกว่า 0")
+
+        if years_from_now is not None:
+            if years_from_now <= 0:
+                raise ValueError("years_from_now ต้องมากกว่า 0")
+            if deadline is not None:
+                raise ValueError("ห้ามระบุทั้ง deadline และ years_from_now พร้อมกัน")
+            from datetime import datetime
+            target_year = datetime.now().year + years_from_now
+            deadline = f"{target_year}-12-31"
+
+        if deadline is not None:
+            from datetime import datetime
+            try:
+                datetime.strptime(deadline, "%Y-%m-%d")
+            except ValueError:
+                raise ValueError(f"deadline ต้องอยู่ในรูปแบบ 'YYYY-MM-DD' (got '{deadline}')")
+
         state = self.goals_repo.load_goals(portfolio_id=None)
         clean_name = name.strip()
         existing = next(
@@ -90,6 +112,9 @@ class PortfolioGoalService:
             existing.years_from_now = years_from_now
             existing.notes = notes
             existing.bucket_id = bucket_id
+            existing.priority_tier = priority_tier
+            existing.flexibility = flexibility
+            existing.monthly_savings_thb = monthly_savings_thb
         else:
             final_name = new_name.strip() if new_name and new_name.strip() else clean_name
             duplicate = next(
@@ -109,10 +134,14 @@ class PortfolioGoalService:
                     created_date=_now_iso()[:10],
                     portfolio_id=portfolio_id,
                     bucket_id=bucket_id,
+                    priority_tier=priority_tier,
+                    flexibility=flexibility,
+                    monthly_savings_thb=monthly_savings_thb,
                 )
             )
         self.goals_repo.save_goals(state)
         return self.get_structured_goals(portfolio_id=None)
+
 
     def structured_remove_goal(self, name: str, portfolio_id: Optional[str] = None) -> List[Dict]:
         clean_name = name.strip()

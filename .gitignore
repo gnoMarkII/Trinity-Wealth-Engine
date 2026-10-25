@@ -62,6 +62,7 @@ gen_code_review.py
 scratch/
 docs/
 temp/
+cookies.txt
 
 # =========================================
 # 7. OS & IDE

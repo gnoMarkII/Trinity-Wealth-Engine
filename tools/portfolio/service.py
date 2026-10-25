@@ -494,10 +494,31 @@ class PortfolioService:
         return self._watchlist_service.get_structured_watchlist(portfolio_id=portfolio_id)
 
     def structured_upsert_watchlist_item(
-        self, symbol: str, asset_type: str, target_price: Optional[float] = None, notes: str = "", portfolio_id: str = "default"
+        self,
+        symbol: str,
+        asset_type: str,
+        target_price: Optional[float] = None,
+        notes: str = "",
+        portfolio_id: str = "default",
+        suggested_bucket_id: Optional[str] = None,
+        evaluation_ref: Optional[str] = None,
+        source_refs: Optional[List[str]] = None,
+        target_price_basis: Optional[str] = None,
+        applied_bucket_name: Optional[str] = None,
+        target_currency: Optional[str] = None,
     ) -> WatchlistState:
         return self._watchlist_service.structured_upsert_watchlist_item(
-            symbol=symbol, asset_type=asset_type, target_price=target_price, notes=notes, portfolio_id=portfolio_id
+            symbol=symbol,
+            asset_type=asset_type,
+            target_price=target_price,
+            notes=notes,
+            portfolio_id=portfolio_id,
+            suggested_bucket_id=suggested_bucket_id,
+            evaluation_ref=evaluation_ref,
+            source_refs=source_refs,
+            target_price_basis=target_price_basis,
+            applied_bucket_name=applied_bucket_name,
+            target_currency=target_currency,
         )
 
     def structured_remove_watchlist_item(self, symbol: str, portfolio_id: str = "default") -> WatchlistState:
@@ -549,6 +570,9 @@ class PortfolioService:
         portfolio_id: str = "default",
         bucket_id: Optional[str] = None,
         new_name: Optional[str] = None,
+        priority_tier: Literal["needs", "wants", "wishes"] = "wants",
+        flexibility: Literal["none", "timeline_flexible", "amount_flexible", "fully_flexible"] = "none",
+        monthly_savings_thb: float = 0.0,
     ) -> List[Dict]:
         return self._goal_service.structured_upsert_goal(
             name=name,
@@ -560,7 +584,11 @@ class PortfolioService:
             portfolio_id=portfolio_id,
             bucket_id=bucket_id,
             new_name=new_name,
+            priority_tier=priority_tier,
+            flexibility=flexibility,
+            monthly_savings_thb=monthly_savings_thb,
         )
+
 
     def structured_remove_goal(self, name: str, portfolio_id: Optional[str] = None) -> List[Dict]:
         return self._goal_service.structured_remove_goal(name=name, portfolio_id=portfolio_id)

@@ -18,41 +18,93 @@ from schemas.micro_quant_schemas import (
     TacticalSetup,
     ThesisFalsifier,
 )
+from core.portfolio_advisory.sector_mapping import (
+    normalize_to_canonical_sector,
+    map_etf_to_canonical_sector,
+    is_sector_match,
+)
 
 
 def load_latest_macro_regime_context(vault_path: Optional[Path] = None) -> Optional[dict[str, Any]]:
     """Loads the latest Macro Strategy Direction output from the Vault (fail-open)."""
     try:
         base = vault_path or Path(os.getenv("OBSIDIAN_VAULT_PATH", "memories"))
-        candidate_dirs = [
-            base / "30_Knowledge_Base" / "Macro_Strategy",
-            base / "30_Knowledge_Base" / "Macroeconomics" / "Strategies",
-            base / "10_Macro_Analysis",
-        ]
-        found_files: list[Path] = []
-        for d in candidate_dirs:
-            if d.exists():
-                found_files.extend(d.rglob("Macro_Strategy_Direction_*.json"))
-                latest_f = d / "latest.json"
-                if latest_f.exists():
-                    found_files.append(latest_f)
+        data: Optional[dict[str, Any]] = None
 
-        if not found_files:
-            return None
+        # 1. Try reading through StrategyVaultAdapter.latest()
+        try:
+            from tools.macro.adapters.strategy_vault_adapter import StrategyVaultAdapter
+            adapter = StrategyVaultAdapter(base)
+            report = adapter.latest()
+            if report:
+                data = report if isinstance(report, dict) else report.model_dump()
+        except Exception:
+            data = None
 
-        files = sorted(found_files, key=lambda p: p.stat().st_mtime, reverse=True)
-        data = json.loads(files[0].read_text(encoding="utf-8"))
+        # 2. Fallback to candidate file discovery if adapter didn't find it
+        if not data:
+            candidate_dirs = [
+                base / "30_Knowledge_Base" / "Macro_Strategy",
+                base / "30_Knowledge_Base" / "Macroeconomics" / "Strategies",
+                base / "10_Macro_Analysis",
+            ]
+            found_files: list[Path] = []
+            for d in candidate_dirs:
+                if d.exists():
+                    found_files.extend(d.rglob("Macro_Strategy_Direction_*.json"))
+                    latest_f = d / "latest.json"
+                    if latest_f.exists():
+                        found_files.append(latest_f)
+
+            if not found_files:
+                return None
+
+            files = sorted(found_files, key=lambda p: p.stat().st_mtime, reverse=True)
+            data = json.loads(files[0].read_text(encoding="utf-8"))
+
         regime = data.get("overall_regime") or data.get("regime_name")
+        evaluated_at = data.get("evaluated_at")
         sector_analysis = data.get("sector_analysis") or {}
-        leading = [str(s).strip().lower() for s in sector_analysis.get("leading_sectors", [])]
-        lagging = [str(s).strip().lower() for s in sector_analysis.get("lagging_sectors", [])]
-        regional_alloc = data.get("regional_allocation") or {}
+        raw_leading = sector_analysis.get("leading_sectors", [])
+        raw_lagging = sector_analysis.get("lagging_sectors", [])
+
+        # Normalize sectors with 3-way canonical mapping
+        leading: list[str] = []
+        for s in raw_leading:
+            s_str = str(s).strip()
+            if s_str.lower() not in leading:
+                leading.append(s_str.lower())
+            can = normalize_to_canonical_sector(s_str)
+            if can and can.lower() not in leading:
+                leading.append(can.lower())
+
+        lagging: list[str] = []
+        for s in raw_lagging:
+            s_str = str(s).strip()
+            if s_str.lower() not in lagging:
+                lagging.append(s_str.lower())
+            can = normalize_to_canonical_sector(s_str)
+            if can and can.lower() not in lagging:
+                lagging.append(can.lower())
+
+        # Asset allocation mapping per D6
+        asset_allocation = data.get("asset_allocation") or []
+        regional_alloc = dict(data.get("regional_allocation") or {})
+        if not regional_alloc and asset_allocation:
+            for item in asset_allocation:
+                if isinstance(item, dict):
+                    reg = item.get("region")
+                    stance = item.get("stance")
+                    if reg and stance:
+                        regional_alloc[str(reg)] = stance
 
         return {
             "overall_regime": regime,
+            "evaluated_at": evaluated_at,
             "leading_sectors": leading,
             "lagging_sectors": lagging,
             "regional_allocation": regional_alloc,
+            "asset_allocation": asset_allocation,
         }
     except Exception:
         return None
@@ -489,13 +541,25 @@ def compute_deterministic_scorecard(
             or (quant_signals.fcf_yield_pct is not None and quant_signals.fcf_yield_pct < 0.0)
         )
 
+        def _sector_in_list(sec_name: str, sec_list: list[str]) -> bool:
+            if not sec_name:
+                return False
+            can = (normalize_to_canonical_sector(sec_name) or "").lower()
+            return any(
+                item == sec_name or (can and item == can) or item in sec_name or (can and item in can)
+                for item in sec_list
+            )
+
+        is_leading = _sector_in_list(stock_sector, leading)
+        is_lagging = _sector_in_list(stock_sector, lagging)
+
         regime_str = str(macro_regime_name or "").lower()
-        if any(sec in stock_sector for sec in leading) or (
+        if is_leading or (
             any(k in regime_str for k in ("goldilocks", "reflation", "expansion")) and not is_fragile
         ):
             macro_status = "tailwind"
             macro_note = f"หุ้นหรืออุตสาหกรรม ({stock_sector or 'N/A'}) สอดคล้องกับสภาวะมหภาคเชิงบวก ({macro_regime_name or 'Tailwind'})"
-        elif any(sec in stock_sector for sec in lagging) or (
+        elif is_lagging or (
             any(k in regime_str for k in ("stagflation", "deflation", "slowdown")) and is_fragile
         ):
             macro_status = "headwind"

@@ -221,6 +221,12 @@ class WatchlistItem(BaseModel):
     target_price: Optional[float] = None
     notes: Optional[str] = None
     added_date: str
+    suggested_bucket_id: Optional[str] = None
+    applied_bucket_name: Optional[str] = None
+    target_price_basis: Optional[str] = None
+    target_currency: Optional[str] = None
+    evaluation_ref: Optional[str] = None
+    source_refs: List[str] = Field(default_factory=list)
 
 
 class WatchlistState(BaseModel):
@@ -266,6 +272,9 @@ class GoalItem(BaseModel):
     created_date: str
     portfolio_id: str = "default"
     bucket_id: Optional[str] = None
+    priority_tier: Optional[Literal["needs", "wants", "wishes"]] = "wants"
+    flexibility: Optional[Literal["none", "timeline_flexible", "amount_flexible", "fully_flexible"]] = "none"
+    monthly_savings_thb: float = 0.0
 
 
 class GoalsState(BaseModel):

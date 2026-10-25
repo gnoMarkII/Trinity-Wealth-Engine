@@ -11,6 +11,20 @@ from fastapi import APIRouter, Depends
 from api.auth import require_session
 
 from .common import handle_portfolio_exceptions
+from .router_advisory import (
+    router as advisory_router,
+    get_portfolio_advisory_endpoint,
+    synthesize_advisory_playbook_endpoint,
+)
+from .router_funds import (
+    router as funds_router,
+    get_fund_constituents_endpoint,
+    get_portfolio_look_through_endpoint,
+)
+from .router_opportunities import (
+    router as opportunities_router,
+    get_portfolio_opportunities,
+)
 from .router_macro import (
     router as macro_router,
     get_latest_portfolio,
@@ -75,10 +89,16 @@ router.include_router(trading_router)
 router.include_router(ledger_router)
 router.include_router(extensions_router)
 router.include_router(macro_router)
+router.include_router(advisory_router)
+router.include_router(funds_router)
+router.include_router(opportunities_router)
 
 __all__ = [
     "router",
     "handle_portfolio_exceptions",
+    "get_portfolio_opportunities",
+    "get_portfolio_advisory_endpoint",
+    "synthesize_advisory_playbook_endpoint",
     "list_portfolios_endpoint",
     "create_portfolio_endpoint",
     "delete_portfolio_endpoint",

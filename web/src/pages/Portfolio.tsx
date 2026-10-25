@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { createPortal } from 'react-dom'
 import { useSearchParams } from 'react-router-dom'
 import { api } from '../api/client'
@@ -356,6 +356,21 @@ export default function Portfolio() {
     setSearchParams(nextParams)
   }
 
+  const refreshWatchlist = useCallback(async () => {
+    try {
+      const wState = await api.getActualWatchlist(selectedPortfolioId)
+      if (selectedPortfolioIdRef.current === selectedPortfolioId) {
+        setWatchlistState(wState)
+      }
+    } catch (e) {
+      console.warn('Failed to refresh watchlist:', e)
+    }
+  }, [selectedPortfolioId])
+
+  const watchlistedSymbols = useMemo(() => {
+    return (watchlistState?.items ?? []).map((it) => it.symbol.toUpperCase())
+  }, [watchlistState])
+
   const handleCreatePortfolio = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!newPortName.trim()) return
@@ -497,6 +512,12 @@ export default function Portfolio() {
 
           {/* Action Toolbar — Available across all tabs */}
           <div className="flex flex-wrap items-center justify-start xl:justify-end gap-2 sm:gap-2.5 w-full">
+            <a
+              href={`/advisory?portfolio_id=${encodeURIComponent(selectedPortfolioId)}`}
+              className="rounded-xl bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 px-3 sm:px-3.5 py-1.5 sm:py-2 text-xs sm:text-sm font-bold text-white shadow-md shadow-indigo-500/20 hover:from-indigo-500 hover:to-pink-500 active:scale-98 transition-all flex items-center gap-1.5 whitespace-nowrap"
+            >
+              <span>⚡ Advisory Desk</span>
+            </a>
             <button
               type="button"
               onClick={() => setTradeModalOpen(true)}
@@ -778,6 +799,8 @@ export default function Portfolio() {
               onSuccessJournal={(entries) => setJournalRows(entries)}
               onOpenTradeModal={() => setTradeModalOpen(true)}
               onViewTransactions={handleViewTransactionsForSymbol}
+              watchlistedSymbols={watchlistedSymbols}
+              onWatchlistChanged={refreshWatchlist}
             />
           </div>
         )}

@@ -200,3 +200,63 @@ export const PortfolioHoldingsSkeleton: React.FC = () => (
     </div>
   </div>
 )
+
+export const PortfolioAdvisorySkeleton: React.FC<{ label?: string }> = ({
+  label = 'กำลังประมวลผลคำแนะนำพอร์ตโฟลิโอและตรวจสอบ Guardrails 11 จุด...',
+}) => (
+  <div className="space-y-6 animate-fade-in" aria-live="polite">
+    <TopLoadingRibbon label={label} />
+
+    {/* Dual Currency Cash & Risk Radar Banner Skeleton */}
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      {Array.from({ length: 3 }).map((_, idx) => (
+        <div key={idx} className="flow-panel rounded-2xl border border-edge/80 p-5 space-y-3">
+          <div className="h-4 w-32 rounded animate-shimmer" />
+          <div className="h-7 w-40 rounded animate-shimmer" />
+          <div className="h-3 w-48 rounded animate-shimmer" />
+        </div>
+      ))}
+    </div>
+
+    {/* AI Playbook Hero Card Skeleton */}
+    <div className="flow-panel rounded-2xl border border-edge/80 p-6 space-y-4">
+      <div className="flex items-center justify-between">
+        <div className="h-5 w-52 rounded animate-shimmer" />
+        <div className="h-8 w-36 rounded-xl animate-shimmer" />
+      </div>
+      <div className="space-y-2">
+        <div className="h-4 w-full rounded animate-shimmer" />
+        <div className="h-4 w-5/6 rounded animate-shimmer" />
+      </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
+        <div className="h-20 rounded-xl border border-edge/60 animate-shimmer" />
+        <div className="h-20 rounded-xl border border-edge/60 animate-shimmer" />
+      </div>
+    </div>
+
+    {/* Table Skeleton */}
+    <div className="flow-panel rounded-2xl border border-edge/80 p-5 space-y-3">
+      <div className="h-5 w-40 rounded animate-shimmer" />
+      <div className="space-y-2.5">
+        {Array.from({ length: 5 }).map((_, idx) => (
+          <div key={idx} className="h-14 rounded-xl border border-edge/40 animate-shimmer" />
+        ))}
+      </div>
+    </div>
+  </div>
+)
+
+export const AiPlaybookSynthesisLoader: React.FC<{ label?: string }> = ({
+  label = 'กำลังวิเคราะห์แผนกลยุทธ์เชิงลึกด้วย AI Synthesizer และตรวจสอบความสอดคล้องกับตัวเลข...',
+}) => (
+  <div className="p-8 rounded-2xl border border-sky-200/80 bg-sky-50/50 backdrop-blur-sm space-y-4 text-center animate-pulse">
+    <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-sky-500/10 text-sky-600 mb-1">
+      <span className="inline-block w-6 h-6 border-2 border-sky-500 border-t-transparent rounded-full animate-spin" />
+    </div>
+    <div className="space-y-1">
+      <h4 className="text-base font-semibold text-slate-800">กำลังประมวลผลคำแนะนำกลยุทธ์</h4>
+      <p className="text-xs text-slate-500 max-w-md mx-auto">{label}</p>
+    </div>
+    <TopLoadingRibbon />
+  </div>
+)

@@ -11,7 +11,11 @@ from api.routers.equity.router_earnings_call import (
     get_earnings_call_run,
     retry_earnings_call_run,
     get_earnings_calls,
+    get_promise_ledger,
+    sync_promise_ledger,
 )
+from api.routers.equity.router_event_study import router as event_study_router, get_event_study_presets, execute_event_study
+from api.routers.equity.router_position_review import router as position_review_router, get_position_review
 
 router = APIRouter()
 router.include_router(valuation_router)
@@ -19,9 +23,12 @@ router.include_router(insider_router)
 router.include_router(analyst_router)
 router.include_router(financials_router)
 router.include_router(earnings_call_router)
+router.include_router(event_study_router)
+router.include_router(position_review_router)
 
 __all__ = [
     "router",
+    "get_position_review",
     "get_equity_valuation_targets",
     "get_equity_insider_filings",
     "get_equity_analyst_context",
@@ -30,4 +37,8 @@ __all__ = [
     "get_earnings_call_run",
     "retry_earnings_call_run",
     "get_earnings_calls",
+    "get_promise_ledger",
+    "sync_promise_ledger",
+    "get_event_study_presets",
+    "execute_event_study",
 ]

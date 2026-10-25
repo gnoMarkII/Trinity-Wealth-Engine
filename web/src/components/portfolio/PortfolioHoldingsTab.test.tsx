@@ -1,6 +1,15 @@
-import { render, screen, fireEvent, within } from '@testing-library/react'
+import { render, screen, fireEvent, within, waitFor } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import PortfolioHoldingsTab from './PortfolioHoldingsTab'
+import { api } from '../../api/client'
+
+vi.mock('../../api/client', () => ({
+  api: {
+    getFundConstituents: vi.fn(),
+    batchRemoveHoldings: vi.fn(),
+    removeHolding: vi.fn(),
+  },
+}))
 
 describe('PortfolioHoldingsTab', () => {
   const holdings = [
@@ -307,5 +316,119 @@ describe('PortfolioHoldingsTab', () => {
     expect(container.querySelectorAll('.animate-pulse').length).toBeGreaterThanOrEqual(1)
     expect(screen.queryByText(/ยังไม่มีสินทรัพย์ในพอร์ตการลงทุน/i)).not.toBeInTheDocument()
   })
+
+  it('renders Look-Through button for Fund holdings and expands constituent drawer on click', async () => {
+    const fundHolding = {
+      ...holdings[0]!,
+      symbol: 'SCBS&P500E',
+      asset_type: 'Fund',
+      company_name: 'SCB S&P 500 Index Fund',
+      market_value_thb: 200000,
+    }
+    const mockConstituents = {
+      fund_id: 'scbsp500e',
+      symbol: 'SCBS&P500E',
+      as_of_date: '2026-09-30',
+      master_fund_name: 'iShares Core S&P 500 ETF',
+      master_fund_ticker: 'IVV',
+      top_holdings: [
+        { ticker: 'AAPL', name: 'Apple Inc.', percent: 7.2 },
+        { ticker: 'MSFT', name: 'Microsoft Corp.', percent: 6.5 },
+      ],
+      sector_breakdown: [
+        { sector_name_en: 'Information Technology', sector_name_th: 'เทคโนโลยี', percent: 32.5 },
+      ],
+      asset_allocation: { Equity: 99.1, Cash: 0.9 },
+    }
+    vi.mocked(api.getFundConstituents).mockResolvedValue(mockConstituents)
+
+    render(
+      <PortfolioHoldingsTab
+        portfolioId="default"
+        holdings={[fundHolding]}
+        selectedBucket={null}
+        onClearBucketFilter={vi.fn()}
+      />
+    )
+
+    // Button should be visible
+    const lookThroughBtn = screen.getByRole('button', { name: /ส่องไส้ในกองทุน/i })
+    expect(lookThroughBtn).toBeInTheDocument()
+
+    // Click to open drawer
+    fireEvent.click(lookThroughBtn)
+
+    expect(api.getFundConstituents).toHaveBeenCalledWith('SCBS&P500E')
+
+    await waitFor(() => {
+      expect(screen.getByText(/Glass-Box Look-Through: ไส้ในกองทุน \[SCBS&P500E\]/i)).toBeInTheDocument()
+    })
+
+    expect(screen.getByText('iShares Core S&P 500 ETF')).toBeInTheDocument()
+    expect(screen.getByText('Apple Inc.')).toBeInTheDocument()
+    expect(screen.getByText('7.20%')).toBeInTheDocument()
+
+    // Close button
+    const closeBtn = screen.getByRole('button', { name: /✕ ปิด/i })
+    fireEvent.click(closeBtn)
+
+    expect(screen.queryByText(/Glass-Box Look-Through: ไส้ในกองทุน \[SCBS&P500E\]/i)).not.toBeInTheDocument()
+  })
+
+  it('opens look-through drawer via quick-access pill bar above table and closes via Escape key', async () => {
+    const fundHolding = {
+      ...holdings[0]!,
+      symbol: 'SCBS&P500E',
+      asset_type: 'Fund',
+      company_name: 'SCB S&P 500 Index Fund',
+      market_value_thb: 200000,
+    }
+
+    const mockConstituents = {
+      fund_id: 'scbsp500e',
+      symbol: 'SCBS&P500E',
+      as_of_date: '2026-09-30',
+      master_fund_name: 'iShares Core S&P 500 ETF',
+      master_fund_ticker: 'IVV',
+      top_holdings: [
+        { ticker: 'AAPL', name: 'Apple Inc.', percent: 7.2 },
+        { ticker: 'MSFT', name: 'Microsoft Corp.', percent: 6.8 },
+      ],
+      sector_breakdown: [
+        { sector_name_en: 'Information Technology', sector_name_th: 'เทคโนโลยี', percent: 31.5 },
+      ],
+      asset_allocation: { Equity: 99.1, Cash: 0.9 },
+    }
+    vi.mocked(api.getFundConstituents).mockResolvedValue(mockConstituents)
+
+    render(
+      <PortfolioHoldingsTab
+        portfolioId="default"
+        holdings={[fundHolding]}
+        selectedBucket={null}
+        onClearBucketFilter={vi.fn()}
+      />
+    )
+
+    // Quick-Access pill bar button
+    const pillBtn = screen.getByRole('button', { name: /เปิดลิ้นชักส่องไส้ใน SCBS&P500E/i })
+    expect(pillBtn).toBeInTheDocument()
+
+    // Click pill to open drawer
+    fireEvent.click(pillBtn)
+
+    await waitFor(() => {
+      expect(screen.getByRole('dialog')).toBeInTheDocument()
+      expect(screen.getByText(/Glass-Box Look-Through: ไส้ในกองทุน \[SCBS&P500E\]/i)).toBeInTheDocument()
+    })
+
+    // Press Escape to dismiss drawer via useFocusTrap
+    fireEvent.keyDown(window, { key: 'Escape' })
+
+    await waitFor(() => {
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    })
+  })
 })
+
 

@@ -3,6 +3,7 @@ import type { ActualGoalItemDTO, ActualGoalsResponseDTO } from '../../api/types'
 import { formatTHB } from '../../utils/formatters'
 import { api } from '../../api/client'
 import GoalModal from './Modals/GoalModal'
+import GoalFundingTensionSimulator from './GoalFundingTensionSimulator'
 
 interface Props {
   goals: ActualGoalItemDTO[]
@@ -26,12 +27,11 @@ export default function PortfolioGoalsTab({
   const [modalOpen, setModalOpen] = useState(false)
   const [editingGoal, setEditingGoal] = useState<ActualGoalItemDTO | null>(null)
 
-  const handleDelete = async (name: string) => {
+  const handleDelete = async (name: string, portfolioId?: string | null) => {
     if (!onSuccess) return
     if (!window.confirm(`คุณต้องการลบเป้าหมาย "${name}" หรือไม่?`)) return
     try {
-      // ไม่กรองตามพอร์ต — ให้ response ที่คืนมายังคงมีเป้าหมายของทุกพอร์ตครบ ไม่ใช่แค่พอร์ตที่เลือกอยู่
-      const res = await api.removeGoal(name)
+      const res = await api.removeGoal(name, portfolioId || selectedPortfolioId)
       onSuccess(res)
     } catch (err: any) {
       alert(err?.message || 'ลบเป้าหมายไม่สำเร็จ')
@@ -52,6 +52,62 @@ export default function PortfolioGoalsTab({
         return <span className="rounded-full bg-sky-50 px-2.5 py-0.5 text-xs font-semibold text-sky-700">{type}</span>
     }
   }
+
+  const getPriorityTierBadge = (tier?: string | null) => {
+    switch (tier) {
+      case 'needs':
+        return (
+          <span className="rounded-full bg-emerald-50 border border-emerald-200 px-2.5 py-0.5 text-[11px] font-bold text-emerald-800 inline-flex items-center gap-1">
+            🛡️ Needs (ล้มเหลวไม่ได้)
+          </span>
+        )
+      case 'wishes':
+        return (
+          <span className="rounded-full bg-purple-50 border border-purple-200 px-2.5 py-0.5 text-[11px] font-bold text-purple-800 inline-flex items-center gap-1">
+            🚀 Wishes (เสี่ยงสูงได้)
+          </span>
+        )
+      case 'wants':
+      default:
+        return (
+          <span className="rounded-full bg-sky-50 border border-sky-200 px-2.5 py-0.5 text-[11px] font-bold text-sky-800 inline-flex items-center gap-1">
+            ⚖️ Wants (สำคัญมาก)
+          </span>
+        )
+    }
+  }
+
+  const getFlexibilityBadge = (flexibility?: string | null) => {
+    switch (flexibility) {
+      case 'none':
+        return (
+          <span className="rounded-full bg-zinc-100 border border-zinc-200 px-2 py-0.5 text-[11px] font-medium text-zinc-700 inline-flex items-center gap-1">
+            🔒 ไม่ยืดหยุ่น
+          </span>
+        )
+      case 'timeline_flexible':
+        return (
+          <span className="rounded-full bg-blue-50 border border-blue-200 px-2 py-0.5 text-[11px] font-medium text-blue-700 inline-flex items-center gap-1">
+            ⏱️ ยืดหยุ่นเวลา
+          </span>
+        )
+      case 'amount_flexible':
+        return (
+          <span className="rounded-full bg-amber-50 border border-amber-200 px-2 py-0.5 text-[11px] font-medium text-amber-700 inline-flex items-center gap-1">
+            💰 ยืดหยุ่นยอด
+          </span>
+        )
+      case 'fully_flexible':
+        return (
+          <span className="rounded-full bg-emerald-50 border border-emerald-200 px-2 py-0.5 text-[11px] font-medium text-emerald-700 inline-flex items-center gap-1">
+            🔄 ยืดหยุ่นเต็มที่
+          </span>
+        )
+      default:
+        return null
+    }
+  }
+
 
   return (
     <div className="space-y-6">
@@ -100,6 +156,8 @@ export default function PortfolioGoalsTab({
                 <div className="flex items-center justify-between gap-2 pb-2.5 border-b border-sky-100/70">
                   <div className="flex items-center gap-1.5 flex-wrap min-w-0">
                     {getGoalTypeBadge(goal.goal_type, goal.bucket_id)}
+                    {getPriorityTierBadge(goal.priority_tier)}
+                    {getFlexibilityBadge(goal.flexibility)}
                     <span className="inline-flex items-center gap-1 rounded-full bg-zinc-100/80 px-2 py-0.5 text-[11px] font-medium text-zinc-600 truncate max-w-[180px]">
                       📁 {linkedPortName}
                     </span>
@@ -116,7 +174,7 @@ export default function PortfolioGoalsTab({
                       </button>
                       <button
                         type="button"
-                        onClick={() => handleDelete(goal.name)}
+                        onClick={() => handleDelete(goal.name, goal.portfolio_id)}
                         className="rounded-lg p-1.5 text-zinc-400 hover:bg-rose-50 hover:text-rose-600 transition-colors"
                         title="ลบเป้าหมาย"
                       >
@@ -172,6 +230,54 @@ export default function PortfolioGoalsTab({
                   </div>
                 </div>
 
+                {/* Risk Required & Tension Analysis (The Three Faces of Risk) */}
+                <div className="mt-3.5 space-y-2">
+                  <div className="flex flex-wrap items-center justify-between gap-1.5 text-[11px]">
+                    <div className="flex items-center gap-1.5">
+                      <span className="font-semibold text-zinc-500">ผลตอบแทนที่ต้องการ:</span>
+                      {goal.required_return_pct !== null && goal.required_return_pct !== undefined ? (
+                        <span
+                          className={`rounded-md px-2 py-0.5 font-mono font-bold ${
+                            goal.required_return_pct === 0
+                              ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                              : goal.tension_level === 'CRITICAL_TENSION'
+                                ? 'bg-rose-50 text-rose-700 border border-rose-200'
+                                : goal.tension_level === 'MODERATE_TENSION'
+                                  ? 'bg-amber-50 text-amber-700 border border-amber-200'
+                                  : 'bg-sky-50 text-sky-700 border border-sky-200'
+                          }`}
+                        >
+                          {goal.required_return_pct === 0
+                            ? '0.0% (ออมครบตามแผน)'
+                            : `${goal.required_return_pct.toFixed(1)}% ต่อปี`}
+                        </span>
+                      ) : (
+                        <span className="text-zinc-400 italic">ไม่ได้ระบุกำหนดเวลา</span>
+                      )}
+                    </div>
+
+                    {goal.monthly_savings_thb ? (
+                      <span className="text-zinc-500 font-mono text-[11px]">
+                        ออมสะสม: <strong className="text-zinc-700 font-bold">{formatTHB(goal.monthly_savings_thb)}</strong>/ด.
+                      </span>
+                    ) : null}
+                  </div>
+
+                  {/* Tension Alert Box & Interactive 4 Levers Simulator */}
+                  {goal.adjustment_levers && (goal.tension_level === 'CRITICAL_TENSION' || goal.tension_level === 'MODERATE_TENSION') && (
+                    <GoalFundingTensionSimulator
+                      goalName={goal.name}
+                      targetAmountThb={goal.target_amount_thb}
+                      currentAmountThb={goal.current_amount_thb}
+                      monthlySavingsThb={goal.monthly_savings_thb || 0}
+                      deadlineDaysLeft={goal.deadline_days_left}
+                      requiredReturnPct={goal.required_return_pct}
+                      tensionLevel={goal.tension_level}
+                      adjustmentLevers={goal.adjustment_levers}
+                    />
+                  )}
+                </div>
+
                 {/* Linked Purpose Bucket & Funding Attribution (WP13 Task 9) */}
                 {goal.bucket_id && (
                   <div className="mt-3.5 rounded-xl border border-purple-100 bg-purple-50/50 p-3 text-xs">
@@ -179,6 +285,7 @@ export default function PortfolioGoalsTab({
                       const linkedBucket = allocationPolicy?.purpose_buckets?.find(
                         (pb) => pb.bucket_id === goal.bucket_id
                       )
+
                       const bucketSummary = bucketSummaries?.find(
                         (bs) => bs.bucket_id === goal.bucket_id
                       )
@@ -265,7 +372,7 @@ export default function PortfolioGoalsTab({
       {(modalOpen || editingGoal) && onSuccess && (
         <GoalModal
           initialGoal={editingGoal}
-          existingNames={goals.map((g) => g.name)}
+          existingNames={goals.filter(g => (g.portfolio_id || 'default') === (editingGoal?.portfolio_id || selectedPortfolioId)).map(g => g.name)}
           portfolios={portfolios}
           selectedPortfolioId={selectedPortfolioId}
           onClose={() => {

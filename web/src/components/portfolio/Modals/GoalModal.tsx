@@ -27,6 +27,17 @@ export default function GoalModal({ initialGoal, existingNames = [], portfolios 
   const [notes, setNotes] = useState(initialGoal?.notes || '')
   const [portfolioId, setPortfolioId] = useState<string>(initialGoal?.portfolio_id || selectedPortfolioId || 'default')
   const [bucketId, setBucketId] = useState<string>(initialGoal?.bucket_id || '')
+  const [priorityTier, setPriorityTier] = useState<'needs' | 'wants' | 'wishes'>(
+    (initialGoal?.priority_tier as any) || 'wants'
+  )
+  const [flexibility, setFlexibility] = useState<'none' | 'timeline_flexible' | 'amount_flexible' | 'fully_flexible'>(
+    (initialGoal?.flexibility as any) || 'none'
+  )
+  const [monthlySavingsThb, setMonthlySavingsThb] = useState<string>(
+    initialGoal?.monthly_savings_thb !== undefined && initialGoal?.monthly_savings_thb !== null
+      ? initialGoal.monthly_savings_thb.toString()
+      : ''
+  )
 
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -60,6 +71,9 @@ export default function GoalModal({ initialGoal, existingNames = [], portfolios 
         portfolio_id: portfolioId,
         bucket_id: goalType === 'bucket_target' ? bucketId || null : null,
         new_name: isNameChanged ? trimmedName : undefined,
+        priority_tier: priorityTier,
+        flexibility: flexibility,
+        monthly_savings_thb: monthlySavingsThb ? parseFloat(monthlySavingsThb) : 0.0,
       })
       onSuccess(res)
       onClose()
@@ -69,6 +83,7 @@ export default function GoalModal({ initialGoal, existingNames = [], portfolios 
       setLoading(false)
     }
   }
+
 
   return (
     <FormModal
@@ -178,6 +193,43 @@ export default function GoalModal({ initialGoal, existingNames = [], portfolios 
         </FormField>
       </div>
 
+      <div className="grid grid-cols-2 gap-3">
+        <FormField label="ระดับความสำคัญ (Priority Tier)">
+          <FormSelect
+            value={priorityTier}
+            onChange={(e) => setPriorityTier(e.target.value as any)}
+          >
+            <option value="needs">🛡️ Essential (Needs: ล้มเหลวไม่ได้)</option>
+            <option value="wants">⚖️ Important (Wants: สำคัญมาก)</option>
+            <option value="wishes">🚀 Aspirational (Wishes: เสี่ยงสูงได้)</option>
+          </FormSelect>
+        </FormField>
+
+        <FormField label="ความยืดหยุ่น (Flexibility)">
+          <FormSelect
+            value={flexibility}
+            onChange={(e) => setFlexibility(e.target.value as any)}
+          >
+            <option value="none">🔒 กำหนดตายตัว (Strict)</option>
+            <option value="timeline_flexible">⏳ ยืดหยุ่นเวลาได้</option>
+            <option value="amount_flexible">📉 ปรับลดจำนวนเงินได้</option>
+            <option value="fully_flexible">✨ ยืดหยุ่นได้ทั้งสองด้าน</option>
+          </FormSelect>
+        </FormField>
+      </div>
+
+      <FormField label="เงินออมสะสมที่จัดสรรต่อเดือน (Monthly Savings THB)">
+        <FormInput
+          type="number"
+          step="any"
+          min="0"
+          value={monthlySavingsThb}
+          onChange={(e) => setMonthlySavingsThb(e.target.value)}
+          placeholder="เช่น 10000 (ใส่ 0 หากไม่มีเงินออมเพิ่ม)"
+          className="font-mono"
+        />
+      </FormField>
+
       <FormField label="รายละเอียดเพิ่มเติม / กลยุทธ์ (Notes)">
         <FormInput
           type="text"
@@ -186,6 +238,7 @@ export default function GoalModal({ initialGoal, existingNames = [], portfolios 
           placeholder="เช่น ทยอยออมเดือนละ 50,000 บาทใน Index ETF"
         />
       </FormField>
+
     </FormModal>
   )
 }

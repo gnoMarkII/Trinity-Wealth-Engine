@@ -63,6 +63,7 @@ from agents.pipelines.equity_helpers import (
     build_synthesized_equity_output,
     compute_thesis_delta_from_vault,
     load_portfolio_holding_context,
+    sanitize_quant_payload_for_llm,
 )
 
 log = get_logger(__name__)
@@ -876,25 +877,26 @@ def build_graph(checkpointer=None, note_writer: Optional[KnowledgeNoteWritePort]
         reply = extract_worker_reply(state["messages"])
         try:
             validated = QuantSignals.model_validate(json.loads(strip_json_envelope(reply)))
-            try:
-                save_equity_quant_snapshot(validated, note_writer=note_writer)
-            except Exception as hist_err:
-                log.warning("save_equity_quant_snapshot failed (non-fatal): %s", hist_err)
-
             thesis_delta_obj = compute_thesis_delta_from_vault(validated.ticker, validated)
             portfolio_ctx_obj = load_portfolio_holding_context(validated.ticker, validated.market, validated)
 
-            # Provisional sidecar persistence: quant signals exist on disk even before narrative LLM call
-            try:
-                from tools.market.equity_sidecar import write_equity_sidecar
-                partial_output = build_provisional_equity_output(
-                    validated,
-                    thesis_delta=thesis_delta_obj,
-                    portfolio_context=portfolio_ctx_obj,
-                )
-                write_equity_sidecar(partial_output)
-            except Exception as sidecar_err:
-                log.warning("Provisional equity sidecar write failed (non-fatal): %s", sidecar_err)
+            # Provisional sidecar and quant snapshot persistence: only when equity_save_to_vault is True
+            if state.get("equity_save_to_vault", True):
+                try:
+                    save_equity_quant_snapshot(validated, note_writer=note_writer)
+                except Exception as hist_err:
+                    log.warning("save_equity_quant_snapshot failed (non-fatal): %s", hist_err)
+
+                try:
+                    from tools.market.equity_sidecar import write_equity_sidecar
+                    partial_output = build_provisional_equity_output(
+                        validated,
+                        thesis_delta=thesis_delta_obj,
+                        portfolio_context=portfolio_ctx_obj,
+                    )
+                    write_equity_sidecar(partial_output)
+                except Exception as sidecar_err:
+                    log.warning("Provisional equity sidecar write failed (non-fatal): %s", sidecar_err)
 
             validated_json = validated.model_dump(mode="json")
             turn_id = state.get("turn_id", "unknown")
@@ -965,7 +967,7 @@ def build_graph(checkpointer=None, note_writer: Optional[KnowledgeNoteWritePort]
                 "thesis_delta": thesis_delta_data,
                 "portfolio_context": portfolio_context_data,
             }
-            quant_json = json.dumps(synthesizer_quant_payload, ensure_ascii=False)
+            quant_json = json.dumps(sanitize_quant_payload_for_llm(synthesizer_quant_payload), ensure_ascii=False)
             narrative_json = json.dumps(narrative_data, ensure_ascii=False)
 
             narrative = invoke_equity_synthesizer(model, quant_json, narrative_json)

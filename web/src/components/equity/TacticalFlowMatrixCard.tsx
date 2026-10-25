@@ -1,6 +1,11 @@
 import type { EquitySentimentContextDTO, SmartMoneyFlagsDTO, TacticalSetupDTO } from '../../api/types'
+import TacticalStageCycleBar from './TacticalStageCycleBar'
+import PriceActionDepthLadder from './PriceActionDepthLadder'
+import SmartMoneyFlowGauge from './SmartMoneyFlowGauge'
 
-export interface TacticalSetupProps extends Partial<TacticalSetupDTO> {}
+export interface TacticalSetupProps extends Partial<TacticalSetupDTO> {
+  current_price?: number | null
+}
 
 export interface InsiderConvictionProps {
   status?: string
@@ -22,14 +27,6 @@ interface Props {
   currency?: string
 }
 
-function formatLargeNum(val?: number | null, prefix = '$'): string {
-  if (val == null || isNaN(val)) return 'N/A'
-  const abs = Math.abs(val)
-  if (abs >= 1e9) return `${prefix}${(val / 1e9).toFixed(2)}B`
-  if (abs >= 1e6) return `${prefix}${(val / 1e6).toFixed(2)}M`
-  if (abs >= 1e3) return `${prefix}${(val / 1e3).toFixed(1)}K`
-  return `${prefix}${val.toLocaleString()}`
-}
 
 export default function TacticalFlowMatrixCard({
   tactical,
@@ -76,8 +73,11 @@ export default function TacticalFlowMatrixCard({
 
       {/* Section 1: Tactical Trading Blueprint */}
       {tactical && (
-        <div className="space-y-3.5">
-          <div className="flex items-center justify-between text-xs font-semibold text-zinc-500 uppercase tracking-wider">
+        <div className="space-y-4">
+          {/* Infographic: 4-Stage Market Cycle Bar */}
+          <TacticalStageCycleBar currentStage={tactical.price_stage} />
+
+          <div className="flex items-center justify-between text-xs font-semibold text-zinc-500 uppercase tracking-wider pt-1">
             <span>🎯 Tactical Setup ({tactical.horizon_timeframe || '1-3M'})</span>
             {tactical.atr_14 != null && (
               <span className="text-zinc-500 font-normal">ATR(14): {currency}{tactical.atr_14.toFixed(2)}</span>
@@ -97,7 +97,7 @@ export default function TacticalFlowMatrixCard({
                   </span>
                 )}
               </div>
-              <span className="font-bold text-emerald-950 text-sm block mt-0.5">
+              <span className="font-mono font-bold text-emerald-950 text-base sm:text-lg block mt-0.5">
                 {tactical.buy_zone_min != null && tactical.buy_zone_max != null
                   ? `${currency}${tactical.buy_zone_min.toFixed(2)} - ${currency}${tactical.buy_zone_max.toFixed(2)}`
                   : 'N/A'}
@@ -109,7 +109,7 @@ export default function TacticalFlowMatrixCard({
               <span className="text-rose-800 font-semibold block text-[10px] uppercase">
                 Stop Loss (จุดยอมแพ้)
               </span>
-              <span className="font-bold text-rose-950 text-sm block mt-0.5">
+              <span className="font-mono font-bold text-rose-950 text-base sm:text-lg block mt-0.5">
                 {tactical.invalidation_stop_loss != null
                   ? `${currency}${tactical.invalidation_stop_loss.toFixed(2)}`
                   : 'N/A'}
@@ -121,7 +121,7 @@ export default function TacticalFlowMatrixCard({
               <span className="text-sky-800 font-semibold block text-[10px] uppercase">
                 Tactical Target
               </span>
-              <span className="font-bold text-sky-950 text-sm block mt-0.5">
+              <span className="font-mono font-bold text-sky-950 text-base sm:text-lg block mt-0.5">
                 {tactical.tactical_target_price != null
                   ? `${currency}${tactical.tactical_target_price.toFixed(2)}`
                   : 'N/A'}
@@ -133,7 +133,7 @@ export default function TacticalFlowMatrixCard({
               <span className="text-zinc-500 font-semibold block text-[10px] uppercase">
                 R:R ณ Analysis Price
               </span>
-              <span className="font-bold text-zinc-900 text-sm block mt-0.5">
+              <span className="font-mono font-bold text-zinc-900 text-base sm:text-lg block mt-0.5">
                 {tactical.current_rr_ratio != null
                   ? `${tactical.current_rr_ratio.toFixed(2)} : 1`
                   : (tactical.pullback_entry_status === 'at_or_above_target'
@@ -148,21 +148,17 @@ export default function TacticalFlowMatrixCard({
             </div>
           </div>
 
-          {/* Support / Resistance Levels */}
-          <div className="flex flex-wrap items-center justify-between text-xs rounded-xl bg-surface-strong/60 border border-sky-100 p-3">
-            <div className="flex items-center gap-2">
-              <span className="text-zinc-500 font-medium">Key Support:</span>
-              <span className="font-bold text-zinc-900">
-                {tactical.key_support_level != null ? `${currency}${tactical.key_support_level.toFixed(2)}` : 'N/A'}
-              </span>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="text-zinc-500 font-medium">Key Resistance:</span>
-              <span className="font-bold text-zinc-900">
-                {tactical.key_resistance_level != null ? `${currency}${tactical.key_resistance_level.toFixed(2)}` : 'N/A'}
-              </span>
-            </div>
-          </div>
+          {/* Infographic: Support / Resistance Depth Ladder & Execution Channels */}
+          <PriceActionDepthLadder
+            currentPrice={tactical.current_price ?? 0}
+            keyResistance={tactical.key_resistance_level}
+            keySupport={tactical.key_support_level}
+            buyZoneMin={tactical.buy_zone_min}
+            buyZoneMax={tactical.buy_zone_max}
+            stopLoss={tactical.invalidation_stop_loss}
+            tacticalTarget={tactical.tactical_target_price}
+            currency={currency}
+          />
 
           {/* Breakout Blueprint Strip */}
           {tactical.breakout_trigger_price != null && (
@@ -171,7 +167,7 @@ export default function TacticalFlowMatrixCard({
                 <div className="flex items-center gap-2">
                   <span className="font-bold text-indigo-900 uppercase text-[10px]">🚀 Breakout Setup:</span>
                   <span className="text-indigo-800">
-                    Trigger <strong>${tactical.breakout_trigger_price.toFixed(2)}</strong> | Target <strong>${tactical.breakout_target_price?.toFixed(2)}</strong> | Stop <strong>${tactical.breakout_stop_loss?.toFixed(2)}</strong>
+                    Trigger <strong>{currency}{tactical.breakout_trigger_price.toFixed(2)}</strong> | Target <strong>{currency}{tactical.breakout_target_price?.toFixed(2)}</strong> | Stop <strong>{currency}{tactical.breakout_stop_loss?.toFixed(2)}</strong>
                   </span>
                 </div>
                 {tactical.breakout_entry_status && (
@@ -214,53 +210,13 @@ export default function TacticalFlowMatrixCard({
         </div>
       )}
 
-      {/* Section 2: SEC Form 4 & Smart Money Flow */}
+      {/* Section 2: SEC Form 4 & Smart Money Flow (Infographic 3) */}
       {(insider || smartMoney) && (
-        <div className="space-y-3 pt-1 border-t border-edge/60">
-          <div className="flex items-center justify-between text-xs font-semibold text-zinc-500 uppercase tracking-wider">
-            <span>🕵️ Smart Money & SEC Form 4 Flow (90D)</span>
-            {insider?.status && (
-              <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-surface border border-edge text-zinc-700">
-                {insider.status.replace(/_/g, ' ')}
-              </span>
-            )}
-          </div>
-
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
-            {/* Form 4 Purchases */}
-            <div className="bg-surface/80 rounded-lg p-2.5 border border-edge/40">
-              <span className="text-zinc-400 block text-[10px] uppercase">Open-Market Purchases (P)</span>
-              <span className="font-bold text-zinc-900 text-sm block mt-0.5">
-                {insider ? `${insider.open_market_p_count_90d || 0} (${formatLargeNum(insider.open_market_p_value_usd, currency)})` : 'N/A'}
-              </span>
-            </div>
-
-            {/* C-Suite Purchases */}
-            <div className="bg-surface/80 rounded-lg p-2.5 border border-edge/40">
-              <span className="text-zinc-400 block text-[10px] uppercase">C-Suite Purchases (CEO/CFO)</span>
-              <span className="font-bold text-zinc-900 text-sm block mt-0.5">
-                {insider ? `${insider.c_suite_p_count || 0} รายการ` : 'N/A'}
-              </span>
-            </div>
-
-            {/* Institutional Ownership */}
-            <div className="bg-surface/80 rounded-lg p-2.5 border border-edge/40">
-              <span className="text-zinc-400 block text-[10px] uppercase">Institutional Ownership</span>
-              <span className="font-bold text-zinc-900 text-sm block mt-0.5">
-                {smartMoney?.institutional_ownership_pct != null ? `${smartMoney.institutional_ownership_pct}%` : 'N/A'}
-              </span>
-            </div>
-
-            {/* Short Interest */}
-            <div className="bg-surface/80 rounded-lg p-2.5 border border-edge/40">
-              <span className="text-zinc-400 block text-[10px] uppercase">Short Interest</span>
-              <span className={`font-bold text-sm block mt-0.5 ${smartMoney?.short_squeeze_risk ? 'text-amber-600' : 'text-zinc-900'}`}>
-                {smartMoney?.short_interest_pct != null ? `${smartMoney.short_interest_pct}%` : 'N/A'}
-                {smartMoney?.short_squeeze_risk && ' ⚡'}
-              </span>
-            </div>
-          </div>
-        </div>
+        <SmartMoneyFlowGauge
+          smartMoney={smartMoney}
+          insider={insider}
+          currency={currency}
+        />
       )}
 
       {/* Section 3: Sentiment & Tail Risks Warning */}

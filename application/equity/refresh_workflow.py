@@ -22,6 +22,11 @@ from schemas.micro_quant_schemas import (
 )
 from tools.market.equity_quant_tool import compute_equity_quant_signals
 from tools.market.equity_sidecar import write_equity_sidecar
+from agents.pipelines.equity_helpers import (
+    compute_thesis_delta_from_vault,
+    load_portfolio_holding_context,
+    sanitize_quant_payload_for_llm,
+)
 
 log = logging.getLogger(__name__)
 
@@ -94,13 +99,22 @@ def execute_equity_refresh_workflow(
         role="instruction", label="Equity Quant"
     )
 
-    quant_raw_json = compute_equity_quant_signals(ticker=clean_ticker, market=market)
-    try:
-        quant_data = json.loads(quant_raw_json)
-    except Exception as e:
-        err_msg = f"Failed to parse quant output JSON: {e}"
-        job_repo.append_job_log(job_id, "equity_quant", err_msg, role="reply", label="Quant Parse Error")
-        return "error", err_msg
+    # S2 Fix: Dual-compatible invocation (StructuredTool .invoke() vs raw function / mock)
+    from langchain_core.tools import BaseTool
+    if isinstance(compute_equity_quant_signals, BaseTool):
+        quant_raw_json = compute_equity_quant_signals.invoke({"ticker": clean_ticker, "market": market})
+    else:
+        quant_raw_json = compute_equity_quant_signals(ticker=clean_ticker, market=market)
+
+    if isinstance(quant_raw_json, dict):
+        quant_data = quant_raw_json
+    else:
+        try:
+            quant_data = json.loads(quant_raw_json)
+        except Exception as e:
+            err_msg = f"Failed to parse quant output JSON: {e}"
+            job_repo.append_job_log(job_id, "equity_quant", err_msg, role="reply", label="Quant Parse Error")
+            return "error", err_msg
 
     if quant_data.get("run_status") == "error":
         err_code = quant_data.get("error_code") or "QUANT_EXECUTION_ERROR"
@@ -133,6 +147,9 @@ def execute_equity_refresh_workflow(
         else signals.evaluated_at[:10]
     )
 
+    thesis_delta = compute_thesis_delta_from_vault(clean_ticker, signals, current_date=as_of_date)
+    portfolio_context = load_portfolio_holding_context(clean_ticker, market, signals)
+
     provisional_output = MicroQuantOutput(
         ticker=clean_ticker,
         market=market,
@@ -153,6 +170,8 @@ def execute_equity_refresh_workflow(
         deterministic_scorecard=signals.deterministic_scorecard,
         thesis_falsifiers=signals.thesis_falsifiers,
         evidence_snapshot=signals.evidence_snapshot,
+        thesis_delta=thesis_delta,
+        portfolio_context=portfolio_context,
     )
 
     if payload.save_to_vault:
@@ -209,7 +228,12 @@ def execute_equity_refresh_workflow(
         vault_text = _search_vault_memories(search_keyword)
 
         synth_model = get_chat_model("EQUITY_SYNTHESIZER_MODEL", default="gemini-3.1-flash-lite-preview")
-        quant_json = signals.model_dump_json()
+        sanitized_quant = sanitize_quant_payload_for_llm(signals)
+        if thesis_delta:
+            sanitized_quant["thesis_delta"] = thesis_delta.model_dump() if hasattr(thesis_delta, "model_dump") else thesis_delta
+        if portfolio_context:
+            sanitized_quant["portfolio_context"] = portfolio_context.model_dump() if hasattr(portfolio_context, "model_dump") else portfolio_context
+        quant_json = json.dumps(sanitized_quant, ensure_ascii=False)
         narrative_json = json.dumps({
             "ticker": clean_ticker,
             "vault_context": vault_text,

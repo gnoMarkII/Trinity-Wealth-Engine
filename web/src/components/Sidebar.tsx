@@ -6,6 +6,7 @@ const links = [
   { to: '/', label: 'Home' },
   { to: '/kanban', label: 'Agent Kanban Board' },
   { to: '/portfolio', label: 'All-Asset Portfolio' },
+  { to: '/advisory', label: 'Advisory Desk ⚡' },
   { to: '/macro', label: 'Macroeconomic Analysis' },
   { to: '/equity', label: 'Equity Analysis' },
 ]

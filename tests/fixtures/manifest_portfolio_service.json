@@ -1813,6 +1813,24 @@
           "kind": "POSITIONAL_OR_KEYWORD",
           "default": null,
           "annotation": "Optional"
+        },
+        {
+          "name": "priority_tier",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "wants",
+          "annotation": "Literal"
+        },
+        {
+          "name": "flexibility",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": "none",
+          "annotation": "Literal"
+        },
+        {
+          "name": "monthly_savings_thb",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": 0.0,
+          "annotation": "float"
         }
       ],
       "return_annotation": "List"
@@ -1856,6 +1874,30 @@
           "kind": "POSITIONAL_OR_KEYWORD",
           "default": "default",
           "annotation": "str"
+        },
+        {
+          "name": "suggested_bucket_id",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": null,
+          "annotation": "Optional"
+        },
+        {
+          "name": "evaluation_ref",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": null,
+          "annotation": "Optional"
+        },
+        {
+          "name": "source_refs",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": null,
+          "annotation": "Optional"
+        },
+        {
+          "name": "target_price_basis",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": null,
+          "annotation": "Optional"
         }
       ],
       "return_annotation": "WatchlistState"

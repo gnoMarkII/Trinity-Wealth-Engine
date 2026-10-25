@@ -446,6 +446,63 @@ def compute_equity_quant_signals(ticker: str, market: Literal["TH", "US"] = "US"
             margin_flags.append("missing_operating_margin:dcf")
 
         # 3. 5-Year Explicit DCF & True Reverse DCF Solver
+        from schemas.micro_quant_schemas import HistoricalFinancialItem
+        historical_3y: list[HistoricalFinancialItem] = []
+        if autopsy and autopsy.periods:
+            ann_periods = [p for p in autopsy.periods if getattr(p, "period_type", "") == "annual"]
+            recent_ann = sorted(ann_periods[:3], key=lambda x: str(x.fiscal_period_end or ""))
+            for idx, p in enumerate(recent_ann):
+                r = float(p.total_revenue or 0.0)
+                raw_eb = p.operating_income if p.operating_income is not None else p.ebit
+                if raw_eb is None:
+                    continue
+                eb = float(raw_eb)
+                m = round((eb / r * 100.0), 2) if r > 0 else 0.0
+                fy = (p.fiscal_period_end[:4] + "A") if p.fiscal_period_end else f"Y-{len(recent_ann)-idx}A"
+                gw = None
+                if idx > 0 and recent_ann[idx - 1].total_revenue and recent_ann[idx - 1].total_revenue > 0:
+                    pr = float(recent_ann[idx - 1].total_revenue)
+                    gw = round(((r / pr) - 1.0) * 100.0, 2)
+                gp = float(p.gross_profit) if getattr(p, "gross_profit", None) is not None else None
+                gp_m = round((gp / r * 100.0), 2) if (gp is not None and r > 0) else None
+                rd = float(p.research_and_development) if getattr(p, "research_and_development", None) is not None else None
+                rd_m = round((rd / r * 100.0), 2) if (rd is not None and r > 0) else None
+                sga = float(p.selling_general_admin) if getattr(p, "selling_general_admin", None) is not None else None
+                sga_m = round((sga / r * 100.0), 2) if (sga is not None and r > 0) else None
+                deprec = float(p.depreciation) if getattr(p, "depreciation", None) is not None else None
+                raw_capex = getattr(p, "capital_expenditure", None) if getattr(p, "capital_expenditure", None) is not None else getattr(p, "capital_expenditures", None)
+                capex = float(raw_capex) if raw_capex is not None else None
+                capex_ratio = None
+                lifecycle_phase = "unavailable"
+                if capex is not None and deprec is not None and deprec > 0:
+                    capex_ratio = round(abs(capex) / abs(deprec), 2)
+                    if capex_ratio >= 1.5:
+                        lifecycle_phase = "aggressive_expansion"
+                    elif capex_ratio >= 0.85:
+                        lifecycle_phase = "sustainable_maintenance"
+                    else:
+                        lifecycle_phase = "underinvestment_warning"
+                historical_3y.append(
+                    HistoricalFinancialItem(
+                        fiscal_year=fy,
+                        revenue=r,
+                        revenue_growth_pct=gw,
+                        ebit=eb,
+                        ebit_margin_pct=m,
+                        depreciation=deprec,
+                        capex=capex,
+                        fcf=float(p.free_cash_flow) if getattr(p, "free_cash_flow", None) is not None else None,
+                        gross_profit=gp,
+                        gross_margin_pct=gp_m,
+                        research_and_development=rd,
+                        rd_pct_of_rev=rd_m,
+                        selling_general_admin=sga,
+                        sga_pct_of_rev=sga_m,
+                        capex_to_depreciation_ratio=capex_ratio,
+                        reinvestment_lifecycle_phase=lifecycle_phase,
+                    )
+                )
+
         reinvest_pct = 10.0
         reverse_dcf_result, rdcf_flags = compute_institutional_reverse_dcf(
             ticker=resolved.raw_symbol.strip().upper(),
@@ -475,6 +532,7 @@ def compute_equity_quant_signals(ticker: str, market: Literal["TH", "US"] = "US"
             roe_pct=roe_pct,
             book_value_per_share=info.get("bookValue"),
             dividend_yield_pct=dividend_yield_pct,
+            historical_financials=historical_3y if historical_3y else None,
         )
 
         # 4. Tactical Setup (S/R, ATR, Stage, Tactical R:R) with shared price history

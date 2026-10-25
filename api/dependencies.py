@@ -1,6 +1,7 @@
 """FastAPI Application Dependencies & Composition Provider."""
+import os
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any, Dict, List, Optional
 from fastapi import Request
 import yfinance as yf
 
@@ -394,6 +395,21 @@ def get_earnings_call_service() -> EarningsCallApplicationService:
     )
 
 
+def get_promise_service():
+    """Compose the Promise Check application service with extractor and scraper/vault adapters."""
+    from application.earnings_call.promise_service import PromiseApplicationService
+    from tools.market.adapters.promise_extractor_adapter import PromiseExtractorAdapter
+    from tools.market.adapters.transcript_vault_adapter import (
+        StockAnalysisTranscriptScraperAdapter,
+        ObsidianTranscriptVaultAdapter,
+    )
+    return PromiseApplicationService(
+        extractor_port=PromiseExtractorAdapter(),
+        scraper_port=StockAnalysisTranscriptScraperAdapter(),
+        vault_port=ObsidianTranscriptVaultAdapter(),
+    )
+
+
 def get_investor_uow_factory():
     """Dependency provider for Investor Essence SQLite UoW Factory."""
     from api.db.investor_essence_adapters import SqliteInvestorRuntimeUowFactory
@@ -505,4 +521,175 @@ def get_bucket_planning_service():
         portfolio_port=PortfolioPlanningAdapter(),
         clock=SystemClockAdapter(),
         id_gen=UuidGeneratorAdapter(),
+    )
+
+
+_FUND_LOOK_THROUGH_CACHE_KEY: Optional[tuple[str, str]] = None
+_FUND_LOOK_THROUGH_SERVICE = None
+
+
+def get_fund_look_through_service():
+    """Dependency provider for FundLookThroughService (cached singleton per vault/cache dir)."""
+    global _FUND_LOOK_THROUGH_SERVICE, _FUND_LOOK_THROUGH_CACHE_KEY
+    current_key = (str(_get_vault_path()), os.environ.get("FINNOMENA_CACHE_DIR", ""))
+    if _FUND_LOOK_THROUGH_SERVICE is None or _FUND_LOOK_THROUGH_CACHE_KEY != current_key:
+        from application.portfolio.fund_look_through_service import FundLookThroughService
+        from tools.portfolio.adapters.advisory_vault_adapter import PortfolioStateAdapter
+        from tools.portfolio.adapters.thai_fund.finnomena_adapter import FinnomenaFundAdapter
+
+        _FUND_LOOK_THROUGH_SERVICE = FundLookThroughService(
+            portfolio_reader=PortfolioStateAdapter(),
+            fund_port=FinnomenaFundAdapter(),
+        )
+        _FUND_LOOK_THROUGH_CACHE_KEY = current_key
+    return _FUND_LOOK_THROUGH_SERVICE
+
+
+def get_portfolio_advisory_service():
+    """Dependency provider for PortfolioAdvisoryService."""
+    from application.portfolio.advisory_service import PortfolioAdvisoryService
+    from tools.portfolio.adapters.advisory_vault_adapter import (
+        AdvisorySynthesizerAdapter,
+        AdvisoryVaultAdapter,
+        EquitySidecarAdapter,
+        MacroContextAdapter,
+        PortfolioStateAdapter,
+    )
+
+    vault_path = _get_vault_path()
+    return PortfolioAdvisoryService(
+        portfolio_reader=PortfolioStateAdapter(),
+        macro_reader=MacroContextAdapter(vault_path=vault_path),
+        sidecar_reader=EquitySidecarAdapter(vault_path=vault_path),
+        vault_port=AdvisoryVaultAdapter(vault_path=vault_path),
+        synthesizer_port=AdvisorySynthesizerAdapter(),
+        look_through_service=get_fund_look_through_service(),
+    )
+
+
+class ConfirmedPolicyAdapter:
+    """Adapter reading confirmed axis and applied bucket policy from SQLite runtime UoW."""
+    def __init__(self, uow_factory: Optional[Any] = None) -> None:
+        self._uow_factory = uow_factory
+
+    def get_confirmed_investment_axis(self, portfolio_id: str = "default") -> Optional[Dict[str, Any]]:
+        if self._uow_factory:
+            try:
+                scope = f"portfolio:{portfolio_id}"
+                with self._uow_factory.open() as uow:
+                    snap = uow.planning.get_confirmed_snapshot(scope, "investment_axis")
+                    if snap:
+                        return snap
+                    ws_snap = uow.planning.get_confirmed_snapshot("workspace", "investment_axis")
+                    if ws_snap:
+                        return ws_snap
+            except Exception:
+                pass
+        return None
+
+    def get_applied_bucket_policy(self, portfolio_id: str = "default") -> List[Dict[str, Any]]:
+        if self._uow_factory:
+            try:
+                scope = f"portfolio:{portfolio_id}"
+                with self._uow_factory.open() as uow:
+                    snap = uow.planning.get_confirmed_snapshot(scope, "bucket_policy")
+                    if snap:
+                        if "buckets" in snap and snap["buckets"]:
+                            return snap["buckets"]
+                        if "purpose_buckets" in snap and snap["purpose_buckets"]:
+                            return snap["purpose_buckets"]
+            except Exception:
+                pass
+
+        try:
+            from tools.portfolio.core import get_structured_portfolio_state
+            p_state = get_structured_portfolio_state(portfolio_id=portfolio_id, refresh_prices=False)
+            if p_state:
+                if getattr(p_state, "accepted_policy_snapshot", None):
+                    snap = p_state.accepted_policy_snapshot
+                    if isinstance(snap, dict):
+                        b = snap.get("purpose_buckets") or snap.get("buckets")
+                        if b:
+                            return b
+                if p_state.allocation_policy and isinstance(p_state.allocation_policy, dict):
+                    buckets = p_state.allocation_policy.get("purpose_buckets") or p_state.allocation_policy.get("buckets")
+                    if buckets:
+                        return buckets
+                if getattr(p_state, "allocation_targets", None):
+                    return [
+                        {
+                            "id": t.bucket_id,
+                            "name": t.name,
+                            "target_pct": float(t.target_percent),
+                        }
+                        for t in p_state.allocation_targets
+                    ]
+        except Exception:
+            pass
+
+        return [
+            {"id": "core", "name": "Core Compounder", "target_pct": 50},
+            {"id": "growth", "name": "Growth & Speculative", "target_pct": 30},
+            {"id": "income", "name": "Income & Dividend", "target_pct": 20},
+        ]
+
+
+_PORTFOLIO_OPPORTUNITY_CACHE_KEY: Optional[tuple[str, str]] = None
+_PORTFOLIO_OPPORTUNITY_SERVICE = None
+
+
+def get_portfolio_opportunity_service():
+    """Dependency provider for PortfolioOpportunityService (cached singleton per vault/cache dir)."""
+    global _PORTFOLIO_OPPORTUNITY_SERVICE, _PORTFOLIO_OPPORTUNITY_CACHE_KEY
+    vault_path = _get_vault_path()
+    current_key = (str(vault_path), os.environ.get("FINNOMENA_CACHE_DIR", ""))
+    if _PORTFOLIO_OPPORTUNITY_SERVICE is None or _PORTFOLIO_OPPORTUNITY_CACHE_KEY != current_key:
+        from api.db.investor_essence_adapters import SqliteInvestorRuntimeUowFactory
+        from application.portfolio.opportunity_service import PortfolioOpportunityService
+        from tools.portfolio.adapters.advisory_vault_adapter import (
+            EquitySidecarAdapter,
+            MacroContextAdapter,
+            PortfolioStateAdapter,
+        )
+        from tools.portfolio.adapters.markdown.watchlist_adapter import MarkdownWatchlistAdapter
+        from tools.portfolio.adapters.thai_fund.finnomena_adapter import FinnomenaFundAdapter
+
+        uow_factory = None
+        try:
+            uow_factory = SqliteInvestorRuntimeUowFactory()
+        except Exception:
+            pass
+
+        policy_adapter = ConfirmedPolicyAdapter(uow_factory=uow_factory)
+
+        _PORTFOLIO_OPPORTUNITY_SERVICE = PortfolioOpportunityService(
+            portfolio_reader=PortfolioStateAdapter(),
+            fund_port=FinnomenaFundAdapter(),
+            equity_reader=EquitySidecarAdapter(vault_path=vault_path),
+            policy_reader=policy_adapter,
+            macro_reader=MacroContextAdapter(vault_path=vault_path),
+            watchlist_reader=MarkdownWatchlistAdapter(),
+            look_through_service=get_fund_look_through_service(),
+        )
+        _PORTFOLIO_OPPORTUNITY_CACHE_KEY = current_key
+    return _PORTFOLIO_OPPORTUNITY_SERVICE
+
+
+def get_event_study_service():
+    """Dependency provider for EventStudyApplicationService."""
+    from application.equity.event_study_service import EventStudyApplicationService
+    return EventStudyApplicationService(ohlcv_service=_OHLCV_SERVICE)
+
+
+def get_position_review_service():
+    """Dependency provider for PositionReviewApplicationService."""
+    from application.equity.position_review_service import PositionReviewApplicationService
+    from tools.market.adapters.position_review_adapter import YFinancePositionReviewAdapter
+    from tools.portfolio.core import get_structured_portfolio_state
+    return PositionReviewApplicationService(
+        ohlcv_service=_OHLCV_SERVICE,
+        fundamentals_provider=YFinancePositionReviewAdapter(),
+        portfolio_reader=lambda portfolio_id="default", refresh_prices=False: get_structured_portfolio_state(
+            portfolio_id=portfolio_id, refresh_prices=refresh_prices
+        ),
     )

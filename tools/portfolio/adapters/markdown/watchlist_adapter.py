@@ -52,6 +52,18 @@ def _item_to_md(item: WatchlistItem, portfolio_id: str, vault_root: Path) -> str
     ]
     if item.target_price is not None:
         lines.append(f"target_price: {item.target_price}")
+    if getattr(item, "suggested_bucket_id", None):
+        lines.append(f"suggested_bucket_id: {item.suggested_bucket_id}")
+    if getattr(item, "applied_bucket_name", None):
+        lines.append(f'applied_bucket_name: "{item.applied_bucket_name}"')
+    if getattr(item, "target_price_basis", None):
+        lines.append(f'target_price_basis: "{item.target_price_basis}"')
+    if getattr(item, "target_currency", None):
+        lines.append(f"target_currency: {item.target_currency}")
+    if getattr(item, "evaluation_ref", None):
+        lines.append(f"evaluation_ref: {item.evaluation_ref}")
+    if getattr(item, "source_refs", None):
+        lines.append(f"source_refs: {list(item.source_refs)}")
     lines.append(f'added_date: "{item.added_date}"')
     lines.append("---")
     lines.append("")

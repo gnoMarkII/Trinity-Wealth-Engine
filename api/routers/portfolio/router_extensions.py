@@ -49,6 +49,12 @@ def upsert_watchlist_item_endpoint(
             target_price=payload.target_price,
             notes=payload.notes,
             portfolio_id=portfolio_id,
+            suggested_bucket_id=payload.suggested_bucket_id,
+            evaluation_ref=payload.evaluation_ref,
+            source_refs=payload.source_refs,
+            target_price_basis=payload.target_price_basis,
+            applied_bucket_name=payload.applied_bucket_name,
+            target_currency=payload.target_currency,
         )
         return ActualWatchlistStateDTO.model_validate(state.model_dump(exclude_none=True))
 
@@ -99,7 +105,11 @@ def upsert_goal_endpoint(
             portfolio_id=getattr(payload, "portfolio_id", "default") or "default",
             bucket_id=getattr(payload, "bucket_id", None),
             new_name=getattr(payload, "new_name", None),
+            priority_tier=getattr(payload, "priority_tier", "wants") or "wants",
+            flexibility=getattr(payload, "flexibility", "none") or "none",
+            monthly_savings_thb=getattr(payload, "monthly_savings_thb", 0.0) or 0.0,
         )
+
         return ActualGoalsResponseDTO(
             n_goals=len(goals),
             goals=[ActualGoalItemDTO.model_validate(g) for g in goals],

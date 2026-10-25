@@ -2,6 +2,7 @@ import { useState } from 'react'
 import type { ActualWatchlistItemDTO, ActualWatchlistStateDTO } from '../../api/types'
 import { api } from '../../api/client'
 import WatchlistModal from './Modals/WatchlistModal'
+import SmartOpportunityFinder from './SmartOpportunityFinder'
 
 interface Props {
   portfolioId: string
@@ -13,6 +14,7 @@ interface Props {
 export default function PortfolioWatchlistTab({ portfolioId, items, lastUpdated, onSuccess }: Props) {
   const [modalOpen, setModalOpen] = useState(false)
   const [editingItem, setEditingItem] = useState<ActualWatchlistItemDTO | null>(null)
+  const [finderOpen, setFinderOpen] = useState(false)
 
   const handleDelete = async (symbol: string) => {
     if (!onSuccess) return
@@ -40,6 +42,13 @@ export default function PortfolioWatchlistTab({ portfolioId, items, lastUpdated,
               อัปเดตล่าสุด: {new Date(lastUpdated).toLocaleString('th-TH')}
             </span>
           )}
+          <button
+            type="button"
+            onClick={() => setFinderOpen(true)}
+            className="rounded-xl bg-gradient-to-r from-teal-500 to-emerald-600 px-4 py-2 text-xs font-bold text-white shadow-md hover:from-teal-600 hover:to-emerald-700 active:scale-95 transition-all flex items-center gap-1.5"
+          >
+            <span>🌟</span> 3D Opportunity Finder
+          </button>
           {onSuccess && (
             <button
               type="button"
@@ -62,6 +71,7 @@ export default function PortfolioWatchlistTab({ portfolioId, items, lastUpdated,
               <tr className="border-b border-sky-100 bg-zinc-50/80 text-xs font-semibold uppercase tracking-wider text-zinc-500 whitespace-nowrap">
                 <th className="px-6 py-3.5 whitespace-nowrap">Symbol</th>
                 <th className="px-6 py-3.5 whitespace-nowrap">Asset Type</th>
+                <th className="px-6 py-3.5 whitespace-nowrap">Strategy Bucket</th>
                 <th className="px-6 py-3.5 text-right whitespace-nowrap">Target Price</th>
                 <th className="px-6 py-3.5 whitespace-nowrap">Added Date</th>
                 <th className="px-6 py-3.5 whitespace-nowrap">Notes</th>
@@ -76,6 +86,15 @@ export default function PortfolioWatchlistTab({ portfolioId, items, lastUpdated,
                     <span className="inline-block rounded-md bg-sky-50 px-2 py-0.5 text-xs font-semibold text-sky-800">
                       {item.asset_type}
                     </span>
+                  </td>
+                  <td className="px-6 py-4">
+                    {item.suggested_bucket_id ? (
+                      <span className="inline-block rounded-md bg-indigo-50 px-2 py-0.5 text-xs font-semibold text-indigo-700 font-mono">
+                        {item.suggested_bucket_id}
+                      </span>
+                    ) : (
+                      <span className="text-zinc-400 text-xs">-</span>
+                    )}
                   </td>
                   <td className="px-6 py-4 text-right font-mono tabular-nums font-bold text-flow-blue">
                     {item.target_price !== null && item.target_price !== undefined
@@ -108,7 +127,7 @@ export default function PortfolioWatchlistTab({ portfolioId, items, lastUpdated,
               ))}
               {items.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="py-16 text-center text-zinc-400">
+                  <td colSpan={7} className="py-16 text-center text-zinc-400">
                     ยังไม่มีรายการ Watchlist ในขณะนี้
                   </td>
                 </tr>
@@ -131,6 +150,14 @@ export default function PortfolioWatchlistTab({ portfolioId, items, lastUpdated,
           }}
         />
       )}
+
+      {/* 3D Smart Opportunity Finder Modal */}
+      <SmartOpportunityFinder
+        isOpen={finderOpen}
+        portfolioId={portfolioId}
+        onClose={() => setFinderOpen(false)}
+        onWatchlistUpdated={onSuccess}
+      />
     </div>
   )
 }

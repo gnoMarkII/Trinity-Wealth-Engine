@@ -153,3 +153,22 @@ def validate_valuation_guardrails(direction: Any) -> list[ContradictionFinding]:
     findings.extend(check_credit_spread_warning(direction))
     apply_contradiction_findings(findings, direction)
     return findings
+
+
+def check_management_credibility_guardrail(
+    credibility_score: Optional[float],
+    bias_classification: Optional[str] = None,
+) -> list[str]:
+    """Check management track record warnings for equity valuation & thesis discounting."""
+    warnings: list[str] = []
+    if bias_classification == "Overpromiser":
+        warnings.append(
+            "MANAGEMENT_OVERPROMISER_RISK: Company management has a documented history of guiding high "
+            "and missing actuals (Overpromiser bias). Forward guidance and growth projections should be discounted."
+        )
+    if credibility_score is not None and credibility_score < 55.0:
+        warnings.append(
+            f"MANAGEMENT_LOW_CREDIBILITY_RISK: Management commitment delivery score is {credibility_score:.1f}/100 "
+            "(Grade D/F). Track record reflects elevated miss and quiet-drop rates across past 8 quarters."
+        )
+    return warnings

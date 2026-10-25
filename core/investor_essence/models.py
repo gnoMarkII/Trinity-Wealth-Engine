@@ -490,3 +490,74 @@ def compute_semantic_hash(payload: Any) -> str:
     canonical = _canonicalize(payload)
     serialized = json.dumps(canonical, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
     return hashlib.sha256(serialized.encode("utf-8")).hexdigest()
+
+
+# ---------------------------------------------------------------------------
+# Goal-Based Wealth Planning Models (Three Faces of Risk & Priority Tiers)
+# ---------------------------------------------------------------------------
+
+
+class GoalPriorityTier(str, Enum):
+    """Priority tier of an investment goal (Needs vs Wants vs Wishes)."""
+    NEEDS = "needs"
+    WANTS = "wants"
+    WISHES = "wishes"
+
+
+class GoalFlexibility(str, Enum):
+    """Flexibility dimensions of a financial goal."""
+    NONE = "none"
+    TIMELINE_FLEXIBLE = "timeline_flexible"
+    AMOUNT_FLEXIBLE = "amount_flexible"
+    FULLY_FLEXIBLE = "fully_flexible"
+
+
+class GoalTensionLevel(str, Enum):
+    """Mathematical tension level between goal demands and portfolio capabilities."""
+    BALANCED = "BALANCED"
+    MODERATE_TENSION = "MODERATE_TENSION"
+    CRITICAL_TENSION = "CRITICAL_TENSION"
+    INSUFFICIENT_DATA = "INSUFFICIENT_DATA"
+
+
+@dataclass(frozen=True)
+class GoalAdjustmentLevers:
+    """Actionable levers to resolve mathematical funding tensions."""
+    save_more_monthly_thb: Decimal = Decimal("0.00")
+    total_monthly_savings_needed_thb: Decimal = Decimal("0.00")
+    extend_timeline_months: int = 0
+    total_months_needed: int = 0
+    downsized_target_thb: Decimal = Decimal("0.00")
+    required_risk_cagr_pct: Optional[Decimal] = None
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "save_more_monthly_thb": float(self.save_more_monthly_thb),
+            "total_monthly_savings_needed_thb": float(self.total_monthly_savings_needed_thb),
+            "extend_timeline_months": self.extend_timeline_months,
+            "total_months_needed": self.total_months_needed,
+            "downsized_target_thb": float(self.downsized_target_thb),
+            "required_risk_cagr_pct": float(self.required_risk_cagr_pct) if self.required_risk_cagr_pct is not None else None,
+        }
+
+
+@dataclass(frozen=True)
+class GoalTensionReport:
+    """Tension analysis comparing Risk Required with Expected/Sustainable Return."""
+    required_return_cagr_pct: Optional[Decimal]
+    expected_return_cagr_pct: Optional[Decimal]
+    tension_level: GoalTensionLevel
+    headline_message: str
+    detailed_message: str
+    levers: GoalAdjustmentLevers
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "required_return_cagr_pct": float(self.required_return_cagr_pct) if self.required_return_cagr_pct is not None else None,
+            "expected_return_cagr_pct": float(self.expected_return_cagr_pct) if self.expected_return_cagr_pct is not None else None,
+            "tension_level": self.tension_level.value,
+            "headline_message": self.headline_message,
+            "detailed_message": self.detailed_message,
+            "levers": self.levers.to_dict(),
+        }
+

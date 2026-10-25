@@ -1,4 +1,4 @@
-from typing import Optional, Tuple
+from typing import Optional, Tuple, List
 import frontmatter
 from tools.portfolio import get_default_service
 from tools.portfolio.domain.models import WatchlistState, WatchlistItem, _now_iso
@@ -27,10 +27,30 @@ def get_structured_watchlist(portfolio_id: str = "default") -> WatchlistState:
     return get_default_service().get_structured_watchlist(portfolio_id=portfolio_id)
 
 def structured_upsert_watchlist_item(
-    symbol: str, asset_type: str, target_price: Optional[float] = None, notes: str = "", portfolio_id: str = "default"
+    symbol: str,
+    asset_type: str,
+    target_price: Optional[float] = None,
+    notes: str = "",
+    portfolio_id: str = "default",
+    suggested_bucket_id: Optional[str] = None,
+    evaluation_ref: Optional[str] = None,
+    source_refs: Optional[List[str]] = None,
+    target_price_basis: Optional[str] = None,
+    applied_bucket_name: Optional[str] = None,
+    target_currency: Optional[str] = None,
 ) -> WatchlistState:
     return get_default_service().structured_upsert_watchlist_item(
-        symbol=symbol, asset_type=asset_type, target_price=target_price, notes=notes, portfolio_id=portfolio_id
+        symbol=symbol,
+        asset_type=asset_type,
+        target_price=target_price,
+        notes=notes,
+        portfolio_id=portfolio_id,
+        suggested_bucket_id=suggested_bucket_id,
+        evaluation_ref=evaluation_ref,
+        source_refs=source_refs,
+        target_price_basis=target_price_basis,
+        applied_bucket_name=applied_bucket_name,
+        target_currency=target_currency,
     )
 
 def structured_remove_watchlist_item(symbol: str, portfolio_id: str = "default") -> WatchlistState:

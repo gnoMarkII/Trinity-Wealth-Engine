@@ -21,7 +21,41 @@ from schemas.micro_quant_schemas import (
     ThesisDeltaSummary,
 )
 
+import math
+
 log = logging.getLogger(__name__)
+
+
+def sanitize_quant_payload_for_llm(signals: QuantSignals | dict[str, Any]) -> dict[str, Any]:
+    """Cleans and sanitizes quantitative signals for LLM prompt ingestion.
+
+    - Replaces NaN, Inf, and -Inf with None
+    - Quantizes floats to clean decimals (2-4 decimal places) to prevent 15-decimal token bloat
+    - Preserves scorecard, thesis falsifiers, and valuation structures
+    """
+    if hasattr(signals, "model_dump"):
+        data = signals.model_dump(mode="json")
+    elif isinstance(signals, dict):
+        data = dict(signals)
+    else:
+        return {}
+
+    def _sanitize(obj: Any) -> Any:
+        if isinstance(obj, float):
+            if math.isnan(obj) or math.isinf(obj):
+                return None
+            return round(obj, 4)
+        elif isinstance(obj, dict):
+            return {
+                k: _sanitize(v)
+                for k, v in obj.items()
+                if k not in ("evidence_snapshot", "sensitivity_matrix", "sensitivity_matrices")
+            }
+        elif isinstance(obj, list):
+            return [_sanitize(v) for v in obj]
+        return obj
+
+    return _sanitize(data)
 
 
 def compute_thesis_delta_from_vault(
@@ -30,29 +64,78 @@ def compute_thesis_delta_from_vault(
     current_date: Optional[str] = None,
     vault_path: Optional[Path] = None,
 ) -> Optional[ThesisDeltaSummary]:
-    """Computes Thesis Evolution & Drift compared to previous Equity Sidecar in Vault."""
+    """Computes Thesis Evolution & Drift compared to previous Equity Sidecar in Vault.
+
+    Enforces Guardrail T4 (SAME_DAY_THESIS_DELTA_GUARD):
+    Ensures that the comparison sidecar has analysis_date < current_date.
+    """
     try:
         base = vault_path or Path(os.getenv("OBSIDIAN_VAULT_PATH", "memories"))
         sanitized_ticker = ticker.replace(".BK", "").strip().upper()
         raw_ticker = ticker.strip().upper()
-        candidate_paths = [
-            base / "30_Knowledge_Base" / "Stocks" / sanitized_ticker / "Analysis" / f"{sanitized_ticker} Equity Analysis latest.json",
-            base / "30_Knowledge_Base" / "Stocks" / raw_ticker / "Analysis" / f"{raw_ticker} Equity Analysis latest.json",
-            base / "30_Knowledge_Base" / "Stocks" / sanitized_ticker / f"{sanitized_ticker} Equity Analysis latest.json",
-            base / "30_Knowledge_Base" / "Stocks" / raw_ticker / f"{raw_ticker} Equity Analysis latest.json",
-            base / "30_Knowledge_Base" / "Equities" / sanitized_ticker / "latest.json",
-            base / "30_Knowledge_Base" / "Equities" / raw_ticker / "latest.json",
+        today_str = current_date or datetime.now(timezone.utc).strftime("%Y-%m-%d")
+
+        candidate_dirs = [
+            base / "30_Knowledge_Base" / "Stocks" / sanitized_ticker / "Analysis",
+            base / "30_Knowledge_Base" / "Stocks" / raw_ticker / "Analysis",
+            base / "30_Knowledge_Base" / "Stocks" / sanitized_ticker,
+            base / "30_Knowledge_Base" / "Stocks" / raw_ticker,
+            base / "30_Knowledge_Base" / "Equities" / sanitized_ticker,
+            base / "30_Knowledge_Base" / "Equities" / raw_ticker,
         ]
-        sidecar_path = next((p for p in candidate_paths if p.exists()), None)
-        if not sidecar_path:
+
+        found_sidecars: list[Path] = []
+        for d in candidate_dirs:
+            if d.exists():
+                found_sidecars.extend(d.glob("*.json"))
+
+        valid_candidates: list[tuple[str, Path, dict[str, Any]]] = []
+        for p in found_sidecars:
+            try:
+                content = json.loads(p.read_text(encoding="utf-8"))
+                a_date = str(content.get("analysis_date") or "")
+                # T4 Guard: Must be strictly older than today_str
+                if a_date and a_date < today_str:
+                    valid_candidates.append((a_date, p, content))
+            except Exception:
+                continue
+
+        if not valid_candidates:
+            # Fallback check for latest.json if dated strictly before today
+            for d in candidate_dirs:
+                latest_f = d / f"{sanitized_ticker} Equity Analysis latest.json"
+                if not latest_f.exists():
+                    latest_f = d / "latest.json"
+                if latest_f.exists():
+                    try:
+                        content = json.loads(latest_f.read_text(encoding="utf-8"))
+                        a_date = str(content.get("analysis_date") or "")
+                        if a_date and a_date < today_str:
+                            valid_candidates.append((a_date, latest_f, content))
+                            break
+                    except Exception:
+                        continue
+
+        if not valid_candidates:
             return None
 
-        prev_data = json.loads(sidecar_path.read_text(encoding="utf-8"))
-        prev_quant = prev_data.get("quant_signals") or {}
-        prev_date = prev_data.get("analysis_date", "")
+        # Pick the most recent historical analysis
+        valid_candidates.sort(key=lambda x: x[0], reverse=True)
+        prev_date, sidecar_path, prev_data = valid_candidates[0]
 
-        prev_price = prev_quant.get("raw_analysis_price") or prev_quant.get("current_price")
-        curr_price = getattr(current_signals, "raw_analysis_price", None) or getattr(current_signals, "current_price", None)
+        prev_quant = prev_data.get("quant_signals") or {}
+
+        # 3-tier price fallback
+        prev_price = (
+            prev_quant.get("raw_analysis_price")
+            or prev_quant.get("current_price")
+            or (prev_quant.get("atomic_market_snapshot") or {}).get("analysis_price")
+        )
+        curr_price = (
+            getattr(current_signals, "raw_analysis_price", None)
+            or getattr(current_signals, "current_price", None)
+            or (current_signals.atomic_market_snapshot.analysis_price if current_signals.atomic_market_snapshot else None)
+        )
         price_change_pct = (
             round(((curr_price - prev_price) / prev_price * 100.0), 2)
             if (curr_price and prev_price and prev_price > 0)
@@ -130,7 +213,10 @@ def load_portfolio_holding_context(
     market: str,
     current_signals: QuantSignals,
 ) -> Optional[PortfolioHoldingContext]:
-    """Retrieves portfolio position state for the analyzed ticker (fail-open)."""
+    """Retrieves portfolio position state for the analyzed ticker (fail-open).
+
+    Enforces D1 (holding currency/market resolution) and D2 (filters inactive/archived holdings).
+    """
     try:
         from tools.portfolio.core import get_structured_portfolio_state
 
@@ -159,14 +245,25 @@ def load_portfolio_holding_context(
             )
 
         sanitized_ticker = ticker.replace(".BK", "").strip().upper()
+        raw_ticker = ticker.strip().upper()
         holding = None
+
+        # Filter active holdings only (D2)
         for h in state.holdings:
-            sym = h.symbol.replace(".BK", "").strip().upper()
-            if sym == sanitized_ticker or h.symbol.strip().upper() == ticker.strip().upper():
+            status_val = getattr(h, "status", None)
+            if isinstance(status_val, str) and status_val.lower() in ("archived", "inactive"):
+                continue
+            units_val = getattr(h, "units", None)
+            if isinstance(units_val, (int, float)) and units_val <= 0:
+                continue
+            sym = str(getattr(h, "symbol", "")).replace(".BK", "").strip().upper()
+            raw_sym = str(getattr(h, "symbol", "")).strip().upper()
+            if sym == sanitized_ticker or raw_sym == raw_ticker:
                 holding = h
                 break
 
-        if not holding or holding.units <= 0:
+        units_val = getattr(holding, "units", None) if holding else None
+        if not holding or (isinstance(units_val, (int, float)) and units_val <= 0):
             return PortfolioHoldingContext(
                 is_held=False,
                 portfolio_id="default",
@@ -178,13 +275,26 @@ def load_portfolio_holding_context(
                 position_action_hint=default_hint,
             )
 
-        total_val = state.summary.total_value_thb if state.summary else 0.0
+        total_val = float(state.summary.total_value_thb) if state.summary and hasattr(state.summary, "total_value_thb") and state.summary.total_value_thb else 0.0
+        h_val = float(holding.market_value_thb) if hasattr(holding, "market_value_thb") and holding.market_value_thb else 0.0
         weight_pct = (
-            round((holding.market_value_thb / total_val * 100.0), 2) if total_val > 0 else 0.0
+            round((h_val / total_val * 100.0), 2) if total_val > 0 else 0.0
         )
 
-        avg_cost = holding.avg_cost_usd if market == "US" else (holding.avg_cost_thb or holding.avg_cost_usd)
-        pnl_pct = holding.unrealized_pnl_percent
+        # D1 Resolution: Do NOT use current_price_usd to identify US stocks!
+        # Check avg_cost_usd vs avg_cost_thb and ticker suffix
+        avg_usd = getattr(holding, "avg_cost_usd", None)
+        avg_thb = getattr(holding, "avg_cost_thb", None)
+        has_usd = isinstance(avg_usd, (int, float))
+        has_thb = isinstance(avg_thb, (int, float))
+        is_us_holding = (has_usd and not has_thb)
+
+        if market == "US" or is_us_holding:
+            avg_cost = float(avg_usd) if has_usd else (float(avg_thb) if has_thb else None)
+        else:
+            avg_cost = float(avg_thb) if has_thb else (float(avg_usd) if has_usd else None)
+
+        pnl_pct = float(holding.unrealized_pnl_percent) if hasattr(holding, "unrealized_pnl_percent") and holding.unrealized_pnl_percent is not None and not isinstance(holding.unrealized_pnl_percent, type(lambda: None)) else None
 
         if weight_pct >= 15.0:
             if stance == "REDUCE" or weight_pct >= 20.0:

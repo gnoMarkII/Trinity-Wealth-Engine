@@ -49,6 +49,7 @@ class FinancialAutopsyPeriod(BaseModel):
     free_cash_flow: Optional[float] = None
     operating_cash_flow: Optional[float] = None
     capital_expenditure: Optional[float] = None
+    depreciation: Optional[float] = None
     total_debt: Optional[float] = None
     total_revenue: Optional[float] = None
     net_income: Optional[float] = None
@@ -61,6 +62,8 @@ class FinancialAutopsyPeriod(BaseModel):
     income_before_tax: Optional[float] = None
     # Additive fields for Piotroski 9 Criteria & Quality of Earnings
     gross_profit: Optional[float] = None
+    research_and_development: Optional[float] = None
+    selling_general_admin: Optional[float] = None
     total_assets: Optional[float] = None
     current_assets: Optional[float] = None
     current_liabilities: Optional[float] = None
@@ -230,6 +233,7 @@ def _build_rolling_ttm_period(
     ttm_ocf = 0.0
     ttm_capex = 0.0
     ttm_fcf = 0.0
+    ttm_deprec = 0.0
 
     has_rev = False
     has_op_inc = False
@@ -238,6 +242,7 @@ def _build_rolling_ttm_period(
     has_ocf = False
     has_capex = False
     has_fcf = False
+    has_deprec = False
 
     for col in sorted_q_cols:
         rev = _extract_df_val_aligned(q_financials, col, ["Total Revenue", "Operating Revenue", "Revenue"])
@@ -270,6 +275,12 @@ def _build_rolling_ttm_period(
         if capex is not None:
             ttm_capex += abs(capex)
             has_capex = True
+        deprec = _extract_df_val_aligned(q_cashflow, col, ["Depreciation And Amortization", "Depreciation & Amortization", "Depreciation Amortization Depletion", "Depreciation"])
+        if deprec is None:
+            deprec = _extract_df_val_aligned(q_financials, col, ["Depreciation And Amortization", "Depreciation & Amortization", "Depreciation Amortization Depletion", "Depreciation"])
+        if deprec is not None:
+            ttm_deprec += abs(deprec)
+            has_deprec = True
         if fcf is not None:
             ttm_fcf += fcf
             has_fcf = True
@@ -285,6 +296,7 @@ def _build_rolling_ttm_period(
         free_cash_flow=round(ttm_fcf, 2) if has_fcf else None,
         operating_cash_flow=round(ttm_ocf, 2) if has_ocf else None,
         capital_expenditure=round(ttm_capex, 2) if has_capex else None,
+        depreciation=round(ttm_deprec, 2) if has_deprec else None,
         total_revenue=round(ttm_rev, 2) if has_rev else None,
         operating_income=round(ttm_op_inc, 2) if has_op_inc else None,
         ebit=round(ttm_ebit, 2) if has_ebit else None,
@@ -451,6 +463,9 @@ def get_financial_autopsy(resolved_asset: ResolvedAsset) -> FinancialAutopsyFetc
         fcf = _extract_df_val_aligned(cashflow, col, ["Free Cash Flow"])
         ocf = _extract_df_val_aligned(cashflow, col, ["Operating Cash Flow", "Total Cash From Operating Activities"])
         capex = _extract_df_val_aligned(cashflow, col, ["Capital Expenditure", "Capital Expenditures"])
+        deprec_val = _extract_df_val_aligned(cashflow, col, ["Depreciation And Amortization", "Depreciation & Amortization", "Depreciation Amortization Depletion", "Depreciation"])
+        if deprec_val is None:
+            deprec_val = _extract_df_val_aligned(financials, col, ["Depreciation And Amortization", "Depreciation & Amortization", "Depreciation Amortization Depletion", "Depreciation"])
         div_paid = _extract_df_val_aligned(cashflow, col, ["Common Stock Dividend Paid", "Cash Dividends Paid", "Dividends Paid"])
 
         if fcf is None and ocf is not None and capex is not None:
@@ -478,6 +493,8 @@ def get_financial_autopsy(resolved_asset: ResolvedAsset) -> FinancialAutopsyFetc
         # Financials / Income statement items
         rev = _extract_df_val_aligned(financials, col, ["Total Revenue", "Operating Revenue", "Revenue"])
         gross_prof = _extract_df_val_aligned(financials, col, ["Gross Profit"])
+        rd_exp = _extract_df_val_aligned(financials, col, ["Research And Development", "Research & Development", "ResearchAndDevelopmentExpense"])
+        sga_exp = _extract_df_val_aligned(financials, col, ["Selling General And Administration", "SG&A", "SellingGeneralAndAdministrativeExpense", "Selling General and Administrative"])
         net_inc = _extract_df_val_aligned(financials, col, ["Net Income", "Net Income Common Stockholders", "Net Income Loss"])
         ebit_val = _extract_df_val_aligned(financials, col, ["EBIT", "Total Operating Income As Reported", "Operating Income"])
         op_income_val = _extract_df_val_aligned(financials, col, ["Operating Income", "Total Operating Income As Reported", "EBIT"])
@@ -497,7 +514,8 @@ def get_financial_autopsy(resolved_asset: ResolvedAsset) -> FinancialAutopsyFetc
                     fiscal_period_end=dt_str,
                     free_cash_flow=fcf,
                     operating_cash_flow=ocf,
-                    capital_expenditure=capex,
+                    capital_expenditure=abs(capex) if capex is not None else None,
+                    depreciation=abs(deprec_val) if deprec_val is not None else None,
                     total_debt=total_debt,
                     total_revenue=rev,
                     net_income=net_inc,
@@ -509,6 +527,8 @@ def get_financial_autopsy(resolved_asset: ResolvedAsset) -> FinancialAutopsyFetc
                     tax_expense=tax_exp,
                     income_before_tax=pretax_inc,
                     gross_profit=gross_prof,
+                    research_and_development=rd_exp,
+                    selling_general_admin=sga_exp,
                     total_assets=tot_assets,
                     current_assets=curr_assets,
                     current_liabilities=curr_liab,

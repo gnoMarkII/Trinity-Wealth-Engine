@@ -27,8 +27,10 @@ export interface ThesisDeltaProp {
   f_score_delta?: number | null
   breached_falsifiers?: string[]
 }
+import PriceSpectrumGauge from './PriceSpectrumGauge'
+import FourPillarBalanceRings from './FourPillarBalanceRings'
 
-interface Props {
+export interface Props {
   scorecard: ScorecardProps | null | undefined
   baseCaseSummary?: string
   narrativeAnalysis?: string
@@ -40,6 +42,9 @@ interface Props {
   onViewEarningsCall?: () => void
   onOpenProvenance?: () => void
   hasProvenance?: boolean
+  reverseDcf?: any
+  tactical?: any
+  currencySymbol?: string
 }
 
 export function getStanceBadgeStyle(stance: string = 'UNKNOWN') {
@@ -104,20 +109,46 @@ export default function ExecutiveThesisHero({
   onViewEarningsCall,
   onOpenProvenance,
   hasProvenance = false,
+  reverseDcf,
+  tactical,
+  currencySymbol = '$',
 }: Props) {
   const stanceInfo = getStanceBadgeStyle(scorecard?.action_stance)
   const conviction = scorecard?.core_conviction_score
   const readiness = scorecard?.execution_readiness_score
+  const resolvedPrice =
+    atomicSnapshot?.analysis_price ??
+    currentPrice ??
+    tactical?.current_price ??
+    null
 
   return (
-    <div className="flow-panel rounded-2xl border border-edge/80 p-6 shadow-sm transition-all animate-card-in">
+    <div className="flow-panel rounded-2xl border border-edge/80 p-6 shadow-sm transition-all animate-card-in space-y-6">
+      {/* Infographic 1: Valuation & Tactical Execution Spectrum Gauge */}
+      {resolvedPrice != null && (
+        <PriceSpectrumGauge
+          currentPrice={resolvedPrice}
+          targetPrice12m={reverseDcf?.target_price_12m}
+          upside12mPct={reverseDcf?.upside_12m_pct}
+          intrinsicValue={reverseDcf?.intrinsic_value_today}
+          buyZoneMin={tactical?.buy_zone_min}
+          buyZoneMax={tactical?.buy_zone_max}
+          isInBuyZone={tactical?.is_in_buy_zone}
+          stopLoss={tactical?.invalidation_stop_loss}
+          currency={currencySymbol}
+          actionStance={scorecard?.action_stance || 'HOLD_WAIT'}
+          stanceReason={scorecard?.action_stance_reason}
+        />
+      )}
       {/* Top Header: Stance Hero & Summary Badges */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-b border-edge/60 pb-5">
         <div className="flex flex-wrap items-center gap-3">
-          <div className={`inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border text-xs font-bold tracking-wider uppercase ${stanceInfo.bg}`}>
-            <span className={`w-2.5 h-2.5 rounded-full ${stanceInfo.dot} animate-pulse`} />
-            <span>{stanceInfo.label}</span>
-          </div>
+          {resolvedPrice == null && (
+            <div className={`inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border text-xs font-bold tracking-wider uppercase ${stanceInfo.bg}`}>
+              <span className={`w-2.5 h-2.5 rounded-full ${stanceInfo.dot} animate-pulse`} />
+              <span>{stanceInfo.label}</span>
+            </div>
+          )}
 
           <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-surface border border-edge/70 text-xs font-medium text-zinc-700" title="Business Conviction = Fundamental Quality (55%) + Guidance/Expectations (45%)">
             <span className="text-zinc-400">Business Conviction:</span>
@@ -171,20 +202,20 @@ export default function ExecutiveThesisHero({
             </div>
           )}
 
-          {atomicSnapshot?.analysis_price != null ? (
+          {resolvedPrice == null && atomicSnapshot?.analysis_price != null ? (
             <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-sky-50/60 border border-sky-200 text-xs font-medium text-sky-800" title={`Price Source: ${atomicSnapshot.price_source} | Session: ${atomicSnapshot.market_session_status || 'closed'}`}>
               <span className="text-sky-600 font-normal">Analysis close:</span>
-              <span className="font-bold">${atomicSnapshot.analysis_price.toFixed(2)}</span>
+              <span className="font-bold">{currencySymbol}{atomicSnapshot.analysis_price.toFixed(2)}</span>
               <span className="text-[10px] text-sky-500">({atomicSnapshot.analysis_price_as_of})</span>
             </div>
-          ) : currentPrice != null ? (
+          ) : resolvedPrice == null && currentPrice != null ? (
             <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-sky-50/60 border border-sky-200 text-xs font-medium text-sky-800">
               <span className="text-sky-600 font-normal">Price:</span>
-              <span className="font-bold">${currentPrice.toFixed(2)}</span>
+              <span className="font-bold">{currencySymbol}{currentPrice.toFixed(2)}</span>
             </div>
           ) : null}
 
-          {scorecard?.action_stance_reason && (
+          {resolvedPrice == null && scorecard?.action_stance_reason && (
             <span className="text-xs text-zinc-500 italic max-w-md truncate">
               {scorecard.action_stance_reason}
             </span>
@@ -208,7 +239,7 @@ export default function ExecutiveThesisHero({
         <div className="mt-4 rounded-xl border border-amber-300 bg-amber-50/90 p-3 text-xs text-amber-900 flex items-start gap-2 shadow-xs">
           <span className="text-base">⚠️</span>
           <div>
-            <span className="font-bold">Price Synchronization Alert:</span> Live quote differs from unadjusted OHLCV Close. Analysis is strictly anchored to EOD Close ({atomicSnapshot.latest_ohlcv_close != null ? `$${atomicSnapshot.latest_ohlcv_close.toFixed(2)}` : 'N/A'} as of {atomicSnapshot.latest_ohlcv_date}).
+            <span className="font-bold">Price Synchronization Alert:</span> Live quote differs from unadjusted OHLCV Close. Analysis is strictly anchored to EOD Close ({atomicSnapshot.latest_ohlcv_close != null ? `${currencySymbol}${atomicSnapshot.latest_ohlcv_close.toFixed(2)}` : 'N/A'} as of {atomicSnapshot.latest_ohlcv_date}).
           </div>
         </div>
       )}
@@ -272,7 +303,7 @@ export default function ExecutiveThesisHero({
                     </span>
                   </div>
                   <div className="text-[11px] text-sky-800/80 mt-0.5">
-                    {portfolioContext.units} units @ ${portfolioContext.avg_cost?.toFixed(2)} • Weight: {portfolioContext.current_weight_pct?.toFixed(1)}%
+                    {portfolioContext.units} units @ {portfolioContext.avg_cost != null ? `${currencySymbol}${portfolioContext.avg_cost.toFixed(2)}` : 'N/A'} • Weight: {portfolioContext.current_weight_pct != null ? `${portfolioContext.current_weight_pct.toFixed(1)}%` : 'N/A'}
                   </div>
                 </div>
               </div>
@@ -322,108 +353,17 @@ export default function ExecutiveThesisHero({
         </div>
       )}
 
-      {/* 4-Pillar Scorecard Grid */}
-      <div className="my-5 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        {/* Pillar 1: Fundamental Quality */}
-        <div className="rounded-xl border border-edge/60 bg-surface/70 p-4 transition-all hover:bg-surface hover:border-sky-300/80">
-          <div className="flex items-center justify-between text-xs font-medium text-zinc-500 mb-1.5">
-            <span>Pillar 1: Fundamental</span>
-            <span className="font-semibold text-sky-700">
-              {scorecard?.reweighting_metadata ? '55% Wt (Reweighted)' : '40% Wt'}
-            </span>
-          </div>
-          <div className="flex items-baseline justify-between mb-2">
-            <span className="text-xl font-bold text-zinc-900">
-              {scorecard?.fundamental_quality_score != null ? `${scorecard.fundamental_quality_score.toFixed(1)}` : 'N/A'}
-            </span>
-            <span className="text-xs text-zinc-400">/ 100</span>
-          </div>
-          <div className="w-full bg-zinc-200/80 h-1.5 rounded-full overflow-hidden">
-            <div
-              className="bg-gradient-to-r from-sky-500 to-emerald-500 h-full rounded-full transition-all duration-500"
-              style={{ width: `${Math.min(100, Math.max(0, scorecard?.fundamental_quality_score || 0))}%` }}
-            />
-          </div>
-          <span className="text-[11px] text-zinc-500 block mt-2">งบการเงิน, FCF Quality, Piotroski</span>
-        </div>
-
-        {/* Pillar 2: Guidance & Expectation Gap */}
-        <div className="rounded-xl border border-edge/60 bg-surface/70 p-4 transition-all hover:bg-surface hover:border-sky-300/80">
-          <div className="flex items-center justify-between text-xs font-medium text-zinc-500 mb-1.5">
-            <span>
-              {scorecard?.management_guidance_score == null && scorecard?.analyst_expectations_score != null
-                ? 'Pillar 2: Analyst Expectations'
-                : 'Pillar 2: Guidance & Expectations'}
-            </span>
-            <span className="font-semibold text-sky-700">
-              {scorecard?.reweighting_metadata ? '45% Wt (Reweighted)' : '30% Wt'}
-            </span>
-          </div>
-          <div className="flex items-baseline justify-between mb-2">
-            <span className="text-xl font-bold text-zinc-900">
-              {scorecard?.guidance_expectation_score != null ? `${scorecard.guidance_expectation_score.toFixed(1)}` : 'N/A'}
-            </span>
-            <span className="text-xs text-zinc-400">/ 100</span>
-          </div>
-          <div className="w-full bg-zinc-200/80 h-1.5 rounded-full overflow-hidden">
-            <div
-              className="bg-gradient-to-r from-sky-500 to-indigo-500 h-full rounded-full transition-all duration-500"
-              style={{ width: `${Math.min(100, Math.max(0, scorecard?.guidance_expectation_score || 0))}%` }}
-            />
-          </div>
-          <span className="text-[11px] text-zinc-500 block mt-2">
-            {scorecard?.management_guidance_score == null && scorecard?.analyst_expectations_score != null
-              ? 'EPS Revision Consensus (+40 Up / 0 Down)'
-              : 'Guidance Delivery & Analyst Revisions'}
-          </span>
-        </div>
-
-        {/* Pillar 3: Valuation Margin */}
-        <div className="rounded-xl border border-edge/60 bg-surface/70 p-4 transition-all hover:bg-surface hover:border-sky-300/80">
-          <div className="flex items-center justify-between text-xs font-medium text-zinc-500 mb-1.5">
-            <span>Pillar 3: Valuation</span>
-            <span className="font-semibold text-sky-700">
-              {scorecard?.reweighting_metadata ? '0% (Excluded)' : '30% Wt'}
-            </span>
-          </div>
-          <div className="flex items-baseline justify-between mb-2">
-            <span className="text-xl font-bold text-zinc-900">
-              {scorecard?.valuation_margin_score != null ? `${scorecard.valuation_margin_score.toFixed(1)}` : 'Informational'}
-            </span>
-            {scorecard?.valuation_margin_score != null && <span className="text-xs text-zinc-400">/ 100</span>}
-          </div>
-          <div className="w-full bg-zinc-200/80 h-1.5 rounded-full overflow-hidden">
-            <div
-              className="bg-gradient-to-r from-sky-500 to-amber-500 h-full rounded-full transition-all duration-500"
-              style={{ width: `${Math.min(100, Math.max(0, scorecard?.valuation_margin_score || 0))}%` }}
-            />
-          </div>
-          <span className="text-[11px] text-zinc-500 block mt-2">
-            {scorecard?.valuation_margin_score != null ? '12M DCF Upside, Implied Growth' : 'Macro Anomaly (ERP ≤ 0 / Ke < Rf)'}
-          </span>
-        </div>
-
-        {/* Pillar 4: Execution Readiness */}
-        <div className="rounded-xl border border-edge/60 bg-surface/70 p-4 transition-all hover:bg-surface hover:border-sky-300/80">
-          <div className="flex items-center justify-between text-xs font-medium text-zinc-500 mb-1.5">
-            <span>Execution Readiness</span>
-            <span className="font-semibold text-zinc-500">Timing</span>
-          </div>
-          <div className="flex items-baseline justify-between mb-2">
-            <span className="text-xl font-bold text-zinc-900">
-              {readiness != null ? `${(readiness * 10).toFixed(0)}` : 'N/A'}
-            </span>
-            <span className="text-xs text-zinc-400">/ 100</span>
-          </div>
-          <div className="w-full bg-zinc-200/80 h-1.5 rounded-full overflow-hidden">
-            <div
-              className="bg-gradient-to-r from-sky-500 to-cyan-500 h-full rounded-full transition-all duration-500"
-              style={{ width: `${Math.min(100, Math.max(0, (readiness || 0) * 10))}%` }}
-            />
-          </div>
-          <span className="text-[11px] text-zinc-500 block mt-2">Stage, S/R Levels, SEC Form 4</span>
-        </div>
-      </div>
+      {/* Infographic 3: 4-Pillar Scorecard SVG Circular Progress Rings */}
+      <FourPillarBalanceRings
+        fundamentalScore={scorecard?.fundamental_quality_score}
+        guidanceScore={scorecard?.guidance_expectation_score}
+        valuationScore={scorecard?.valuation_margin_score}
+        executionReadiness={readiness}
+        isReweighted={Boolean(scorecard?.reweighting_metadata)}
+        reweightingMetadata={scorecard?.reweighting_metadata}
+        hasAnalystRevisionOnly={scorecard?.management_guidance_score == null && scorecard?.analyst_expectations_score != null}
+        executionBreakdown={scorecard?.execution_score_breakdown}
+      />
 
       {/* Base Case & Earnings Call Strip */}
       <div className="space-y-4 pt-1">

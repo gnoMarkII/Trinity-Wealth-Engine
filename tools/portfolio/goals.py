@@ -1,8 +1,10 @@
 import csv
 import json
+import math
 import os
 import tempfile
 from datetime import datetime
+from decimal import Decimal
 from pathlib import Path
 from typing import Literal, Optional, List, Dict
 
@@ -10,8 +12,10 @@ import frontmatter
 from filelock import FileLock, Timeout
 from langchain_core.tools import tool
 
+from core.investor_essence.funding import evaluate_goal_tension
 from core.logger import get_logger
 from tools._atomic_io import _atomic_write_to
+
 from tools.archivist.metadata import dump_note
 from tools.archivist.maintenance_guard import assert_write_allowed
 from tools.portfolio.adapters.markdown.identity import portfolio_note_identity
@@ -42,18 +46,7 @@ def _get_goals_filepath() -> Path:
 
 
 def _atomic_write_goals(serialized: str) -> None:
-    assert_write_allowed(GOALS_PATH)
-    parent = GOALS_PATH.parent
-    parent.mkdir(parents=True, exist_ok=True)
-    fd, tmp_name = tempfile.mkstemp(prefix=".goals_", suffix=".md.tmp", dir=str(parent))
-    tmp_path = Path(tmp_name)
-    try:
-        with os.fdopen(fd, "w", encoding="utf-8") as f:
-            f.write(serialized)
-        os.replace(tmp_path, GOALS_PATH)
-    except Exception:
-        tmp_path.unlink(missing_ok=True)
-        raise
+    _atomic_write_to(GOALS_PATH, serialized)
 
 
 def _goal_item_to_md(goal: GoalItem) -> str:
@@ -82,7 +75,14 @@ def _goal_item_to_md(goal: GoalItem) -> str:
         metadata["notes"] = goal.notes
     if goal.bucket_id is not None:
         metadata["bucket_id"] = goal.bucket_id
+    if getattr(goal, "priority_tier", None) is not None:
+        metadata["priority_tier"] = goal.priority_tier
+    if getattr(goal, "flexibility", None) is not None:
+        metadata["flexibility"] = goal.flexibility
+    if getattr(goal, "monthly_savings_thb", 0.0):
+        metadata["monthly_savings_thb"] = goal.monthly_savings_thb
     return dump_note(metadata, "")
+
 
 
 def _sync_goals_sidecars(state: GoalsState) -> None:
@@ -164,6 +164,9 @@ def set_goal(
     notes: str | None = None,
     portfolio_id: str = "default",
     bucket_id: str | None = None,
+    priority_tier: Literal["needs", "wants", "wishes"] = "wants",
+    flexibility: Literal["none", "timeline_flexible", "amount_flexible", "fully_flexible"] = "none",
+    monthly_savings_thb: float = 0.0,
 ) -> str:
     """บันทึกหรืออัปเดตเป้าหมายทางการเงิน (Financial Goals)"""
     nm = name.strip()
@@ -205,6 +208,9 @@ def set_goal(
                 created_date=preserved_date,
                 portfolio_id=portfolio_id,
                 bucket_id=bucket_id,
+                priority_tier=priority_tier,
+                flexibility=flexibility,
+                monthly_savings_thb=monthly_savings_thb,
             )
             if existing_idx is not None:
                 state.goals[existing_idx] = new_goal
@@ -221,6 +227,7 @@ def set_goal(
 
     dl_note = f" | deadline: {deadline}" if deadline else ""
     return f"{action} {nm} ({goal_type}) target: {target_amount_thb:,.2f} THB{dl_note} | total: {total}"
+
 
 
 @tool
@@ -305,6 +312,10 @@ def _compute_structured_goals(
             _PCT_DP,
         )
 
+        priority_tier = getattr(g, "priority_tier", "wants") or "wants"
+        flexibility = getattr(g, "flexibility", "none") or "none"
+        monthly_savings = getattr(g, "monthly_savings_thb", 0.0) or 0.0
+
         entry: dict = {
             "name": g.name,
             "goal_type": g.goal_type,
@@ -313,16 +324,39 @@ def _compute_structured_goals(
             "progress_pct": pct,
             "portfolio_id": pid,
             "bucket_id": g.bucket_id,
+            "priority_tier": priority_tier,
+            "flexibility": flexibility,
+            "monthly_savings_thb": monthly_savings,
         }
+        days_left = None
         if g.deadline:
             try:
                 dl = datetime.strptime(g.deadline, "%Y-%m-%d")
                 entry["deadline"] = g.deadline
-                entry["deadline_days_left"] = (dl - now).days
+                days_left = (dl - now).days
+                entry["deadline_days_left"] = days_left
             except ValueError:
                 entry["deadline"] = g.deadline
         if g.notes:
             entry["notes"] = g.notes
+
+        # Tension & Required Return Analysis
+        months_remaining = max(1, math.ceil(days_left / 30.4375)) if days_left is not None and days_left > 0 else None
+        tension_report = evaluate_goal_tension(
+            current_amount=Decimal(str(round(current, _MONEY_DP))),
+            target_amount=Decimal(str(g.target_amount_thb)),
+            monthly_savings=Decimal(str(monthly_savings)),
+            months_remaining=months_remaining,
+            priority_tier=priority_tier,
+        )
+        entry["required_return_pct"] = (
+            float(tension_report.required_return_cagr_pct)
+            if tension_report.required_return_cagr_pct is not None
+            else None
+        )
+        entry["tension_level"] = tension_report.tension_level.value
+        entry["adjustment_levers"] = tension_report.levers.to_dict()
+
         results.append(entry)
     return results
 
@@ -367,6 +401,9 @@ def structured_upsert_goal(
     portfolio_id: str = "default",
     bucket_id: str | None = None,
     new_name: str | None = None,
+    priority_tier: Literal["needs", "wants", "wishes"] = "wants",
+    flexibility: Literal["none", "timeline_flexible", "amount_flexible", "fully_flexible"] = "none",
+    monthly_savings_thb: float = 0.0,
 ) -> list[dict]:
     nm = name.strip()
     if not nm:
@@ -424,6 +461,9 @@ def structured_upsert_goal(
             created_date=preserved_date,
             portfolio_id=portfolio_id,
             bucket_id=bucket_id,
+            priority_tier=priority_tier,
+            flexibility=flexibility,
+            monthly_savings_thb=monthly_savings_thb,
         )
         if existing_idx is not None:
             state.goals[existing_idx] = new_goal
@@ -432,6 +472,7 @@ def structured_upsert_goal(
         _save_goals(post, state)
 
     return get_structured_goals(portfolio_id=None)
+
 
 
 def structured_remove_goal(name: str, portfolio_id: str | None = None) -> list[dict]:

@@ -59,6 +59,15 @@ import type {
   ApplyBucketPlanRequestDTO,
   AllocationPreviewDTO,
   AllocationApplyReceiptDTO,
+  PortfolioAdvisoryResponseDTO,
+  PortfolioAdvisoryNarrativeDTO,
+  FundConstituentsDTO,
+  PortfolioLookThroughReportDTO,
+  PortfolioOpportunitiesResponseDTO,
+  EventPresetItemDTO,
+  EventStudyRequestDTO,
+  EventStudyResponseDTO,
+  PositionReviewResponseDTO,
 } from './types'
 
 export class ApiError extends Error {
@@ -276,6 +285,18 @@ export const api = {
       { signal }
     ),
 
+  getPromiseLedger: (ticker: string, signal?: AbortSignal) =>
+    request<import('./types').PromiseSyncResponseDTO>(
+      `/api/equity/${encodeURIComponent(ticker)}/earnings-call/ledger`,
+      { signal }
+    ),
+
+  syncPromiseLedger: (ticker: string, forceRefresh: boolean = false, limitCalls: number = 8, signal?: AbortSignal) =>
+    request<import('./types').PromiseSyncResponseDTO>(
+      `/api/equity/${encodeURIComponent(ticker)}/earnings-call/sync?force_refresh=${forceRefresh}&limit_calls=${limitCalls}`,
+      { method: 'POST', signal }
+    ),
+
 
 
 
@@ -394,11 +415,41 @@ export const api = {
     return cachedGet<ActualPortfolioStateDTO>(url, 45_000)
   },
 
+  getPortfolioAdvisory: (refreshPrices: boolean = false, portfolioId: string = 'default') => {
+    const url = `/api/portfolio/advisory?refresh_prices=${refreshPrices}&portfolio_id=${encodeURIComponent(portfolioId)}`
+    if (refreshPrices) {
+      invalidateApiCache('/api/portfolio/advisory')
+      return request<PortfolioAdvisoryResponseDTO>(url)
+    }
+    return cachedGet<PortfolioAdvisoryResponseDTO>(url, 45_000)
+  },
+
+  synthesizeAdvisoryPlaybook: (forceRefresh: boolean = false, portfolioId: string = 'default') => {
+    invalidateApiCache('/api/portfolio/advisory')
+    return request<PortfolioAdvisoryNarrativeDTO>('/api/portfolio/advisory/synthesize', {
+      method: 'POST',
+      body: JSON.stringify({ force_refresh: forceRefresh, portfolio_id: portfolioId }),
+    })
+  },
+
+  getFundConstituents: (symbol: string) =>
+    cachedGet<FundConstituentsDTO>(`/api/portfolio/funds/${encodeURIComponent(symbol)}/constituents`, 60_000),
+
+  getPortfolioLookThrough: (portfolioId: string = 'default') =>
+    cachedGet<PortfolioLookThroughReportDTO>(`/api/portfolio/${encodeURIComponent(portfolioId)}/look-through`, 45_000),
+
   getActualBucketAllocations: (portfolioId: string = 'default') =>
     cachedGet<BucketAllocationResponseDTO>(`/api/portfolio/actual/allocations?portfolio_id=${encodeURIComponent(portfolioId)}`, 45_000),
 
   getActualWatchlist: (portfolioId: string = 'default') =>
     cachedGet<ActualWatchlistStateDTO>(`/api/portfolio/actual/watchlist?portfolio_id=${encodeURIComponent(portfolioId)}`, 45_000),
+
+  getPortfolioOpportunities: (portfolioId: string = 'default', forceRefresh: boolean = false) => {
+    const url = `/api/portfolio/watchlist/opportunities?portfolio_id=${encodeURIComponent(portfolioId)}${forceRefresh ? '&force_refresh=true' : ''}`
+    return forceRefresh
+      ? request<PortfolioOpportunitiesResponseDTO>(url)
+      : cachedGet<PortfolioOpportunitiesResponseDTO>(url, 30_000)
+  },
 
   getActualGoals: (portfolioId?: string) => {
     const params = portfolioId ? `?portfolio_id=${encodeURIComponent(portfolioId)}` : ''
@@ -1460,6 +1511,24 @@ export const api = {
         method: 'POST',
         body: JSON.stringify(payload),
       },
+    )
+  },
+
+  getEventStudyPresets: () =>
+    request<EventPresetItemDTO[]>('/api/equity/event-study/presets'),
+
+  postEventStudy: (ticker: string, payload: EventStudyRequestDTO) =>
+    request<EventStudyResponseDTO>(`/api/equity/${encodeURIComponent(ticker)}/event-study`, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+
+  getPositionReview: (ticker: string, market: string = 'US', portfolioId: string = 'default') => {
+    const params = new URLSearchParams()
+    if (market) params.set('market', market)
+    if (portfolioId) params.set('portfolio_id', portfolioId)
+    return request<PositionReviewResponseDTO>(
+      `/api/equity/${encodeURIComponent(ticker)}/position-review?${params.toString()}`
     )
   },
 }

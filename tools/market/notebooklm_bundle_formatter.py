@@ -591,13 +591,41 @@ def format_insider_ownership(snapshot: EquityCorpusSnapshot) -> str:
 
 
 def format_earnings_calls(snapshot: EquityCorpusSnapshot) -> str:
-    """Part 05: Earnings Call Transcripts & Summaries."""
+    """Part 05: Earnings Call Transcripts, Management Notes & Promise Track Record."""
     lines = [
         f"# {snapshot.ticker} Earnings Call Transcripts & Management Notes",
         "",
         f"Total earnings call notes: {len(snapshot.earnings_calls)}",
         "",
     ]
+
+    # Incorporate Promise Check management credibility ledger if available
+    try:
+        from tools.market.adapters.transcript_vault_adapter import load_promise_ledger
+        from core.promise_check.scoring import compute_promise_scores
+        raw_ledger = load_promise_ledger(snapshot.ticker)
+        if raw_ledger:
+            scores = compute_promise_scores(raw_ledger)
+            bias = scores.get("bias", {})
+            lines.extend([
+                "## 🏆 Rolling 8-Quarter Management Credibility & Promise Track Record",
+                f"- **Overall Credibility Score:** `{scores.get('credibility', 'N/A')} / 100` (Grade: `{scores.get('grade', 'N/A')}`, Confidence: `{scores.get('confidence', 'N/A')}`)",
+                f"- **Guidance Delivery Rate:** `{scores.get('delivery', 'N/A')}%` | **Transparency Score:** `{scores.get('transparency', 'N/A')}%`",
+                f"- **Management Bias:** `{bias.get('label', 'N/A')}` — {bias.get('message', '')}",
+                f"- **Median Guidance Delta:** `{bias.get('median_delta_pct', 'N/A')}%` (Beat Rate: `{bias.get('beat_rate', 'N/A')}%` over {bias.get('n', 0)} calls)",
+                f"- **Average Milestone Slip:** `{scores.get('milestone_slip_quarters', 'N/A')} quarters` ({scores.get('milestone_slip_n', 0)} milestones tracked)",
+                "",
+                "### Summary of Commitment Outcomes",
+                f"- **Delivered:** `{scores.get('counts', {}).get('Delivered', 0)}`",
+                f"- **Partial / Missed:** `{scores.get('counts', {}).get('Partial', 0)}` Partial, `{scores.get('counts', {}).get('Missed', 0)}` Missed",
+                f"- **Quietly Dropped:** `{scores.get('counts', {}).get('Quietly dropped', 0)}`",
+                f"- **Pending (Future Quarters):** `{scores.get('counts', {}).get('Pending', 0)}`",
+                "",
+                "---",
+                "",
+            ])
+    except Exception:
+        pass
 
     if not snapshot.earnings_calls:
         lines.append("No retained earnings call notes found for this company.")

@@ -57,10 +57,10 @@ describe('TacticalFlowMatrixCard', () => {
       />
     )
 
-    expect(screen.getByText('STAGE 2 MARKUP')).toBeInTheDocument()
-    expect(screen.getByText('$151.39 - $160.60')).toBeInTheDocument()
-    expect(screen.getByText('$149.85')).toBeInTheDocument()
-    expect(screen.getByText('$169.91')).toBeInTheDocument()
+    expect(screen.getAllByText('STAGE 2 MARKUP').length).toBeGreaterThanOrEqual(1)
+    expect(screen.getAllByText('$151.39 - $160.60').length).toBeGreaterThanOrEqual(1)
+    expect(screen.getAllByText('$149.85').length).toBeGreaterThanOrEqual(1)
+    expect(screen.getAllByText('$169.91').length).toBeGreaterThanOrEqual(1)
     expect(screen.getByText('78.5%')).toBeInTheDocument()
     expect(screen.getByText('Unified SASE')).toBeInTheDocument()
     expect(screen.getByText('Firewall refresh delay')).toBeInTheDocument()

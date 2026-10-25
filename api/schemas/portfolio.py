@@ -143,6 +143,12 @@ class ActualWatchlistItemDTO(BaseModel):
     target_price: Optional[float] = None
     added_date: str
     notes: Optional[str] = None
+    suggested_bucket_id: Optional[str] = None
+    applied_bucket_name: Optional[str] = None
+    target_price_basis: Optional[str] = None
+    target_currency: Optional[str] = None
+    evaluation_ref: Optional[str] = None
+    source_refs: Optional[list[str]] = None
 
 
 class ActualWatchlistStateDTO(BaseModel):
@@ -178,6 +184,14 @@ class ActualGoalItemDTO(BaseModel):
     notes: Optional[str] = None
     portfolio_id: Optional[str] = "default"
     bucket_id: Optional[str] = None
+    priority_tier: Optional[Literal["needs", "wants", "wishes"]] = "wants"
+    flexibility: Optional[Literal["none", "timeline_flexible", "amount_flexible", "fully_flexible"]] = "none"
+    monthly_savings_thb: float = 0.0
+    required_return_pct: Optional[float] = None
+    tension_level: Optional[Literal["BALANCED", "MODERATE_TENSION", "CRITICAL_TENSION", "INSUFFICIENT_DATA"]] = "BALANCED"
+    adjustment_levers: Optional[dict[str, Any]] = None
+
+
 
 
 class ActualGoalsResponseDTO(BaseModel):
@@ -409,6 +423,12 @@ class UpsertWatchlistItemRequestDTO(BaseModel):
     asset_type: str
     target_price: Optional[float] = None
     notes: str = ""
+    suggested_bucket_id: Optional[str] = None
+    applied_bucket_name: Optional[str] = None
+    target_currency: Optional[str] = None
+    evaluation_ref: Optional[str] = None
+    source_refs: Optional[list[str]] = None
+    target_price_basis: Optional[str] = None
 
 
 class UpsertGoalRequestDTO(BaseModel):
@@ -420,6 +440,10 @@ class UpsertGoalRequestDTO(BaseModel):
     portfolio_id: Optional[str] = "default"
     bucket_id: Optional[str] = None
     new_name: Optional[str] = None
+    priority_tier: Optional[Literal["needs", "wants", "wishes"]] = "wants"
+    flexibility: Optional[Literal["none", "timeline_flexible", "amount_flexible", "fully_flexible"]] = "none"
+    monthly_savings_thb: Optional[float] = 0.0
+
 
 
 class AppendJournalRequestDTO(BaseModel):

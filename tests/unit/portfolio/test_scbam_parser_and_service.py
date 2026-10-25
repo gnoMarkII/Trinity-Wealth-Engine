@@ -166,6 +166,9 @@ class MockThaiFundPriceAdapter(ThaiFundPricePort):
     def fetch_historical_nav(self, symbol: str, target_date: str) -> Optional[float]:
         return self.nav_map.get((symbol, target_date))
 
+    def fetch_constituents(self, symbol: str):
+        return None
+
 
 class MockBatchTradeImporter:
     def __init__(self):

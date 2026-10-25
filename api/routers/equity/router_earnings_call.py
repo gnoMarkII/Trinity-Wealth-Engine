@@ -8,10 +8,17 @@ from api.schemas.equity import (
     EarningsCallListResponse,
     EarningsCallNoteItem,
 )
-from api.dependencies import get_earnings_call_service
+from api.dependencies import get_earnings_call_service, get_promise_service
 from application.earnings_call.dto import (
     EarningsCallSummarizeRequestDTO,
     EarningsCallRunDTO,
+)
+from application.earnings_call.promise_service import PromiseApplicationService
+from schemas.promise_schemas import (
+    PromiseSyncResponseDTO,
+    PromiseLedgerDTO,
+    PromiseItemDTO,
+    TranscriptCallDTO,
 )
 from application.earnings_call.errors import (
     EarningsCallValidationError,
@@ -232,10 +239,58 @@ def get_earnings_calls(
     )
 
 
+@router.get(
+    "/{ticker}/earnings-call/ledger",
+    response_model=PromiseSyncResponseDTO,
+    status_code=status.HTTP_200_OK,
+    summary="Get 8-Quarter Promise Check Ledger & Scores",
+)
+def get_promise_ledger(
+    ticker: str,
+    promise_service: PromiseApplicationService = Depends(get_promise_service),
+) -> PromiseSyncResponseDTO:
+    """Retrieve existing 8-quarter earnings commitments, resolution status, and credibility metrics."""
+    result = promise_service.get_sync_response(ticker=ticker)
+    if not result:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"No promise ledger found for {ticker.upper()}. Run POST /{ticker}/earnings-call/sync first.",
+        )
+    return result
+
+
+@router.post(
+    "/{ticker}/earnings-call/sync",
+    response_model=PromiseSyncResponseDTO,
+    status_code=status.HTTP_200_OK,
+    summary="Sync Rolling 8-Quarter Earnings Transcripts & Recalculate Scores",
+)
+def sync_promise_ledger(
+    ticker: str,
+    force_refresh: bool = False,
+    limit_calls: int = 8,
+    promise_service: PromiseApplicationService = Depends(get_promise_service),
+) -> PromiseSyncResponseDTO:
+    """Discovers earnings calls, ingests transcripts, resolves promises, and persists credibility metrics."""
+    try:
+        return promise_service.sync_ledger(
+            ticker=ticker,
+            force_refresh=force_refresh,
+            limit_calls=limit_calls,
+        )
+    except Exception as exc:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to sync promise ledger for {ticker}: {exc}",
+        ) from exc
+
+
 __all__ = [
     "router",
     "summarize_earnings_call",
     "get_earnings_call_run",
     "retry_earnings_call_run",
     "get_earnings_calls",
+    "get_promise_ledger",
+    "sync_promise_ledger",
 ]

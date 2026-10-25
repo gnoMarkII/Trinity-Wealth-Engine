@@ -170,6 +170,20 @@
         ]
       }
     },
+    "/api/equity/event-study/presets": {
+      "get": {
+        "operationId": "get_event_study_presets_api_equity_event_study_presets_get",
+        "tags": [
+          "equity"
+        ],
+        "summary": "Get Event Study Presets",
+        "parameters": [],
+        "has_request_body": false,
+        "responses": [
+          "200"
+        ]
+      }
+    },
     "/api/equity/latest": {
       "get": {
         "operationId": "get_latest_equities_api_equity_latest_get",
@@ -309,6 +323,31 @@
         ]
       }
     },
+    "/api/equity/{ticker}/earnings-call/ledger": {
+      "get": {
+        "operationId": "get_promise_ledger_api_equity__ticker__earnings_call_ledger_get",
+        "tags": [
+          "equity"
+        ],
+        "summary": "Get 8-Quarter Promise Check Ledger & Scores",
+        "parameters": [
+          {
+            "name": "ticker",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Ticker"
+            }
+          }
+        ],
+        "has_request_body": false,
+        "responses": [
+          "200",
+          "422"
+        ]
+      }
+    },
     "/api/equity/{ticker}/earnings-call/runs/{run_id}": {
       "get": {
         "operationId": "get_earnings_call_run_api_equity__ticker__earnings_call_runs__run_id__get",
@@ -402,6 +441,51 @@
         ]
       }
     },
+    "/api/equity/{ticker}/earnings-call/sync": {
+      "post": {
+        "operationId": "sync_promise_ledger_api_equity__ticker__earnings_call_sync_post",
+        "tags": [
+          "equity"
+        ],
+        "summary": "Sync Rolling 8-Quarter Earnings Transcripts & Recalculate Scores",
+        "parameters": [
+          {
+            "name": "ticker",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Ticker"
+            }
+          },
+          {
+            "name": "force_refresh",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false,
+              "title": "Force Refresh"
+            }
+          },
+          {
+            "name": "limit_calls",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 8,
+              "title": "Limit Calls"
+            }
+          }
+        ],
+        "has_request_body": false,
+        "responses": [
+          "200",
+          "422"
+        ]
+      }
+    },
     "/api/equity/{ticker}/earnings-calls": {
       "get": {
         "operationId": "get_earnings_calls_api_equity__ticker__earnings_calls_get",
@@ -421,6 +505,31 @@
           }
         ],
         "has_request_body": false,
+        "responses": [
+          "200",
+          "422"
+        ]
+      }
+    },
+    "/api/equity/{ticker}/event-study": {
+      "post": {
+        "operationId": "execute_event_study_api_equity__ticker__event_study_post",
+        "tags": [
+          "equity"
+        ],
+        "summary": "Execute Event Study",
+        "parameters": [
+          {
+            "name": "ticker",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Ticker"
+            }
+          }
+        ],
+        "has_request_body": true,
         "responses": [
           "200",
           "422"
@@ -681,6 +790,41 @@
               "description": "Bar interval (15m, 1h, 1d, 1wk, 1mo)",
               "default": "1d",
               "title": "Interval"
+            }
+          }
+        ],
+        "has_request_body": false,
+        "responses": [
+          "200",
+          "422"
+        ]
+      }
+    },
+    "/api/equity/{ticker}/position-review": {
+      "get": {
+        "operationId": "get_position_review_api_equity__ticker__position_review_get",
+        "tags": [
+          "equity"
+        ],
+        "summary": "Get Position Review",
+        "parameters": [
+          {
+            "name": "ticker",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Ticker"
+            }
+          },
+          {
+            "name": "market",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "US",
+              "title": "Market"
             }
           }
         ],
@@ -2519,6 +2663,30 @@
         ]
       }
     },
+    "/api/portfolio/actual/performance/snapshot-all": {
+      "post": {
+        "operationId": "trigger_performance_snapshot_all_api_portfolio_actual_performance_snapshot_all_post",
+        "tags": [],
+        "summary": "Trigger Performance Snapshot All",
+        "parameters": [
+          {
+            "name": "refresh_prices",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false,
+              "title": "Refresh Prices"
+            }
+          }
+        ],
+        "has_request_body": false,
+        "responses": [
+          "200",
+          "422"
+        ]
+      }
+    },
     "/api/portfolio/actual/reset": {
       "post": {
         "operationId": "reset_portfolio_clean_slate_api_portfolio_actual_reset_post",
@@ -2891,6 +3059,71 @@
             "required": false,
             "schema": {
               "type": "string",
+              "default": "default",
+              "title": "Portfolio Id"
+            }
+          }
+        ],
+        "has_request_body": true,
+        "responses": [
+          "200",
+          "422"
+        ]
+      }
+    },
+    "/api/portfolio/advisory": {
+      "get": {
+        "operationId": "get_portfolio_advisory_endpoint_api_portfolio_advisory_get",
+        "tags": [
+          "Portfolio Advisory"
+        ],
+        "summary": "Get Tier 1 Portfolio Advisory Report and Cached Playbook",
+        "parameters": [
+          {
+            "name": "refresh_prices",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "description": "Whether to trigger an immediate live price fetch before evaluation",
+              "default": false,
+              "title": "Refresh Prices"
+            }
+          },
+          {
+            "name": "portfolio_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "Portfolio identifier to evaluate",
+              "default": "default",
+              "title": "Portfolio Id"
+            }
+          }
+        ],
+        "has_request_body": false,
+        "responses": [
+          "200",
+          "422"
+        ]
+      }
+    },
+    "/api/portfolio/advisory/synthesize": {
+      "post": {
+        "operationId": "synthesize_advisory_playbook_endpoint_api_portfolio_advisory_synthesize_post",
+        "tags": [
+          "Portfolio Advisory"
+        ],
+        "summary": "Synthesize AI Strategic Playbook",
+        "parameters": [
+          {
+            "name": "portfolio_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "Portfolio identifier to synthesize",
               "default": "default",
               "title": "Portfolio Id"
             }
@@ -3297,6 +3530,31 @@
         ]
       }
     },
+    "/api/portfolio/funds/{symbol}/constituents": {
+      "get": {
+        "operationId": "get_fund_constituents_endpoint_api_portfolio_funds__symbol__constituents_get",
+        "tags": [
+          "Portfolio Funds"
+        ],
+        "summary": "Get single fund top holdings, sector breakdown, and asset allocation",
+        "parameters": [
+          {
+            "name": "symbol",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Symbol"
+            }
+          }
+        ],
+        "has_request_body": false,
+        "responses": [
+          "200",
+          "422"
+        ]
+      }
+    },
     "/api/portfolio/latest": {
       "get": {
         "operationId": "get_latest_portfolio_api_portfolio_latest_get",
@@ -3517,6 +3775,44 @@
             "schema": {
               "type": "string",
               "title": "Scan Id"
+            }
+          }
+        ],
+        "has_request_body": false,
+        "responses": [
+          "200",
+          "422"
+        ]
+      }
+    },
+    "/api/portfolio/watchlist/opportunities": {
+      "get": {
+        "operationId": "get_portfolio_opportunities_api_portfolio_watchlist_opportunities_get",
+        "tags": [
+          "Portfolio Watchlist Opportunities"
+        ],
+        "summary": "Get 3D Smart Opportunity Finder candidates for portfolio watchlist",
+        "parameters": [
+          {
+            "name": "portfolio_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "Portfolio ID to evaluate opportunities for",
+              "default": "default",
+              "title": "Portfolio Id"
+            }
+          },
+          {
+            "name": "force_refresh",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "description": "Bypass cache and force re-evaluation",
+              "default": false,
+              "title": "Force Refresh"
             }
           }
         ],
@@ -3773,6 +4069,31 @@
         "operationId": "delete_portfolio_endpoint_api_portfolio__portfolio_id__delete",
         "tags": [],
         "summary": "Delete Portfolio Endpoint",
+        "parameters": [
+          {
+            "name": "portfolio_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Portfolio Id"
+            }
+          }
+        ],
+        "has_request_body": false,
+        "responses": [
+          "200",
+          "422"
+        ]
+      }
+    },
+    "/api/portfolio/{portfolio_id}/look-through": {
+      "get": {
+        "operationId": "get_portfolio_look_through_endpoint_api_portfolio__portfolio_id__look_through_get",
+        "tags": [
+          "Portfolio Funds"
+        ],
+        "summary": "Get portfolio-wide look-through overlap and true economic exposure",
         "parameters": [
           {
             "name": "portfolio_id",

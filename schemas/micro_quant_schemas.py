@@ -22,6 +22,93 @@ class DCFScenario(BaseModel):
     target_price: Optional[float] = None
     upside_pct: Optional[float] = None
     margin_of_safety_pct: Optional[float] = None
+    implied_exit_ebitda_multiple: Optional[float] = None
+    terminal_ebitda: Optional[float] = None
+
+
+class ValuationSanityAudit(BaseModel):
+    terminal_value_pct_of_ev: Optional[float] = None
+    implied_exit_fcf_multiple: Optional[float] = None
+    implied_exit_ebitda_multiple: Optional[float] = None
+    benchmark_sector_multiple: Optional[float] = None
+    model_reliability_tier: Literal["high", "moderate", "terminal_dependent", "unavailable"] = "unavailable"
+    reliability_score: Optional[int] = None
+    is_terminal_dependent: bool = False
+    is_growth_capped: bool = False
+    sanity_warnings: list[str] = Field(default_factory=list)
+
+
+class SensitivityCell(BaseModel):
+    wacc_pct: float
+    terminal_growth_pct: float
+    target_price: float
+    upside_pct: float
+    verdict: Literal["undervalued", "fairly_valued", "overvalued", "unavailable"] = "fairly_valued"
+    is_base: bool = False
+
+
+class SensitivityMatrix(BaseModel):
+    wacc_values: list[float] = Field(default_factory=list)
+    terminal_growth_values: list[float] = Field(default_factory=list)
+    grid: list[list[SensitivityCell]] = Field(default_factory=list)
+    current_price: float = 0.0
+
+
+class SensitivitySummary(BaseModel):
+    min_target_price: float
+    max_target_price: float
+    min_upside_pct: float
+    max_upside_pct: float
+    wacc_spread_pct: list[float] = Field(default_factory=list)
+    growth_spread_pct: list[float] = Field(default_factory=list)
+    # Sensitivity Diagnostics for Agent Synthesis & Forensics
+    growth_delta_per_1pct: Optional[float] = None
+    margin_delta_per_1pct: Optional[float] = None
+    primary_operating_driver: Optional[str] = None  # "operating_leverage" | "revenue_growth" | "balanced"
+    macro_yield_shock_50bps_delta: Optional[float] = None
+    macro_yield_shock_100bps_delta: Optional[float] = None
+
+
+# -------------------------------------------------------------
+# 3D Sensitivity Matrix Schemas (Valuation, Operating, Macro Shock)
+# -------------------------------------------------------------
+class OperatingSensitivityCell(BaseModel):
+    revenue_growth_pct: float
+    ebit_margin_pct: float
+    target_price: float
+    upside_pct: float
+    verdict: Literal["undervalued", "fairly_valued", "overvalued", "unavailable"] = "fairly_valued"
+    is_base: bool = False
+
+
+class OperatingSensitivityMatrix(BaseModel):
+    growth_values: list[float] = Field(default_factory=list)      # 5Y Revenue CAGR %
+    margin_values: list[float] = Field(default_factory=list)      # EBIT Margin %
+    grid: list[list[OperatingSensitivityCell]] = Field(default_factory=list)
+    current_price: float = 0.0
+
+
+class MacroSensitivityCell(BaseModel):
+    beta: float
+    risk_free_rate_pct: float
+    effective_wacc_pct: float
+    target_price: float
+    upside_pct: float
+    verdict: Literal["undervalued", "fairly_valued", "overvalued", "unavailable"] = "fairly_valued"
+    is_base: bool = False
+
+
+class MacroSensitivityMatrix(BaseModel):
+    beta_values: list[float] = Field(default_factory=list)        # Stock Beta
+    yield_values: list[float] = Field(default_factory=list)       # 10Y Treasury Yield %
+    grid: list[list[MacroSensitivityCell]] = Field(default_factory=list)
+    current_price: float = 0.0
+
+
+class SensitivityMatrixSet(BaseModel):
+    valuation: Optional[SensitivityMatrix] = None                 # WACC vs Terminal g (5x5)
+    operating: Optional[OperatingSensitivityMatrix] = None         # Growth vs Margin (5x5)
+    macro: Optional[MacroSensitivityMatrix] = None                 # Beta vs 10Y Yield (5x5)
 
 
 class DCFResult(BaseModel):
@@ -36,6 +123,20 @@ class DCFResult(BaseModel):
     is_actionable: bool = True
     actionability_reason: Optional[str] = None
     invalidation_reasons: list[str] = Field(default_factory=list)
+    valuation_sanity_audit: Optional[ValuationSanityAudit] = None
+    sensitivity_matrix: Optional[SensitivityMatrix] = None
+    sensitivity_summary: Optional[SensitivitySummary] = None
+    discounting_convention: Literal["mid_year", "end_year"] = "mid_year"
+    # Damodaran Synthetic Rating & Cost of Debt Benchmark
+    synthetic_credit_rating: Optional[str] = None
+    interest_coverage_ratio: Optional[float] = None
+    credit_spread_bps: Optional[float] = None
+    benchmark_cost_of_debt_pct: Optional[float] = None
+    # Dual Terminal Value & Implied Exit EV/EBITDA Cross-Check
+    terminal_ebitda: Optional[float] = None
+    implied_exit_ebitda_multiple: Optional[float] = None
+    implied_exit_fcf_multiple: Optional[float] = None
+    implied_perpetual_growth_from_exit_pct: Optional[float] = None
 
 
 class MarginMetricItem(BaseModel):
@@ -46,16 +147,55 @@ class MarginMetricItem(BaseModel):
     source_provenance: Optional[str] = None
 
 
+class HistoricalFinancialItem(BaseModel):
+    fiscal_year: str                                    # e.g. "2021A", "2022A", "2023A"
+    revenue: float
+    revenue_growth_pct: Optional[float] = None
+    ebit: float
+    ebit_margin_pct: float
+    depreciation: Optional[float] = None
+    capex: Optional[float] = None
+    fcf: Optional[float] = None
+    # Functional OpEx Breakdown (Optional)
+    gross_profit: Optional[float] = None
+    gross_margin_pct: Optional[float] = None
+    research_and_development: Optional[float] = None
+    rd_pct_of_rev: Optional[float] = None
+    selling_general_admin: Optional[float] = None
+    sga_pct_of_rev: Optional[float] = None
+    sales_and_marketing: Optional[float] = None
+    general_and_administrative: Optional[float] = None
+    capex_to_depreciation_ratio: Optional[float] = None
+    reinvestment_lifecycle_phase: Optional[Literal["aggressive_expansion", "sustainable_maintenance", "underinvestment_warning", "unavailable"]] = None
+
+
 class ExplicitFCFProjection(BaseModel):
     year_index: int  # 1 to 5
     projected_revenue: float
+    projected_revenue_growth_pct: float = 0.0          # YoY Growth % (Staged Fade)
+    # Functional OpEx Projections (Optional Operating Leverage Modeling)
+    projected_gross_profit: Optional[float] = None
+    projected_gross_margin_pct: Optional[float] = None
+    projected_rd: Optional[float] = None
+    projected_rd_pct_of_rev: Optional[float] = None
+    projected_sga: Optional[float] = None
+    projected_sga_pct_of_rev: Optional[float] = None
+    # Operating Income & NOPAT
     projected_ebit: float
-    projected_ebit_margin_pct: float
-    projected_nopat: float
-    projected_reinvestment_currency: float  # Absolute net reinvestment (CapEx - Deprec + Delta NWC) in currency units
-    projected_fcf: float
-    discount_factor: float
-    pv_fcf: float
+    projected_ebit_margin_pct: float                   # EBIT Margin % (Staged Leverage)
+    projected_nopat: float                             # EBIT * (1 - Tax Rate)
+    # Reinvestment Breakdown Sub-items
+    projected_depreciation: float = 0.0                # D&A
+    projected_capex: float = 0.0                       # Capital Expenditures
+    projected_net_capex: float = 0.0                   # CapEx - D&A
+    projected_delta_nwc: float = 0.0                   # Change in Working Capital
+    projected_reinvestment_currency: float             # Total Net Reinvestment = Net CapEx + Delta NWC
+    # Cash Flow & Discounting
+    projected_fcf: float                               # NOPAT - Reinvestment
+    discount_factor: float                             # Mid-Year Discount Factor: (1 + WACC)^(-(t - 0.5))
+    pv_fcf: float                                      # UFCF * Discount Factor
+    capex_to_depreciation_ratio: Optional[float] = None
+    reinvestment_lifecycle_phase: Optional[Literal["aggressive_expansion", "sustainable_maintenance", "underinvestment_warning", "unavailable"]] = None
 
 
 class AtomicMarketSnapshot(BaseModel):
@@ -83,7 +223,9 @@ class AtomicMarketSnapshot(BaseModel):
 
 
 class ReverseDCFResult(BaseModel):
+    historical_financials_3y: list[HistoricalFinancialItem] = Field(default_factory=list)
     explicit_forecast_5y: list[ExplicitFCFProjection] = Field(default_factory=list)
+    explicit_forecast_5y_scenarios: dict[str, list[ExplicitFCFProjection]] = Field(default_factory=dict)
     sum_pv_5y_fcf: Optional[float] = None
     terminal_value_undiscounted: Optional[float] = None
     terminal_value_pv: Optional[float] = None
@@ -93,6 +235,10 @@ class ReverseDCFResult(BaseModel):
     intrinsic_value_today: Optional[float] = None
     target_price_12m: Optional[float] = None
     upside_12m_pct: Optional[float] = None
+    current_stock_price: Optional[float] = None
+    shares_outstanding: Optional[float] = None
+    terminal_growth_pct: Optional[float] = None
+    beta: Optional[float] = None
     market_implied_growth_pct: Optional[float] = None
     market_implied_margin_pct: Optional[float] = None
     solver_status: Literal["converged", "bounded_extreme", "no_solution", "not_applicable"] = "converged"
@@ -125,6 +271,34 @@ class ReverseDCFResult(BaseModel):
     alternative_target_price_12m: Optional[float] = None
     alternative_upside_12m_pct: Optional[float] = None
     market_implied_roe_pct: Optional[float] = None
+    valuation_sanity_audit: Optional[ValuationSanityAudit] = None
+    sensitivity_matrix: Optional[SensitivityMatrix] = None
+    sensitivity_matrices: Optional[SensitivityMatrixSet] = None
+    sensitivity_summary: Optional[SensitivitySummary] = None
+    discounting_convention: Literal["mid_year", "end_year"] = "mid_year"
+    # Damodaran Synthetic Rating & Cost of Debt Benchmark
+    synthetic_credit_rating: Optional[str] = None
+    interest_coverage_ratio: Optional[float] = None
+    credit_spread_bps: Optional[float] = None
+    benchmark_cost_of_debt_pct: Optional[float] = None
+    # Dual Terminal Value & Implied Exit EV/EBITDA Cross-Check
+    terminal_ebitda: Optional[float] = None
+    implied_exit_ebitda_multiple: Optional[float] = None
+    implied_exit_fcf_multiple: Optional[float] = None
+    implied_perpetual_growth_from_exit_pct: Optional[float] = None
+    exit_multiple_tv_undiscounted: Optional[float] = None
+    # Company Archetype & Mid-Cycle Normalization
+    company_archetype: Optional[Literal["high_growth_tech", "mature_cash_cow", "cyclical", "turnaround", "general"]] = None
+    normalized_mid_cycle_ebit_margin_pct: Optional[float] = None
+    is_mid_cycle_normalized: bool = False
+    archetype_rationale: Optional[str] = None
+    # Margin of Safety (MoS) Entry Price Target
+    margin_of_safety_pct: float = 15.0
+    mos_entry_price_today: Optional[float] = None
+    mos_target_price_12m: Optional[float] = None
+    current_margin_of_safety_pct: Optional[float] = None
+    is_in_buy_zone: bool = False
+    required_pullback_pct: Optional[float] = None
 
 
 class SmartMoneyFlags(BaseModel):

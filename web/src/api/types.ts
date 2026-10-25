@@ -701,6 +701,12 @@ export interface ActualWatchlistItemDTO {
   target_price: number | null
   added_date: string
   notes: string | null
+  suggested_bucket_id?: string | null
+  applied_bucket_name?: string | null
+  target_currency?: string | null
+  evaluation_ref?: string | null
+  source_refs?: string[] | null
+  target_price_basis?: string | null
 }
 
 export interface ActualWatchlistStateDTO {
@@ -716,6 +722,16 @@ export interface PortfolioMetaDTO {
 }
 
 
+export interface GoalAdjustmentLeversDTO {
+  save_more_monthly_thb: number
+  total_monthly_savings_needed_thb: number
+  extend_timeline_months: number
+  total_months_needed: number
+  downsized_target_thb: number
+  required_risk_cagr_pct: number | null
+}
+
+
 export interface ActualGoalItemDTO {
   name: string
   target_amount_thb: number
@@ -727,7 +743,14 @@ export interface ActualGoalItemDTO {
   notes: string | null
   portfolio_id?: string | null
   bucket_id?: string | null
+  priority_tier?: 'needs' | 'wants' | 'wishes' | null
+  flexibility?: 'none' | 'timeline_flexible' | 'amount_flexible' | 'fully_flexible' | null
+  monthly_savings_thb?: number | null
+  required_return_pct?: number | null
+  tension_level?: 'BALANCED' | 'MODERATE_TENSION' | 'CRITICAL_TENSION' | 'INSUFFICIENT_DATA' | null
+  adjustment_levers?: GoalAdjustmentLeversDTO | null
 }
+
 
 export interface ActualGoalsResponseDTO {
   n_goals: number
@@ -837,6 +860,12 @@ export interface UpsertWatchlistItemPayload {
   asset_type: string
   target_price?: number | null
   notes?: string
+  suggested_bucket_id?: string | null
+  applied_bucket_name?: string | null
+  target_currency?: string | null
+  evaluation_ref?: string | null
+  source_refs?: string[] | null
+  target_price_basis?: string | null
 }
 
 export interface UpsertGoalPayload {
@@ -848,7 +877,11 @@ export interface UpsertGoalPayload {
   portfolio_id?: string | null
   bucket_id?: string | null
   new_name?: string | null
+  priority_tier?: 'needs' | 'wants' | 'wishes' | null
+  flexibility?: 'none' | 'timeline_flexible' | 'amount_flexible' | 'fully_flexible' | null
+  monthly_savings_thb?: number | null
 }
+
 
 export interface AppendJournalPayload {
   entry: string
@@ -901,6 +934,89 @@ export interface DCFScenarioDTO {
   target_price?: number | null
   upside_pct?: number | null
   margin_of_safety_pct?: number | null
+  implied_exit_ebitda_multiple?: number | null
+  terminal_ebitda?: number | null
+}
+
+export interface ValuationSanityAuditDTO {
+  terminal_value_pct_of_ev?: number | null
+  implied_exit_fcf_multiple?: number | null
+  implied_exit_ebitda_multiple?: number | null
+  benchmark_sector_multiple?: number | null
+  model_reliability_tier?: 'high' | 'moderate' | 'terminal_dependent' | 'unavailable'
+  reliability_score?: number | null
+  is_terminal_dependent?: boolean
+  is_growth_capped?: boolean
+  sanity_warnings?: string[]
+}
+
+export interface SensitivityCellDTO {
+  wacc_pct: number
+  terminal_growth_pct: number
+  target_price: number
+  upside_pct: number
+  verdict: 'undervalued' | 'fairly_valued' | 'overvalued' | 'unavailable'
+  is_base?: boolean
+}
+
+export interface SensitivityMatrixDTO {
+  wacc_values: number[]
+  terminal_growth_values: number[]
+  grid: SensitivityCellDTO[][]
+  current_price: number
+}
+
+export interface SensitivitySummaryDTO {
+  min_target_price: number
+  max_target_price: number
+  min_upside_pct: number
+  max_upside_pct: number
+  wacc_spread_pct: number[]
+  growth_spread_pct: number[]
+  growth_delta_per_1pct?: number | null
+  margin_delta_per_1pct?: number | null
+  primary_operating_driver?: string | null
+  macro_yield_shock_50bps_delta?: number | null
+  macro_yield_shock_100bps_delta?: number | null
+}
+
+export interface OperatingSensitivityCellDTO {
+  revenue_growth_pct: number
+  ebit_margin_pct: number
+  target_price: number
+  upside_pct: number
+  verdict: 'undervalued' | 'fairly_valued' | 'overvalued' | 'unavailable'
+  is_base?: boolean
+}
+
+export interface OperatingSensitivityMatrixDTO {
+  growth_values: number[]
+  margin_values: number[]
+  grid: OperatingSensitivityCellDTO[][]
+  current_price: number
+}
+
+export interface MacroSensitivityCellDTO {
+  beta: number
+  risk_free_rate_pct: number
+  effective_wacc_pct: number
+  target_price: number
+  upside_pct: number
+  verdict: 'undervalued' | 'fairly_valued' | 'overvalued' | 'unavailable'
+  is_base?: boolean
+}
+
+export interface MacroSensitivityMatrixDTO {
+  beta_values: number[]
+  yield_values: number[]
+  grid: MacroSensitivityCellDTO[][]
+  current_price: number
+}
+
+export interface SensitivityMatrixSetDTO {
+  valuation?: SensitivityMatrixDTO | null
+  operating?: OperatingSensitivityMatrixDTO | null
+  macro?: MacroSensitivityMatrixDTO | null
 }
 
 export interface DCFResultDTO {
@@ -915,6 +1031,18 @@ export interface DCFResultDTO {
   is_actionable?: boolean
   actionability_reason?: string | null
   invalidation_reasons?: string[]
+  valuation_sanity_audit?: ValuationSanityAuditDTO | null
+  sensitivity_matrix?: SensitivityMatrixDTO | any[] | null
+  sensitivity_summary?: SensitivitySummaryDTO | null
+  discounting_convention?: 'mid_year' | 'end_year'
+  synthetic_credit_rating?: string | null
+  interest_coverage_ratio?: number | null
+  credit_spread_bps?: number | null
+  benchmark_cost_of_debt_pct?: number | null
+  terminal_ebitda?: number | null
+  implied_exit_ebitda_multiple?: number | null
+  implied_exit_fcf_multiple?: number | null
+  implied_perpetual_growth_from_exit_pct?: number | null
 }
 
 export type PriceSource =
@@ -956,8 +1084,60 @@ export interface AtomicMarketSnapshotDTO {
   retrieved_at: string
 }
 
+export interface HistoricalFinancialItemDTO {
+  fiscal_year: string
+  revenue: number
+  revenue_growth_pct?: number | null
+  ebit: number
+  ebit_margin_pct: number
+  depreciation?: number | null
+  capex?: number | null
+  fcf?: number | null
+  gross_profit?: number | null
+  gross_margin_pct?: number | null
+  research_and_development?: number | null
+  rd_pct_of_rev?: number | null
+  selling_general_admin?: number | null
+  sga_pct_of_rev?: number | null
+  sales_and_marketing?: number | null
+  general_and_administrative?: number | null
+  capex_to_depreciation_ratio?: number | null
+  reinvestment_lifecycle_phase?: 'aggressive_expansion' | 'sustainable_maintenance' | 'underinvestment_warning' | 'unavailable' | null
+}
+
+export interface ExplicitFCFProjectionDTO {
+  year_index: number
+  projected_revenue: number
+  projected_revenue_growth_pct: number
+  projected_gross_profit?: number | null
+  projected_gross_margin_pct?: number | null
+  projected_rd?: number | null
+  projected_rd_pct_of_rev?: number | null
+  projected_sga?: number | null
+  projected_sga_pct_of_rev?: number | null
+  projected_ebit: number
+  projected_ebit_margin_pct: number
+  projected_nopat: number
+  projected_depreciation: number
+  projected_capex: number
+  projected_net_capex: number
+  projected_delta_nwc: number
+  projected_reinvestment_currency: number
+  projected_fcf: number
+  discount_factor: number
+  pv_fcf: number
+  capex_to_depreciation_ratio?: number | null
+  reinvestment_lifecycle_phase?: 'aggressive_expansion' | 'sustainable_maintenance' | 'underinvestment_warning' | 'unavailable' | null
+}
+
 export interface ReverseDCFResultDTO {
-  explicit_forecast_5y?: any[]
+  shares_outstanding?: number | null
+  current_stock_price?: number | null
+  terminal_growth_pct?: number | null
+  beta?: number | null
+  historical_financials_3y?: HistoricalFinancialItemDTO[]
+  explicit_forecast_5y?: ExplicitFCFProjectionDTO[]
+  explicit_forecast_5y_scenarios?: Record<'bear' | 'base' | 'bull', ExplicitFCFProjectionDTO[]> | null
   sum_pv_5y_fcf?: number | null
   terminal_value_undiscounted?: number | null
   terminal_value_pv?: number | null
@@ -999,6 +1179,30 @@ export interface ReverseDCFResultDTO {
   alternative_target_price_12m?: number | null
   alternative_upside_12m_pct?: number | null
   market_implied_roe_pct?: number | null
+  valuation_sanity_audit?: ValuationSanityAuditDTO | null
+  sensitivity_matrix?: SensitivityMatrixDTO | any[] | null
+  sensitivity_matrices?: SensitivityMatrixSetDTO | null
+  sensitivity_summary?: SensitivitySummaryDTO | null
+  discounting_convention?: 'mid_year' | 'end_year'
+  synthetic_credit_rating?: string | null
+  interest_coverage_ratio?: number | null
+  credit_spread_bps?: number | null
+  benchmark_cost_of_debt_pct?: number | null
+  terminal_ebitda?: number | null
+  implied_exit_ebitda_multiple?: number | null
+  implied_exit_fcf_multiple?: number | null
+  implied_perpetual_growth_from_exit_pct?: number | null
+  exit_multiple_tv_undiscounted?: number | null
+  company_archetype?: 'high_growth_tech' | 'mature_cash_cow' | 'cyclical' | 'turnaround' | 'general' | null
+  normalized_mid_cycle_ebit_margin_pct?: number | null
+  is_mid_cycle_normalized?: boolean
+  archetype_rationale?: string | null
+  margin_of_safety_pct?: number | null
+  mos_entry_price_today?: number | null
+  mos_target_price_12m?: number | null
+  current_margin_of_safety_pct?: number | null
+  is_in_buy_zone?: boolean
+  required_pullback_pct?: number | null
 }
 
 export interface TacticalSetupDTO {
@@ -2074,6 +2278,126 @@ export interface EarningsCallListResponse {
 }
 
 // ---------------------------------------------------------
+// Promise Check & Earnings Commitment Types
+// ---------------------------------------------------------
+
+export interface TranscriptCallDTO {
+  quarter: string
+  date: string
+  status: 'ok' | 'missing'
+  source?: string | null
+  source_url?: string | null
+  words?: number | null
+  cached_file?: string | null
+  fetch_method?: string | null
+  retired?: boolean
+}
+
+export interface PromiseItemDTO {
+  id: string
+  made_in: string
+  speaker: string
+  section: 'prepared' | 'qa'
+  type: 'A_numeric' | 'B_milestone'
+  category: string
+  scope: string
+  quote: string
+  metric: string
+  metric_th?: string | null
+  target_kind: string
+  target_low?: number | null
+  target_high?: number | null
+  target_point?: number | null
+  direction?: 'up' | 'down' | 'flat' | null
+  unit?: string | null
+  basis?: string | null
+  due: string
+  due_precision: 'explicit' | 'inferred'
+  notes?: string
+  notes_th?: string
+  status: 'Delivered' | 'Partial' | 'Missed' | 'Restated' | 'Quietly dropped' | 'Pending' | 'Unverifiable'
+  restated_direction?: 'raised' | 'lowered' | null
+  supersedes?: string | null
+  resolved_in?: string | null
+  evidence_quote?: string | null
+  actual_numeric?: number | null
+  outcome_value?: number | null
+  delta_pct?: number | null
+  slip_quarters?: number | null
+  extraction_method?: string
+  retired?: boolean
+}
+
+export interface GuidanceBiasDTO {
+  label: 'Sandbagger' | 'Straight shooter' | 'Overpromiser' | 'Mixed' | string
+  code: string
+  message: string
+  median_delta_pct?: number | null
+  beat_rate?: number | null
+  n: number
+  min_n: number
+}
+
+export interface CohortTrendItemDTO {
+  quarter: string
+  label: string
+  date?: string | null
+  status: string
+  made: number
+  resolved: number
+  delivered: number
+  pending: number
+  hit_rate?: number | null
+}
+
+export interface PromiseScoresDTO {
+  framework_version: string
+  ticker: string
+  company: string
+  run_date: string
+  window: {
+    from: string
+    to: string
+    calls: number
+    missing: string[]
+  }
+  credibility?: number | null
+  grade?: string | null
+  confidence: 'Low' | 'Medium' | 'High'
+  delivery?: number | null
+  transparency: number
+  n_promises: number
+  n_resolved: number
+  counts: Record<string, number>
+  bias: GuidanceBiasDTO
+  milestone_slip_quarters?: number | null
+  milestone_slip_n: number
+  trend: {
+    verdict: string
+    older_half_hit_rate?: number | null
+    newer_half_hit_rate?: number | null
+    cohorts?: CohortTrendItemDTO[]
+  }
+  top_kept?: string[]
+  top_broken?: string[]
+}
+
+export interface PromiseLedgerDTO {
+  ticker: string
+  company: string
+  framework_version: string
+  run_date: string
+  calls: TranscriptCallDTO[]
+  promises: PromiseItemDTO[]
+}
+
+export interface PromiseSyncResponseDTO {
+  ledger: PromiseLedgerDTO
+  scores: PromiseScoresDTO
+  from_cache: boolean
+}
+
+// ---------------------------------------------------------
 // Terminal V2 Phase 4 Types (Commodity Vol, Treasury Demand, SEC, News, Options)
 // ---------------------------------------------------------
 
@@ -2922,5 +3246,415 @@ export interface AllocationApplyReceiptDTO {
   canonical_status: string
   projection_status: string
   warnings: string[]
+}
+
+// =====================================================================
+// Portfolio Advisory Desk (Tier 1 Quant + Tier 2 AI Playbook)
+// =====================================================================
+
+export type AdvisoryActionCode =
+  | 'URGENT_REDUCE'
+  | 'TRIM_OVERWEIGHT'
+  | 'LET_WINNER_RUN'
+  | 'ACCUMULATE_NOW'
+  | 'BREAKOUT_BUY'
+  | 'ACCUMULATE_ON_DIP'
+  | 'HOLD_WITHIN_BAND'
+  | 'HOLD_LOCKED_VEHICLE'
+  | 'HOLD_PASSIVE_CORE'
+  | 'QUARANTINED_DATA_ANOMALY'
+  | 'WAIT_PRICE_REFRESH'
+
+export type AdvisoryDataMode =
+  | 'FULL_CROSS_SCALE'
+  | 'PORTFOLIO_PLUS_MICRO'
+  | 'PORTFOLIO_BUCKET_ONLY'
+
+export interface LotSizingDTO {
+  market: 'TH' | 'US' | 'GLOBAL'
+  board_lot_shares?: number | null
+  odd_lot_shares?: number | null
+  whole_shares?: number | null
+  fractional_shares?: number | null
+  amount_thb: number
+  amount_native: number
+  estimated_execution_price_native: number
+  native_currency: 'THB' | 'USD'
+}
+
+export interface DualCurrencyCashPlanDTO {
+  cash_thb_available: number
+  cash_usd_available: number
+  usd_thb_fx_rate: number
+  immediate_deploy_thb: number
+  immediate_deploy_usd: number
+  conditional_limit_order_thb: number
+  conditional_limit_order_usd: number
+  thb_surplus_after_immediate: number
+  usd_surplus_after_immediate: number
+  fx_conversion_needed_thb: number
+}
+
+export interface DataAnomalyWarningDTO {
+  guardrail_code: string
+  ticker: string
+  message: string
+  severity: 'critical' | 'warning' | 'info'
+  remedy_hint?: string
+}
+
+export interface QuarantinedHoldingDTO {
+  symbol: string
+  reason: string
+  guardrail_code: string
+  current_value_thb: number
+  details?: string
+}
+
+export interface HoldingAdvisoryDTO {
+  symbol: string
+  asset_name: string
+  asset_type: string
+  market: 'TH' | 'US'
+  native_currency: 'THB' | 'USD'
+  evaluation_track: string
+  bucket_id?: string | null
+  bucket_name?: string | null
+  current_units: number
+  current_price_native: number
+  current_value_thb: number
+  current_weight_pct: number
+  target_weight_pct: number
+  weight_drift_pct: number
+  action_code: AdvisoryActionCode | string
+  action_rationale: string
+  lot_sizing?: LotSizingDTO | null
+  is_immediate_execution: boolean
+  conditional_buy_zone_min?: number | null
+  conditional_buy_zone_max?: number | null
+  core_conviction_score?: number | null
+  business_conviction_score?: number | null
+  price_stage?: string | null
+  live_upside_12m_pct?: number | null
+  macro_alignment: 'tailwind' | 'neutral' | 'headwind' | 'unavailable'
+  sector_quadrant?: string | null
+  breached_falsifiers: string[]
+  data_warnings: string[]
+}
+
+export interface PortfolioRiskRadarDTO {
+  weighted_beta?: number | null
+  sector_crowding: Record<string, number>
+  fx_exposure_pct: Record<string, number>
+  purpose_bucket_drift: Record<string, number>
+  unassigned_holdings_value_thb: number
+  unassigned_holdings_nav_pct: number
+  unassigned_drift_guard_active: boolean
+  hhi?: number | null
+  effective_holdings_count?: number | null
+  top_1_weight_pct?: number
+  top_3_weight_pct?: number
+  top_5_weight_pct?: number
+  concentration_risk_level?: 'LOW' | 'MODERATE' | 'HIGH'
+}
+
+export interface PortfolioAdvisoryNarrativeDTO {
+  synthesized_at: string
+  portfolio_state_hash: string
+  macro_executive_summary: string
+  immediate_action_playbook: string[]
+  conditional_dip_plan: string[]
+  risk_mitigation_and_hedging: string[]
+  whats_working?: string[]
+  what_concerns_me?: string[]
+  strategic_discussion_points?: string[]
+  consistency_verified: boolean
+  generated_by: string
+}
+
+export interface FundHoldingItemDTO {
+  name: string
+  percent: number
+  ticker?: string | null
+  asset_type?: string
+}
+
+export interface FundSectorItemDTO {
+  sector_name_th: string
+  sector_name_en: string
+  percent: number
+}
+
+export interface FundConstituentsDTO {
+  fund_id: string
+  symbol: string
+  as_of_date: string
+  master_fund_name?: string | null
+  master_fund_ticker?: string | null
+  top_holdings: FundHoldingItemDTO[]
+  sector_breakdown: FundSectorItemDTO[]
+  asset_allocation: Record<string, number>
+}
+
+export interface LookThroughHoldingExposureDTO {
+  ticker: string
+  company_name: string
+  market: string
+  direct_value_thb: number
+  direct_weight_pct: number
+  indirect_value_thb: number
+  indirect_weight_pct: number
+  total_value_thb: number
+  total_weight_pct: number
+  source_funds: Array<[string, number]>
+  is_cap_breached: boolean
+  is_hidden_concentration: boolean
+}
+
+export interface TrueSectorExposureDTO {
+  sector_name: string
+  sector_name_th: string
+  total_value_thb: number
+  weight_pct: number
+  direct_stocks_pct: number
+  funds_pct: number
+  is_crowded: boolean
+}
+
+export interface PortfolioLookThroughReportDTO {
+  portfolio_id: string
+  evaluated_at: string
+  total_nav_thb: number
+  holdings_exposure: LookThroughHoldingExposureDTO[]
+  top_overlapped_stocks: LookThroughHoldingExposureDTO[]
+  sector_exposure: TrueSectorExposureDTO[]
+  hidden_concentration_warnings: string[]
+  cap_breached_count: number
+}
+
+export interface PortfolioAdvisoryResponseDTO {
+  evaluated_at: string
+  data_mode: AdvisoryDataMode | string
+  portfolio_state_hash: string
+  total_nav_thb: number
+  cash_plan: DualCurrencyCashPlanDTO
+  risk_radar: PortfolioRiskRadarDTO
+  holdings_advisory: HoldingAdvisoryDTO[]
+  quarantined_holdings: QuarantinedHoldingDTO[]
+  anomaly_warnings: DataAnomalyWarningDTO[]
+  macro_regime_summary?: Record<string, any> | null
+  cached_narrative?: PortfolioAdvisoryNarrativeDTO | null
+  look_through_summary?: PortfolioLookThroughReportDTO | null
+}
+
+export interface SynthesizeAdvisoryPlaybookRequest {
+  force_refresh?: boolean
+}
+
+export interface OpportunityCandidateDTO {
+  security_id: string
+  issuer_id: string
+  symbol: string
+  market: string
+  currency: string
+  asset_type: string
+  company_name: string
+  sector_name: string
+  sector_name_th: string
+  source_pools: string[]
+  source_refs: string[]
+  already_directly_held: boolean
+  already_watchlisted: boolean
+  current_direct_value_thb: number
+  current_indirect_value_thb: number
+  current_total_exposure_thb: number
+  current_total_weight_pct: number
+}
+
+export interface CandidateEvaluationResultDTO {
+  candidate: OpportunityCandidateDTO
+  policy_fit: 'pass' | 'fail' | 'needs_review'
+  policy_reasons: string[]
+  suggested_bucket_id?: string | null
+  applied_bucket_name?: string | null
+
+  evidence_readiness: 'sufficient' | 'partial' | 'stale' | 'unavailable'
+  composite_score?: number | null
+  valuation_upside_pct?: number | null
+  target_price?: number | null
+  target_price_basis?: string | null
+  moat_rating?: string | null
+  evidence_reasons: string[]
+
+  macro_alignment: 'tailwind' | 'neutral' | 'headwind' | 'unavailable'
+  macro_stage?: string | null
+  macro_reasons: string[]
+
+  capacity_status: 'available' | 'constrained' | 'unknown' | 'not_applicable'
+  remaining_capacity_thb?: number | null
+  issuer_room_thb?: number | null
+  sector_room_thb?: number | null
+  capacity_reasons: string[]
+
+  research_priority: number
+  priority_reasons: string[]
+  is_actionable: boolean
+}
+
+export interface PortfolioOpportunitiesResponseDTO {
+  portfolio_id: string
+  evaluation_id: string
+  evaluated_at: string
+  readiness: 'ready' | 'degraded' | 'not_ready'
+  total_candidates_scanned: number
+  passed_candidates_count: number
+  candidates: CandidateEvaluationResultDTO[]
+  warnings: string[]
+  missing_requirements: string[]
+  snapshot_meta: Record<string, any>
+}
+
+// ---------------------------------------------------------------------------
+// Event Study & Historical Scenario Analysis DTOs
+// ---------------------------------------------------------------------------
+
+export interface EventPresetItemDTO {
+  preset_id: string
+  name: string
+  category: string
+  description: string
+  recommended_ticker?: string | null
+}
+
+export interface EventStudyRequestDTO {
+  preset_id?: string
+  custom_dates?: string[]
+  custom_event_name?: string
+  horizons?: number[]
+}
+
+export interface EventPathPointDTO {
+  day_offset: number
+  date: string
+  close: number
+  cumulative_return_pct: number
+}
+
+export interface EventInstanceDTO {
+  event_id: string
+  event_date: string
+  entry_date: string
+  entry_price: number
+  description?: string | null
+  forward_returns: Record<string, number | null>
+  daily_trajectory: EventPathPointDTO[]
+  is_win_by_horizon: Record<string, boolean | null>
+}
+
+export interface HorizonStatsDTO {
+  horizon_days: number
+  sample_size: number
+  hit_rate_pct: number
+  avg_return_pct: number
+  median_return_pct: number
+  best_return_pct?: number | null
+  worst_return_pct?: number | null
+  avg_win_pct?: number | null
+  avg_loss_pct?: number | null
+  risk_reward_ratio?: number | null
+  win_count: number
+  loss_count: number
+}
+
+export interface AverageTrajectoryPointDTO {
+  day_offset: number
+  avg_return_pct: number
+  sample_count: number
+}
+
+export interface EventStudyGuardrailWarningDTO {
+  code: string
+  message: string
+}
+
+export interface EventStudyResponseDTO {
+  ticker: string
+  event_name: string
+  horizons: number[]
+  events: EventInstanceDTO[]
+  horizon_stats: Record<string, HorizonStatsDTO>
+  average_trajectory: AverageTrajectoryPointDTO[]
+  warnings: EventStudyGuardrailWarningDTO[]
+}
+
+export interface PriceMoveDecompositionDTO {
+  horizon_label: string
+  start_date: string
+  end_date: string
+  start_price: number
+  end_price: number
+  total_return_pct: number
+  start_eps: number
+  end_eps: number
+  eps_growth_pct: number
+  start_pe: number
+  end_pe: number
+  pe_expansion_pct: number
+  primary_driver: string
+  diagnosis_tier: string
+  diagnosis_summary: string
+}
+
+export interface ThenVsNowSnapshotDTO {
+  is_held: boolean
+  period_label: string
+  then_date: string
+  now_date: string
+  then_price: number
+  now_price: number
+  then_pe?: number | null
+  now_pe?: number | null
+  then_growth_pct?: number | null
+  now_growth_pct?: number | null
+  what_was_true_then: string
+  what_is_true_now: string
+  thesis_reflection_question: string
+}
+
+export interface PortfolioAwareTriggerDTO {
+  trigger_id: string
+  title: string
+  condition_text: string
+  category: string
+  case_impact: string
+  impact_description: string
+  is_currently_triggered: boolean
+  metric_current_value?: number | null
+  metric_threshold_value?: number | null
+}
+
+export interface HoldingSummaryDTO {
+  is_held: boolean
+  units: number
+  avg_cost?: number | null
+  unrealized_pnl_pct?: number | null
+  current_weight_pct: number
+  bucket_id?: string | null
+  entry_date?: string | null
+  added_direction?: string | null
+}
+
+export interface PositionReviewResponseDTO {
+  ticker: string
+  company_name?: string | null
+  current_price: number
+  as_of_date: string
+  action_stance: string
+  action_stance_reason?: string | null
+  holding_summary: HoldingSummaryDTO
+  decompositions: PriceMoveDecompositionDTO[]
+  then_vs_now?: ThenVsNowSnapshotDTO | null
+  triggers: PortfolioAwareTriggerDTO[]
+  honest_gaps: string[]
 }
 

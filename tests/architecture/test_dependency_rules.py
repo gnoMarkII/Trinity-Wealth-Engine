@@ -68,6 +68,12 @@ def test_domain_layer_isolation():
     """Domain layers must not import infrastructure, frameworks, adapters, or api."""
     domain_dirs = [
         PROJECT_ROOT / "core" / "investor_essence",
+        PROJECT_ROOT / "core" / "portfolio",
+        PROJECT_ROOT / "core" / "portfolio_advisory",
+        PROJECT_ROOT / "core" / "opportunity_finder",
+        PROJECT_ROOT / "core" / "promise_check",
+        PROJECT_ROOT / "core" / "equity_analytics",
+        PROJECT_ROOT / "core" / "event_study",
         PROJECT_ROOT / "tools" / "portfolio" / "domain",
         PROJECT_ROOT / "tools" / "market" / "financials" / "domain",
         PROJECT_ROOT / "tools" / "market" / "ohlcv" / "domain",
@@ -84,8 +90,7 @@ def test_domain_layer_isolation():
         "tools.market.financials.adapters",
         "tools.market.ohlcv.adapters",
         "tools.market.terminal_v2.adapters",
-        "tools.investor_essence.adapters",
-    ]
+            ]
 
     violations = []
     for domain_dir in domain_dirs:
@@ -150,7 +155,10 @@ def test_application_and_router_layers_do_not_import_infrastructure():
         "yfinance",
         "fastapi",
         ".adapters",
-        "tools.content.notebooklm.adapter",
+        "tools.portfolio.adapters",
+        "tools.market.adapters",
+        "tools.macro.adapters",
+                "tools.content.notebooklm.adapter",
     )
     violations = []
     for base_dir in application_dirs:

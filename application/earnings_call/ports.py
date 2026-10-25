@@ -1,5 +1,5 @@
 """Outbound Ports for Earnings Call Context."""
-from typing import Optional, Protocol
+from typing import Any, Optional, Protocol
 
 from application.earnings_call.dto import (
     ClaimDTO,
@@ -138,4 +138,74 @@ class EarningsCallWorkflowPort(Protocol):
         self, run_id: str, lease_seconds: int = 60
     ) -> tuple[EarningsCallRunDTO, EarningsCallOutboxEventDTO, LeaseDTO]:
         """Resets dead-lettered outbox event for explicit user-triggered retry."""
+        ...
+
+
+class PromiseExtractorPort(Protocol):
+    """Abstract port for extracting and resolving forward-looking earnings commitments."""
+
+    def extract_commitments_from_transcript(
+        self,
+        company: str,
+        ticker: str,
+        fiscal_quarter: str,
+        call_date: str,
+        fy_end_month: str,
+        open_promises: list[dict],
+        transcript_text: str,
+    ) -> dict:
+        """Extract forward-looking commitments, reiterations, and restatements."""
+        ...
+
+    def resolve_promise(
+        self,
+        promise: dict,
+        resolving_quarter: str,
+        grace_quarter: Optional[str],
+        transcript_text: str,
+    ) -> dict:
+        """Resolve a specific commitment against subsequent transcript text."""
+        ...
+
+
+
+
+    def load_transcript(self, ticker: str, quarter: str) -> Optional[str]:
+        ...
+
+    def list_cached(self, ticker: str) -> list[str]:
+        ...
+
+    def save_ledger(self, ticker: str, ledger: dict) -> str:
+        ...
+
+    def load_ledger(self, ticker: str) -> Optional[dict]:
+        ...
+
+class TranscriptScraperPort(Protocol):
+    """Abstract port for discovering and fetching earnings call transcripts."""
+
+    def discover_calls(self, ticker: str, limit: int = 8) -> list[dict]:
+        ...
+
+    def fetch_transcript(self, call: Any) -> tuple[str, int]:
+        ...
+
+
+class TranscriptVaultPort(Protocol):
+    """Abstract port for caching transcripts and storing promise ledgers in Vault."""
+
+    def save_transcript(self, ticker: str, quarter: str, text: str) -> str:
+        ...
+
+    def load_transcript(self, ticker: str, quarter: str) -> Optional[str]:
+        ...
+
+    def list_cached(self, ticker: str) -> list[str]:
+        ...
+
+    def save_ledger(self, ticker: str, ledger: dict) -> str:
+        ...
+
+    def load_ledger(self, ticker: str) -> Optional[dict]:
         ...

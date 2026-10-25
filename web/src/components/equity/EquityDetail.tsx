@@ -15,7 +15,8 @@ import { EquityChartTab } from './EquityChartTab'
 import { FinancialsTab } from './FinancialsTab'
 import { DataQualityFlagsCard } from './DataQualityFlagsCard'
 import { EarningsCallTab } from './EarningsCallTab'
-import ExecutiveThesisHero, { getStanceBadgeStyle } from './ExecutiveThesisHero'
+import { EventStudyTab } from './EventStudyTab'
+import ExecutiveThesisHero from './ExecutiveThesisHero'
 import ValuationWorkbenchCard from './ValuationWorkbenchCard'
 import TacticalFlowMatrixCard from './TacticalFlowMatrixCard'
 import { EvidenceProvenanceDrawer } from './EvidenceProvenanceDrawer'
@@ -26,6 +27,9 @@ import { SecFinancialsCard } from './SecFinancialsCard'
 import { SecInsiderTradesCard } from './SecInsiderTradesCard'
 import { EquityNotebookLMExport } from './EquityNotebookLMExport'
 import { EquityDetailSkeleton } from '../ui/FlowSkeleton'
+import { PositionReviewModal } from './PositionReviewModal'
+import { ExpectationGapCard } from './ExpectationGapCard'
+import { KillSwitchProximityMeter } from './KillSwitchProximityMeter'
 
 interface EquityDetailProps {
   status: 'loading' | 'error' | 'not-found' | 'success' | 'idle'
@@ -35,6 +39,7 @@ interface EquityDetailProps {
   onOpenAnalysisModal?: (ticker: string, market?: 'US' | 'TH') => void
   isUpdating?: boolean
   onNotify?: (message: string, type: 'info' | 'success' | 'error') => void
+  portfolioId?: string
 }
 
 const eyebrowClass = 'text-xs font-bold uppercase tracking-wider text-sky-700/80'
@@ -48,17 +53,21 @@ export const EquityDetail: React.FC<EquityDetailProps> = ({
   onOpenAnalysisModal,
   isUpdating,
   onNotify,
+  portfolioId = 'default',
 }) => {
-  const [activeTab, setActiveTab] = useState<'overview' | 'chart' | 'financials' | 'news' | 'notes' | 'earnings-call'>('overview')
+  const [activeTab, setActiveTab] = useState<'overview' | 'chart' | 'financials' | 'news' | 'notes' | 'earnings-call' | 'event-study'>('overview')
   const [visitedTabs, setVisitedTabs] = useState<Set<string>>(() => new Set(['overview']))
   const [latestEarningsCall, setLatestEarningsCall] = useState<EarningsCallNoteItem | null>(null)
   const [isFactorsExpanded, setIsFactorsExpanded] = useState(false)
+  const [isDerivativesExpanded, setIsDerivativesExpanded] = useState(false)
+  const [isSecFilingsExpanded, setIsSecFilingsExpanded] = useState(false)
   const [isProvenanceDrawerOpen, setIsProvenanceDrawerOpen] = useState(false)
   const [nasdaqConsensus, setNasdaqConsensus] = useState<any | null>(null)
   const [optionsChain, setOptionsChain] = useState<any | null>(null)
   const [maxPain, setMaxPain] = useState<any | null>(null)
   const [secFinancials, setSecFinancials] = useState<SecCompanyFactsSnapshotDTO | null>(null)
   const [secInsiderTrades, setSecInsiderTrades] = useState<SecInsiderTradeSnapshotDTO | null>(null)
+  const [isPositionReviewOpen, setIsPositionReviewOpen] = useState(false)
 
   useEffect(() => {
     if (data?.ticker) {
@@ -79,8 +88,8 @@ export const EquityDetail: React.FC<EquityDetailProps> = ({
   useEffect(() => {
     if (!data?.ticker) return
     const timer = setTimeout(() => {
-      api.getEquityNews?.(data.ticker)?.catch?.(() => {})
-      api.getEquityOHLCV?.(data.ticker, '6mo', '1d')?.catch?.(() => {})
+      api.getEquityNews?.(data.ticker)?.catch?.(() => { })
+      api.getEquityOHLCV?.(data.ticker, '6mo', '1d')?.catch?.(() => { })
     }, 150)
     return () => clearTimeout(timer)
   }, [data?.ticker])
@@ -235,11 +244,10 @@ export const EquityDetail: React.FC<EquityDetailProps> = ({
             <button
               onClick={() => onOpenAnalysisModal?.(data.ticker, (data.market || 'US') as 'US' | 'TH')}
               disabled={isUpdating}
-              className={`px-3 py-1 rounded-xl border text-xs font-semibold flex items-center gap-1.5 transition-colors shadow-2xs ${
-                isUpdating
+              className={`px-3 py-1 rounded-xl border text-xs font-semibold flex items-center gap-1.5 transition-colors shadow-2xs ${isUpdating
                   ? 'border-amber-200 bg-amber-50 text-amber-700 opacity-80 cursor-not-allowed'
                   : 'border-sky-200 bg-sky-50 text-sky-700 hover:bg-sky-100'
-              }`}
+                }`}
               title={isUpdating ? 'กำลังประมวลผลการวิเคราะห์...' : 'วิเคราะห์ใหม่และดึงข่าวล่าสุด'}
             >
               <span className={isUpdating ? 'inline-block animate-spin' : ''}>🔄</span>
@@ -250,6 +258,14 @@ export const EquityDetail: React.FC<EquityDetailProps> = ({
               market={data.market || 'US'}
               onNotify={onNotify}
             />
+            <button
+              onClick={() => setIsPositionReviewOpen(true)}
+              className="px-3 py-1 rounded-xl border border-indigo-200 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 text-xs font-semibold flex items-center gap-1.5 transition-colors shadow-2xs"
+              title="เปิด Position Review & Decision Framework"
+            >
+              <span>📋</span>
+              <span>Position Review</span>
+            </button>
           </div>
           {isUpdating && (
             <div className="flex items-center gap-2 rounded-xl border border-amber-200 bg-amber-50/80 px-3 py-1.5 text-xs text-amber-900 font-medium">
@@ -268,62 +284,24 @@ export const EquityDetail: React.FC<EquityDetailProps> = ({
           </div>
         </div>
 
-        {/* Hero Action & Valuation Strip */}
-        <div className="flex flex-wrap items-center gap-4 self-start rounded-2xl border border-edge/80 bg-panel px-5 py-4 shadow-sm shadow-black/5">
-          {/* Action Stance */}
-          {scorecard?.action_stance && (
-            <div className="flex flex-col items-start pr-3 border-r border-edge/60">
-              <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider">Action Stance</span>
-              <div className={`mt-1 inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full border text-xs font-bold ${getStanceBadgeStyle(scorecard.action_stance).bg}`}>
-                <span className={`w-2 h-2 rounded-full ${getStanceBadgeStyle(scorecard.action_stance).dot}`} />
-                <span>{scorecard.action_stance.replace(/_/g, ' ')}</span>
+        {/* Consolidated Masthead Quick Strip */}
+        <div className="flex flex-wrap items-center gap-4 self-start rounded-2xl border border-edge/80 bg-panel px-5 py-3.5 shadow-sm shadow-black/5">
+          {resolvedCurrentPrice != null && (
+            <div className="flex flex-col items-start pr-4 border-r border-edge/60">
+              <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Analysis Price</span>
+              <div className="font-mono text-xl font-extrabold text-zinc-900 mt-0.5">
+                {currencySymbol}{resolvedCurrentPrice.toFixed(2)}
               </div>
             </div>
           )}
 
-          {/* 12M Target Price */}
-          {(reverseDcf?.target_price_12m != null || quant.upside_pct != null) && (
-            <div className="flex flex-col items-start pr-3 border-r border-edge/60">
-              <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider">12M Target Price</span>
-              <div className="flex items-center gap-1.5 text-sm font-bold text-zinc-900 mt-0.5">
-                <span>
-                  {currencySymbol}
-                  {(reverseDcf?.target_price_12m ?? quant.atomic_market_snapshot?.analysis_price ?? tactical?.current_price ?? 0).toFixed(2)}
-                </span>
-                {reverseDcf?.upside_12m_pct != null && (
-                  <span
-                    className={`text-[11px] px-1.5 py-0.2 rounded-full font-bold border ${
-                      reverseDcf.upside_12m_pct >= 0
-                        ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                        : 'bg-rose-50 text-rose-700 border-rose-200'
-                    }`}
-                  >
-                    {reverseDcf.upside_12m_pct >= 0 ? '+' : ''}
-                    {reverseDcf.upside_12m_pct.toFixed(1)}%
-                  </span>
-                )}
-              </div>
-            </div>
-          )}
-
-          {/* Conviction Score & Composite Mini Ring */}
-          <div className="flex items-center gap-3">
-            {scorecard?.core_conviction_score != null && (
-              <div className="text-left pr-3 border-r border-edge/60">
-                <div className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider">Conviction</div>
-                <div className="text-sm font-bold text-sky-700 mt-0.5">
-                  {scorecard.core_conviction_score.toFixed(1)} <span className="text-[10px] text-zinc-400 font-normal">/ 10</span>
-                </div>
-              </div>
-            )}
-
-            <div className="flex items-center gap-2">
-              <ScoreRing score={data.composite_score} />
-              <div>
-                <div className="text-[10px] font-bold text-zinc-400 uppercase">Composite</div>
-                <div className="text-xs font-semibold text-zinc-700">
-                  {data.composite_score != null ? `${data.composite_score.toFixed(1)}` : 'N/A'}
-                </div>
+          {/* Composite Score Mini Ring */}
+          <div className="flex items-center gap-2.5">
+            <ScoreRing score={data.composite_score} />
+            <div>
+              <div className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Composite</div>
+              <div className="text-xs font-semibold text-zinc-700">
+                {data.composite_score != null ? `${data.composite_score.toFixed(1)} / 100` : 'N/A'}
               </div>
             </div>
           </div>
@@ -334,63 +312,66 @@ export const EquityDetail: React.FC<EquityDetailProps> = ({
       <div className="flex border-b border-edge gap-6 text-sm font-medium">
         <button
           onClick={() => handleTabSelect('overview')}
-          className={`pb-3 border-b-2 transition-colors flex items-center gap-2 ${
-            activeTab === 'overview'
+          className={`pb-3 border-b-2 transition-colors flex items-center gap-2 ${activeTab === 'overview'
               ? 'border-sky-600 text-sky-600 font-semibold'
               : 'border-transparent text-zinc-500 hover:text-zinc-900'
-          }`}
+            }`}
         >
           <span>📊 Overview</span>
         </button>
         <button
           onClick={() => handleTabSelect('chart')}
-          className={`pb-3 border-b-2 transition-colors flex items-center gap-2 ${
-            activeTab === 'chart'
+          className={`pb-3 border-b-2 transition-colors flex items-center gap-2 ${activeTab === 'chart'
               ? 'border-sky-600 text-sky-600 font-semibold'
               : 'border-transparent text-zinc-500 hover:text-zinc-900'
-          }`}
+            }`}
         >
           <span>📈 Chart</span>
         </button>
         <button
           onClick={() => handleTabSelect('financials')}
-          className={`pb-3 border-b-2 transition-colors flex items-center gap-2 ${
-            activeTab === 'financials'
+          className={`pb-3 border-b-2 transition-colors flex items-center gap-2 ${activeTab === 'financials'
               ? 'border-sky-600 text-sky-600 font-semibold'
               : 'border-transparent text-zinc-500 hover:text-zinc-900'
-          }`}
+            }`}
         >
           <span>📑 Financials</span>
         </button>
         <button
           onClick={() => handleTabSelect('news')}
-          className={`pb-3 border-b-2 transition-colors flex items-center gap-2 ${
-            activeTab === 'news'
+          className={`pb-3 border-b-2 transition-colors flex items-center gap-2 ${activeTab === 'news'
               ? 'border-sky-600 text-sky-600 font-semibold'
               : 'border-transparent text-zinc-500 hover:text-zinc-900'
-          }`}
+            }`}
         >
           <span>📰 News</span>
         </button>
         <button
           onClick={() => handleTabSelect('notes')}
-          className={`pb-3 border-b-2 transition-colors flex items-center gap-2 ${
-            activeTab === 'notes'
+          className={`pb-3 border-b-2 transition-colors flex items-center gap-2 ${activeTab === 'notes'
               ? 'border-sky-600 text-sky-600 font-semibold'
               : 'border-transparent text-zinc-500 hover:text-zinc-900'
-          }`}
+            }`}
         >
           <span>📓 Notes</span>
         </button>
         <button
           onClick={() => handleTabSelect('earnings-call')}
-          className={`pb-3 border-b-2 transition-colors flex items-center gap-2 ${
-            activeTab === 'earnings-call'
+          className={`pb-3 border-b-2 transition-colors flex items-center gap-2 ${activeTab === 'earnings-call'
               ? 'border-sky-600 text-sky-600 font-semibold'
               : 'border-transparent text-zinc-500 hover:text-zinc-900'
-          }`}
+            }`}
         >
           <span>🎙️ Earnings Call</span>
+        </button>
+        <button
+          onClick={() => handleTabSelect('event-study')}
+          className={`pb-3 border-b-2 transition-colors flex items-center gap-2 ${activeTab === 'event-study'
+              ? 'border-sky-600 text-sky-600 font-semibold'
+              : 'border-transparent text-zinc-500 hover:text-zinc-900'
+            }`}
+        >
+          <span>🔬 Event Study</span>
         </button>
       </div>
 
@@ -432,6 +413,12 @@ export const EquityDetail: React.FC<EquityDetailProps> = ({
         </div>
       )}
 
+      {visitedTabs.has('event-study') && (
+        <div className={activeTab === 'event-study' ? 'block animate-fade-in' : 'hidden'}>
+          <EventStudyTab ticker={data.ticker} market={data.market} />
+        </div>
+      )}
+
       {visitedTabs.has('overview') && (
         <div className={activeTab === 'overview' ? 'space-y-8 block animate-fade-in' : 'hidden'}>
           {/* =========================================================
@@ -448,6 +435,9 @@ export const EquityDetail: React.FC<EquityDetailProps> = ({
             onViewEarningsCall={() => handleTabSelect('earnings-call')}
             onOpenProvenance={() => setIsProvenanceDrawerOpen(prev => !prev)}
             hasProvenance={Boolean(evidenceSnapshot)}
+            reverseDcf={reverseDcf}
+            tactical={tactical}
+            currencySymbol={currencySymbol}
           />
 
           {/* Evidence Provenance Drawer (If Opened) */}
@@ -457,11 +447,26 @@ export const EquityDetail: React.FC<EquityDetailProps> = ({
             </div>
           )}
 
+          {/* Infographic 2: Market Expectation vs Reality Gap (Reverse DCF) */}
+          {reverseDcf && (
+            <ExpectationGapCard
+              marketImpliedRevenueGrowth={reverseDcf.market_implied_growth_pct}
+              actualRevenueGrowth={quant.revenue_growth_yoy_pct}
+              marketImpliedOperatingMargin={reverseDcf.market_implied_margin_pct}
+              actualOperatingMargin={reverseDcf.reported_ebit_margin_pct ?? quant.gaap_operating_margin?.value_pct ?? quant.provider_ebit_margin?.value_pct}
+              solverStatus={reverseDcf.solver_status}
+              pvOf5yFcf={reverseDcf.sum_pv_5y_fcf}
+              pvOfTerminalValue={reverseDcf.terminal_value_pv}
+              enterpriseValue={reverseDcf.enterprise_value}
+              currency={currencySymbol}
+            />
+          )}
+
           {/* =========================================================
-              TIER 2: 2-Column Core Analytical Grid
+              TIER 2: Full-Width Analytical Stack (Valuation Workbench & Tactical Blueprint)
              ========================================================= */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
-            {/* Left Column: Valuation Workbench & Quality Forensics */}
+          <div className="space-y-8">
+            {/* Section 2A: Valuation Workbench & Quality Forensics */}
             <ValuationWorkbenchCard
               reverseDcf={reverseDcf}
               dcf={quant.dcf_result}
@@ -471,6 +476,7 @@ export const EquityDetail: React.FC<EquityDetailProps> = ({
               nonGaapOperatingMargin={quant.non_gaap_operating_margin}
               providerEbitMargin={quant.provider_ebit_margin}
               valuationMarginSourceUsed={quant.valuation_margin_source_used}
+              dividendYieldPct={quant.dividend_yield_pct}
               netShareholderYieldPct={quant.net_shareholder_yield_pct}
               netBuybackYieldPct={quant.net_buyback_yield_pct}
               sectorKpis={quant.sector_kpis}
@@ -484,9 +490,9 @@ export const EquityDetail: React.FC<EquityDetailProps> = ({
               currency={currencySymbol}
             />
 
-            {/* Right Column: Tactical Blueprint & Smart Money Flow */}
+            {/* Section 2B: Tactical Blueprint & Smart Money Flow */}
             <TacticalFlowMatrixCard
-              tactical={tactical}
+              tactical={tactical ? { ...tactical, current_price: resolvedCurrentPrice } : tactical}
               insider={insider}
               smartMoney={quant.smart_money_flags}
               sentiment={data.sentiment_context}
@@ -495,64 +501,15 @@ export const EquityDetail: React.FC<EquityDetailProps> = ({
           </div>
 
           {/* =========================================================
-              TIER 2.5: Institutional Derivatives & Sell-Side Intelligence (Terminal V2)
+              TIER 2.3: Thesis Falsifiers & Exit Safeguards (Infographic 4 Proximity Meter)
              ========================================================= */}
-          {(nasdaqConsensus || strikeLadderData.length > 0) && (
-            <div className="space-y-6">
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
-                {/* Left Column: Nasdaq Consensus & Earnings Surprise */}
-                {nasdaqConsensus && (
-                  <NasdaqConsensusCard
-                    symbol={nasdaqConsensus.symbol}
-                    coverageStatus={nasdaqConsensus.coverage_status}
-                    hasEarningsSurprise={nasdaqConsensus.has_earnings_surprise}
-                    hasAnalystRatings={nasdaqConsensus.has_analyst_ratings}
-                    upcomingEarnings={nasdaqConsensus.upcoming_earnings}
-                    ratings={nasdaqConsensus.ratings}
-                    surpriseHistory={nasdaqConsensus.surprise_history}
-                  />
-                )}
-
-                {/* Right Column: Cboe Options Open Interest Ladder */}
-                {strikeLadderData.length > 0 && (
-                  <OptionsOiStrikeLadder
-                    symbol={data.ticker}
-                    strikes={strikeLadderData}
-                    currentPrice={resolvedCurrentPrice ?? undefined}
-                    maxPainStrike={maxPain?.max_pain_strike ?? undefined}
-                    expirationDate={optionsChain?.expiration_date ?? undefined}
-                    putCallRatio={optionsChain?.put_call_ratio ?? undefined}
-                  />
-                )}
-              </div>
-
-              {/* Options Volatility Smile */}
-              {optionsChain?.contracts && optionsChain.contracts.length > 0 && (
-                <OptionsVolSmile
-                  symbol={data.ticker}
-                  expiry={optionsChain.expiration_date || 'Current Expiry'}
-                  currentPrice={resolvedCurrentPrice ?? undefined}
-                  contracts={optionsChain.contracts}
-                  asOfDate={optionsChain.as_of}
-                />
-              )}
-            </div>
-          )}
-
-          {/* =========================================================
-              TIER 2.6: SEC EDGAR Regulatory & Corporate Filings Intelligence
-             ========================================================= */}
-          {(secFinancials || secInsiderTrades || data.market === 'US') && (
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
-              <SecFinancialsCard
-                financials={secFinancials}
-                symbol={data.ticker}
-              />
-              <SecInsiderTradesCard
-                trades={secInsiderTrades}
-                symbol={data.ticker}
-              />
-            </div>
+          {falsifiers.length > 0 && (
+            <KillSwitchProximityMeter
+              falsifiers={falsifiers}
+              currentOperatingMargin={reverseDcf?.reported_ebit_margin_pct ?? quant.gaap_operating_margin?.value_pct ?? quant.provider_ebit_margin?.value_pct}
+              currentPrice={resolvedCurrentPrice}
+              currency={currencySymbol}
+            />
           )}
 
           {/* Editorial Reading Section: Deep Narrative Analysis */}
@@ -569,48 +526,116 @@ export const EquityDetail: React.FC<EquityDetailProps> = ({
           )}
 
           {/* =========================================================
+              TIER 2.5: Institutional Derivatives & Sell-Side Intelligence (Progressive Disclosure)
+             ========================================================= */}
+          {(nasdaqConsensus || strikeLadderData.length > 0) && (
+            <section className="flow-panel rounded-2xl border border-edge/80 p-5 shadow-sm">
+              <button
+                onClick={() => setIsDerivativesExpanded(prev => !prev)}
+                className="w-full flex items-center justify-between text-left transition-colors"
+                aria-expanded={isDerivativesExpanded}
+                aria-label="Toggle institutional derivatives"
+              >
+                <div className="flex items-center gap-2">
+                  <span className="text-base">⚡</span>
+                  <div>
+                    <h3 className="text-sm font-bold text-zinc-900">
+                      Institutional Derivatives & Sell-Side Consensus
+                    </h3>
+                    <p className="text-xs text-zinc-500">
+                      Cboe Options Open Interest Ladder, Volatility Smile & Nasdaq Analyst Consensus
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  {maxPain?.max_pain_strike != null && (
+                    <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-zinc-100 border border-zinc-200 text-zinc-700">
+                      Max Pain: ${maxPain.max_pain_strike.toFixed(2)}
+                    </span>
+                  )}
+                  <span className="text-xs font-medium text-sky-600 hover:text-sky-700">
+                    {isDerivativesExpanded ? '▲ ซ่อน' : '▼ ดูข้อมูลอนุพันธ์'}
+                  </span>
+                </div>
+              </button>
+              {isDerivativesExpanded && (
+                <div className="mt-5 space-y-6 pt-4 border-t border-edge/60 animate-fade-in">
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
+                    {nasdaqConsensus && (
+                      <NasdaqConsensusCard
+                        symbol={nasdaqConsensus.symbol}
+                        coverageStatus={nasdaqConsensus.coverage_status}
+                        hasEarningsSurprise={nasdaqConsensus.has_earnings_surprise}
+                        hasAnalystRatings={nasdaqConsensus.has_analyst_ratings}
+                        upcomingEarnings={nasdaqConsensus.upcoming_earnings}
+                        ratings={nasdaqConsensus.ratings}
+                        surpriseHistory={nasdaqConsensus.surprise_history}
+                      />
+                    )}
+                    {strikeLadderData.length > 0 && (
+                      <OptionsOiStrikeLadder
+                        symbol={data.ticker}
+                        strikes={strikeLadderData}
+                        currentPrice={resolvedCurrentPrice ?? undefined}
+                        maxPainStrike={maxPain?.max_pain_strike ?? undefined}
+                        expirationDate={optionsChain?.expiration_date ?? undefined}
+                        putCallRatio={optionsChain?.put_call_ratio ?? undefined}
+                      />
+                    )}
+                  </div>
+                  {optionsChain?.contracts && optionsChain.contracts.length > 0 && (
+                    <OptionsVolSmile
+                      symbol={data.ticker}
+                      expiry={optionsChain.expiration_date || 'Current Expiry'}
+                      currentPrice={resolvedCurrentPrice ?? undefined}
+                      contracts={optionsChain.contracts}
+                      asOfDate={optionsChain.as_of}
+                    />
+                  )}
+                </div>
+              )}
+            </section>
+          )}
+
+          {/* =========================================================
+              TIER 2.6: SEC EDGAR Regulatory & Corporate Filings Intelligence (Progressive Disclosure)
+             ========================================================= */}
+          {(secFinancials || secInsiderTrades || data.market === 'US') && (
+            <section className="flow-panel rounded-2xl border border-edge/80 p-5 shadow-sm">
+              <button
+                onClick={() => setIsSecFilingsExpanded(prev => !prev)}
+                className="w-full flex items-center justify-between text-left transition-colors"
+                aria-expanded={isSecFilingsExpanded}
+                aria-label="Toggle SEC filings"
+              >
+                <div className="flex items-center gap-2">
+                  <span className="text-base">🏛️</span>
+                  <div>
+                    <h3 className="text-sm font-bold text-zinc-900">
+                      SEC EDGAR Regulatory & Corporate Filings
+                    </h3>
+                    <p className="text-xs text-zinc-500">
+                      XBRL Company Facts (10-K / 10-Q) & Form 4 Insider Ownership Filings
+                    </p>
+                  </div>
+                </div>
+                <span className="text-xs font-medium text-sky-600 hover:text-sky-700">
+                  {isSecFilingsExpanded ? '▲ ซ่อน' : '▼ ดูเอกสาร SEC'}
+                </span>
+              </button>
+              {isSecFilingsExpanded && (
+                <div className="mt-5 grid grid-cols-1 lg:grid-cols-2 gap-6 items-start pt-4 border-t border-edge/60 animate-fade-in">
+                  <SecFinancialsCard financials={secFinancials} symbol={data.ticker} />
+                  <SecInsiderTradesCard trades={secInsiderTrades} symbol={data.ticker} />
+                </div>
+              )}
+            </section>
+          )}
+
+          {/* =========================================================
               TIER 3: Risk Governance & Factor Deep-Dive (Collapsible)
              ========================================================= */}
           <div className="space-y-6">
-            {/* Thesis Falsifiers (Kill-Switches Table) */}
-            {falsifiers.length > 0 && (
-              <section className="flow-panel rounded-2xl border border-rose-200/80 bg-rose-50/20 p-6 shadow-sm">
-                <div className="flex items-center justify-between border-b border-rose-200/60 pb-3 mb-4">
-                  <div className="flex items-center gap-2">
-                    <span className="text-lg">🛑</span>
-                    <h3 className="text-sm font-bold uppercase tracking-wider text-rose-900">
-                      Thesis Falsifiers & Invalidation Criteria (Kill-Switches)
-                    </h3>
-                  </div>
-                  <span className="text-xs text-rose-700/80 font-medium">เกณฑ์ยกเลิกสมมติฐานการลงทุน</span>
-                </div>
-
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left text-xs border-collapse">
-                    <thead>
-                      <tr className="border-b border-rose-200/80 text-rose-800 font-semibold">
-                        <th className="pb-2 pl-1">ID</th>
-                        <th className="pb-2">Metric / Condition</th>
-                        <th className="pb-2">Threshold</th>
-                        <th className="pb-2">Source Ref</th>
-                        <th className="pb-2 pr-1">คำอธิบายความเสี่ยง</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-rose-100 text-zinc-800">
-                      {falsifiers.map((f: any) => (
-                        <tr key={f.falsifier_id} className="hover:bg-rose-50/40">
-                          <td className="py-2.5 pl-1 font-mono font-bold text-rose-700">{f.falsifier_id}</td>
-                          <td className="py-2.5 font-medium">{f.metric_name}: <span className="text-rose-600">{f.condition}</span></td>
-                          <td className="py-2.5 font-semibold text-zinc-900">{f.threshold_value != null ? `${f.threshold_value}` : 'N/A'}</td>
-                          <td className="py-2.5 text-zinc-500 font-mono text-[11px]">{f.source_ref || 'N/A'}</td>
-                          <td className="py-2.5 pr-1 text-zinc-600 leading-relaxed">{f.narrative_explanation}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </section>
-            )}
 
             {/* Data Quality Flags */}
             <DataQualityFlagsCard flags={data.data_quality_flags} />
@@ -678,6 +703,14 @@ export const EquityDetail: React.FC<EquityDetailProps> = ({
           Flow Theme • Institutional Equity Suite v3.1
         </div>
       </div>
+
+      <PositionReviewModal
+        isOpen={isPositionReviewOpen}
+        onClose={() => setIsPositionReviewOpen(false)}
+        ticker={data.ticker}
+        market={data.market || 'US'}
+        portfolioId={portfolioId}
+      />
     </div>
   )
 }

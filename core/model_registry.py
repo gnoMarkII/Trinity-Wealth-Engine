@@ -31,12 +31,14 @@ REGISTRY: dict[str, ModelSlot] = {
     "equity_quant":       ModelSlot("EQUITY_QUANT_MODEL",       "gemini-3.1-flash-lite-preview", "Equity Quant Signals agent (deterministic)", "agent"),
     "equity_narrative":   ModelSlot("EQUITY_NARRATIVE_MODEL",   "gemini-3.1-flash-lite-preview", "Equity Sentiment/Narrative synthesis agent", "agent"),
     "equity_synthesizer": ModelSlot("EQUITY_SYNTHESIZER_MODEL", "gemini-3.1-flash-lite-preview", "Equity final report synthesis agent", "agent"),
+    "portfolio_synthesizer": ModelSlot("PORTFOLIO_SYNTHESIZER_MODEL", "gemini-3.1-flash-lite-preview", "Portfolio Advisory Playbook synthesis agent", "agent"),
     # --- Tool Layer ---
     "extractor":              ModelSlot("EXTRACTOR_MODEL",              "gemini-3.1-flash-lite-preview", "Article/PDF/YouTube content extraction", "tool"),
     "youtube_pitch":           ModelSlot("YOUTUBE_PITCH_MODEL",          "gemini-3.1-flash-lite-preview", "YouTube Pitch generation + Briefing Book", "tool"),
     "news_triage":             ModelSlot("NEWS_FUNNEL_TRIAGE_MODEL",     "gemini-3.1-flash-lite-preview", "News impact scoring (batch triage)", "tool"),
     "thai_title_translation":  ModelSlot("NEWS_FUNNEL_SYNTHESIS_MODEL",  "gemini-3.1-flash-lite-preview", "Thai title translation for news", "tool"),
     "earnings_call_summarizer": ModelSlot("EARNINGS_CALL_MODEL",          "gemini-3.1-flash-lite-preview", "Earnings Call Transcript Summarizer", "tool"),
+    "promise_extractor":        ModelSlot("PROMISE_EXTRACTOR_MODEL",       "gemini-3.1-flash-lite-preview", "Promise Check earnings commitment extractor", "tool"),
 }
 
 

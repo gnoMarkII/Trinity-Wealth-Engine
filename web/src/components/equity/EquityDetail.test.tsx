@@ -45,7 +45,7 @@ describe('EquityDetail', () => {
     expect(screen.getByText('(US)')).toBeInTheDocument()
     expect(screen.getByText('Apple Inc.')).toBeInTheDocument()
     
-    expect(screen.getByText(/Base Case/)).toBeInTheDocument()
+    expect(screen.getAllByText(/Base Case/).length).toBeGreaterThanOrEqual(1)
     expect(screen.getByText(mockEquityDetailAAPL.base_case_summary)).toBeInTheDocument()
     
     expect(screen.getByText('bullish')).toBeInTheDocument()

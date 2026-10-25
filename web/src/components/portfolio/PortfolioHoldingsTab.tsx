@@ -1,10 +1,18 @@
 import { useState, useMemo, Fragment, useEffect } from 'react'
-import type { ActualHoldingDTO, AllocationTargetDTO, ActualPortfolioStateDTO, JournalEntryDTO } from '../../api/types'
+import type {
+  ActualHoldingDTO,
+  AllocationTargetDTO,
+  ActualPortfolioStateDTO,
+  JournalEntryDTO,
+  FundConstituentsDTO,
+} from '../../api/types'
 import { formatTHB } from '../../utils/formatters'
 import { api } from '../../api/client'
 import BatchAssignBucketModal from './Modals/BatchAssignBucketModal'
 import HoldingCorrectionModal from './Modals/HoldingCorrectionModal'
 import JournalModal from './Modals/JournalModal'
+import FundLookThroughDrawer, { type AvailableFundItem } from './FundLookThroughDrawer'
+import WatchlistModal, { type WatchlistDraft } from './Modals/WatchlistModal'
 import Modal from '../ui/Modal'
 import { TradeIcon, EditIcon, DeleteIcon, FolderIcon, JournalIcon } from './icons/PortfolioIcons'
 import { isPvdHolding, isValidIsoDate } from '../../lib/pvdPresentation'
@@ -25,6 +33,8 @@ interface Props {
   onSuccessJournal?: (entries: JournalEntryDTO[]) => void
   onOpenTradeModal?: () => void
   onViewTransactions?: (symbol: string) => void
+  watchlistedSymbols?: string[]
+  onWatchlistChanged?: () => void
 }
 
 type SortField = 'symbol' | 'asset_type' | 'bucket_id' | 'units' | 'market_value_thb' | 'unrealized_pnl_percent' | 'pe_ratio' | 'yield_on_cost'
@@ -44,6 +54,8 @@ export default function PortfolioHoldingsTab({
   onSuccessJournal,
   onOpenTradeModal,
   onViewTransactions,
+  watchlistedSymbols,
+  onWatchlistChanged,
 }: Props) {
   const [sortField, setSortField] = useState<SortField>('market_value_thb')
   const [sortAsc, setSortAsc] = useState<boolean>(false)
@@ -51,6 +63,40 @@ export default function PortfolioHoldingsTab({
   const [filterOnlyUnassigned, setFilterOnlyUnassigned] = useState(false)
 
   const [expandedSymbol, setExpandedSymbol] = useState<string | null>(null)
+  const [drawerFundSymbol, setDrawerFundSymbol] = useState<string | null>(null)
+  const [fundConstituentsCache, setFundConstituentsCache] = useState<Record<string, FundConstituentsDTO>>({})
+  const [fundLoadingMap, setFundLoadingMap] = useState<Record<string, boolean>>({})
+  const [watchlistDraft, setWatchlistDraft] = useState<WatchlistDraft | null>(null)
+
+  const directHoldingsSymbols = useMemo(() => holdings.map((h) => h.symbol), [holdings])
+
+  const openLookThroughDrawer = async (symbol: string) => {
+    setDrawerFundSymbol(symbol)
+    if (!fundConstituentsCache[symbol] && !fundLoadingMap[symbol]) {
+      setFundLoadingMap((prev) => ({ ...prev, [symbol]: true }))
+      try {
+        const res = await api.getFundConstituents(symbol)
+        if (res) {
+          setFundConstituentsCache((prev) => ({ ...prev, [symbol]: res }))
+        }
+      } catch (err) {
+        console.warn('Could not fetch fund constituents:', err)
+      } finally {
+        setFundLoadingMap((prev) => ({ ...prev, [symbol]: false }))
+      }
+    }
+  }
+
+  const fundHoldings = useMemo<AvailableFundItem[]>(() => {
+    return holdings
+      .filter((h) => h.asset_type === 'Fund' || isPvdHolding(h) || h.symbol.startsWith('PVD_'))
+      .map((h) => ({
+        symbol: h.symbol,
+        name: h.company_name || h.symbol,
+        asset_type: h.asset_type,
+      }))
+  }, [holdings])
+
   const [journalModalOpen, setJournalModalOpen] = useState(false)
   const [journalModalSymbol, setJournalModalSymbol] = useState<string | undefined>(undefined)
   const [allEntriesModalOpen, setAllEntriesModalOpen] = useState(false)
@@ -368,6 +414,60 @@ export default function PortfolioHoldingsTab({
         </div>
       )}
 
+      {/* Quick-Access Fund Look-Through Pill Bar */}
+      {fundHoldings.length > 0 && (
+        <div className="rounded-2xl border border-purple-200/90 bg-gradient-to-r from-purple-50/80 via-indigo-50/40 to-white p-4 shadow-2xs">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="flex items-center gap-2.5">
+              <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-purple-100 text-purple-700 text-sm shadow-2xs">
+                🔍
+              </span>
+              <div>
+                <div className="flex items-center gap-2">
+                  <h4 className="font-extrabold text-zinc-900 text-xs sm:text-sm">
+                    Fund Constituents Look-Through
+                  </h4>
+                  <span className="rounded-full bg-purple-100 px-2 py-0.5 text-[10px] font-bold text-purple-800">
+                    {fundHoldings.length} กองทุน
+                  </span>
+                </div>
+                <p className="text-[11px] text-zinc-500">
+                  ส่องทะลุไส้ในกองทุน (Top Holdings & Sectors) ผ่าน Side Drawer ขอบขวาจอ
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-1.5 flex-wrap">
+              {fundHoldings.map((fh) => {
+                const isSelected = drawerFundSymbol === fh.symbol
+                const cached = fundConstituentsCache[fh.symbol]
+                return (
+                  <button
+                    key={fh.symbol}
+                    type="button"
+                    onClick={() => openLookThroughDrawer(fh.symbol)}
+                    aria-label={`เปิดลิ้นชักส่องไส้ใน ${fh.symbol}`}
+                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-mono font-bold transition-all shadow-2xs ${
+                      isSelected
+                        ? 'bg-purple-600 text-white shadow-xs scale-102 ring-2 ring-purple-300'
+                        : 'bg-white hover:bg-purple-50 text-purple-900 border border-purple-200 hover:border-purple-300'
+                    }`}
+                    title={`เปิดลิ้นชักส่องไส้ใน ${fh.symbol}`}
+                  >
+                    <span>{fh.symbol}</span>
+                    {cached?.master_fund_ticker && (
+                      <span className="font-mono text-[9px] px-1 py-0.2 rounded bg-indigo-100 text-indigo-700 font-semibold">
+                        {cached.master_fund_ticker}
+                      </span>
+                    )}
+                    <span className="text-[10px] text-purple-400">→</span>
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Table Container with Overflow & 2-line Stacked Grid */}
       <div className="rounded-2xl border border-sky-100 bg-panel shadow-sm overflow-hidden">
         <div className="border-b border-sky-100 bg-sky-50/40 px-6 py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
@@ -477,12 +577,34 @@ export default function PortfolioHoldingsTab({
                         />
                       </td>
 
-                      {/* Col 1: Symbol (Line 1) + Company Name (Line 2) */}
+                      {/* Col 1: Symbol (Line 1) + Company Name (Line 2) + Glass-Box Look-Through Badge */}
                       <td className="px-4 py-4 align-top">
                         <div className="font-extrabold text-zinc-900 text-base tracking-tight font-mono">{h.symbol}</div>
                         <div className="mt-0.5 text-xs text-zinc-500 line-clamp-1 font-medium">
                           {h.company_name || (h.asset_type === 'Gold' ? 'ARR Paotang Gold 99.99%' : 'N/A')}
                         </div>
+                        {(h.asset_type === 'Fund' || isPvd || h.symbol.startsWith('PVD_')) && (
+                          <div className="mt-1.5 flex items-center gap-1.5 flex-wrap">
+                            <button
+                              type="button"
+                              onClick={() => openLookThroughDrawer(h.symbol)}
+                              className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-bold border transition-all shadow-2xs ${
+                                drawerFundSymbol === h.symbol
+                                  ? 'bg-purple-600 text-white border-purple-600 shadow-xs'
+                                  : 'bg-purple-50 text-purple-700 border-purple-200 hover:bg-purple-100 hover:border-purple-300'
+                              }`}
+                              title="คลิกเพื่อส่องดูไส้ในกองทุน (Top Holdings & Sectors) ผ่าน Side Drawer"
+                            >
+                              <span>🔍 ส่องไส้ในกองทุน</span>
+                              <span className="text-[9px]">→</span>
+                            </button>
+                            {fundConstituentsCache[h.symbol]?.master_fund_ticker && (
+                              <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-indigo-50 text-indigo-700 border border-indigo-200 font-semibold">
+                                Master: {fundConstituentsCache[h.symbol]?.master_fund_ticker}
+                              </span>
+                            )}
+                          </div>
+                        )}
                       </td>
 
                       {/* Col 2: Asset Type */}
@@ -778,6 +900,8 @@ export default function PortfolioHoldingsTab({
                         </td>
                       </tr>
                     )}
+
+
                   </Fragment>
                 )
               })}
@@ -956,6 +1080,33 @@ export default function PortfolioHoldingsTab({
           }}
           onSuccess={(entries) => {
             onSuccessJournal(entries)
+          }}
+        />
+      )}
+
+      {/* Slide-Over Side Drawer for Fund Look-Through (Bloomberg / Notion Style) */}
+      <FundLookThroughDrawer
+        isOpen={Boolean(drawerFundSymbol)}
+        onClose={() => setDrawerFundSymbol(null)}
+        selectedFundSymbol={drawerFundSymbol}
+        onSelectFund={(sym) => openLookThroughDrawer(sym)}
+        availableFunds={fundHoldings}
+        constituentsData={drawerFundSymbol ? fundConstituentsCache[drawerFundSymbol] : null}
+        loading={drawerFundSymbol ? Boolean(fundLoadingMap[drawerFundSymbol]) : false}
+        directHoldingsSymbols={directHoldingsSymbols}
+        watchlistedSymbols={watchlistedSymbols}
+        onQuickAddToWatchlist={(draft) => setWatchlistDraft(draft)}
+      />
+
+      {/* Quick Add Watchlist Modal from Look-Through Constituent */}
+      {watchlistDraft && (
+        <WatchlistModal
+          portfolioId={portfolioId}
+          initialDraft={watchlistDraft}
+          onClose={() => setWatchlistDraft(null)}
+          onSuccess={() => {
+            setWatchlistDraft(null)
+            onWatchlistChanged?.()
           }}
         />
       )}
