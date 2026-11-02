@@ -4,14 +4,18 @@ Parses official open data CSVs from SEC Thailand (MF_PORT_TH.csv, STAT_DEPT_TH.c
 Handles F5 WAF rejection responses, UTF-8 BOM, Buddhist Era offsets, and million THB scaling.
 Strict Rule: Reports broad asset classes only; does NOT report equity sectors (Bank/Energy/Tech).
 """
+from __future__ import annotations
+
 import csv
 import io
 import logging
 import time
 import re
-from typing import Dict, List, Optional, Tuple, Set
+from typing import Any, Dict, List, Optional, Set, Tuple
 import requests
 
+from core.datetime_utils import parse_thai_or_iso_date, format_iso_date
+from core.financial_parsers import extract_financial_decimal
 from schemas.macro_schemas import MarketObservable
 from tools.market.terminal_v2.application.cache import BROWSER_HEADERS, ThreadSafeTTLCache
 from tools.market.terminal_v2.domain.errors import DataUnavailableError, ProviderError
@@ -384,7 +388,7 @@ class SecThailandAdapter(ThaiFundAllocationPort, ThaiBondMarketPort):
                 logger.warning("Could not fetch SEC industry market cap for observables: %s", e)
                 return []
 
-        obs_date = snapshot.as_of if re.match(r"\d{4}-\d{2}-\d{2}", snapshot.as_of) else time.strftime("%Y-%m-%d")
+        obs_date = format_iso_date(parse_thai_or_iso_date(snapshot.as_of)) or time.strftime("%Y-%m-%d")
         observables: list[MarketObservable] = []
         for grp in snapshot.groups:
             observables.append(
@@ -453,22 +457,18 @@ def parse_industry_csv(csv_text: str, market: str = "SET") -> ThaiIndustryMarket
         quarter = int(q_match.group(0)) if q_match else 0
 
         # Parse value: '-' or empty is missing (never convert to 0!)
-        clean_val = val_col.replace(",", "").strip()
-        if not clean_val or clean_val == "-":
+        val_dec = extract_financial_decimal(val_col)
+        if val_dec is None:
             continue
-        try:
-            val_million = float(clean_val)
-        except ValueError:
-            continue
+        val_million = float(val_dec)
 
         if ce_yr > latest_year or (ce_yr == latest_year and quarter > latest_q):
             latest_year = ce_yr
             latest_q = quarter
             # Parse as_of date if available
-            date_match = re.search(r"(\d{1,2})/(\d{1,2})/(\d{4})", as_of_raw)
-            if date_match:
-                d, m, y = date_match.groups()
-                latest_as_of = f"{int(y) - BE_OFFSET:04d}-{int(m):02d}-{int(d):02d}"
+            parsed_d = parse_thai_or_iso_date(as_of_raw)
+            if parsed_d:
+                latest_as_of = parsed_d.isoformat()
             else:
                 latest_as_of = as_of_raw
 

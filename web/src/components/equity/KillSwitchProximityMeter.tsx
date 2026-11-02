@@ -1,4 +1,5 @@
 import React from 'react'
+import { ContextTooltip } from './explainer'
 
 export interface FalsifierItem {
   falsifier_id: string
@@ -78,6 +79,12 @@ export const KillSwitchProximityMeter: React.FC<KillSwitchProximityMeterProps> =
           <div>
             <h3 className="text-sm font-bold uppercase tracking-wider text-rose-950 flex items-center gap-2">
               <span>Thesis Falsifiers & Invalidation Criteria</span>
+              <ContextTooltip
+                title="เกณฑ์ลบล้างสมมติฐาน (Thesis Falsifiers & Kill Switches)"
+                whatIsIt="ชุดเงื่อนไขที่กำหนดไว้ล่วงหน้าว่า 'ถ้าเกิดเหตุการณ์นี้ขึ้น แปลว่าเราคิดผิดตั้งแต่แรก' เช่น อัตรากำไรทรุดหนัก หรือราคาหลุดแนวรับโครงสร้าง"
+                howToRead="กองทุนมืออาชีพจะกำหนดจุดยอมแพ้ก่อนเข้าซื้อเสมอ หากแตะเกณฑ์ Kill Switch ต้องตัดขาดทุนทันที ห้ามหวังลมๆ แล้งๆ หรือเปลี่ยนใจถือยาว"
+                impactOnMoney="กฎเหล็กที่ปกป้องพอร์ตไม่ให้เสียหายหนัก และป้องกันการติดดอยยาวข้ามปี"
+              />
               <span className="text-[10px] px-2 py-0.5 rounded-full bg-rose-100 text-rose-800 font-extrabold">
                 {falsifiers.length} Kill-Switches Active
               </span>
@@ -91,6 +98,17 @@ export const KillSwitchProximityMeter: React.FC<KillSwitchProximityMeterProps> =
         <span className="text-xs px-2.5 py-1 rounded-xl bg-white/80 border border-rose-200 text-rose-700 font-semibold shadow-2xs">
           🛡️ Institutional Risk Governance
         </span>
+      </div>
+
+      {/* Practical Safety Shield 2: Stop Loss & Kill Switch Discipline Banner */}
+      <div className="flex items-start gap-3 p-3.5 rounded-xl bg-rose-100/70 border border-rose-300/80 text-xs text-rose-950">
+        <span className="text-base shrink-0 mt-0.5">🚨</span>
+        <div className="space-y-0.5">
+          <span className="font-bold block text-rose-950">กฎเหล็กการเอาตัวรอด (Kill Switch Discipline):</span>
+          <p className="text-rose-900 leading-relaxed text-[11px]">
+            หากราคาหลุดแนวรับสำคัญ หรือ Margin หดตัวต่ำกว่าเกณฑ์สมมติฐาน แปลว่า <em>'เหตุผลที่เราซื้อตั้งแต่แรกผิดไปแล้ว'</em> ต้องกล้ายอมรับความจริงและตัดขาดทุนตามแผน อย่าถือหุ้นด้วยความหวัง
+          </p>
+        </div>
       </div>
 
       {/* Infographic 4: Safety Buffer Meters */}

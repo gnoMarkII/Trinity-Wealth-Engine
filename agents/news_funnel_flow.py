@@ -1,6 +1,6 @@
 """LangGraph Flow แยกอิสระสำหรับ Web UI Kanban Board (Human-in-the-Loop Approval Flow)
 
-ไม่กระทบ manager_agent.py เดิม ครอบคลุม 3 Node:
+ไม่กระทบ research_swarm_flow.py เดิม ครอบคลุม 3 Node:
 load_pending_node -> gate_node -> synthesize_node
 """
 from pathlib import Path

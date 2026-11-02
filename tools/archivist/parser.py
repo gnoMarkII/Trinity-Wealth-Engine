@@ -118,7 +118,7 @@ def _extract_asset_tickers(text: str) -> list[tuple[str, str]]:
     result = []
     for line in text.splitlines():
         stripped = line.strip().lstrip("- *")
-        m = re.search(r"\[\[([A-Z][A-Z0-9.\-]{1,9})\]\]", stripped)
+        m = re.search(r"\[\[([A-Z][A-Z0-9.\-]{1,9})(?:\|[^\]]+)?\]\]", stripped)
         if not m:
             continue
         ticker = m.group(1)

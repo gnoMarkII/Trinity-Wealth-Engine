@@ -68,7 +68,7 @@ export default function EditTemplateModal({ template, onClose, onSave }: Props) 
 
         <div>
           <label htmlFor="edit-template-instruction" className="mb-1 block text-xs font-medium text-zinc-600">
-            คำสั่งเต็มที่จะส่งให้ Manager
+            คำสั่งเต็มที่จะส่งให้ Swarm Supervisor
           </label>
           <textarea
             id="edit-template-instruction"

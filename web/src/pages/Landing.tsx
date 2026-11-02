@@ -36,6 +36,12 @@ function LandingContent() {
             <p className="mt-6 max-w-sm text-sm leading-relaxed text-zinc-400 sm:text-base">Signals distilled. Decisions retained.</p>
             <div className="mt-8 flex flex-wrap gap-3">
               <button
+                onClick={() => navigate('/manager')}
+                className="rounded-xl bg-gradient-to-r from-sky-400 to-cyan-400 px-5 py-3 text-sm font-bold text-sky-950 shadow-[0_12px_36px_rgba(14,165,233,0.3)] transition-transform hover:-translate-y-0.5 hover:from-sky-300 hover:to-cyan-300 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-300 flex items-center gap-2"
+              >
+                <span>✨ Trinity AI Advisor</span>
+              </button>
+              <button
                 onClick={() => navigate('/kanban')}
                 className="rounded-xl bg-amber-300 px-5 py-3 text-sm font-bold text-zinc-950 shadow-[0_12px_36px_rgba(251,191,36,0.24)] transition-transform hover:-translate-y-0.5 hover:bg-amber-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-200"
               >

@@ -1378,6 +1378,18 @@ export interface EquityDetailDTO extends EquitySummaryDTO {
   } | null
 }
 
+export interface EquityYouTubeMentionDTO {
+  video_id: string
+  title?: string
+  thai_title?: string
+  channel: string
+  key_takeaways: string[]
+  alignment_with_news?: 'confirmed' | 'contrarian' | 'independent' | string | null
+  alignment_note?: string | null
+  link: string
+  published_at?: string | null
+}
+
 export interface EquityNewsItemDTO {
   title: string
   source: string
@@ -1388,6 +1400,12 @@ export interface EquityNewsItemDTO {
   is_stale: boolean
   sources_count?: number
   summary?: string
+  what_happened?: string
+  why_it_matters?: string
+  thesis_signal?: 'thesis_breaker' | 'buy_on_dip' | 'thesis_reinforcer' | 'noise'
+  impact_type?: string
+  macro_impact_score?: number
+  asset_impact_score?: number
 }
 
 export interface EquityNewsDTO {
@@ -1396,6 +1414,7 @@ export interface EquityNewsDTO {
   last_updated?: string | null
   news_date?: string | null
   items: EquityNewsItemDTO[]
+  youtube_mentions?: EquityYouTubeMentionDTO[]
 }
 
 export interface EquityNoteItemDTO {
@@ -2657,6 +2676,44 @@ export interface TreasuryYieldCurveDTO {
 
 
 
+export interface ThaiYieldPointDTO {
+  tenor: string
+  ttm_years: number
+  yield_percent?: number | null
+}
+
+export interface ThaiYieldCurveDTO {
+  observation_date: string
+  yields: ThaiYieldPointDTO[]
+  spread_10y_2y_bps?: number | null
+  spread_10y_1y_bps?: number | null
+  fetched_at: number
+  source: string
+  unit: string
+  is_stale: boolean
+  stale_reason?: string | null
+}
+
+export interface ThaiPublicDebtComponentDTO {
+  component_number: number
+  label_en: string
+  label_th: string
+  amount_thb: number
+}
+
+export interface ThaiPublicDebtDTO {
+  reporting_month: string
+  total_debt_thb: number
+  debt_to_gdp_pct?: number | null
+  fx_rate_usd_thb?: number | null
+  components?: ThaiPublicDebtComponentDTO[]
+  fetched_at?: number
+  source?: string
+  unit?: string
+  is_stale?: boolean
+  stale_reason?: string | null
+}
+
 export interface StablecoinItemDTO {
   symbol: string
   name: string
@@ -3658,3 +3715,213 @@ export interface PositionReviewResponseDTO {
   honest_gaps: string[]
 }
 
+
+
+// ---------------------------------------------------------------------------
+// Market Intelligence Daily & Weekly Digest DTOs
+// ---------------------------------------------------------------------------
+
+export interface DigestPortfolioBadgeDTO {
+  symbol: string
+  company_name?: string | null
+  impact_type: 'direct_holding' | 'fund_lookthrough' | 'watchlist'
+  weight_pct?: number | null
+  unrealized_pnl_pct?: number | null
+  source_fund_codes?: string[]
+  target_entry_price?: number | null
+  sector?: string | null
+}
+
+export interface DigestNewsCandidateDTO {
+  candidate_id: string
+  title: string
+  summary: string
+  source: string
+  links: string[]
+  sources_count: number
+  published_at?: string | null
+  age_hours: number
+  freshness_tier: string
+  freshness_label: string
+  is_stale: boolean
+  matched_tickers: string[]
+  portfolio_badges: DigestPortfolioBadgeDTO[]
+}
+
+export interface DigestYouTubeCandidateDTO {
+  video_id: string
+  title: string
+  channel: string
+  link: string
+  published_at?: string | null
+  age_hours: number
+  freshness_tier: string
+  freshness_label: string
+  thumbnail: string
+  is_fetched: boolean
+  cached_summary_snippet?: string | null
+  cached_tickers: string[]
+}
+
+export interface DigestCandidatesResponseDTO {
+  last_fetched_at?: string | null
+  news_candidates: DigestNewsCandidateDTO[]
+  youtube_candidates: DigestYouTubeCandidateDTO[]
+  stale_dropped_count: number
+}
+
+export interface DailyDigestSynthesizeRequestDTO {
+  selected_video_ids: string[]
+  excluded_news_ids: string[]
+  custom_youtube_urls: string[]
+  custom_news_items: string[]
+}
+
+export interface DailyDigestItemDTO {
+  source_candidate_id: string
+  thai_headline: string
+  what_happened: string
+  why_it_matters: string
+  thesis_signal: 'thesis_breaker' | 'buy_on_dip' | 'thesis_reinforcer' | 'noise'
+  impact_type: 'direct_holding' | 'fund_lookthrough' | 'watchlist' | 'second_order' | 'macro_general'
+  affected_tickers: string[]
+  affected_sectors: string[]
+  macro_impact_score: number
+  asset_impact_score: number
+  time_horizon: 'short_term' | 'structural'
+  youtube_corroboration?: string | null
+  source: string
+  link: string
+  links: string[]
+  published_at?: string | null
+  age_hours: number
+  freshness_tier: string
+  freshness_label: string
+  portfolio_badges: DigestPortfolioBadgeDTO[]
+  is_read: boolean
+  is_new: boolean
+}
+
+export interface DailyYouTubeHighlightDTO {
+  video_id: string
+  thai_title: string
+  channel: string
+  key_takeaways: string[]
+  mentioned_tickers: string[]
+  alignment_with_news: 'confirmed' | 'contrarian' | 'independent'
+  alignment_note: string
+}
+
+export interface DailyDigestPayloadDTO {
+  digest_id: string
+  date: string
+  period: string
+  generated_at: string
+  market_mood: 'risk_on' | 'risk_off' | 'mixed'
+  market_mood_summary: string
+  transmission_chain: string
+  top_portfolio_focus: string
+  selected_video_ids: string[]
+  items: DailyDigestItemDTO[]
+  youtube_highlights: DailyYouTubeHighlightDTO[]
+}
+
+export interface DailyDigestResponseDTO {
+  has_digest: boolean
+  digest: DailyDigestPayloadDTO | null
+  snapshot_age_hours: number
+  is_snapshot_stale: boolean
+  fresh_pending_count: number
+  available_dates?: string[]
+}
+
+export interface WeeklyPortfolioMatrixRowDTO {
+  ticker: string
+  thesis_status: 'strong_hold' | 'watch_closely' | 'accumulate_zone' | 'review_thesis'
+  thesis_status_label: string
+  weekly_summary: string
+}
+
+export interface WeeklyDigestPayloadDTO {
+  digest_id: string
+  from_date: string
+  to_date: string
+  generated_at: string
+  executive_themes: string[]
+  portfolio_health_summary: string
+  portfolio_matrix: WeeklyPortfolioMatrixRowDTO[]
+  consensus_narratives: string[]
+  contrarian_and_pitches: string[]
+  week_ahead_checklist: string[]
+  items: DailyDigestItemDTO[]
+  youtube_highlights: DailyYouTubeHighlightDTO[]
+}
+
+export interface WeeklyDigestResponseDTO {
+  has_digest: boolean
+  digest: WeeklyDigestPayloadDTO | null
+  available_dates?: string[]
+}
+
+export interface WeeklyDigestSynthesizeRequestDTO {
+  days: number
+  selected_video_ids: string[]
+  excluded_news_ids: string[]
+  custom_youtube_urls: string[]
+  custom_news_items: string[]
+}
+
+export interface DigestReadStateRequestDTO {
+  item_ids: string[]
+  mark_as_read: boolean
+}
+
+export interface DigestReadStateResponseDTO {
+  ok: boolean
+  read_item_ids: string[]
+}
+
+
+// ==========================================
+// Trinity AI Advisor (Manager Chat) DTOs
+// ==========================================
+export interface AdvisorSessionDTO {
+  id: string
+  title: string
+  created_at: string
+  updated_at: string
+  message_count: number
+}
+
+export interface AdvisorChatMessageDTO {
+  id: string
+  session_id: string
+  role: 'user' | 'assistant' | 'system'
+  content: string
+  citations: string[]
+  created_at: string
+}
+
+export interface SkillManifestDTO {
+  name: string
+  description: string
+  is_quarantined: boolean
+  path: string
+  created_at: string
+}
+
+export interface SandboxStateSnapshotDTO {
+  memory_files: string[]
+  active_skills: SkillManifestDTO[]
+  quarantined_skills: SkillManifestDTO[]
+  scratch_files_count: number
+  last_audit_entry?: string | null
+}
+
+export interface HermesSyncStatusDTO {
+  is_installed: boolean
+  current_commit: string
+  upstream_commit: string
+  has_updates: boolean
+  last_synced_at?: string | null
+}

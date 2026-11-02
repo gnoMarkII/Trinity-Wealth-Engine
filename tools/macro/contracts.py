@@ -32,6 +32,9 @@ MARKET_OBSERVABLE_COVERAGE: Dict[str, List[str]] = {
         "obs_us_policy_rate_bis",
         "obs_thai_policy_rate_bis",
         "obs_diff_us_th_policy_rate_bis",
+        "obs_jp_policy_rate_bis",
+        "obs_cn_policy_rate_bis",
+        "obs_in_policy_rate_bis",
     ],
     "commodity_volatility": [
         "obs_cboe_gold_volatility_gvz",
@@ -183,9 +186,9 @@ KNOWN_DEGRADED_SERIES_POLICY: Dict[str, Dict[str, Any]] = {
         "replacement_series": "DX-Y.NYB",
     },
     "INTDSRCNM193N": {
-        "reason": "China Discount Rate discontinued on FRED",
-        "policy": "mark_unavailable_exclude_from_scoring",
-        "replacement_series": None,
+        "reason": "China Discount Rate discontinued on FRED (Superseded by BIS WS_CBPOL 1Y LPR)",
+        "policy": "allow_stale_or_fallback",
+        "replacement_series": "obs_cn_policy_rate_bis",
     },
     "NGDPRXDCCNA": {
         "reason": "China Real GDP Annual series with long reporting lag",
@@ -198,9 +201,9 @@ KNOWN_DEGRADED_SERIES_POLICY: Dict[str, Dict[str, Any]] = {
         "replacement_series": None,
     },
     "INTDSRJPM193N": {
-        "reason": "Japan Discount Rate discontinued by Bank of Japan in 2017",
-        "policy": "mark_unavailable_exclude_from_scoring",
-        "replacement_series": None,
+        "reason": "Japan Discount Rate discontinued by Bank of Japan in 2017 (Superseded by BIS WS_CBPOL Policy Rate)",
+        "policy": "allow_stale_or_fallback",
+        "replacement_series": "obs_jp_policy_rate_bis",
     },
     "JPNCPIALLMINMEI": {
         "reason": "Japan CPI discontinued on FRED OECD dataset",
@@ -208,9 +211,9 @@ KNOWN_DEGRADED_SERIES_POLICY: Dict[str, Dict[str, Any]] = {
         "replacement_series": None,
     },
     "INTDSRINM193N": {
-        "reason": "India Bank Rate discontinued on FRED",
-        "policy": "mark_unavailable_exclude_from_scoring",
-        "replacement_series": None,
+        "reason": "India Bank Rate discontinued on FRED (Superseded by BIS WS_CBPOL Repo Rate)",
+        "policy": "allow_stale_or_fallback",
+        "replacement_series": "obs_in_policy_rate_bis",
     },
     "INDCPIALLMINMEI": {
         "reason": "India CPI discontinued on FRED OECD dataset",

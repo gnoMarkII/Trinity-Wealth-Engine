@@ -10,6 +10,10 @@ from __future__ import annotations
 import re
 from typing import Any, List, Set, Tuple
 
+from core.news_digest.entity_matcher import (
+    COMMON_STOPWORDS_AND_ACRONYMS,
+    contains_ticker_boundary,
+)
 from core.portfolio_advisory.models import (
     AdvisoryActionCode,
     PortfolioAdvisoryNarrative,
@@ -17,20 +21,12 @@ from core.portfolio_advisory.models import (
 )
 
 # Common financial acronyms and macro tickers allowed in narratives
-ALLOWED_ACRONYMS: Set[str] = {
-    "NAV", "USD", "THB", "GDP", "CPI", "FED", "BOT", "SET", "SET50", "SET100",
-    "SPY", "QQQ", "DIA", "IWM", "VTI", "VOO", "XLK", "XLF", "XLV", "XLE", "XLI",
-    "XLY", "XLP", "XLU", "XLRE", "XLB", "XLC", "PVD", "RMF", "SSF", "ESG",
-    "ROIC", "WACC", "DCF", "RDCF", "EBITDA", "EBIT", "GAAP", "OCF", "FCF",
-    "ADTV", "SMA", "EMA", "RSI", "MACD", "PE", "PBV", "AI", "SEC", "CEO", "CFO",
-    "HHI", "ETF", "ETFS", "REIT", "REITS", "GOLD", "BOND", "BONDS", "CASH",
-    "BUY", "SELL", "HOLD", "TRIM", "DIP", "YTD", "QTD", "MTD", "CAGR", "EPS",
-    "DPS", "ROE", "ROA", "EV", "FX", "BPS", "IRR", "NPV", "TTM", "FY",
-    "US", "TH", "CORE", "RISK", "GROWTH", "SPEC", "SAFE", "ALPHA", "BETA", "TECH", "SECTOR", "DIV",
-}
+ALLOWED_ACRONYMS: Set[str] = COMMON_STOPWORDS_AND_ACRONYMS
 
 BUY_KEYWORDS = ("ซื้อ", "สะสม", "เพิ่มน้ำหนัก", "buy", "accumulate", "add")
 SELL_KEYWORDS = ("ขาย", "ลดน้ำหนัก", "ตัดขาดทุน", "sell", "trim", "cut loss", "reduce")
+
+_TICKER_CANDIDATE_RE = re.compile(r'(?<![A-Za-z0-9])[A-Z]{2,5}(?![A-Za-z0-9])')
 
 
 def validate_advisory_narrative_consistency(
@@ -68,7 +64,7 @@ def validate_advisory_narrative_consistency(
         valid_symbols[clean] = h.action_code
         valid_symbols[h.symbol.strip().upper()] = h.action_code
         if getattr(h, "asset_name", None):
-            for token in re.findall(r'\b[A-Z]{2,5}\b', h.asset_name):
+            for token in _TICKER_CANDIDATE_RE.findall(h.asset_name):
                 valid_symbols[token] = h.action_code
 
     for q in quant_report.quarantined_holdings:
@@ -78,7 +74,7 @@ def validate_advisory_narrative_consistency(
 
     if quant_report.macro_regime_summary:
         macro_str = str(quant_report.macro_regime_summary)
-        for token in re.findall(r'\b[A-Z]{2,5}\b', macro_str):
+        for token in _TICKER_CANDIDATE_RE.findall(macro_str):
             valid_symbols.setdefault(token, AdvisoryActionCode.HOLD_WITHIN_BAND)
 
     lt_summary = getattr(quant_report, "look_through_summary", None)
@@ -121,14 +117,14 @@ def validate_advisory_narrative_consistency(
     ]
 
     for sym, action in valid_symbols.items():
-        if re.search(rf'\b{re.escape(sym)}\b', immediate_text, re.IGNORECASE):
+        if contains_ticker_boundary(immediate_text, sym):
             # If stock is URGENT_REDUCE, TRIM_OVERWEIGHT, or QUARANTINED, verify it's not advised to buy
             if action in (
                 AdvisoryActionCode.URGENT_REDUCE,
                 AdvisoryActionCode.TRIM_OVERWEIGHT,
                 AdvisoryActionCode.QUARANTINED_DATA_ANOMALY,
             ):
-                sentences = [s for s in immediate_sentences if re.search(rf'\b{re.escape(sym)}\b', s, re.IGNORECASE)]
+                sentences = [s for s in immediate_sentences if contains_ticker_boundary(s, sym)]
                 for s in sentences:
                     s_lower = s.lower()
                     if any(bk in s_lower for bk in BUY_KEYWORDS) and not any(sk in s_lower for sk in SELL_KEYWORDS):
@@ -138,7 +134,7 @@ def validate_advisory_narrative_consistency(
 
             # If stock is ACCUMULATE_NOW or BREAKOUT_BUY, verify it's not advised to panic sell
             elif action in (AdvisoryActionCode.ACCUMULATE_NOW, AdvisoryActionCode.BREAKOUT_BUY):
-                sentences = [s for s in immediate_sentences if re.search(rf'\b{re.escape(sym)}\b', s, re.IGNORECASE)]
+                sentences = [s for s in immediate_sentences if contains_ticker_boundary(s, sym)]
                 for s in sentences:
                     s_lower = s.lower()
                     if any(sk in s_lower for sk in SELL_KEYWORDS) and not any(bk in s_lower for bk in BUY_KEYWORDS):
@@ -148,7 +144,7 @@ def validate_advisory_narrative_consistency(
 
     # 4. Ticker Hallucination Check
     # Match standalone uppercase ticker candidates (2 to 5 uppercase characters)
-    raw_candidates = set(re.findall(r'\b[A-Z]{2,5}\b', full_narrative_text))
+    raw_candidates = set(_TICKER_CANDIDATE_RE.findall(full_narrative_text))
     for cand in raw_candidates:
         if cand in ALLOWED_ACRONYMS:
             continue

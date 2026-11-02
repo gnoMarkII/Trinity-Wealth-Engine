@@ -1,3 +1,7 @@
+import api.db.repositories.advisor_chat_repository as advisor_chat_repo_dao
+from application.manager.ports import AdvisorSessionRepoPort
+from core.sandbox.models import AdvisorChatMessage, AdvisorSessionSummary
+import uuid
 """SQLite driven adapters for application repository ports.
 
 The adapters deliberately support two lifecycles:
@@ -14,7 +18,7 @@ adapter boundary and contains only connection/row mapping concerns.
 from contextlib import closing, contextmanager
 import json
 import sqlite3
-from typing import Any, Iterator, List, Optional, Dict
+from typing import Any, Iterator, List, Optional, Dict, Sequence
 
 from application.jobs.ports import JobRepositoryPort
 from application.kanban.ports import KanbanRepositoryPort
@@ -863,3 +867,44 @@ class SqliteEquityExportRepositoryAdapter(EquityExportRepositoryPort):
                 error_message=error_message,
             )
             return _row_to_equity_export_record(row) if row else None
+
+
+class SqliteAdvisorSessionRepositoryAdapter(_SqliteAdapterBase, AdvisorSessionRepoPort):
+    """Concrete SQLite adapter for AdvisorSessionRepoPort."""
+
+    def list_sessions(self, limit: int = 30) -> list[AdvisorSessionSummary]:
+        with self._connection() as conn:
+            return advisor_chat_repo_dao.list_sessions(conn, limit=limit)
+
+    def create_session(
+        self, title: str = "บทสนทนาใหม่", session_id: Optional[str] = None
+    ) -> AdvisorSessionSummary:
+        actual_id = session_id or f"session_{uuid.uuid4().hex[:12]}"
+        with self._connection(write=True) as conn:
+            return advisor_chat_repo_dao.create_session(conn, actual_id, title)
+
+    def update_session_title(self, session_id: str, title: str) -> None:
+        with self._connection(write=True) as conn:
+            advisor_chat_repo_dao.update_session_title(conn, session_id, title)
+
+    def get_session(self, session_id: str) -> Optional[AdvisorSessionSummary]:
+        with self._connection() as conn:
+            return advisor_chat_repo_dao.get_session(conn, session_id)
+
+    def get_messages(self, session_id: str) -> list[AdvisorChatMessage]:
+        with self._connection() as conn:
+            return advisor_chat_repo_dao.get_messages(conn, session_id)
+
+    def append_message(
+        self,
+        session_id: str,
+        role: str,
+        content: str,
+        citations: Sequence[str] = (),
+    ) -> AdvisorChatMessage:
+        msg_id = f"msg_{uuid.uuid4().hex[:12]}"
+        citations_json = json.dumps(list(citations), ensure_ascii=False)
+        with self._connection(write=True) as conn:
+            return advisor_chat_repo_dao.append_message(
+                conn, msg_id, session_id, role, content, citations_json
+            )

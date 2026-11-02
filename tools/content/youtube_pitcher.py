@@ -810,7 +810,7 @@ def select_financial_autopsy_assets(pitch: Any, events: Any) -> list:
             text_parts.append(ev.get("canonical_title", ""))
             text_parts.append(ev.get("comprehensive_summary", ""))
         text = " ".join(text_parts)
-        potential_symbols = re.findall(r'\b[A-Z][A-Z0-9]{1,5}\b', text)
+        potential_symbols = re.findall(r'(?<![A-Za-z0-9])[A-Z][A-Z0-9]{1,5}(?![A-Za-z0-9])', text)
 
     resolved = []
     seen = set()

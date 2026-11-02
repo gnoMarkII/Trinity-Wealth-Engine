@@ -33,6 +33,7 @@ from api.routers.equity.router_ohlcv import router as ohlcv_router
 from api.routers.knowledge_writes import router as knowledge_writes_router
 from api.routers.routes_terminal_v2 import router as terminal_v2_router
 from api.routers.investor_essence import router as investor_essence_router
+from api.routers.manager_chat_router import router as manager_chat_router
 
 WEB_DIST = Path(__file__).resolve().parent.parent / "web" / "dist"
 
@@ -74,6 +75,9 @@ async def lifespan(app: FastAPI):
         run_fn=notebooklm_worker.notebooklm_run_fn,
         flows={"notebooklm", "macro_notebooklm", "equity_notebooklm"},
     )
+    from api.dependencies import set_global_app_job_queue
+    set_global_app_job_queue(app.state.job_queue)
+
     # Queue objects remain available to request dependencies for compatibility,
     # but no background task or scheduler is started when explicitly disabled
     # (notably in tests and one-shot CLI deployments).
@@ -156,6 +160,7 @@ app.include_router(health_router)
 app.include_router(knowledge_writes_router)
 app.include_router(terminal_v2_router)
 app.include_router(investor_essence_router)
+app.include_router(manager_chat_router, prefix="/api/manager", tags=["Manager Chat"])
 
 
 @app.get("/health")

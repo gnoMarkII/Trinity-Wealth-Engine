@@ -74,7 +74,7 @@ describe('LiveTerminal', () => {
       source.emitMessage(line('researcher', 'ค้นข้อมูล 2'))
     })
 
-    expect(screen.getByText('Manager')).toBeInTheDocument()
+    expect(screen.getByText('Supervisor')).toBeInTheDocument()
     expect(screen.getByText('Researcher')).toBeInTheDocument()
     expect(screen.getByText('ค้นข้อมูล 2')).toBeInTheDocument()
   })

@@ -199,6 +199,8 @@ def test_sector_canonical_matching():
     assert normalize_to_canonical_sector("Information Technology") == "Technology"
     assert normalize_to_canonical_sector("Financial Services") == "Financials"
     assert normalize_to_canonical_sector("XLF") == "Financials"
+    assert normalize_to_canonical_sector("กลุ่มIT") == "Technology"
+    assert normalize_to_canonical_sector("กองทุนXLK") == "Technology"
 
     assert is_sector_match("XLK", "Technology") is True
     assert is_sector_match("Financial Services", "XLF") is True

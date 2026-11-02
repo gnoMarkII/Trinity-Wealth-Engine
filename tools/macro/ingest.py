@@ -253,6 +253,87 @@ def ingest_country_macro() -> str:
         except Exception:
             pass
 
+    # Enhance / fallback Asian policy rates with fresh institutional data from BIS SDMX
+    try:
+        from tools.market.terminal_v2.bootstrap import get_terminal_data_service
+        bis_rates = get_terminal_data_service().get_global_policy_rates()
+        if bis_rates and not getattr(bis_rates, "is_stale", False):
+            bis_map = {r.country.upper(): r for r in getattr(bis_rates, "rates", [])}
+            # China: PBOC 1Y LPR
+            if "CN" in bis_map:
+                cn_item = bis_map["CN"]
+                cn_date = cn_item.effective_date or today
+                if len(cn_date) == 7:
+                    cn_date = f"{cn_date}-01"
+                existing = rows_by_id.get("INTDSRCNM193N")
+                is_stale = not existing
+                if existing and existing.get("date"):
+                    try:
+                        is_stale = (datetime.now() - datetime.strptime(existing["date"], "%Y-%m-%d")).days > 180
+                    except Exception:
+                        is_stale = True
+                if is_stale:
+                    rows_by_id["INTDSRCNM193N"] = {
+                        "series_id": "INTDSRCNM193N",
+                        "name": "China Policy Rate (PBOC 1Y LPR)",
+                        "description": "อัตราดอกเบี้ยนโยบาย PBOC 1-Year Loan Prime Rate (BIS SDMX)",
+                        "value": cn_item.rate_value,
+                        "prev": cn_item.previous_rate or cn_item.rate_value,
+                        "ma": cn_item.rate_value,
+                        "unit": "%",
+                        "date": cn_date,
+                    }
+            # Japan: BOJ Call Rate
+            if "JP" in bis_map:
+                jp_item = bis_map["JP"]
+                jp_date = jp_item.effective_date or today
+                if len(jp_date) == 7:
+                    jp_date = f"{jp_date}-01"
+                existing = rows_by_id.get("INTDSRJPM193N")
+                is_stale = not existing
+                if existing and existing.get("date"):
+                    try:
+                        is_stale = (datetime.now() - datetime.strptime(existing["date"], "%Y-%m-%d")).days > 180
+                    except Exception:
+                        is_stale = True
+                if is_stale:
+                    rows_by_id["INTDSRJPM193N"] = {
+                        "series_id": "INTDSRJPM193N",
+                        "name": "Japan Policy Rate (BOJ)",
+                        "description": "อัตราดอกเบี้ยนโยบาย BOJ Overnight Call Rate (BIS SDMX)",
+                        "value": jp_item.rate_value,
+                        "prev": jp_item.previous_rate or jp_item.rate_value,
+                        "ma": jp_item.rate_value,
+                        "unit": "%",
+                        "date": jp_date,
+                    }
+            # India: RBI Repo Rate
+            if "IN" in bis_map:
+                in_item = bis_map["IN"]
+                in_date = in_item.effective_date or today
+                if len(in_date) == 7:
+                    in_date = f"{in_date}-01"
+                existing = rows_by_id.get("INTDSRINM193N")
+                is_stale = not existing
+                if existing and existing.get("date"):
+                    try:
+                        is_stale = (datetime.now() - datetime.strptime(existing["date"], "%Y-%m-%d")).days > 180
+                    except Exception:
+                        is_stale = True
+                if is_stale:
+                    rows_by_id["INTDSRINM193N"] = {
+                        "series_id": "INTDSRINM193N",
+                        "name": "India Policy Rate (RBI Repo)",
+                        "description": "อัตราดอกเบี้ยนโยบาย RBI Policy Repo Rate (BIS SDMX)",
+                        "value": in_item.rate_value,
+                        "prev": in_item.previous_rate or in_item.rate_value,
+                        "ma": in_item.rate_value,
+                        "unit": "%",
+                        "date": in_date,
+                    }
+    except Exception as exc:
+        log.warning("Could not enrich Asian policy rates with BIS data: %s", exc)
+
     # In production path, do not inject mock indicators.
     # Offline test suites can enable mock injection explicitly via ALLOW_MOCK_MACRO_INGEST=true.
     if os.getenv("ALLOW_MOCK_MACRO_INGEST", "false").lower() == "true":

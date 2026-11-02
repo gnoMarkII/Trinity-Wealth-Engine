@@ -19,9 +19,8 @@ def test_extract_video_id():
     assert _extract_video_id("https://youtube.com/shorts/dQw4w9WgXcQ") == "dQw4w9WgXcQ"
     assert _extract_video_id("https://youtube.com/live/dQw4w9WgXcQ") == "dQw4w9WgXcQ"
     assert _extract_video_id("invalid_url_string") is None
-
 def test_find_existing_insight(tmp_path, monkeypatch):
-    monkeypatch.setattr("tools.knowledge.youtube._YOUTUBE_SUMMARIES_PATH", tmp_path)
+    monkeypatch.setattr("tools.knowledge.youtube._get_youtube_summaries_path", lambda: tmp_path)
     
     assert _find_existing_insight("12345678901") is None
     

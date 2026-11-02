@@ -1,6 +1,8 @@
 import os
 import urllib.request
 import xml.etree.ElementTree as ET
+import re
+from core.news_digest.engine import evaluate_freshness
 from datetime import datetime, timedelta, timezone, date
 from pathlib import Path
 from langchain_core.tools import tool
@@ -30,7 +32,7 @@ _YT_NS = {
 }
 
 
-def get_youtube_candidates(lookback_days: int = 30) -> list[dict]:
+def get_youtube_candidates(lookback_days: int = 7) -> list[dict]:
     """ดึงรายการคลิปใหม่จากทุกช่องที่ติดตาม คืนเป็น list of dict ล้วนๆ ไม่มี side effect (ไม่เขียนไฟล์)
 
     ใช้เป็น candidate list สำหรับ human-in-the-loop approval แยกออกมาจาก
@@ -40,9 +42,10 @@ def get_youtube_candidates(lookback_days: int = 30) -> list[dict]:
     today = datetime.now(timezone.utc)
     cutoff = today - timedelta(days=lookback_days)
 
-    candidates: list[dict] = []
-    for handle, channel_id in TARGET_CHANNELS.items():
+    def _fetch_channel(channel_info):
+        handle, channel_id = channel_info
         url = f"https://www.youtube.com/feeds/videos.xml?channel_id={channel_id}"
+        ch_candidates = []
         try:
             xml_data = _fetch_rss_with_retry(url)
             root = ET.fromstring(xml_data)
@@ -80,25 +83,58 @@ def get_youtube_candidates(lookback_days: int = 30) -> list[dict]:
                 video_id_element = entry.find('yt:videoId', _YT_NS)
                 video_id = video_id_element.text if video_id_element is not None else None
                 is_fetched = False
+                cached_snippet = None
+                cached_tickers = []
                 if video_id:
                     summaries_dir = _get_save_dir().parent
-                    if any("Inbox" not in p.parts and "Revisions" not in p.parts for p in summaries_dir.rglob(f"*{video_id}*.md")):
-                        is_fetched = True
+                    for p in summaries_dir.rglob(f"*{video_id}*.md"):
+                        if "Inbox" not in p.parts and "Revisions" not in p.parts:
+                            is_fetched = True
+                            try:
+                                txt = p.read_text(encoding="utf-8")
+                                from tools.knowledge.search_youtube_insights import extract_first_bullet_of_key_takeaways
+                                bullet = extract_first_bullet_of_key_takeaways(txt, max_chars=120)
+                                if bullet:
+                                    cached_snippet = bullet
+                                cached_tickers = sorted(set(re.findall(r"\[\[([A-Z0-9.\-:^]+)\]\]", txt)))
+                            except Exception:
+                                pass
+                            break
 
-                candidates.append({
+                age_h, tier, label, is_stale = evaluate_freshness(
+                    published_str,
+                    today,
+                    max_age_hours=max(168, lookback_days * 24),
+                )
+
+                ch_candidates.append({
                     "channel": channel_title,
                     "title": video_title,
                     "link": video_link,
                     "video_id": video_id,
                     "published": published_date.strftime("%Y-%m-%d"),
+                    "published_at": published_date.isoformat(),
+                    "age_hours": age_h,
+                    "freshness_tier": tier,
+                    "freshness_label": label,
+                    "is_stale": is_stale,
                     "thumbnail": thumbnail_url,
                     "is_fetched": is_fetched,
+                    "cached_summary_snippet": cached_snippet,
+                    "cached_tickers": cached_tickers,
                 })
         except Exception as e:
             from core.logger import get_logger
             get_logger(__name__).error(f"Error parsing channel {handle}: {e}")
-            continue
+        return ch_candidates
 
+    import concurrent.futures
+    candidates: list[dict] = []
+    with concurrent.futures.ThreadPoolExecutor(max_workers=min(4, len(TARGET_CHANNELS))) as executor:
+        for ch_res in executor.map(_fetch_channel, TARGET_CHANNELS.items()):
+            candidates.extend(ch_res)
+
+    candidates.sort(key=lambda x: str(x.get("published_at", "")), reverse=True)
     return candidates
 
 

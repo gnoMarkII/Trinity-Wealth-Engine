@@ -9,6 +9,7 @@ from langchain_core.tools import tool
 from core.logger import get_logger
 from core.retry import with_retry as _with_retry
 from core.nlp_utils import group_similar_news, select_representative_news, calculate_freshness
+from core.text_utils import strip_html_tags
 from schemas.macro_schemas import ThemeCategory
 from tools.market.asset_resolver import resolve_asset
 from .core import Market, _currency_for, _yf_info, _yf_news, _yf_financials, _fmt_number, _fmt_large, _fmt_fin
@@ -69,7 +70,7 @@ def ingest_stock_news(ticker: str, market: Market = "US") -> str:
         raw_summary = content.get("summary") or content.get("description") or item.get("summary") or ""
         clean_summary = ""
         if raw_summary:
-            clean_summary = html.unescape(re.sub(r"<[^>]+>", "", str(raw_summary))).strip()[:220]
+            clean_summary = strip_html_tags(str(raw_summary))[:220]
 
         pub_time = content.get("pubDate") or item.get("providerPublishTime")
         published_at = None

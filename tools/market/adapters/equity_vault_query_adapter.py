@@ -247,6 +247,63 @@ class EquityVaultQueryAdapter:
         clean = self._validate_ticker(ticker)
         ticker_regex = re.compile(rf"(?<![A-Za-z0-9]){re.escape(clean)}(?![A-Za-z0-9])", re.IGNORECASE)
 
+        # 0. Check pre-indexed ticker intelligence from Digest Store (Instant Single Source of Truth)
+        try:
+            from tools.macro.digest_store import get_ticker_intelligence
+            intel = get_ticker_intelligence(clean)
+            intel_news = intel.get("news_items", [])
+            intel_yt = intel.get("youtube_mentions", [])
+            if intel_news or intel_yt:
+                items: list[dict[str, Any]] = []
+                for n in intel_news:
+                    link_val = ""
+                    if isinstance(n.get("links"), list) and n.get("links"):
+                        link_val = n["links"][0]
+                    elif n.get("link"):
+                        link_val = n["link"]
+                    items.append({
+                        "title": n.get("thai_headline") or n.get("title", ""),
+                        "source": n.get("source") or "Daily Digest",
+                        "link": link_val,
+                        "published_at": n.get("published_at"),
+                        "age_hours": n.get("age_hours", 0),
+                        "freshness_reason": n.get("freshness_label", "สดใหม่"),
+                        "is_stale": n.get("is_stale", False),
+                        "sources_count": n.get("sources_count", 1),
+                        "summary": n.get("what_happened") or n.get("summary", ""),
+                        "what_happened": n.get("what_happened"),
+                        "why_it_matters": n.get("why_it_matters"),
+                        "thesis_signal": n.get("thesis_signal"),
+                        "impact_type": n.get("impact_type"),
+                        "macro_impact_score": n.get("macro_impact_score"),
+                        "asset_impact_score": n.get("asset_impact_score"),
+                    })
+                yt_mentions: list[dict[str, Any]] = []
+                for y in intel_yt:
+                    yt_title = y.get("thai_title") or y.get("title", "")
+                    yt_mentions.append({
+                        "video_id": y.get("video_id", ""),
+                        "title": yt_title,
+                        "thai_title": yt_title,
+                        "channel": y.get("channel", "YouTube"),
+                        "link": f"https://www.youtube.com/watch?v={y.get('video_id', '')}",
+                        "published_at": y.get("published_at"),
+                        "key_takeaways": y.get("key_takeaways", []),
+                        "alignment_with_news": y.get("alignment_with_news"),
+                        "alignment_note": y.get("alignment_note"),
+                    })
+                market_type = "TH" if (clean.endswith(".BK") or clean in {"PTT", "SCB", "KBANK", "CPALL", "DELTA", "ADVANC", "AOT", "BDMS"}) else "US"
+                return {
+                    "ticker": clean,
+                    "market": market_type,
+                    "last_updated": intel.get("last_updated") or datetime.now(timezone.utc).isoformat(),
+                    "news_date": datetime.now().strftime("%Y-%m-%d"),
+                    "items": items,
+                    "youtube_mentions": yt_mentions,
+                }
+        except Exception as exc:
+            log.warning("Could not load ticker intelligence from digest store: %s", exc)
+
         # 1. Search Vault V2: 30_Knowledge_Base/News/**
         v2_news_dir = self.vault_path / "30_Knowledge_Base" / "News"
         v2_json_files: list[Path] = []

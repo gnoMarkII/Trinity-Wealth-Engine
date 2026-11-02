@@ -1,7 +1,7 @@
 """Equity intel pipeline output construction and fallback helpers.
 
 Architecture Layer: agents/pipelines/
-Extracted from manager_agent.py to encapsulate MicroQuantOutput provisional sidecars,
+Extracted from research_swarm_flow.py to encapsulate MicroQuantOutput provisional sidecars,
 narrative fallbacks, and synthesizer failure recovery.
 """
 from __future__ import annotations

@@ -21,6 +21,7 @@ os.environ["WEBUI_STATE_DB_PATH"] = str(_GLOBAL_TEST_TEMP / "webui_state.sqlite"
 os.environ["CHECKPOINT_DB_PATH"] = str(_GLOBAL_TEST_TEMP / "checkpoints.sqlite")
 os.environ["NEWS_FUNNEL_STORE_PATH"] = str(_GLOBAL_TEST_TEMP / "news_funnel_state.json")
 os.environ["FINNOMENA_CACHE_DIR"] = str(_GLOBAL_TEST_TEMP / "finnomena_cache")
+os.environ["TELEMETRY_EVENTS_PATH"] = str(_GLOBAL_TEST_TEMP / "probe_events.jsonl")
 # Never start production background workers/schedulers during tests.  The
 # application lifespan still constructs queue objects for dependency shape
 # compatibility, but no task is started and no durable work is re-enqueued.

@@ -190,16 +190,16 @@ def test_job_log_role_label_and_current_node(tmp_path):
     conn = state_db.get_connection(db_path)
     state_db.create_job(conn, "job-z", "thread-z", "card-z", "key-z", "instr", status="running")
 
-    state_db.append_job_log(conn, "job-z", "bookkeeper", "อ่านพอร์ตมา", role="instruction", label="manager → bookkeeper")
-    state_db.append_job_log(conn, "job-z", "bookkeeper", "อ่านพอร์ตเสร็จแล้ว", role="reply", label="bookkeeper")
+    state_db.append_job_log(conn, "job-z", "archivist", "อ่านพอร์ตมา", role="instruction", label="manager → archivist")
+    state_db.append_job_log(conn, "job-z", "archivist", "อ่านพอร์ตเสร็จแล้ว", role="reply", label="archivist")
 
     logs = state_db.get_job_logs_since(conn, "job-z", after_seq=0)
     assert len(logs) == 2
     assert logs[0]["role"] == "instruction"
-    assert logs[0]["label"] == "manager → bookkeeper"
+    assert logs[0]["label"] == "manager → archivist"
     assert logs[1]["role"] == "reply"
 
-    assert state_db.get_latest_job_log_node(conn, "job-z") == "bookkeeper"
+    assert state_db.get_latest_job_log_node(conn, "job-z") == "archivist"
     conn.close()
 
 

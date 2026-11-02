@@ -44,14 +44,16 @@ def _val(v: Any) -> Optional[float]:
 
 
 class SoSoValueEtfFlowsAdapter(SpotEtfFlowsPort):
-    """Adapter reading US Spot ETF flow statistics from SoSoValue."""
+    """Adapter reading US Spot ETF flow statistics from SoSoValue with Farside secondary fallback."""
 
     def __init__(
         self,
         cache: Optional[ThreadSafeTTLCache] = None,
         enabled: Optional[bool] = None,
+        secondary_adapter: Optional[SpotEtfFlowsPort] = None,
     ):
         self._cache = cache or ThreadSafeTTLCache(default_ttl_seconds=ETF_FLOWS_TTL_SECONDS)
+        self._secondary_adapter = secondary_adapter
         if enabled is not None:
             self._enabled = enabled
         else:
@@ -135,12 +137,60 @@ class SoSoValueEtfFlowsAdapter(SpotEtfFlowsPort):
             source="SoSoValue",
         )
 
+    def _fallback_from_snapshot(self, asset: str) -> Optional[SpotEtfFlowSnapshot]:
+        try:
+            import glob, json
+            snapshots = sorted(glob.glob("memories/30_Knowledge_Base/Macroeconomics/Daily_Snapshots/Macro_Observables_Snapshot_*.json"))
+            if not snapshots:
+                return None
+            with open(snapshots[-1], "r", encoding="utf-8") as f:
+                data = json.load(f)
+            reg = data.get("observables", {})
+            obs_key = f"crypto:{asset.lower()}_etf_flow:latest"
+            obs = reg.get(obs_key)
+            if obs:
+                raw_val = obs.get("value")
+                val = float(raw_val) if raw_val is not None else None
+                return SpotEtfFlowSnapshot(
+                    asset=asset,
+                    report_date=obs.get("observed_at", "2026-10-29"),
+                    daily_total_usd=val,
+                    cumulative_total_usd=None,
+                    issuers=(),
+                    is_stale=True,
+                    stale_reason="SoSoValue upstream unavailable; served from latest daily macro snapshot",
+                    source="SoSoValue (Snapshot Fallback)",
+                )
+        except Exception as exc:
+            logger.debug("Could not load ETF flows fallback from snapshot: %s", exc)
+        return None
+
+    def _fetch_with_secondary(self, norm: str) -> SpotEtfFlowSnapshot:
+        if not self._enabled:
+            raise DataUnavailableError(
+                "SoSoValue ETF flows capability is currently disabled by feature flag",
+                capability="etf-flows",
+                source="SoSoValue",
+            )
+        try:
+            return self._fetch_snapshot(norm)
+        except Exception as soso_err:
+            if self._secondary_adapter is not None:
+                logger.info("SoSoValue failed for %s (%s); trying secondary adapter...", norm, soso_err)
+                try:
+                    return self._secondary_adapter.get_spot_etf_flows(norm)
+                except Exception as sec_err:
+                    logger.warning("Secondary adapter also failed for %s: %s", norm, sec_err)
+                    raise soso_err
+            raise soso_err
+
     def get_spot_etf_flows(self, asset: str) -> SpotEtfFlowSnapshot:
         norm = asset.strip().upper()
         cache_key = f"sosovalue:etf:{norm}"
         return self._cache.get_or_set(
             key=cache_key,
-            loader=lambda: self._fetch_snapshot(norm),
+            loader=lambda: self._fetch_with_secondary(norm),
             ttl_seconds=ETF_FLOWS_TTL_SECONDS,
             max_stale_seconds=ETF_FLOWS_MAX_STALE_SECONDS,
+            fallback_loader=lambda: self._fallback_from_snapshot(norm),
         )

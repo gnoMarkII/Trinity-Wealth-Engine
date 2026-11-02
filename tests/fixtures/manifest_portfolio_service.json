@@ -1898,6 +1898,18 @@
           "kind": "POSITIONAL_OR_KEYWORD",
           "default": null,
           "annotation": "Optional"
+        },
+        {
+          "name": "applied_bucket_name",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": null,
+          "annotation": "Optional"
+        },
+        {
+          "name": "target_currency",
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "default": null,
+          "annotation": "Optional"
         }
       ],
       "return_annotation": "WatchlistState"

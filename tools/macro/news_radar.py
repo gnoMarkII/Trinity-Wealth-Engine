@@ -1,15 +1,17 @@
 import calendar
+import concurrent.futures
 from datetime import datetime, timezone
 import email.utils
 import os
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 import feedparser
 from langchain_core.tools import tool
 
 from core.logger import get_logger
 from core.nlp_utils import calculate_freshness, group_similar_news, select_representative_news
+from core.news_digest.engine import evaluate_freshness
 from core.retry import with_retry
 from schemas.macro_schemas import ThemeCategory
 
@@ -152,8 +154,10 @@ def get_news_candidates(max_items: int = 40) -> List[Dict[str, Any]]:
     all_news_items: List[Dict[str, Any]] = []
     now_utc = datetime.now(timezone.utc)
 
-    for feed in FEEDS:
-        entries = _fetch_feed_entries(feed)
+    with concurrent.futures.ThreadPoolExecutor(max_workers=6) as executor:
+        feed_entries_list = list(executor.map(_fetch_feed_entries, FEEDS))
+
+    for feed, entries in zip(FEEDS, feed_entries_list):
         for entry in entries[:50]:  # Increased to 50 for richer candidate pool
             try:
                 title = entry.title.replace("|", "｜").replace("\n", " ").strip()
@@ -229,6 +233,126 @@ def get_news_candidates(max_items: int = 40) -> List[Dict[str, Any]]:
             "is_fetched": _is_url_fetched(item["link"]),
         })
     return candidates
+
+
+def build_dynamic_portfolio_feeds(tickers: Optional[List[str]] = None) -> List[Dict[str, Any]]:
+    """Build dynamic RSS feeds for given portfolio and watchlist tickers."""
+    if not tickers:
+        return []
+    us_tickers: List[str] = []
+    th_tickers: List[str] = []
+    try:
+        from tools.market.asset_resolver import _CURATED_SET_SYMBOLS
+    except Exception:
+        _CURATED_SET_SYMBOLS = set()
+
+    for t in tickers:
+        clean = t.strip().upper()
+        if not clean or clean.startswith("^") or clean in {"CASH", "CASH_THB", "CASH_USD"}:
+            continue
+        base_sym = clean.replace(".BK", "")
+        if clean.endswith(".BK") or base_sym in _CURATED_SET_SYMBOLS:
+            th_tickers.append(base_sym)
+        else:
+            us_tickers.append(clean)
+
+    dynamic_feeds: List[Dict[str, Any]] = []
+    if us_tickers:
+        for i in range(0, min(len(us_tickers), 20), 10):
+            chunk = us_tickers[i:i + 10]
+            symbols_param = ",".join(chunk)
+            dynamic_feeds.append({
+                "name": f"Yahoo Finance ({','.join(chunk[:3])})",
+                "url": f"https://feeds.finance.yahoo.com/rss/2.0/headline?s={symbols_param}",
+            })
+    if th_tickers:
+        for sym in th_tickers[:5]:
+            dynamic_feeds.append({
+                "name": f"Google News TH ({sym})",
+                "url": f"https://news.google.com/rss/search?q={sym}+หุ้น&hl=th&gl=TH&ceid=TH:th",
+            })
+    return dynamic_feeds
+
+
+def fetch_fresh_news_candidates(
+    portfolio_tickers: Optional[List[str]] = None,
+    max_age_hours: int = 36,
+    max_items: int = 25,
+) -> Tuple[List[Dict[str, Any]], int]:
+    """Fetch and filter candidates strictly against freshness policy.
+
+    Drops unverified or stale (> max_age_hours) news before clustering and triage.
+
+    Returns:
+        (fresh_candidates, stale_dropped_count)
+    """
+    all_feeds = list(FEEDS) + build_dynamic_portfolio_feeds(portfolio_tickers)
+    raw_collected: List[Dict[str, Any]] = []
+    now_utc = datetime.now(timezone.utc)
+    stale_dropped_count = 0
+
+    with concurrent.futures.ThreadPoolExecutor(max_workers=6) as executor:
+        feed_entries_list = list(executor.map(_fetch_feed_entries, all_feeds))
+
+    for feed, entries in zip(all_feeds, feed_entries_list):
+        for entry in entries[:30]:
+            try:
+                title = entry.title.replace("|", "｜").replace("\n", " ").strip()
+                link = getattr(entry, "link", "")
+                if not title or not link:
+                    continue
+
+                published_at = _parse_entry_published_at(entry)
+                pub_iso = published_at.isoformat() if published_at else None
+                age_h, tier, label, is_stale = evaluate_freshness(pub_iso, now_utc, max_age_hours=max_age_hours)
+                if is_stale:
+                    stale_dropped_count += 1
+                    continue
+
+                summary_text = getattr(entry, "summary", getattr(entry, "description", ""))
+                source_name = feed["name"]
+                feed_source_title = getattr(getattr(entry, "source", None), "title", None)
+                if feed_source_title:
+                    source_name = f"{source_name} ({feed_source_title})"
+
+                raw_collected.append({
+                    "title": title,
+                    "summary": summary_text,
+                    "source": source_name,
+                    "link": link,
+                    "published_at": pub_iso,
+                    "age_hours": age_h,
+                    "freshness_tier": tier,
+                    "freshness_label": label,
+                    "is_stale": False,
+                })
+            except Exception as e:
+                log.warning("Error parsing entry for %s: %s", feed.get("name"), e)
+
+    if not raw_collected:
+        return [], stale_dropped_count
+
+    clusters = group_similar_news(raw_collected, threshold=0.75)
+    representatives = [select_representative_news(cluster) for cluster in clusters]
+    representatives.sort(key=lambda x: (x.get("sources_count", 1), -x.get("age_hours", 0)), reverse=True)
+
+    candidates: List[Dict[str, Any]] = []
+    for item in representatives[:max_items]:
+        candidates.append({
+            "title": item["title"],
+            "summary": item.get("summary", ""),
+            "link": item["link"],
+            "source": item["source"],
+            "sources_count": item.get("sources_count", 1),
+            "published_at": item.get("published_at"),
+            "age_hours": item.get("age_hours", 0),
+            "freshness_tier": item.get("freshness_tier", "fresh_today"),
+            "freshness_label": item.get("freshness_label", ""),
+            "is_stale": False,
+            "is_fetched": _is_url_fetched(item["link"]),
+        })
+
+    return candidates, stale_dropped_count
 
 
 @tool

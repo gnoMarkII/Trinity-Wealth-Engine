@@ -56,3 +56,15 @@ class TestAnonymize:
         text = "เลข 1-2345-67890-12-3 ของฉัน"
         out, _ = anonymize_pii(text)
         assert "[REDACTED_THAI_ID]" not in out
+
+    def test_thai_adjacent_phone_and_id_redacted(self):
+        # Thai characters are Unicode word characters, verify non-digit boundary matches without space
+        text_id = "เลขบัตร1123456789120ของผม"
+        out_id, found_id = anonymize_pii(text_id)
+        assert "[REDACTED_THAI_ID]" in out_id
+        assert found_id is True
+
+        text_phone = "ติดต่อเบอร์0812345678ได้เลย"
+        out_phone, found_phone = anonymize_pii(text_phone)
+        assert "[REDACTED_PHONE]" in out_phone
+        assert found_phone is True

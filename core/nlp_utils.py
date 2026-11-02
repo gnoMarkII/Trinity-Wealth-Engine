@@ -206,10 +206,20 @@ def select_representative_news(cluster: List[Dict[str, Any]]) -> Dict[str, Any]:
         # Handle naive or missing dates by assigning a very old date for sorting
         pub = item.get('published_at')
         if not pub:
-            pub = datetime.datetime.min.replace(tzinfo=datetime.timezone.utc)
-        elif pub.tzinfo is None:
-             pub = pub.replace(tzinfo=datetime.timezone.utc)
-        return (tier, -pub.timestamp())
+            pub_dt = datetime.datetime.min.replace(tzinfo=datetime.timezone.utc)
+        elif isinstance(pub, str):
+            try:
+                clean_pub = pub.replace("Z", "+00:00")
+                pub_dt = datetime.datetime.fromisoformat(clean_pub)
+                if pub_dt.tzinfo is None:
+                    pub_dt = pub_dt.replace(tzinfo=datetime.timezone.utc)
+            except Exception:
+                pub_dt = datetime.datetime.min.replace(tzinfo=datetime.timezone.utc)
+        elif isinstance(pub, datetime.datetime):
+            pub_dt = pub.replace(tzinfo=datetime.timezone.utc) if pub.tzinfo is None else pub
+        else:
+            pub_dt = datetime.datetime.min.replace(tzinfo=datetime.timezone.utc)
+        return (tier, -pub_dt.timestamp())
         
     sorted_cluster = sorted(cluster, key=sort_key)
     rep = sorted_cluster[0].copy()

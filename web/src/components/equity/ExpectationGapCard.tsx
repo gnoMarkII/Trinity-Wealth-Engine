@@ -1,4 +1,5 @@
 import React from 'react'
+import { ContextTooltip } from '../macro/explainer/ContextTooltip'
 
 export interface ExpectationGapCardProps {
   marketImpliedRevenueGrowth?: number | null
@@ -52,9 +53,17 @@ export const ExpectationGapCard: React.FC<ExpectationGapCardProps> = ({
         <div className="flex items-center gap-2">
           <span className="text-lg">⚖️</span>
           <div>
-            <h4 className="text-sm font-bold text-zinc-900 tracking-tight">
-              Reverse DCF: Market Expectation vs Reality Gap
-            </h4>
+            <div className="flex items-center gap-2">
+              <h4 className="text-sm font-bold text-zinc-900 tracking-tight">
+                Reverse DCF: Market Expectation vs Reality Gap
+              </h4>
+              <ContextTooltip
+                title="Reverse DCF (การคิดย้อนกลับจากราคาตลาด)"
+                what="แทนที่จะเดาอนาคตเพื่อหาราคา โมเดลนี้จะเอาราคาหุ้นวันนี้มาถอดรหัสว่า 'ตลาดกำลังคาดหวังให้บริษัทนี้เติบโตปีละกี่ %'"
+                normalBenchmark="ถ้าตัวเลขคาดหวังต่ำกว่าสิ่งที่บริษัทเคยทำได้จริง = มีแต้มต่อ (ตลาดมองโลกในแง่ร้ายเกินไป); ถ้าคาดหวังสูงลิ่ว = เสี่ยงสะดุด"
+                decisionImpact="ช่วยเช็คว่าเรากำลังซื้อหุ้นที่แบกความหวังไว้สูงเกินไปหรือไม่"
+              />
+            </div>
             <p className="text-xs text-zinc-500">
               ราคาปัจจุบันตลาดแฝงความคาดหวังไว้ต่ำหรือสูงกว่าความสามารถจริงของกิจการ
             </p>
@@ -66,6 +75,38 @@ export const ExpectationGapCard: React.FC<ExpectationGapCardProps> = ({
             Solver: {solverStatus}
           </span>
         )}
+      </div>
+
+      {/* Beginner Interpretation Banner */}
+      <div className={`rounded-xl border p-3.5 text-xs flex items-start gap-3 shadow-2xs ${
+        growthGap != null && growthGap >= 0
+          ? 'border-emerald-200 bg-emerald-50/70 text-emerald-950'
+          : 'border-amber-200 bg-amber-50/70 text-amber-950'
+      }`}>
+        <span className="text-lg shrink-0 mt-0.5">
+          {growthGap != null && growthGap >= 0 ? '🟢' : '⚠️'}
+        </span>
+        <div className="space-y-1">
+          <div className="flex items-center gap-2">
+            <span className={`font-bold block ${
+              growthGap != null && growthGap >= 0 ? 'text-emerald-900' : 'text-amber-900'
+            }`}>
+              ถอดรหัสราคาหุ้นวันนี้เป็นภาษาคน (Investor Takeaway):
+            </span>
+            <span className={`px-2 py-0.2 rounded-full text-[10px] font-extrabold uppercase ${
+              growthGap != null && growthGap >= 0
+                ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
+                : 'bg-amber-100 text-amber-800 border border-amber-300'
+            }`}>
+              {growthGap != null && growthGap >= 0 ? 'ตลาดไม่กดดัน (มีแต้มต่อ)' : 'ตลาดคาดหวังสูง (ระวังสะดุด)'}
+            </span>
+          </div>
+          <p className="text-[12px] leading-relaxed">
+            {growthGap != null && growthGap >= 0
+              ? `ราคาหุ้นวันนี้ ตลาดคาดหวังให้รายได้โตเฉลี่ยปีละ ${marketImpliedRevenueGrowth?.toFixed(1)}% ซึ่งต่ำกว่าที่บริษัทเคยทำได้จริง (${actualRevenueGrowth?.toFixed(1)}%) — แปลว่าตลาดยังไม่ได้ตั้งเป้าความหวังไว้สูงเกินไป หุ้นมีแต้มต่อความปลอดภัย (Margin of Safety) หากผลงานออกมาดีตามปกติก็พร้อมเซอร์ไพรส์เชิงบวก`
+              : `ราคาหุ้นวันนี้ ตลาดตั้งเป้าความหวังไว้สูงมากถึงปีละ ${marketImpliedRevenueGrowth?.toFixed(1)}% (เทียบกับผลงานในอดีต ${actualRevenueGrowth?.toFixed(1)}%) — บริษัทต้องเร่งสร้างการเติบโตอย่างหนัก หากผลประกอบการไตรมาสถัดไปพลาดเป้าแม้แต่นิดเดียว ราคาอาจปรับฐานแรง`}
+          </p>
+        </div>
       </div>
 
       {/* 2-Column Comparison Bar Matrix */}

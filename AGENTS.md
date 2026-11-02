@@ -59,7 +59,8 @@ flowchart TD
 2. **No Manual Manifest Edits:** Never edit `tests/fixtures/manifest_*.json` by hand.
 3. **No Filesystem I/O in Routers:** `api/routers/` must delegate business logic and I/O to application services or adapters.
 4. **No Direct Commit in DAOs:** Never invoke `.commit()` inside repositories or DAOs.
-5. **Do Not Touch `agents/bookkeeper_agent.py`:** Reserved for dedicated refactoring.
+5. **Bookkeeper Agent Decommissioned:** Legacy `bookkeeper_agent.py` is removed; all portfolio accounting and advisory are managed deterministically via `PortfolioService` & `PortfolioAdvisoryService`.
+6. **Single-Brain Manager Architecture:** Hermes (`manager_chat_service.py`) is the only Manager. Background research flows (`research_swarm_flow.py`) use deterministic Python dispatchers (`classify_research_tasks`), never redundant LLM routers.
 
 ---
 

@@ -826,6 +826,16 @@
               "default": "US",
               "title": "Market"
             }
+          },
+          {
+            "name": "portfolio_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "default",
+              "title": "Portfolio Id"
+            }
           }
         ],
         "has_request_body": false,
@@ -867,6 +877,20 @@
           "Health"
         ],
         "summary": "Get Component Health",
+        "parameters": [],
+        "has_request_body": false,
+        "responses": [
+          "200"
+        ]
+      }
+    },
+    "/api/health/harness-telemetry": {
+      "get": {
+        "operationId": "get_harness_telemetry_api_health_harness_telemetry_get",
+        "tags": [
+          "Health"
+        ],
+        "summary": "Get Harness Telemetry",
         "parameters": [],
         "has_request_body": false,
         "responses": [
@@ -1697,6 +1721,161 @@
         ]
       }
     },
+    "/api/macro/digest/candidates": {
+      "get": {
+        "operationId": "get_digest_candidates_api_macro_digest_candidates_get",
+        "tags": [],
+        "summary": "Get Digest Candidates",
+        "parameters": [
+          {
+            "name": "days",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 14,
+              "minimum": 1,
+              "default": 7,
+              "title": "Days"
+            }
+          },
+          {
+            "name": "force_refresh",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false,
+              "title": "Force Refresh"
+            }
+          },
+          {
+            "name": "max_news_age_hours",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer",
+                  "maximum": 336,
+                  "minimum": 1
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Max News Age Hours"
+            }
+          }
+        ],
+        "has_request_body": false,
+        "responses": [
+          "200",
+          "422"
+        ]
+      }
+    },
+    "/api/macro/digest/daily": {
+      "get": {
+        "operationId": "get_daily_digest_api_macro_digest_daily_get",
+        "tags": [],
+        "summary": "Get Daily Digest",
+        "parameters": [
+          {
+            "name": "date",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Optional ISO date string YYYY-MM-DD",
+              "title": "Date"
+            }
+          }
+        ],
+        "has_request_body": false,
+        "responses": [
+          "200",
+          "422"
+        ]
+      }
+    },
+    "/api/macro/digest/daily/synthesize": {
+      "post": {
+        "operationId": "synthesize_daily_digest_api_macro_digest_daily_synthesize_post",
+        "tags": [],
+        "summary": "Synthesize Daily Digest",
+        "parameters": [],
+        "has_request_body": true,
+        "responses": [
+          "200",
+          "422"
+        ]
+      }
+    },
+    "/api/macro/digest/read-state": {
+      "post": {
+        "operationId": "update_digest_read_state_api_macro_digest_read_state_post",
+        "tags": [],
+        "summary": "Update Digest Read State",
+        "parameters": [],
+        "has_request_body": true,
+        "responses": [
+          "200",
+          "422"
+        ]
+      }
+    },
+    "/api/macro/digest/weekly": {
+      "get": {
+        "operationId": "get_weekly_digest_api_macro_digest_weekly_get",
+        "tags": [],
+        "summary": "Get Weekly Digest",
+        "parameters": [
+          {
+            "name": "date",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Optional target date YYYY-MM-DD",
+              "title": "Date"
+            }
+          }
+        ],
+        "has_request_body": false,
+        "responses": [
+          "200",
+          "422"
+        ]
+      }
+    },
+    "/api/macro/digest/weekly/synthesize": {
+      "post": {
+        "operationId": "synthesize_weekly_digest_api_macro_digest_weekly_synthesize_post",
+        "tags": [],
+        "summary": "Synthesize Weekly Digest",
+        "parameters": [],
+        "has_request_body": true,
+        "responses": [
+          "200",
+          "422"
+        ]
+      }
+    },
     "/api/macro/indicators/{indicator_id}/series": {
       "get": {
         "operationId": "get_macro_indicator_series_api_macro_indicators__indicator_id__series_get",
@@ -2032,6 +2211,162 @@
           }
         ],
         "has_request_body": false,
+        "responses": [
+          "200",
+          "422"
+        ]
+      }
+    },
+    "/api/manager/hermes/sync": {
+      "post": {
+        "operationId": "trigger_hermes_sync_api_manager_hermes_sync_post",
+        "tags": [
+          "Manager Chat"
+        ],
+        "summary": "Trigger Hermes Sync",
+        "parameters": [],
+        "has_request_body": false,
+        "responses": [
+          "200"
+        ]
+      }
+    },
+    "/api/manager/hermes/sync-status": {
+      "get": {
+        "operationId": "get_hermes_sync_status_api_manager_hermes_sync_status_get",
+        "tags": [
+          "Manager Chat"
+        ],
+        "summary": "Get Hermes Sync Status",
+        "parameters": [],
+        "has_request_body": false,
+        "responses": [
+          "200"
+        ]
+      }
+    },
+    "/api/manager/sandbox/skills/{skill_name}/promote": {
+      "post": {
+        "operationId": "promote_skill_api_manager_sandbox_skills__skill_name__promote_post",
+        "tags": [
+          "Manager Chat"
+        ],
+        "summary": "Promote Skill",
+        "parameters": [
+          {
+            "name": "skill_name",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Skill Name"
+            }
+          }
+        ],
+        "has_request_body": false,
+        "responses": [
+          "200",
+          "422"
+        ]
+      }
+    },
+    "/api/manager/sandbox/state": {
+      "get": {
+        "operationId": "get_sandbox_state_api_manager_sandbox_state_get",
+        "tags": [
+          "Manager Chat"
+        ],
+        "summary": "Get Sandbox State",
+        "parameters": [],
+        "has_request_body": false,
+        "responses": [
+          "200"
+        ]
+      }
+    },
+    "/api/manager/sessions": {
+      "get": {
+        "operationId": "list_sessions_api_manager_sessions_get",
+        "tags": [
+          "Manager Chat"
+        ],
+        "summary": "List Sessions",
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 30,
+              "title": "Limit"
+            }
+          }
+        ],
+        "has_request_body": false,
+        "responses": [
+          "200",
+          "422"
+        ]
+      },
+      "post": {
+        "operationId": "create_session_api_manager_sessions_post",
+        "tags": [
+          "Manager Chat"
+        ],
+        "summary": "Create Session",
+        "parameters": [],
+        "has_request_body": true,
+        "responses": [
+          "201",
+          "422"
+        ]
+      }
+    },
+    "/api/manager/sessions/{session_id}/messages": {
+      "get": {
+        "operationId": "get_messages_api_manager_sessions__session_id__messages_get",
+        "tags": [
+          "Manager Chat"
+        ],
+        "summary": "Get Messages",
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Session Id"
+            }
+          }
+        ],
+        "has_request_body": false,
+        "responses": [
+          "200",
+          "422"
+        ]
+      }
+    },
+    "/api/manager/sessions/{session_id}/stream": {
+      "post": {
+        "operationId": "stream_chat_api_manager_sessions__session_id__stream_post",
+        "tags": [
+          "Manager Chat"
+        ],
+        "summary": "Stream Chat",
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Session Id"
+            }
+          }
+        ],
+        "has_request_body": true,
         "responses": [
           "200",
           "422"

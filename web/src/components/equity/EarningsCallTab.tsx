@@ -17,6 +17,7 @@ import { PromiseCohortTrendChart } from './promise_check/PromiseCohortTrendChart
 import { PromiseLedgerTable } from './promise_check/PromiseLedgerTable'
 import { PromiseMethodologyAccordion } from './promise_check/PromiseMethodologyAccordion'
 import { VerbatimQuoteModal } from './promise_check/VerbatimQuoteModal'
+import { ContextTooltip } from './explainer'
 
 interface EarningsCallTabProps {
   ticker: string
@@ -253,8 +254,14 @@ export const EarningsCallTab: React.FC<EarningsCallTabProps> = ({ ticker }) => {
           <div>
             <div className="flex items-center gap-2">
               <span className="text-xl">🎙️</span>
-              <h3 className="text-lg font-bold text-zinc-900 dark:text-zinc-100">
-                Earnings Call Insights & Transcript Analyzer
+              <h3 className="text-lg font-bold text-zinc-900 dark:text-zinc-100 flex items-center gap-1.5">
+                <span>Earnings Call Insights & Transcript Analyzer</span>
+                <ContextTooltip
+                  title="Promise Tracker (ระบบตรวจการบ้านสัญญาผู้บริหาร)"
+                  whatIsIt="ระบบตรวจสอบความน่าเชื่อถือของผู้บริหาร โดย AI จะแกะรอยสิ่งที่ผู้บริหารเคยสัญญาไว้ใน Earnings Call ย้อนหลัง 8 ไตรมาส เทียบกับสิ่งที่เกิดขึ้นจริง (Say-Do Ratio)"
+                  howToRead="Credibility Score > 80 (Grade A) = ผู้บริหารรักษาสัญญาและโปร่งใสสูง, ต่ำกว่า 60 = มีประวัติผิดสัญญาบ่อยครั้งหรือให้ Guidance เกินจริง"
+                  impactOnMoney="ช่วยคัดกรองผู้บริหารที่มีฝีมือและซื่อสัตย์ ป้องกันการตกเป็นเหยื่อของการปั่นกระแสหรือสัญญาที่ไม่เกิดขึ้นจริง"
+                />
               </h3>
               <span className="rounded-md bg-sky-100 dark:bg-sky-950 px-2 py-0.5 text-xs font-semibold text-sky-800 dark:text-sky-300">
                 {ticker}

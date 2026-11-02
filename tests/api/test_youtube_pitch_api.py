@@ -55,7 +55,7 @@ def test_default_run_fn_youtube_pitch_flow_pauses_for_approval(tmp_path, monkeyp
         pass
     monkeypatch.setenv("CHECKPOINT_DB_PATH", str(tmp_path / "checkpoints.sqlite"))
     monkeypatch.setenv("WEBUI_STATE_DB_PATH", str(tmp_path / "webui_state.sqlite"))
-    monkeypatch.setattr("agents.manager_agent.generate_manager_summary", lambda instruction, deliverables: None)
+    monkeypatch.setattr("agents.research_swarm_flow.generate_manager_summary", lambda instruction, deliverables: None)
 
     conn = state_db.get_connection(str(tmp_path / "webui_state.sqlite"))
     state_db.create_job(conn, "job-pitch-1", "thread-pitch-1", "card-1", "key-1", "หาไอเดียทำคลิป YouTube", status="running", flow="youtube_pitch")
@@ -95,7 +95,7 @@ def test_default_run_fn_youtube_pitch_flow_resumes_and_completes(tmp_path, monke
 
     monkeypatch.setenv("CHECKPOINT_DB_PATH", str(tmp_path / "checkpoints.sqlite"))
     monkeypatch.setenv("WEBUI_STATE_DB_PATH", str(tmp_path / "webui_state.sqlite"))
-    monkeypatch.setattr("agents.manager_agent.generate_manager_summary", lambda instruction, deliverables: None)
+    monkeypatch.setattr("agents.research_swarm_flow.generate_manager_summary", lambda instruction, deliverables: None)
 
     conn = state_db.get_connection(str(tmp_path / "webui_state.sqlite"))
     state_db.create_job(conn, "job-pitch-2", "thread-pitch-2", "card-2", "key-2", "หาไอเดียทำคลิป YouTube", status="running", flow="youtube_pitch")
@@ -142,7 +142,7 @@ def test_job_queue_resume_youtube_pitch_flow(tmp_path, monkeypatch):
 
     monkeypatch.setenv("CHECKPOINT_DB_PATH", str(tmp_path / "checkpoints.sqlite"))
     monkeypatch.setenv("WEBUI_STATE_DB_PATH", str(tmp_path / "webui_state.sqlite"))
-    monkeypatch.setattr("agents.manager_agent.generate_manager_summary", lambda instruction, deliverables: None)
+    monkeypatch.setattr("agents.research_swarm_flow.generate_manager_summary", lambda instruction, deliverables: None)
 
     db_path = str(tmp_path / "webui_state.sqlite")
     queue = JobQueue(run_fn=default_run_fn, db_path=db_path)

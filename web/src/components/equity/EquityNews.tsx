@@ -24,7 +24,7 @@ export const EquityNews: React.FC<EquityNewsProps> = ({ ticker }) => {
     setError(null)
     setIs404(false)
 
-    // Stage 1: Load Vault News (~20ms) decoupled
+    // Stage 1: Load Vault / Pre-indexed Digest News (~20ms) decoupled
     api.getEquityNews(ticker)
       .then((data) => {
         if (!isMounted) return
@@ -66,13 +66,14 @@ export const EquityNews: React.FC<EquityNewsProps> = ({ ticker }) => {
 
   const hasNews = Boolean(news && news.items && news.items.length > 0)
   const hasDiscovery = Boolean(discoveryNews && discoveryNews.items && discoveryNews.items.length > 0)
+  const hasYouTubeMentions = Boolean(news && news.youtube_mentions && news.youtube_mentions.length > 0)
 
   // While primary news is still loading, or while discovery is loading without any primary news
   if ((loadingPrimary && !hasDiscovery) || (loadingDiscovery && !hasNews && !hasDiscovery && !error && is404)) {
     return <NewsCardListSkeleton count={3} label="กำลังโหลดข่าวสาร..." />
   }
 
-  if (!hasNews && !hasDiscovery) {
+  if (!hasNews && !hasDiscovery && !hasYouTubeMentions) {
     if (loadingDiscovery) {
       return <NewsCardListSkeleton count={3} label="กำลังโหลดข่าวสาร..." />
     }
@@ -85,7 +86,7 @@ export const EquityNews: React.FC<EquityNewsProps> = ({ ticker }) => {
           </svg>
           <h3 className="text-lg font-medium text-zinc-900 mb-1">ยังไม่มีข้อมูลข่าวสำหรับหุ้นตัวนี้ในระบบ</h3>
           <p className="text-zinc-500 max-w-md text-sm">
-            สามารถสั่งงานผ่านผู้จัดการ (Manager Agent) ในระบบเพื่อเริ่มต้นดึงข่าวและวิเคราะห์หุ้นตัวนี้ได้
+            สามารถสั่งงานผ่าน Trinity Advisor (Manager) หรือสั่ง Research Swarm เพื่อเริ่มต้นดึงข่าวและวิเคราะห์หุ้นตัวนี้ได้
           </p>
         </div>
       )
@@ -107,14 +108,45 @@ export const EquityNews: React.FC<EquityNewsProps> = ({ ticker }) => {
     )
   }
 
+  const renderThesisBadge = (signal?: string) => {
+    switch (signal) {
+      case 'thesis_breaker':
+        return (
+          <span className="shrink-0 px-2 py-0.5 rounded text-[11px] font-bold bg-rose-50 text-rose-700 border border-rose-200">
+            🚨 THESIS BREAKER
+          </span>
+        )
+      case 'buy_on_dip':
+        return (
+          <span className="shrink-0 px-2 py-0.5 rounded text-[11px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+            💎 BUY ON DIP
+          </span>
+        )
+      case 'thesis_reinforcer':
+        return (
+          <span className="shrink-0 px-2 py-0.5 rounded text-[11px] font-bold bg-sky-50 text-sky-700 border border-sky-200">
+            ✅ THESIS REINFORCER
+          </span>
+        )
+      case 'noise':
+        return (
+          <span className="shrink-0 px-2 py-0.5 rounded text-[11px] font-medium bg-zinc-100 text-zinc-500 border border-zinc-200">
+            💤 NOISE
+          </span>
+        )
+      default:
+        return null
+    }
+  }
+
   return (
     <div className="space-y-6">
-      {/* Primary / Analyzed News Items */}
+      {/* Primary / Pre-Indexed Digest News Items */}
       {hasNews && (
         <div className="space-y-4">
           <div className="flex items-center justify-between border-b border-edge pb-3">
             <div className="text-xs font-semibold uppercase tracking-wider text-sky-600">
-              Latest News ({news!.items.length})
+              Analyzed Intelligence & News ({news!.items.length})
             </div>
             {news!.last_updated && (
               <span className="text-xs text-zinc-400">
@@ -129,25 +161,44 @@ export const EquityNews: React.FC<EquityNewsProps> = ({ ticker }) => {
                 key={idx}
                 className="flex flex-col justify-between rounded-xl border border-edge bg-panel p-4 shadow-sm shadow-black/5 hover:border-sky-200 transition-colors"
               >
-                <div className="space-y-2">
-                  <div className="flex items-start justify-between gap-3">
-                    <h4 className="font-semibold text-zinc-900 text-base leading-snug">
+                <div className="space-y-2.5">
+                  <div className="flex flex-wrap items-start justify-between gap-2">
+                    <h4 className="font-semibold text-zinc-900 text-base leading-snug flex-1">
                       {item.title}
                     </h4>
-                    {item.is_stale && (
-                      <span className="shrink-0 px-2 py-0.5 rounded text-[11px] font-medium bg-amber-50 text-amber-700 border border-amber-200">
-                        ⚠️ STALE
-                      </span>
-                    )}
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      {renderThesisBadge(item.thesis_signal)}
+                      {item.is_stale && (
+                        <span className="px-2 py-0.5 rounded text-[11px] font-medium bg-amber-50 text-amber-700 border border-amber-200">
+                          ⚠️ STALE
+                        </span>
+                      )}
+                    </div>
                   </div>
 
-                  {item.summary && (
-                    <p className="text-xs text-zinc-600 line-clamp-2 leading-relaxed">
+                  {/* Structured Analysis: What Happened & Why it Matters */}
+                  {item.what_happened && (
+                    <div className="text-xs text-zinc-700 leading-relaxed">
+                      <span className="font-semibold text-zinc-900">เหตุการณ์: </span>
+                      {item.what_happened}
+                    </div>
+                  )}
+
+                  {item.why_it_matters && (
+                    <div className="rounded-lg bg-sky-50/70 border border-sky-100 p-2.5 text-xs text-sky-950 leading-relaxed">
+                      <span className="font-bold text-sky-800">ผลกระทบต่อพอร์ต & วิทยานิพนธ์ (Why It Matters): </span>
+                      {item.why_it_matters}
+                    </div>
+                  )}
+
+                  {/* Fallback to summary if no what_happened */}
+                  {!item.what_happened && item.summary && (
+                    <p className="text-xs text-zinc-600 line-clamp-3 leading-relaxed">
                       {item.summary}
                     </p>
                   )}
 
-                  <div className="flex flex-wrap items-center gap-3 text-xs text-zinc-500">
+                  <div className="flex flex-wrap items-center gap-3 text-xs text-zinc-500 pt-1">
                     <span className="font-medium text-zinc-700">ที่มา: {item.source}</span>
                     {item.sources_count && item.sources_count > 1 && (
                       <span className="bg-surface-strong px-2 py-0.5 rounded text-zinc-600">
@@ -156,6 +207,12 @@ export const EquityNews: React.FC<EquityNewsProps> = ({ ticker }) => {
                     )}
                     <span className="text-zinc-400">•</span>
                     <span>{item.freshness_reason || `${item.age_hours} ชั่วโมงที่แล้ว`}</span>
+                    {item.macro_impact_score && (
+                      <>
+                        <span className="text-zinc-400">•</span>
+                        <span className="font-medium text-sky-700">Macro Score: {item.macro_impact_score}/10</span>
+                      </>
+                    )}
                   </div>
                 </div>
 
@@ -168,9 +225,82 @@ export const EquityNews: React.FC<EquityNewsProps> = ({ ticker }) => {
                       className="inline-flex items-center gap-1 text-xs font-medium text-sky-600 hover:text-sky-700 hover:underline"
                     >
                       อ่านต่อบน {item.source}
-                      <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                      </svg>
+                    </a>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* YouTube Channel Mentions & Takeaways */}
+      {hasYouTubeMentions && (
+        <div className="space-y-4 rounded-xl border border-red-100 bg-red-50/20 p-5">
+          <div className="flex items-center justify-between border-b border-red-200/60 pb-3">
+            <div>
+              <h4 className="text-xs font-bold uppercase tracking-wider text-red-900 flex items-center gap-2">
+                <span className="text-red-600 text-sm">▶</span>
+                <span>YouTube Insights & Video Mentions ({news!.youtube_mentions!.length})</span>
+              </h4>
+              <p className="mt-0.5 text-[11px] text-zinc-500">
+                สรุปประเด็นจากวิดีโอรายการและช่องการเงินชั้นนำที่พูดถึงหุ้น {ticker}
+              </p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 gap-3">
+            {news!.youtube_mentions!.map((yt, idx) => (
+              <div
+                key={idx}
+                className="flex flex-col justify-between rounded-lg border border-edge bg-panel p-4 shadow-2xs hover:border-red-200 transition-colors"
+              >
+                <div className="space-y-2">
+                  <div className="flex flex-wrap items-baseline justify-between gap-2">
+                    <h5 className="font-semibold text-zinc-900 text-sm leading-snug">
+                      {yt.thai_title || yt.title}
+                    </h5>
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      <span className="rounded bg-red-50 text-red-700 px-2 py-0.5 text-[11px] font-semibold border border-red-100">
+                        {yt.channel}
+                      </span>
+                      {yt.alignment_with_news === 'confirmed' && (
+                        <span className="rounded bg-emerald-50 text-emerald-700 px-2 py-0.5 text-[10px] font-bold border border-emerald-200">
+                          สอดคล้องกับข่าว
+                        </span>
+                      )}
+                      {yt.alignment_with_news === 'contrarian' && (
+                        <span className="rounded bg-amber-50 text-amber-700 px-2 py-0.5 text-[10px] font-bold border border-amber-200">
+                          มุมมองสวนทาง (Contrarian)
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  {yt.key_takeaways && yt.key_takeaways.length > 0 && (
+                    <ul className="list-disc pl-4 space-y-1 text-xs text-zinc-700 leading-relaxed">
+                      {yt.key_takeaways.map((point, pIdx) => (
+                        <li key={pIdx}>{point}</li>
+                      ))}
+                    </ul>
+                  )}
+
+                  {yt.alignment_note && (
+                    <p className="text-xs text-zinc-500 italic">
+                      หมายเหตุ: {yt.alignment_note}
+                    </p>
+                  )}
+                </div>
+
+                {yt.link && (
+                  <div className="mt-3 pt-2.5 border-t border-edge flex justify-end">
+                    <a
+                      href={yt.link}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 text-xs font-medium text-red-600 hover:text-red-700 hover:underline"
+                    >
+                      รับชมบน YouTube ↗
                     </a>
                   </div>
                 )}

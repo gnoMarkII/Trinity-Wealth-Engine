@@ -34,6 +34,18 @@ class EquityDetailDTO(EquitySummaryDTO):
     thesis_delta: Optional[dict[str, Any]] = None
 
 
+class EquityYouTubeMentionDTO(BaseModel):
+    video_id: str
+    title: str
+    thai_title: Optional[str] = None
+    channel: str
+    link: str
+    published_at: Optional[str] = None
+    key_takeaways: list[str] = Field(default_factory=list)
+    alignment_with_news: Optional[str] = None
+    alignment_note: Optional[str] = None
+
+
 class EquityNewsItemDTO(BaseModel):
     title: str
     source: str
@@ -43,6 +55,13 @@ class EquityNewsItemDTO(BaseModel):
     freshness_reason: str
     is_stale: bool
     sources_count: int = 1
+    summary: Optional[str] = None
+    what_happened: Optional[str] = None
+    why_it_matters: Optional[str] = None
+    thesis_signal: Optional[str] = None
+    impact_type: Optional[str] = None
+    macro_impact_score: Optional[int] = None
+    asset_impact_score: Optional[int] = None
 
 
 class EquityNewsDTO(BaseModel):
@@ -51,6 +70,7 @@ class EquityNewsDTO(BaseModel):
     last_updated: Optional[str] = None
     news_date: Optional[str] = None
     items: list[EquityNewsItemDTO] = []
+    youtube_mentions: list[EquityYouTubeMentionDTO] = []
 
 
 class EquityNoteItemDTO(BaseModel):

@@ -33,7 +33,7 @@ def news_references_from_radar(markdown: str, max_items: int = 5) -> list[dict]:
         cells = [cell.strip() for cell in line.strip().strip("|").split("|")]
         if len(cells) < 4:
             continue
-        match = re.search(r"\[(?P<title>.+?)\]\((?P<url>https://[^)]+)\)", cells[1])
+        match = re.search(r"\[(?P<title>.+?)\]\((?P<url>https?://[^)]+)\)", cells[1])
         if not match:
             continue
         age_match = re.search(r"Age:\s*(\d+)h", cells[2])

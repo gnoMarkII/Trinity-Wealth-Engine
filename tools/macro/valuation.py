@@ -22,18 +22,10 @@ def _default_ticker_info_getter(symbol: str) -> dict[str, Any]:
         return {}
 
 
-def _parse_val_to_float(val_str: Any) -> Optional[float]:
-    if isinstance(val_str, (int, float)):
-        return float(val_str)
-    if not isinstance(val_str, str) or not val_str.strip() or val_str.strip() == "-" or val_str.strip().upper() == "N/A":
-        return None
-    match = re.search(r"[-+]?\d*\.\d+|\d+", str(val_str))
-    if match:
-        try:
-            return float(match.group(0))
-        except ValueError:
-            return None
-    return None
+from core.financial_parsers import extract_valuation_metric
+
+# Centralized context-aware valuation and metric parser
+_parse_val_to_float = extract_valuation_metric
 
 
 def _find_dgs10_in_observables(observables: list[MarketObservable]) -> tuple[Optional[float], Optional[str]]:

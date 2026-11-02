@@ -244,6 +244,126 @@ const KNOWN_FLAGS: Record<string, { label: string; subtext?: string; category: F
     subtext: 'ราคาตลาดสะท้อนสมมติฐานการเติบโตที่ต่ำผิดปกติหรือมีส่วนลดมูลค่าสูงมาก',
     category: 'model_methodology',
   },
+  'in_margin_of_safety_buy_zone:dcf': {
+    label: 'ราคาหุ้นอยู่ในโซน Margin of Safety (DCF)',
+    subtext: 'ราคาตลาดต่ำกว่ามูลค่าที่แท้จริงตามเกณฑ์ส่วนเผื่อเพื่อความปลอดภัย',
+    category: 'low_impact_fallback',
+  },
+  'tax_policy:US_FEDERAL_STATUTORY_21PCT': {
+    label: 'ใช้อัตราภาษีนิติบุคคลสหรัฐฯ (21%)',
+    subtext: 'คำนวณอัตราภาษีมาตรฐาน US Federal Statutory Tax Rate 21%',
+    category: 'model_methodology',
+  },
+  'operating_margin_proxy:dcf': {
+    label: 'ใช้อัตรากำไรจากการดำเนินงานเป็นตัวแทน',
+    subtext: 'ใช้อัตรากำไรจากการดำเนินงานเฉลี่ยเพื่อประมาณการกระแสเงินสด',
+    category: 'model_methodology',
+  },
+  'cyclical_peak_margin_normalized:dcf': {
+    label: 'ปรับ Normalized อัตรากำไรช่วงวัฏจักรพีค',
+    subtext: 'ปรับลดอัตรากำไรให้อยู่ในระดับค่าเฉลี่ยวัฏจักรระยะยาว',
+    category: 'model_methodology',
+  },
+  'cyclical_trough_margin_normalized:dcf': {
+    label: 'ปรับ Normalized อัตรากำไรช่วงวัฏจักรต่ำสุด',
+    subtext: 'ปรับเพิ่มอัตรากำไรให้อยู่ในระดับค่าเฉลี่ยวัฏจักรระยะยาว',
+    category: 'model_methodology',
+  },
+  'high_terminal_value_dependency:dcf': {
+    label: 'สัดส่วน Terminal Value สูง (>80%)',
+    subtext: 'มูลค่ากิจการส่วนใหญ่พึ่งพากระแสเงินสดในระยะยาวหลังปีที่ 5',
+    category: 'model_methodology',
+  },
+  'aggressive_implied_exit_multiple:dcf': {
+    label: 'Implied Exit Multiple ค่อนข้างสูง',
+    subtext: 'ตัวคูณมูลค่ากิจการที่สะท้อนจากราคาตลาดอยู่ในระดับสูง',
+    category: 'market_warning',
+  },
+  'extreme_terminal_exit_ebitda:dcf': {
+    label: 'Terminal Exit EBITDA Multiple อยู่ในระดับสูงมาก',
+    subtext: 'ตัวคูณ Exit EBITDA เกินเกณฑ์มาตรฐานอุตสาหกรรม',
+    category: 'market_warning',
+  },
+  'depressed_terminal_exit_ebitda:dcf': {
+    label: 'Terminal Exit EBITDA Multiple อยู่ในระดับต่ำมาก',
+    subtext: 'ตัวคูณ Exit EBITDA ต่ำกว่าเกณฑ์มาตรฐานอุตสาหกรรม',
+    category: 'market_warning',
+  },
+  'valuation_not_actionable:scorecard': {
+    label: 'ผลประเมิน DCF เป็นเพียงข้อมูลประกอบ (Non-actionable)',
+    subtext: 'เนื่องจากข้อจำกัดทางคณิตศาสตร์หรือข้อมูลพื้นฐาน จึงไม่นำผล DCF ไปใช้เป็นเกณฑ์ตัดสินใจหลัก',
+    category: 'model_methodology',
+  },
+  'non_actionable_dcf:valuation': {
+    label: 'DCF ไม่สามารถใช้ตัดสินใจได้ (Non-actionable)',
+    subtext: 'ผลประเมิน DCF มีสมมติฐานที่ไม่สมบูรณ์ จึงจัดเป็นเพียงข้อมูลประกอบ',
+    category: 'model_methodology',
+  },
+  'macro_stale_publication:us_10y': {
+    label: 'ข้อมูลอัตราผลตอบแทนพันธบัตรสหรัฐฯ 10 ปีไม่อัพเดท',
+    subtext: 'วันที่เผยแพร่ข้อมูล US 10Y ล่าสุดไม่เป็นปัจจุบัน',
+    category: 'critical_fallback',
+  },
+  'macro_stale_publication:erp': {
+    label: 'ข้อมูล Equity Risk Premium ไม่อัพเดท',
+    subtext: 'วันที่เผยแพร่ข้อมูล ERP ล่าสุดไม่เป็นปัจจุบัน',
+    category: 'critical_fallback',
+  },
+  'macro_publication_future_leak:us_10y': {
+    label: 'ข้อมูลพันธบัตรสหรัฐฯ 10 ปีมีวันที่ในอนาคต',
+    subtext: 'พบความผิดปกติของ timestamp ในชุดข้อมูลอัตราผลตอบแทนพันธบัตร',
+    category: 'critical_fallback',
+  },
+  'stale_ohlcv:target_eod_missing': {
+    label: 'ข้อมูลราคาปิดแท่งเทียน (EOD) ล่าสุดขาดหาย',
+    subtext: 'ไม่พบราคาปิดสิ้นวันของรอบการซื้อขายล่าสุด ระบบใช้ราคาปิดก่อนหน้า',
+    category: 'market_warning',
+  },
+  'stale_ohlcv:stale_one_session': {
+    label: 'ข้อมูลราคาแท่งเทียนย้อนหลัง 1 รอบการซื้อขาย',
+    subtext: 'ข้อมูลราคาซื้อขายยังไม่ได้ปรับปรุงเป็นรอบล่าสุด',
+    category: 'market_warning',
+  },
+  'stale_ohlcv:market_data': {
+    label: 'ข้อมูลราคาตลาดแท่งเทียนไม่อัพเดท',
+    subtext: 'ชุดข้อมูล OHLCV ล่าช้ากว่าข้อมูลราคาตลาดปัจจุบัน',
+    category: 'market_warning',
+  },
+  'missing_operating_margin:dcf': {
+    label: 'ข้อมูล Operating Margin ไม่เพียงพอ',
+    subtext: 'ขาดข้อมูลอัตรากำไรจากการดำเนินงานสำหรับใช้ในการคำนวณ DCF',
+    category: 'critical_fallback',
+  },
+  'unknown_financial_source_tier:dcf': {
+    label: 'ไม่ทราบระดับความน่าเชื่อถือของข้อมูลงบการเงิน',
+    subtext: 'ที่มาของงบการเงินไม่ได้ระบุ authoritative tier',
+    category: 'low_impact_fallback',
+  },
+  'unknown_financial_period_type:dcf': {
+    label: 'ไม่ทราบประเภทงวดเวลาของงบการเงิน',
+    subtext: 'งวดเวลาไม่ได้ระบุเป็นรอบปี (FY) หรือรอบไตรมาส (TTM)',
+    category: 'low_impact_fallback',
+  },
+  'invalidation:macro_inputs_stale_or_misaligned': {
+    label: 'ข้อมูลปัจจัยมหภาคไม่อัพเดทหรือไม่สอดคล้อง',
+    subtext: 'ปัจจัยมหภาคที่ใช้คำนวณ WACC และ Cost of Capital มีความล่าช้า',
+    category: 'critical_fallback',
+  },
+  'non_actionable_macro_anomaly:reverse_dcf': {
+    label: 'พบความผิดปกติของปัจจัยมหภาคใน Reverse DCF',
+    subtext: 'ผลการคำนวณ Reverse DCF ได้รับผลกระทบจากความผิดปกติของตัวแปรมหภาค',
+    category: 'critical_fallback',
+  },
+  'wacc_below_terminal_growth:reverse_dcf': {
+    label: 'WACC ต่ำกว่า Terminal Growth ใน Reverse DCF',
+    subtext: 'ต้นทุนทางการเงินต่ำกว่าสมมติฐานการเติบโตระยะยาวในการถอดรหัสราคาตลาด',
+    category: 'critical_fallback',
+  },
+  'execution_exception': {
+    label: 'เกิดข้อผิดพลาดในการประมวลผล',
+    subtext: 'ระบบพบข้อผิดพลาดระหว่างการรันโมเดลเชิงปริมาณ',
+    category: 'critical_fallback',
+  },
 }
 
 const STALE_REASON_LABELS: Record<string, string> = {

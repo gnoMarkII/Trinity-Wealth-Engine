@@ -88,10 +88,13 @@ class JobQueue:
 
     def enqueue(self, job_id: str) -> None:
         """Queue a job whose durable state has already been updated."""
-        if self._loop is not None:
+        if self._loop is not None and not self._loop.is_closed():
             self._loop.call_soon_threadsafe(self._queue.put_nowait, job_id)
         else:
-            self._queue.put_nowait(job_id)
+            try:
+                self._queue.put_nowait(job_id)
+            except Exception:
+                pass
 
     async def _worker_loop(self) -> None:
         while True:
@@ -243,7 +246,7 @@ def _append_manager_summary(job_repo, job_id: str, instruction: str, flow: str =
     if flow != "manager":
         return
 
-    from agents.manager_agent import generate_manager_summary
+    from agents.research_swarm_flow import generate_manager_summary
 
     # Private helper compatibility: older callers passed a raw sqlite
     # connection.  New worker code passes the typed connection-bound
@@ -267,13 +270,13 @@ def _append_manager_summary(job_repo, job_id: str, instruction: str, flow: str =
     ]
     if not deliverables:
         deliverables = [
-            (row["node_name"] or "Manager", row["content"] or "")
+            (row["node_name"] or "Supervisor", row["content"] or "")
             for row in reply_logs
             if row["node_name"] == "supervisor"
         ]
     summary = generate_manager_summary(instruction, deliverables)
     if summary:
-        job_repo.append_job_log(job_id, "manager_summary", summary, role="reply", label="Manager Summary")
+        job_repo.append_job_log(job_id, "manager_summary", summary, role="reply", label="Executive Research Summary")
         if legacy_conn is not None:
             legacy_conn.commit()
 

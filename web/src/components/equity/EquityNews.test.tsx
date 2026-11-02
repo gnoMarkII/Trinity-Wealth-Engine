@@ -37,7 +37,7 @@ describe('EquityNews', () => {
 
     await waitFor(() => {
       expect(screen.getByText('ยังไม่มีข้อมูลข่าวสำหรับหุ้นตัวนี้ในระบบ')).toBeInTheDocument()
-      expect(screen.getByText(/สั่งงานผ่านผู้จัดการ \(Manager Agent\)/)).toBeInTheDocument()
+      expect(screen.getByText(/สั่งงานผ่าน Trinity Advisor \(Manager\) หรือสั่ง Research Swarm/)).toBeInTheDocument()
     })
   })
 

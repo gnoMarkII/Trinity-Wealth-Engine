@@ -339,7 +339,7 @@ class FinnomenaFundAdapter(ThaiFundPricePort):
         fund_id = self.get_fund_id(resolved_sym)
         if not fund_id:
             # Try stripped variations (e.g. TLNDQINCOME-UH-X -> TLNDQINCOME, SCBS&P500E -> SCBS&P500)
-            candidate_base = re.sub(r"-(UH|X|A|D|E|SSF|RMF)+$", "", resolved_sym, flags=re.IGNORECASE)
+            candidate_base = re.sub(r"(?:-(?:UH|X|A|D|E|SSF|RMF|P|I|B|\([A-Z0-9]+\)))+$", "", resolved_sym, flags=re.IGNORECASE)
             candidate_base = re.sub(r"\([A-Z0-9]+\)$", "", candidate_base).strip()
             fund_id = self.get_fund_id(candidate_base)
             if not fund_id and resolved_sym.endswith("E"):

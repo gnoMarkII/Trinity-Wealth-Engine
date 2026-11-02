@@ -6,6 +6,7 @@ import type {
   FinancialRatioPointDTO,
 } from '../../api/types'
 import { FinancialSummaryChart } from './FinancialSummaryChart'
+import { ContextTooltip } from './explainer'
 
 interface FinancialsTabProps {
   ticker: string
@@ -545,12 +546,55 @@ export function FinancialsTab({ ticker, market = 'US', currency }: FinancialsTab
           {/* Top Modern Summary Chart */}
           <FinancialSummaryChart data={activeChartPoints} currency={data.currency} />
 
+          {/* Beginner Statement Explainer Guide Banner */}
+          <div className="rounded-xl border border-sky-200/80 bg-sky-50/60 p-3.5 text-xs text-sky-950 space-y-1">
+            <div className="flex items-center gap-2 font-bold text-sky-900">
+              <span>💡</span>
+              <span>
+                {statementType === 'income' && '3 บรรทัดทองคำในงบกำไรขาดทุน (Income Statement Core Checklist):'}
+                {statementType === 'balance_sheet' && 'สมการงบดุลภาษาคน (Balance Sheet Core Concept):'}
+                {statementType === 'cash_flow' && 'หัวใจของงบกระแสเงินสด (Cash Flow & Free Cash Flow):'}
+                {statementType === 'ratios' && 'คู่มือดูอัตราส่วนสำคัญ (Key Financial Ratios Guide):'}
+              </span>
+            </div>
+            <p className="text-[11px] text-sky-800 leading-relaxed pl-5">
+              {statementType === 'income' && (
+                <>
+                  1. <strong>รายได้รวม (Revenue)</strong>: ยอดขายทั้งหมดที่ไหลเข้ากิจการ ➔ 2. <strong>กำไรจากการดำเนินงาน (Operating Income / EBIT)</strong>: กำไรจากเนื้อแท้ของธุรกิจจริงๆ ก่อนหักดอกเบี้ยและภาษี ➔ 3. <strong>กำไรสุทธิ (Net Income)</strong>: เงินสุดท้ายที่เหลือถึงมือผู้ถือหุ้น (นำไปคำนวณกำไรต่อหุ้น EPS)
+                </>
+              )}
+              {statementType === 'balance_sheet' && (
+                <>
+                  <strong>สินทรัพย์ (สิ่งที่บริษัทมี) = หนี้สิน (เงินกู้ยืม) + ส่วนของผู้ถือหุ้น (เงินของเจ้าของ)</strong> — กฎความปลอดภัย: อัตราส่วนหนี้สินต่อทุน (D/E Ratio) ควรต่ำกว่า 1.0 - 1.5 เท่า แสดงว่าหนี้น้อย ฐานะการเงินแข็งแกร่ง ไม่เสี่ยงล้มละลาย
+                </>
+              )}
+              {statementType === 'cash_flow' && (
+                <>
+                  <strong>Free Cash Flow (FCF - กระแสเงินสดอิสระ)</strong>: เงินสดแท้จริงที่เข้ากระเป๋าหลังหักงบลงทุนบำรุงรักษาโรงงาน/เซิร์ฟเวอร์ (CapEx) แล้ว นี่คือเงินที่นำมาจ่ายปันผลสดและซื้อหุ้นคืน (กำไรทางบัญชีอาจแต่งได้ แต่เงินสดในมือโกหกไม่ได้)
+                </>
+              )}
+              {statementType === 'ratios' && (
+                <>
+                  <strong>Operating Margin</strong>: บ่งชี้ความสามารถทำกำไรและอำนาจกำหนดราคา (Pricing Power) | <strong>FCF Margin</strong>: สัดส่วนเงินสดจริงจากยอดขาย | <strong>Current Ratio & D/E</strong>: วัดสภาพคล่องและความปลอดภัยจากภาระหนี้สิน
+                </>
+              )}
+            </p>
+          </div>
+
           {/* Key Ratios Table View */}
           {statementType === 'ratios' ? (
             <div className="bg-panel border border-edge/80 rounded-2xl shadow-sm overflow-hidden">
               <div className="p-4 border-b border-edge flex items-center justify-between bg-surface/30">
                 <div>
-                  <h3 className="text-sm font-bold text-primary">Financial & Operational Ratios</h3>
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-sm font-bold text-primary">Financial & Operational Ratios</h3>
+                    <ContextTooltip
+                      title="อัตราส่วนทางการเงินที่สำคัญ (Key Financial Ratios)"
+                      whatIsIt="ตัวชี้วัดประสิทธิภาพการทำกำไร ความสามารถในการชำระหนี้ และกระแสเงินสดของบริษัท"
+                      howToRead="Gross & Operating Margin สูงสะท้อนว่ามี Moat แข็งแกร่ง, Current Ratio > 1.0 เท่าสะท้อนสภาพคล่องหมุนเวียนปลอดภัย, D/E < 1.5 เท่าสะท้อนภาระหนี้สินต่ำ"
+                      impactOnMoney="ช่วยตรวจสุขภาพบริษัทก่อนตัดสินใจลงทุน เพื่อเลี่ยงบริษัทที่ยอดขายโตแต่มีปัญหาหนี้สินหรือขาดเงินสด"
+                    />
+                  </div>
                   <p className="text-xs text-muted">Core profitability, debt solvency, and liquidity metrics across periods</p>
                 </div>
               </div>
@@ -640,9 +684,35 @@ export function FinancialsTab({ ticker, market = 'US', currency }: FinancialsTab
             <div className="bg-panel border border-edge/80 rounded-2xl shadow-sm overflow-hidden">
               <div className="p-4 border-b border-edge flex flex-wrap items-center justify-between gap-3 bg-surface/30">
                 <div>
-                  <h3 className="text-sm font-bold text-primary capitalize">
-                    {statementType.replace('_', ' ')} Statement
-                  </h3>
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-sm font-bold text-primary capitalize">
+                      {statementType.replace('_', ' ')} Statement
+                    </h3>
+                    <ContextTooltip
+                      title={
+                        statementType === 'income'
+                          ? 'งบกำไรขาดทุน (Income Statement)'
+                          : statementType === 'balance_sheet'
+                          ? 'งบดุล (Balance Sheet)'
+                          : 'งบกระแสเงินสด (Cash Flow Statement)'
+                      }
+                      whatIsIt={
+                        statementType === 'income'
+                          ? 'รายงานรายได้ ค่าใช้จ่าย และผลกำไรขาดทุนของบริษัทในช่วงระยะเวลาหนึ่ง'
+                          : statementType === 'balance_sheet'
+                          ? 'ภาพถ่ายฐานะทางการเงิน ณ วันสิ้นงวด แสดงทรัพย์สิน หนี้สิน และทุนของเจ้าของ'
+                          : 'รายงานการเคลื่อนไหวของกระแสเงินสดจริงเข้าออกบริษัท แยกตามกิจกรรมดำเนินงาน ลงทุน และจัดหาเงิน'
+                      }
+                      howToRead={
+                        statementType === 'income'
+                          ? 'ดูแนวโน้มการเติบโตของรายได้ (Revenue Growth YoY) และอัตรากำไรจากการดำเนินงาน (Operating Margin)'
+                          : statementType === 'balance_sheet'
+                          ? 'ตรวจดูโครงสร้างหนี้สิน สินทรัพย์สภาพคล่อง และส่วนของผู้ถือหุ้นที่สะสมเพิ่มขึ้น'
+                          : 'เน้นดู Free Cash Flow (FCF) ว่าบริษัทสามารถสร้างเงินสดจริงได้สม่ำเสมอหรือไม่'
+                      }
+                      impactOnMoney="งบการเงินคืองบตรวจสุขภาพที่แท้จริง ช่วยคัดกรองบริษัทที่มีกำไรจริงออกจากบริษัทที่มีแต่ภาพลวงตา"
+                    />
+                  </div>
                   <p className="text-xs text-muted">
                     {statementType === 'balance_sheet'
                       ? 'Instant snapshot balance as of period end date'

@@ -1,13 +1,15 @@
-// map ชื่อ node จริงในกราฟ (ดู agents/manager_agent.py, agents/news_youtube_flow.py)
+// map ชื่อ node จริงในกราฟ (ดู agents/research_swarm_flow.py, agents/news_youtube_flow.py)
 // ไปเป็นชื่อที่อ่านง่ายสำหรับ UI — ไม่ครบก็ไม่เป็นไร เพราะ fallback คืนชื่อดิบเสมอ ไม่มีทาง "หาย"
 const NODE_DISPLAY_NAMES: Record<string, string> = {
-  supervisor: 'Manager',
+  supervisor: 'Supervisor',
   macro_quant: 'Macro Quant',
   macro_economist: 'Macro Economist',
   strategic_allocator: 'Strategic Allocator',
   researcher: 'Researcher',
   archivist: 'Archivist',
-  bookkeeper: 'Bookkeeper',
+  equity_quant: 'Equity Quant',
+  equity_narrative: 'Equity Narrative',
+  equity_synthesizer: 'Equity Synthesizer',
   prepare_archivist: 'Archivist',
   post_macro_intel: 'Macro Intel',
   fetch_news: 'ดึงข่าว',

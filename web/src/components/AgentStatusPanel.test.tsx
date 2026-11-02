@@ -50,17 +50,17 @@ describe('AgentStatusPanel', () => {
     vi.spyOn(api, 'getActiveAgentStatus').mockResolvedValue({
       running: true,
       flow: 'manager',
-      node: 'researcher',
+      node: 'macro_quant',
       job_id: 'j1',
     })
     render(<AgentStatusPanel />)
     // ให้ promise ของ poll แรก resolve
     await act(() => vi.advanceTimersByTimeAsync(0))
 
-    const researcherRow = screen.getByText('Researcher').closest('li')
-    expect(researcherRow?.querySelector('.bg-emerald-500')).not.toBeNull()
-    const managerRow = screen.getByText('Manager').closest('li')
-    expect(managerRow?.querySelector('.bg-emerald-500')).toBeNull()
+    const quantRow = screen.getByText('Macro Quant').closest('li')
+    expect(quantRow?.querySelector('.bg-emerald-500')).not.toBeNull()
+    const economistRow = screen.getByText('Macro Economist').closest('li')
+    expect(economistRow?.querySelector('.bg-emerald-500')).toBeNull()
   })
 
   it('flow อื่น (news_youtube) แสดง banner Running แทนการ mark agent รายตัว', async () => {
@@ -73,6 +73,6 @@ describe('AgentStatusPanel', () => {
     render(<AgentStatusPanel />)
     await act(() => vi.advanceTimersByTimeAsync(0))
 
-    expect(screen.getByText(/Running: News\/YouTube/)).toBeInTheDocument()
+    expect(screen.getByText(/Workflow: News\/YouTube/)).toBeInTheDocument()
   })
 })

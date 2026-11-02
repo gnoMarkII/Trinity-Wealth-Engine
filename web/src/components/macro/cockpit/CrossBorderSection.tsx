@@ -2,6 +2,8 @@ import React from 'react'
 import { FedBotRatePair } from './FedBotRatePair'
 import { SourceProvenanceBadge } from './SourceProvenanceBadge'
 import type { ThaiFundFlowDTO, TreasuryYieldCurveDTO, MacroDashboardDTO } from '../../../api/types'
+import { ContextTooltip } from '../explainer/ContextTooltip'
+import { SafetyShieldBanner } from '../explainer/SafetyShieldBanner'
 
 interface CrossBorderSectionProps {
   globalPolicyRates: any | null
@@ -36,14 +38,28 @@ export const CrossBorderSection: React.FC<CrossBorderSectionProps> = ({
       <div className="space-y-3">
         <div className="flex items-center justify-between border-b border-sky-100/70 pb-2">
           <div>
-            <h2 className="text-base font-bold text-zinc-900 tracking-tight flex items-center gap-2">
-              <span>อัตราดอกเบี้ยนโยบายและส่วนต่าง (Policy Rate Differential)</span>
-            </h2>
+            <div className="flex items-center gap-2">
+              <h2 className="text-base font-bold text-zinc-900 tracking-tight flex items-center gap-2">
+                <span>อัตราดอกเบี้ยนโยบายและส่วนต่าง (Policy Rate Differential)</span>
+              </h2>
+              <ContextTooltip
+                title="ส่วนต่างอัตราดอกเบี้ย Fed vs BoT (Policy Rate Spread)"
+                whatIsIt="ส่วนต่างระหว่างอัตราดอกเบี้ยนโยบายของสหรัฐฯ (Fed Funds) กับธนาคารแห่งประเทศไทย (BoT 1D Repo)"
+                howToRead="เมื่อสหรัฐฯ ให้ดอกเบี้ยสูงกว่าไทยมาก (Spread เป็นบวก) เงินทุนทั่วโลกมักไหลไปพักในดอลลาร์ ทำให้บาทมีแนวโน้มอ่อนค่า"
+                impactOnMoney="คนไทยที่ซื้อของนำเข้าหรือเที่ยวต่างประเทศจะจ่ายแพงขึ้น แต่จะช่วยพยุงราคาทองคำแท่งและหุ้นส่งออกในไทย"
+              />
+            </div>
             <p className="text-xs text-zinc-500">
               เปรียบเทียบ Fed Funds กับ BoT 1D Repo เพื่อประเมินทิศทางแรงกดดันเงินทุนเคลื่อนย้ายระหว่างประเทศ
             </p>
           </div>
         </div>
+
+        {/* FX Safety Shield */}
+        <SafetyShieldBanner
+          type="fx_hedge"
+          customMessage="คำแนะนำค่าเงินสำหรับคนไทย: เมื่อลงทุนในสินทรัพย์ต่างประเทศในช่วงที่ดอกเบี้ยสหรัฐฯ สูงกว่าไทยและค่าเงินผันผวน แนะนำให้เลือกลงทุนผ่านกองทุนที่มีนโยบายป้องกันความเสี่ยงอัตราแลกเปลี่ยน (Hedge FX) เพื่อไม่ให้กำไรถูกค่าเงินกลืนหายไป"
+        />
 
         <FedBotRatePair
           ratesData={globalPolicyRates}

@@ -17,6 +17,9 @@ interface Props {
   onClose: () => void
   onCardTransition: () => void
   onDispatchCard?: (card: KanbanCardDTO, flow: string) => void
+  embedded?: boolean
+  onAskAi?: (card: KanbanCardDTO) => void
+  onWatchPipeline?: (jobId: string) => void
 }
 
 const WIDTH_STORAGE_KEY = 'kanban-drawer-width'
@@ -42,7 +45,15 @@ function loadStoredWidth(): number {
  * งานล่าสุดที่เพิ่ง dispatch ก็ตาม — SSE endpoint replay log ทั้งหมดจาก seq 0 เสมอตอนเปิด
  * connection ใหม่ จึงใช้งานกับ job เก่าที่ทำเสร็จไปแล้วได้ปกติ
  */
-export default function KanbanDetailDrawer({ card, onClose, onCardTransition, onDispatchCard }: Props) {
+export default function KanbanDetailDrawer({
+  card,
+  onClose,
+  onCardTransition,
+  onDispatchCard,
+  embedded = false,
+  onAskAi,
+  onWatchPipeline,
+}: Props) {
   const [approvalPayload, setApprovalPayload] = useState<ApprovalPayload | null>(null)
   const [approving, setApproving] = useState(false)
   const [terminalKey, setTerminalKey] = useState(0)
@@ -169,22 +180,24 @@ export default function KanbanDetailDrawer({ card, onClose, onCardTransition, on
 
   return (
     <aside
-      style={{ width }}
-      // negative margin ต้อง match padding ของ Layout main (p-5 sm:p-8) ทั้งสอง breakpoint
-      // ไม่งั้น drawer เหลื่อมขอบจอ 12px บนจอเล็ก
-      className="flow-panel sticky top-0 -mr-5 -my-5 flex h-screen shrink-0 border-r-0 sm:-mr-8 sm:-my-8"
+      style={embedded ? undefined : { width }}
+      className={
+        embedded
+          ? 'flex h-full w-full min-h-0 flex-col bg-surface border-l border-zinc-200'
+          : 'flow-panel sticky top-0 -mr-5 -my-5 flex h-screen shrink-0 border-r-0 sm:-mr-8 sm:-my-8'
+      }
     >
-      {/* resize handle — ลากซ้าย/ขวาเพื่อปรับความกว้าง Drawer (touch-none กัน browser
-          แย่ง gesture ไป scroll ระหว่างลากด้วยนิ้ว) */}
-      <div
-        onPointerDown={(e) => {
-          e.preventDefault()
-          setResizing(true)
-        }}
-        className={`group -ml-1.5 w-3 shrink-0 cursor-col-resize touch-none ${resizing ? 'bg-sky-400/20' : ''}`}
-      >
-        <div className="mx-auto h-full w-px bg-zinc-200 transition-colors group-hover:bg-sky-400/60" />
-      </div>
+      {!embedded && (
+        <div
+          onPointerDown={(e) => {
+            e.preventDefault()
+            setResizing(true)
+          }}
+          className={`group -ml-1.5 w-3 shrink-0 cursor-col-resize touch-none ${resizing ? 'bg-sky-400/20' : ''}`}
+        >
+          <div className="mx-auto h-full w-px bg-zinc-200 transition-colors group-hover:bg-sky-400/60" />
+        </div>
+      )}
 
       <div className="flex min-w-0 flex-1 flex-col">
         <div className="flex shrink-0 items-center justify-between border-b border-edge px-4 py-3">
@@ -200,16 +213,38 @@ export default function KanbanDetailDrawer({ card, onClose, onCardTransition, on
           ) : (
             <span className="text-xs font-semibold text-zinc-500">Task Details</span>
           )}
-          {card && (
-            <button
-              onClick={onClose}
-              className="rounded p-1 text-zinc-400 transition-colors hover:bg-surface-strong hover:text-zinc-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-sky-500"
-              title="ยกเลิกการเลือก"
-              aria-label="ยกเลิกการเลือก"
-            >
-              ✕
-            </button>
-          )}
+          <div className="flex items-center gap-1.5">
+            {card && onAskAi && (
+              <button
+                type="button"
+                onClick={() => onAskAi(card)}
+                className="inline-flex items-center gap-1 rounded bg-sky-50 px-2 py-1 text-xs font-medium text-sky-700 border border-sky-200 hover:bg-sky-100 transition-colors"
+                title="ส่งรายละเอียดงานนี้ไปคุยกับ Trinity Advisor"
+              >
+                <span>✨ ปรึกษา AI</span>
+              </button>
+            )}
+            {card?.job_id && onWatchPipeline && (
+              <button
+                type="button"
+                onClick={() => onWatchPipeline(card.job_id!)}
+                className="inline-flex items-center gap-1 rounded bg-purple-50 px-2 py-1 text-xs font-medium text-purple-700 border border-purple-200 hover:bg-purple-100 transition-colors"
+                title="สลับไปดูสถานะใน Live Pipeline"
+              >
+                <span>⚡ Pipeline</span>
+              </button>
+            )}
+            {card && (
+              <button
+                onClick={onClose}
+                className="rounded p-1 text-zinc-400 transition-colors hover:bg-surface-strong hover:text-zinc-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-sky-500"
+                title="ยกเลิกการเลือก"
+                aria-label="ยกเลิกการเลือก"
+              >
+                ✕
+              </button>
+            )}
+          </div>
         </div>
 
         <div className="min-h-0 flex-1 space-y-4 overflow-y-auto p-4">

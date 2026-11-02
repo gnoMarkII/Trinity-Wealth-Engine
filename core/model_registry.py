@@ -22,9 +22,7 @@ class ModelSlot:
 REGISTRY: dict[str, ModelSlot] = {
     # --- Agent Layer ---
     "manager":       ModelSlot("MANAGER_MODEL",             "gemini-3.1-flash-lite-preview", "Manager Agent — routing and orchestration", "agent"),
-    "router":        ModelSlot("ROUTER_MODEL",               "gemini-3.1-flash-lite-preview", "Structured routing (RouterDecision)", "agent"),
     "archivist":     ModelSlot("ARCHIVIST_MODEL",             "gemini-3.1-flash-lite-preview", "PKM management agent", "agent"),
-    "bookkeeper":    ModelSlot("BOOKKEEPER_MODEL",            "gemini-3.1-flash-lite-preview", "Portfolio & accounting agent", "agent"),
     "macro_quant":   ModelSlot("MACRO_QUANT_MODEL",           "gemini-3.1-flash-lite-preview", "Quant Macro Matrix agent", "agent"),
     "economist":     ModelSlot("MACRO_ECONOMIST_MODEL",       "gemini-3.1-flash-lite-preview", "Macroeconomic narrative synthesis agent", "agent"),
     "allocator":     ModelSlot("STRATEGIC_ALLOCATOR_MODEL",   "gemini-3.1-flash-lite-preview", "Strategic Allocator agent", "agent"),

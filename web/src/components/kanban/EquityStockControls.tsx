@@ -16,7 +16,7 @@ export interface ParsedEquityStock {
 
 export function parseEquityStock(prompt: string, title?: string): ParsedEquityStock {
   const text = `${title || ''} ${prompt || ''}`
-  const matchWithMarket = text.match(/วิเคราะห์หุ้น\s+([A-Z0-9.\-_]+)\s*\((US|TH)\)/i)
+  const matchWithMarket = text.match(/วิเคราะห์หุ้น\s*([A-Z0-9.\-_]+)\s*\((US|TH)\)/i)
   if (matchWithMarket && matchWithMarket[1] && matchWithMarket[2]) {
     return {
       ticker: matchWithMarket[1].toUpperCase(),
@@ -24,7 +24,7 @@ export function parseEquityStock(prompt: string, title?: string): ParsedEquitySt
     }
   }
 
-  const matchTicker = text.match(/วิเคราะห์หุ้น\s+([A-Z0-9.\-_]+)/i)
+  const matchTicker = text.match(/วิเคราะห์หุ้น\s*([A-Z0-9.\-_]+)/i)
   if (matchTicker && matchTicker[1]) {
     const ticker = matchTicker[1].toUpperCase()
     const isTH = ticker.endsWith('.BK') || ticker.endsWith('.TH')
@@ -46,9 +46,9 @@ export function updateEquityPromptAndTitle(
   const cleanTicker = newTicker.trim().toUpperCase()
 
   let updatedTitle = originalTitle
-  if (originalTitle && /วิเคราะห์หุ้น\s+[A-Z0-9.\-_]+/i.test(originalTitle)) {
+  if (originalTitle && /วิเคราะห์หุ้น\s*[A-Z0-9.\-_]+/i.test(originalTitle)) {
     updatedTitle = originalTitle.replace(
-      /วิเคราะห์หุ้น\s+[A-Z0-9.\-_]+(?:\s*\((?:US|TH)\))?/i,
+      /วิเคราะห์หุ้น\s*[A-Z0-9.\-_]+(?:\s*\((?:US|TH)\))?/i,
       `วิเคราะห์หุ้น ${cleanTicker} (${newMarket})`
     )
   } else {
@@ -56,9 +56,9 @@ export function updateEquityPromptAndTitle(
   }
 
   let updatedPrompt = originalPrompt
-  if (originalPrompt && /วิเคราะห์หุ้น\s+[A-Z0-9.\-_]+/i.test(originalPrompt)) {
+  if (originalPrompt && /วิเคราะห์หุ้น\s*[A-Z0-9.\-_]+/i.test(originalPrompt)) {
     updatedPrompt = originalPrompt.replace(
-      /วิเคราะห์หุ้น\s+[A-Z0-9.\-_]+(?:\s*\((?:US|TH)\))?/i,
+      /วิเคราะห์หุ้น\s*[A-Z0-9.\-_]+(?:\s*\((?:US|TH)\))?/i,
       `วิเคราะห์หุ้น ${cleanTicker} (${newMarket})`
     )
   } else {

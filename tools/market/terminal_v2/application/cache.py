@@ -43,7 +43,7 @@ def is_transient_upstream_error(exc: Exception) -> bool:
     if isinstance(exc, DataUnavailableError):
         return True
     if isinstance(exc, ProviderError):
-        if exc.status_code is not None and 400 <= exc.status_code < 500 and exc.status_code != 429:
+        if exc.status_code is not None and 400 <= exc.status_code < 500 and exc.status_code not in (429, 403):
             return False
         return True
     try:
@@ -51,7 +51,7 @@ def is_transient_upstream_error(exc: Exception) -> bool:
         if isinstance(exc, (requests.ConnectionError, requests.Timeout, requests.RequestException)):
             if isinstance(exc, requests.HTTPError) and exc.response is not None:
                 code = exc.response.status_code
-                if 400 <= code < 500 and code != 429:
+                if 400 <= code < 500 and code not in (429, 403):
                     return False
             return True
     except ImportError:
@@ -197,6 +197,7 @@ class ThreadSafeTTLCache:
         loader: Callable[[], T],
         ttl_seconds: Optional[float] = None,
         max_stale_seconds: Optional[float] = None,
+        fallback_loader: Optional[Callable[[], Optional[T]]] = None,
     ) -> T:
         """Double-checked locking getter with bounded stale-on-error fallback."""
         ttl = ttl_seconds if ttl_seconds is not None else self._default_ttl
@@ -288,7 +289,29 @@ class ThreadSafeTTLCache:
                         stale_data = new_dict
                     return stale_data
 
-                # Non-transient error or no cache exists: re-raise
+                # Non-transient error or no cache exists: check optional fallback_loader
+                if fallback_loader is not None:
+                    try:
+                        fallback_data = fallback_loader()
+                        if fallback_data is not None:
+                            logger.warning(
+                                "Terminal V2 Cache: Upstream error for key '%s' (%s: %s). Serving offline/vault fallback.",
+                                key,
+                                type(exc).__name__,
+                                exc,
+                            )
+                            with self._global_lock:
+                                self._entries[key] = CacheEntry(
+                                    data=fallback_data,
+                                    expires_at=time.monotonic() + min(ttl, 300.0),
+                                    cached_at=time.time(),
+                                    monotonic_cached_at=time.monotonic(),
+                                )
+                                self._evict_if_needed()
+                            return fallback_data
+                    except Exception as fb_exc:
+                        logger.debug("Terminal V2 Cache: fallback_loader failed for key '%s': %s", key, fb_exc)
+
                 logger.error(
                     "Terminal V2 Cache: Upstream failed for key '%s' and cannot serve stale (%s: %s).",
                     key,

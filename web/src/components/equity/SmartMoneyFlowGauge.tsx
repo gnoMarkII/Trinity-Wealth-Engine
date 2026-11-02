@@ -1,6 +1,7 @@
 import React from 'react'
 import type { SmartMoneyFlagsDTO } from '../../api/types'
 import type { InsiderConvictionProps } from './TacticalFlowMatrixCard'
+import { ContextTooltip } from './explainer'
 
 export interface SmartMoneyFlowGaugeProps {
   smartMoney?: SmartMoneyFlagsDTO | null
@@ -45,6 +46,12 @@ export const SmartMoneyFlowGauge: React.FC<SmartMoneyFlowGaugeProps> = ({
           <span className="text-xs font-bold text-zinc-800 tracking-tight">
             Institutional Ownership & Smart Money Capital Flow (90D)
           </span>
+          <ContextTooltip
+            title="Smart Money & SEC Form 4 (รอยเท้าสถาบันและการซื้อขายของผู้บริหาร)"
+            whatIsIt="ข้อมูลสัดส่วนการถือหุ้นของกองทุนสถาบัน และประวัติการซื้อขายหุ้นของผู้บริหารบริษัทตามแบบรายงาน SEC Form 4"
+            howToRead="สถาบันถือครองสูง (>70%) สะท้อนความเชื่อมั่นของผู้เล่นมืออาชีพ ส่วนผู้บริหารควักเงินซื้อหุ้น (Insider Buy) มักเป็นสัญญาณบวกที่น่าเชื่อถือที่สุด"
+            impactOnMoney="ช่วยแยกความแตกต่างระหว่างข่าวลือกับพฤติกรรมจริงของผู้เล่นรายใหญ่และคนวงใน"
+          />
         </div>
         <span
           className={`px-2.5 py-0.5 text-xs font-bold rounded-full uppercase border ${
@@ -67,7 +74,15 @@ export const SmartMoneyFlowGauge: React.FC<SmartMoneyFlowGaugeProps> = ({
         {/* Metric 1: Institutional Ownership Gauge Bar */}
         <div className="p-3 rounded-xl bg-surface border border-edge/60 space-y-2">
           <div className="flex items-center justify-between text-[11px] font-medium text-zinc-500">
-            <span>Institutional Float</span>
+            <div className="flex items-center gap-1.5">
+              <span>Institutional Float</span>
+              <ContextTooltip
+                title="สัดส่วนสถาบันถือครอง (Institutional Float)"
+                whatIsIt="เปอร์เซ็นต์ของหุ้นหมุนเวียนทั้งหมดที่ถือโดยกองทุนรวม สถาบันการเงิน และผู้จัดการสินทรัพย์มืออาชีพ"
+                howToRead="ปกติบริษัทชั้นนำจะมีสถาบันถือ 60-85% หากสัดส่วนสูงช่วยเสริมสภาพคล่องและมีบทวิเคราะห์รองรับ"
+                impactOnMoney="ช่วยหลีกเลี่ยงหุ้นที่มีแต่รายย่อยเก็งกำไรจนราคาผันผวนผิดปกติ"
+              />
+            </div>
             <span className="font-bold text-zinc-900 font-mono">
               {instOwnership > 0 ? `${instOwnership.toFixed(1)}%` : 'N/A'}
             </span>
@@ -89,7 +104,17 @@ export const SmartMoneyFlowGauge: React.FC<SmartMoneyFlowGaugeProps> = ({
 
         {/* Metric 2: SEC Form 4 Open-Market Purchases */}
         <div className="p-3 rounded-xl bg-surface border border-edge/60 space-y-1">
-          <div className="text-[11px] font-medium text-zinc-500">Form 4 Insider Purchases (P)</div>
+          <div className="flex items-center justify-between text-[11px] font-medium text-zinc-500">
+            <div className="flex items-center gap-1.5">
+              <span>Form 4 Insider Purchases (P)</span>
+              <ContextTooltip
+                title="ผู้บริหารซื้อหุ้นในกระดาน (Insider Open-Market Buy)"
+                whatIsIt="รายงานตามกฎหมายเมื่อผู้บริหารหรือกรรมการซื้อหุ้นในตลาดด้วยเงินกระเป๋าตัวเอง"
+                howToRead="ผู้บริหารอาจขายหุ้นเพื่อใช้จ่ายส่วนตัว แต่จะ 'ซื้อหุ้น' เมื่อมั่นใจว่าราคาถูกกว่ามูลค่าจริง"
+                impactOnMoney="การซื้อของผู้บริหารระดับ C-Suite ถือเป็นสัญญาณบวกที่เชื่อถือได้สูง"
+              />
+            </div>
+          </div>
           <div className="font-mono text-xl font-black text-emerald-700">
             {insider
               ? `${insider.open_market_p_count_90d || 0} รายการ (${formatLargeNum(
@@ -106,7 +131,15 @@ export const SmartMoneyFlowGauge: React.FC<SmartMoneyFlowGaugeProps> = ({
         {/* Metric 3: Short Interest & Squeeze Risk Gauge */}
         <div className="p-3 rounded-xl bg-surface border border-edge/60 space-y-1">
           <div className="flex items-center justify-between text-[11px] font-medium text-zinc-500">
-            <span>Short Interest (% Float)</span>
+            <div className="flex items-center gap-1.5">
+              <span>Short Interest (% Float)</span>
+              <ContextTooltip
+                title="อัตราส่วนการขายชอร์ต (Short Interest)"
+                whatIsIt="สัดส่วนหุ้นที่ถูกยืมมาขายชอร์ตเพื่อเก็งกำไรขาลงเทียบกับหุ้นหมุนเวียนทั้งหมด"
+                howToRead="ปกติ 1-3%, สูง 5-10%, หากเกิน 15% บ่งชี้ว่ามีคนแทงลงเยอะ เสี่ยงเกิดการไล่ซื้อคืน (Short Squeeze)"
+                impactOnMoney="หากบริษัทมีข่าวกำไรดีกว่าคาด หุ้นที่มี Short Interest สูงอาจพุ่งขึ้นรุนแรงจากการบีบชอร์ต"
+              />
+            </div>
             {squeezeRisk && (
               <span className="px-1.5 py-0.2 rounded bg-amber-100 text-amber-800 font-bold text-[9px] border border-amber-300 animate-pulse">
                 ⚡ Squeeze Risk
@@ -119,6 +152,17 @@ export const SmartMoneyFlowGauge: React.FC<SmartMoneyFlowGaugeProps> = ({
           <span className="text-[10px] text-zinc-400 block">
             {squeezeRisk ? 'Bear crowding detected (>15% shorted)' : 'Healthy borrowing demand'}
           </span>
+        </div>
+      </div>
+
+      {/* Beginner Context Callout: Insider & Smart Money Decoder */}
+      <div className="flex items-start gap-2.5 p-3 rounded-xl bg-sky-50/70 border border-sky-200/70 text-xs text-sky-900">
+        <span className="text-sm shrink-0 mt-0.5">💡</span>
+        <div className="space-y-0.5">
+          <span className="font-bold block text-sky-950">ถอดรหัสพฤติกรรม Smart Money & คนวงใน (Insider Decoder):</span>
+          <p className="text-sky-800 leading-relaxed text-[11px]">
+            ผู้บริหารขายหุ้นอาจเป็นเรื่องส่วนตัว (จ่ายภาษี ซื้อบ้าน) แต่หากผู้บริหารควักเงินซื้อหุ้นเพิ่มในตลาดเปิด มักสะท้อนว่าธุรกิจกำลังมีแนวโน้มสดใสกว่าที่ตลาดคาดการณ์ไว้
+          </p>
         </div>
       </div>
     </div>

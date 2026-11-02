@@ -1,4 +1,15 @@
 import type {
+  DigestCandidatesResponseDTO,
+  DailyDigestResponseDTO,
+  DailyDigestSynthesizeRequestDTO,
+  WeeklyDigestResponseDTO,
+  WeeklyDigestSynthesizeRequestDTO,
+  DigestReadStateRequestDTO,
+  DigestReadStateResponseDTO,
+  AdvisorSessionDTO,
+  AdvisorChatMessageDTO,
+  SandboxStateSnapshotDTO,
+  HermesSyncStatusDTO,
   ActiveAgentStatusDTO,
   JobOutputsDTO,
   JobStatusDTO,
@@ -1531,5 +1542,166 @@ export const api = {
       `/api/equity/${encodeURIComponent(ticker)}/position-review?${params.toString()}`
     )
   },
+
+  listAdvisorSessions: (limit: number = 30) =>
+    request<AdvisorSessionDTO[]>(`/api/manager/sessions?limit=${limit}`, { cache: 'no-store' }),
+
+  createAdvisorSession: (title?: string) =>
+    request<AdvisorSessionDTO>('/api/manager/sessions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ title: title || 'บทสนทนาใหม่' }),
+    }),
+
+  getAdvisorMessages: (sessionId: string) =>
+    request<AdvisorChatMessageDTO[]>(`/api/manager/sessions/${encodeURIComponent(sessionId)}/messages`, { cache: 'no-store' }),
+
+  getSandboxState: () =>
+    request<SandboxStateSnapshotDTO>('/api/manager/sandbox/state', { cache: 'no-store' }),
+
+  getHermesSyncStatus: () =>
+    request<HermesSyncStatusDTO>('/api/manager/hermes/sync-status', { cache: 'no-store' }),
+
+  triggerHermesSync: () =>
+    request<{ success: boolean; output: string }>('/api/manager/hermes/sync', { method: 'POST' }),
+
+  promoteSandboxSkill: (skillName: string) =>
+    request<{ success: boolean; message: string }>(
+      `/api/manager/sandbox/skills/${encodeURIComponent(skillName)}/promote`,
+      { method: 'POST' }
+    ),
+  getHarnessTelemetry: () =>
+    request<any>('/api/health/harness-telemetry', { cache: 'no-store' }),
+
+  getThaiYieldCurve: () =>
+    request<any>('/api/macro/thai-yield-curve', { cache: 'no-store' }),
+
+  getThaiPublicDebt: () =>
+    request<any>('/api/macro/thai-public-debt', { cache: 'no-store' }),
+
+  getDigestCandidates: (days: number = 1, forceRefresh: boolean = false, maxAgeHours?: number) =>
+    request<DigestCandidatesResponseDTO>(
+      `/api/macro/digest/candidates?days=${days}&force_refresh=${forceRefresh}${
+        maxAgeHours !== undefined ? `&max_news_age_hours=${maxAgeHours}` : ''
+      }`,
+      { cache: 'no-store' }
+    ),
+
+  getDailyDigest: (date?: string) =>
+    request<DailyDigestResponseDTO>(
+      `/api/macro/digest/daily${date ? `?date=${encodeURIComponent(date)}` : ''}`,
+      { cache: 'no-store' }
+    ),
+
+  synthesizeDailyDigest: (payload: DailyDigestSynthesizeRequestDTO) =>
+    request<DailyDigestResponseDTO>('/api/macro/digest/daily/synthesize', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    }),
+
+  getWeeklyDigest: (date?: string) =>
+    request<WeeklyDigestResponseDTO>(
+      `/api/macro/digest/weekly${date ? `?date=${encodeURIComponent(date)}` : ''}`,
+      { cache: 'no-store' }
+    ),
+
+  synthesizeWeeklyDigest: (payload: WeeklyDigestSynthesizeRequestDTO) =>
+    request<WeeklyDigestResponseDTO>('/api/macro/digest/weekly/synthesize', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    }),
+
+  updateDigestReadState: (payload: DigestReadStateRequestDTO) =>
+    request<DigestReadStateResponseDTO>('/api/macro/digest/read-state', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    }),
+
 }
+
+export async function streamAdvisorChat(
+  sessionId: string,
+  message: string,
+  contextRefs: string[],
+  onDelta: (delta: string) => void,
+  onDone: (donePayload?: { message_id?: string; citations?: string[] }) => void,
+  onError: (err: string) => void,
+  signal?: AbortSignal,
+  onJobDispatched?: (job: { job_id: string; ticker: string; job_type: string }) => void,
+): Promise<void> {
+  let doneCalled = false
+  let lastDonePayload: any = undefined
+  const notifyDone = (payload?: any) => {
+    if (!doneCalled) {
+      doneCalled = true
+      onDone(payload || lastDonePayload)
+    }
+  }
+
+  try {
+    const res = await fetch(`/api/manager/sessions/${encodeURIComponent(sessionId)}/stream`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message, context_refs: contextRefs }),
+      signal,
+    })
+    if (!res.ok) {
+      onError(`HTTP error: ${res.status}`)
+      return
+    }
+    const reader = res.body?.getReader()
+    if (!reader) {
+      onError('ReadableStream not supported')
+      return
+    }
+    const decoder = new TextDecoder()
+    let buffer = ''
+    while (true) {
+      const { done, value } = await reader.read()
+      if (done) break
+      buffer += decoder.decode(value, { stream: true })
+      const lines = buffer.split('\n\n')
+      buffer = lines.pop() || ''
+      for (const block of lines) {
+        if (!block.trim()) continue
+        const eventMatch = block.match(/event:\s*([^\n]+)/)
+        const dataMatch = block.match(/data:\s*([^\n]+)/)
+        const eventType = (eventMatch && eventMatch[1]) ? eventMatch[1].trim() : ''
+        const dataStr = (dataMatch && dataMatch[1]) ? dataMatch[1].trim() : ''
+        if (eventType === 'text_delta') {
+          try {
+            const parsed = JSON.parse(dataStr)
+            if (parsed.delta) onDelta(parsed.delta)
+          } catch {}
+        } else if (eventType === 'job_dispatched') {
+          try {
+            const parsed = JSON.parse(dataStr)
+            onJobDispatched?.(parsed)
+          } catch {}
+        } else if (eventType === 'done') {
+          try {
+            lastDonePayload = JSON.parse(dataStr)
+          } catch {}
+          notifyDone(lastDonePayload)
+        } else if (eventType === 'error') {
+          try {
+            const parsed = JSON.parse(dataStr)
+            onError(parsed.error || 'Stream error')
+          } catch {
+            onError('Stream error')
+          }
+        }
+      }
+    }
+    notifyDone()
+  } catch (err: any) {
+    if (err.name !== 'AbortError') {
+      onError(err.message || 'Network error')
+    }
+  }
+}
+
 

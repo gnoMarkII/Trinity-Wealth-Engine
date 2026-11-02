@@ -15,22 +15,12 @@ from core.logger import get_logger
 from core.retry import with_retry as _with_retry
 
 
+from core.financial_parsers import extract_valuation_metric
 from core.logger import get_logger
 log = get_logger(__name__)
 
-
-def _parse_float_from_str(s: str) -> float | None:
-    import re
-    if not s:
-        return None
-    try:
-        clean = s.replace(',', '')
-        match = re.search(r'[-+]?\d*\.\d+|[-+]?\d+', clean)
-        if match:
-            return float(match.group())
-        return None
-    except ValueError:
-        return None
+# Context-aware numeric parser for macro tables and observables
+_parse_float_from_str = extract_valuation_metric
 
 def _parse_markdown_table_rows(content: str) -> list[dict]:
     """Legacy parser for flat tables"""

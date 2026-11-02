@@ -12,6 +12,9 @@ from typing import List, Optional, Tuple
 from bs4 import BeautifulSoup
 import pypdf
 
+from core.datetime_utils import format_iso_date, parse_thai_or_iso_date
+from core.financial_parsers import extract_financial_decimal, extract_labeled_decimal
+from core.text_utils import extract_labeled_value
 from tools.portfolio.domain.calculations import validate_reconciliation_invariant
 from tools.portfolio.domain.models import (
     TradeImportItem,
@@ -38,15 +41,8 @@ def _clean_str(val: str) -> str:
 def _parse_decimal(val_str: str) -> Decimal:
     if not val_str:
         return Decimal("0.00")
-    # Extract the first valid numeric token (handles glued PDF columns like 1.00-4,221.53)
-    m = re.search(r"[-+]?[\d,]+(?:\.\d+)?", str(val_str))
-    if not m:
-        return Decimal("0.00")
-    clean = m.group(0).replace(",", "")
-    try:
-        return Decimal(clean)
-    except Exception:
-        return Decimal("0.00")
+    d = extract_financial_decimal(val_str)
+    return d if d is not None else Decimal("0.00")
 
 
 def _compute_fingerprint(confirmation_no: str, trade_date: str, action: str, units: Decimal, price: Decimal) -> str:
@@ -142,9 +138,7 @@ class ArrGoldParserAdapter(ArrGoldParserPort):
             ref_no = subj_ref_match.group(1).strip()
         else:
             # Match from text e.g. เลขที่อ้างอิง: B25092602371 or เลขที่อ้างอิง B26061208401
-            text_ref_match = re.search(r"เลขที่อ้างอิง[:\s]*([A-Za-z0-9]+)", flat_text)
-            if text_ref_match:
-                ref_no = text_ref_match.group(1).strip()
+            ref_no = extract_labeled_value(flat_text, ["เลขที่อ้างอิง"]) or ""
 
         if not ref_no:
             log.warning("No reference number found in ARR Gold email")
@@ -152,12 +146,12 @@ class ArrGoldParserAdapter(ArrGoldParserPort):
 
         # 3. Extract Trade Date (YYYY-MM-DD HH:MM:SS)
         trade_date = ""
-        date_match = re.search(r"(\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2})", flat_text)
+        date_match = re.search(r"(?<!\d)(\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2})", flat_text)
         if date_match:
             trade_date = date_match.group(1).strip()
         else:
             # Fallback to date only
-            date_only = re.search(r"(\d{4}-\d{2}-\d{2})", flat_text)
+            date_only = re.search(r"(?<!\d)(\d{4}-\d{2}-\d{2})(?!\d)", flat_text)
             if date_only:
                 trade_date = f"{date_only.group(1).strip()} 00:00:00"
 
@@ -181,16 +175,15 @@ class ArrGoldParserAdapter(ArrGoldParserPort):
             net_amount = _parse_decimal(table_match.group(3))
         else:
             # Try vertical format (Format B - 2025)
-            price_match = re.search(r"ราคา(?:ซื้อ|ขาย)หน่วยละ\s*([\d,\.]+)", flat_text)
-            units_match = re.search(r"น้ำหนักทองคำ\s*[+-]?\s*([\d,\.]+)", flat_text)
-            amt_match = re.search(r"คิดเป็นจำนวนเงิน\s*[+-]?\s*([\d,\.]+)", flat_text)
-
-            if price_match:
-                price = _parse_decimal(price_match.group(1))
-            if units_match:
-                units = _parse_decimal(units_match.group(1))
-            if amt_match:
-                net_amount = _parse_decimal(amt_match.group(1))
+            p = extract_labeled_decimal(flat_text, ["ราคาซื้อหน่วยละ", "ราคาขายหน่วยละ", "ราคาหน่วยละ"])
+            if p is not None:
+                price = abs(p)
+            u = extract_labeled_decimal(flat_text, ["น้ำหนักทองคำ"])
+            if u is not None:
+                units = abs(u)
+            a = extract_labeled_decimal(flat_text, ["คิดเป็นจำนวนเงิน"])
+            if a is not None:
+                net_amount = abs(a)
 
         if units <= 0 or price <= 0:
             log.warning("Invalid units (%s) or price (%s) in ARR Gold email %s", units, price, ref_no)
@@ -283,10 +276,9 @@ class ArrGoldParserAdapter(ArrGoldParserPort):
                 price = abs(_parse_decimal(price_raw))
                 glued = m.group(5).strip()
 
-                # Normalize date DD/MM/YYYY HH:MM:SS -> YYYY-MM-DD
-                parts = raw_date.split()
-                d_parts = parts[0].split("/")
-                iso_date = f"{d_parts[2]}-{d_parts[1]}-{d_parts[0]}"
+                # Normalize date (DD/MM/YYYY or ISO) via core datetime_utils
+                parsed_d = parse_thai_or_iso_date(raw_date)
+                iso_date = format_iso_date(parsed_d) if parsed_d else raw_date.split()[0]
 
                 action = "BUY" if act_raw == "BUY" else "SELL"
                 units, amount = _unpack_units_and_amount(glued, price)

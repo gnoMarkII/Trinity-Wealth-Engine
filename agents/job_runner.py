@@ -42,7 +42,7 @@ def _log_manager_messages(job_repo: JobRepositoryPort, job_id: str, event: dict)
 def _append_manager_summary(job_repo: JobRepositoryPort, job_id: str, instruction: str, flow: str) -> None:
     if flow != "manager":
         return
-    from agents.manager_agent import generate_manager_summary
+    from agents.research_swarm_flow import generate_manager_summary
 
     reply_logs = job_repo.get_job_reply_logs(job_id)
     if any(row["node_name"] == "manager_summary" for row in reply_logs):
@@ -56,13 +56,13 @@ def _append_manager_summary(job_repo: JobRepositoryPort, job_id: str, instructio
     ]
     if not deliverables:
         deliverables = [
-            (row["node_name"] or "Manager", row["content"] or "")
+            (row["node_name"] or "Supervisor", row["content"] or "")
             for row in reply_logs
             if row["node_name"] == "supervisor"
         ]
     summary = generate_manager_summary(instruction, deliverables)
     if summary:
-        job_repo.append_job_log(job_id, "manager_summary", summary, role="reply", label="Manager Summary")
+        job_repo.append_job_log(job_id, "manager_summary", summary, role="reply", label="Executive Research Summary")
 
 
 def _resolve_stream_input(
@@ -158,7 +158,7 @@ def run_job_workflow(
             graph = build_youtube_pitch_graph(checkpointer=checkpointer)
             fresh_inputs = {"instruction": instruction}
         else:
-            from agents.manager_agent import build_graph
+            from agents.research_swarm_flow import build_graph
             graph = build_graph(checkpointer=checkpointer)
             fresh_inputs = {
                 "messages": [("user", instruction)],

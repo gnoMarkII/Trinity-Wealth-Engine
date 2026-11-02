@@ -376,6 +376,23 @@ CREATE TABLE IF NOT EXISTS investor_command_receipts (
     result_json TEXT NOT NULL,
     created_at TEXT NOT NULL
 );
+
+CREATE TABLE IF NOT EXISTS advisor_sessions (
+    session_id TEXT PRIMARY KEY,
+    title TEXT NOT NULL,
+    created_at REAL NOT NULL,
+    updated_at REAL NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS advisor_messages (
+    id TEXT PRIMARY KEY,
+    session_id TEXT NOT NULL,
+    role TEXT NOT NULL,
+    content TEXT NOT NULL,
+    citations_json TEXT NOT NULL DEFAULT '[]',
+    created_at REAL NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_advisor_messages_session ON advisor_messages(session_id, created_at);
 """
 
 _INITIALIZED_DB_PATHS: set[str] = set()

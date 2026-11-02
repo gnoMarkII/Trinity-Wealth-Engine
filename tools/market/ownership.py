@@ -13,13 +13,19 @@ log = get_logger(__name__)
 
 
 @traceable(run_type="parser")
-def compute_smart_money_flags(ticker: str, info_dict: Optional[dict[str, Any]] = None) -> tuple[SmartMoneyFlags, list[str]]:
+def compute_smart_money_flags(
+    ticker: str,
+    info_dict: Optional[dict[str, Any]] = None,
+    has_10b51_filtered_data: bool = False,
+    discretionary_buy_count: Optional[int] = None,
+    discretionary_sell_count: Optional[int] = None,
+) -> tuple[SmartMoneyFlags, list[str]]:
     """ประเมินสัญญาณ Smart Money (Insider buying/selling, Short Interest, Institutional Ownership)
 
     หมายเหตุ: คืนข้อมูลเชิงสัญญาณ (Flag) แยกจากคะแนนตัวเลข ไม่รวมใน Composite Score
-    แนบ data_quality_flags '10b51_unfiltered:insider_signal' เสมอเนื่องจาก yfinance ไม่ได้แยก 10b5-1 plans
+    หาก has_10b51_filtered_data=True จะไม่แนบ '10b51_unfiltered:insider_signal'
     """
-    flags: list[str] = ["10b51_unfiltered:insider_signal"]
+    flags: list[str] = [] if has_10b51_filtered_data else ["10b51_unfiltered:insider_signal"]
 
     if info_dict is None:
         try:
@@ -44,36 +50,39 @@ def compute_smart_money_flags(ticker: str, info_dict: Optional[dict[str, Any]] =
     short_squeeze_risk = bool(short_pct is not None and short_pct >= 15.0)
 
     # Insider transactions (90d)
-    insider_buy_count = 0
-    insider_sell_count = 0
+    if discretionary_buy_count is not None and discretionary_sell_count is not None:
+        insider_buy_count = discretionary_buy_count
+        insider_sell_count = discretionary_sell_count
+    else:
+        insider_buy_count = 0
+        insider_sell_count = 0
+        try:
+            tk = yf.Ticker(ticker)
+            insiders = tk.insider_transactions
+            if insiders is not None and not insiders.empty and "Transaction" in insiders.columns:
+                date_col = next((c for c in ("Start Date", "Date") if c in insiders.columns), None)
+                if date_col is not None:
+                    cutoff = datetime.now(timezone.utc) - timedelta(days=_INSIDER_WINDOW_DAYS)
+                    tx_dates = pd.to_datetime(insiders[date_col], errors="coerce", utc=True)
+                    recent = insiders[tx_dates >= cutoff]
+                else:
+                    recent = insiders.iloc[0:0]
+                    flags.append("insider_date_unavailable:insider_signal")
+
+                for _, row in recent.iterrows():
+                    trans = str(row.get("Transaction", "")).lower()
+                    if "buy" in trans or "purchase" in trans:
+                        insider_buy_count += 1
+                    elif "sale" in trans or "sell" in trans:
+                        insider_sell_count += 1
+        except Exception as e:
+            log.debug("Could not fetch insider_transactions for %s: %s", ticker, e)
+
     insider_signal = "neutral"
-
-    try:
-        tk = yf.Ticker(ticker)
-        insiders = tk.insider_transactions
-        if insiders is not None and not insiders.empty and "Transaction" in insiders.columns:
-            date_col = next((c for c in ("Start Date", "Date") if c in insiders.columns), None)
-            if date_col is not None:
-                cutoff = datetime.now(timezone.utc) - timedelta(days=_INSIDER_WINDOW_DAYS)
-                tx_dates = pd.to_datetime(insiders[date_col], errors="coerce", utc=True)
-                recent = insiders[tx_dates >= cutoff]
-            else:
-                recent = insiders.iloc[0:0]
-                flags.append("insider_date_unavailable:insider_signal")
-
-            for _, row in recent.iterrows():
-                trans = str(row.get("Transaction", "")).lower()
-                if "buy" in trans or "purchase" in trans:
-                    insider_buy_count += 1
-                elif "sale" in trans or "sell" in trans:
-                    insider_sell_count += 1
-
-            if insider_buy_count > insider_sell_count:
-                insider_signal = "buying"
-            elif insider_sell_count > insider_buy_count:
-                insider_signal = "selling"
-    except Exception as e:
-        log.debug("Could not fetch insider_transactions for %s: %s", ticker, e)
+    if insider_buy_count > insider_sell_count:
+        insider_signal = "buying"
+    elif insider_sell_count > insider_buy_count:
+        insider_signal = "selling"
 
     # Overall Signal Flag
     if insider_signal == "buying" and not short_squeeze_risk:
@@ -102,6 +111,7 @@ def compute_canonical_insider_conviction(
     market: str = "US",
     canonical_transactions: Optional[List[dict[str, Any]]] = None,
     quarantine_meta: Optional[dict[str, Any]] = None,
+    as_of: Optional[datetime] = None,
 ) -> Tuple[InsiderConviction, List[str]]:
     """คำนวณ Insider Conviction จาก Canonical SEC Form 4 Ledger
     - Code P (Open Market Purchase) สำหรับ Insider Timing
@@ -118,8 +128,31 @@ def compute_canonical_insider_conviction(
             data_status="not_applicable",
         ), ["form4_not_applicable_th_market:insider"]
 
-    # If canonical_transactions not passed, try to fetch from yfinance as fallback
+    # If canonical_transactions not passed, try to fetch from SEC Form 4 adapter first, then yfinance fallback
     txs = canonical_transactions
+    from_sec_form4 = False
+    if txs is None and mkt == "US":
+        try:
+            from tools.market.terminal_v2.bootstrap import get_terminal_data_service
+            sec_snap = get_terminal_data_service().get_insider_trades(ticker, limit=30)
+            if sec_snap and sec_snap.transactions:
+                txs = []
+                for it in sec_snap.transactions:
+                    txs.append({
+                        "transaction_date": it.transaction_date,
+                        "transaction_code": it.transaction_code,
+                        "shares": it.shares or 0.0,
+                        "price_per_share": it.price_per_share or 0.0,
+                        "officer_title": it.officer_title or "",
+                        "is_c_suite": bool(it.is_officer and any(t in (it.officer_title or "").lower() for t in ["ceo", "cfo", "coo", "chief", "president"])),
+                        "is_10b5_1_plan": it.is_10b51,
+                        "accession_number": it.accession_number,
+                    })
+                from_sec_form4 = True
+        except Exception as e:
+            log.debug("SEC EDGAR insider trades not available via bootstrap for %s: %s", ticker, e)
+
+    # Fallback to yfinance if not obtained from SEC EDGAR
     if txs is None:
         try:
             tk = yf.Ticker(ticker)
@@ -149,6 +182,7 @@ def compute_canonical_insider_conviction(
                         "price_per_share": price,
                         "officer_title": text_title,
                         "is_c_suite": is_c_suite,
+                        "is_10b5_1_plan": False,
                     })
         except Exception as e:
             log.warning("Failed to fetch insider transactions for %s: %s", ticker, e)
@@ -157,7 +191,8 @@ def compute_canonical_insider_conviction(
     if txs is None:
         return InsiderConviction(status="unavailable", data_status="unavailable"), ["form4_data_unavailable:insider"]
 
-    cutoff = datetime.now(timezone.utc) - timedelta(days=_INSIDER_WINDOW_DAYS)
+    now_dt = as_of if as_of is not None else datetime.now(timezone.utc)
+    cutoff = now_dt - timedelta(days=_INSIDER_WINDOW_DAYS)
     p_filing_accs = set()
     p_lot_count = 0
     p_cents = 0
@@ -248,21 +283,22 @@ def compute_canonical_insider_conviction(
     quarantined_lots = q_meta.get("quarantined_lot_count_90d", 0) if isinstance(q_meta, dict) else 0
 
     # Status Determination
+    is_authoritative = (canonical_transactions is not None) or from_sec_form4
     if requires_review:
         status = "requires_review"
         signal_conf = "unavailable"
     elif c_suite_count >= 2 or (p_lot_count >= 3 and p_cents >= 100_000_00):
         status = "bullish_cluster"
-        signal_conf = "high" if canonical_transactions is not None else "moderate"
+        signal_conf = "high" if is_authoritative else "moderate"
     elif p_lot_count >= 1:
         status = "moderate_buying"
-        signal_conf = "high" if canonical_transactions is not None else "moderate"
+        signal_conf = "high" if is_authoritative else "moderate"
     elif s_lot_count > 0:
         status = "selling_activity"
-        signal_conf = "high" if canonical_transactions is not None else "moderate"
+        signal_conf = "high" if is_authoritative else "moderate"
     else:
         status = "neutral_no_signal"
-        signal_conf = "high" if canonical_transactions is not None else "moderate"
+        signal_conf = "high" if is_authoritative else "moderate"
 
     def _to_usd_str(cents: int) -> str:
         return f"{Decimal(cents) / Decimal(100):.2f}"

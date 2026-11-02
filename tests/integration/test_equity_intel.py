@@ -6,7 +6,7 @@ from unittest.mock import patch, MagicMock
 from langgraph.checkpoint.memory import MemorySaver
 from langchain_core.messages import AIMessage
 
-from agents.manager_agent import build_graph, RouterDecision, WorkerTask
+from agents.research_swarm_flow import build_graph, RouterDecision, WorkerTask
 from schemas.micro_quant_schemas import EquityNarrativeOutput
 
 
@@ -30,25 +30,11 @@ class CapturingMockGraph:
         return self.return_val
 
 
-@patch("agents.manager_agent._get_archivist_graph")
-@patch("agents.manager_agent._get_equity_narrative_graph")
-@patch("agents.manager_agent._get_equity_quant_graph")
-@patch("agents.manager_agent._get_router_model")
-@patch("agents.manager_agent.get_llm")
-def test_equity_intel_flow_mocked_router(mock_llm, mock_router, mock_eq_quant, mock_eq_narrative, mock_archivist, equity_tmp_vault):
-    class MockRouterModel:
-        def invoke(self, *args, **kwargs):
-            return RouterDecision(
-                tasks=[WorkerTask(target="equity_intel", instruction="วิเคราะห์ AAPL")]
-            )
-
-        def with_structured_output(self, *args, **kwargs):
-            return self
-
-        def with_fallbacks(self, *args, **kwargs):
-            return self
-
-    mock_router.return_value = MockRouterModel()
+@patch("agents.research_swarm_flow._get_archivist_graph")
+@patch("agents.research_swarm_flow._get_equity_narrative_graph")
+@patch("agents.research_swarm_flow._get_equity_quant_graph")
+@patch("agents.research_swarm_flow.get_llm")
+def test_equity_intel_flow_mocked_router(mock_llm, mock_eq_quant, mock_eq_narrative, mock_archivist, equity_tmp_vault):
 
     quant_valid = (
         '{"ticker": "AAPL", "market": "US", "value_score": 70.0, "quality_score": 80.0, '
@@ -102,28 +88,16 @@ def test_equity_intel_flow_mocked_router(mock_llm, mock_router, mock_eq_quant, m
     assert final_state["equity_narrative_context"]["market_sentiment"] == "bullish"
 
 
-@patch("agents.manager_agent._get_archivist_graph")
-@patch("agents.manager_agent._get_equity_narrative_graph")
-@patch("agents.manager_agent._get_equity_quant_graph")
-@patch("agents.manager_agent._get_router_model")
-@patch("agents.manager_agent.get_llm")
+@patch("agents.research_swarm_flow._get_archivist_graph")
+@patch("agents.research_swarm_flow._get_equity_narrative_graph")
+@patch("agents.research_swarm_flow._get_equity_quant_graph")
+@patch("agents.research_swarm_flow.get_llm")
 def test_equity_intel_flow_dictates_deterministic_archivist_filename(
-    mock_llm, mock_router, mock_eq_quant, mock_eq_narrative, mock_archivist, tmp_vault
+    mock_llm, mock_eq_quant, mock_eq_narrative, mock_archivist, tmp_vault
 ):
     """prepare_archivist_node ต้องบอก filename ให้ Archivist ตรงๆ จาก title: frontmatter — ไม่ปล่อยให้
     LLM เดาเอง (เจอจริงว่า re-run วันเดียวกันได้ filename ไม่ตรงกัน เช่น space vs underscore
     ทำให้เกิดไฟล์ซ้ำแทนที่จะ overwrite เดิม)"""
-    class MockRouterModel:
-        def invoke(self, *args, **kwargs):
-            return RouterDecision(tasks=[WorkerTask(target="equity_intel", instruction="วิเคราะห์ AAPL")])
-
-        def with_structured_output(self, *args, **kwargs):
-            return self
-
-        def with_fallbacks(self, *args, **kwargs):
-            return self
-
-    mock_router.return_value = MockRouterModel()
 
     quant_valid = (
         '{"ticker": "AAPL", "market": "US", "value_score": 70.0, "quality_score": 80.0, '
@@ -167,26 +141,14 @@ def test_equity_intel_flow_dictates_deterministic_archivist_filename(
     assert "ห้ามดัดแปลง" in archivist_instruction
 
 
-@patch("agents.manager_agent._get_archivist_graph")
-@patch("agents.manager_agent._get_equity_narrative_graph")
-@patch("agents.manager_agent._get_equity_quant_graph")
-@patch("agents.manager_agent._get_router_model")
-@patch("agents.manager_agent.get_llm")
+@patch("agents.research_swarm_flow._get_archivist_graph")
+@patch("agents.research_swarm_flow._get_equity_narrative_graph")
+@patch("agents.research_swarm_flow._get_equity_quant_graph")
+@patch("agents.research_swarm_flow.get_llm")
 def test_equity_intel_flow_multi_document_archivist_when_valid_news_present(
-    mock_llm, mock_router, mock_eq_quant, mock_eq_narrative, mock_archivist, tmp_vault
+    mock_llm, mock_eq_quant, mock_eq_narrative, mock_archivist, tmp_vault
 ):
     """เมื่อมี equity_news_raw ที่มี YAML frontmatter prepare_archivist_node ต้องสร้าง directive 2 ครั้งให้ Archivist"""
-    class MockRouterModel:
-        def invoke(self, *args, **kwargs):
-            return RouterDecision(tasks=[WorkerTask(target="equity_intel", instruction="วิเคราะห์ AAPL")])
-
-        def with_structured_output(self, *args, **kwargs):
-            return self
-
-        def with_fallbacks(self, *args, **kwargs):
-            return self
-
-    mock_router.return_value = MockRouterModel()
 
     quant_valid = (
         '{"ticker": "AAPL", "market": "US", "value_score": 70.0, "quality_score": 80.0, '
@@ -236,26 +198,14 @@ def test_equity_intel_flow_multi_document_archivist_when_valid_news_present(
     assert "เป๊ะๆ ตามนี้เท่านั้น ห้ามดัดแปลง" in archivist_instruction
 
 
-@patch("agents.manager_agent._get_archivist_graph")
-@patch("agents.manager_agent._get_equity_narrative_graph")
-@patch("agents.manager_agent._get_equity_quant_graph")
-@patch("agents.manager_agent._get_router_model")
-@patch("agents.manager_agent.get_llm")
+@patch("agents.research_swarm_flow._get_archivist_graph")
+@patch("agents.research_swarm_flow._get_equity_narrative_graph")
+@patch("agents.research_swarm_flow._get_equity_quant_graph")
+@patch("agents.research_swarm_flow.get_llm")
 def test_equity_intel_flow_invalid_news_without_frontmatter_bypasses_news_saving(
-    mock_llm, mock_router, mock_eq_quant, mock_eq_narrative, mock_archivist, tmp_vault
+    mock_llm, mock_eq_quant, mock_eq_narrative, mock_archivist, tmp_vault
 ):
     """ถ้า equity_news_raw เป็น error string ไม่มี frontmatter ต้องข้ามการบันทึกข่าวและไม่ส่งไฟล์ขยะให้ Archivist"""
-    class MockRouterModel:
-        def invoke(self, *args, **kwargs):
-            return RouterDecision(tasks=[WorkerTask(target="equity_intel", instruction="วิเคราะห์ AAPL")])
-
-        def with_structured_output(self, *args, **kwargs):
-            return self
-
-        def with_fallbacks(self, *args, **kwargs):
-            return self
-
-    mock_router.return_value = MockRouterModel()
 
     quant_valid = (
         '{"ticker": "AAPL", "market": "US", "value_score": 70.0, "quality_score": 80.0, '
@@ -304,26 +254,14 @@ def test_equity_intel_flow_invalid_news_without_frontmatter_bypasses_news_saving
     assert "filename='AAPL Equity Analysis" in archivist_instruction
 
 
-@patch("agents.manager_agent._get_archivist_graph")
-@patch("agents.manager_agent._get_equity_narrative_graph")
-@patch("agents.manager_agent._get_equity_quant_graph")
-@patch("agents.manager_agent._get_router_model")
-@patch("agents.manager_agent.get_llm")
+@patch("agents.research_swarm_flow._get_archivist_graph")
+@patch("agents.research_swarm_flow._get_equity_narrative_graph")
+@patch("agents.research_swarm_flow._get_equity_quant_graph")
+@patch("agents.research_swarm_flow.get_llm")
 def test_equity_intel_flow_quant_error_short_circuits_to_supervisor(
-    mock_llm, mock_router, mock_eq_quant, mock_eq_narrative, mock_archivist, equity_tmp_vault
+    mock_llm, mock_eq_quant, mock_eq_narrative, mock_archivist, equity_tmp_vault
 ):
     """ถ้า equity_quant tool คืน Error string (JSON parse ไม่ผ่าน) ต้องไม่ไปต่อ equity_narrative"""
-    class MockRouterModel:
-        def invoke(self, *args, **kwargs):
-            return RouterDecision(tasks=[WorkerTask(target="equity_intel", instruction="วิเคราะห์ BADTICKER")])
-
-        def with_structured_output(self, *args, **kwargs):
-            return self
-
-        def with_fallbacks(self, *args, **kwargs):
-            return self
-
-    mock_router.return_value = MockRouterModel()
     mock_eq_quant.return_value = MockGraph(
         {"messages": [AIMessage(content="Error: ไม่สามารถคำนวณ Quant Signals ของ BADTICKER (US) ได้", name="equity_quant")]}
     )
@@ -349,28 +287,14 @@ def test_equity_intel_flow_quant_error_short_circuits_to_supervisor(
     assert "equity_synthesizer" not in nodes_visited
 
 
-@patch("agents.manager_agent._get_archivist_graph")
-@patch("agents.manager_agent._get_equity_narrative_graph")
-@patch("agents.manager_agent._get_equity_quant_graph")
-@patch("agents.manager_agent._get_router_model")
-@patch("agents.manager_agent.get_llm")
+@patch("agents.research_swarm_flow._get_archivist_graph")
+@patch("agents.research_swarm_flow._get_equity_narrative_graph")
+@patch("agents.research_swarm_flow._get_equity_quant_graph")
+@patch("agents.research_swarm_flow.get_llm")
 def test_equity_intel_flow_respects_save_to_vault_false(
-    mock_llm, mock_router, mock_eq_quant, mock_eq_narrative, mock_archivist, equity_tmp_vault
+    mock_llm, mock_eq_quant, mock_eq_narrative, mock_archivist, equity_tmp_vault
 ):
     """user บอก 'ดูเฉยๆ ไม่ต้องเซฟ' -> save_to_vault=False -> ต้องไม่ไป prepare_archivist/archivist"""
-    class MockRouterModel:
-        def invoke(self, *args, **kwargs):
-            return RouterDecision(
-                tasks=[WorkerTask(target="equity_intel", instruction="วิเคราะห์ AAPL ดูเฉยๆ", save_to_vault=False)]
-            )
-
-        def with_structured_output(self, *args, **kwargs):
-            return self
-
-        def with_fallbacks(self, *args, **kwargs):
-            return self
-
-    mock_router.return_value = MockRouterModel()
 
     quant_valid = (
         '{"ticker": "AAPL", "market": "US", "value_score": 70.0, "quality_score": 80.0, '
@@ -418,28 +342,16 @@ def test_equity_intel_flow_respects_save_to_vault_false(
     assert "ราคาหุ้นอยู่ในทิศทางขาขึ้น" in final_state["messages"][-1].content
 
 
-@patch("agents.manager_agent.log_worker_result")
-@patch("agents.manager_agent._get_archivist_graph")
-@patch("agents.manager_agent._get_equity_narrative_graph")
-@patch("agents.manager_agent._get_equity_quant_graph")
-@patch("agents.manager_agent._get_router_model")
-@patch("agents.manager_agent.get_llm")
+@patch("agents.research_swarm_flow.log_worker_result")
+@patch("agents.research_swarm_flow._get_archivist_graph")
+@patch("agents.research_swarm_flow._get_equity_narrative_graph")
+@patch("agents.research_swarm_flow._get_equity_quant_graph")
+@patch("agents.research_swarm_flow.get_llm")
 def test_equity_intel_supervisor_node_resets_equity_news_raw(
-    mock_llm, mock_router, mock_eq_quant, mock_eq_narrative, mock_archivist, mock_log_worker, equity_tmp_vault
+    mock_llm, mock_eq_quant, mock_eq_narrative, mock_archivist, mock_log_worker, equity_tmp_vault
 ):
     """เมื่อเริ่มรัน equity_intel รอบใหม่ supervisor_node ต้อง reset equity_news_raw = None เสมอ กัน stale data ข้ามรอบ"""
     mock_llm.return_value = MagicMock()
-    class MockRouterModel:
-        def invoke(self, *args, **kwargs):
-            return RouterDecision(tasks=[WorkerTask(target="equity_intel", instruction="วิเคราะห์ TSLA")])
-
-        def with_structured_output(self, *args, **kwargs):
-            return self
-
-        def with_fallbacks(self, *args, **kwargs):
-            return self
-
-    mock_router.return_value = MockRouterModel()
     mock_eq_quant.return_value = MockGraph({"messages": [AIMessage(content="{}", name="equity_quant")]})
 
     memory = MemorySaver()
@@ -458,42 +370,43 @@ def test_equity_intel_supervisor_node_resets_equity_news_raw(
     assert supervisor_update.get("equity_output") is None
 
 
-@patch("agents.manager_agent.log_worker_result")
-@patch("agents.manager_agent.fetch_and_save_macro_snapshots")
-@patch("agents.manager_agent.write_strategy_json_sidecar")
-@patch("agents.manager_agent.format_macro_strategy_report")
-@patch("agents.manager_agent.invoke_strategic_allocator")
-@patch("agents.manager_agent._get_archivist_graph")
-@patch("agents.manager_agent._get_equity_narrative_graph")
-@patch("agents.manager_agent._get_equity_quant_graph")
-@patch("agents.manager_agent._get_macro_economist_graph")
-@patch("agents.manager_agent._get_macro_quant_graph")
-@patch("agents.manager_agent._get_router_model")
-@patch("agents.manager_agent.get_llm")
+@patch("agents.research_swarm_flow.log_worker_result")
+@patch("agents.research_swarm_flow.fetch_and_save_macro_snapshots")
+@patch("agents.research_swarm_flow.write_strategy_json_sidecar")
+@patch("agents.research_swarm_flow.format_macro_strategy_report")
+@patch("agents.research_swarm_flow.invoke_strategic_allocator")
+@patch("agents.research_swarm_flow._get_archivist_graph")
+@patch("agents.research_swarm_flow._get_equity_narrative_graph")
+@patch("agents.research_swarm_flow._get_equity_quant_graph")
+@patch("agents.research_swarm_flow._get_macro_economist_graph")
+@patch("agents.research_swarm_flow._get_macro_quant_graph")
+@patch("agents.research_swarm_flow.get_llm")
 def test_macro_intel_remains_single_document_archivist(
-    mock_llm, mock_router, mock_macro_quant, mock_macro_econ, mock_eq_quant, mock_eq_narrative, mock_archivist, mock_invoke_alloc, mock_fmt_report, mock_sidecar, mock_snapshots, mock_log_worker, equity_tmp_vault
+    mock_llm, mock_macro_quant, mock_macro_econ, mock_eq_quant, mock_eq_narrative, mock_archivist, mock_invoke_alloc, mock_fmt_report, mock_sidecar, mock_snapshots, mock_log_worker, equity_tmp_vault
 ):
     """ยืนยันว่า macro_intel ยังคงใช้ single-document archivist directive พร้อมคำเตือนห้ามดัดแปลงตามเดิม"""
     mock_llm.return_value = MagicMock()
-    class MockRouterModel:
-        def invoke(self, *args, **kwargs):
-            return RouterDecision(tasks=[WorkerTask(target="macro_intel", instruction="วิเคราะห์เศรษฐกิจ")])
-
-        def with_structured_output(self, *args, **kwargs):
-            return self
-
-        def with_fallbacks(self, *args, **kwargs):
-            return self
-
-    mock_router.return_value = MockRouterModel()
     quant_valid = '{"evaluated_at": "2024-05-20T10:00:00Z", "regions": {"USA": {"growth_score": 0.5, "inflation_score": 0.2, "monetary_score": 0.0, "economic_state": "Goldilocks", "confidence": 0.8}}, "global_geopolitics_score": -0.2, "recession_probability": 0.1, "data_freshness_note": "Test"}'
     mock_macro_quant.return_value = MockGraph({"messages": [AIMessage(content=quant_valid, name="macro_quant")]})
     macro_report = "---\ntitle: Global Macro Snapshot 2026-08-08\nentity_type: Macroeconomics\n---\n# Global Macro"
     mock_macro_econ.return_value = MockGraph({"messages": [AIMessage(content=macro_report, name="macro_economist")]})
     
-    mock_dir = MagicMock()
-    mock_dir.source_files = []
-    mock_invoke_alloc.return_value = mock_dir
+    from schemas.macro_schemas import MacroStrategyDirection, AssetAllocationView, AssetStance, EconomicState
+    mock_strategy = MacroStrategyDirection(
+        evaluated_at="2024-05-20T10:00:00Z",
+        overall_regime=EconomicState.GOLDILOCKS,
+        asset_allocation=[
+            AssetAllocationView(asset_class="equity", asset_bucket="equities", stance=AssetStance.NEUTRAL, rationale="Test")
+        ],
+        focus_themes=["dummy"],
+        conviction_level="medium",
+        conviction_rationale="Test",
+        quant_narrative_alignment="aligned",
+        divergence_note=""
+    )
+    mock_strategy.source_files = []
+    mock_invoke_alloc.return_value = mock_strategy
+    mock_sidecar.return_value = (None, {})
     mock_fmt_report.return_value = macro_report
 
     capturing_archivist = CapturingMockGraph({"messages": [AIMessage(content="saved", name="archivist")]})

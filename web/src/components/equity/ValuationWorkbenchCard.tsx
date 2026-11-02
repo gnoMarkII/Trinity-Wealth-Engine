@@ -1,6 +1,8 @@
 import { useState } from 'react'
 import CapitalAllocationYieldMeter from './CapitalAllocationYieldMeter'
 import ScenarioTargetSpreadBar from './ScenarioTargetSpreadBar'
+import { IllustrativeValueScale } from './explainer/IllustrativeValueScale'
+import { ContextTooltip } from '../macro/explainer/ContextTooltip'
 import type {
   DCFResultDTO,
   MarginMetricItemDTO,
@@ -434,6 +436,15 @@ export default function ValuationWorkbenchCard({
           </div>
         </div>
       </div>
+
+      {/* Beginner Illustrative Value Scale (100-Baht Model) */}
+      {reverseDcf?.current_stock_price != null && (reverseDcf.intrinsic_value_today != null || targetPrice != null) && (
+        <IllustrativeValueScale
+          currentPrice={reverseDcf.current_stock_price}
+          intrinsicValue={reverseDcf.intrinsic_value_today ?? targetPrice!}
+          currencySymbol={currency}
+        />
+      )}
 
       {/* Scenario Target Spread Bar (Bear vs Base vs Bull) */}
       {scenarios.length > 0 && (
@@ -1489,7 +1500,7 @@ export default function ValuationWorkbenchCard({
                   5×5 Valuation Sensitivity Matrix (3D Suite)
                 </span>
                 <span className="text-[10px] text-zinc-500">
-                  ทดสอบความทนทานต่อ Valuation (WACC vs g), Operating (Growth vs Margin), และ Macro Shock (Beta vs 10Y Yield)
+                  ทดสอบความทนทานต่อ Valuation (WACC vs g), Operating (Growth vs Margin), และ Macro Shock (Beta vs 10Y Yield) — 💡 ตัวช่วยดูว่าถ้าเศรษฐกิจเปลี่ยน มูลค่าหุ้นจะไปอยู่ตรงไหน
                 </span>
               </div>
             </div>
@@ -1833,6 +1844,12 @@ export default function ValuationWorkbenchCard({
               <span className="text-xs font-bold uppercase tracking-wider text-sky-900">
                 Financial Health & Forensics (Piotroski & Capital Quality)
               </span>
+              <ContextTooltip
+                title="Piotroski F-Score & Capital Quality"
+                what="คะแนนตรวจสุขภาพการเงิน 9 ด้าน ครอบคลุมการทำกำไร (Profitability), หนี้สิน/สภาพคล่อง (Leverage), และประสิทธิภาพดำเนินงาน (Operating Efficiency)"
+                normalBenchmark="คะแนนเต็ม 9; คะแนน 7-9 = สุขภาพการเงินแกร่งมาก; ต่ำกว่า 3 = เสี่ยงมีปัญหาสภาพคล่องหรือความเสี่ยงสูง"
+                decisionImpact="ช่วยคัดกรองไม่ให้เราซื้อ 'หุ้นเน่าราคาถูก (Value Trap)' ที่ตัวเลข P/E ดูถูกแต่กิจการกำลังแย่ลง"
+              />
             </div>
 
             {piotroski?.f_score != null && (

@@ -314,7 +314,8 @@ def _has_hard_data_numbers(data_list: list[str]) -> bool:
     fin_pattern = re.compile(
         r'(?:%|bps|pts?|points?|score|level|target|usd|thb|eur|jpy|index|yield|rate|cpi|ppi|pmi|'
         r'vix|dxy|spx|sp500|s&p|nasdaq|gold|oil|brent|wti|spread|ratio|curve|inversion|y|years?|ปี|p/e|eps|gdp|nfp|bn|mn|mb|gb|mil|bil|million|billion|'
-        r'ล้าน|พันล้าน|บาท|baht|contracts?|สัญญา|shares?|หุ้น|oz|ออนซ์|barrels?|บาร์เรล|จุด|ดัชนี|ผลตอบแทน|อัตรา|\$|€|£|¥)',
+        r'ล้าน|พันล้าน|บาท|baht|contracts?|สัญญา|shares?|หุ้น|oz|ออนซ์|barrels?|บาร์เรล|จุด|ดัชนี|ผลตอบแทน|อัตรา|\$|€|£|¥|'
+        r'nfci|momentum|rsi|macd|leading|lagging|quadrant|sector|etf|qqq|spy|xlk|xle|xlf|xlv|xli|xlp|xlu|xlb|xlre|xly|xrt|soxx|smh|tips|fscore|roe|roa|roic|ebitda|fcf|p/b|p/s|ev/ebitda|drawdown|volatility)',
         re.IGNORECASE
     )
     for item in data_list:
@@ -367,6 +368,40 @@ def _valid_source_files_for_refs(
         for obs in _valid_observables_for_refs(observable_refs, observable_registry)
         if obs.source_file
     }
+
+
+def _valid_source_identities_for_refs(
+    observable_refs: list[str],
+    observable_registry: dict[str, "MarketObservable"],
+) -> set[str]:
+    """Returns unique providers across valid observables."""
+    sources = set()
+    for obs in _valid_observables_for_refs(observable_refs, observable_registry):
+        if obs.provider:
+            for p in re.split(r'[,;&]', obs.provider):
+                p_clean = p.strip()
+                if p_clean and len(p_clean) > 2:
+                    sources.add(p_clean.upper())
+    return sources
+
+
+def _has_multi_source_or_indicator_corroboration(
+    observable_refs: list[str],
+    observable_registry: dict[str, "MarketObservable"] | None,
+) -> bool:
+    """Check if an asset has multi-source or multi-indicator corroboration.
+    Requires at least 2 distinct valid observables with distinct indicators,
+    providers, or source files.
+    """
+    if not observable_registry or not observable_refs:
+        return False
+    valid_obs = _valid_observables_for_refs(observable_refs, observable_registry)
+    if len(valid_obs) < 2:
+        return False
+    distinct_indicators = {obs.indicator.strip().lower() for obs in valid_obs if obs.indicator}
+    distinct_providers = {obs.provider.strip().lower() for obs in valid_obs if obs.provider}
+    distinct_files = {obs.source_file.strip() for obs in valid_obs if obs.source_file}
+    return len(distinct_indicators) >= 2 or len(distinct_providers) >= 2 or len(distinct_files) >= 2
 
 
 def _all_execution_fields_present(pair_trade: "PairTradeStrategy") -> bool:
@@ -447,6 +482,10 @@ def _is_allowed_cross_bucket(target_bucket: str | None, obs: "MarketObservable")
         text = (obs.indicator + " " + obs.observable_id).lower()
         if any(k in text for k in ["bill", "fedfunds", "sofr", "effr", "rate", "yield", "3m", "13w", "cash", "short"]):
             return True
+    if target_bucket == "fx" and obs.asset_bucket in ("cash", "fixed_income"):
+        text = (obs.indicator + " " + obs.observable_id).lower()
+        if any(k in text for k in ["rate", "policy", "diff", "spread", "yield", "bis", "fed", "bot", "thb", "usd"]):
+            return True
     return False
 
 
@@ -461,6 +500,8 @@ def _clear_resolved_hard_data_warnings(asset: "AssetAllocationView") -> None:
         if "lack of numeric hard data in supporting_data" not in warning
         and "missing numeric hard data" not in warning
         and "Auto-extracted hard data lacks valid observable_refs" not in warning
+        and f"[{DEFENSIVE_LOW_SUPPORTING_DATA}]" not in warning
+        and f"[{ACTIVE_ALLOC_GUARDRAIL}]" not in warning
     ]
 
 
@@ -528,12 +569,16 @@ def _is_excluded_number(num: float) -> bool:
 def _clean_numbers_from_clause(clause: str) -> list[float]:
     """สกัดตัวเลขจากข้อความ โดยคัดกรองตัวเลขที่เป็นชื่อดัชนี (เช่น S&P 500, SET 50) ออก และรองรับ comma คั่นหลักพัน"""
     cleaned = re.sub(
-        r'\b(?:s&p|sp|russell|set|nasdaq|nikkei|ftse|eurostoxx)\s*\d+\b',
+        r'(?i)(?<![A-Za-z0-9])(?:s&p|sp|russell|set|nasdaq|nikkei|ftse|eurostoxx)\s*\d+(?![A-Za-z0-9])',
         '',
         clause,
-        flags=re.IGNORECASE
     )
-    tokens = re.findall(r'-?\b\d{1,3}(?:,\d{3})*(?:\.\d+)?\b|-?\b\d+(?:\.\d+)?\b', cleaned)
+    cleaned = re.sub(
+        r'(?i)(?<![A-Za-z0-9])(?:z[- ]?score|sd|beta|std[- ]?dev|p[- ]?value)\s*[:=]?\s*[-+]?\d+(?:\.\d+)?(?![A-Za-z0-9])',
+        '',
+        cleaned,
+    )
+    tokens = re.findall(r'(?<!\d)[-+]?\d{1,3}(?:,\d{3})*(?:\.\d+)?(?!\d)|(?<!\d)[-+]?\d+(?:\.\d+)?(?!\d)', cleaned)
     nums: list[float] = []
     for t in tokens:
         try:
@@ -609,7 +654,13 @@ def _validate_supporting_data_against_registry(
                     continue
                 # ถือว่า "ตรง" ถ้าใกล้เคียงกับ indicator ที่ match ได้ตัวใดตัวหนึ่งก็พอ
                 close_to_any = any(
-                    abs(num - v) < 1e-4 or (abs(num) / abs(v) <= 10.0 and abs(v) / (abs(num) if abs(num) > 0 else 1e-9) <= 10.0)
+                    abs(num - v) < 1e-4
+                    or (
+                        abs(v) > 1e-9
+                        and abs(num) > 1e-9
+                        and 0.1 <= (abs(num) / abs(v)) <= 10.0
+                        and 0.1 <= (abs(v) / abs(num)) <= 10.0
+                    )
                     for v in all_candidate_vals
                 )
                 if not close_to_any:
@@ -636,7 +687,8 @@ def _auto_link_observable_refs(asset: Any, registry: dict[str, Any]) -> None:
         ind = str(getattr(obs, "indicator", "")).lower()
         val_str = str(getattr(obs, "value", "")).strip()
         ind_tokens = [t for t in re.findall(r'[a-z0-9/]+', ind) if len(t) >= 4 and t not in ("rate", "yield", "index", "ratio", "level")]
-        if ind_tokens and all(t in sd_text for t in ind_tokens[:2]):
+        has_digits_in_sd = any(c.isdigit() for c in sd_text)
+        if ind_tokens and all(t in sd_text for t in ind_tokens[:2]) and (val_str in sd_text or not has_digits_in_sd):
             if oid not in linked:
                 linked.append(oid)
         elif val_str and len(val_str) >= 3 and val_str in sd_text:
@@ -644,7 +696,7 @@ def _auto_link_observable_refs(asset: Any, registry: dict[str, Any]) -> None:
                 linked.append(oid)
 
     # 2. If still insufficient (< 2), fallback to bucket & region heuristics
-    if len(linked) < 2:
+    if 0 < len(linked) < 2:
         for oid, obs in registry.items():
             if not getattr(obs, "is_valid", False):
                 continue
@@ -659,6 +711,31 @@ def _auto_link_observable_refs(asset: Any, registry: dict[str, Any]) -> None:
 
     if linked:
         asset.observable_refs = linked
+
+
+def _auto_backfill_supporting_data(asset: Any, registry: dict[str, Any]) -> None:
+    """If asset lacks numeric supporting_data but has valid observable_refs, backfill deterministically."""
+    if _has_hard_data_numbers(getattr(asset, "supporting_data", [])):
+        return
+    backfilled: list[str] = list(getattr(asset, "supporting_data", []) or [])
+    for ref in (getattr(asset, "observable_refs", []) or []):
+        obs = registry.get(ref)
+        if obs and getattr(obs, "is_valid", False):
+            val = getattr(obs, "current_value", None)
+            if val is not None:
+                name = (
+                    getattr(obs, "observable_name", None)
+                    or getattr(obs, "indicator_name", None)
+                    or getattr(obs, "indicator", None)
+                    or ref
+                )
+                unit = getattr(obs, "unit", "") or ""
+                line = f"{name} = {val} {unit}".strip()
+                if line not in backfilled:
+                    backfilled.append(line)
+    if backfilled:
+        asset.supporting_data = backfilled
+        _clear_resolved_hard_data_warnings(asset)
 
 
 
@@ -723,7 +800,8 @@ class AssetAllocationView(BaseModel):
             if self.confidence == "high":
                 self.confidence = "medium"
             _add_warning_idempotent(self.validation_warnings, str(WarningMessage(SINGLE_SOURCE_PENALTY)))
-        if not _has_hard_data_numbers(self.supporting_data):
+        has_hard_data = _has_hard_data_numbers(self.supporting_data) or bool(self.observable_refs)
+        if not has_hard_data:
             self.confidence = "low"
             _add_warning_idempotent(self.validation_warnings, str(WarningMessage(DEFENSIVE_LOW_SUPPORTING_DATA)))
         if self.confidence == "low" and self.stance != AssetStance.NEUTRAL:
@@ -808,11 +886,11 @@ class PairTradeStrategy(BaseModel):
 
         import re
         has_stat_evidence = any(
-            re.search(r'(?i)\b(beta|z-score|standard deviation|sd|correlation)\b', str(d))
+            re.search(r'(?i)(?<![A-Za-z0-9])(beta|z-score|standard deviation|sd|correlation)(?![A-Za-z0-9])', str(d))
             for d in (self.supporting_data + self.observable_refs)
         )
         if not has_stat_evidence:
-            if re.search(r'(?i)\bbeta[- ]?adjusted\b', str(self.hedge_ratio)) or re.search(r'(?i)\b(\d+(?:\.\d+)?)\s*(?:sd|z-score)\b', str(self.entry_trigger)):
+            if re.search(r'(?i)(?<![A-Za-z0-9])beta[- ]?adjusted(?![A-Za-z0-9])', str(self.hedge_ratio)) or re.search(r'(?i)(?<![A-Za-z0-9])(\d+(?:\.\d+)?)\s*(?:sd|z-score)(?![A-Za-z0-9])', str(self.entry_trigger)):
                 if self.confidence == "high":
                     self.confidence = "medium"
                 _add_warning_idempotent(self.validation_warnings, str(WarningMessage(STATISTICAL_OVERCLAIM)))
@@ -1005,6 +1083,7 @@ class MacroStrategyDirection(BaseModel):
         data["validation_warnings"] = [
             w for w in data.get("validation_warnings", [])
             if "SOURCE_REF_PENALTY" not in str(w)
+            and "FX_SPREAD_DATA_UNAVAILABLE" not in str(w)
         ]
         for a in data.get("asset_allocation", []):
             a["validation_warnings"] = [
@@ -1012,6 +1091,7 @@ class MacroStrategyDirection(BaseModel):
                 if "MISSING_OBSERVABLE_REFS" not in str(w)
                 and "SUPPORTING_DATA_MISMATCH" not in str(w)
                 and "SOURCE_REF_PENALTY" not in str(w)
+                and "FX_SPREAD_DATA_UNAVAILABLE" not in str(w)
             ]
         return type(self).model_validate(data)
 
@@ -1024,6 +1104,8 @@ class MacroStrategyDirection(BaseModel):
         for a in self.asset_allocation:
             if self.observable_registry and not a.observable_refs:
                 _auto_link_observable_refs(a, self.observable_registry)
+            if self.observable_registry and a.observable_refs:
+                _auto_backfill_supporting_data(a, self.observable_registry)
             old_r = a.rationale
             a.rationale = _clean_hallucinated_attributions(a.rationale)
             a.supporting_data = [_clean_hallucinated_attributions(sd) for sd in a.supporting_data]
@@ -1148,7 +1230,13 @@ class MacroStrategyDirection(BaseModel):
                 if valid_ref_files:
                     a.source_refs = sorted(list(set(a.source_refs or []) | set(valid_ref_files)))
             valid_source_files = _valid_source_files_for_refs(a.observable_refs, self.observable_registry) if self.observable_registry else set()
-            if len(valid_source_files) >= 2:
+            valid_source_identities = _valid_source_identities_for_refs(a.observable_refs, self.observable_registry) if self.observable_registry else set()
+            has_corroboration = (
+                len(valid_source_files) >= 2
+                or len(valid_source_identities) >= 2
+                or _has_multi_source_or_indicator_corroboration(a.observable_refs, self.observable_registry)
+            )
+            if has_corroboration:
                 was_single = any("Single-Source Penalty" in str(w) or "SINGLE_SOURCE_PENALTY" in str(w) for w in a.validation_warnings)
                 a.validation_warnings = [
                     w for w in a.validation_warnings if "Single-Source Penalty" not in w and "SINGLE_SOURCE_PENALTY" not in w
@@ -1157,49 +1245,57 @@ class MacroStrategyDirection(BaseModel):
                     a.confidence = "high"
 
         # AG-215: Check whether valid policy rate spread observable exists in registry
-        has_valid_us_th_spread = False
-        if self.observable_registry:
+        if self.observable_registry is not None:
+            has_valid_us_th_spread = False
             for oid, obs in self.observable_registry.items():
                 if getattr(obs, "is_valid", False):
                     if oid == "obs_diff_us_th_policy_rate_bis" or ("diff" in oid and "policy_rate" in oid and "th" in oid):
                         has_valid_us_th_spread = True
                         break
 
-        spread_pattern = re.compile(r'(ส่วนต่าง(อัตรา)?ดอกเบี้ย(นโยบาย)?|policy (rate )?spread|rate differential|fed[-–]bot|bot[-–]fed|ส่วนต่าง fed)', re.IGNORECASE)
-        spread_claim_pattern = re.compile(r'(\+?\d+([.,]\d+)?\s*(?:bps|%|จุด)|(?:กว้าง|แคบ|อยู่ที่|ประมาณ)\s*\+?\d+)', re.IGNORECASE)
-
-        if not has_valid_us_th_spread:
-            for a in self.asset_allocation:
-                bucket = (getattr(a, "asset_bucket", "") or "").lower()
-                aclass = (getattr(a, "asset_class", "") or "").lower()
-                is_fx = (bucket == "fx") or ("fx" in aclass) or ("thb" in aclass) or ("usd" in aclass) or ("currency" in aclass)
-
-                claims_spread = (
-                    bool(spread_pattern.search(a.rationale or ""))
-                    or any(spread_pattern.search(str(sd)) for sd in a.supporting_data)
-                )
-                if is_fx and claims_spread:
-                    cleaned_rat = a.rationale or ""
-                    cleaned_rat = re.sub(r'(\+?\d+([.,]\d+)?\s*(?:bps|%|จุด)|(?:กว้าง|แคบ|อยู่ที่|ประมาณ)\s*\+?\d+([.,]\d+)?\s*(?:bps|%|จุด)?)', '', cleaned_rat, flags=re.IGNORECASE)
-                    cleaned_rat = re.sub(r'\s{2,}', ' ', cleaned_rat).strip()
-                    if "ยังไม่มีข้อมูล" not in cleaned_rat:
-                        cleaned_rat = cleaned_rat.rstrip(". ") + " (ปัจจุบันยังไม่มีข้อมูลส่วนต่างอัตราดอกเบี้ยนโยบายที่ยืนยันได้ จึงยังประเมินส่วนต่างไม่ได้)"
-                    a.rationale = cleaned_rat
-
-
-                    a.supporting_data = [
-                        sd for sd in a.supporting_data
-                        if not (spread_pattern.search(str(sd)) and (spread_claim_pattern.search(str(sd)) or re.search(r'\bbps\b', str(sd), re.IGNORECASE)))
+            if has_valid_us_th_spread:
+                self.validation_warnings = [
+                    w for w in self.validation_warnings if "FX_SPREAD_DATA_UNAVAILABLE" not in str(w)
+                ]
+                for a in self.asset_allocation:
+                    a.validation_warnings = [
+                        w for w in a.validation_warnings if "FX_SPREAD_DATA_UNAVAILABLE" not in str(w)
                     ]
+            else:
+                spread_pattern = re.compile(r'(ส่วนต่าง(อัตรา)?ดอกเบี้ย(นโยบาย)?|policy (rate )?spread|rate differential|fed[-–]bot|bot[-–]fed|ส่วนต่าง fed)', re.IGNORECASE)
+                spread_claim_pattern = re.compile(r'(\+?\d+([.,]\d+)?\s*(?:bps|%|จุด)|(?:กว้าง|แคบ|อยู่ที่|ประมาณ)\s*\+?\d+)', re.IGNORECASE)
 
-                    if a.confidence == "high":
-                        a.confidence = "medium"
-                    elif a.confidence == "medium":
-                        a.confidence = "low"
+                for a in self.asset_allocation:
+                    bucket = (getattr(a, "asset_bucket", "") or "").lower()
+                    aclass = (getattr(a, "asset_class", "") or "").lower()
+                    is_fx = (bucket == "fx") or ("fx" in aclass) or ("thb" in aclass) or ("usd" in aclass) or ("currency" in aclass)
 
-                    _add_warning_idempotent(a.validation_warnings, str(WarningMessage(FX_SPREAD_DATA_UNAVAILABLE)))
-                    _add_warning_idempotent(self.validation_warnings, str(WarningMessage(FX_SPREAD_DATA_UNAVAILABLE)))
-                    _normalize_why_not_high(a)
+                    claims_spread = (
+                        bool(spread_pattern.search(a.rationale or ""))
+                        or any(spread_pattern.search(str(sd)) for sd in a.supporting_data)
+                    )
+                    if is_fx and claims_spread:
+                        cleaned_rat = a.rationale or ""
+                        cleaned_rat = re.sub(r'(\+?\d+([.,]\d+)?\s*(?:bps|%|จุด)|(?:กว้าง|แคบ|อยู่ที่|ประมาณ)\s*\+?\d+([.,]\d+)?\s*(?:bps|%|จุด)?)', '', cleaned_rat, flags=re.IGNORECASE)
+                        cleaned_rat = re.sub(r'\s{2,}', ' ', cleaned_rat).strip()
+                        if "ยังไม่มีข้อมูล" not in cleaned_rat:
+                            cleaned_rat = cleaned_rat.rstrip(". ") + " (ปัจจุบันยังไม่มีข้อมูลส่วนต่างอัตราดอกเบี้ยนโยบายที่ยืนยันได้ จึงยังประเมินส่วนต่างไม่ได้)"
+                        a.rationale = cleaned_rat
+
+
+                        a.supporting_data = [
+                            sd for sd in a.supporting_data
+                            if not (spread_pattern.search(str(sd)) and (spread_claim_pattern.search(str(sd)) or re.search(r'(?i)(?<![A-Za-z0-9])bps(?![A-Za-z0-9])', str(sd))))
+                        ]
+
+                        if a.confidence == "high":
+                            a.confidence = "medium"
+                        elif a.confidence == "medium":
+                            a.confidence = "low"
+
+                        _add_warning_idempotent(a.validation_warnings, str(WarningMessage(FX_SPREAD_DATA_UNAVAILABLE)))
+                        _add_warning_idempotent(self.validation_warnings, str(WarningMessage(FX_SPREAD_DATA_UNAVAILABLE)))
+                        _normalize_why_not_high(a)
 
         valid_pair_trades = []
         dropped_pair_trades = 0
@@ -1304,7 +1400,7 @@ class MacroStrategyDirection(BaseModel):
             return self
 
         low_conf_count = sum(1 for a in self.asset_allocation if a.confidence == "low" or not _has_hard_data_numbers(a.supporting_data))
-        if (low_conf_count / len(self.asset_allocation)) >= 0.5:
+        if len(self.asset_allocation) > 0 and (low_conf_count / len(self.asset_allocation)) >= 0.5:
             self.conviction_level = "low"
             _add_warning_idempotent(self.validation_warnings, str(WarningMessage(PORTFOLIO_DEFENSIVE_LOW, {"ratio": f"{low_conf_count}/{len(self.asset_allocation)}"})))
         else:

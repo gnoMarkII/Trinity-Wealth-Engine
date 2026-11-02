@@ -83,15 +83,19 @@ describe('AiBriefingCard', () => {
     // Rationale
     expect(screen.getByText(/เงินเฟ้อภาคบริการยังคงทรงตัวในระดับสูง/)).toBeInTheDocument()
 
-    // Stance chips
-    expect(screen.getByText('US Short Treasuries')).toBeInTheDocument()
-    expect(screen.getByText('High-Beta Equities')).toBeInTheDocument()
+    // Regime Weather & Actionable Rule of Thumb
+    expect(screen.getByText(/สภาพอากาศเศรษฐกิจ: พายุเศรษฐกิจ \(Stagflation\)/)).toBeInTheDocument()
+    expect(screen.getByText(/สูตรจำสำหรับเงินของคุณ:/)).toBeInTheDocument()
 
-    // Top Warning
-    expect(screen.getByText(/จับตาราคาน้ำมันดิบ WTI/)).toBeInTheDocument()
+    // Safety Invalidation Trigger Bar
+    expect(
+      screen.getByText(/เบรกเกอร์ตัดไฟ \(จุดที่ต้องยอมรับว่าสมมติฐานผิด \/ Invalidation Triggers\)/)
+    ).toBeInTheDocument()
 
-    // Navigation link
-    const linkBtn = screen.getByRole('button', { name: /ดูพอร์ตเต็ม →/i })
+    // Navigation link to detailed 5D / Portfolio Tab
+    const linkBtn = screen.getByRole('button', {
+      name: /ดูสัดส่วนพอร์ตและหลักฐาน 5 มิติในแท็บด้านล่าง/i,
+    })
     await userEvent.click(linkBtn)
     expect(onNavigate).toHaveBeenCalledTimes(1)
 

@@ -17,6 +17,7 @@ from youtube_transcript_api import (
 
 from core.logger import get_logger
 from core.model_registry import get_model_name
+from core.text_utils import strip_html_tags
 from .core import _call_extractor_llm, _extractor_system_prompt
 
 log = get_logger(__name__)
@@ -262,7 +263,9 @@ def _get_ytdlp_subtitles(video_id: str) -> str | None:
                 line = line.strip()
                 if not line or "-->" in line or line.startswith("WEBVTT") or re.match(r"^\d+$", line):
                     continue
-                clean_line = re.sub(r"<[^>]+>", "", line).strip()
+                # Strip WebVTT cue timestamps (e.g. <00:01:23.456>) and tags safely
+                line_no_cues = re.sub(r"<\d{2}:[^>]+>", "", line)
+                clean_line = strip_html_tags(line_no_cues).strip()
                 if clean_line and (not lines or lines[-1] != clean_line):
                     lines.append(clean_line)
             text = " ".join(lines)

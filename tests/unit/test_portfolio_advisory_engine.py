@@ -252,6 +252,17 @@ def test_narrative_consistency_and_contradiction_validation():
     assert is_ok_h is False
     assert any("Hallucinated Ticker Detected: 'TSLA'" in e for e in errs_h)
 
+    # 4. Thai-adjacent Hallucinated Ticker without spaces
+    hallucinated_thai_adjacent = {
+        "macro_executive_summary": "แนะนำให้เปิดสถานะในNVDAทันทีเพื่อรับคลื่นAI",
+        "immediate_action_playbook": [],
+        "conditional_dip_plan": [],
+        "risk_mitigation_and_hedging": [],
+    }
+    is_ok_th, errs_th = validate_advisory_narrative_consistency(hallucinated_thai_adjacent, report)
+    assert is_ok_th is False
+    assert any("Hallucinated Ticker Detected: 'NVDA'" in e for e in errs_th)
+
 
 def test_real_portfolio_state_schema_integration():
     """Verifies real PortfolioState fields: fx_rates['USDTHB'], allocation_targets, company_name, and QuantSignals.beta."""

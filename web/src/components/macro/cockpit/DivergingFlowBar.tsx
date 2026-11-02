@@ -43,6 +43,29 @@ export const DivergingFlowBar: React.FC<DivergingFlowBarProps> = ({
     )
   }
 
+  const isAllZero =
+    flow.investors.length > 0 &&
+    flow.investors.every(
+      (i) =>
+        (i.buy_value === 0 || i.buy_value == null) &&
+        (i.sell_value === 0 || i.sell_value == null) &&
+        (i.net_value === 0 || i.net_value == null)
+    )
+
+  if (isAllZero) {
+    return (
+      <div className={`rounded-2xl border border-amber-200/80 bg-amber-50/60 p-5 text-xs text-amber-900 ${className}`}>
+        <div className="font-bold flex items-center gap-1.5">
+          <span>⏳</span>
+          <span>SET Investor Fund Flow: อยู่ระหว่างรอเชื่อมต่อข้อมูลตลาด</span>
+        </div>
+        <p className="mt-1 text-zinc-600">
+          ยังไม่มีข้อมูลกระแสเงินทุน 4 กลุ่มนักลงทุนรายวันจากตลาดหลักทรัพย์แห่งประเทศไทย (SET)
+        </p>
+      </div>
+    )
+  }
+
   // Calculate max absolute net value for scale
   const maxAbsNet = Math.max(
     1_000_000,

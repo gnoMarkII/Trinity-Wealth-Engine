@@ -1,5 +1,6 @@
 import React from 'react'
 import type { CryptoMacroLiquidityDTO } from '../../api/types'
+import { ContextTooltip } from './explainer/ContextTooltip'
 
 interface CryptoLiquidityCardProps {
   data: CryptoMacroLiquidityDTO | null
@@ -55,6 +56,12 @@ export const CryptoLiquidityCard: React.FC<CryptoLiquidityCardProps> = ({
         <div>
           <h3 className="text-base font-bold text-zinc-900 tracking-tight flex items-center gap-2">
             <span>สภาพคล่องโลกและสินทรัพย์ดิจิทัล (Crypto Macro Liquidity Radar)</span>
+            <ContextTooltip
+              title="ปรอทวัดสภาพคล่องเงินสดใน Wall Street (Crypto Macro Liquidity)"
+              whatIsIt="ตัวชี้วัดกระแสเงินสดส่วนเกินและเม็ดเงินสถาบัน Wall Street ที่ไหลเข้าสินทรัพย์ดิจิทัลผ่าน Bitcoin ETF และ Stablecoin"
+              howToRead="เม็ดเงินไหลเข้าสุทธิ (ETF Net Inflow เป็นบวก) แปลว่านักลงทุนสถาบันกล้าได้กล้าเสียและสภาพคล่องในระบบสูง"
+              impactOnMoney="สภาพคล่องที่สูงเป็นปัจจัยหนุนตลาดหุ้นและสินทรัพย์เสี่ยง หากเงินไหลออกต่อเนื่องควรระวังการปรับฐาน"
+            />
             <span className="rounded-full bg-sky-100 text-sky-800 font-mono text-[10px] font-bold px-2.5 py-0.5">
               Level 1 Proxy
             </span>
@@ -62,6 +69,9 @@ export const CryptoLiquidityCard: React.FC<CryptoLiquidityCardProps> = ({
           <p className="text-xs text-zinc-500">
             ตรวจวัดสภาพคล่องเงินสดในระบบ (Dry Powder) และความกล้าเสี่ยงของตลาดโลก ผ่าน Stablecoin Supply, BTC/Gold Ratio และ ETF Flow
           </p>
+          <div className="mt-2 text-[11px] text-sky-900 bg-sky-50/80 rounded-lg p-2 border border-sky-100/70 font-medium leading-relaxed">
+            🌊 <strong>ปรอทวัดสภาพคล่อง Wall Street:</strong> วันนี้มีเม็ดเงินสถาบันไหลเข้ามาเก็งกำไรสินทรัพย์เสี่ยง หรือกำลังถอนเงินสดกลับไปพักในสินทรัพย์ปลอดภัย
+          </div>
         </div>
 
         <div className="flex items-center gap-2">

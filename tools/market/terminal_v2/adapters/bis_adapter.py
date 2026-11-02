@@ -5,12 +5,14 @@ Keyless, CORS-open SDMX v2 REST API covering 12 major central banks.
 """
 import csv
 import io
+import re
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Dict, List, Optional
 import requests
 
 from core.logger import get_logger
+from schemas.macro_schemas import MarketObservable
 from tools.market.terminal_v2.application.cache import TerminalTtlCache
 from tools.market.terminal_v2.domain.calculations import calculate_policy_rate_spreads
 from tools.market.terminal_v2.domain.models import (
@@ -173,3 +175,129 @@ class BisPolicyRatesHttpAdapter(GlobalPolicyRatesPort):
             source="BIS",
             is_stale=snapshot_stale,
         )
+
+    def as_macro_observables(
+        self,
+        snapshot: Optional[GlobalPolicyRateSnapshot] = None,
+        as_of_date: Optional[str] = None,
+    ) -> List[MarketObservable]:
+        """Convert BIS policy rates snapshot into typed MarketObservables."""
+        if snapshot is None:
+            try:
+                snapshot = self.fetch_global_policy_rates()
+            except Exception as exc:
+                logger.warning("Could not fetch BIS policy rates for observables: %s", exc)
+                return []
+
+        today_str = as_of_date or datetime.now(timezone.utc).strftime("%Y-%m-%d")
+        obs_date = snapshot.as_of_date or today_str
+        if len(obs_date) == 7:
+            obs_date = f"{obs_date}-01"
+        elif not re.fullmatch(r"\d{4}-\d{2}-\d{2}", obs_date):
+            obs_date = today_str
+
+        observables: List[MarketObservable] = []
+        is_snap_stale = snapshot.is_stale
+
+        region_map = {
+            "US": "United States",
+            "TH": "Thailand",
+            "XM": "Euro Area",
+            "JP": "Japan",
+            "CN": "China",
+            "IN": "India",
+            "GB": "United Kingdom",
+            "KR": "South Korea",
+            "ID": "Indonesia",
+            "MY": "Malaysia",
+            "PH": "Philippines",
+            "AU": "Australia",
+        }
+
+        us_rate_val: Optional[float] = None
+        us_rate_valid = False
+        th_rate_val: Optional[float] = None
+        th_rate_valid = False
+
+        for item in snapshot.rates:
+            ctry = (item.country or "").strip().upper()
+            rate = item.rate_value
+            eff_date = item.effective_date or obs_date
+            if len(eff_date) == 7:
+                eff_date = f"{eff_date}-01"
+            elif not re.fullmatch(r"\d{4}-\d{2}-\d{2}", eff_date):
+                eff_date = obs_date
+
+            item_valid = (not is_snap_stale) and (not item.is_stale)
+            region = region_map.get(ctry, ctry)
+
+            if ctry == "US":
+                obs_id = "obs_us_policy_rate_bis"
+                indicator = "US Fed Funds Policy Rate (BIS)"
+                us_rate_val = rate
+                us_rate_valid = item_valid
+            elif ctry == "TH":
+                obs_id = "obs_thai_policy_rate_bis"
+                indicator = "Bank of Thailand Policy Rate (BIS)"
+                th_rate_val = rate
+                th_rate_valid = item_valid
+            else:
+                obs_id = f"obs_{ctry.lower()}_policy_rate_bis"
+                indicator = f"{item.central_bank} Policy Rate (BIS)"
+
+            val_str = f"{rate:.3f}" if rate != round(rate, 2) else f"{rate:.2f}"
+            observables.append(
+                MarketObservable(
+                    observable_id=obs_id,
+                    asset_bucket="cash",
+                    region=region,
+                    indicator=indicator,
+                    value=val_str,
+                    unit="%",
+                    observed_at=eff_date,
+                    source_file="Terminal_V2_BIS",
+                    provider="Terminal V2 (BIS)",
+                    confidence="high" if item_valid else "low",
+                    is_valid=item_valid,
+                    status="verified" if item_valid else "stale",
+                    stale_reason="Observation age exceeds fresh threshold" if not item_valid else "",
+                    metadata={
+                        "raw_country": ctry,
+                        "numeric_value": rate,
+                        "previous_rate": item.previous_rate,
+                        "rate_type": item.rate_type,
+                        "central_bank": item.central_bank,
+                        "currency": item.currency,
+                        "last_change_date": item.last_change_date,
+                    },
+                )
+            )
+
+        # Differential: US - TH
+        if us_rate_val is not None and th_rate_val is not None and us_rate_valid and th_rate_valid:
+            diff_pct = us_rate_val - th_rate_val
+            diff_bps = round(diff_pct * 100.0, 1)
+            observables.append(
+                MarketObservable(
+                    observable_id="obs_diff_us_th_policy_rate_bis",
+                    asset_bucket="cash",
+                    region="Global",
+                    indicator="US-Thailand Policy Rate Differential (BIS)",
+                    value=f"{diff_bps:.1f}",
+                    unit="bps",
+                    observed_at=obs_date,
+                    source_file="Terminal_V2_BIS",
+                    provider="Terminal V2 (BIS)",
+                    confidence="high",
+                    is_valid=True,
+                    status="verified",
+                    metadata={
+                        "diff_bps": diff_bps,
+                        "diff_pct": round(diff_pct, 4),
+                        "us_rate": us_rate_val,
+                        "th_rate": th_rate_val,
+                    },
+                )
+            )
+
+        return observables

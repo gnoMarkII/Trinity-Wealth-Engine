@@ -13,10 +13,11 @@ CASH_VIA_MANAGE = (
     "Error: ห้ามจัดการ cash sentinel ({symbols}) ผ่านเครื่องมือนี้ "
     "— ใช้ 'manage_cash_flow' แทน"
 )
-GOAL_VIA_BOOKKEEPER = (
+GOAL_NOT_IN_VAULT = (
     "Error: ห้ามบันทึก goal/financial_goal ด้วย write_raw_markdown "
-    "— ให้ใช้ 'set_goal' ของ Bookkeeper แทน"
+    "— การตั้งเป้าหมายทางการเงินให้ดำเนินการผ่านหน้า All-Asset Portfolio (/portfolio)"
 )
+GOAL_VIA_BOOKKEEPER = GOAL_NOT_IN_VAULT  # Backward-compatibility alias
 ENTITY_VIA_SAVE_MEMORY = (
     "Error: write_raw_markdown สำหรับ raw markdown เท่านั้น "
     "— ใช้ 'save_memory' เพื่อสร้าง/อัปเดต Entity"

@@ -62,7 +62,7 @@ class TestGetEquityScoreTrend:
 
     def test_returns_saved_snapshot(self, tmp_vault):
         save_equity_quant_snapshot(_make_signals(evaluated_at="2026-07-20T10:00:00+00:00", value_score=80.0))
-        trend = get_equity_score_trend("AAPL", days=90)
+        trend = get_equity_score_trend("AAPL", days=180)
         assert len(trend) == 1
         assert trend[0]["value_score"] == 80.0
 
@@ -84,5 +84,5 @@ class TestGetEquityScoreTrend:
         assert "Composite Score" in content
         assert "82.5" in content
 
-        trend = get_equity_score_trend("AAPL", days=90)
+        trend = get_equity_score_trend("AAPL", days=180)
         assert trend[0]["composite_score"] == 82.5

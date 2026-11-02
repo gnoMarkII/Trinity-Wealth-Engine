@@ -219,10 +219,13 @@ def test_evaluator_structural_capacity_when_cash_is_zero(base_candidate):
 
 
 def test_asset_classification_word_boundary_netflix():
-    """Netflix must not be misclassified as an ETF due to substring matching."""
+    """Netflix must not be misclassified as an ETF due to substring matching, but Thai-adjacent ETF/REIT must be classified."""
     from core.portfolio.security_identity import classify_asset_type
     assert classify_asset_type("NFLX", asset_type_raw="Stock", name="Netflix, Inc.") == "EQUITY"
     assert classify_asset_type("SPY", asset_type_raw="ETF", name="SPDR S&P 500 ETF Trust") == "ETF"
+    assert classify_asset_type("TDEX", asset_type_raw="", name="กองทุนETF") == "ETF"
+    assert classify_asset_type("WHART", asset_type_raw="", name="กองทุนเปิดREIT") == "REIT"
+    assert classify_asset_type("CPNREIT", asset_type_raw="", name="กองทุนรวมอสังหาริมทรัพย์และREIT") == "REIT"
 
 
 def test_evaluator_composite_score_priority_thresholds(base_candidate):

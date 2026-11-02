@@ -1,4 +1,5 @@
 import React from 'react'
+import { ContextTooltip } from './explainer'
 
 export interface TacticalStageCycleBarProps {
   currentStage?: string | null
@@ -20,8 +21,8 @@ export const TacticalStageCycleBar: React.FC<TacticalStageCycleBarProps> = ({
     {
       num: 1,
       title: 'Stage 1: Accumulation',
-      sub: 'ฐานราคา / ไร้ทิศทาง',
-      action: 'Watchlist / รอระเบิดตัว',
+      sub: 'ช่วงสะสมพลัง (สร้างฐานราก รายใหญ่แอบเก็บเงียบๆ)',
+      action: 'เฝ้ารอ: ใส่ Watchlist รอดักตอนเบรกเอาท์ผ่านกรอบ',
       isActive: isStage1,
       activeColor: 'bg-sky-500 text-white border-sky-600 shadow-[0_0_12px_rgba(14,165,233,0.4)]',
       barColor: isStage1 ? 'bg-sky-500' : 'bg-zinc-200',
@@ -29,8 +30,8 @@ export const TacticalStageCycleBar: React.FC<TacticalStageCycleBarProps> = ({
     {
       num: 2,
       title: 'Stage 2: Markup',
-      sub: 'ขาขึ้นแข็งแกร่ง (MA200 ชี้ขึ้น)',
-      action: 'Aggressive Buy / Ride Trend',
+      sub: 'ช่วงขาขึ้นจริง (ราคายืนเหนือ MA200 วิ่งรันเทรนด์แข็งแกร่ง)',
+      action: 'สเตจที่ดีที่สุด: ทยอยสะสมเมื่อราคาย่อตัวใน Buy Zone',
       isActive: isStage2,
       activeColor: 'bg-emerald-600 text-white border-emerald-700 shadow-[0_0_12px_rgba(16,185,129,0.5)]',
       barColor: isStage2 ? 'bg-emerald-500' : 'bg-zinc-200',
@@ -38,8 +39,8 @@ export const TacticalStageCycleBar: React.FC<TacticalStageCycleBarProps> = ({
     {
       num: 3,
       title: 'Stage 3: Distribution',
-      sub: 'ยอดดอย / สถาบันปล่อยของ',
-      action: 'Take Profit / ลดขนาดพอร์ต',
+      sub: 'ช่วงแจกจ่าย (รายใหญ่เริ่มปล่อยของ ราคากวัดแกว่งตึงตัว)',
+      action: 'ระวังตัว: ทยอยล็อคกำไร ห้ามไล่ราคาเด็ดขาด',
       isActive: isStage3,
       activeColor: 'bg-amber-500 text-white border-amber-600 shadow-[0_0_12px_rgba(245,158,11,0.4)]',
       barColor: isStage3 ? 'bg-amber-500' : 'bg-zinc-200',
@@ -47,8 +48,8 @@ export const TacticalStageCycleBar: React.FC<TacticalStageCycleBarProps> = ({
     {
       num: 4,
       title: 'Stage 4: Markdown',
-      sub: 'ขาลง / ต่ำกว่า MA200',
-      action: 'Cash is King / หลีกเลี่ยง',
+      sub: 'ช่วงขาลง (แรงเทขายต่อเนื่อง หลุดเส้น MA200 เป็นแนวโน้มลง)',
+      action: 'อันตรายสูงสุด: ถือเงินสด ห้ามรับมีดหรือถัวเฉลี่ยเด็ดขาด',
       isActive: isStage4,
       activeColor: 'bg-rose-600 text-white border-rose-700 shadow-[0_0_12px_rgba(244,63,94,0.5)]',
       barColor: isStage4 ? 'bg-rose-500' : 'bg-zinc-200',
@@ -66,6 +67,12 @@ export const TacticalStageCycleBar: React.FC<TacticalStageCycleBarProps> = ({
           <span className="text-xs font-bold text-zinc-800 tracking-tight">
             Stan Weinstein 4-Stage Market Cycle Timeline
           </span>
+          <ContextTooltip
+            title="วัฏจักรราคา 4 สเตจ (Stan Weinstein 4-Stage Market Cycle)"
+            whatIsIt="ทฤษฎีวิเคราะห์วงจรชีวิตราคาหุ้นของ Stan Weinstein ที่แบ่งพฤติกรรมราคาหุ้นออกเป็น 4 ช่วงตามแนวโน้มและเส้นค่าเฉลี่ย 200 วัน"
+            howToRead="Stage 1: สะสมพลัง ➔ Stage 2: ขาขึ้นจริง (จังหวะซื้อและถือทำกำไร) ➔ Stage 3: กระจายของ (เตรียมขายทำกำไร) ➔ Stage 4: ขาลง (หลีกเลี่ยง ไม่ควรรับมีด)"
+            impactOnMoney="ช่วยป้องกันการเข้าซื้อผิดจังหวะ โดยเฉพาะหุ้น Stage 4 ที่ราคาลงต่อเนื่องแม้จะดูเหมือนถูกก็ตาม"
+          />
         </div>
         <div className="flex items-center gap-1.5">
           <span className="text-[11px] text-zinc-400">Current Phase:</span>

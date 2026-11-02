@@ -90,7 +90,7 @@ export default function KanbanCardModal({
         ) : (
           <div>
             <label htmlFor="kanban-card-prompt" className="mb-1 block text-xs font-medium text-zinc-600">
-              Prompt สำหรับ Manager (ไม่บังคับ)
+              Prompt สำหรับ Swarm Supervisor (ไม่บังคับ)
             </label>
             <textarea
               id="kanban-card-prompt"

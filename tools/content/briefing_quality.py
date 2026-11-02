@@ -2,6 +2,7 @@
 import re
 from typing import Any, Tuple, List
 
+from core.financial_parsers import extract_financial_decimal
 from schemas.briefing_book_schemas import (
     ResearchQualityReport,
     QualityIssueRecord,
@@ -14,7 +15,7 @@ from schemas.briefing_book_schemas import (
 def _years_in_text(text: str) -> set:
     if not text:
         return set()
-    return set(re.findall(r"\b(19\d{2}|20\d{2})\b", str(text)))
+    return set(re.findall(r"(?<!\d)(19\d{2}|20\d{2})(?!\d)", str(text)))
 
 
 def validate_briefing_book_structure(rendered: RenderedBriefing) -> Tuple[bool, List[str]]:
@@ -259,7 +260,10 @@ def validate_briefing_book_quality(
                         ev_val = float(ev.value)
                         for num_str in numbers:
                             try:
-                                num_val = float(num_str.replace(",", ""))
+                                dec_val = extract_financial_decimal(num_str)
+                                if dec_val is None:
+                                    continue
+                                num_val = float(dec_val)
                                 diff = abs(num_val - ev_val)
                                 if diff < 0.05 or (ev_val != 0 and (diff / abs(ev_val)) < 0.02):
                                     found = True

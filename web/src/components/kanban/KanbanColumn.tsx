@@ -25,6 +25,7 @@ interface Props {
   onCardClick: (card: KanbanCardDTO) => void
   onEditCard?: (card: KanbanCardDTO) => void
   onDispatchCard?: (card: KanbanCardDTO) => void
+  onAskAiCard?: (card: KanbanCardDTO) => void
 }
 
 export default function KanbanColumn({
@@ -40,6 +41,7 @@ export default function KanbanColumn({
   onCardClick,
   onEditCard,
   onDispatchCard,
+  onAskAiCard,
 }: Props) {
   return (
     <div className="flex h-full flex-col rounded-2xl border border-sky-100 bg-white/70 p-2.5 shadow-[0_10px_35px_rgba(14,165,233,0.06)] backdrop-blur-md transition-colors duration-150">
@@ -61,6 +63,7 @@ export default function KanbanColumn({
             dispatchDisabled={dispatchDisabled}
             onEdit={onEditCard ? () => onEditCard(c) : undefined}
             onDispatch={onDispatchCard ? () => onDispatchCard(c) : undefined}
+            onAskAi={onAskAiCard ? () => onAskAiCard(c) : undefined}
             style={staggerCards ? { animationDelay: `${Math.min(i * STAGGER_STEP_MS, STAGGER_CAP_MS)}ms` } : undefined}
           />
         ))}

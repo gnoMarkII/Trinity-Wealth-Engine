@@ -235,7 +235,7 @@ def normalize_sector_name(raw_name: str) -> Tuple[str, str]:
                     return gics_en, thai_name
             elif any(ord(c) < 128 for c in kw_l):
                 # Multi-word English phrase with word boundary
-                if re.search(r"\b" + re.escape(kw_l) + r"\b", cleaned):
+                if re.search(rf"(?<![a-z0-9]){re.escape(kw_l)}(?![a-z0-9])", cleaned):
                     return gics_en, thai_name
             else:
                 # Thai keyword substring match

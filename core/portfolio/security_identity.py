@@ -69,34 +69,35 @@ def classify_asset_type(
     if any(k in raw_type for k in ("CASH", "CURRENCY", "DEPOSIT", "MONEY MARKET", "LIQUIDITY")) or sym in ("CASH", "THB", "USD"):
         return "CASH"
 
-    # 2. Funds / ETFs / PVD (Checked before Gold/Bonds to avoid misidentifying gold mutual funds like SCBGOLD or PVD_SINSA_GOLD as direct physical assets)
-    if any(k in raw_type for k in ("MUTUAL_FUND", "FUND", "PVD", "RMF", "SSF", "THAIESG")) or sym.startswith("PVD_") or "กองทุน" in nm:
-        if bool(re.search(r"\betf\b", raw_type, re.IGNORECASE)) or bool(re.search(r"\betf\b", nm, re.IGNORECASE)):
-            return "ETF"
-        return "FUND"
-
-    if raw_type == "ETF" or bool(re.search(r"\betf\b", nm, re.IGNORECASE)):
-        return "ETF"
-
-    # 3. Gold / Precious Metals
-    if sym in _GOLD_SYMBOLS or raw_type == "GOLD" or "ทองคำ" in nm or ("GOLD" in sym and not any(k in raw_type for k in ("FUND", "PVD", "RMF", "SSF"))):
-        return "GOLD"
-
-    # 4. Fixed Income / Bonds
-    if any(k in raw_type for k in ("BOND", "DEBENTURE", "TREASURY", "FIXED INCOME", "ตราสารหนี้")) or "พันธบัตร" in nm or "หุ้นกู้" in nm:
-        return "BOND"
-
-    # 5. REITs & Property Infrastructure Funds
     clean_sym = sym.replace(".BK", "")
+
+    # 2. REITs & Property Infrastructure Funds (Checked before generic Funds so Property/Infra Funds aren't masked by 'กองทุน')
     if (
         clean_sym in _THAI_REIT_SYMBOLS
         or raw_type in ("REIT", "PROPERTY FUND")
         or "ทรัสต์เพื่อการลงทุนในอสังหาริมทรัพย์" in nm
         or "กองทุนรวมอสังหาริมทรัพย์" in nm
         or "กองทุนรวมโครงสร้างพื้นฐาน" in nm
-        or bool(re.search(r"\breit\b", nm, re.IGNORECASE))
+        or bool(re.search(r"(?<![A-Za-z0-9])reit(?![A-Za-z0-9])", nm, re.IGNORECASE))
     ):
         return "REIT"
+
+    # 3. Funds / ETFs / PVD (Checked before Gold/Bonds to avoid misidentifying gold mutual funds like SCBGOLD or PVD_SINSA_GOLD as direct physical assets)
+    if any(k in raw_type for k in ("MUTUAL_FUND", "FUND", "PVD", "RMF", "SSF", "THAIESG")) or sym.startswith("PVD_") or "กองทุน" in nm:
+        if bool(re.search(r"(?<![A-Za-z0-9])etf(?![A-Za-z0-9])", raw_type, re.IGNORECASE)) or bool(re.search(r"(?<![A-Za-z0-9])etf(?![A-Za-z0-9])", nm, re.IGNORECASE)):
+            return "ETF"
+        return "FUND"
+
+    if raw_type == "ETF" or bool(re.search(r"(?<![A-Za-z0-9])etf(?![A-Za-z0-9])", nm, re.IGNORECASE)):
+        return "ETF"
+
+    # 4. Gold / Precious Metals
+    if sym in _GOLD_SYMBOLS or raw_type == "GOLD" or "ทองคำ" in nm or ("GOLD" in sym and not any(k in raw_type for k in ("FUND", "PVD", "RMF", "SSF"))):
+        return "GOLD"
+
+    # 5. Fixed Income / Bonds
+    if any(k in raw_type for k in ("BOND", "DEBENTURE", "TREASURY", "FIXED INCOME", "ตราสารหนี้")) or "พันธบัตร" in nm or "หุ้นกู้" in nm:
+        return "BOND"
 
     # 6. Equities
     if raw_type in ("EQUITY", "STOCK", "COMMON_STOCK") or "หุ้นสามัญ" in nm:

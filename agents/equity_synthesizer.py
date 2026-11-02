@@ -28,11 +28,17 @@ def invoke_equity_synthesizer(
         {"role": "system", "content": system_content},
         {"role": "human", "content": human_content},
     ]
+    import json
+    try:
+        quant_data = json.loads(quant_json) if quant_json else {}
+    except Exception:
+        quant_data = {}
+
     narrative, _ = invoke_with_retry(
         model=model,
         messages=messages,
         output_schema=EquityNarrativeOutput,
-        observable_registry={},
+        observable_registry={"quant_data": quant_data},
         max_retries=1,
         agent_name="equity_synthesizer",
     )

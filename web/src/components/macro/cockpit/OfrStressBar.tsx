@@ -1,5 +1,7 @@
 import React from 'react'
 import { SourceProvenanceBadge } from './SourceProvenanceBadge'
+import { ContextTooltip } from '../explainer/ContextTooltip'
+import { TrafficLightSubtitle } from '../explainer/TrafficLightSubtitle'
 
 interface CategoryItem {
   label: string
@@ -58,6 +60,12 @@ export const OfrStressBar: React.FC<OfrStressBarProps> = ({
             <h3 className="font-bold text-zinc-900 text-sm tracking-tight">
               US Financial Stress Index (OFR FSI)
             </h3>
+            <ContextTooltip
+              title="ดัชนีความตึงตัวของระบบการเงินสหรัฐฯ (OFR FSI)"
+              whatIsIt="ดัชนีรวมของกระทรวงการคลังสหรัฐฯ (OFR) ที่วัดความเครียด ความเสี่ยงสภาพคล่อง และความผันผวนในระบบธนาคาร 5 หมวด"
+              howToRead="ค่าติดลบ (< 0) = สภาพคล่องดี ระบบการเงินผ่อนคลาย ปลอดภัย, ค่าเป็นบวก (> 0) = ตลาดการเงินเริ่มตึงตัว สถาบันระมัดระวัง"
+              impactOnMoney="ถ้าค่าติดลบ เป็นบวกต่อสินทรัพย์เสี่ยงและหุ้น ถ้าค่าพุ่งเป็นบวกสูง ควรถือเงินสดสำรองเพิ่ม"
+            />
             <span
               className={`rounded-md border px-2 py-0.5 text-[10px] font-bold uppercase ${
                 isStressPositive
@@ -71,6 +79,19 @@ export const OfrStressBar: React.FC<OfrStressBarProps> = ({
           <p className="text-xs text-zinc-500 mt-0.5">
             ดัชนีความตึงตัวในตลาดการเงินสหรัฐฯ 5 หมวด (ค่า 0 = ระดับความเครียดเฉลี่ยในอดีต)
           </p>
+          <div className="mt-2">
+            {isStressPositive ? (
+              <TrafficLightSubtitle
+                status="danger"
+                text="🔴 ตลาดการเงินเริ่มตึงตัว: สถาบันการเงินระมัดระวังการปล่อยกู้ สภาพคล่องลดลง"
+              />
+            ) : (
+              <TrafficLightSubtitle
+                status="positive"
+                text="🟢 สภาพคล่องในระบบการเงินดี: สถาบันการเงินไม่ตึงตัว ไม่มีสัญญาณวิกฤตสภาพคล่อง"
+              />
+            )}
+          </div>
         </div>
 
         <SourceProvenanceBadge

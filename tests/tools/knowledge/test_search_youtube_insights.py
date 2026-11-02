@@ -79,6 +79,7 @@ def test_search_youtube_insights_tool(tmp_path, monkeypatch):
     import importlib
     mod = importlib.import_module("tools.knowledge.search_youtube_insights")
     monkeypatch.setattr(mod, "VAULT_PATH", tmp_path)
+    monkeypatch.setenv("OBSIDIAN_VAULT_PATH", str(tmp_path))
     summaries_dir = tmp_path / "30_Knowledge_Base" / "YouTube_Summaries"
     summaries_dir.mkdir(parents=True, exist_ok=True)
 

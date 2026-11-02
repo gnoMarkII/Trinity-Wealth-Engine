@@ -46,7 +46,7 @@ def extract_first_bullet_of_key_takeaways(content: str, max_chars: int = 90) -> 
             bullet_text = line_clean[2:].strip()
             # ตัด Markdown tags บางส่วนออกเพื่อความสะอาดในชื่อเรื่อง
             bullet_text = re.sub(r'\*\*(.*?)\*\*', r'\1', bullet_text)
-            bullet_text = re.sub(r'\[\[(.*?)\]\]', r'\1', bullet_text)
+            bullet_text = re.sub(r'\[\[(?:[^\]|]+\|)?([^\]]+)\]\]', r'\1', bullet_text)
             if len(bullet_text) > max_chars:
                 return bullet_text[:max_chars] + "..."
             return bullet_text

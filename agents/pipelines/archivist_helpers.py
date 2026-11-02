@@ -1,7 +1,7 @@
 """Archivist task preparation and verification helpers.
 
 Architecture Layer: agents/pipelines/
-Extracted from manager_agent.py to isolate Archivist prompt engineering,
+Extracted from research_swarm_flow.py to isolate Archivist prompt engineering,
 filename directive injection, and verification specification.
 """
 from __future__ import annotations

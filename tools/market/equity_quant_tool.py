@@ -4,6 +4,7 @@
 ไม่มี field ตัวเลขไหนใน output มาจากการตัดสินใจของ LLM — LLM ที่ผูกกับ tool นี้มีหน้าที่แค่ตีความ
 ticker/market จาก instruction แล้วส่งต่อผลลัพธ์ดิบกลับไปเท่านั้น (ดู prompts/skills/equity_quant/SKILL.md)
 """
+import math
 import os
 import time
 from datetime import datetime, timezone
@@ -367,8 +368,23 @@ def compute_equity_quant_signals(ticker: str, market: Literal["TH", "US"] = "US"
             cash_and_equivalents=cash_raw or 0.0,
         )
 
-        # Smart Money & Ownership Flags
-        smart_money_flags, ownership_flags = compute_smart_money_flags(provider_symbol, info)
+        # Canonical SEC Form 4 Insider Conviction & Smart Money Integration
+        insider_conviction, ins_flags = compute_canonical_insider_conviction(provider_symbol, market=market)
+        has_filtered_form4 = bool(
+            insider_conviction
+            and insider_conviction.status not in ("unavailable", "not_applicable")
+            and insider_conviction.data_status == "available"
+        )
+        if has_filtered_form4:
+            smart_money_flags, ownership_flags = compute_smart_money_flags(
+                provider_symbol,
+                info,
+                has_10b51_filtered_data=True,
+                discretionary_buy_count=insider_conviction.open_market_p_count_90d,
+                discretionary_sell_count=insider_conviction.unflagged_s_count_90d,
+            )
+        else:
+            smart_money_flags, ownership_flags = compute_smart_money_flags(provider_symbol, info)
 
         # Net Shareholder Yield (Dividend + Buyback - Dilution)
         latest_sh = (autopsy.periods[0].shares_outstanding if (autopsy and autopsy.periods) else None) or shares_out
@@ -504,6 +520,38 @@ def compute_equity_quant_signals(ticker: str, market: Literal["TH", "US"] = "US"
                 )
 
         reinvest_pct = 10.0
+        # Blended Forward Growth: Fundamental (Reinvestment Rate x ROIC) & Wall Street Consensus
+        raw_hist_growth = growth_rates.get("revenue_growth_yoy_pct")
+        street_growth_raw = info.get("revenueGrowth")
+        street_growth_pct = round(street_growth_raw * 100.0, 2) if (street_growth_raw is not None and math.isfinite(street_growth_raw)) else None
+
+        fundamental_growth_pct = None
+        if roic_pct is not None and roic_pct > 0:
+            fundamental_growth_pct = round((reinvest_pct / 100.0) * roic_pct, 2)
+        elif roe_pct is not None and roe_pct > 0:
+            fundamental_growth_pct = round((reinvest_pct / 100.0) * roe_pct, 2)
+
+        forecast_rev_growth = raw_hist_growth
+        if street_growth_pct is not None and raw_hist_growth is not None:
+            bounded_street = max(min(street_growth_pct, 45.0), -20.0)
+            bounded_hist = max(min(raw_hist_growth, 45.0), -20.0)
+            forecast_rev_growth = round(0.5 * bounded_hist + 0.5 * bounded_street, 2)
+        elif street_growth_pct is not None:
+            forecast_rev_growth = round(max(min(street_growth_pct, 45.0), -20.0), 2)
+        elif fundamental_growth_pct is not None and raw_hist_growth is not None:
+            forecast_rev_growth = round(0.5 * raw_hist_growth + 0.5 * fundamental_growth_pct, 2)
+
+        # Analyst consensus count: enrich with Nasdaq Equity Intelligence if missing from vendor
+        analyst_opinions = info.get("numberOfAnalystOpinions")
+        if (analyst_opinions is None or analyst_opinions == 0) and market == "US":
+            try:
+                from tools.market.terminal_v2.bootstrap import get_terminal_data_service
+                nasdaq_snap = get_terminal_data_service().get_nasdaq_consensus(provider_symbol)
+                if nasdaq_snap and nasdaq_snap.ratings:
+                    analyst_opinions = nasdaq_snap.ratings.analyst_count
+            except Exception:
+                pass
+
         reverse_dcf_result, rdcf_flags = compute_institutional_reverse_dcf(
             ticker=resolved.raw_symbol.strip().upper(),
             market=market,
@@ -519,7 +567,7 @@ def compute_equity_quant_signals(ticker: str, market: Literal["TH", "US"] = "US"
             interest_expense=interest_exp,
             macro_registry=macro_registry,
             sector=sector_name,
-            forecast_revenue_growth_pct=growth_rates.get("revenue_growth_yoy_pct"),
+            forecast_revenue_growth_pct=forecast_rev_growth,
             expected_dividend_per_share=(dividend_yield_raw or 0.0) * (analysis_price or 0.0),
             ebit_margin_fiscal_period=margin_fiscal_period,
             ebit_margin_period_type=margin_period_type,
@@ -527,7 +575,7 @@ def compute_equity_quant_signals(ticker: str, market: Literal["TH", "US"] = "US"
             consensus_target_price=info.get("targetMeanPrice"),
             consensus_target_high=info.get("targetHighPrice"),
             consensus_target_low=info.get("targetLowPrice"),
-            analyst_count=info.get("numberOfAnalystOpinions"),
+            analyst_count=analyst_opinions,
             base_revenue_period_type=base_revenue_period_type,
             roe_pct=roe_pct,
             book_value_per_share=info.get("bookValue"),
@@ -540,8 +588,7 @@ def compute_equity_quant_signals(ticker: str, market: Literal["TH", "US"] = "US"
             provider_symbol, market=market, current_price=analysis_price, price_history_df=df_1y
         )
 
-        # 5. Canonical SEC Form 4 Insider Conviction
-        insider_conviction, ins_flags = compute_canonical_insider_conviction(provider_symbol, market=market)
+        # 5. Canonical SEC Form 4 Insider Conviction (computed above with Smart Money)
 
         flags = [
             f for f in [

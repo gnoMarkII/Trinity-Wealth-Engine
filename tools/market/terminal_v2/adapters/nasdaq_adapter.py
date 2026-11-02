@@ -149,7 +149,7 @@ class NasdaqHttpAdapter(NasdaqEquityIntelligencePort):
             r_data = ratings_payload["data"]
             consensus = str(r_data.get("meanRatingType") or "").strip()
             summary_str = str(r_data.get("ratingsSummary") or "")
-            count_match = re.search(r"Based on (\d+) analysts", summary_str)
+            count_match = re.search(r"(?i)based on (\d+) analysts?", summary_str)
             analyst_count = int(count_match.group(1)) if count_match else 0
             brokers = tuple(str(b).strip() for b in (r_data.get("brokerNames") or []))
 

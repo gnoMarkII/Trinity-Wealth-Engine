@@ -20,6 +20,8 @@ from core.nlp_utils import (
     group_similar_news,
     select_representative_news,
 )
+from core.news_digest.entity_matcher import contains_ticker_boundary
+from core.text_utils import strip_html_tags
 from schemas.news_funnel_schemas import (
     MacroImpactTriageResult,
     TriageBatchResult,
@@ -102,16 +104,10 @@ TICKER_ALIAS_MAP: Dict[str, str] = {
 
 
 def _clean_and_truncate_summary(text: str, max_len: int = 500) -> str:
-    """ทำความสะอาด HTML tags จาก summary ด้วย BeautifulSoup ก่อนทำการตัดคำ (truncate) เพื่อไม่ให้ tag ว่างหรือ HTML ขาดกลางเมื่อเจอ tag ยาว"""
+    """ทำความสะอาด HTML tags จาก summary ด้วย strip_html_tags เพื่อไม่ให้ tag ว่างหรือ HTML ขาดกลางและรักษาเครื่องหมาย < > ทางการเงิน"""
     if not text:
         return ""
-    try:
-        from bs4 import BeautifulSoup
-        soup = BeautifulSoup(text, "html.parser")
-        clean = soup.get_text(separator=" ", strip=True)
-    except Exception:
-        clean = re.sub(r"<[^>]+>", " ", text).strip()
-        clean = re.sub(r"\s+", " ", clean)
+    clean = strip_html_tags(text)
 
     if len(clean) > max_len:
         return clean[:max_len].rsplit(" ", 1)[0] + "..." if " " in clean[:max_len] else clean[:max_len] + "..."
@@ -249,25 +245,27 @@ def _mock_or_llm_triage(candidate: Dict[str, Any]) -> MacroImpactTriageResult:
     tickers = []
     themes = ["policy"]
 
-    if re.search(r"\b(fed|rate|inflation|cpi|policy|treasury)\b|ดอกเบี้ย|เงินเฟ้อ", text):
+    if re.search(r"(?<![A-Za-z0-9])(fed|rate|inflation|cpi|policy|treasury)(?![A-Za-z0-9])|ดอกเบี้ย|เงินเฟ้อ", text):
         macro_score = 8
         themes.append("inflation")
-        if re.search(r"\b(fed|rate)\b", text):
+        if re.search(r"(?<![A-Za-z0-9])(fed|rate)(?![A-Za-z0-9])", text):
             themes.append("policy")
         tags.append("policy")
 
-    if re.search(r"\b(nvda|nvidia|ai|server|chip)\b|ชิป", text):
+    if contains_ticker_boundary(text, "nvda") or re.search(r"(?<![A-Za-z0-9])(nvidia|ai|server|chip)(?![A-Za-z0-9])|ชิป", text):
         asset_score = 8
         tickers.extend(["NVDA"])
         themes.append("earnings")
         tags.append("tech")
 
-    if re.search(r"\b(oil|ptt|energy|gold)\b|น้ำมัน|ทองคำ", text):
+    if contains_ticker_boundary(text, "ptt") or contains_ticker_boundary(text, "delta") or re.search(r"(?<![A-Za-z0-9])(oil|energy|gold)(?![A-Za-z0-9])|น้ำมัน|ทองคำ", text):
         macro_score = max(macro_score, 7)
         asset_score = max(asset_score, 7)
-        if re.search(r"\bptt\b|น้ำมัน", text):
+        if contains_ticker_boundary(text, "ptt") or "น้ำมัน" in text:
             tickers.append("PTT")
-        if re.search(r"\bgold\b|ทองคำ", text):
+        if contains_ticker_boundary(text, "delta"):
+            tickers.append("DELTA")
+        if contains_ticker_boundary(text, "gold") or "ทองคำ" in text:
             tickers.append("Gold")
         themes.append("geopolitics")
         tags.append("commodities")
@@ -378,7 +376,7 @@ def _heuristic_prefilter_candidates(items: List[Dict[str, Any]]) -> tuple[List[D
     now_iso = datetime.now().isoformat()
 
     finance_override_regex = re.compile(
-        r"\b(earnings|stock|stocks|shares|ipo|market|markets|revenue|dividend|profit|loss)\b|หุ้น|กำไร|รายได้|ตลาด|ปันผล|ผลประกอบการ",
+        r"(?<![A-Za-z0-9])(earnings|stock|stocks|shares|ipo|market|markets|revenue|dividend|profit|loss)(?![A-Za-z0-9])|หุ้น|กำไร|รายได้|ตลาด|ปันผล|ผลประกอบการ",
         re.IGNORECASE
     )
     en_blacklist_regex = re.compile(

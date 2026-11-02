@@ -62,3 +62,31 @@ class TestFinancialContext:
         updated = update_readiness(snapshot)
         # Warnings do not block numeric readiness
         assert updated.is_ready_for_numeric_policy is True
+
+    def test_extract_years_from_text_disambiguation(self):
+        from core.investor_essence.financial_context import extract_years_from_text
+        from datetime import datetime
+
+        # 1. Standard durations
+        assert extract_years_from_text("ระยะยาว 10 ปี") == Decimal("10")
+        assert extract_years_from_text("10 years") == Decimal("10")
+        assert extract_years_from_text("5.5 yrs") == Decimal("5.5")
+        assert extract_years_from_text("5-7 ปี") == Decimal("7")
+
+        # 2. Target calendar year (CE and BE)
+        current_year = datetime.now().year
+        expected_ce = Decimal(str(2030 - current_year))
+        assert extract_years_from_text("เป้าหมายปี 2030") == expected_ce
+        assert extract_years_from_text("เป้าหมาย2030") == expected_ce
+        assert extract_years_from_text("เกษียณ2030") == expected_ce
+
+        # 2575 BE -> 2032 CE
+        expected_be = Decimal(str(2032 - current_year))
+        assert extract_years_from_text("เกษียณปี 2575") == expected_be
+        assert extract_years_from_text("เกษียณ2575") == expected_be
+
+        # 3. Absurd numbers
+        assert extract_years_from_text("9999") is None
+        assert extract_years_from_text("1500") is None
+        assert extract_years_from_text("") is None
+        assert extract_years_from_text(None) is None

@@ -21,7 +21,8 @@ def test_manifest_building_and_offline_replay(tmp_path):
     today_str = datetime.now().strftime("%Y-%m-%d")
     dates = pd.date_range(end=today_str, periods=250, freq="B")
     prices = [150.0 + i * 0.1 for i in range(250)]
-    prices[-1] = 172.78
+    for k in range(1, 10):
+        prices[-k] = 172.78
     df_1y = pd.DataFrame({
         "Date": dates.strftime("%Y-%m-%d"),
         "Open": prices,
@@ -76,7 +77,7 @@ def test_manifest_building_and_offline_replay(tmp_path):
         snapshot = build_analysis_evidence_snapshot(
             ticker="FTNT",
             market="US",
-            as_of_date="2026-08-27",
+            as_of_date=today_str,
             raw_payloads=raw_payloads,
             derived_features={
                 "analysis_price": 172.78,

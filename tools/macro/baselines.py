@@ -4,6 +4,8 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Dict, Any
 
+from core.financial_parsers import extract_json_block
+
 from langchain_core.tools import tool
 from application.knowledge.note_write_ports import KnowledgeNoteWritePort
 from application.knowledge.write_context import current_note_writer
@@ -69,10 +71,8 @@ def _get_snapshot(target_date: datetime) -> Dict[str, Any]:
             with open(closest_file, "r", encoding="utf-8") as file:
                 content = file.read()
                 
-            import re
-            json_match = re.search(r'```(?:json)?\s*(.*?)\s*```', content, re.DOTALL)
-            if json_match:
-                data = json.loads(json_match.group(1))
+            data = extract_json_block(content)
+            if data and isinstance(data, dict):
                 return {
                     "date": data.get("evaluated_at", "Unknown"),
                     "dominant_themes": data.get("dominant_themes", []),

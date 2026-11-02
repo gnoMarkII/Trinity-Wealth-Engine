@@ -13,7 +13,7 @@ export interface StepBlock {
 
 // รวมบรรทัด log ที่ node เดียวกันติดกันเป็น step เดียว — เปลี่ยน node เมื่อไหร่ขึ้น step ใหม่
 // ต่อท้ายด้านล่างทันที (รองรับ supervisor วนกลับมาเรียก node เดิมซ้ำ เพราะกราฟจริงเป็นแบบ
-// dynamic dispatch ไม่มีลำดับตายตัว — ดู agents/manager_agent.py supervisor_node)
+// dynamic dispatch ไม่มีลำดับตายตัว — ดู agents/research_swarm_flow.py supervisor_node)
 export function groupIntoSteps(lines: LogLine[]): StepBlock[] {
   const blocks: StepBlock[] = []
   for (const line of lines) {

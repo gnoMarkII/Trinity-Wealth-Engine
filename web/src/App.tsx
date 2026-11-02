@@ -4,15 +4,14 @@ import { AuthProvider } from './auth/AuthContext'
 import ErrorBoundary from './components/ErrorBoundary'
 import Layout from './components/Layout'
 
-// lazy ทุกหน้า — แยก chunk ต่อ route เพื่อไม่ให้ผู้ใช้ /kanban ต้องโหลดโค้ด landing
-// (motion ~40KB) และกลับกัน; Login โหลด eager เพราะเป็นหน้าแรกที่ผู้ใช้ยังไม่ auth เจอเสมอ
+// lazy ทุกหน้า — แยก chunk ต่อ route เพื่อไม่ให้โหลดโค้ดเกินจำเป็น
 import Login from './pages/Login'
-const Kanban = lazy(() => import('./pages/Kanban'))
 const Portfolio = lazy(() => import('./pages/Portfolio'))
 const PortfolioAdvisory = lazy(() => import('./pages/PortfolioAdvisory'))
 const Macro = lazy(() => import('./pages/Macro'))
 const Equity = lazy(() => import('./pages/Equity'))
-const Landing = lazy(() => import('./pages/Landing'))
+const DailyDigest = lazy(() => import('./pages/DailyDigest'))
+const ManagerAdvisor = lazy(() => import('./pages/ManagerAdvisor'))
 
 function RouteFallback() {
   return <div className="flex min-h-full items-center justify-center text-sm text-zinc-400">กำลังโหลด...</div>
@@ -26,16 +25,19 @@ function App() {
           <Suspense fallback={<RouteFallback />}>
             <Routes>
               <Route path="/login" element={<Login />} />
-              <Route path="/" element={<Landing />} />
+              <Route path="/" element={<Navigate to="/manager" replace />} />
               <Route element={<Layout />}>
-                <Route path="/kanban" element={<Kanban />} />
+                <Route path="/manager" element={<ManagerAdvisor />} />
+                <Route path="/advisor" element={<Navigate to="/manager" replace />} />
+                <Route path="/kanban" element={<Navigate to="/manager?view=kanban" replace />} />
+                <Route path="/digest" element={<DailyDigest />} />
                 <Route path="/portfolio" element={<Portfolio />} />
                 <Route path="/advisory" element={<PortfolioAdvisory />} />
                 <Route path="/macro" element={<Macro />} />
                 <Route path="/equity" element={<Equity />} />
                 <Route path="/equity/:ticker" element={<Equity />} />
               </Route>
-              <Route path="*" element={<Navigate to="/" replace />} />
+              <Route path="*" element={<Navigate to="/manager" replace />} />
             </Routes>
           </Suspense>
         </AuthProvider>

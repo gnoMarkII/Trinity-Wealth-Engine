@@ -1,6 +1,8 @@
 import React, { useMemo } from 'react'
 import type { TreasuryYieldCurveDTO } from '../../../api/types'
 import { SourceProvenanceBadge } from './SourceProvenanceBadge'
+import { ContextTooltip } from '../explainer/ContextTooltip'
+import { TrafficLightSubtitle } from '../explainer/TrafficLightSubtitle'
 
 interface YieldCurveChartProps {
   data: TreasuryYieldCurveDTO | null
@@ -124,6 +126,12 @@ export const YieldCurveChart: React.FC<YieldCurveChartProps> = ({
             <h3 className="font-bold text-zinc-900 text-sm tracking-tight">
               US Treasury Yield Curve (Cross-Section)
             </h3>
+            <ContextTooltip
+              title="เส้นอัตราผลตอบแทนพันธบัตร (Yield Curve)"
+              whatIsIt="กราฟเปรียบเทียบผลตอบแทนของพันธบัตรรัฐบาลสหรัฐฯ ตั้งแต่อายุสั้น (1 เดือน) ถึงยาว (30 ปี)"
+              howToRead="ปกติเส้นจะชันขึ้น (ดอกเบี้ยยาวสูงกว่าสั้น) หากกลับหัว (Inverted: ดอกเบี้ยสั้นสูงกว่ายาว) มักเตือนว่าเศรษฐกิจอาจถดถอย"
+              impactOnMoney="หากเส้นกลับหัว ควรระวังการลงทุนในหุ้นและเพิ่มเงินสดสำรอง หากเส้นปกติสะท้อนว่าตลาดยังไม่เห็นวิกฤตระยะสั้น"
+            />
             {isInverted ? (
               <span className="rounded-md border border-rose-200 bg-rose-50 px-2 py-0.5 text-[10px] font-bold text-rose-700">
                 INVERTED (กลับหัว)
@@ -137,6 +145,19 @@ export const YieldCurveChart: React.FC<YieldCurveChartProps> = ({
           <p className="text-xs text-zinc-500 mt-0.5">
             อัตราผลตอบแทนพันธบัตรรัฐบาลสหรัฐฯ ณ สิ้นวันทำการข้าม Tenor (1M ถึง 30Y)
           </p>
+          <div className="mt-2">
+            {isInverted ? (
+              <TrafficLightSubtitle
+                status="danger"
+                text="🚨 สัญญาณเตือนภัยเศรษฐกิจถดถอย: ดอกเบี้ยระยะสั้นสูงกว่าระยะยาว ตลาดกังวลว่าเศรษฐกิจอาจชะลอตัวในอีก 1-2 ปีข้างหน้า"
+              />
+            ) : (
+              <TrafficLightSubtitle
+                status="positive"
+                text="✅ เส้นปกติ: ดอกเบี้ยระยะยาวสูงกว่าระยะสั้น ตลาดยังไม่เห็นสัญญาณวิกฤตเศรษฐกิจระยะสั้น"
+              />
+            )}
+          </div>
         </div>
 
         <SourceProvenanceBadge

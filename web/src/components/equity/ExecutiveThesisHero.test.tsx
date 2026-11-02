@@ -56,6 +56,21 @@ describe('ExecutiveThesisHero', () => {
     expect(onViewMock).toHaveBeenCalledTimes(1)
   })
 
+  it('renders narrative analysis and toggles expand/collapse', () => {
+    render(
+      <ExecutiveThesisHero
+        scorecard={mockScorecard}
+        narrativeAnalysis="Detailed AI synthesis narrative explaining company growth."
+      />
+    )
+
+    expect(screen.getByText('AI Synthesis & Core Narrative (บทวิเคราะห์เจาะลึกโดย AI)')).toBeInTheDocument()
+    expect(screen.getByText('Detailed AI synthesis narrative explaining company growth.')).toBeInTheDocument()
+    const toggleBtn = screen.getByRole('button', { name: /ขยายอ่านบทวิเคราะห์เต็ม/ })
+    fireEvent.click(toggleBtn)
+    expect(screen.getByRole('button', { name: /ย่อบทวิเคราะห์/ })).toBeInTheDocument()
+  })
+
   it('returns correct badge style for various stances', () => {
     expect(getStanceBadgeStyle('BREAKOUT_BUY').bg).toContain('emerald')
     expect(getStanceBadgeStyle('TRIM').bg).toContain('amber')

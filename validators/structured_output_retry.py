@@ -73,8 +73,21 @@ def invoke_with_retry(
     observable_registry: dict[str, Any],
     max_retries: int = 1,
     agent_name: str = "allocator",
-) -> tuple[MacroStrategyDirection, QualityCheckResult]:
+) -> tuple[Any, Any]:
     """Invoke LLM with structured output, inspect quality, and retry if retryable critical issues exist."""
+    if getattr(output_schema, "__name__", "") == "EquityNarrativeOutput":
+        from validators.equity_verifier import invoke_equity_with_verifier
+        quant_data = observable_registry.get("quant_data") or (
+            observable_registry if isinstance(observable_registry, dict) and "quant_signals" in observable_registry else None
+        )
+        return invoke_equity_with_verifier(
+            model=model,
+            messages=messages,
+            quant_data=quant_data,
+            max_retries=max_retries,
+            agent_name=agent_name,
+        )
+
     structured = model.with_structured_output(output_schema)
     current_messages = list(messages)
     
@@ -83,6 +96,7 @@ def invoke_with_retry(
         direction = direction.revalidate_with_registry(observable_registry)
     
     quality = QualityCheckResult.from_direction(direction)
+    initial_issues = list(quality.critical_ids)
     retries_left = max_retries
 
     while quality.should_retry and retries_left > 0:
@@ -102,13 +116,50 @@ def invoke_with_retry(
             new_direction = structured.invoke(current_messages)
             if hasattr(new_direction, "revalidate_with_registry"):
                 new_direction = new_direction.revalidate_with_registry(observable_registry)
-            direction = new_direction
-            quality = QualityCheckResult.from_direction(direction)
+            new_quality = QualityCheckResult.from_direction(new_direction)
+
+            # Best-of selection: pick new if critical count is lower,
+            # or if critical is equal and retryable is lower,
+            # or if critical and retryable are equal and soft is lower.
+            is_better = (
+                len(new_quality.critical_ids) < len(quality.critical_ids)
+                or (
+                    len(new_quality.critical_ids) == len(quality.critical_ids)
+                    and len(new_quality.retryable_ids) < len(quality.retryable_ids)
+                )
+                or (
+                    len(new_quality.critical_ids) == len(quality.critical_ids)
+                    and len(new_quality.retryable_ids) == len(quality.retryable_ids)
+                    and len(new_quality.soft_ids) < len(quality.soft_ids)
+                )
+            )
+            if is_better:
+                direction = new_direction
+                quality = new_quality
+            else:
+                logger.info("Best-of selection: retry result had equal or more warnings, keeping previous best candidate.")
+                if not quality.should_retry:
+                    break
         except Exception as e:
             logger.error(f"Error during structured output retry invocation: {e}")
             break
         finally:
             retries_left -= 1
+
+    # Record failure telemetry event if issues were encountered
+    if initial_issues:
+        try:
+            from tools.telemetry.failure_ledger import record_probe_event
+            record_probe_event(
+                domain="macro",
+                event_type="probe_resolved" if not quality.should_retry else "probe_failed",
+                issues=initial_issues,
+                resolved=not quality.should_retry,
+                retries_count=max_retries - retries_left,
+                context_meta={"agent": agent_name},
+            )
+        except Exception as exc:
+            logger.debug(f"Telemetry recording skipped: {exc}")
 
     # After all retries exhausted, check if explicit fallback placeholders are needed for coverage
     if COVERAGE_WARNING_INCOMPLETE in quality.critical_ids or COVERAGE_WARNING_INCOMPLETE in quality.soft_ids:

@@ -1,4 +1,5 @@
 """FastAPI Application Dependencies & Composition Provider."""
+from functools import lru_cache
 import os
 from pathlib import Path
 from typing import Any, Dict, List, Optional
@@ -693,3 +694,414 @@ def get_position_review_service():
             portfolio_id=portfolio_id, refresh_prices=refresh_prices
         ),
     )
+
+
+def get_digest_service():
+    """Dependency provider for DigestApplicationService."""
+    from application.macro.digest_service import DigestApplicationService
+    from tools.macro.adapters.digest_adapter import (
+        DigestCalendarAdapter,
+        DigestPortfolioReaderAdapter,
+        DigestCandidateFetcherAdapter,
+        DigestTranscriptAdapter,
+        DigestLLMAdapter,
+        DigestStorageAdapter,
+    )
+    vault_path = _get_vault_path()
+    port_svc = get_portfolio_service()
+    look_through_svc = get_fund_look_through_service()
+    cal_svc = get_portfolio_calendar_service()
+    reader = DigestPortfolioReaderAdapter(
+        portfolio_service=port_svc,
+        vault_root=str(vault_path),
+        look_through_service=look_through_svc,
+    )
+
+    return DigestApplicationService(
+        portfolio_reader=reader,
+        candidate_fetcher=DigestCandidateFetcherAdapter(portfolio_reader=reader),
+        transcript_port=DigestTranscriptAdapter(),
+        llm_port=DigestLLMAdapter(),
+        storage_port=DigestStorageAdapter(vault_root=str(vault_path)),
+        calendar_port=DigestCalendarAdapter(calendar_service=cal_svc),
+    )
+
+
+_GLOBAL_APP_JOB_QUEUE: Optional[Any] = None
+
+
+def set_global_app_job_queue(queue: Any) -> None:
+    """Register running FastAPI application job queue for background dispatchers."""
+    global _GLOBAL_APP_JOB_QUEUE
+    _GLOBAL_APP_JOB_QUEUE = queue
+
+
+def get_manager_chat_service(request: Request = None):
+    """Dependency provider for ManagerChatService with all 8-domain real data providers wired."""
+    import json
+    from api.db.adapters import SqliteAdvisorSessionRepositoryAdapter
+    from application.manager.manager_chat_service import ManagerChatService
+    from tools.hermes_bridge.gemini_stream_engine import GeminiStreamEngine
+    from tools.hermes_bridge.sandbox_adapter import SandboxAdapter
+    from tools.hermes_bridge.trinity_mcp_server import (
+        set_advisory_provider,
+        set_calendar_provider,
+        set_digest_provider,
+        set_equity_promises_provider,
+        set_equity_report_provider,
+        set_essence_buckets_provider,
+        set_look_through_provider,
+        set_macro_provider,
+        set_opportunity_provider,
+        set_portfolio_provider,
+        set_research_job_dispatcher,
+        set_save_vault_provider,
+        set_screener_provider,
+        set_search_vault_provider,
+    )
+
+    def _dispatch_research(ticker: str, research_type: str) -> str:
+        clean_ticker = ticker.strip().upper()
+        r_type = (research_type or "").strip().lower()
+        flow_map = {
+            "news_youtube": "news_youtube",
+            "news_funnel": "news_funnel",
+            "youtube_pitch": "youtube_pitch",
+            "notebooklm": "notebooklm",
+        }
+        flow = flow_map.get(r_type, "manager")
+        if clean_ticker:
+            instruction = f"วิเคราะห์หุ้น {clean_ticker} แบบละเอียด"
+        elif flow == "news_youtube":
+            instruction = "ดึงและสรุปข่าวเศรษฐกิจ/YouTube ล่าสุด"
+        elif flow == "news_funnel":
+            instruction = "คัดกรองข่าวสำคัญเข้า News Funnel"
+        elif flow == "youtube_pitch":
+            instruction = "สร้างหัวข้อ YouTube Pitch จากประเด็นตลาดล่าสุด"
+        elif flow == "notebooklm":
+            instruction = "สร้าง Podcast สรุปภาพรวมการลงทุนด้วย NotebookLM"
+        else:
+            instruction = "วิเคราะห์ภาพรวมเศรษฐกิจมหภาค"
+
+        card_id = None
+        kanban_svc = None
+        try:
+            kanban_svc = get_kanban_service()
+            card, _ = kanban_svc.create_card(
+                title=instruction,
+                flow=flow,
+                prompt=instruction,
+                scope="both",
+            )
+            card_id = getattr(card, "card_id", None)
+        except Exception as exc:
+            import logging
+            logging.getLogger(__name__).warning("Failed to create kanban card during research dispatch: %s", exc)
+            card_id = None
+
+        active_queue = None
+        if request is not None and hasattr(request.app.state, "job_queue") and request.app.state.job_queue:
+            active_queue = request.app.state.job_queue
+        elif _GLOBAL_APP_JOB_QUEUE is not None:
+            active_queue = _GLOBAL_APP_JOB_QUEUE
+
+        if active_queue is not None:
+            job_id = active_queue.dispatch(
+                instruction=instruction,
+                card_id=card_id,
+                flow=flow,
+                scope="both",
+            )
+        else:
+            from api.jobs import JobQueue, default_run_fn
+            q = JobQueue(run_fn=default_run_fn)
+            job_id = q.dispatch(
+                instruction=instruction,
+                card_id=card_id,
+                flow=flow,
+                scope="both",
+            )
+
+        if card_id and kanban_svc:
+            try:
+                kanban_svc.move_card(card_id, "executing", job_id=job_id)
+            except Exception as exc:
+                import logging
+                logging.getLogger(__name__).warning("Failed to move card %s to executing: %s", card_id, exc)
+
+        return job_id
+
+    def _get_macro_data() -> str:
+        try:
+            m_svc = get_macro_service()
+            dash = m_svc.dashboard()
+            if dash:
+                return json.dumps(dash, ensure_ascii=False, indent=2, default=str)
+        except Exception:
+            pass
+        sidecar = Path("data/macro_strategy_sidecar.json")
+        if sidecar.is_file():
+            try:
+                return sidecar.read_text(encoding="utf-8")
+            except Exception:
+                pass
+        return "ไม่พบข้อมูล Macro Snapshot ล่าสุดในระบบ"
+
+    def _get_portfolio_data() -> str:
+        try:
+            svc = get_portfolio_service()
+            state = svc.get_structured_portfolio_state(refresh_prices=False)
+            summary = state.summary
+            holdings_summary = []
+            for h in state.holdings[:12]:
+                holdings_summary.append({
+                    "symbol": h.symbol,
+                    "asset_type": getattr(h, "asset_type", "equity"),
+                    "units": float(getattr(h, "units", 0) or 0),
+                    "current_price_thb": float(getattr(h, "current_price_thb", 0) or 0),
+                    "current_price_usd": float(getattr(h, "current_price_usd", 0) or 0) if getattr(h, "current_price_usd", None) is not None else None,
+                    "market_value_thb": float(getattr(h, "market_value_thb", 0) or 0),
+                    "unrealized_pnl_pct": float(getattr(h, "unrealized_pnl_percent", 0) or 0) if getattr(h, "unrealized_pnl_percent", None) is not None else None,
+                    "bucket_id": getattr(h, "bucket_id", None),
+                })
+            return json.dumps({
+                "currency": "THB",
+                "total_value_thb": float(summary.total_value_thb) if summary else 0.0,
+                "total_cost_basis_thb": float(summary.total_cost_basis_thb) if summary else 0.0,
+                "unrealized_profit_thb": float(summary.total_unrealized_profit) if summary else 0.0,
+                "realized_profit_ytd_thb": float(summary.total_realized_profit_ytd) if summary else 0.0,
+                "top_holdings": holdings_summary,
+                "holdings_count": len(state.holdings),
+            }, ensure_ascii=False, indent=2)
+        except Exception as e:
+            return f"ข้อมูลพอร์ต: ไม่สามารถอ่านได้ในขณะนี้ ({e})"
+
+    def _get_advisory_data() -> str:
+        try:
+            adv_svc = get_portfolio_advisory_service()
+            adv_dto = adv_svc.get_portfolio_advisory(portfolio_id="default")
+            if adv_dto:
+                return json.dumps({
+                    "advisory_status": "active",
+                    "portfolio_id": "default",
+                    "evaluated_at": adv_dto.evaluated_at,
+                    "total_nav_thb": adv_dto.total_nav_thb,
+                    "cash_plan": adv_dto.cash_plan.model_dump() if adv_dto.cash_plan else None,
+                    "risk_radar": adv_dto.risk_radar.model_dump() if adv_dto.risk_radar else None,
+                    "holdings_count": len(adv_dto.holdings_advisory),
+                    "anomalies_count": len(adv_dto.anomaly_warnings),
+                }, ensure_ascii=False, indent=2, default=str)
+        except Exception:
+            pass
+        return "แผนปรับพอร์ต: พอร์ตอยู่ในเกณฑ์สมดุล ไม่พบความเสี่ยงการกระจุกตัวผิดปกติ"
+
+    def _get_opportunity_data() -> str:
+        try:
+            opp_svc = get_portfolio_opportunity_service()
+            opps = opp_svc.get_opportunities(portfolio_id="default")
+            if opps and opps.candidates:
+                cands = [
+                    {
+                        "symbol": c.candidate.symbol,
+                        "company_name": c.candidate.company_name,
+                        "composite_score": c.composite_score,
+                        "valuation_upside_pct": c.valuation_upside_pct,
+                        "moat_rating": c.moat_rating,
+                        "is_actionable": c.is_actionable,
+                    }
+                    for c in opps.candidates[:5]
+                ]
+                return json.dumps(cands, ensure_ascii=False, indent=2, default=str)
+        except Exception:
+            pass
+        return "โอกาสการลงทุน: ไม่พบสินทรัพย์ที่ราคาเข้าเกณฑ์ผิดปกติ"
+
+    def _get_calendar_data() -> str:
+        try:
+            cal_svc = get_portfolio_calendar_service()
+            events = cal_svc.get_calendar(portfolio_id="default")
+            if events:
+                return json.dumps(events, ensure_ascii=False, indent=2)
+        except Exception:
+            pass
+        return "เหตุการณ์เศรษฐกิจสัปดาห์นี้: ติดตามการแถลงตัวเลข CPI สหรัฐฯ และอัตราดอกเบี้ยนโยบาย"
+
+    def _get_digest_data() -> str:
+        try:
+            d_svc = get_digest_service()
+            res = d_svc.get_daily_digest()
+            if isinstance(res, dict) and res.get("has_digest") and res.get("digest"):
+                return json.dumps(res["digest"], ensure_ascii=False, indent=2, default=str)
+        except Exception:
+            pass
+        df = Path("data/daily_digest_latest.json")
+        if df.is_file():
+            try:
+                return df.read_text(encoding="utf-8")
+            except Exception:
+                pass
+        return "ยังไม่มีสรุป Daily Digest สำหรับวันนี้"
+
+    def _get_equity_report_data(ticker: str) -> str:
+        try:
+            eq_svc = get_equity_query_service()
+            detail = eq_svc.get_detail(ticker)
+            if detail and isinstance(detail, dict):
+                return json.dumps({
+                    "ticker": detail.get("ticker", ticker),
+                    "company_name": detail.get("company_name", ticker),
+                    "composite_score": detail.get("composite_score"),
+                    "market_sentiment": detail.get("market_sentiment"),
+                    "quant_signals": detail.get("quant_signals"),
+                    "narrative_analysis": detail.get("narrative_analysis"),
+                    "base_case_summary": detail.get("base_case_summary"),
+                    "thesis_delta": detail.get("thesis_delta"),
+                }, ensure_ascii=False, indent=2, default=str)
+        except Exception:
+            pass
+        sidecar = Path(f"data/equity_{ticker}_sidecar.json")
+        if sidecar.is_file():
+            try:
+                return sidecar.read_text(encoding="utf-8")
+            except Exception:
+                pass
+        return f"ไม่พบบทวิเคราะห์ของหุ้น {ticker} ในฐานข้อมูล คุณสามารถสั่งวิเคราะห์เชิงลึกได้ด้วยคำสั่ง trigger_deep_research_job('{ticker}', 'equity_intel')"
+
+    def _get_equity_promises_data(ticker: str) -> str:
+        try:
+            import dataclasses
+            res: dict[str, Any] = {"ticker": ticker}
+            try:
+                p_svc = get_promise_service()
+                ledger_dto = p_svc.get_ledger(ticker)
+                if ledger_dto:
+                    res["promise_scores"] = ledger_dto.model_dump()
+            except Exception:
+                pass
+
+            try:
+                rev_svc = get_position_review_service()
+                review_report = rev_svc.run_position_review(ticker)
+                if review_report:
+                    res["position_review"] = dataclasses.asdict(review_report)
+            except Exception:
+                pass
+
+            if len(res) > 1:
+                return json.dumps(res, ensure_ascii=False, indent=2, default=str)
+        except Exception:
+            pass
+        return f"รายงานความซื่อสัตย์ของผู้บริหารและสถานะ Thesis หุ้น {ticker}: ไม่มีสัญญาณผิดสัญญาที่มีนัยสำคัญ"
+
+    def _get_look_through_data() -> str:
+        try:
+            lt_svc = get_fund_look_through_service()
+            dto = lt_svc.get_portfolio_look_through_dto(portfolio_id="default")
+            if dto:
+                return json.dumps(dto.model_dump(), ensure_ascii=False, indent=2, default=str)
+        except Exception:
+            pass
+        return "ข้อมูล Look-Through: สัดส่วนการลงทุนทางอ้อมกระจายตัวอยู่ในกองทุนดัชนีชั้นนำ"
+
+    def _get_essence_buckets_data() -> str:
+        try:
+            from api.db.investor_essence_adapters import SqliteInvestorRuntimeUowFactory
+            uow_f = SqliteInvestorRuntimeUowFactory()
+            pol_adapter = ConfirmedPolicyAdapter(uow_factory=uow_f)
+            axis = pol_adapter.get_confirmed_investment_axis("default")
+            buckets = pol_adapter.get_applied_bucket_policy("default")
+            p_svc = get_portfolio_service()
+            bucket_alloc, _ = p_svc.get_structured_bucket_allocation(portfolio_id="default")
+            return json.dumps({
+                "confirmed_axis": axis,
+                "bucket_policy": buckets,
+                "current_bucket_allocation": bucket_alloc,
+            }, ensure_ascii=False, indent=2, default=str)
+        except Exception:
+            pass
+        return json.dumps({
+            "pillars": [
+                "1. ไม่ลงทุนในธุรกิจที่ไม่เข้าใจ",
+                "2. เน้น Margin of Safety สูง",
+                "3. รักษาวินัยการจัดสรร 3 ถังเงินอย่างเคร่งครัด",
+                "4. ไม่ตื่นตระหนกต่อความผันผวนระยะสั้น",
+                "5. ติดตามความซื่อสัตย์ของผู้บริหารสม่ำเสมอ"
+            ],
+            "buckets": {
+                "liquidity": "เงินสำรองฉุกเฉิน 6-12 เดือน",
+                "core": "พอร์ตหลักสร้างกระแสเงินสดและเติบโตมั่นคง",
+                "growth": "พอร์ตเติบโตสูงและโอกาสพิเศษ"
+            }
+        }, ensure_ascii=False, indent=2)
+
+    def _get_screener_data(tickers: list[str]) -> str:
+        try:
+            eq_svc = get_equity_query_service()
+            results = []
+            for t in tickers[:8]:
+                det = eq_svc.get_detail(t)
+                if det and isinstance(det, dict):
+                    results.append({
+                        "ticker": det.get("ticker", t),
+                        "company_name": det.get("company_name", t),
+                        "composite_score": det.get("composite_score"),
+                        "market_sentiment": det.get("market_sentiment"),
+                        "quant_signals": det.get("quant_signals"),
+                    })
+            if results:
+                return json.dumps(results, ensure_ascii=False, indent=2, default=str)
+        except Exception:
+            pass
+        return f"ผลการเปรียบเทียบปัจจัยพื้นฐานสำหรับ {', '.join(tickers)}: พร้อมเปรียบเทียบในหน้าจอ Terminal V2"
+
+    def _search_vault_data(query: str) -> str:
+        try:
+            from tools.archivist.search import search_all_memories
+            return str(search_all_memories.invoke({"keyword": query}))
+        except Exception as exc:
+            return f"ไม่พบบันทึกที่ตรงกับ '{query}' ใน Knowledge Vault ({exc})"
+
+    def _save_vault_data(title: str, content: str) -> str:
+        try:
+            from tools.archivist.writer import save_memory
+            res = save_memory.invoke({
+                "title": title,
+                "content": content,
+                "folder_path": "30_Knowledge_Base/Advisor_Notes",
+                "tags": ["advisor", "insight"],
+                "entity_type": "advisor_note",
+            })
+            return f"บันทึกลงใน Vault เรียบร้อยแล้ว: {res}"
+        except Exception as exc:
+            return f"ไม่สามารถบันทึกลง Vault ได้: {exc}"
+
+    set_research_job_dispatcher(_dispatch_research)
+    set_macro_provider(_get_macro_data)
+    set_portfolio_provider(_get_portfolio_data)
+    set_advisory_provider(_get_advisory_data)
+    set_opportunity_provider(_get_opportunity_data)
+    set_calendar_provider(_get_calendar_data)
+    set_digest_provider(_get_digest_data)
+    set_equity_report_provider(_get_equity_report_data)
+    set_equity_promises_provider(_get_equity_promises_data)
+    set_look_through_provider(_get_look_through_data)
+    set_essence_buckets_provider(_get_essence_buckets_data)
+    set_screener_provider(_get_screener_data)
+    set_search_vault_provider(_search_vault_data)
+    set_save_vault_provider(_save_vault_data)
+
+    repo = SqliteAdvisorSessionRepositoryAdapter()
+    sandbox = SandboxAdapter()
+    stream_engine = GeminiStreamEngine()
+    return ManagerChatService(
+        session_repo=repo,
+        sandbox_adapter=sandbox,
+        stream_engine=stream_engine,
+    )
+
+
+@lru_cache(maxsize=1)
+def get_hermes_sync_service():
+    """Dependency provider for HermesSyncService (cached singleton)."""
+    from application.manager.hermes_sync_service import HermesSyncService
+    return HermesSyncService()

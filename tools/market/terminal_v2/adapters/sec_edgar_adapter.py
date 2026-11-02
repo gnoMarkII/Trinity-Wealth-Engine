@@ -15,6 +15,7 @@ import json
 import logging
 import os
 from pathlib import Path
+import re
 import threading
 import time
 from typing import Any, Dict, List, Optional, Tuple
@@ -298,6 +299,23 @@ class SecEdgarAdapter(SecFinancialsPort, SecInsiderTradesPort):
             logger.debug("Failed to parse Form 4 XML for %s: %s", accession_number, exc)
             return results
 
+        # Document-level 10b5-1 indicators
+        doc_10b51 = False
+        aff_text = (root.findtext(".//aff10b5One") or "").strip().lower()
+        if aff_text in ("1", "true"):
+            doc_10b51 = True
+        rule_text = (root.findtext(".//rule10b51TransactionInd") or root.findtext(".//rule10b51Flag") or "").strip().lower()
+        if rule_text in ("1", "true"):
+            doc_10b51 = True
+
+        # Map footnote IDs that mention 10b5-1
+        footnotes_10b51: set[str] = set()
+        for fn in root.findall(".//footnote"):
+            fn_id = fn.attrib.get("id")
+            fn_text = fn.text or ""
+            if fn_id and re.search(r"10b-?5-?1", fn_text, re.IGNORECASE):
+                footnotes_10b51.add(fn_id)
+
         # Reporting Owner Information
         owner_name = root.findtext(".//reportingOwner//rptOwnerName", "Unknown Owner")
         officer_title = root.findtext(".//reportingOwnerRelationship/officerTitle")
@@ -318,6 +336,10 @@ class SecEdgarAdapter(SecFinancialsPort, SecInsiderTradesPort):
             price = float(price_txt) if price_txt else None
             notional = (shares * price) if (shares and price) else None
 
+            # Transaction-level 10b5-1 check
+            tx_fn_ids = {fn_elem.attrib.get("id") for fn_elem in tx.findall(".//footnoteId") if fn_elem.attrib.get("id")}
+            is_10b51 = doc_10b51 or bool(tx_fn_ids.intersection(footnotes_10b51))
+
             results.append(
                 InsiderTransaction(
                     transaction_date=tx_date,
@@ -333,6 +355,7 @@ class SecEdgarAdapter(SecFinancialsPort, SecInsiderTradesPort):
                     direct_or_indirect=direct_or_ind,
                     accession_number=accession_number,
                     is_amendment=is_amendment,
+                    is_10b51=is_10b51,
                 )
             )
 

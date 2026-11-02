@@ -15,6 +15,7 @@ interface Props {
   dispatchDisabled?: boolean
   onEdit?: () => void
   onDispatch?: () => void
+  onAskAi?: () => void
   style?: CSSProperties
 }
 
@@ -41,6 +42,7 @@ export default function KanbanCard({
   dispatchDisabled,
   onEdit,
   onDispatch,
+  onAskAi,
   style,
 }: Props) {
   return (
@@ -90,8 +92,8 @@ export default function KanbanCard({
               }}
               onKeyDown={(e) => e.stopPropagation()}
               disabled={dispatchDisabled}
-              title={dispatchDisabled ? 'กำลังส่งงานอื่นอยู่ — รอสักครู่' : 'ส่งงานให้ Manager (Run Job)'}
-              aria-label="ส่งงานให้ Manager"
+              title={dispatchDisabled ? 'กำลังส่งงานอื่นอยู่ — รอสักครู่' : 'ส่งงานให้ Swarm (Run Job)'}
+              aria-label="ส่งงานให้ Swarm"
               className="group/play inline-flex items-center justify-center gap-1 rounded-md border border-emerald-300 bg-emerald-100/90 px-2 py-0.5 text-[11px] font-bold text-emerald-700 shadow-sm transition-all duration-150 hover:border-emerald-600 hover:bg-emerald-600 hover:text-white hover:shadow focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-emerald-500 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:border-emerald-300 disabled:hover:bg-emerald-100/90 disabled:hover:text-emerald-700"
             >
               <svg
@@ -106,6 +108,21 @@ export default function KanbanCard({
           )}
           {card.display_seq != null && (
             <span className="shrink-0 font-mono text-[11px] font-medium text-zinc-400">#AG-{card.display_seq}</span>
+          )}
+          {onAskAi && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation()
+                onAskAi()
+              }}
+              onKeyDown={(e) => e.stopPropagation()}
+              title="ส่งหัวข้อนี้เข้าแชทเพื่อปรึกษา AI Advisor"
+              aria-label="ปรึกษา AI"
+              className="inline-flex items-center gap-1 rounded-md border border-sky-200 bg-sky-50 px-1.5 py-0.5 text-[10px] font-semibold text-sky-700 shadow-sm transition-colors hover:border-sky-300 hover:bg-sky-100"
+            >
+              <span>✨</span>
+              <span>ปรึกษา AI</span>
+            </button>
           )}
         </div>
         <span className="max-w-[100%] truncate rounded border border-purple-200/60 bg-purple-50 px-1.5 py-0.5 text-[10px] font-medium text-purple-700">

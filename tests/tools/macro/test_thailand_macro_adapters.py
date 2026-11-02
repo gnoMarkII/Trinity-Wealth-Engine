@@ -230,7 +230,8 @@ def test_thai_yield_curve_and_policy_rate_observables():
 
     # 4. Default loaded records from ThaiBMA sync -> verified
     adapter_default = ThaiHardDataAdapter()
-    obs_default = adapter_default.as_observables()
+    as_of = adapter_default.get_thai_yield_curve_status()["10Y"].observed_at
+    obs_default = adapter_default.as_observables(as_of_date=as_of)
     spread_default_obs = next(o for o in obs_default if o.observable_id == "obs_th_gov_10y_2y_spread")
     assert spread_default_obs.is_valid is True
     assert spread_default_obs.status == "verified"

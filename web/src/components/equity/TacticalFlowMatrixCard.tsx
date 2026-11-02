@@ -2,6 +2,7 @@ import type { EquitySentimentContextDTO, SmartMoneyFlagsDTO, TacticalSetupDTO } 
 import TacticalStageCycleBar from './TacticalStageCycleBar'
 import PriceActionDepthLadder from './PriceActionDepthLadder'
 import SmartMoneyFlowGauge from './SmartMoneyFlowGauge'
+import { ContextTooltip } from './explainer'
 
 export interface TacticalSetupProps extends Partial<TacticalSetupDTO> {
   current_price?: number | null
@@ -27,7 +28,6 @@ interface Props {
   currency?: string
 }
 
-
 export default function TacticalFlowMatrixCard({
   tactical,
   insider,
@@ -52,6 +52,12 @@ export default function TacticalFlowMatrixCard({
           </div>
           <h3 className="text-lg font-bold text-zinc-900 flex items-center gap-2 mt-0.5">
             <span>📊 Tactical Blueprint & Flow</span>
+            <ContextTooltip
+              title="แผนภูมิกลยุทธ์และกระแสเงินทุน (Tactical Blueprint & Flow)"
+              whatIsIt="กรอบการตัดสินใจเข้าซื้อขายหุ้นโดยผสานวัฏจักรราคา (Cycle), โซนราคาที่เหมาะสม (Buy Zone), จุดยอมแพ้ (Stop Loss) และกระแสเงินทุนของสถาบัน"
+              howToRead="ควรเลือกหุ้นที่อยู่ใน Stage 2 (ขาขึ้น), รอให้ราคาย่อตัวเข้า Buy Zone ที่มี Risk/Reward คุ้มค่า (> 2:1) และตรวจสอบว่าไม่มีแรงขายผิดปกติจากผู้บริหาร"
+              impactOnMoney="ช่วยลดความเสี่ยงจากการซื้อไล่ราคาบนยอดดอย และสร้างวินัยในการเทรดที่มีแบบแผนชัดเจน"
+            />
           </h3>
         </div>
 
@@ -77,6 +83,17 @@ export default function TacticalFlowMatrixCard({
           {/* Infographic: 4-Stage Market Cycle Bar */}
           <TacticalStageCycleBar currentStage={tactical.price_stage} />
 
+          {/* Beginner Trading Discipline Tip */}
+          <div className="flex items-start gap-2.5 p-3 rounded-xl bg-amber-50/70 border border-amber-200/70 text-xs text-amber-900">
+            <span className="text-sm shrink-0 mt-0.5">🛡️</span>
+            <div>
+              <span className="font-bold block text-amber-950">วินัยการเข้าเทรดสำหรับมือใหม่ (Tactical Discipline):</span>
+              <span className="text-amber-800 text-[11px] leading-relaxed">
+                เข้าซื้อเมื่อราคาอยู่ใน <strong>Optimal Buy Zone</strong> เท่านั้น และต้องกำหนด <strong>Stop Loss</strong> ล่วงหน้าเสมอ เพื่อจำกัดการขาดทุนไม่ให้กระทบพอร์ตหลัก
+              </span>
+            </div>
+          </div>
+
           <div className="flex items-center justify-between text-xs font-semibold text-zinc-500 uppercase tracking-wider pt-1">
             <span>🎯 Tactical Setup ({tactical.horizon_timeframe || '1-3M'})</span>
             {tactical.atr_14 != null && (
@@ -88,9 +105,17 @@ export default function TacticalFlowMatrixCard({
             {/* Buy Zone */}
             <div className="rounded-xl border border-emerald-200/80 bg-emerald-50/50 p-3">
               <div className="flex items-center justify-between">
-                <span className="text-emerald-800 font-semibold block text-[10px] uppercase">
-                  Optimal Buy Zone
-                </span>
+                <div className="flex items-center gap-1">
+                  <span className="text-emerald-800 font-semibold block text-[10px] uppercase">
+                    Optimal Buy Zone
+                  </span>
+                  <ContextTooltip
+                    title="โซนราคาที่เหมาะสมในการซื้อ (Optimal Buy Zone)"
+                    whatIsIt="กรอบราคาที่เกิดจากการพักตัวหรือทดสอบแนวรับสำคัญ ซึ่งให้แต้มต่อในการเข้าซื้อสูง"
+                    howToRead="หากราคาอยู่ในกรอบนี้ถือเป็นจังหวะสะสมที่ดี หากราคาเกินกรอบไปแล้วไม่ควรไล่ซื้อ ควรรอย่อตัวรอบถัดไป"
+                    impactOnMoney="ช่วยป้องกันการติดดอยจากการซื้อหุ้นตอนที่ราคาวิ่งไปไกลแล้ว"
+                  />
+                </div>
                 {tactical.is_in_buy_zone && (
                   <span className="text-[9px] px-1 py-0.2 rounded bg-emerald-200/80 text-emerald-900 font-bold">
                     IN ZONE
@@ -106,9 +131,17 @@ export default function TacticalFlowMatrixCard({
 
             {/* Invalidation Stop Loss */}
             <div className="rounded-xl border border-rose-200/80 bg-rose-50/50 p-3">
-              <span className="text-rose-800 font-semibold block text-[10px] uppercase">
-                Stop Loss (จุดยอมแพ้)
-              </span>
+              <div className="flex items-center gap-1">
+                <span className="text-rose-800 font-semibold block text-[10px] uppercase">
+                  Stop Loss (จุดยอมแพ้)
+                </span>
+                <ContextTooltip
+                  title="จุดตัดขาดทุน (Invalidation Stop Loss)"
+                  whatIsIt="ระดับราคาที่หากหลุดลงไป จะทำให้สมมติฐานทางเทคนิคหรือแนวรับหลักเสียหาย"
+                  howToRead="หากราคาปิดต่ำกว่าระดับนี้ ต้องขายตัดขาดทุนตามแผนทันที ห้ามถัวเฉลี่ยขาลงเด็ดขาด"
+                  impactOnMoney="ช่วยจำกัดความเสียหายไม่ให้ลุกลามจนกลายเป็นผู้ถือหุ้นติดดอยระยะยาว"
+                />
+              </div>
               <span className="font-mono font-bold text-rose-950 text-base sm:text-lg block mt-0.5">
                 {tactical.invalidation_stop_loss != null
                   ? `${currency}${tactical.invalidation_stop_loss.toFixed(2)}`
@@ -118,9 +151,17 @@ export default function TacticalFlowMatrixCard({
 
             {/* Tactical Target */}
             <div className="rounded-xl border border-sky-200/80 bg-sky-50/50 p-3">
-              <span className="text-sky-800 font-semibold block text-[10px] uppercase">
-                Tactical Target
-              </span>
+              <div className="flex items-center gap-1">
+                <span className="text-sky-800 font-semibold block text-[10px] uppercase">
+                  Tactical Target
+                </span>
+                <ContextTooltip
+                  title="ราคาเป้าหมายเชิงกลยุทธ์ (Tactical Target Price)"
+                  whatIsIt="เป้าหมายทำกำไรตามแนวต้านสำคัญหรือสัดส่วนผลตอบแทนที่คำนวณไว้"
+                  howToRead="เมื่อราคาขึ้นมาถึงระดับนี้ แนะนำให้พิจารณาแบ่งขายทำกำไร (Take Profit) หรือเลื่อนจุด Stop Loss ขึ้นมาเพื่อล็อคกำไร"
+                  impactOnMoney="ช่วยให้สามารถเก็บกำไรเข้าพอร์ตได้อย่างเป็นรูปธรรม ไม่ปล่อยให้กำไรกลายเป็นขาดทุน"
+                />
+              </div>
               <span className="font-mono font-bold text-sky-950 text-base sm:text-lg block mt-0.5">
                 {tactical.tactical_target_price != null
                   ? `${currency}${tactical.tactical_target_price.toFixed(2)}`
@@ -130,9 +171,17 @@ export default function TacticalFlowMatrixCard({
 
             {/* Risk / Reward Ratio */}
             <div className="rounded-xl border border-edge/80 bg-surface p-3">
-              <span className="text-zinc-500 font-semibold block text-[10px] uppercase">
-                R:R ณ Analysis Price
-              </span>
+              <div className="flex items-center gap-1">
+                <span className="text-zinc-500 font-semibold block text-[10px] uppercase">
+                  R:R ณ Analysis Price
+                </span>
+                <ContextTooltip
+                  title="อัตราส่วนผลตอบแทนต่อความเสี่ยง (Risk / Reward Ratio)"
+                  whatIsIt="เปรียบเทียบกำไรที่มีโอกาสได้ กับเงินต้นที่มีโอกาสขาดทุนเมื่อแตะ Stop Loss"
+                  howToRead="อัตราส่วนควรมากกว่า 2.0 : 1 ขึ้นไป (กำไรมีโอกาสได้มากกว่าขาดทุน 2 เท่าขึ้นไป) หากต่ำกว่า 1.0 : 1 ถือว่าไม่คุ้มเสี่ยง"
+                  impactOnMoney="ช่วยให้พอร์ตเติบโตได้ในระยะยาว แม้จะทายถูกเพียง 50% ของจำนวนครั้งก็ตาม"
+                />
+              </div>
               <span className="font-mono font-bold text-zinc-900 text-base sm:text-lg block mt-0.5">
                 {tactical.current_rr_ratio != null
                   ? `${tactical.current_rr_ratio.toFixed(2)} : 1`

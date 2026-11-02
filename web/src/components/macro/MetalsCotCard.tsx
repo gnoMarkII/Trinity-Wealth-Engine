@@ -1,4 +1,5 @@
 import React from 'react'
+import { ContextTooltip } from './explainer/ContextTooltip'
 
 export interface TraderClassUI {
   class_name: string
@@ -54,6 +55,12 @@ export const MetalsCotCard: React.FC<MetalsCotCardProps> = ({
             <h3 className="font-semibold text-zinc-900 tracking-tight">
               {commodity.toUpperCase()} Futures Positioning (CFTC COT)
             </h3>
+            <ContextTooltip
+              title="เรดาร์ส่องไพ่เฮดจ์ฟันด์โลก (CFTC COT Report)"
+              whatIsIt="รายงานทางการสหรัฐฯ เปิดเผยสถานะสัญญา期貨 (Futures) ของกองทุนเก็งกำไรระดับโลกในทองคำ"
+              howToRead="ดู Net Managed Money: ฝั่ง Long ชนะ แปลว่ากองทุนมองขึ้น ถ้า Percentile 52w เกิน 90% แปลว่าเปิด Long แน่นมาก อาจใกล้จุดกลับตัว"
+              impactOnMoney="ช่วยให้เราไม่ไปไล่ซื้อทองคำตอนที่กองทุนทั่วโลกกำลังจ้องทำกำไร"
+            />
             <span className="rounded-full bg-amber-100 px-2 py-0.5 font-mono text-[10px] font-bold text-amber-800">
               DISAGGREGATED
             </span>
@@ -61,6 +68,9 @@ export const MetalsCotCard: React.FC<MetalsCotCardProps> = ({
           <p className="text-xs text-zinc-500 mt-0.5">
             CME / NYMEX Futures & Options • Weekly Hedge Fund / Speculative Flows
           </p>
+          <div className="mt-2 text-[11px] text-amber-950 bg-amber-50/80 rounded-lg p-2 border border-amber-100/70 font-medium leading-relaxed">
+            👁️ <strong>เรดาร์ส่องไพ่กองทุนเฮดจ์ฟันด์โลก:</strong> ตรวจสอบว่าเงินฉลาด (Smart Money) กำลังวางเงินเก็งกำไรฝั่งซื้อหรือขายสุทธิในทองคำ
+          </div>
         </div>
 
         {/* Date Separation (Tuesday as_of vs Friday published) */}

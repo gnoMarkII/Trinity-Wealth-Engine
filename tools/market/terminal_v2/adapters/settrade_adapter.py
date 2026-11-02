@@ -79,6 +79,14 @@ class SettradeAdapter(ThaiMarketPort):
                     )
                 )
 
+            # Upstream empty stub validation (Settrade legacy endpoint returns asof_date="" and 0.0 for all values)
+            if not as_of and (total_value == 0.0 or not investors_list or all(i.buy_value == 0.0 and i.sell_value == 0.0 for i in investors_list)):
+                raise DataUnavailableError(
+                    "Investor type flow data is temporarily unavailable from Settrade upstream (empty response)",
+                    capability="investor_type_flow",
+                    source="Settrade",
+                )
+
             return ThaiFundFlowSnapshot(
                 market=venue,
                 as_of=as_of,
@@ -121,14 +129,29 @@ class SettradeAdapter(ThaiMarketPort):
                     source="Settrade",
                 ) from exc
 
+            as_of = data.get("asof_date", "")
+            mcap = float(data["market_cap"]) if data.get("market_cap") is not None else None
+            pe = float(data["pe_ratio"]) if data.get("pe_ratio") is not None else None
+            pbv = float(data["pbv_ratio"]) if data.get("pbv_ratio") is not None else None
+            div_yield = float(data["dividend_yield"]) if data.get("dividend_yield") is not None else None
+            turnover = float(data["turnover_ratio"]) if data.get("turnover_ratio") is not None else None
+
+            # Upstream empty stub validation (Settrade legacy endpoint returns asof_date="" and 0.0)
+            if not as_of and ((pe == 0.0 or pe is None) and (pbv == 0.0 or pbv is None) and (mcap == 0.0 or mcap is None)):
+                raise DataUnavailableError(
+                    "Market statistics data is temporarily unavailable from Settrade upstream (empty response)",
+                    capability="market_statistics",
+                    source="Settrade",
+                )
+
             return MarketValuation(
                 market=venue,
-                as_of=data.get("asof_date", ""),
-                market_cap=float(data["market_cap"]) if data.get("market_cap") is not None else None,
-                pe_ratio=float(data["pe_ratio"]) if data.get("pe_ratio") is not None else None,
-                pbv_ratio=float(data["pbv_ratio"]) if data.get("pbv_ratio") is not None else None,
-                dividend_yield=float(data["dividend_yield"]) if data.get("dividend_yield") is not None else None,
-                turnover_ratio=float(data["turnover_ratio"]) if data.get("turnover_ratio") is not None else None,
+                as_of=as_of,
+                market_cap=mcap,
+                pe_ratio=pe,
+                pbv_ratio=pbv,
+                dividend_yield=div_yield,
+                turnover_ratio=turnover,
                 source="Settrade",
                 is_stale=False,
             )
@@ -166,12 +189,25 @@ class SettradeAdapter(ThaiMarketPort):
                     source="Settrade",
                 ) from exc
 
+            as_of = data.get("datetime", "")
+            gainers = int(data.get("gainer_amount", 0))
+            losers = int(data.get("loser_amount", 0))
+            unchanged = int(data.get("unchange_amount", 0))
+
+            # Upstream empty stub validation (Settrade legacy endpoint returns asof_date="" and 0)
+            if not as_of and gainers == 0 and losers == 0 and unchanged == 0:
+                raise DataUnavailableError(
+                    "Market breadth data is temporarily unavailable from Settrade upstream (empty response)",
+                    capability="market_breadth",
+                    source="Settrade",
+                )
+
             return MarketBreadth(
                 market=venue,
-                as_of=data.get("datetime", ""),
-                gainers=int(data.get("gainer_amount", 0)),
-                losers=int(data.get("loser_amount", 0)),
-                unchanged=int(data.get("unchange_amount", 0)),
+                as_of=as_of,
+                gainers=gainers,
+                losers=losers,
+                unchanged=unchanged,
                 source="Settrade",
                 is_stale=False,
             )

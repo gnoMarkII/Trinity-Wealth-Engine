@@ -5,6 +5,7 @@ import re
 from typing import Any, Dict, List, Optional
 import httpx
 
+from core.financial_parsers import extract_json_block
 from core.llm_factory import get_llm, detect_provider
 from core.model_registry import get_model_name
 
@@ -18,23 +19,7 @@ def _extract_json_block(text: Any) -> Optional[dict]:
             part.get("text", "") if isinstance(part, dict) else str(part)
             for part in text
         )
-    elif not isinstance(text, str):
-        text = str(text) if text is not None else ""
-    text = text.strip()
-    if text.startswith("```"):
-        text = re.sub(r"^```(?:json)?\s*", "", text)
-        text = re.sub(r"\s*```$", "", text)
-    try:
-        return json.loads(text)
-    except Exception:
-        # Fallback to finding outermost JSON braces
-        match = re.search(r"(\{.*\})", text, re.DOTALL)
-        if match:
-            try:
-                return json.loads(match.group(1))
-            except Exception:
-                pass
-    return None
+    return extract_json_block(text)
 
 
 class PromiseExtractorAdapter:

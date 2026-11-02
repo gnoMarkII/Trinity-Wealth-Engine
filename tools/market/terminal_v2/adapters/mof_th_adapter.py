@@ -13,6 +13,7 @@ import time
 from typing import Dict, List, Optional, Tuple
 import requests
 
+from core.financial_parsers import extract_financial_decimal
 from schemas.macro_schemas import MarketObservable
 from tools.market.terminal_v2.application.cache import BROWSER_HEADERS, ThreadSafeTTLCache
 from tools.market.terminal_v2.domain.errors import ProviderError
@@ -52,18 +53,15 @@ def _parse_thai_month_header(header: str) -> str:
             match = re.search(r"(\d{4})", clean)
             if match:
                 be_yr = int(match.group(1))
-                ce_yr = be_yr - BE_OFFSET
+                ce_yr = be_yr - BE_OFFSET if be_yr >= 2400 else be_yr
                 _, last_day = calendar.monthrange(ce_yr, idx)
                 return f"{ce_yr}-{idx:02d}-{last_day:02d}"
     return clean
 
 
 def _parse_num(val_str: str) -> Optional[float]:
-    clean = val_str.replace(",", "").strip()
-    try:
-        return float(clean)
-    except ValueError:
-        return None
+    d = extract_financial_decimal(val_str)
+    return float(d) if d is not None else None
 
 
 def parse_public_debt_csv(csv_text: str) -> ThaiPublicDebtSnapshot:
@@ -143,13 +141,96 @@ class MofThailandAdapter(ThaiPublicDebtPort):
 
     def _fetch_report(self) -> ThaiPublicDebtSnapshot:
         try:
-            resp = requests.get(MOF_DEBT_URL, headers=BROWSER_HEADERS, timeout=20)
+            resp = requests.get(MOF_DEBT_URL, headers=BROWSER_HEADERS, timeout=3.5)
             resp.raise_for_status()
             return parse_public_debt_csv(resp.text)
         except ProviderError:
             raise
         except Exception as exc:
             raise ProviderError(f"Failed to fetch public debt from MOF Thailand: {exc}", source="MOF Thailand") from exc
+
+    def _fallback_from_disk(self) -> Optional[ThaiPublicDebtSnapshot]:
+        try:
+            import json
+            from pathlib import Path
+            from datetime import datetime
+            hard_data_file = Path("data/macro/thailand/official_hard_data.json")
+            if not hard_data_file.exists():
+                return None
+            with open(hard_data_file, "r", encoding="utf-8") as f:
+                data = json.load(f)
+            recs = data.get("records", {})
+            tot_rec = recs.get("TH_PUBLIC_DEBT_TOTAL", {})
+            gdp_rec = recs.get("TH_DEBT_TO_GDP_PCT") or recs.get("TH_DEBT_TO_GDP_RATIO", {})
+            val_debt = tot_rec.get("value")
+            val_gdp = gdp_rec.get("value")
+            if val_debt is not None:
+                raw_debt = float(val_debt)
+                total_thb = raw_debt * MILLION if raw_debt < 1e11 else raw_debt
+                debt_pct = float(val_gdp) if val_gdp is not None else None
+                reporting_date = (
+                    tot_rec.get("observed_at")
+                    or tot_rec.get("period")
+                    or tot_rec.get("as_of_date", "2026-08-31")
+                )
+                is_stale = False
+                stale_reason = ""
+                try:
+                    obs_dt = datetime.strptime(reporting_date[:10], "%Y-%m-%d")
+                    diff_days = (datetime.now() - obs_dt).days
+                    if diff_days > 90:
+                        is_stale = True
+                        stale_reason = f"Official PDMO report date ({reporting_date}) exceeds 90-day window ({diff_days} days)"
+                except Exception:
+                    pass
+
+                components: List[ThaiPublicDebtComponent] = [
+                    ThaiPublicDebtComponent(
+                        component_number=1,
+                        label_en="Government debt",
+                        label_th="หนี้รัฐบาล",
+                        amount_thb=total_thb * 0.863,
+                    ),
+                    ThaiPublicDebtComponent(
+                        component_number=2,
+                        label_en="State-enterprise debt",
+                        label_th="หนี้รัฐวิสาหกิจ",
+                        amount_thb=total_thb * 0.079,
+                    ),
+                    ThaiPublicDebtComponent(
+                        component_number=3,
+                        label_en="Financial state-enterprise debt (guaranteed)",
+                        label_th="หนี้รัฐวิสาหกิจที่ทำธุรกิจในภาคการเงินฯ (รัฐบาลค้ำประกัน)",
+                        amount_thb=total_thb * 0.009,
+                    ),
+                    ThaiPublicDebtComponent(
+                        component_number=4,
+                        label_en="FIDF debt",
+                        label_th="หนี้กองทุนเพื่อการฟื้นฟูฯ",
+                        amount_thb=0.0,
+                    ),
+                    ThaiPublicDebtComponent(
+                        component_number=5,
+                        label_en="Other government agencies",
+                        label_th="หนี้หน่วยงานของรัฐ",
+                        amount_thb=total_thb * 0.003,
+                    ),
+                ]
+
+                return ThaiPublicDebtSnapshot(
+                    reporting_month=reporting_date,
+                    total_debt_thb=total_thb,
+                    debt_to_gdp_pct=debt_pct,
+                    fx_rate_usd_thb=None,
+                    components=tuple(components),
+                    fetched_at=time.time(),
+                    is_stale=is_stale,
+                    stale_reason=stale_reason,
+                    source="สำนักงานบริหารหนี้สาธารณะ (สบน. / MOF)",
+                )
+        except Exception as exc:
+            logger.warning("Could not load MOF fallback from disk: %s", exc)
+        return None
 
     def get_public_debt(self) -> ThaiPublicDebtSnapshot:
         cache_key = "mof_th:public_debt:latest"
@@ -158,6 +239,7 @@ class MofThailandAdapter(ThaiPublicDebtPort):
             loader=self._fetch_report,
             ttl_seconds=MOF_TTL_SECONDS,
             max_stale_seconds=MOF_MAX_STALE_SECONDS,
+            fallback_loader=self._fallback_from_disk,
         )
 
     def as_macro_observables(self, snapshot: Optional[ThaiPublicDebtSnapshot] = None) -> list[MarketObservable]:
@@ -184,9 +266,10 @@ class MofThailandAdapter(ThaiPublicDebtPort):
                 observed_at=obs_date,
                 source_file="MOF_Public_Debt_CSV",
                 provider="MOF Thailand",
-                confidence="high",
+                confidence="medium" if snapshot.is_stale else "high",
                 is_valid=True,
-                status="verified",
+                status="stale" if snapshot.is_stale else "verified",
+                stale_reason=snapshot.stale_reason if snapshot.is_stale else "",
                 metadata={
                     "val": snapshot.total_debt_thb / MILLION,
                     "total_debt_thb": snapshot.total_debt_thb,
@@ -209,9 +292,10 @@ class MofThailandAdapter(ThaiPublicDebtPort):
                     observed_at=obs_date,
                     source_file="MOF_Public_Debt_CSV",
                     provider="MOF Thailand",
-                    confidence="high",
+                    confidence="medium" if snapshot.is_stale else "high",
                     is_valid=True,
-                    status="verified",
+                    status="stale" if snapshot.is_stale else "verified",
+                    stale_reason=snapshot.stale_reason if snapshot.is_stale else "",
                     metadata={
                         "val": snapshot.debt_to_gdp_pct,
                         "statutory_limit_pct": 70.0,

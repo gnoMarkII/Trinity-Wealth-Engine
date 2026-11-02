@@ -5,6 +5,8 @@
 - ห้ามสร้างข้อความสำเร็จรูป เช่น "Backfilled core asset class" ใน rationale เด็ดขาด ต้องอ้างอิงข้อมูลจริงจาก Hard Data หรือกล่าวตามจริงว่าข้อมูลไม่เพียงพอ
 - สำหรับมุมมองทองคำ (Gold) บังคับอ้างอิง Real Yields (เช่น DFII10) หรือ USD Index (DTWEXBGS) ในเชิงต้นทุนค่าเสียโอกาส (Opportunity cost)
 - ทุกรายการมุมมองสินทรัพย์หลักและ Pair Trade บังคับระบุ `observable_refs` อย่างน้อย 2-3 รหัสที่ถูกต้องจาก Valid Observables เพื่อรองรับความมั่นใจระดับ MEDIUM หรือ HIGH
+- [Dual Distinct Source Requirement (ป้องกัน SINGLE_SOURCE_PENALTY)]: สำหรับสินทรัพย์ที่ให้ระดับความมั่นใจ MEDIUM หรือ HIGH ต้องระบุ `source_refs` จากแหล่งข้อมูลที่ต่างกันอย่างน้อย 2 แหล่ง (เช่น FRED ร่วมกับ YFinance, SEC, หรือ Terminal) ห้ามใส่แหล่งข้อมูลเดียวซ้ำกัน
+- [Exact Number Grounding in Supporting Data (ป้องกัน SUPPORTING_DATA_MISMATCH)]: ตัวเลขทางเศรษฐกิจหรือดัชนีทุกตัวที่ระบุใน `supporting_data` ต้องตรงกับตัวเลขจริงในตาราง Observables ทุกหลักทศนิยม ห้ามประมาณการหรือแต่งตัวเลขเองโดยพลการ
 
 [Regional Separation & Thailand Market Stance Guardrail (การแยกตลาดโลกออกจากตลาดทุนไทย)]:
 - บังคับแยกสภาวะเศรษฐกิจมหภาคระดับโลก (Global/US Macro Regime) ออกจากท่าทีตลาดทุนไทย (Thailand Market Stance) อย่างเด็ดขาด:

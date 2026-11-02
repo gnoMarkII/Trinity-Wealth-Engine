@@ -1,4 +1,5 @@
 import React from 'react'
+import { ContextTooltip } from '../macro/explainer/ContextTooltip'
 
 export interface PillarItem {
   id: string
@@ -11,6 +12,54 @@ export interface PillarItem {
   drivers: string
   statusColor?: 'emerald' | 'sky' | 'indigo' | 'amber' | 'rose' | 'zinc'
   isExcluded?: boolean
+}
+
+
+const PILLAR_EXPLAINERS: Record<string, {
+  subtitle: string
+  tooltip: {
+    title: string
+    what: string
+    normalBenchmark: string
+    decisionImpact: string
+  }
+}> = {
+  'pillar-1-fundamental': {
+    subtitle: '🏢 คุณภาพธุรกิจ & สุขภาพงบการเงิน',
+    tooltip: {
+      title: 'Pillar 1: Fundamental Quality (คุณภาพพื้นฐาน)',
+      what: 'วัดความแข็งแกร่งของงบการเงิน ความสามารถในการทำกำไร (Operating Margin), คุณภาพกระแสเงินสด (FCF) และคะแนนตรวจสุขภาพการเงิน 9 ด่าน (Piotroski F-Score)',
+      normalBenchmark: 'คะแนน > 70 ถือว่าพื้นฐานยอดเยี่ยม ป้อมปราการแกร่ง; ต่ำกว่า 40 ควรระวังความเสี่ยงด้านงบการเงิน',
+      decisionImpact: 'หากพื้นฐานอ่อนแอ แม้ราคาจะลดลงมาเยอะก็ไม่ควรซื้อ เพราะอาจเป็นกับดักมูลค่า (Value Trap)',
+    },
+  },
+  'pillar-2-guidance': {
+    subtitle: '🎯 แนวโน้มกำไร & คำสัญญาผู้บริหาร',
+    tooltip: {
+      title: 'Pillar 2: Guidance & Expectations (ความคาดหวัง)',
+      what: 'วัดความน่าเชื่อถือของผู้บริหารในการทำผลงานตามเป้า (Say-Do Ratio) และทิศทางการปรับประมาณการกำไรของนักวิเคราะห์สถาบัน (Consensus Revisions)',
+      normalBenchmark: 'คะแนน > 60 แปลว่านักวิเคราะห์เริ่มปรับเป้ากำไรขึ้น; ถ้าคะแนนต่ำแปลว่าผลงานแย่กว่าเป้าต่อเนื่อง',
+      decisionImpact: 'เป็นแรงขับเคลื่อนราคาหุ้นระยะสั้นถึงกลาง หุ้นที่ถูกปรับเป้ากำไรขึ้นต่อเนื่องมัก Outperform ตลาด',
+    },
+  },
+  'pillar-3-valuation': {
+    subtitle: '🏷️ ความถูกแพง & ส่วนเผื่อความปลอดภัย',
+    tooltip: {
+      title: 'Pillar 3: Valuation Margin (ความถูกแพง)',
+      what: 'ประเมินมูลค่าแท้จริงผ่านแบบจำลองคิดลดกระแสเงินสด (DCF) และวิเคราะห์ย้อนกลับว่าราคาปัจจุบันตลาดคาดหวังการเติบโตเท่าใด (Reverse DCF Hurdle)',
+      normalBenchmark: 'มี Margin of Safety อย่างน้อย 15-20% (ราคาตลาดต่ำกว่ามูลค่าแท้จริง)',
+      decisionImpact: 'บอกแต้มต่อของการลงทุน อย่าซื้อหุ้นดีในราคาที่แพงเกินไปจนไม่มีส่วนเผื่อความปลอดภัย',
+    },
+  },
+  'pillar-4-tactical': {
+    subtitle: '⚡ จังหวะเวลา & รอยเท้าสถาบัน',
+    tooltip: {
+      title: 'Pillar 4: Tactical Execution (จังหวะเวลา)',
+      what: 'วิเคราะห์ช่วงวงจรราคาหุ้น (Stage 1-4), แนวรับแนวต้าน, รายการซื้อขายของผู้บริหาร (Insider Form 4), และกระแสเงินสถาบัน (Smart Money)',
+      normalBenchmark: 'Stage 2 ขาขึ้น พร้อมสัญญาณผู้บริหารซื้อสุทธิ = จังหวะเปิดสถานะที่ได้เปรียบสูงสุด',
+      decisionImpact: 'ช่วยกำหนดจังหวะเข้าซื้อ (Timing) และจุดตัดขาดทุน (Stop Loss) เพื่อไม่ให้ติดดอยนาน',
+    },
+  },
 }
 
 export interface FourPillarBalanceRingsProps {
@@ -176,11 +225,21 @@ export const FourPillarBalanceRings: React.FC<FourPillarBalanceRingsProps> = ({
             data-testid={`pillar-card-${pillar.id}`}
             className="group relative flex flex-col justify-between rounded-xl border border-edge/70 bg-surface/80 p-4 transition-all duration-200 hover:border-sky-300 hover:shadow-md hover:bg-surface"
           >
-            {/* Top row: Title & Weight Badge */}
-            <div className="flex items-start justify-between gap-2 mb-3">
-              <span className="text-xs font-semibold text-zinc-700 tracking-tight leading-snug">
-                {pillar.title}
-              </span>
+            {/* Top row: Title & Weight Badge with ContextTooltip */}
+            <div className="flex items-start justify-between gap-2 mb-1.5">
+              <div className="flex items-center gap-1.5 min-w-0">
+                <span className="text-xs font-semibold text-zinc-800 tracking-tight leading-snug truncate">
+                  {pillar.title}
+                </span>
+                {PILLAR_EXPLAINERS[pillar.id] ? (
+                  <ContextTooltip
+                    title={PILLAR_EXPLAINERS[pillar.id]!.tooltip.title}
+                    whatIsIt={PILLAR_EXPLAINERS[pillar.id]!.tooltip.what}
+                    howToRead={PILLAR_EXPLAINERS[pillar.id]!.tooltip.normalBenchmark}
+                    impactOnMoney={PILLAR_EXPLAINERS[pillar.id]!.tooltip.decisionImpact}
+                  />
+                ) : null}
+              </div>
               <span
                 className={`shrink-0 inline-flex items-center text-[10px] font-bold px-2 py-0.5 rounded-full border ${
                   pillar.weightBadgeType === 'reweighted'
@@ -195,6 +254,13 @@ export const FourPillarBalanceRings: React.FC<FourPillarBalanceRingsProps> = ({
                 {pillar.weightText}
               </span>
             </div>
+
+            {/* Plain-Language Subtitle for Beginners */}
+            {PILLAR_EXPLAINERS[pillar.id] ? (
+              <div className="text-[11px] font-medium text-sky-800/80 mb-2 truncate">
+                {PILLAR_EXPLAINERS[pillar.id]!.subtitle}
+              </div>
+            ) : null}
 
             {/* Middle: SVG Ring & Giant Score */}
             <div className="flex items-center gap-4 my-1">

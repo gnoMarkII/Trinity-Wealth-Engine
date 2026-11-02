@@ -6,6 +6,10 @@ import WarningPanel from '../../WarningPanel'
 import { stanceCategory, type StanceCategory } from '../../../lib/stance'
 import { SourceProvenanceBadge } from './SourceProvenanceBadge'
 import { SectorAiPanel } from './SectorAiPanel'
+import { ContextTooltip } from '../explainer/ContextTooltip'
+import { TrafficLightSubtitle, type TrafficStatus } from '../explainer/TrafficLightSubtitle'
+import { SafetyShieldBanner } from '../explainer/SafetyShieldBanner'
+import { IllustrativeAllocationPie } from '../explainer/IllustrativeAllocationPie'
 
 interface AiAnalysisSectionProps {
   aiData: MacroDashboardDTO | null
@@ -29,6 +33,72 @@ function confidenceBadgeClass(confidence?: string): string {
 
 const cardClass =
   'space-y-2.5 rounded-xl border border-sky-100 bg-panel p-4 shadow-[0_4px_20px_rgba(14,165,233,0.03)] backdrop-blur-sm transition-all duration-150 hover:border-sky-200 hover:shadow-sm'
+
+interface AssetExplainer {
+  status: TrafficStatus
+  subtitle: string
+  tooltipTitle: string
+  whatIsIt: string
+  howToRead: string
+  impactOnMoney: string
+  fxHedgeNote?: string
+}
+
+function getAssetExplainer(assetClass: string): AssetExplainer | null {
+  const name = (assetClass || '').toLowerCase()
+  if (name.includes('us equities') || name.includes('s&p') || name.includes('nasdaq')) {
+    return {
+      status: 'warning',
+      subtitle: '⚠️ Valuation สูง (ERP ต่ำ): ผลตอบแทนคาดหวังเริ่มไม่คุ้มเสี่ยงเทียบพันธบัตร ไม่ควรไล่ราคา',
+      tooltipTitle: 'หุ้นสหรัฐฯ (US Equities & ERP)',
+      whatIsIt: 'ตลาดหุ้นสหรัฐฯ (เช่น S&P 500) และตัวชี้วัด Equity Risk Premium (ERP)',
+      howToRead: 'เมื่อ ERP ต่ำมาก แปลว่าหุ้นแพง ผลตอบแทนหุ้นต่ำกว่าดอกเบี้ยพันธบัตร',
+      impactOnMoney: 'ชะลอการซื้อไล่ราคา เน้นเลือกหุ้นรายตัวที่มีกำไรแท้จริง หรือรอจังหวะย่อตัว',
+      fxHedgeNote: '💵 คนไทยควรเลือกลงทุนผ่านกองทุนที่มีนโยบาย Hedge ค่าเงิน เพื่อไม่ให้กำไรถูกค่าเงินบาทกลืน',
+    }
+  }
+  if (name.includes('set') || name.includes('thai') || name.includes('thailand')) {
+    return {
+      status: 'info',
+      subtitle: '⚖️ Valuation ถูก มีปันผลรองรับ: ตลาดแกว่งตัว เหมาะกับการทยอยสะสมเงินก้อนใหม่',
+      tooltipTitle: 'ตลาดหุ้นไทย (SET Index)',
+      whatIsIt: 'ดัชนีตลาดหลักทรัพย์แห่งประเทศไทย และระดับอัตราส่วน P/E & เงินปันผล',
+      howToRead: 'ระดับ P/E ต่ำและเงินปันผลสูงกว่า 3.5% ถือว่า Valuation ไม่แพงและมี Margin of Safety',
+      impactOnMoney: 'เป็นโอกาสทยอยสะสมหุ้นไทยพื้นฐานดีที่มีปันผลสม่ำเสมอ สำหรับพอร์ตระยะยาว',
+    }
+  }
+  if (name.includes('treasur') || name.includes('bond') || name.includes('fixed income')) {
+    return {
+      status: 'positive',
+      subtitle: '🏛️ Real Yield สูงชนะเงินเฟ้อ: ได้กระแสเงินสดมั่นคงและเป็นเกราะคุ้มครองพอร์ต',
+      tooltipTitle: 'พันธบัตรรัฐบาลสหรัฐฯ (US Treasuries)',
+      whatIsIt: 'ตราสารหนี้ที่ออกโดยรัฐบาลสหรัฐฯ ซึ่งให้ผลตอบแทนดอกเบี้ยสม่ำเสมอและมีความเสี่ยงผิดนัดชำระหนี้ต่ำสุด',
+      howToRead: 'หาก Real Yield (ผลตอบแทนหักเงินเฟ้อ) เกิน 2.0% ถือว่าให้ผลตอบแทนคุ้มค่ามาก',
+      impactOnMoney: 'ช่วยล็อกผลตอบแทนดอกเบี้ยสูง และจะสร้างกำไรส่วนต่างราคา (Capital Gain) เมื่อดอกเบี้ยเริ่มปรับลง',
+    }
+  }
+  if (name.includes('gold')) {
+    return {
+      status: 'warning',
+      subtitle: '🪙 เผชิญแรงกดดัน Real Yield แต่ได้แรงหนุนภูมิรัฐศาสตร์: ถือเป็นประกันภัย 10-15%',
+      tooltipTitle: 'ทองคำแท่ง (Gold Spot & GTA)',
+      whatIsIt: 'สินทรัพย์ปลอดภัยสากลที่ไม่มีความเสี่ยงคู่สัญญา และเป็นเกราะป้องกันความเสี่ยงสงคราม/เงินเฟ้อ',
+      howToRead: 'ทองคำไม่จ่ายดอกเบี้ย จึงถูกกดดันเมื่อดอกเบี้ยแท้จริงสูง แต่จะพุ่งขึ้นเมื่อมีความตึงเครียดทางภูมิรัฐศาสตร์',
+      impactOnMoney: 'ควรมีติดพอร์ต 10–15% เพื่อประกันความเสี่ยงวิกฤต ไม่แนะนำให้ทุ่มเก็งกำไรด้วยเงินก้อนใหญ่',
+    }
+  }
+  if (name.includes('cash') || name.includes('liquidity') || name.includes('money market')) {
+    return {
+      status: 'neutral',
+      subtitle: '💵 สำรองเงินสด/กองทุนตลาดเงิน: เพื่อความยืดหยุ่นและรอจังหวะช้อนซื้อสินทรัพย์คุณภาพ',
+      tooltipTitle: 'เงินสดและสินทรัพย์สภาพคล่อง (Cash & Liquidity)',
+      whatIsIt: 'เงินฝาก กองทุนตลาดเงินระยะสั้น (Money Market) ที่มีความเสี่ยงต่ำและถอนได้ทันที',
+      howToRead: 'ในภาวะที่ตลาดก้ำกึ่ง ควรถือเงินสดสำรอง 15–20% เสมอ',
+      impactOnMoney: 'เงินสดคือกำลังเสริมที่มีค่าที่สุดยามตลาดปรับฐาน ทำให้เราไม่ต้องถูกบีบให้ขายของขาดทุน',
+    }
+  }
+  return null
+}
 
 function synthesizeThaiNarrative(
   marketStance?: MacroDashboardDTO['thailand_market_stance'],
@@ -170,7 +240,15 @@ export const AiAnalysisSection: React.FC<AiAnalysisSectionProps> = ({
           {/* Regime Scenarios */}
           <div className="rounded-xl border border-edge bg-panel p-4 shadow-sm">
             <div className="mb-2 flex items-center justify-between">
-              <h3 className="text-sm font-semibold text-zinc-900">ฉากทัศน์ที่ AI ประเมิน (Assessed Scenarios)</h3>
+              <div className="flex items-center gap-1.5">
+                <h3 className="text-sm font-semibold text-zinc-900">ฉากทัศน์ที่ AI ประเมิน (Assessed Scenarios)</h3>
+                <ContextTooltip
+                  title="ฉากทัศน์สภาวะเศรษฐกิจ 4 แบบ (4 Macro Scenarios)"
+                  whatIsIt="การจัดหมวดเศรษฐกิจตามทิศทางการเติบโต (Growth) และเงินเฟ้อ (Inflation): ☀️ Goldilocks, 🌤️ Reflation, ⛈️ Stagflation, 🌧️ Recession"
+                  howToRead="คะแนนเปอร์เซ็นต์ในแต่ละช่องสะท้อนน้ำหนักหลักฐานที่ระบบตรวจพบในปัจจุบัน ช่องที่ได้คะแนนสูงสุดคือสมมติฐานหลัก"
+                  impactOnMoney="บอกว่าเราควรเอียงพอร์ตไปทางสินทรัพย์เติบโต สินทรัพย์ป้องกันความเสี่ยง หรือเงินสดปลอดภัย"
+                />
+              </div>
             </div>
             <p className="text-xs text-zinc-500 mb-3">
               สัดส่วนคะแนนที่โมเดลประเมินจากหลักฐานเชิงปริมาณ (ไม่ใช่ Probability ทางสถิติที่ผ่านการ Calibrate)
@@ -237,7 +315,15 @@ export const AiAnalysisSection: React.FC<AiAnalysisSectionProps> = ({
       <div className="rounded-xl border border-edge bg-panel p-4 sm:p-5 shadow-sm space-y-5">
         <div className="flex flex-col justify-between gap-2 sm:flex-row sm:items-center border-b border-slate-100 pb-3">
           <div>
-            <h3 className="text-base font-bold text-zinc-900">คำแนะนำจัดสรรสัดส่วนสินทรัพย์ (Asset Stance)</h3>
+            <div className="flex items-center gap-2">
+              <h3 className="text-base font-bold text-zinc-900">คำแนะนำจัดสรรสัดส่วนสินทรัพย์ (Asset Stance)</h3>
+              <ContextTooltip
+                title="การจัดสรรสัดส่วนสินทรัพย์ (Asset Stance)"
+                whatIsIt="การปรับน้ำหนักการลงทุนตามรอบเศรษฐกิจสำหรับเงินก้อนใหม่ โดยไม่ล้างพอร์ตเกษียณหลักทิ้ง"
+                howToRead="ดูสีและสัดส่วนที่แนะนำ: Overweight (เพิ่มน้ำหนัก), Underweight (ลดน้ำหนัก), Neutral (คงสัดส่วนเดิม)"
+                impactOnMoney="ช่วยลดความเสี่ยงจากการถือสินทรัพย์ผิดวัฏจักร และเพิ่มผลตอบแทนจากสินทรัพย์ที่มีแนวโน้มเติบโต"
+              />
+            </div>
             <p className="text-xs text-zinc-500">ตามภาพรวมสภาวะเศรษฐกิจโลก สหรัฐฯ และไทย</p>
           </div>
           <div className="flex w-fit gap-1 rounded-lg border border-edge bg-surface p-1">
@@ -259,65 +345,102 @@ export const AiAnalysisSection: React.FC<AiAnalysisSectionProps> = ({
           </div>
         </div>
 
+        {/* Safety Shield 1: TAA vs SAA Distinction */}
+        <SafetyShieldBanner
+          type="taa"
+          customMessage="คำแนะนำการจัดสรรสัดส่วนในหน้านี้เป็นแบบ Tactical Asset Allocation (TAA) หรือการปรับเอียงน้ำหนักตามรอบเศรษฐกิจ 3–6 เดือน สำหรับ 'เงินก้อนใหม่' หรือ 'เงินส่วนยืดหยุ่น' ไม่ใช่การเทขายล้างพอร์ตหลักระยะยาว (Core Portfolio) ทิ้ง"
+        />
+
+        {/* Portfolio Stance Bar + Beginner Navigator 3: Illustrative 100-Baht Pie */}
         {assetAllocations.length > 0 && (
-          <div className="rounded-xl border border-edge bg-surface p-3">
-            <PortfolioStanceBar allocations={assetAllocations} />
+          <div className="space-y-4">
+            <div className="rounded-xl border border-edge bg-surface p-3">
+              <PortfolioStanceBar allocations={assetAllocations} />
+            </div>
+            <IllustrativeAllocationPie allocations={assetAllocations} />
           </div>
         )}
 
+        {/* Asset Cards Grid with Plain-Language Subtitles & Context Tooltips */}
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {filteredAssets.map((a, idx) => (
-            <div key={idx} className={cardClass}>
-              <div className="flex items-start justify-between gap-2">
-                <div>
-                  <h4 className="font-semibold text-zinc-900 text-xs sm:text-[13px]">{a.asset_class}</h4>
-                  <div className="flex items-center gap-1.5 mt-0.5">
-                    {a.asset_bucket && (
-                      <span className="text-[10px] font-medium uppercase tracking-wider text-zinc-400">
-                        {a.asset_bucket}
-                      </span>
-                    )}
-                    {a.region && (
-                      <span className="text-[10px] text-zinc-400 font-medium">
-                        • {a.region}
+          {filteredAssets.map((a, idx) => {
+            const explainer = getAssetExplainer(a.asset_class)
+            return (
+              <div key={idx} className={cardClass}>
+                <div className="flex items-start justify-between gap-2">
+                  <div>
+                    <div className="flex items-center gap-1.5">
+                      <h4 className="font-semibold text-zinc-900 text-xs sm:text-[13px]">{a.asset_class}</h4>
+                      {explainer && (
+                        <ContextTooltip
+                          title={explainer.tooltipTitle}
+                          whatIsIt={explainer.whatIsIt}
+                          howToRead={explainer.howToRead}
+                          impactOnMoney={explainer.impactOnMoney}
+                        />
+                      )}
+                    </div>
+                    <div className="flex items-center gap-1.5 mt-0.5">
+                      {a.asset_bucket && (
+                        <span className="text-[10px] font-medium uppercase tracking-wider text-zinc-400">
+                          {a.asset_bucket}
+                        </span>
+                      )}
+                      {a.region && (
+                        <span className="text-[10px] text-zinc-400 font-medium">
+                          • {a.region}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <span
+                      className={`rounded-md border px-2 py-0.5 text-[10px] font-bold uppercase ${
+                        STANCE_CLASS[stanceCategory(a.stance)]
+                      }`}
+                    >
+                      {a.stance}
+                    </span>
+                    {a.confidence && (
+                      <span
+                        className={`rounded-md border px-1.5 py-0.5 text-[9px] font-semibold ${confidenceBadgeClass(
+                          a.confidence
+                        )}`}
+                      >
+                        {a.confidence}
                       </span>
                     )}
                   </div>
                 </div>
-                <div className="flex items-center gap-1">
-                  <span
-                    className={`rounded-md border px-2 py-0.5 text-[10px] font-bold uppercase ${
-                      STANCE_CLASS[stanceCategory(a.stance)]
-                    }`}
-                  >
-                    {a.stance}
-                  </span>
-                  {a.confidence && (
-                    <span
-                      className={`rounded-md border px-1.5 py-0.5 text-[9px] font-semibold ${confidenceBadgeClass(
-                        a.confidence
-                      )}`}
-                    >
-                      {a.confidence}
-                    </span>
-                  )}
-                </div>
+
+                {/* Plain-Language Subtitle & FX Hedge Banner */}
+                {explainer && (
+                  <div className="space-y-1.5">
+                    <TrafficLightSubtitle status={explainer.status} text={explainer.subtitle} />
+                    {explainer.fxHedgeNote && (
+                      <div className="text-[11px] text-teal-900 bg-teal-50/80 rounded-md p-1.5 border border-teal-100 font-medium leading-relaxed">
+                        {explainer.fxHedgeNote}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                <p className="text-xs text-zinc-600 leading-relaxed">{a.rationale}</p>
+                {(a.supporting_data ?? []).length > 0 && (
+                  <div className="pt-1 text-[11px] text-zinc-500">
+                    <span className="font-semibold text-zinc-600">ข้อมูลสนับสนุน: </span>
+                    {a.supporting_data.join(', ')}
+                  </div>
+                )}
+                {a.allocation_delta && (
+                  <div className="text-[11px] text-zinc-500 flex items-center justify-between border-t border-slate-100 pt-1.5">
+                    <span>การปรับสัดส่วน:</span>
+                    <span className="font-semibold text-zinc-800">{a.allocation_delta}</span>
+                  </div>
+                )}
               </div>
-              <p className="text-xs text-zinc-600 leading-relaxed">{a.rationale}</p>
-              {(a.supporting_data ?? []).length > 0 && (
-                <div className="pt-1 text-[11px] text-zinc-500">
-                  <span className="font-semibold text-zinc-600">ข้อมูลสนับสนุน: </span>
-                  {a.supporting_data.join(', ')}
-                </div>
-              )}
-              {a.allocation_delta && (
-                <div className="text-[11px] text-zinc-500 flex items-center justify-between border-t border-slate-100 pt-1.5">
-                  <span>การปรับสัดส่วน:</span>
-                  <span className="font-semibold text-zinc-800">{a.allocation_delta}</span>
-                </div>
-              )}
-            </div>
-          ))}
+            )
+          })}
         </div>
 
         {/* Pair Trades & Tail Risks Row */}
@@ -326,9 +449,17 @@ export const AiAnalysisSection: React.FC<AiAnalysisSectionProps> = ({
             {/* Pair Trades */}
             {pairTrades.length > 0 && (
               <div className="space-y-3">
-                <div>
-                  <h4 className="text-sm font-semibold text-zinc-900">กลยุทธ์จับคู่การเทรด (Tactical Pair Trades)</h4>
-                  <p className="text-xs text-zinc-500">กลยุทธ์ความสัมพันธ์เชิงเปรียบเทียบข้ามสินทรัพย์</p>
+                <div className="flex items-center gap-1.5">
+                  <div>
+                    <h4 className="text-sm font-semibold text-zinc-900">กลยุทธ์จับคู่การเทรด (Tactical Pair Trades)</h4>
+                    <p className="text-xs text-zinc-500">กลยุทธ์ความสัมพันธ์เชิงเปรียบเทียบข้ามสินทรัพย์ (Long ตัวแกร่ง / Short ตัวอ่อนแอกว่า)</p>
+                  </div>
+                  <ContextTooltip
+                    title="กลยุทธ์จับคู่การเทรด (Pair Trades)"
+                    whatIsIt="การลงทุนแบบ Long (ซื้อตัวที่คาดว่าจะขึ้นมากกว่า) ควบคู่กับ Short (ขายตัวที่คาดว่าจะขึ้นช้ากว่าหรือร่วง)"
+                    howToRead="เพื่อทำกำไรจากส่วนต่างผลตอบแทนสัมพัทธ์ (Relative Performance) โดยไม่สนใจว่าตลาดภาพรวมจะขึ้นหรือลง"
+                    impactOnMoney="เป็นกลยุทธ์สำหรับเงินส่วนเก็งกำไรระดับมืออาชีพ มือใหม่ไม่จำเป็นต้องเทรดตามทั้งหมด"
+                  />
                 </div>
                 <div className="space-y-2.5">
                   {pairTrades.map((pt, idx) => (
@@ -352,9 +483,17 @@ export const AiAnalysisSection: React.FC<AiAnalysisSectionProps> = ({
             {/* Tail Risk Scenarios */}
             {riskScenarios.length > 0 && (
               <div className="space-y-3">
-                <div>
-                  <h4 className="text-sm font-semibold text-zinc-900">การบริหารความเสี่ยงหางแถว (Tail Risk Scenarios)</h4>
-                  <p className="text-xs text-zinc-500">แผนรองรับเหตุการณ์ไม่คาดฝันระดับโลก (High-Impact)</p>
+                <div className="flex items-center gap-1.5">
+                  <div>
+                    <h4 className="text-sm font-semibold text-zinc-900">การบริหารความเสี่ยงหางแถว (Tail Risk Scenarios)</h4>
+                    <p className="text-xs text-zinc-500">แผนรองรับเหตุการณ์ไม่คาดฝันระดับโลก (โอกาสเกิดน้อย แต่กระทบรุนแรงมาก)</p>
+                  </div>
+                  <ContextTooltip
+                    title="ความเสี่ยงหางแถว (Tail Risk)"
+                    whatIsIt="ความเสี่ยงจากเหตุการณ์ไม่คาดฝัน (Black Swan หรือวิกฤตกะทันหัน) ที่เกิดขึ้นยากแต่สร้างความเสียหายรุนแรง"
+                    howToRead="ดูว่ามีเงื่อนไขกระตุ้น (Trigger) อะไร และมีกลยุทธ์รับมือ (Mitigation Strategy) อย่างไร"
+                    impactOnMoney="ช่วยให้เราเตรียมตัวล่วงหน้า ไม่ตระหนกตกใจจนขายพอร์ตที่จุดต่ำสุด"
+                  />
                 </div>
                 <div className="space-y-2.5">
                   {riskScenarios.map((rs, idx) => (
@@ -499,7 +638,6 @@ export const AiAnalysisSection: React.FC<AiAnalysisSectionProps> = ({
         </div>
 
         {/* Cross-Border Transmission & Divergence Note */}
-        {/* Cross-Border Transmission & Policy Divergence Card */}
         <div className="rounded-xl border border-sky-100 bg-panel p-4 sm:p-5 shadow-sm space-y-4">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 border-b border-sky-100/70 pb-2.5">
             <div>
@@ -512,21 +650,30 @@ export const AiAnalysisSection: React.FC<AiAnalysisSectionProps> = ({
             </div>
             <div className="flex flex-wrap items-center gap-1.5 shrink-0">
               {aiData.quant_narrative_alignment && (
-                <span className={`rounded border px-2 py-0.5 text-[10px] font-semibold ${
-                  aiData.quant_narrative_alignment.toLowerCase() === 'aligned'
-                    ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
-                    : 'bg-amber-50 text-amber-800 border-amber-200'
-                }`}>
+                <span
+                  className={`rounded border px-2 py-0.5 text-[10px] font-semibold ${
+                    aiData.quant_narrative_alignment.toLowerCase() === 'aligned'
+                      ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                      : 'bg-amber-50 text-amber-800 border-amber-200'
+                  }`}
+                >
                   Alignment: {aiData.quant_narrative_alignment}
                 </span>
               )}
               {typeof aiData.thailand_market_stance?.policy_spread_bps === 'number' && (
                 <span className="rounded bg-indigo-50 text-indigo-800 border border-indigo-200 px-2 py-0.5 text-[10px] font-mono font-semibold">
-                  Spread: {aiData.thailand_market_stance.policy_spread_bps > 0 ? '+' : ''}{aiData.thailand_market_stance.policy_spread_bps} bps
+                  Spread: {aiData.thailand_market_stance.policy_spread_bps > 0 ? '+' : ''}
+                  {aiData.thailand_market_stance.policy_spread_bps} bps
                 </span>
               )}
             </div>
           </div>
+
+          {/* Safety Shield 2: FX Hedging Guidance for Thai Investors */}
+          <SafetyShieldBanner
+            type="fx_hedge"
+            customMessage="สำหรับคนไทยที่ลงทุนสินทรัพย์ต่างประเทศ (เช่น หุ้นสหรัฐฯ หรือทองคำโลก) ในช่วงที่ค่าเงินบาทผันผวน แนะนำเลือกลงทุนผ่านกองทุนที่มีนโยบายป้องกันความเสี่ยงอัตราแลกเปลี่ยน (Hedge FX) เพื่อล็อกผลตอบแทนไม่ให้ถูกค่าเงินบาทกลืนหายไป"
+          />
 
           {/* Divergence Note or Quant-Narrative Alignment Synthesis */}
           {aiData.divergence_note ? (

@@ -652,3 +652,52 @@ def test_gold_and_us_growth_contradiction_guardrails():
     us_eq = next(a for a in direction.asset_allocation if "US Equities" in a.asset_class)
     assert us_eq.confidence == "medium"
     assert any("US_EQUITY_CONTRADICTION" in str(w) or "Contradiction Degradation" in str(w) for w in us_eq.validation_warnings)
+
+
+def test_zero_division_resilience_in_supporting_data_check():
+    """Verify that zero values (0.0) in candidate observables or numbers do not cause ZeroDivisionError."""
+    from schemas.macro_schemas import _validate_supporting_data_against_registry, MarketObservable
+
+    registry = {
+        "fixed_income:fed_funds_rate:latest": MarketObservable(
+            observable_id="fixed_income:fed_funds_rate:latest",
+            asset_bucket="fixed_income",
+            region="US",
+            indicator="Fed Funds Rate",
+            value="0.00",
+            unit="%",
+            observed_at="2026-10-29",
+            source_file="macro_input_20261029.json",
+        ),
+        "fx:usd_net_inflow:latest": MarketObservable(
+            observable_id="fx:usd_net_inflow:latest",
+            asset_bucket="fx",
+            region="US",
+            indicator="USD Net Inflow",
+            value="0.00",
+            unit="M USD",
+            observed_at="2026-10-29",
+            source_file="macro_input_20261029.json",
+        ),
+    }
+
+    # Case 1: supporting data contains 0.0
+    warns1 = []
+    _validate_supporting_data_against_registry(
+        supporting_data=["Fed Funds Rate at 0.0%"],
+        observable_refs=["fixed_income:fed_funds_rate:latest"],
+        observable_registry=registry,
+        warnings_list=warns1,
+    )
+    assert len(warns1) == 0  # Matches 0.0 with 0.0 without ZeroDivisionError
+
+    # Case 2: supporting data contains non-zero number, registry has 0.0
+    warns2 = []
+    _validate_supporting_data_against_registry(
+        supporting_data=["USD Net Inflow at 15.5M USD"],
+        observable_refs=["fx:usd_net_inflow:latest"],
+        observable_registry=registry,
+        warnings_list=warns2,
+    )
+    # 50.0 vs 0.0 should safely detect mismatch without throwing float division by zero
+    assert any("SUPPORTING_DATA_MISMATCH" in str(w) for w in warns2)

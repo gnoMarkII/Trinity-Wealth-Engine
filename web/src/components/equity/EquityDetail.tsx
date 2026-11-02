@@ -3,10 +3,7 @@ import { api } from '../../api/client'
 import type {
   EquityDetailDTO,
   EarningsCallNoteItem,
-  SecCompanyFactsSnapshotDTO,
-  SecInsiderTradeSnapshotDTO,
 } from '../../api/types'
-import { ScoreCard } from './ScoreCard'
 import ScoreRing from './ScoreRing'
 import { sentimentClass } from '../../lib/sentiment'
 import { EquityNews } from './EquityNews'
@@ -23,13 +20,12 @@ import { EvidenceProvenanceDrawer } from './EvidenceProvenanceDrawer'
 import { NasdaqConsensusCard } from './NasdaqConsensusCard'
 import { OptionsOiStrikeLadder } from '../charts/OptionsOiStrikeLadder'
 import { OptionsVolSmile } from '../charts/OptionsVolSmile'
-import { SecFinancialsCard } from './SecFinancialsCard'
-import { SecInsiderTradesCard } from './SecInsiderTradesCard'
 import { EquityNotebookLMExport } from './EquityNotebookLMExport'
 import { EquityDetailSkeleton } from '../ui/FlowSkeleton'
-import { PositionReviewModal } from './PositionReviewModal'
+import { PositionReviewCard } from './PositionReviewCard'
 import { ExpectationGapCard } from './ExpectationGapCard'
 import { KillSwitchProximityMeter } from './KillSwitchProximityMeter'
+import { EquityGlossaryDrawer, StockWayfinderBanner, SectionWaypointHeader } from './explainer'
 
 interface EquityDetailProps {
   status: 'loading' | 'error' | 'not-found' | 'success' | 'idle'
@@ -43,7 +39,6 @@ interface EquityDetailProps {
 }
 
 const eyebrowClass = 'text-xs font-bold uppercase tracking-wider text-sky-700/80'
-const QUANT_STAGGER_STEP_MS = 50
 
 export const EquityDetail: React.FC<EquityDetailProps> = ({
   status,
@@ -58,16 +53,12 @@ export const EquityDetail: React.FC<EquityDetailProps> = ({
   const [activeTab, setActiveTab] = useState<'overview' | 'chart' | 'financials' | 'news' | 'notes' | 'earnings-call' | 'event-study'>('overview')
   const [visitedTabs, setVisitedTabs] = useState<Set<string>>(() => new Set(['overview']))
   const [latestEarningsCall, setLatestEarningsCall] = useState<EarningsCallNoteItem | null>(null)
-  const [isFactorsExpanded, setIsFactorsExpanded] = useState(false)
   const [isDerivativesExpanded, setIsDerivativesExpanded] = useState(false)
-  const [isSecFilingsExpanded, setIsSecFilingsExpanded] = useState(false)
   const [isProvenanceDrawerOpen, setIsProvenanceDrawerOpen] = useState(false)
   const [nasdaqConsensus, setNasdaqConsensus] = useState<any | null>(null)
   const [optionsChain, setOptionsChain] = useState<any | null>(null)
   const [maxPain, setMaxPain] = useState<any | null>(null)
-  const [secFinancials, setSecFinancials] = useState<SecCompanyFactsSnapshotDTO | null>(null)
-  const [secInsiderTrades, setSecInsiderTrades] = useState<SecInsiderTradeSnapshotDTO | null>(null)
-  const [isPositionReviewOpen, setIsPositionReviewOpen] = useState(false)
+  const [isGlossaryOpen, setIsGlossaryOpen] = useState(false)
 
   useEffect(() => {
     if (data?.ticker) {
@@ -114,14 +105,10 @@ export const EquityDetail: React.FC<EquityDetailProps> = ({
       api.getNasdaqConsensus?.(sym)?.then(setNasdaqConsensus)?.catch(() => setNasdaqConsensus(null))
       api.getOptionsChain?.(sym)?.then(setOptionsChain)?.catch(() => setOptionsChain(null))
       api.getOptionsMaxPain?.(sym)?.then(setMaxPain)?.catch(() => setMaxPain(null))
-      api.getSecFinancials?.(sym)?.then(setSecFinancials)?.catch(() => setSecFinancials(null))
-      api.getSecInsiderTrades?.(sym)?.then(setSecInsiderTrades)?.catch(() => setSecInsiderTrades(null))
     } else {
       setNasdaqConsensus(null)
       setOptionsChain(null)
       setMaxPain(null)
-      setSecFinancials(null)
-      setSecInsiderTrades(null)
     }
   }, [data?.ticker, data?.market])
 
@@ -201,7 +188,7 @@ export const EquityDetail: React.FC<EquityDetailProps> = ({
         </svg>
         <h3 className="text-lg font-medium text-zinc-900 mb-1">ไม่พบข้อมูล</h3>
         <p className="text-zinc-500 max-w-sm mb-4 text-sm">
-          ยังไม่มีการวิเคราะห์สำหรับหุ้นตัวนี้ กรุณากดปุ่มด้านล่างเพื่อสั่ง Manager Agent เริ่มการวิเคราะห์ระดับสูง
+          ยังไม่มีการวิเคราะห์สำหรับหุ้นตัวนี้ กรุณาสั่งงานผ่าน Trinity Advisor (Manager) หรือสั่ง Research Swarm เริ่มการวิเคราะห์ระดับสูง
         </p>
       </div>
     )
@@ -259,12 +246,12 @@ export const EquityDetail: React.FC<EquityDetailProps> = ({
               onNotify={onNotify}
             />
             <button
-              onClick={() => setIsPositionReviewOpen(true)}
-              className="px-3 py-1 rounded-xl border border-indigo-200 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 text-xs font-semibold flex items-center gap-1.5 transition-colors shadow-2xs"
-              title="เปิด Position Review & Decision Framework"
+              onClick={() => setIsGlossaryOpen(true)}
+              className="px-3 py-1 rounded-xl border border-emerald-200 bg-emerald-50 text-emerald-800 hover:bg-emerald-100 text-xs font-semibold flex items-center gap-1.5 transition-colors shadow-2xs"
+              title="เปิดคู่มือคำศัพท์หุ้นภาษาคน (30 คำศัพท์วิเคราะห์หุ้นระดับสถาบัน)"
             >
-              <span>📋</span>
-              <span>Position Review</span>
+              <span>📖</span>
+              <span>คู่มือศัพท์หุ้นภาษาคน</span>
             </button>
           </div>
           {isUpdating && (
@@ -307,6 +294,13 @@ export const EquityDetail: React.FC<EquityDetailProps> = ({
           </div>
         </div>
       </div>
+
+      {/* 30-Second Stock Wayfinder Banner */}
+      <StockWayfinderBanner
+        ticker={data.ticker}
+        companyName={data.company_name}
+        market={data.market}
+      />
 
       {/* Sub-nav Tab Switcher */}
       <div className="flex border-b border-edge gap-6 text-sm font-medium">
@@ -422,51 +416,87 @@ export const EquityDetail: React.FC<EquityDetailProps> = ({
       {visitedTabs.has('overview') && (
         <div className={activeTab === 'overview' ? 'space-y-8 block animate-fade-in' : 'hidden'}>
           {/* =========================================================
-              TIER 1: Executive Investment Thesis Hero Card
+              TIER 1: Executive Investment Thesis Hero Card (AI-First)
              ========================================================= */}
-          <ExecutiveThesisHero
-            scorecard={scorecard}
-            baseCaseSummary={data.base_case_summary}
-            latestEarningsCall={latestEarningsCall}
-            atomicSnapshot={quant.atomic_market_snapshot}
-            currentPrice={resolvedCurrentPrice}
-            portfolioContext={data.portfolio_context}
-            thesisDelta={data.thesis_delta}
-            onViewEarningsCall={() => handleTabSelect('earnings-call')}
-            onOpenProvenance={() => setIsProvenanceDrawerOpen(prev => !prev)}
-            hasProvenance={Boolean(evidenceSnapshot)}
-            reverseDcf={reverseDcf}
-            tactical={tactical}
-            currencySymbol={currencySymbol}
-          />
-
-          {/* Evidence Provenance Drawer (If Opened) */}
-          {isProvenanceDrawerOpen && evidenceSnapshot && (
-            <div className="flow-panel rounded-2xl border border-edge/80 p-5 shadow-xs">
-              <EvidenceProvenanceDrawer snapshot={evidenceSnapshot} />
-            </div>
-          )}
-
-          {/* Infographic 2: Market Expectation vs Reality Gap (Reverse DCF) */}
-          {reverseDcf && (
-            <ExpectationGapCard
-              marketImpliedRevenueGrowth={reverseDcf.market_implied_growth_pct}
-              actualRevenueGrowth={quant.revenue_growth_yoy_pct}
-              marketImpliedOperatingMargin={reverseDcf.market_implied_margin_pct}
-              actualOperatingMargin={reverseDcf.reported_ebit_margin_pct ?? quant.gaap_operating_margin?.value_pct ?? quant.provider_ebit_margin?.value_pct}
-              solverStatus={reverseDcf.solver_status}
-              pvOf5yFcf={reverseDcf.sum_pv_5y_fcf}
-              pvOfTerminalValue={reverseDcf.terminal_value_pv}
-              enterpriseValue={reverseDcf.enterprise_value}
-              currency={currencySymbol}
+          <div className="space-y-4">
+            <SectionWaypointHeader
+              tierNumber={1}
+              icon="🤖"
+              title="ส่วนที่ 1: สรุปภาพรวมและคำแนะนำโดย AI"
+              plainLanguageSummary="AI สังเคราะห์งบการเงินและข่าวสารทั้งหมดให้เรา สรุปเป็นคำแนะนำใน 3 วินาที (น่าสะสม / ถือรอ / ชะลอซื้อ)"
+              frameworkLabel="AI Executive Command Center"
             />
-          )}
+            <ExecutiveThesisHero
+              scorecard={scorecard}
+              baseCaseSummary={data.base_case_summary}
+              narrativeAnalysis={data.narrative_analysis}
+              latestEarningsCall={latestEarningsCall}
+              atomicSnapshot={quant.atomic_market_snapshot}
+              currentPrice={resolvedCurrentPrice}
+              portfolioContext={data.portfolio_context}
+              thesisDelta={data.thesis_delta}
+              onViewEarningsCall={() => handleTabSelect('earnings-call')}
+              onOpenProvenance={() => setIsProvenanceDrawerOpen(prev => !prev)}
+              hasProvenance={Boolean(evidenceSnapshot)}
+              reverseDcf={reverseDcf}
+              tactical={tactical}
+              currencySymbol={currencySymbol}
+            />
+
+            {/* Evidence Provenance Drawer (If Opened) */}
+            {isProvenanceDrawerOpen && evidenceSnapshot && (
+              <div className="flow-panel rounded-2xl border border-edge/80 p-5 shadow-xs">
+                <EvidenceProvenanceDrawer snapshot={evidenceSnapshot} />
+              </div>
+            )}
+          </div>
 
           {/* =========================================================
-              TIER 2: Full-Width Analytical Stack (Valuation Workbench & Tactical Blueprint)
+              TIER 2: Your Position & Decision Review (Inline Section)
              ========================================================= */}
-          <div className="space-y-8">
-            {/* Section 2A: Valuation Workbench & Quality Forensics */}
+          <div className="space-y-4">
+            <SectionWaypointHeader
+              tierNumber={2}
+              icon="💼"
+              title="ส่วนที่ 2: ทบทวนสถานะพอร์ตและจิตวิทยาการลงทุน"
+              plainLanguageSummary="ตรวจดูว่าหุ้นในมือเรา ราคาขึ้นเพราะกำไรแท้จริง (EPS Growth) หรือเพราะตลาดเก็งกำไรจน P/E พอง"
+              frameworkLabel="Position & Decision Review"
+              id="position-review-section"
+            />
+            <PositionReviewCard
+              ticker={data.ticker}
+              market={data.market}
+              portfolioId={portfolioId}
+            />
+          </div>
+
+          {/* =========================================================
+              TIER 3: Valuation & Expectation Reality Check
+             ========================================================= */}
+          <div className="space-y-6">
+            <SectionWaypointHeader
+              tierNumber={3}
+              icon="🏷️"
+              title="ส่วนที่ 3: ตรวจสอบความถูกแพงและมูลค่ากิจการ"
+              plainLanguageSummary="ตอบคำถามเดียว: ราคานี้เรากำลังซื้อของถูกหรือของแพง? และตลาดกำลังคาดหวังรายได้เติบโตเกินจริงหรือไม่"
+              frameworkLabel="Valuation Reality Check"
+            />
+            {/* Infographic 2: Market Expectation vs Reality Gap (Reverse DCF) */}
+            {reverseDcf && (
+              <ExpectationGapCard
+                marketImpliedRevenueGrowth={reverseDcf.market_implied_growth_pct}
+                actualRevenueGrowth={quant.revenue_growth_yoy_pct}
+                marketImpliedOperatingMargin={reverseDcf.market_implied_margin_pct}
+                actualOperatingMargin={reverseDcf.reported_ebit_margin_pct ?? quant.gaap_operating_margin?.value_pct ?? quant.provider_ebit_margin?.value_pct}
+                solverStatus={reverseDcf.solver_status}
+                pvOf5yFcf={reverseDcf.sum_pv_5y_fcf}
+                pvOfTerminalValue={reverseDcf.terminal_value_pv}
+                enterpriseValue={reverseDcf.enterprise_value}
+                currency={currencySymbol}
+              />
+            )}
+
+            {/* Section 3B: Valuation Workbench & Quality Forensics */}
             <ValuationWorkbenchCard
               reverseDcf={reverseDcf}
               dcf={quant.dcf_result}
@@ -489,8 +519,19 @@ export const EquityDetail: React.FC<EquityDetailProps> = ({
               }}
               currency={currencySymbol}
             />
+          </div>
 
-            {/* Section 2B: Tactical Blueprint & Smart Money Flow */}
+          {/* =========================================================
+              TIER 4: Tactical Blueprint & Smart Money Flow
+             ========================================================= */}
+          <div className="space-y-6">
+            <SectionWaypointHeader
+              tierNumber={4}
+              icon="🎯"
+              title="ส่วนที่ 4: จังหวะเวลาและรอยเท้าสถาบัน"
+              plainLanguageSummary="หุ้นดีแต่ซื้อผิดสเตจก็ติดดอยได้: ดูวงจร 4 สเตจ, โซนราคาเข้าซื้อที่ได้เปรียบ และดูว่าผู้บริหารกำลังซื้อหรือแอบขาย"
+              frameworkLabel="Tactical Blueprint & Smart Money"
+            />
             <TacticalFlowMatrixCard
               tactical={tactical ? { ...tactical, current_price: resolvedCurrentPrice } : tactical}
               insider={insider}
@@ -501,193 +542,100 @@ export const EquityDetail: React.FC<EquityDetailProps> = ({
           </div>
 
           {/* =========================================================
-              TIER 2.3: Thesis Falsifiers & Exit Safeguards (Infographic 4 Proximity Meter)
-             ========================================================= */}
-          {falsifiers.length > 0 && (
-            <KillSwitchProximityMeter
-              falsifiers={falsifiers}
-              currentOperatingMargin={reverseDcf?.reported_ebit_margin_pct ?? quant.gaap_operating_margin?.value_pct ?? quant.provider_ebit_margin?.value_pct}
-              currentPrice={resolvedCurrentPrice}
-              currency={currencySymbol}
-            />
-          )}
-
-          {/* Editorial Reading Section: Deep Narrative Analysis */}
-          {data.narrative_analysis && (
-            <section className="flow-panel rounded-2xl border border-edge/80 p-6 shadow-sm">
-              <div className="flex items-center justify-between border-b border-edge/60 pb-3 mb-4">
-                <h3 className={eyebrowClass}>📝 In-Depth Narrative Analysis</h3>
-                <span className="text-xs text-zinc-400">สังเคราะห์ข้อมูลเชิงคุณภาพและข่าวสาร</span>
-              </div>
-              <div className="prose prose-sm max-w-none text-zinc-800 leading-relaxed whitespace-pre-line text-[14px]">
-                {data.narrative_analysis}
-              </div>
-            </section>
-          )}
-
-          {/* =========================================================
-              TIER 2.5: Institutional Derivatives & Sell-Side Intelligence (Progressive Disclosure)
-             ========================================================= */}
-          {(nasdaqConsensus || strikeLadderData.length > 0) && (
-            <section className="flow-panel rounded-2xl border border-edge/80 p-5 shadow-sm">
-              <button
-                onClick={() => setIsDerivativesExpanded(prev => !prev)}
-                className="w-full flex items-center justify-between text-left transition-colors"
-                aria-expanded={isDerivativesExpanded}
-                aria-label="Toggle institutional derivatives"
-              >
-                <div className="flex items-center gap-2">
-                  <span className="text-base">⚡</span>
-                  <div>
-                    <h3 className="text-sm font-bold text-zinc-900">
-                      Institutional Derivatives & Sell-Side Consensus
-                    </h3>
-                    <p className="text-xs text-zinc-500">
-                      Cboe Options Open Interest Ladder, Volatility Smile & Nasdaq Analyst Consensus
-                    </p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  {maxPain?.max_pain_strike != null && (
-                    <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-zinc-100 border border-zinc-200 text-zinc-700">
-                      Max Pain: ${maxPain.max_pain_strike.toFixed(2)}
-                    </span>
-                  )}
-                  <span className="text-xs font-medium text-sky-600 hover:text-sky-700">
-                    {isDerivativesExpanded ? '▲ ซ่อน' : '▼ ดูข้อมูลอนุพันธ์'}
-                  </span>
-                </div>
-              </button>
-              {isDerivativesExpanded && (
-                <div className="mt-5 space-y-6 pt-4 border-t border-edge/60 animate-fade-in">
-                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
-                    {nasdaqConsensus && (
-                      <NasdaqConsensusCard
-                        symbol={nasdaqConsensus.symbol}
-                        coverageStatus={nasdaqConsensus.coverage_status}
-                        hasEarningsSurprise={nasdaqConsensus.has_earnings_surprise}
-                        hasAnalystRatings={nasdaqConsensus.has_analyst_ratings}
-                        upcomingEarnings={nasdaqConsensus.upcoming_earnings}
-                        ratings={nasdaqConsensus.ratings}
-                        surpriseHistory={nasdaqConsensus.surprise_history}
-                      />
-                    )}
-                    {strikeLadderData.length > 0 && (
-                      <OptionsOiStrikeLadder
-                        symbol={data.ticker}
-                        strikes={strikeLadderData}
-                        currentPrice={resolvedCurrentPrice ?? undefined}
-                        maxPainStrike={maxPain?.max_pain_strike ?? undefined}
-                        expirationDate={optionsChain?.expiration_date ?? undefined}
-                        putCallRatio={optionsChain?.put_call_ratio ?? undefined}
-                      />
-                    )}
-                  </div>
-                  {optionsChain?.contracts && optionsChain.contracts.length > 0 && (
-                    <OptionsVolSmile
-                      symbol={data.ticker}
-                      expiry={optionsChain.expiration_date || 'Current Expiry'}
-                      currentPrice={resolvedCurrentPrice ?? undefined}
-                      contracts={optionsChain.contracts}
-                      asOfDate={optionsChain.as_of}
-                    />
-                  )}
-                </div>
-              )}
-            </section>
-          )}
-
-          {/* =========================================================
-              TIER 2.6: SEC EDGAR Regulatory & Corporate Filings Intelligence (Progressive Disclosure)
-             ========================================================= */}
-          {(secFinancials || secInsiderTrades || data.market === 'US') && (
-            <section className="flow-panel rounded-2xl border border-edge/80 p-5 shadow-sm">
-              <button
-                onClick={() => setIsSecFilingsExpanded(prev => !prev)}
-                className="w-full flex items-center justify-between text-left transition-colors"
-                aria-expanded={isSecFilingsExpanded}
-                aria-label="Toggle SEC filings"
-              >
-                <div className="flex items-center gap-2">
-                  <span className="text-base">🏛️</span>
-                  <div>
-                    <h3 className="text-sm font-bold text-zinc-900">
-                      SEC EDGAR Regulatory & Corporate Filings
-                    </h3>
-                    <p className="text-xs text-zinc-500">
-                      XBRL Company Facts (10-K / 10-Q) & Form 4 Insider Ownership Filings
-                    </p>
-                  </div>
-                </div>
-                <span className="text-xs font-medium text-sky-600 hover:text-sky-700">
-                  {isSecFilingsExpanded ? '▲ ซ่อน' : '▼ ดูเอกสาร SEC'}
-                </span>
-              </button>
-              {isSecFilingsExpanded && (
-                <div className="mt-5 grid grid-cols-1 lg:grid-cols-2 gap-6 items-start pt-4 border-t border-edge/60 animate-fade-in">
-                  <SecFinancialsCard financials={secFinancials} symbol={data.ticker} />
-                  <SecInsiderTradesCard trades={secInsiderTrades} symbol={data.ticker} />
-                </div>
-              )}
-            </section>
-          )}
-
-          {/* =========================================================
-              TIER 3: Risk Governance & Factor Deep-Dive (Collapsible)
+              TIER 5: Thesis Falsifiers & Exit Safeguards
              ========================================================= */}
           <div className="space-y-6">
+            <SectionWaypointHeader
+              tierNumber={5}
+              icon="🛡️"
+              title="ส่วนที่ 5: เกราะป้องกันความเสี่ยงและจุดตัดใจ"
+              plainLanguageSummary="กฎเหล็กไม่ติดดอย: ถ้าราคาหรือมาร์จิ้นหลุดตรงไหน แปลว่าเหตุผลที่เราซื้อผิดไปแล้วและต้องยอมตัดขาดทุน"
+              frameworkLabel="Risk Defense & Kill Switch"
+            />
 
-            {/* Data Quality Flags */}
-            <DataQualityFlagsCard flags={data.data_quality_flags} />
+            {falsifiers.length > 0 && (
+              <KillSwitchProximityMeter
+                falsifiers={falsifiers}
+                currentOperatingMargin={reverseDcf?.reported_ebit_margin_pct ?? quant.gaap_operating_margin?.value_pct ?? quant.provider_ebit_margin?.value_pct}
+                currentPrice={resolvedCurrentPrice}
+                currency={currencySymbol}
+              />
+            )}
 
-            {/* Collapsible Factor Deep-Dive (6 Quant ScoreCards) */}
-            <section className="flow-panel rounded-2xl border border-edge/80 p-5 shadow-sm">
-              <button
-                onClick={() => setIsFactorsExpanded(prev => !prev)}
-                className="w-full flex items-center justify-between text-left transition-colors"
-                aria-expanded={isFactorsExpanded}
-                aria-label="Toggle factor breakdown"
-              >
-                <div className="flex items-center gap-2">
-                  <span className="text-base">💎</span>
-                  <div>
-                    <h3 className="text-sm font-bold text-zinc-900">
-                      6-Factor Quantitative Breakdown
-                    </h3>
-                    <p className="text-xs text-zinc-500">
-                      คะแนนปัจจัยพื้นฐานทั้ง 6 เสาหลัก (Value, Growth, Quality, Momentum, Dividend, Solvency)
-                    </p>
+            {/* Institutional Derivatives & Sell-Side Intelligence (Progressive Disclosure) */}
+            {(nasdaqConsensus || strikeLadderData.length > 0) && (
+              <section className="flow-panel rounded-2xl border border-edge/80 p-5 shadow-sm">
+                <button
+                  onClick={() => setIsDerivativesExpanded(prev => !prev)}
+                  className="w-full flex items-center justify-between text-left transition-colors"
+                  aria-expanded={isDerivativesExpanded}
+                  aria-label="Toggle institutional derivatives"
+                >
+                  <div className="flex items-center gap-2">
+                    <span className="text-base">⚡</span>
+                    <div>
+                      <h3 className="text-sm font-bold text-zinc-900">
+                        Institutional Derivatives & Sell-Side Consensus
+                      </h3>
+                      <p className="text-xs text-zinc-500">
+                        Cboe Options Open Interest Ladder, Volatility Smile & Nasdaq Analyst Consensus
+                      </p>
+                    </div>
                   </div>
-                </div>
+                  <div className="flex items-center gap-2">
+                    {maxPain?.max_pain_strike != null && (
+                      <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-zinc-100 border border-zinc-200 text-zinc-700">
+                        Max Pain: ${maxPain.max_pain_strike.toFixed(2)}
+                      </span>
+                    )}
+                    <span className="text-xs font-medium text-sky-600 hover:text-sky-700">
+                      {isDerivativesExpanded ? '▲ ซ่อน' : '▼ ดูข้อมูลอนุพันธ์'}
+                    </span>
+                  </div>
+                </button>
+                {isDerivativesExpanded && (
+                  <div className="mt-5 space-y-6 pt-4 border-t border-edge/60 animate-fade-in">
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
+                      {nasdaqConsensus && (
+                        <NasdaqConsensusCard
+                          symbol={nasdaqConsensus.symbol}
+                          coverageStatus={nasdaqConsensus.coverage_status}
+                          hasEarningsSurprise={nasdaqConsensus.has_earnings_surprise}
+                          hasAnalystRatings={nasdaqConsensus.has_analyst_ratings}
+                          upcomingEarnings={nasdaqConsensus.upcoming_earnings}
+                          ratings={nasdaqConsensus.ratings}
+                          surpriseHistory={nasdaqConsensus.surprise_history}
+                        />
+                      )}
+                      {strikeLadderData.length > 0 && (
+                        <OptionsOiStrikeLadder
+                          symbol={data.ticker}
+                          strikes={strikeLadderData}
+                          currentPrice={resolvedCurrentPrice ?? undefined}
+                          maxPainStrike={maxPain?.max_pain_strike ?? undefined}
+                          expirationDate={optionsChain?.expiration_date ?? undefined}
+                          putCallRatio={optionsChain?.put_call_ratio ?? undefined}
+                        />
+                      )}
+                    </div>
+                    {optionsChain?.contracts && optionsChain.contracts.length > 0 && (
+                      <OptionsVolSmile
+                        symbol={data.ticker}
+                        expiry={optionsChain.expiration_date || 'Current Expiry'}
+                        currentPrice={resolvedCurrentPrice ?? undefined}
+                        contracts={optionsChain.contracts}
+                        asOfDate={optionsChain.as_of}
+                      />
+                    )}
+                  </div>
+                )}
+              </section>
+            )}
 
-                <div className="flex items-center gap-2 text-xs font-semibold text-sky-700 bg-surface px-3 py-1.5 rounded-xl border border-edge">
-                  <span>{isFactorsExpanded ? 'พับเก็บ' : 'ขยายดูรายละเอียด'}</span>
-                  <span>{isFactorsExpanded ? '▲' : '▼'}</span>
-                </div>
-              </button>
-
-              {isFactorsExpanded && (
-                <div className="mt-5 pt-4 border-t border-edge/60 flex flex-wrap gap-4 animate-card-in">
-                  {[
-                    { title: 'Value', icon: '💰', score: quant.value_score, tooltip: 'ประเมินความถูกแพงของหุ้นเทียบกับปัจจัยพื้นฐาน เช่น P/E, P/BV' },
-                    { title: 'Growth', icon: '🌱', score: quant.growth_score, tooltip: 'ประเมินแนวโน้มการเติบโตของรายได้และกำไรทั้งในอดีตและอนาคต' },
-                    { title: 'Quality', icon: '💎', score: quant.quality_score, tooltip: 'ประเมินคุณภาพของกิจการ เช่น อัตราการทำกำไร และผลตอบแทนต่อส่วนผู้ถือหุ้น (ROE)' },
-                    { title: 'Momentum', icon: '🚀', score: quant.momentum_score, tooltip: 'ประเมินความแข็งแกร่งของแนวโน้มราคาหุ้นในช่วงที่ผ่านมา' },
-                    { title: 'Dividend', icon: '🪙', score: quant.dividend_score, tooltip: 'ประเมินความน่าสนใจของเงินปันผล ทั้งอัตราผลตอบแทนและความสม่ำเสมอ' },
-                    { title: 'Solvency', icon: '🛡️', score: quant.solvency_score, tooltip: 'ประเมินความมั่นคงทางการเงิน ความสามารถในการชำระหนี้ และสภาพคล่อง' },
-                  ].map((m, i) => (
-                    <ScoreCard
-                      key={m.title}
-                      title={m.title}
-                      icon={m.icon}
-                      score={m.score}
-                      tooltip={m.tooltip}
-                      delayMs={i * QUANT_STAGGER_STEP_MS}
-                    />
-                  ))}
-                </div>
-              )}
-            </section>
+            {/* Risk Governance & Data Safeguards */}
+            {data.data_quality_flags && data.data_quality_flags.length > 0 && (
+              <DataQualityFlagsCard flags={data.data_quality_flags} />
+            )}
           </div>
         </div>
       )}
@@ -704,12 +652,9 @@ export const EquityDetail: React.FC<EquityDetailProps> = ({
         </div>
       </div>
 
-      <PositionReviewModal
-        isOpen={isPositionReviewOpen}
-        onClose={() => setIsPositionReviewOpen(false)}
-        ticker={data.ticker}
-        market={data.market || 'US'}
-        portfolioId={portfolioId}
+      <EquityGlossaryDrawer
+        isOpen={isGlossaryOpen}
+        onClose={() => setIsGlossaryOpen(false)}
       />
     </div>
   )

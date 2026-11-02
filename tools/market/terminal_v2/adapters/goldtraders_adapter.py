@@ -10,6 +10,8 @@ from typing import Optional, Tuple
 from bs4 import BeautifulSoup
 import requests
 
+from core.financial_parsers import extract_financial_decimal
+from core.text_utils import strip_html_tags
 from tools.market.terminal_v2.application.cache import BROWSER_HEADERS, ThreadSafeTTLCache
 from tools.market.terminal_v2.domain.errors import DataUnavailableError, ProviderError
 from tools.market.terminal_v2.domain.models import (
@@ -34,16 +36,8 @@ SPAN_IDS = {
 
 
 def _extract_number(text: Optional[str]) -> Optional[float]:
-    if not text:
-        return None
-    cleaned = text.replace(",", "").strip()
-    match = re.search(r"(\d+(?:\.\d+)?)", cleaned)
-    if match:
-        try:
-            return float(match.group(1))
-        except ValueError:
-            return None
-    return None
+    d = extract_financial_decimal(text)
+    return float(d) if d is not None else None
 
 
 def _parse_announcement(text: Optional[str]) -> Tuple[str, Optional[int]]:
@@ -88,7 +82,7 @@ class GoldTradersAdapter(GoldPricePort):
                     pattern = rf'<span[^>]*id=["\']?{re.escape(span_id)}["\']?[^>]*>(.*?)</span>'
                     match = re.search(pattern, html, re.DOTALL | re.IGNORECASE)
                     if match:
-                        raw = re.sub(r"<[^>]*>", "", match.group(1))
+                        raw = strip_html_tags(match.group(1))
                         return _extract_number(raw)
                     return None
                 return _extract_number(el.get_text())
@@ -103,7 +97,7 @@ class GoldTradersAdapter(GoldPricePort):
             if not raw_time:
                 match = re.search(rf'<span[^>]*id=["\']?{re.escape(SPAN_IDS["announced"])}["\']?[^>]*>(.*?)</span>', html, re.DOTALL | re.IGNORECASE)
                 if match:
-                    raw_time = re.sub(r"<[^>]*>", "", match.group(1)).strip()
+                    raw_time = strip_html_tags(match.group(1))
 
             announced_at, revision = _parse_announcement(raw_time)
 

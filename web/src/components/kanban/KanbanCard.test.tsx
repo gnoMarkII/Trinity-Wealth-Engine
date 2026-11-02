@@ -63,7 +63,7 @@ describe('KanbanCard', () => {
     const { onClick, onDelete, onEdit, onDispatch } = renderCard()
     await userEvent.click(screen.getByRole('button', { name: 'ลบการ์ด' }))
     await userEvent.click(screen.getByRole('button', { name: 'แก้ไขการ์ด' }))
-    await userEvent.click(screen.getByRole('button', { name: 'ส่งงานให้ Manager' }))
+    await userEvent.click(screen.getByRole('button', { name: 'ส่งงานให้ Swarm' }))
     expect(onDelete).toHaveBeenCalledOnce()
     expect(onEdit).toHaveBeenCalledOnce()
     expect(onDispatch).toHaveBeenCalledOnce()
@@ -73,13 +73,13 @@ describe('KanbanCard', () => {
   it('ไม่ editable → ไม่มีปุ่มแก้ไข/Play แต่ยังลบได้', () => {
     renderCard({ editable: false })
     expect(screen.queryByRole('button', { name: 'แก้ไขการ์ด' })).not.toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: 'ส่งงานให้ Manager' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'ส่งงานให้ Swarm' })).not.toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'ลบการ์ด' })).toBeInTheDocument()
   })
 
   it('การ์ด flow=notebooklm ไม่มีปุ่ม Play แม้ editable — สร้าง Audio ทำผ่าน Drawer เท่านั้น', () => {
     renderCard({ card: makeCard({ flow: 'notebooklm' }) })
-    expect(screen.queryByRole('button', { name: 'ส่งงานให้ Manager' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'ส่งงานให้ Swarm' })).not.toBeInTheDocument()
   })
 
   it('workspace preview โชว์ชื่อ agent, จำนวน log และเวลาที่ผ่านไป', () => {

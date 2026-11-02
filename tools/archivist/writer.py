@@ -31,7 +31,7 @@ from .metadata import (
     parse_note,
     validate_capture_note,
 )
-from tools.tool_errors import GOAL_VIA_BOOKKEEPER
+from tools.tool_errors import GOAL_NOT_IN_VAULT
 from .parser import _split_bullets, _parse_h3_subsections, _parse_h2_sections, _strip_frontmatter, _extract_asset_tickers, _TICKER_FRONTMATTER_RE, _VIDEO_ID_FRONTMATTER_RE, _SOURCE_URL_FRONTMATTER_RE, extract_yaml_frontmatter_value, parse_company_news_items
 from .indexer import update_master_index, _index_upsert
 from .portable_links import render_resolved_markdown_link
@@ -267,7 +267,7 @@ def _write_raw_markdown_v2(
         meta = {"title": filename, "entity_type": "capture"}
         body = content
     if str(meta.get("entity_type") or "").strip().lower() in {"goal", "financial_goal"}:
-        return GOAL_VIA_BOOKKEEPER
+        return GOAL_NOT_IN_VAULT
     meta, safe_name, capture_only = _prepare_raw_metadata(
         meta,
         filename=filename,
@@ -525,7 +525,7 @@ def write_raw_markdown(content: str, folder_path: str, filename: str) -> str:
     - article_note → folder_path='30_Knowledge_Base/News'
     - book_note → folder_path='30_Knowledge_Base/Books'
     - Strategy / Concept / macro_strategy / Macro_Strategy_Direction → folder_path='30_Knowledge_Base/Strategies'
-    - goal / financial_goal → ห้ามบันทึกด้วย tool นี้ ให้หยุดและแจ้งผู้ใช้ให้ใช้คำสั่งของ Bookkeeper แทน
+    - goal / financial_goal → ห้ามบันทึกด้วย tool นี้ ให้หยุดและแจ้งผู้ใช้ให้ไปตั้งเป้าหมายที่หน้า All-Asset Portfolio (/portfolio) แทน
 
     Args:
         content (str): เนื้อหา Markdown พร้อม YAML frontmatter ที่ต้องการบันทึก
@@ -550,7 +550,7 @@ def write_raw_markdown(content: str, folder_path: str, filename: str) -> str:
     )
     entity_type_val = extract_yaml_frontmatter_value(content, "entity_type")
     if entity_type_val in {"goal", "financial_goal"}:
-        return GOAL_VIA_BOOKKEEPER
+        return GOAL_NOT_IN_VAULT
 
     resolved_path = _maybe_inject_ticker_subfolder(folder_path, content)
     target_dir = vault_path / resolved_path

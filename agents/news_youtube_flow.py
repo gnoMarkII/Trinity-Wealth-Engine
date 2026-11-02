@@ -1,4 +1,4 @@
-"""กราฟแยกต่างหากสำหรับ human-in-the-loop approval ของข่าว/YouTube — ไม่แตะ agents/manager_agent.py
+"""กราฟแยกต่างหากสำหรับ human-in-the-loop approval ของข่าว/YouTube — ไม่แตะ agents/research_swarm_flow.py
 เลย (ตั้งใจแยกให้ isolated เพื่อไม่เสี่ยงกระทบ pipeline หลักที่ทดสอบแล้วและใช้งานจริงอยู่)
 
 Flow: fetch_news → fetch_youtube → gate (interrupt() รอ user เลือก) → ingest_node (ดึงเนื้อหาเต็ม

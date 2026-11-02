@@ -1,5 +1,6 @@
 import React from 'react'
 import type { CommodityVolSnapshotDTO } from '../../api/types'
+import { ContextTooltip } from './explainer/ContextTooltip'
 
 interface CommodityVolCardProps {
   indices: CommodityVolSnapshotDTO[]
@@ -22,6 +23,12 @@ export const CommodityVolCard: React.FC<CommodityVolCardProps> = ({ indices, cla
         <div>
           <h3 className="text-base font-bold text-zinc-900 tracking-tight flex items-center gap-2">
             <span>Commodity Volatility Radar</span>
+            <ContextTooltip
+              title="ดัชนีความผันผวนสินค้าโภคภัณฑ์ (GVZ / OVX / VXSLV)"
+              whatIsIt="ดัชนีวัดความคาดหวังความผันผวน 30 วันล่วงหน้า (VIX ของสินค้าโภคภัณฑ์) จาก CBOE เช่น GVZ = ทองคำ, OVX = น้ำมันดิบ"
+              howToRead="ค่าปกติของ GVZ อยู่แถว 15–20 หากพุ่งเกิน 30 แปลว่าตลาดตกใจกลัววิกฤตสงครามหรือเงินเฟ้ออย่างรุนแรง"
+              impactOnMoney="ช่วงที่ความผันผวนต่ำ (Complacent/Normal) เป็นจังหวะที่ดีในการสะสมทองคำประกันความเสี่ยง ไม่ควรรอให้พุ่งแล้วค่อยไล่ซื้อ"
+            />
             <span className="rounded-full bg-sky-100 text-sky-800 font-mono text-[10px] font-bold px-2.5 py-0.5">
               CBOE 30D IV
             </span>

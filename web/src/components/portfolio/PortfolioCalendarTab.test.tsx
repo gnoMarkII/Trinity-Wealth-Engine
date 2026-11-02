@@ -40,7 +40,8 @@ describe('PortfolioCalendarTab', () => {
 
   it('renders calendar title and event chips on API success', async () => {
     const now = new Date()
-    const targetDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 5)
+    // Guarantee targetDate is within current month grid regardless of day-of-month
+    const targetDate = new Date(now.getFullYear(), now.getMonth(), 15)
     const year = targetDate.getFullYear()
     const monthStr = String(targetDate.getMonth() + 1).padStart(2, '0')
     const dayStr = String(targetDate.getDate()).padStart(2, '0')

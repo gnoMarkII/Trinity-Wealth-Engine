@@ -4,7 +4,7 @@ import json
 import pytest
 from langchain_core.messages import AIMessage, HumanMessage
 
-from agents.manager_agent import build_graph, AgentState
+from agents.research_swarm_flow import build_graph, AgentState
 from schemas.micro_quant_schemas import MicroQuantOutput, QuantSignals, AtomicMarketSnapshot
 
 
@@ -60,7 +60,7 @@ def test_equity_synthesizer_llm_failure_saves_partial_revision(monkeypatch):
     equity_synthesizer_node = nodes["equity_synthesizer"]
 
     # When get_llm or invoke fails with ConnectionRefusedError
-    with patch("agents.manager_agent.get_llm", side_effect=ConnectionRefusedError("LLM server connection refused (simulated)")):
+    with patch("agents.research_swarm_flow.get_llm", side_effect=ConnectionRefusedError("LLM server connection refused (simulated)")):
         cmd = equity_synthesizer_node.invoke(state)
         assert cmd.goto == "post_equity_intel"
         update = cmd.update

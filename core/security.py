@@ -1,18 +1,18 @@
 import re
 
-_THAI_ID_PATTERN = re.compile(r'\b(\d)-?(\d{4})-?(\d{5})-?(\d{2})-?(\d)\b')
+_THAI_ID_PATTERN = re.compile(r'(?<!\d)(\d)-?(\d{4})-?(\d{5})-?(\d{2})-?(\d)(?!\d)')
 
 _PII_PATTERNS: list[tuple[re.Pattern, str]] = [
     # Credit card with separators: 4-4-4-4 groups (Visa/MC/Discover/etc.)
-    (re.compile(r'\b\d{4}[ -]\d{4}[ -]\d{4}[ -]\d{4}\b'), "[REDACTED_CREDIT_CARD]"),
+    (re.compile(r'(?<!\d)\d{4}[ -]\d{4}[ -]\d{4}[ -]\d{4}(?!\d)'), "[REDACTED_CREDIT_CARD]"),
     # Credit card without separators: major BIN prefixes only (Visa/MC/Amex)
-    (re.compile(r'\b(?:4\d{15}|5[1-5]\d{14}|2[2-7]\d{14}|3[47]\d{13})\b'), "[REDACTED_CREDIT_CARD]"),
+    (re.compile(r'(?<!\d)(?:4\d{15}|5[1-5]\d{14}|2[2-7]\d{14}|3[47]\d{13})(?!\d)'), "[REDACTED_CREDIT_CARD]"),
     # Email
     (re.compile(r'\b[\w.+\-]+@[\w\-]+\.[\w.\-]+\b', re.IGNORECASE), "[REDACTED_EMAIL]"),
     # Thai mobile: 0[6-9]x format (10 digits), with optional separators
-    (re.compile(r'\b0[6-9]\d[-.\s]?\d{3}[-.\s]?\d{4}\b'), "[REDACTED_PHONE]"),
+    (re.compile(r'(?<!\d)0[6-9]\d[-.\s]?\d{3}[-.\s]?\d{4}(?!\d)'), "[REDACTED_PHONE]"),
     # International format: +66 or 0066 prefix
-    (re.compile(r'(?:\+66|0066)[-.\s]?\d{1,2}[-.\s]?\d{3,4}[-.\s]?\d{4}\b'), "[REDACTED_PHONE]"),
+    (re.compile(r'(?<!\d)(?:\+66|0066)[-.\s]?\d{1,2}[-.\s]?\d{3,4}[-.\s]?\d{4}(?!\d)'), "[REDACTED_PHONE]"),
 ]
 
 

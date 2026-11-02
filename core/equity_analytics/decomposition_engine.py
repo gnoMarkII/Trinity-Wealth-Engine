@@ -26,9 +26,28 @@ class PriceMoveDecompositionEngine:
         Mathematical identity:
             (1 + TotalReturn) = (1 + EPSGrowth) * (1 + MultipleExpansion)
         """
-        # Guard against invalid price values
-        s_price = max(float(start_price), 0.0001)
-        e_price = max(float(end_price), 0.0001)
+        # Guard against non-positive price values
+        if start_price <= 0 or end_price <= 0:
+            return PriceMoveDecomposition(
+                horizon_label=horizon_label,
+                start_date=start_date,
+                end_date=end_date,
+                start_price=round(float(start_price), 2),
+                end_price=round(float(end_price), 2),
+                total_return_pct=0.0,
+                start_eps=round(start_eps, 2),
+                end_eps=round(end_eps, 2),
+                eps_growth_pct=0.0,
+                start_pe=0.0,
+                end_pe=0.0,
+                pe_expansion_pct=0.0,
+                primary_driver="earnings_growth",
+                diagnosis_tier="TWIN_DETERIORATION",
+                diagnosis_summary="Invalid price data (zero or non-positive price).",
+            )
+
+        s_price = float(start_price)
+        e_price = float(end_price)
         total_return_pct = round(((e_price - s_price) / s_price) * 100.0, 2)
 
         # Non-positive EPS boundary condition (loss-making company or turnaround)
@@ -60,7 +79,11 @@ class PriceMoveDecompositionEngine:
         start_pe = round(s_price / start_eps, 2)
         end_pe = round(e_price / end_eps, 2)
         eps_growth_pct = round(((end_eps - start_eps) / start_eps) * 100.0, 2)
-        pe_expansion_pct = round(((end_pe - start_pe) / start_pe) * 100.0, 2)
+        pe_expansion_pct = (
+            round(((end_pe - start_pe) / start_pe) * 100.0, 2)
+            if start_pe > 0
+            else 0.0
+        )
 
         # Classification & diagnosis
         if total_return_pct >= 0:

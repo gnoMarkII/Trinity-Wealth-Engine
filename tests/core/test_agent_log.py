@@ -40,7 +40,7 @@ class TestPrefixMultiline:
 class TestLogRouting:
     def test_legacy_log_routing_no_turn_id(self, tmp_path, monkeypatch):
         monkeypatch.setenv("OBSIDIAN_VAULT_PATH", str(tmp_path))
-        agent_log.log_routing("manager", "bookkeeper")
+        agent_log.log_routing("manager", "archivist")
         content = list(tmp_path.glob("01_Daily_Logs/Agent_Log_*.md"))[0].read_text(encoding="utf-8")
         assert "Legacy routing" in content
         assert "Turn: `legacy`" in content

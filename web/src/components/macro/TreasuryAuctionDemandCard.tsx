@@ -1,5 +1,7 @@
 import React, { useState } from 'react'
 import type { AuctionDemandSnapshotDTO } from '../../api/types'
+import { ContextTooltip } from './explainer/ContextTooltip'
+import { TrafficLightSubtitle } from './explainer/TrafficLightSubtitle'
 
 interface TreasuryAuctionDemandCardProps {
   demandNote?: AuctionDemandSnapshotDTO | null
@@ -27,6 +29,12 @@ export const TreasuryAuctionDemandCard: React.FC<TreasuryAuctionDemandCardProps>
         <div>
           <h3 className="text-base font-bold text-zinc-900 tracking-tight flex items-center gap-2">
             <span>US Treasury Auction Demand</span>
+            <ContextTooltip
+              title="อัตราการจองซื้อพันธบัตรสหรัฐฯ (Auction Bid-to-Cover)"
+              whatIsIt="อัตราส่วนยอดจองซื้อของนักลงทุนเทียบกับจำนวนพันธบัตรที่กระทรวงการคลังสหรัฐฯ นำมาประมูล"
+              howToRead="เกิน 2.5 เท่า (เขียว) = นักลงทุนแย่งกันซื้อ รัฐบาลกู้เงินสบาย, ต่ำกว่า 2.3 เท่า (เหลือง) = นักลงทุนเริ่มลังเล ดอกเบี้ยอาจต้องขยับขึ้น"
+              impactOnMoney="ถ้าการประมูลล้มเหลวหรือความต้องการต่ำ ดอกเบี้ยจะพุ่ง กดดันตลาดหุ้นทั่วโลก"
+            />
             <span className="rounded-full bg-sky-100 text-sky-800 font-mono text-[10px] font-bold px-2.5 py-0.5">
               FISCAL DATA
             </span>
@@ -34,6 +42,20 @@ export const TreasuryAuctionDemandCard: React.FC<TreasuryAuctionDemandCardProps>
           <p className="text-xs text-zinc-500">
             Latest auction demand vs prior 8 completed auctions (Moving Average)
           </p>
+          {btc !== null && btc !== undefined && (
+            <div className="mt-2">
+              <TrafficLightSubtitle
+                status={btc >= 2.5 ? 'positive' : btc <= 2.3 ? 'warning' : 'neutral'}
+                text={
+                  btc >= 2.5
+                    ? `🟢 รัฐบาลสหรัฐฯ กู้เงินได้สบาย (Bid-to-Cover ${btc.toFixed(2)}x): นักลงทุนทั่วโลกยังแย่งกันซื้อพันธบัตรอย่างมั่นใจ`
+                    : btc <= 2.3
+                    ? `🟡 นักลงทุนเริ่มชะลอการซื้อ (Bid-to-Cover ${btc.toFixed(2)}x): อาจมีแรงกดดันให้ดอกเบี้ยพันธบัตรปรับขึ้น`
+                    : `⚪ ความต้องการประมูลอยู่ในระดับปกติ (${btc.toFixed(2)}x)`
+                }
+              />
+            </div>
+          )}
         </div>
 
         <div className="inline-flex rounded-lg border border-sky-200/80 bg-slate-100/80 p-1">

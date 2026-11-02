@@ -43,8 +43,14 @@ export const BreadthStackedBar: React.FC<BreadthStackedBarProps> = ({
 
   if (total === 0) {
     return (
-      <div className={`rounded-2xl border border-slate-200 bg-slate-50 p-4 text-xs text-zinc-500 text-center ${className}`}>
-        ยังไม่มีข้อมูลสัดส่วนหุ้นขึ้น/ลง (Denominator เป็น 0)
+      <div className={`rounded-2xl border border-amber-200/80 bg-amber-50/60 p-5 text-xs text-amber-900 ${className}`}>
+        <div className="font-bold flex items-center gap-1.5">
+          <span>⏳</span>
+          <span>SET Market Breadth: อยู่ระหว่างรอเชื่อมต่อข้อมูลความกว้างตลาด</span>
+        </div>
+        <p className="mt-1 text-zinc-600">
+          ยังไม่มีข้อมูลสัดส่วนหุ้นขึ้น/ตกรายวันจากตลาดหลักทรัพย์แห่งประเทศไทย (SET)
+        </p>
       </div>
     )
   }

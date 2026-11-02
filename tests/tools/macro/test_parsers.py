@@ -53,6 +53,10 @@ def test_parse_float_from_str():
     assert _parse_float_from_str(None) is None
     assert _parse_float_from_str("") is None
     assert _parse_float_from_str("invalid") is None
+    # Context-aware and year disambiguation
+    assert _parse_float_from_str("FY2026 Target PE is 15.5x") == 15.5
+    assert _parse_float_from_str("2025 EPS: 4.5") == 4.5
+    assert _parse_float_from_str("เป้าหมาย 45.50 บาท") == 45.50
 
 def test_parse_markdown_table_rows():
     md = """

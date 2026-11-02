@@ -8,13 +8,14 @@ Secondary Fallbacks:
 
 Extracts full text with speaker attribution (Name, Title, Prepared Remarks vs Q&A).
 """
-from datetime import datetime
+from datetime import datetime, timezone
 import logging
 import re
 from typing import Any, Dict, List, Optional, Tuple
 from bs4 import BeautifulSoup
 import httpx
 
+from core.datetime_utils import format_iso_date, parse_fiscal_quarter, parse_thai_or_iso_date
 from schemas.promise_schemas import TranscriptCallDTO
 
 log = logging.getLogger(__name__)
@@ -39,27 +40,15 @@ DATE_PATTERNS = [
 def parse_date_str(date_raw: str) -> str:
     """Parse raw date string to standard YYYY-MM-DD."""
     clean = date_raw.strip()
-    for fmt in DATE_PATTERNS:
-        try:
-            return datetime.strptime(clean, fmt).strftime("%Y-%m-%d")
-        except ValueError:
-            pass
-    # If regex matches YYYY-MM-DD
-    m = re.search(r"(\d{4})-(\d{2})-(\d{2})", clean)
-    if m:
-        return f"{m.group(1)}-{m.group(2)}-{m.group(3)}"
-    return datetime.utcnow().strftime("%Y-%m-%d")
+    d = parse_thai_or_iso_date(clean)
+    if d:
+        return format_iso_date(d)
+    return datetime.now(timezone.utc).strftime("%Y-%m-%d")
 
 
 def parse_quarter_label(text: str) -> Optional[str]:
     """Extract standard quarter format FYYYYYQX from text like 'Earnings Call: Q4 2025'."""
-    m = re.search(r"Q([1-4])\s+(\d{4})", text, re.IGNORECASE)
-    if m:
-        return f"FY{m.group(2)}Q{m.group(1)}"
-    m2 = re.search(r"(\d{4})\s+Q([1-4])", text, re.IGNORECASE)
-    if m2:
-        return f"FY{m2.group(1)}Q{m2.group(2)}"
-    return None
+    return parse_fiscal_quarter(text)
 
 
 def discover_stockanalysis_calls(ticker: str, limit: int = 8) -> List[TranscriptCallDTO]:
@@ -103,11 +92,11 @@ def discover_stockanalysis_calls(ticker: str, limit: int = 8) -> List[Transcript
                 if len(parts) >= 2:
                     date_str = parse_date_str(parts[1])
                 else:
-                    date_match = re.search(r"([A-Za-z]{3}\s+\d{1,2},\s+\d{4})", parent_text)
+                    date_match = re.search(r"([A-Za-z]{3,9}\.?\s+\d{1,2},?\s+\d{4})", parent_text)
                     if date_match:
                         date_str = parse_date_str(date_match.group(1))
                     else:
-                        date_str = datetime.utcnow().strftime("%Y-%m-%d")
+                        date_str = datetime.now(timezone.utc).strftime("%Y-%m-%d")
                 
                 full_url = f"https://stockanalysis.com{href}" if href.startswith("/") else href
                 

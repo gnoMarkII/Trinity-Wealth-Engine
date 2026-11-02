@@ -133,7 +133,8 @@ export function extractIndicatorValue(id: string, data: MacroDashboardDTO): stri
   const lower = id.toLowerCase()
 
   // Scan all regime evidence snippets
-  const evidenceList = data.regime_evidence?.map((re) => re.evidence || '') || []
+  const evidenceList =
+    data.regime_evidence?.map((re) => (typeof re === 'string' ? re : re?.evidence || '')) || []
   const supportList: string[] = []
 
   data.asset_allocation?.forEach((a) => {
@@ -147,15 +148,22 @@ export function extractIndicatorValue(id: string, data: MacroDashboardDTO): stri
 
   for (const text of combinedTexts) {
     if (lower.includes('vix')) {
-      const match = text.match(/VIX Index\s*=\s*([\d.]+)/i) || text.match(/VIX\s*=\s*([\d.]+)/i)
+      const match =
+        text.match(/(?:VIX Index|VIX)\s*(?:=|:|is|at|อยู่ที่)\s*([\d.]+)/i) ||
+        text.match(/VIX Index\s*=\s*([\d.]+)/i) ||
+        text.match(/VIX\s*=\s*([\d.]+)/i)
       if (match) return `${match[1]} pts`
     }
     if (lower.includes('hyg') || lower.includes('lqd')) {
-      const match = text.match(/HYG\/LQD Ratio\s*=\s*([\d.]+)/i) || text.match(/HYG\/LQD\s*=\s*([\d.]+)/i)
+      const match =
+        text.match(/(?:HYG\/LQD Ratio|HYG\/LQD)\s*(?:=|:|is|at|อยู่ที่)\s*([\d.]+)/i) ||
+        text.match(/HYG\/LQD Ratio\s*=\s*([\d.]+)/i) ||
+        text.match(/HYG\/LQD\s*=\s*([\d.]+)/i)
       if (match?.[1]) return match[1]
     }
     if (lower.includes('cl_f') || lower.includes('oil') || lower.includes('crude')) {
       const match =
+        text.match(/(?:ราคาน้ำมันดิบ|Oil)\s*(?:=|:|is|at|อยู่ที่)\s*(\$?[\d.]+\s*(?:USD\/bbl)?)/i) ||
         text.match(/ราคาน้ำมันดิบ\s*=\s*([\d.]+\s*USD\/bbl)/i) ||
         text.match(/Oil\s*=\s*(\$?[\d.]+)/i)
       if (match?.[1]) return match[1]

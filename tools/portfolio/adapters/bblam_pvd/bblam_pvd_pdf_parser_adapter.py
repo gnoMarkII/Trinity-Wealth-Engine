@@ -15,6 +15,9 @@ from typing import Optional
 
 import pypdf
 
+from core.datetime_utils import parse_thai_or_iso_date, extract_date_by_labels
+from core.financial_parsers import extract_financial_decimal, extract_labeled_decimal
+from core.text_utils import extract_labeled_value
 from tools.portfolio.domain.pvd_models import PvdContributionSummary, PvdStatement, PvdSubFundHolding
 from tools.portfolio.domain.pvd_validation import validate_statement
 from tools.portfolio.ports.pvd_port import PvdParserPort
@@ -24,18 +27,15 @@ _NUMBER = re.compile(r"(?<![A-Za-z])[-+]?\d[\d,]*(?:\.\d+)?")
 _ACCOUNTING_NUMBER = re.compile(
     r"\(\s*(?P<negative>\d[\d,]*(?:\.\d+)?)\s*\)|(?P<plain>(?<![A-Za-z])[-+]?\d[\d,]*(?:\.\d+)?)"
 )
-_DATE = re.compile(r"(\d{1,2}[/-]\d{1,2}[/-]\d{4}|\d{4}-\d{2}-\d{2})")
-_CODE = re.compile(r"\b(SINSA(?:_[A-Z0-9_]+|[0-9]+))\b", re.IGNORECASE)
+_DATE = re.compile(r"(?<!\d)(\d{1,2}[/-]\d{1,2}[/-]\d{4}|\d{4}-\d{2}-\d{2})(?!\d)")
+_CODE = re.compile(r"(?<![A-Za-z0-9])(SINSA(?:_[A-Z0-9_]+|[0-9]+))(?![A-Za-z0-9])", re.IGNORECASE)
 
 
 def _decimal(raw: str) -> Decimal:
-    try:
-        value = Decimal(raw.replace(",", "").replace("%", "").strip())
-    except (InvalidOperation, AttributeError) as exc:
-        raise ValueError(f"Invalid PVD numeric value: {raw}") from exc
-    if not value.is_finite():
-        raise ValueError("PVD values must be finite")
-    return value
+    val = extract_financial_decimal(raw)
+    if val is None or not val.is_finite():
+        raise ValueError(f"Invalid PVD numeric value: {raw}")
+    return val
 
 
 def _number_values(text: str) -> list[Decimal]:
@@ -55,27 +55,21 @@ def _normal_member_id(value: str) -> str:
 
 def _parse_date(raw: str) -> date:
     raw = raw.strip()
-    if re.fullmatch(r"\d{4}-\d{2}-\d{2}", raw):
-        parsed = date.fromisoformat(raw)
-    else:
-        parts = re.split(r"[/-]", raw)
-        day, month, year = map(int, parts)
-        if year > 2400:
-            year -= 543
-        parsed = date(year, month, day)
+    parsed = parse_thai_or_iso_date(raw)
+    if not parsed:
+        raise ValueError(f"ไม่สามารถแปลงวันที่ใน Statement ได้: {raw}")
     if parsed.year < 1900 or parsed > date.today():
         raise ValueError("วันที่ใน Statement อยู่นอกช่วงที่รองรับ")
     return parsed
 
 
 def _label_value(text: str, labels: tuple[str, ...], *, required: bool = True) -> Optional[Decimal]:
-    label_pattern = "|".join(re.escape(label) for label in labels)
-    match = re.search(rf"(?:{label_pattern})\s*[:：]?\s*({_NUMBER.pattern})", text, re.IGNORECASE)
-    if not match:
+    val = extract_labeled_decimal(text, labels)
+    if val is None:
         if required:
             raise ValueError(f"ไม่พบยอด '{labels[0]}' ใน Statement")
         return None
-    return _decimal(match.group(1))
+    return val
 
 
 class BblamPvdPdfParserAdapter(PvdParserPort):
@@ -97,28 +91,47 @@ class BblamPvdPdfParserAdapter(PvdParserPort):
         if not text.strip():
             raise ValueError("ไม่พบข้อความใน PDF; รองรับเฉพาะ Statement แบบ text-based")
 
-        date_match = re.search(r"(?:As\s*of(?:\s*Date)?|Statement\s*Date|วันที่(?:ข้อมูล|สรุป|ณ))\s*[:：]?\s*" + _DATE.pattern, text, re.IGNORECASE)
-        if not date_match:
+        as_of_d = extract_date_by_labels(
+            text,
+            ["As of Date", "As of", "Statement Date", "วันที่ข้อมูล", "วันที่สรุป", "วันที่ณ"],
+        )
+        if not as_of_d:
             raise ValueError("ไม่พบวันที่ของ Statement")
-        as_of_date = _parse_date(date_match.group(1))
+        if as_of_d.year < 1900 or as_of_d > date.today():
+            raise ValueError("วันที่ใน Statement อยู่นอกช่วงที่รองรับ")
+        as_of_date = as_of_d
 
-        member_match = re.search(r"(?:Member\s*(?:ID|No\.?|Number|Code)|Unit\s*Holder\s*(?:ID|No\.?|Number)|รหัสสมาชิก|เลขที่สมาชิก)\s*[:：]?\s*((?:EM\s+)?[A-Z0-9-]+)", text, re.IGNORECASE)
-        if not member_match:
+        member_id = extract_labeled_value(
+            text,
+            [
+                "Member ID",
+                "Member No.",
+                "Member Number",
+                "Member Code",
+                "Unit Holder ID",
+                "Unit Holder No.",
+                "Unit Holder Number",
+                "รหัสสมาชิก",
+                "เลขที่สมาชิก",
+            ],
+            value_pattern=r"((?:EM\s+)?[A-Z0-9-]+)",
+        )
+        if not member_id:
             raise ValueError("ไม่พบรหัสสมาชิกใน Statement")
-        member_id = member_match.group(1).strip()
+        member_id = member_id.strip()
         normalized_id = _normal_member_id(member_id)
         member_hash = hashlib.sha256(normalized_id.encode("utf-8")).hexdigest()
         masked_member_id = f"••••{normalized_id[-4:]}" if len(normalized_id) > 4 else "••••"
 
-        fund_match = re.search(r"\bFund\s*Code\s*[:：]?\s*([A-Z0-9-]+)", text, re.IGNORECASE)
-        fund_code = f"BBLAM_{fund_match.group(1).upper()}" if fund_match else "BBLAM"
+        fund_code_raw = extract_labeled_value(text, ["Fund Code"], value_pattern=r"([A-Z0-9-]+)")
+        fund_code = f"BBLAM_{fund_code_raw.upper()}" if fund_code_raw else "BBLAM"
 
         # BBLAM's member certificate layout stores the contribution/balance
         # summary in one table and each sub-fund's NAV in a later return table.
         # Parse those columns explicitly instead of treating every SINSA row as
         # a synthetic `code units NAV value` line.
         lines = text.splitlines()
-        total_index = next((i for i, line in enumerate(lines) if re.search(r"\bTotal\s*\(\s*Baht\s*\)", line, re.IGNORECASE)), None)
+        total_index = next((i for i, line in enumerate(lines) if re.search(r"(?<![A-Za-z0-9])Total\s*\(\s*Baht\s*\)", line, re.IGNORECASE)), None)
         accumulated_index = next((i for i, line in enumerate(lines) if re.search(r"Accumulated\s+Return\s+of\s+each\s+Sub\s+Fund", line, re.IGNORECASE)), None)
         if total_index is not None and accumulated_index is not None:
             total_line = re.sub(r"(?<=\s)\(\d+\)(?=\s+[-+]?\d[\d,]*(?:\.\d+)?\s*$)", " ", lines[total_index])

@@ -48,14 +48,14 @@ def main():
         print("ERROR: กรุณาตั้งค่า GOOGLE_API_KEY ใน .env ก่อน")
         return
 
-    from agents.manager_agent import build_graph
+    from agents.research_swarm_flow import build_graph
     from tools.archivist.core import init_vault_structure
 
     init_vault_structure()
 
     print("=" * 60)
     print("  Investment Manager AI — Multi-Agent System")
-    print("  Supervisor: The Manager | Workers: The Archivist, The Bookkeeper")
+    print("  Pipeline: Research Swarm | Specialists: Archivist, Macro Intel, Equity Intel")
     print("  พิมพ์ 'quit' 'exit' หรือ 'ออก' เพื่อออกจากโปรแกรม")
     print("=" * 60)
 

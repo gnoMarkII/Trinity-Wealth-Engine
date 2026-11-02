@@ -1,0 +1,23 @@
+# Hermes Agent Sandbox Configuration
+system:
+  agent_name: "Trinity AI Advisor"
+  fund_name: "Trinity Wealth Engine"
+  hermes_home: "./manager_sandbox"
+
+model:
+  provider: "google"
+  default_model: "gemini-3.1-flash-lite-preview"
+  reasoning_model: "gemini-3.1-pro-preview"
+  temperature: 0.2
+  max_output_tokens: 4096
+
+sandbox:
+  scratch_timeout_seconds: 10
+  scratch_max_output_bytes: 65536
+  auto_clean_scratch: true
+  enable_skill_quarantine: true
+
+tools:
+  mcp_server_command: "python -m tools.hermes_bridge.trinity_mcp_server"
+  max_consecutive_tool_calls: 15
+

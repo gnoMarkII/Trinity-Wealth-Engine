@@ -7,6 +7,7 @@ from core.utils import normalize_content
 from tools.archivist.maintenance_guard import assert_write_allowed
 
 def _atomic_write_to(path: Path, content: Any, max_retries: int = 8, backoff: float = 0.05) -> None:
+    path = Path(path)
     assert_write_allowed(path)
     """Generic atomic write: temp file → os.replace() — ใช้ได้กับไฟล์ใดก็ได้"""
     if not isinstance(content, str):

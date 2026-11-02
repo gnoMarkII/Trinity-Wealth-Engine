@@ -30,6 +30,9 @@ def test_market_snapshot_preserves_bar_date_and_previous_price(monkeypatch, snap
     else:
         monkeypatch.setattr(ingest, '_THAI_INDICATORS', {'THB=X': ('USD/THB', 'FX')})
         monkeypatch.setattr(ingest, '_THAI_GROUPS', [('FX', ['THB=X'])])
+        monkeypatch.setattr(ingest, '_CHINA_GROUPS', [])
+        monkeypatch.setattr(ingest, '_JAPAN_GROUPS', [])
+        monkeypatch.setattr(ingest, '_INDIA_GROUPS', [])
         markdown = ingest.ingest_country_macro.invoke({})
         source_key = 'Country_Macro_Snapshot'
 

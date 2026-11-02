@@ -11,9 +11,12 @@ import type {
   ThaiRetailGoldDTO,
   MarketValuationDTO,
   MarketBreadthDTO,
+  ThaiYieldCurveDTO,
+  ThaiPublicDebtDTO,
   CryptoMacroLiquidityDTO,
 } from '../api/types'
 import MacroReferenceDrawer from '../components/MacroReferenceDrawer'
+import { MacroGlossaryDrawer } from '../components/macro/explainer/MacroGlossaryDrawer'
 import Toast from '../components/common/Toast'
 import { MacroRegionTabs, type MacroRegionTab } from '../components/macro/cockpit/MacroRegionTabs'
 import { AiBriefingCard } from '../components/macro/cockpit/AiBriefingCard'
@@ -69,6 +72,8 @@ export default function Macro() {
   const [gold, setGold] = useState<ThaiRetailGoldDTO | null>(null)
   const [valuation, setValuation] = useState<MarketValuationDTO | null>(null)
   const [breadth, setBreadth] = useState<MarketBreadthDTO | null>(null)
+  const [thaiYieldCurve, setThaiYieldCurve] = useState<ThaiYieldCurveDTO | null>(null)
+  const [thaiPublicDebt, setThaiPublicDebt] = useState<ThaiPublicDebtDTO | null>(null)
   const [loadingThai, setLoadingThai] = useState(false)
   const [errorThai, setErrorThai] = useState<string | null>(null)
 
@@ -76,6 +81,7 @@ export default function Macro() {
   const [lastMarketFetched, setLastMarketFetched] = useState<string | null>(null)
   const [isRefreshingMarket, setIsRefreshingMarket] = useState(false)
   const [isRefDrawerOpen, setIsRefDrawerOpen] = useState(false)
+  const [isGlossaryOpen, setIsGlossaryOpen] = useState(false)
   const [updating, setUpdating] = useState(false)
   const [toastState, setToastState] = useState<{
     message: string
@@ -245,12 +251,34 @@ export default function Macro() {
         return { status: 'rejected' as const, reason: err }
       })
 
-    Promise.allSettled([pThFlow, pThGold, pThVal, pThBreadth]).then(([f, g, v, b]) => {
+    const pThYield = Promise.resolve(api.getThaiYieldCurve?.())
+      .then((val) => {
+        setThaiYieldCurve(val)
+        return { status: 'fulfilled' as const, value: val }
+      })
+      .catch((err) => {
+        setThaiYieldCurve(null)
+        return { status: 'rejected' as const, reason: err }
+      })
+
+    const pThDebt = Promise.resolve(api.getThaiPublicDebt?.())
+      .then((val) => {
+        setThaiPublicDebt(val)
+        return { status: 'fulfilled' as const, value: val }
+      })
+      .catch((err) => {
+        setThaiPublicDebt(null)
+        return { status: 'rejected' as const, reason: err }
+      })
+
+    Promise.allSettled([pThFlow, pThGold, pThVal, pThBreadth, pThYield, pThDebt]).then(([f, g, v, b, y, d]) => {
       let thaiErrCount = 0
       if (f.status === 'fulfilled' && f.value.status === 'rejected') thaiErrCount++
       if (g.status === 'fulfilled' && g.value.status === 'rejected') thaiErrCount++
       if (v.status === 'fulfilled' && v.value.status === 'rejected') thaiErrCount++
       if (b.status === 'fulfilled' && b.value.status === 'rejected') thaiErrCount++
+      if (y.status === 'fulfilled' && y.value.status === 'rejected') thaiErrCount++
+      if (d.status === 'fulfilled' && d.value.status === 'rejected') thaiErrCount++
       if (thaiErrCount > 0) {
         setErrorThai(`มีข้อมูลตลาดไทย ${thaiErrCount} รายการที่ไม่สามารถดึงได้`)
       } else {
@@ -259,11 +287,11 @@ export default function Macro() {
       setLoadingThai(false)
     })
 
-    const [yc, fsi, cot, bis, vol, aucNote, aucBill, debt, thFlow, thGold, thVal, thBreadth, cryptoLiq] =
-      await Promise.all([pYc, pFsi, pCot, pBis, pVol, pAucNote, pAucBill, pDebt, pThFlow, pThGold, pThVal, pThBreadth, pCryptoLiq])
+    const [yc, fsi, cot, bis, vol, aucNote, aucBill, debt, thFlow, thGold, thVal, thBreadth, thYield, thDebt, cryptoLiq] =
+      await Promise.all([pYc, pFsi, pCot, pBis, pVol, pAucNote, pAucBill, pDebt, pThFlow, pThGold, pThVal, pThBreadth, pThYield, pThDebt, pCryptoLiq])
 
-    const providerResults = [yc, fsi, cot, bis, vol, aucNote, aucBill, debt, thFlow, thGold, thVal, thBreadth, cryptoLiq]
-    const providerNames = ['US Yield Curve', 'OFR Stress', 'Gold COT', 'Policy Rates', 'Commodity Volatility', '10Y Auction', '13W Auction', 'US Debt', 'SET Flow', 'GTA Gold', 'SET Valuation', 'SET Breadth', 'Crypto Liquidity']
+    const providerResults = [yc, fsi, cot, bis, vol, aucNote, aucBill, debt, thFlow, thGold, thVal, thBreadth, thYield, thDebt, cryptoLiq]
+    const providerNames = ['US Yield Curve', 'OFR Stress', 'Gold COT', 'Policy Rates', 'Commodity Volatility', '10Y Auction', '13W Auction', 'US Debt', 'SET Flow', 'GTA Gold', 'SET Valuation', 'SET Breadth', 'ThaiBMA Yield Curve', 'Thai Public Debt', 'Crypto Liquidity']
     setMarketIssues(providerResults.flatMap((result, index) => {
       if (result.status === 'rejected') return [`${providerNames[index]}: ดึงข้อมูลไม่สำเร็จ`]
       const values = Array.isArray(result.value) ? result.value : [result.value]
@@ -336,80 +364,7 @@ export default function Macro() {
 
   return (
     <div className="animate-page-in space-y-6 pb-12">
-      {/* 1. Cockpit Header: Title, Controls & Provenance Legend */}
-      <div className="rounded-2xl border border-sky-100 bg-gradient-to-br from-white/95 via-sky-50/40 to-slate-50/60 p-6 shadow-sm">
-        <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-          <div className="space-y-1.5">
-            <div className="flex items-center gap-2">
-              <span className="text-2xl">🧭</span>
-              <h1 className="text-xl font-bold tracking-tight text-zinc-900">
-                Macro Cockpit (ห้องควบคุมภาวะเศรษฐกิจมหภาค)
-              </h1>
-            </div>
-            <p className="text-xs text-zinc-500 max-w-2xl leading-relaxed">
-              แยกแยะบริบทอย่างชัดเจนระหว่างสหรัฐฯ ไทย และความเชื่อมโยงข้ามพรมแดน พร้อมระบุแหล่งกำเนิดและวันสังเกตการณ์จริงในทุกข้อมูล
-            </p>
-
-            {/* Provenance Meaning Bar */}
-            <div className="pt-2 flex flex-wrap items-center gap-1.5 text-[11px]">
-              <span className="text-zinc-400 font-semibold mr-1">สัญลักษณ์แหล่งที่มา:</span>
-              <SourceProvenanceBadge origin="provider" compact />
-              <SourceProvenanceBadge origin="deterministic" compact />
-              <SourceProvenanceBadge origin="ai" compact />
-              <SourceProvenanceBadge origin="external" compact />
-            </div>
-          </div>
-
-          {/* Action Buttons */}
-          <div className="flex flex-col items-end gap-2 shrink-0">
-            <div className="flex flex-wrap items-center gap-2">
-              <MacroNotebookLMExport
-                onNotify={(msg, type) =>
-                  setToastState({
-                    message: msg,
-                    type,
-                  })
-                }
-              />
-
-              <button
-                type="button"
-                onClick={fetchMarketObservables}
-                disabled={isRefreshingMarket}
-                className="flex items-center gap-1.5 rounded-xl border border-sky-200 bg-white px-3.5 py-2 text-xs font-semibold text-sky-700 shadow-xs transition-all hover:bg-sky-50 disabled:opacity-50"
-                title="ดึงข้อมูลตลาดสดล่าสุด (ไม่รัน AI)"
-              >
-                <span>{isRefreshingMarket ? '⏳' : '🔄'}</span>
-                <span>{isRefreshingMarket ? 'กำลังดึง...' : 'รีเฟรชข้อมูลตลาด'}</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setIsRefDrawerOpen(true)}
-                className="flex items-center gap-1.5 rounded-xl border border-edge bg-panel px-3.5 py-2 text-xs font-semibold text-zinc-800 shadow-xs transition-all hover:bg-surface-strong hover:shadow"
-                title="เปิดเอกสารอ้างอิงและตัวชี้วัด"
-              >
-                <span>📚</span>
-                <span>References</span>
-              </button>
-            </div>
-
-            {lastMarketFetched && (
-              <span className="text-[10px] text-zinc-400 font-mono">
-                ดึงตลาดล่าสุด: {lastMarketFetched}
-              </span>
-            )}
-          </div>
-        </div>
-      </div>
-
-      {marketIssues.length > 0 && (
-        <div role="status" className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-xs text-amber-900">
-          ข้อมูลตลาดที่ต้องตรวจสอบ: {marketIssues.join(' • ')}
-        </div>
-      )}
-
-      {/* 2. Top Anchor: AI Executive Briefing (Always visible above tabs) */}
+      {/* 1. Topmost Anchor: AI Executive Briefing (ส่วนที่ AI วิเคราะห์อยู่บนสุดทั้งหมด) */}
       <AiBriefingCard
         aiData={aiData}
         aiLoading={aiLoading}
@@ -418,6 +373,82 @@ export default function Macro() {
         updating={updating}
         onNavigateToAiTab={() => handleTabChange('ai')}
       />
+
+      {/* 2. Cockpit Slim Toolbar & Controls (แถบควบคุมกะทัดรัด แนวนอนบรรทัดเดียว ไม่กินพื้นที่หน้าจอ) */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2.5 rounded-xl border border-sky-100/80 bg-white/95 px-3.5 py-2 shadow-2xs">
+        <div className="flex items-center gap-2">
+          <span className="text-base">🧭</span>
+          <h1 className="text-xs sm:text-sm font-bold tracking-tight text-zinc-900">
+            Macro Cockpit (ห้องควบคุมภาวะเศรษฐกิจมหภาค)
+          </h1>
+        </div>
+
+        {/* Hidden from visual toolbar per user request, preserved for accessibility & screen readers */}
+        <div className="sr-only">
+          <SourceProvenanceBadge origin="provider" compact />
+          <SourceProvenanceBadge origin="deterministic" compact />
+          <SourceProvenanceBadge origin="ai" compact />
+          <SourceProvenanceBadge origin="external" compact />
+        </div>
+
+        {/* Action Buttons Toolbar */}
+        <div className="flex flex-wrap items-center gap-1.5 shrink-0">
+          <MacroNotebookLMExport
+            onNotify={(msg, type) =>
+              setToastState({
+                message: msg,
+                type,
+              })
+            }
+          />
+
+          <button
+            type="button"
+            onClick={fetchMarketObservables}
+            disabled={isRefreshingMarket}
+            className="flex items-center gap-1.5 rounded-lg border border-sky-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-sky-700 shadow-2xs transition-all hover:bg-sky-50 disabled:opacity-50"
+            title="ดึงข้อมูลตลาดสดล่าสุด (ไม่รัน AI)"
+          >
+            <span>{isRefreshingMarket ? '⏳' : '🔄'}</span>
+            <span>{isRefreshingMarket ? 'กำลังดึง...' : 'รีเฟรชข้อมูลตลาด'}</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setIsRefDrawerOpen(true)}
+            className="flex items-center gap-1.5 rounded-lg border border-edge bg-panel px-2.5 py-1.5 text-xs font-semibold text-zinc-800 shadow-2xs transition-all hover:bg-surface-strong hover:shadow"
+            title="เปิดเอกสารอ้างอิงและตัวชี้วัด"
+          >
+            <span>📚</span>
+            <span>References</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setIsGlossaryOpen(true)}
+            className="flex items-center gap-1.5 rounded-lg border border-indigo-200 bg-indigo-50/70 px-2.5 py-1.5 text-xs font-semibold text-indigo-900 shadow-2xs transition-all hover:bg-indigo-100 hover:shadow"
+            title="เปิดคู่มือคำศัพท์เศรษฐกิจและการลงทุนฉบับเข้าใจง่าย"
+          >
+            <span>📖</span>
+            <span>คู่มือศัพท์ Macro</span>
+          </button>
+
+          {lastMarketFetched && (
+            <span
+              className="text-[10px] text-zinc-400 font-mono hidden md:inline ml-1"
+              title={`ดึงตลาดล่าสุด: ${lastMarketFetched}`}
+            >
+              {lastMarketFetched}
+            </span>
+          )}
+        </div>
+      </div>
+
+      {marketIssues.length > 0 && (
+        <div role="status" className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-xs text-amber-900">
+          ข้อมูลตลาดที่ต้องตรวจสอบ: {marketIssues.join(' • ')}
+        </div>
+      )}
 
       {/* 3. Region & Analysis Navigation (4 Tabs) */}
       <MacroRegionTabs activeTab={activeTab} onChange={handleTabChange} />
@@ -455,6 +486,8 @@ export default function Macro() {
           gold={gold}
           valuation={valuation}
           breadth={breadth}
+          thaiYieldCurve={thaiYieldCurve}
+          thaiPublicDebt={thaiPublicDebt}
           aiData={aiData}
           globalPolicyRates={globalPolicyRates}
           loading={loadingThai}
@@ -493,6 +526,12 @@ export default function Macro() {
           onClose={() => setIsRefDrawerOpen(false)}
         />
       )}
+
+      {/* Slide-over Macro Glossary Drawer Panel */}
+      <MacroGlossaryDrawer
+        isOpen={isGlossaryOpen}
+        onClose={() => setIsGlossaryOpen(false)}
+      />
 
       {toastState && (
         <Toast

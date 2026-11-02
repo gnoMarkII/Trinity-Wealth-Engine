@@ -141,7 +141,9 @@ describe('EventStudyTab', () => {
     fireEvent.click(card5d!)
 
     // Header updates to 5 days
-    expect(screen.getByText(/เส้นทางผลตอบแทนสะสม 5 วัน/i)).toBeInTheDocument()
+    await waitFor(() => {
+      expect(screen.getByText(/เส้นทางผลตอบแทนสะสม 5 วัน/i)).toBeInTheDocument()
+    })
   })
 
   it('handles custom date input mode', async () => {

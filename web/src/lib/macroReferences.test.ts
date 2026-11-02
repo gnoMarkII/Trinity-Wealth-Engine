@@ -102,6 +102,30 @@ describe('extractIndicatorValue', () => {
     expect(extractIndicatorValue('obs_ratio_hyg_lqd', dashboard)).toBe('0.87')
   })
 
+  it('ดึงค่าด้วย delimiter ที่ยืดหยุ่น เช่น : หรือ อยู่ที่', () => {
+    const dashboard = makeDashboard({
+      regime_evidence: [
+        { dimension: 'Volatility', signal: 'calm', evidence: 'VIX: 16.4 พักฐานในกรอบ', conflict: '', confidence: 'high' },
+      ],
+      asset_allocation: [
+        {
+          asset_class: 'Credit',
+          asset_bucket: null,
+          stance: 'Neutral',
+          confidence: 'medium',
+          rationale: '',
+          supporting_data: ['HYG/LQD อยู่ที่ 0.89'],
+          why_not_high: '',
+          allocation_delta: '',
+          invalidation_conditions: [],
+          warnings: [],
+        },
+      ],
+    })
+    expect(extractIndicatorValue('obs_vix', dashboard)).toBe('16.4 pts')
+    expect(extractIndicatorValue('obs_ratio_hyg_lqd', dashboard)).toBe('0.89')
+  })
+
   it('ไม่มีข้อความไหน match → คืน null', () => {
     expect(extractIndicatorValue('obs_vix', makeDashboard())).toBeNull()
   })

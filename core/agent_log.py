@@ -112,9 +112,9 @@ def log_turn_start(turn_id: str, user_message: str) -> None:
 
 
 def log_manager_plan(turn_id: str, tasks: list[dict]) -> None:
-    """สรุปแผนของ Manager"""
+    """สรุปแผนของ Supervisor"""
     turn_info = f" (Turn: `{turn_id}`)" if turn_id else ""
-    lines = [f"> [!abstract] 📋 Manager Plan {_format_time()}{turn_info}"]
+    lines = [f"> [!abstract] 📋 Supervisor Plan {_format_time()}{turn_info}"]
     if not tasks:
         lines.append("> (No tasks planned)")
     else:

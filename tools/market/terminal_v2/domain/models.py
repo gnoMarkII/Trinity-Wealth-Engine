@@ -861,6 +861,7 @@ class InsiderTransaction:
     direct_or_indirect: str
     accession_number: str
     is_amendment: bool
+    is_10b51: bool = False
 
 
 @dataclass(frozen=True)

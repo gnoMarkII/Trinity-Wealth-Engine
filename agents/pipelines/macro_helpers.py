@@ -1,7 +1,7 @@
 """Macro intel pipeline data assembly, enrichment, and sector context helpers.
 
 Architecture Layer: agents/pipelines/
-Extracted from manager_agent.py to encapsulate Macro Quant observables,
+Extracted from research_swarm_flow.py to encapsulate Macro Quant observables,
 Strategic Allocator direction enrichment, and Sector Rotation context bindings.
 """
 from __future__ import annotations
@@ -238,11 +238,12 @@ def canonicalize_macro_report_direction(
     canonical_direction = {
         key: canonical_report[key] for key in direction_fields if key in canonical_report
     }
-    validated_direction = (
-        MacroStrategyDirection.model_validate(canonical_direction)
-        if canonical_direction
-        else direction
-    )
+    if canonical_direction:
+        if hasattr(direction, "observable_registry") and direction.observable_registry:
+            canonical_direction["observable_registry"] = direction.observable_registry
+        validated_direction = MacroStrategyDirection.model_validate(canonical_direction)
+    else:
+        validated_direction = direction
     resolved_sector_analysis = canonical_report.get("sector_analysis")
     return validated_direction, canonical_report, resolved_sector_analysis
 

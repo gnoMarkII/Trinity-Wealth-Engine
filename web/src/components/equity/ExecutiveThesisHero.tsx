@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import type { AtomicMarketSnapshotDTO, EarningsCallNoteItem, DeterministicScorecardDTO } from '../../api/types'
 
 export interface ScorecardProps extends Omit<Partial<DeterministicScorecardDTO>, 'action_stance'> {
@@ -29,6 +30,7 @@ export interface ThesisDeltaProp {
 }
 import PriceSpectrumGauge from './PriceSpectrumGauge'
 import FourPillarBalanceRings from './FourPillarBalanceRings'
+import { ContextTooltip } from '../macro/explainer/ContextTooltip'
 
 export interface Props {
   scorecard: ScorecardProps | null | undefined
@@ -101,6 +103,7 @@ export function getStanceBadgeStyle(stance: string = 'UNKNOWN') {
 export default function ExecutiveThesisHero({
   scorecard,
   baseCaseSummary,
+  narrativeAnalysis,
   latestEarningsCall,
   atomicSnapshot,
   currentPrice,
@@ -113,6 +116,7 @@ export default function ExecutiveThesisHero({
   tactical,
   currencySymbol = '$',
 }: Props) {
+  const [isNarrativeExpanded, setIsNarrativeExpanded] = useState(false)
   const stanceInfo = getStanceBadgeStyle(scorecard?.action_stance)
   const conviction = scorecard?.core_conviction_score
   const readiness = scorecard?.execution_readiness_score
@@ -150,30 +154,45 @@ export default function ExecutiveThesisHero({
             </div>
           )}
 
-          <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-surface border border-edge/70 text-xs font-medium text-zinc-700" title="Business Conviction = Fundamental Quality (55%) + Guidance/Expectations (45%)">
+          <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-surface border border-edge/70 text-xs font-medium text-zinc-700">
             <span className="text-zinc-400">Business Conviction:</span>
             <span className="font-bold text-zinc-900">
               {scorecard?.business_conviction_score != null
                 ? `${scorecard.business_conviction_score.toFixed(1)} / 10`
                 : (conviction != null ? `${conviction.toFixed(1)} / 10` : 'N/A')}
             </span>
+            <ContextTooltip
+              title="Business Conviction (ความเชื่อมั่นทางธุรกิจ)"
+              what="คะแนนความแข็งแกร่งของตัวธุรกิจ ประเมินจากคุณภาพพื้นฐานงบการเงิน (55%) และความน่าเชื่อถือในการทำตามสัญญาของผู้บริหาร (45%)"
+              normalBenchmark="> 7.0 ถือว่าธุรกิจแข็งแกร่งมาก ป้อมปราการสูง; ต่ำกว่า 5.0 ควรระวังความเสี่ยง"
+              decisionImpact="ใช้ตอบคำถามว่า 'บริษัทนี้เป็นกิจการที่ดีน่าถือครองหรือไม่' โดยยังไม่นำราคาตลาดมาคิด"
+            />
           </div>
 
-          <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-surface border border-edge/70 text-xs font-medium text-zinc-700" title="Investment Conviction = Fundamental (40%) + Guidance (30%) + Actionable Valuation (30%)">
+          <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-surface border border-edge/70 text-xs font-medium text-zinc-700">
             <span className="text-zinc-400">Investment Conviction:</span>
             <span className="font-bold text-zinc-900">
               {scorecard?.investment_conviction_score != null
                 ? `${scorecard.investment_conviction_score.toFixed(1)} / 10`
                 : 'N/A (Informational Valuation)'}
             </span>
+            <ContextTooltip
+              title="Investment Conviction (ความน่าลงทุน)"
+              what="คะแนนความน่าซื้อ วัดจากคุณภาพธุรกิจ (40%) + ความคาดหวังผลประกอบการ (30%) + ส่วนเผื่อความปลอดภัยของราคาประเมินมูลค่า (30%)"
+              normalBenchmark="> 7.5 ถือว่าทั้งพื้นฐานและราคาอยู่ในจุดที่น่าเข้าลงทุนมาก"
+              decisionImpact="เป็นตัวชี้นำหลักว่าควรซื้อ ถือ หรือชะลอการลงทุน โดยรวมมิติมูลค่าและความถูกแพงไว้แล้ว"
+            />
           </div>
 
-          <div
-            className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-surface border border-edge/70 text-xs font-medium text-zinc-700"
-            title={scorecard?.execution_score_breakdown ? `Execution Breakdown: Stage ${scorecard.execution_score_breakdown.stage}, Setup ${scorecard.execution_score_breakdown.setup ?? 'N/A'}, Insider ${scorecard.execution_score_breakdown.insider} (${scorecard.execution_score_breakdown.setup_reason || ''})` : undefined}
-          >
+          <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-surface border border-edge/70 text-xs font-medium text-zinc-700">
             <span className="text-zinc-400">Execution Readiness:</span>
             <span className="font-bold text-zinc-900">{readiness != null ? `${readiness.toFixed(1)} / 10` : 'N/A'}</span>
+            <ContextTooltip
+              title="Execution Readiness (ความพร้อมของจังหวะเวลา)"
+              what="ความพร้อมเชิงเทคนิคและกระแสเงินทุน วัดจากวงจรราคาหุ้น 4 สเตจ, แนวรับแนวต้าน และการเคลื่อนไหวของผู้บริหาร (Insider Buying)"
+              normalBenchmark="Stage 2 พร้อม Setup ดี = คะแนน 8-10 (จังหวะเปิดสถานะที่ได้เปรียบสูงสุด)"
+              decisionImpact="ตอบคำถามว่า 'ควรเคาะซื้อเดี๋ยวนี้เลย หรือควรตั้งรับรอตอนราคาย่อตัวลงมา'"
+            />
           </div>
 
           {/* Macro Regime Alignment Badge */}
@@ -365,17 +384,55 @@ export default function ExecutiveThesisHero({
         executionBreakdown={scorecard?.execution_score_breakdown}
       />
 
-      {/* Base Case & Earnings Call Strip */}
+      {/* AI Synthesis & Narrative Analysis Block */}
       <div className="space-y-4 pt-1">
-        {baseCaseSummary && (
-          <div className="rounded-xl bg-surface-strong/60 border border-sky-100 p-4">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-sky-800/80 block mb-1.5 flex items-center gap-1.5">
-              <span>🎯</span>
-              <span>Base Case Summary</span>
-            </span>
-            <p className="text-[14px] leading-relaxed text-zinc-800 whitespace-pre-line">
-              {baseCaseSummary}
-            </p>
+        {(baseCaseSummary || narrativeAnalysis) && (
+          <div className="rounded-xl bg-gradient-to-br from-surface to-sky-50/30 border border-sky-100 p-5 space-y-3.5 shadow-2xs">
+            <div className="flex items-center justify-between border-b border-edge/60 pb-2.5">
+              <div className="flex items-center gap-2">
+                <span className="text-base">🤖</span>
+                <span className="text-xs font-bold text-sky-950 uppercase tracking-wider">
+                  AI Synthesis & Core Narrative (บทวิเคราะห์เจาะลึกโดย AI)
+                </span>
+              </div>
+              <span className="text-[10px] px-2 py-0.5 rounded-full bg-sky-100 text-sky-800 font-bold border border-sky-200">
+                AI Sourced
+              </span>
+            </div>
+
+            {baseCaseSummary && (
+              <div className="space-y-1">
+                <span className="text-[11px] font-bold text-zinc-600 uppercase tracking-wider flex items-center gap-1.5">
+                  <span>🎯</span>
+                  <span>Base Case Summary</span>
+                  <span className="font-normal text-zinc-400">(สมมติฐานหลัก)</span>
+                </span>
+                <p className="text-[14px] leading-relaxed text-zinc-800 whitespace-pre-line">
+                  {baseCaseSummary}
+                </p>
+              </div>
+            )}
+
+            {narrativeAnalysis && (
+              <div className="space-y-1.5 pt-2 border-t border-edge/40">
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] font-bold text-zinc-600 uppercase tracking-wider flex items-center gap-1.5">
+                    <span>📝</span>
+                    <span>In-Depth Narrative Analysis (การสังเคราะห์ข้อมูลเชิงคุณภาพและข่าวสาร):</span>
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setIsNarrativeExpanded(!isNarrativeExpanded)}
+                    className="text-[11px] font-semibold text-sky-600 hover:text-sky-700"
+                  >
+                    {isNarrativeExpanded ? '▲ ย่อบทวิเคราะห์' : '▼ ขยายอ่านบทวิเคราะห์เต็ม'}
+                  </button>
+                </div>
+                <div className={`prose prose-sm max-w-none text-zinc-800 leading-relaxed whitespace-pre-line text-[13px] ${isNarrativeExpanded ? '' : 'line-clamp-4'}`}>
+                  {narrativeAnalysis}
+                </div>
+              </div>
+            )}
           </div>
         )}
 

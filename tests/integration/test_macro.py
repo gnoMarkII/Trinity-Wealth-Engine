@@ -5,10 +5,10 @@ from dotenv import load_dotenv
 from langgraph.checkpoint.memory import MemorySaver
 from langchain_core.messages import HumanMessage, AIMessage
 
-from agents.manager_agent import build_graph
+from agents.research_swarm_flow import build_graph
 from tools.archivist.core import init_vault_structure
 from unittest.mock import patch, MagicMock
-from agents.manager_agent import RouterDecision, WorkerTask
+from agents.research_swarm_flow import RouterDecision, WorkerTask
 
 load_dotenv()
 
@@ -61,32 +61,18 @@ def datetime_to_date_str():
     from datetime import datetime
     return datetime.now().strftime("%Y-%m-%d")
 
-@patch("agents.manager_agent.fetch_and_save_macro_snapshots")
-@patch("agents.manager_agent._get_macro_quant_graph")
-@patch("agents.manager_agent._get_macro_economist_graph")
-@patch("agents.manager_agent._get_archivist_graph")
-@patch("agents.manager_agent._get_router_model")
-@patch("agents.manager_agent.get_llm")
-def test_macro_analysis_flow_mocked_router(mock_llm, mock_router, mock_archivist, mock_eco, mock_quant, mock_snapshots, equity_tmp_vault, monkeypatch):
+@patch("agents.research_swarm_flow.fetch_and_save_macro_snapshots")
+@patch("agents.research_swarm_flow._get_macro_quant_graph")
+@patch("agents.research_swarm_flow._get_macro_economist_graph")
+@patch("agents.research_swarm_flow._get_archivist_graph")
+@patch("agents.research_swarm_flow.get_llm")
+def test_macro_analysis_flow_mocked_router(mock_llm, mock_archivist, mock_eco, mock_quant, mock_snapshots, equity_tmp_vault, monkeypatch):
     # กัน strategic_allocator_node เขียน JSON sidecar จริงลง Obsidian Vault ของผู้ใช้ —
     # test นี้ build_graph() จริงและรัน strategic_allocator_node จริง (แค่ mock LLM เท่านั้น)
     import tools.macro.report_formatter as report_formatter_module
     import tools.archivist.core as archivist_core_module
     monkeypatch.setattr(report_formatter_module, "VAULT_PATH", equity_tmp_vault)
     monkeypatch.setattr(archivist_core_module, "VAULT_PATH", equity_tmp_vault)
-    class MockRouterModel:
-        def invoke(self, *args, **kwargs):
-            return RouterDecision(
-                tasks=[
-                    WorkerTask(target="macro_intel", instruction="test")
-                ]
-            )
-        def with_structured_output(self, *args, **kwargs):
-            return self
-        def with_fallbacks(self, *args, **kwargs):
-            return self
-
-    mock_router.return_value = MockRouterModel()
     
     class MockGraph:
         def __init__(self, return_val):

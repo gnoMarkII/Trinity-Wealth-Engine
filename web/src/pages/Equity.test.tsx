@@ -29,6 +29,7 @@ vi.mock('../api/client', () => {
       getEquityNotebookLMExport: vi.fn(),
       exportEquityToNotebookLM: vi.fn(),
       retryEquityNotebookLMExport: vi.fn(),
+      getPositionReview: vi.fn().mockResolvedValue(null),
     },
     ApiError: MockApiError,
   }

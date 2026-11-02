@@ -4,7 +4,7 @@ import { nodeDisplayName } from './nodeDisplayNames'
 
 describe('nodeDisplayName', () => {
   it('แปลงชื่อ node ในกราฟเป็นชื่อ UI', () => {
-    expect(nodeDisplayName('supervisor')).toBe('Manager')
+    expect(nodeDisplayName('supervisor')).toBe('Supervisor')
     expect(nodeDisplayName('macro_quant')).toBe('Macro Quant')
     expect(nodeDisplayName('prepare_archivist')).toBe('Archivist')
     expect(nodeDisplayName('archivist')).toBe('Archivist')

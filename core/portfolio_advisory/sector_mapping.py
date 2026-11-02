@@ -133,7 +133,7 @@ def normalize_to_canonical_sector(name_or_ticker: Optional[str]) -> Optional[str
     for alias, canonical in CANONICAL_SECTOR_MAP.items():
         if len(alias) <= 3:
             import re
-            if re.search(rf"\b{re.escape(alias)}\b", raw):
+            if re.search(rf"(?<![a-z0-9]){re.escape(alias)}(?![a-z0-9])", raw):
                 return canonical
         else:
             if alias in raw:

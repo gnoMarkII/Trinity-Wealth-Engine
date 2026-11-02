@@ -7,6 +7,7 @@ from datetime import datetime
 
 from schemas.micro_quant_schemas import MicroQuantOutput
 from .core import _fmt_large
+from .equity_flag_registry import EquityFlagCategory, categorize_equity_flag
 
 _SENTIMENT_LABELS = {"bullish": "🟢 Bullish", "bearish": "🔴 Bearish", "neutral": "⚪ Neutral"}
 
@@ -147,13 +148,63 @@ DATA_QUALITY_FLAG_TRANSLATIONS: dict[str, tuple[str, str]] = {
         "ระยะเวลาเปรียบเทียบงบการเงินไม่ใช่งวดปีเต็ม",
         "งวดเวลาของข้อมูลเปรียบเทียบไม่อยู่ในรอบ 12 เดือนเต็ม",
     ),
-    "share_dilution_risk:capital_allocation": (
-        "ความเสี่ยงจากการเพิ่มทุนหรือไดลูทจำนวนหุ้น (>3% YoY)",
-        "จำนวนหุ้นสามัญเพิ่มขึ้นเกิน 3% ต่อปี ส่งผลลดทอนสัดส่วนกำไรต่อหุ้นของผู้ถือหุ้นเดิม",
+    # market_data & macro flags
+    "quote_ohlcv_mismatch:market_data": (
+        "ราคา Quote ล่าสุดไม่ตรงกับราคาปิด OHLCV",
+        "ราคาซื้อขายล่าสุดแตกต่างจากราคาปิดสิ้นวันของข้อมูลแท่งเทียน ระบบจึงตรึงการวิเคราะห์ไว้ที่ราคาปิดสิ้นวัน (EOD Close)",
     ),
-    "macro_regime_headwind:scorecard": (
-        "สภาวะเศรษฐกิจมหภาคเป็นแรงต้าน (Macro Headwind)",
-        "สภาวะมหภาคปัจจุบันไม่เอื้อต่อหุ้นที่มีภาระหนี้สูงหรือกระแสเงินสดติดลบ จึงปรับลดเพดานความพร้อมในการเข้าลงทุน",
+    "macro_stale_publication:us_10y": (
+        "ข้อมูลอัตราผลตอบแทนพันธบัตรสหรัฐฯ 10 ปีไม่อัพเดท",
+        "วันที่เผยแพร่ข้อมูล US 10Y ล่าสุดไม่เป็นปัจจุบัน",
+    ),
+    "macro_stale_publication:erp": (
+        "ข้อมูล Equity Risk Premium ไม่อัพเดท",
+        "วันที่เผยแพร่ข้อมูล ERP ล่าสุดไม่เป็นปัจจุบัน",
+    ),
+    "macro_publication_future_leak:us_10y": (
+        "ตรวจพบวันที่เผยแพร่ US 10Y ล่วงหน้า",
+        "วันที่ของข้อมูลพันธบัตรเกิดขึ้นหลังวันประเมิน (Future Leakage)",
+    ),
+    "invalidation:macro_inputs_stale_or_misaligned": (
+        "ข้อมูลปัจจัยมหภาคไม่อัพเดทหรือไม่สอดคล้อง",
+        "ปัจจัยมหภาคที่ใช้คำนวณ WACC และ Cost of Capital มีความล่าช้า",
+    ),
+    # valuation / DCF flags
+    "in_margin_of_safety_buy_zone:dcf": (
+        "ราคาหุ้นอยู่ในโซน Margin of Safety (DCF)",
+        "ราคาตลาดต่ำกว่ามูลค่าที่แท้จริงตามเกณฑ์ส่วนเผื่อเพื่อความปลอดภัย",
+    ),
+    "tax_policy:US_FEDERAL_STATUTORY_21PCT": (
+        "ใช้อัตราภาษีนิติบุคคลสหรัฐฯ (21%)",
+        "คำนวณอัตราภาษีมาตรฐาน US Federal Statutory Tax Rate 21%",
+    ),
+    "operating_margin_proxy:dcf": (
+        "ใช้อัตรากำไรจากการดำเนินงานเป็นตัวแทน",
+        "ใช้อัตรากำไรจากการดำเนินงานเฉลี่ยเพื่อประมาณการกระแสเงินสด",
+    ),
+    "high_terminal_value_dependency:dcf": (
+        "สัดส่วน Terminal Value สูง (>80%)",
+        "มูลค่ากิจการส่วนใหญ่พึ่งพากระแสเงินสดในระยะยาวหลังปีที่ 5",
+    ),
+    "aggressive_implied_exit_multiple:dcf": (
+        "Implied Exit Multiple ค่อนข้างสูง",
+        "ตัวคูณมูลค่ากิจการที่สะท้อนจากราคาตลาดอยู่ในระดับสูง",
+    ),
+    "extreme_terminal_exit_ebitda:dcf": (
+        "Terminal Exit EBITDA Multiple สูงผิดปกติ",
+        "ตัวคูณ EBITDA ในปีสุดท้ายสูงเกินค่าเฉลี่ยอุตสาหกรรม",
+    ),
+    "depressed_terminal_exit_ebitda:dcf": (
+        "Terminal Exit EBITDA Multiple ต่ำผิดปกติ",
+        "ตัวคูณ EBITDA ในปีสุดท้ายต่ำกว่าค่าเฉลี่ยอุตสาหกรรม",
+    ),
+    "wacc_below_terminal_growth:dcf": (
+        "WACC ต่ำกว่า Terminal Growth ใน DCF",
+        "ต้นทุนทางการเงินต่ำกว่าสมมติฐานการเติบโตระยะยาว (WACC <= g)",
+    ),
+    "wacc_below_terminal_growth:reverse_dcf": (
+        "WACC ต่ำกว่า Terminal Growth ใน Reverse DCF",
+        "ต้นทุนทางการเงินต่ำกว่าสมมติฐานการเติบโตระยะยาวในการถอดรหัสราคาตลาด",
     ),
 }
 
@@ -518,10 +569,40 @@ def format_equity_analysis_report(output: MicroQuantOutput) -> str:
     ])
 
     if q.data_quality_flags:
-        lines.append("### ⚠️ Data Quality Flags\n")
+        issues = []
+        data_gaps = []
+        assumptions = []
+        info_flags = []
+
         for flag in q.data_quality_flags:
-            lines.append(_translate_flag(flag))
-        lines.append("")
+            cat = categorize_equity_flag(flag)
+            line = _translate_flag(flag)
+            if cat == EquityFlagCategory.ISSUE:
+                issues.append(line)
+            elif cat == EquityFlagCategory.DATA_GAP:
+                data_gaps.append(line)
+            elif cat == EquityFlagCategory.ASSUMPTION:
+                assumptions.append(line)
+            else:
+                info_flags.append(line)
+
+        lines.append("### ⚠️ Data Quality & Model Notes\n")
+        if issues:
+            lines.append("#### 🔴 ประเด็นที่ต้องตรวจสอบ (Issues & Inconsistencies)")
+            lines.extend(issues)
+            lines.append("")
+        if data_gaps:
+            lines.append("#### 🟡 ข้อจำกัดของข้อมูลตลาด (Market Data Gaps)")
+            lines.extend(data_gaps)
+            lines.append("")
+        if assumptions:
+            lines.append("#### ℹ️ สมมติฐานและกรอบการคำนวณ (Model Assumptions & Methodologies)")
+            lines.extend(assumptions)
+            lines.append("")
+        if info_flags:
+            lines.append("#### 🟢 ข้อมูลสถานะและการยืนยัน (Informational & Verifications)")
+            lines.extend(info_flags)
+            lines.append("")
 
     lines.append("## 📰 Sentiment & Narrative Context\n")
 

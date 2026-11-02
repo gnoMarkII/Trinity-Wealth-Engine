@@ -14,6 +14,9 @@ from typing import List, Optional, Tuple, Dict, Any
 
 import pypdf
 
+from core.datetime_utils import format_iso_date, parse_thai_or_iso_date, extract_date_by_labels
+from core.financial_parsers import extract_financial_decimal, extract_labeled_decimal
+from core.text_utils import extract_labeled_value
 from tools.portfolio.domain.calculations import (
     validate_reconciliation_invariant,
     allocate_document_fees_pro_rata,
@@ -83,49 +86,37 @@ def _parse_dime_text_to_dicts(text: str) -> List[Dict[str, Any]]:
     3. Generic fallback for synthetic and legacy trade documents
     """
     # 1. Tax Invoice / Confirmation No.
-    conf_no = ""
-    tax_inv_match = re.search(r"(?:Tax\s*Invoice\s*No\.?|เลขที่ใบกำกับภาษี)\s*[:]?\s*([A-Za-z0-9\-_]+)", text, re.IGNORECASE)
-    if tax_inv_match:
-        conf_no = tax_inv_match.group(1).strip()
-    else:
-        doc_no_match = re.search(r"(?:Confirmation\s*No\.?|Doc\s*No\.?|No\.\s*|เลขที่ใบยืนยัน|เลขที่\s*)\s*[:]?\s*([A-Za-z0-9\-_]+)", text, re.IGNORECASE)
-        if doc_no_match:
-            conf_no = doc_no_match.group(1).strip()
-        else:
-            raise ValueError("ไม่พบเลขที่เอกสารยืนยัน (Confirmation No. / Tax Invoice No.) ในเอกสาร PDF")
+    conf_no = extract_labeled_value(
+        text,
+        [
+            "Tax Invoice No.",
+            "เลขที่ใบกำกับภาษี",
+            "Confirmation No.",
+            "Doc No.",
+            "No.",
+            "เลขที่ใบยืนยัน",
+            "เลขที่",
+        ],
+    )
+    if not conf_no:
+        raise ValueError("ไม่พบเลขที่เอกสารยืนยัน (Confirmation No. / Tax Invoice No.) ในเอกสาร PDF")
 
     # 2. Dates
-    eff_date = ""
-    eff_match = re.search(r"(?:Effective\s*Date|วันที่คำสั่งมีผล)\s*[:]?\s*(\d{2}/\d{2}/\d{4})", text, re.IGNORECASE)
-    if eff_match:
-        d, m, y = eff_match.group(1).split("/")
-        eff_date = f"{y}-{m}-{d}"
+    eff_d = extract_date_by_labels(text, ["Effective Date", "วันที่คำสั่งมีผล"])
+    eff_date = format_iso_date(eff_d) if eff_d else ""
 
-    issue_date = ""
-    issue_match = re.search(r"(?:Issue\s*Date|วันที่ออกใบกำกับภาษี)\s*[:]?\s*(\d{2}/\d{2}/\d{4})", text, re.IGNORECASE)
-    if issue_match:
-        d, m, y = issue_match.group(1).split("/")
-        issue_date = f"{y}-{m}-{d}"
+    issue_d = extract_date_by_labels(text, ["Issue Date", "วันที่ออกใบกำกับภาษี"])
+    issue_date = format_iso_date(issue_d) if issue_d else ""
 
     trade_date = eff_date or issue_date
     if not trade_date:
         raise ValueError("ไม่พบวันที่ทำรายการ (Trade Date / Effective Date / Issue Date) ในเอกสาร PDF")
 
     # Exchange Rate
-    exchange_rate = None
-    fx_match = re.search(r"(?:THB/USD\s*=|THB\s*=\s*)\s*([\d\.]+)", text, re.IGNORECASE)
-    if fx_match:
-        try:
-            exchange_rate = str(Decimal(fx_match.group(1)))
-        except Exception:
-            pass
-    if not exchange_rate:
-        fx_alt_match = re.search(r"(?:BOT as of[^\n]*\n\s*)([\d\.]+)", text, re.IGNORECASE)
-        if fx_alt_match:
-            try:
-                exchange_rate = str(Decimal(fx_alt_match.group(1)))
-            except Exception:
-                pass
+    fx_dec = extract_labeled_decimal(text, ["THB/USD =", "THB ="])
+    if fx_dec is None:
+        fx_dec = extract_labeled_decimal(text, ["BOT as of"], next_line=True)
+    exchange_rate = str(fx_dec) if fx_dec is not None else None
 
     items: List[Dict[str, Any]] = []
     line_idx = 0
@@ -133,25 +124,25 @@ def _parse_dime_text_to_dicts(text: str) -> List[Dict[str, Any]]:
     # Pattern A: Dime US Stock Confirmation
     # Order ID | Settlement Date | BUY/SEL/SELL/REW | Symbol | Units | Price | Currency | Gross | Fee | Tax | Net
     us_stock_pattern = re.compile(
-        r"^\s*(\d+)\s+(\d{2}/\d{2}/\d{4})\s+(BUY|SEL|SELL|REW)\s+([A-Za-z0-9\.\-_]+)\s+([\d\.,]+)\s+([\d\.,]+)\s+([A-Z]{3})\s+([\d\.,]+)\s+([\d\.,]+)\s+([\d\.,]+)\s+([\d\.,]+)",
+        r"^\s*(\d+)\s+((?<!\d)\d{1,2}/\d{1,2}/\d{4}(?!\d))\s+(BUY|SEL|SELL|REW)\s+([A-Za-z0-9\.\-_]+)\s+([\d\.,]+)\s+([\d\.,]+)\s+([A-Z]{3})\s+([\d\.,]+)\s+([\d\.,]+)\s+([\d\.,]+)\s+([\d\.,]+)",
         re.MULTILINE,
     )
     for m in us_stock_pattern.finditer(text):
         order_id = m.group(1).strip()
         raw_settle = m.group(2)
-        d, mo, y = raw_settle.split("/")
-        settlement_date = f"{y}-{mo}-{d}"
+        ps = parse_thai_or_iso_date(raw_settle)
+        settlement_date = format_iso_date(ps) if ps else raw_settle
 
         raw_action = m.group(3).upper()
         action = "BUY" if raw_action in ("BUY", "REW") else "SELL"
         symbol = m.group(4).upper()
-        units = Decimal(m.group(5).replace(",", ""))
-        price = Decimal(m.group(6).replace(",", ""))
+        units = extract_financial_decimal(m.group(5)) or Decimal("0")
+        price = extract_financial_decimal(m.group(6)) or Decimal("0")
         curr = m.group(7).upper()
-        gross = Decimal(m.group(8).replace(",", ""))
-        fee = Decimal(m.group(9).replace(",", ""))
-        tax = Decimal(m.group(10).replace(",", ""))
-        net = Decimal(m.group(11).replace(",", ""))
+        gross = extract_financial_decimal(m.group(8)) or Decimal("0")
+        fee = extract_financial_decimal(m.group(9)) or Decimal("0")
+        tax = extract_financial_decimal(m.group(10)) or Decimal("0")
+        net = extract_financial_decimal(m.group(11)) or Decimal("0")
 
         fp_raw = f"{conf_no}|{order_id}|{symbol}|{action}|{units}|{price}|{trade_date}|{net}"
         fingerprint = hashlib.sha256(fp_raw.encode("utf-8")).hexdigest()
@@ -195,9 +186,9 @@ def _parse_dime_text_to_dicts(text: str) -> List[Dict[str, Any]]:
         raw_action = m.group(2).upper()
         action = "BUY" if raw_action in ("SUB", "SWI") else "SELL"
         symbol = m.group(3).strip().upper()
-        units = Decimal(m.group(4).replace(",", ""))
-        price = Decimal(m.group(5).replace(",", ""))
-        total_amount = Decimal(m.group(6).replace(",", ""))
+        units = extract_financial_decimal(m.group(4)) or Decimal("0")
+        price = extract_financial_decimal(m.group(5)) or Decimal("0")
+        total_amount = extract_financial_decimal(m.group(6)) or Decimal("0")
         curr = "THB"
         gross = total_amount
         net = total_amount

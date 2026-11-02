@@ -6,20 +6,19 @@ def test_registry_has_exactly_15_slots():
     assert len(REGISTRY) == 15
 
 
-def test_registry_has_10_agent_and_5_tool_slots():
+def test_registry_has_9_agent_and_6_tool_slots():
     agent_slots = [s for s in REGISTRY.values() if s.layer == "agent"]
     tool_slots = [s for s in REGISTRY.values() if s.layer == "tool"]
-    assert len(agent_slots) == 10
-    assert len(tool_slots) == 5
+    assert len(agent_slots) == 9
+    assert len(tool_slots) == 6
 
 
 def test_all_expected_slot_keys_present():
     expected = {
-        "manager", "router", "archivist", "bookkeeper",
-        "macro_quant", "economist", "allocator",
-        "equity_quant", "equity_narrative", "equity_synthesizer",
+        "manager", "archivist", "macro_quant", "economist", "allocator",
+        "equity_quant", "equity_narrative", "equity_synthesizer", "portfolio_synthesizer",
         "extractor", "youtube_pitch", "news_triage", "thai_title_translation",
-        "earnings_call_summarizer",
+        "earnings_call_summarizer", "promise_extractor",
     }
     assert set(REGISTRY.keys()) == expected
 

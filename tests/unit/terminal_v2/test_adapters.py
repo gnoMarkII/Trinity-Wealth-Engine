@@ -537,6 +537,27 @@ def test_bis_policy_rates_adapter_with_fixture():
     assert snapshot.spreads_vs_bot_repo["US"] == 250.0
     assert snapshot.spreads_vs_bot_repo["TH"] == 0.0
 
+    # Test as_macro_observables conversion
+    observables = adapter.as_macro_observables(snapshot)
+    assert len(observables) == 13
+    obs_map = {o.observable_id: o for o in observables}
+    assert "obs_us_policy_rate_bis" in obs_map
+    assert "obs_thai_policy_rate_bis" in obs_map
+    assert "obs_jp_policy_rate_bis" in obs_map
+    assert "obs_cn_policy_rate_bis" in obs_map
+    assert "obs_in_policy_rate_bis" in obs_map
+    assert "obs_diff_us_th_policy_rate_bis" in obs_map
+
+    jp_obs = obs_map["obs_jp_policy_rate_bis"]
+    assert jp_obs.region == "Japan"
+    assert jp_obs.unit == "%"
+    assert jp_obs.is_valid is True
+    assert jp_obs.status == "verified"
+
+    diff_obs = obs_map["obs_diff_us_th_policy_rate_bis"]
+    assert diff_obs.value == "250.0"
+    assert diff_obs.unit == "bps"
+
 
 # ============================================================================
 # 12. Nasdaq Equity Intelligence Tests
@@ -683,6 +704,7 @@ def test_sec_edgar_form4_xml_offline():
     assert first_tx.shares == 12483.0
     assert first_tx.price_per_share == 222.1932
     assert first_tx.notional_usd is not None
+    assert first_tx.is_10b51 is True
 
 
 # ============================================================================

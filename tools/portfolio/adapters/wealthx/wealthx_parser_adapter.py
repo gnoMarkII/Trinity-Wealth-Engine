@@ -15,6 +15,9 @@ from typing import List, Optional, Dict, Any
 
 import pypdf
 
+from core.datetime_utils import format_iso_date, parse_thai_or_iso_date, extract_date_by_labels
+from core.financial_parsers import extract_financial_decimal, extract_labeled_decimal
+from core.text_utils import extract_labeled_value
 from tools.portfolio.domain.calculations import validate_reconciliation_invariant
 from tools.portfolio.domain.errors import TradeReconciliationError
 from tools.portfolio.domain.models import (
@@ -78,6 +81,13 @@ KNOWN_AMCS = [
     "PRINCIPAL", "UOBAM", "DAOL", "XSPRING", "BBLAM", "ABERDEEN", "KSAM", "TISCO"
 ]
 
+RESERVED_DOC_WORDS = {
+    "CONFIRMATION", "TRANSACTION", "STATEMENT", "SECURITIES", "ACCOUNT",
+    "AMOUNT", "REFERENCE", "ORDER", "SUMMARY", "ALLOCATED", "PAYMENT",
+    "INVESTMENT", "COMPANY", "LIMITED", "BRANCH", "CUSTOMER", "HOLDINGS",
+    "PORTFOLIO", "NUMBER", "CREDIT", "DEBIT", "RECEIPT",
+}
+
 
 def _parse_wealthx_text_to_dicts(text: str) -> List[Dict[str, Any]]:
     """Parse extracted WealthX confirmation note text into dictionary rows.
@@ -89,38 +99,35 @@ def _parse_wealthx_text_to_dicts(text: str) -> List[Dict[str, Any]]:
     # 1. Settlement No. (Confirmation No. - supports DN for Buy, CN for Sell/Credit)
     conf_no = ""
     settle_match = re.search(
-        r"\b((?:DN|CN)\s*\d{10,14})\b",
+        r"(?<![A-Za-z0-9])((?:DN|CN)\s*\d{10,14})(?![A-Za-z0-9])",
         text,
         re.IGNORECASE,
     )
     if settle_match:
         conf_no = re.sub(r"\s+", " ", settle_match.group(1).strip())
     else:
-        doc_match = re.search(
-            r"(?:เลขที่เอกสาร|เลขที่ใบยืนยัน|Settlement\s*No\.?|Confirmation\s*No\.?)[^:\n]*:?\s*([A-Za-z0-9\-_]+(?:\s+[A-Za-z0-9\-_]+)*)",
+        doc_match = extract_labeled_value(
             text,
-            re.IGNORECASE,
+            ["เลขที่เอกสาร", "เลขที่ใบยืนยัน", "Settlement No.", "Confirmation No."],
+            value_pattern=r"([A-Za-z0-9\-_]+(?:\s+[A-Za-z0-9\-_]+)*)",
         )
         if doc_match:
-            conf_no = re.sub(r"\s+", " ", doc_match.group(1).strip())
+            conf_no = doc_match
         else:
             raise ValueError("ไม่พบเลขที่ใบยืนยัน (Settlement No.) ในเอกสาร PDF ของ WealthX")
 
     # 2. Dates (supports both DD/MM/YYYY and YYYY-MM-DD ISO formats)
     trade_date = ""
     settlement_date = None
-    dates_dmy = re.findall(r"\b(\d{2}/\d{2}/\d{4})\b", text)
-    dates_ymd = re.findall(r"\b(\d{4}-\d{2}-\d{2})\b", text)
+    dates_dmy = re.findall(r"(?<!\d)(\d{1,2}/\d{1,2}/\d{4})(?!\d)", text)
+    dates_ymd = re.findall(r"(?<!\d)(\d{4}-\d{2}-\d{2})(?!\d)", text)
 
     if dates_dmy:
+        p1 = parse_thai_or_iso_date(dates_dmy[0])
+        trade_date = format_iso_date(p1) if p1 else dates_dmy[0]
         if len(dates_dmy) >= 2:
-            d1, m1, y1 = dates_dmy[0].split("/")
-            d2, m2, y2 = dates_dmy[1].split("/")
-            trade_date = f"{y1}-{m1}-{d1}"
-            settlement_date = f"{y2}-{m2}-{d2}"
-        else:
-            d1, m1, y1 = dates_dmy[0].split("/")
-            trade_date = f"{y1}-{m1}-{d1}"
+            p2 = parse_thai_or_iso_date(dates_dmy[1])
+            settlement_date = format_iso_date(p2) if p2 else None
     elif dates_ymd:
         if len(dates_ymd) >= 2:
             trade_date = dates_ymd[0]
@@ -128,18 +135,12 @@ def _parse_wealthx_text_to_dicts(text: str) -> List[Dict[str, Any]]:
         else:
             trade_date = dates_ymd[0]
     else:
-        trade_match = re.search(
-            r"(?:วันที่ส่งคำ[า]?สั่ง|Trade\s*Date|วันที่ได้\s*NAV|NAV\s*Date)[^\d\n]*(\d{2}/\d{2}/\d{4}|\d{4}-\d{2}-\d{2})",
+        trade_d = extract_date_by_labels(
             text,
-            re.IGNORECASE,
+            ["วันที่ส่งคำสั่ง", "วันที่ส่งคำาสั่ง", "Trade Date", "วันที่ได้ NAV", "วันที่ได้NAV", "NAV Date"],
         )
-        if trade_match:
-            raw_d = trade_match.group(1)
-            if "/" in raw_d:
-                d, m, y = raw_d.split("/")
-                trade_date = f"{y}-{m}-{d}"
-            else:
-                trade_date = raw_d
+        if trade_d:
+            trade_date = format_iso_date(trade_d)
         else:
             raise ValueError("ไม่พบวันที่ส่งคำสั่ง (Trade Date) ในเอกสาร PDF ของ WealthX")
 
@@ -176,17 +177,19 @@ def _parse_wealthx_text_to_dicts(text: str) -> List[Dict[str, Any]]:
         for line_idx, chunk in enumerate(row_chunks):
             header_line = chunk[0]
             m = num_pattern.search(header_line)
-            units = Decimal(m.group(1).replace(",", ""))
-            price = Decimal(m.group(2).replace(",", ""))
-            fee = Decimal(m.group(3).replace(",", ""))
-            net_amount = Decimal(m.group(4).replace(",", ""))
+            units = extract_financial_decimal(m.group(1)) or Decimal("0")
+            price = extract_financial_decimal(m.group(2)) or Decimal("0")
+            fee = extract_financial_decimal(m.group(3)) or Decimal("0")
+            net_amount = extract_financial_decimal(m.group(4)) or Decimal("0")
             gross_amount = net_amount
             
             full_chunk_text = "\n".join(chunk)
             
             # Action
             action = "BUY"
-            if any(w in full_chunk_text for w in ["SELL", "RED", "ขาย", "SWO", "สับเปลี่ยนออก"]):
+            if any(w in full_chunk_text for w in ["SELL", "RED", "SWO", "ขายคืน", "สับเปลี่ยนออก"]) or (
+                "ขาย" in full_chunk_text and "ซื้อ" not in full_chunk_text
+            ):
                 action = "SELL"
                 
             # Order ID (Reference No.) - 16 digits starting with 239 or fallback
@@ -210,7 +213,7 @@ def _parse_wealthx_text_to_dicts(text: str) -> List[Dict[str, Any]]:
                         break
                         
             if not order_id:
-                digits_m = re.search(r"\b(\d{14,18})\b", full_chunk_text)
+                digits_m = re.search(r"(?<!\d)(\d{14,18})(?!\d)", full_chunk_text)
                 if digits_m:
                     order_id = digits_m.group(1)
                 else:
@@ -224,7 +227,7 @@ def _parse_wealthx_text_to_dicts(text: str) -> List[Dict[str, Any]]:
                 before_amc = header_line[:amc_match.start()].strip()
                 sym_part1 = before_amc.split()[-1] if before_amc.split() else ""
             else:
-                act_match = re.search(r"\b(BUY|SELL|SUB|RED)\b", header_line)
+                act_match = re.search(r"(?<![A-Za-z0-9])(BUY|SELL|SUB|RED)(?![A-Za-z0-9])", header_line)
                 if act_match:
                     before_act = header_line[:act_match.start()].strip()
                     sym_part1 = before_act.split()[-1] if before_act.split() else ""
@@ -239,8 +242,13 @@ def _parse_wealthx_text_to_dicts(text: str) -> List[Dict[str, Any]]:
 
             symbol = (sym_part1 + sym_part2).strip()
             if not symbol or len(symbol) < 3:
-                broad_sym = re.search(r"\b(TLWORLD-X|TLNDQINCOME-UH-X|TLWORLDXUS-X|LHGRID|[A-Z0-9\-]{4,20})\b", full_chunk_text)
-                symbol = broad_sym.group(1) if broad_sym else "UNKNOWN"
+                for broad_m in re.finditer(r"(?<![A-Za-z0-9])(TLWORLD-X|TLNDQINCOME-UH-X|TLWORLDXUS-X|LHGRID|[A-Z0-9\-]{4,20})(?![A-Za-z0-9])", full_chunk_text):
+                    cand = broad_m.group(1).upper()
+                    if cand not in RESERVED_DOC_WORDS:
+                        symbol = cand
+                        break
+                if not symbol:
+                    symbol = "UNKNOWN"
 
             fp_raw = f"{conf_no}|{order_id}|{symbol}|{action}|{units}|{price}|{trade_date}|{net_amount}"
             fingerprint = hashlib.sha256(fp_raw.encode("utf-8")).hexdigest()
@@ -275,51 +283,53 @@ def _parse_wealthx_text_to_dicts(text: str) -> List[Dict[str, Any]]:
 
     # Fallback for Form Format (Single trade per PDF with explicit key-value fields)
     action = "BUY"
-    if re.search(r"\b(SELL|RED|ขาย|ขายคืน|SWO|สับเปลี่ยนออก)\b", text, re.IGNORECASE):
+    tx_type_m = re.search(r"(?:ประเภทรายการ|Transaction\s*Type)[^:\n]*:?\s*([^\n]+)", text, re.IGNORECASE)
+    if tx_type_m:
+        tx_type_text = tx_type_m.group(1)
+        if any(w in tx_type_text for w in ["SELL", "RED", "SWO", "ขายคืน", "สับเปลี่ยนออก"]) or (
+            "ขาย" in tx_type_text and "ซื้อ" not in tx_type_text
+        ):
+            action = "SELL"
+    elif any(w in text for w in ["SELL", "RED", "SWO", "ขายคืน", "สับเปลี่ยนออก"]) or (
+        "ขาย" in text and "ซื้อ" not in text
+    ):
         action = "SELL"
 
     units = None
     price = None
-    num_match = re.search(r"\b([\d,]+\.\d{4})\s+([\d,]+\.\d{4})\b", text)
+    num_match = re.search(r"(?<!\d)([\d,]+\.\d{4})\s+([\d,]+\.\d{4})(?!\d)", text)
     if num_match:
-        units = Decimal(num_match.group(1).replace(",", ""))
-        price = Decimal(num_match.group(2).replace(",", ""))
+        units = extract_financial_decimal(num_match.group(1))
+        price = extract_financial_decimal(num_match.group(2))
     else:
-        units_match = re.search(r"(?:จำ[า]?นวนหน่วย|Allocated\s*Units|No\.\s*of\s*Units)[^:\d\n]*[:]?\s*([\d\.,]+)", text, re.IGNORECASE)
-        price_match = re.search(r"(?:ราคา/หน่วย|ราคาต่อหน่วย|Unit\s*Price|Price\s*per\s*Unit|NAV)[^:\d\n]*[:]?\s*([\d\.,]+)", text, re.IGNORECASE)
-        if units_match and price_match:
-            units = Decimal(units_match.group(1).replace(",", ""))
-            price = Decimal(price_match.group(1).replace(",", ""))
+        units = extract_labeled_decimal(text, ["จำนวนหน่วย", "จำานวนหน่วย", "Allocated Units", "No. of Units"])
+        price = extract_labeled_decimal(text, ["ราคาต่อหน่วย", "ราคา/หน่วย", "Unit Price", "Price per Unit", "NAV"])
 
     if units is None or price is None:
         raise ValueError("ไม่พบจำนวนหน่วย (Units) หรือราคาต่อหน่วย (NAV) ในเอกสาร PDF ของ WealthX")
 
-    net_amount = None
-    tot_match = re.search(r"(?:Total\s*Buy|รวมมูลค่าซื้อ|จำนวนเงินสุทธิ|Net\s*Amount)[^\d\n]*([\d\.,]+)", text, re.IGNORECASE)
-    if tot_match:
-        net_amount = Decimal(tot_match.group(1).replace(",", ""))
-    else:
-        amt_match = re.search(r"(?:จำ[า]?นวนเงิน(?!\s*สุทธิ)|Amount)[^:\d\n]*[:]?\s*([\d\.,]+)", text, re.IGNORECASE)
-        if amt_match:
-            net_amount = Decimal(amt_match.group(1).replace(",", ""))
+    net_amount = extract_labeled_decimal(
+        text,
+        ["Total Buy", "รวมมูลค่าซื้อ", "จำนวนเงินสุทธิ", "Net Amount", "Amount (Baht)", "จำนวนเงิน"],
+    )
 
     if net_amount is None:
         net_amount = (units * price).quantize(Decimal("0.01"))
 
     order_id = ""
-    m_ref = re.search(r"\b(239\d{13})\b", text)
+    m_ref = re.search(r"(?<!\d)(239\d{13})(?!\d)", text)
     if m_ref:
         order_id = m_ref.group(1)
     else:
-        m_ref_split = re.search(r"\b(239\d{6,14})\s*\n\s*(\d{1,8})\b", text)
+        m_ref_split = re.search(r"(?<!\d)(239\d{6,14})\s*\n\s*(\d{1,8})(?!\d)", text)
         if m_ref_split:
             order_id = m_ref_split.group(1) + m_ref_split.group(2)
         else:
-            ref_match = re.search(r"(?:เลขอ้างอิง|Reference\s*No\.?)[^:\n]*:\s*([A-Za-z0-9\-_]+)", text, re.IGNORECASE)
+            ref_match = extract_labeled_value(text, ["เลขอ้างอิง", "Reference No."])
             if ref_match:
-                order_id = ref_match.group(1).strip()
+                order_id = ref_match
             else:
-                any_digits = re.search(r"\b(\d{15,18})\b", text.replace("\n", " "))
+                any_digits = re.search(r"(?<!\d)(\d{15,18})(?!\d)", text.replace("\n", " "))
                 if any_digits:
                     order_id = any_digits.group(1)
                 else:
@@ -330,10 +340,12 @@ def _parse_wealthx_text_to_dicts(text: str) -> List[Dict[str, Any]]:
     if sym_paren:
         symbol = sym_paren.group(1).upper()
     else:
-        broad_sym = re.search(r"\b(TLWORLD-X|TLNDQINCOME-UH-X|TLWORLDXUS-X|LHGRID|[A-Z0-9\-]{4,20})\b", text)
-        if broad_sym:
-            symbol = broad_sym.group(1)
-        else:
+        for broad_m in re.finditer(r"(?<![A-Za-z0-9])(TLWORLD-X|TLNDQINCOME-UH-X|TLWORLDXUS-X|LHGRID|[A-Z0-9\-]{4,20})(?![A-Za-z0-9])", text):
+            cand = broad_m.group(1).upper()
+            if cand not in RESERVED_DOC_WORDS:
+                symbol = cand
+                break
+        if not symbol:
             raise ValueError("ไม่สามารถระบุรหัสกองทุน (Fund Code / Symbol) จากเอกสาร PDF ของ WealthX ได้")
 
     gross_amount = net_amount

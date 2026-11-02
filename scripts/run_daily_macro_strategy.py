@@ -15,7 +15,7 @@ from langgraph.checkpoint.memory import MemorySaver
 from core.logger import setup_logging
 from core.utils import normalize_content
 from tools.archivist.core import init_vault_structure
-from agents.manager_agent import build_graph
+from agents.research_swarm_flow import build_graph
 from langchain_core.messages import HumanMessage, AIMessage
 
 def main():

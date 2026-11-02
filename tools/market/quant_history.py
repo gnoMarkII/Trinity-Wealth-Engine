@@ -14,6 +14,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from core.financial_parsers import extract_json_block
 from core.logger import get_logger
 from schemas.micro_quant_schemas import QuantSignals
 from application.knowledge.note_write_ports import KnowledgeNoteWritePort
@@ -21,8 +22,6 @@ from application.knowledge.write_context import current_note_writer
 from tools._atomic_io import _atomic_write_to as _shared_atomic_write_to
 
 log = get_logger(__name__)
-
-_JSON_BLOCK_RE = re.compile(r"```(?:json)?\s*(.*?)\s*```", re.DOTALL)
 
 
 def _history_dir(ticker: str) -> Path:
@@ -117,10 +116,9 @@ def get_equity_score_trend(ticker: str, days: int = 90) -> list[dict[str, Any]]:
     for f in sorted_files:
         try:
             content = f.read_text(encoding="utf-8")
-            match = _JSON_BLOCK_RE.search(content)
-            if not match:
+            data = extract_json_block(content)
+            if not isinstance(data, dict):
                 continue
-            data = json.loads(match.group(1))
             evaluated_at = data.get("evaluated_at", "")
             if evaluated_at:
                 snap_date = datetime.fromisoformat(evaluated_at.replace("Z", "+00:00")).date()

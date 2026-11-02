@@ -16,6 +16,7 @@ import json
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
+import re
 from typing import Any, Optional
 from core.logger import get_logger
 from schemas.macro_schemas import MarketObservable
@@ -598,10 +599,9 @@ class ThaiHardDataAdapter:
         )
         if period:
             period = period.strip()
-            import re
-            m = re.search(r"25[5-7]\d", period)
+            m = re.search(r"(?<!\d)(25\d{2}|26\d{2})(?!\d)", period)
             if m:
-                be_year = int(m.group(0))
+                be_year = int(m.group(1))
                 period = period.replace(str(be_year), str(be_year - 543))
 
         published_at = latest_row.get("published_at") or latest_row.get("release_date")

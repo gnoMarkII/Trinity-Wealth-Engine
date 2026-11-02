@@ -11,21 +11,11 @@ from tools.macro.ticker_config import (
     CREDIT_SPREAD_DANGER_THRESHOLD,
     CREDIT_SPREAD_WIDENING_3M_BPS,
 )
+from core.financial_parsers import extract_valuation_metric
 from validators.contradiction_rules import ContradictionFinding, apply_contradiction_findings
 
-
-def _parse_val_to_float(val_str: Any) -> Optional[float]:
-    if isinstance(val_str, (int, float)):
-        return float(val_str)
-    if not isinstance(val_str, str) or not val_str.strip() or val_str.strip() == "-" or val_str.strip().upper() == "N/A":
-        return None
-    match = re.search(r"[-+]?\d*\.\d+|\d+", str(val_str))
-    if match:
-        try:
-            return float(match.group(0))
-        except ValueError:
-            return None
-    return None
+# Alias for backward compatibility across valuation guardrails
+_parse_val_to_float = extract_valuation_metric
 
 
 def check_valuation_contradiction(direction: Any, observable_registry: Optional[dict[str, Any]] = None) -> list[ContradictionFinding]:

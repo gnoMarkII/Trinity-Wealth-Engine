@@ -1,51 +1,149 @@
 import { NavLink } from 'react-router-dom'
 import { useAuth } from '../auth/useAuth'
-import AgentStatusPanel from './AgentStatusPanel'
+import HarnessTelemetryWidget from './HarnessTelemetryWidget'
 
-const links = [
-  { to: '/', label: 'Home' },
-  { to: '/kanban', label: 'Agent Kanban Board' },
-  { to: '/portfolio', label: 'All-Asset Portfolio' },
-  { to: '/advisory', label: 'Advisory Desk ⚡' },
-  { to: '/macro', label: 'Macroeconomic Analysis' },
-  { to: '/equity', label: 'Equity Analysis' },
+interface NavItem {
+  to: string
+  label: string
+  icon: string
+  isFlagship?: boolean
+  badge?: string
+}
+
+interface NavSection {
+  title?: string
+  items: NavItem[]
+}
+
+const navSections: NavSection[] = [
+  {
+    items: [
+      {
+        to: '/manager',
+        label: 'Trinity AI Advisor',
+        icon: '✨',
+        isFlagship: true,
+        badge: 'Advisor',
+      },
+      {
+        to: '/digest',
+        label: 'Daily Digest',
+        icon: '📰',
+      },
+    ],
+  },
+  {
+    title: 'Portfolio & Strategy',
+    items: [
+      {
+        to: '/portfolio',
+        label: 'All-Asset Portfolio',
+        icon: '💼',
+      },
+      {
+        to: '/advisory',
+        label: 'Advisory Desk',
+        icon: '⚡',
+      },
+    ],
+  },
+  {
+    title: 'Market Research',
+    items: [
+      {
+        to: '/macro',
+        label: 'Macroeconomic',
+        icon: '🌐',
+      },
+      {
+        to: '/equity',
+        label: 'Equity Analysis',
+        icon: '📈',
+      },
+    ],
+  },
 ]
 
 export default function Sidebar() {
   const { logout } = useAuth()
 
   return (
-    <aside className="flex w-60 shrink-0 flex-col border-r border-sky-100 bg-panel p-4 shadow-[10px_0_35px_rgba(14,165,233,0.04)] backdrop-blur-xl h-full min-h-0 overflow-y-auto custom-scrollbar">
-      <h2 className="mb-6 flex items-center gap-2 px-1 text-sm font-semibold tracking-[0.08em] text-sky-950">
-        <span className="h-2 w-2 rounded-full bg-flow-cyan shadow-[0_0_10px_rgba(6,182,212,0.5)]" />
-        Money ReRoute
-      </h2>
-      <nav className="flex flex-col gap-1">
-        {links.map((link) => (
-          <NavLink
-            key={link.to}
-            to={link.to}
-            className={({ isActive }) =>
-              `rounded-xl px-3 py-2 text-sm transition-colors ${
-                isActive
-                  ? 'border border-sky-200 bg-panel font-medium text-sky-700 shadow-[0_8px_24px_rgba(14,165,233,0.08)]'
-                  : 'text-zinc-500 hover:bg-surface-strong hover:text-zinc-800'
-              }`
-            }
-          >
-            {link.label}
-          </NavLink>
+    <aside className="flex w-60 shrink-0 flex-col border-r border-sky-100 bg-panel/95 p-3.5 shadow-[10px_0_35px_rgba(14,165,233,0.04)] backdrop-blur-xl h-full min-h-0 overflow-y-auto custom-scrollbar select-none">
+      {/* Brand Header */}
+      <NavLink
+        to="/manager"
+        className="group mb-5 flex items-center gap-2.5 rounded-2xl px-2 py-1.5 transition-colors hover:bg-sky-50/60"
+        title="ไปยัง Trinity AI Advisor"
+      >
+        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-gradient-to-tr from-sky-400 via-cyan-400 to-sky-500 text-xs font-black text-white shadow-[0_2px_12px_rgba(14,165,233,0.35)] transition-transform group-hover:scale-105">
+          MR
+        </div>
+        <div className="min-w-0">
+          <h2 className="flex items-center gap-1.5 text-sm font-bold tracking-tight text-sky-950">
+            <span>Money ReRoute</span>
+          </h2>
+          <p className="text-[10px] font-semibold tracking-wider uppercase text-sky-600/80">
+            Trinity Wealth Engine
+          </p>
+        </div>
+      </NavLink>
+
+      {/* Navigation Sections */}
+      <nav className="flex flex-col gap-4">
+        {navSections.map((section, sIdx) => (
+          <div key={sIdx} className="space-y-1">
+            {section.title && (
+              <h3 className="px-2 pb-0.5 text-[9px] font-bold uppercase tracking-[0.16em] text-zinc-400">
+                {section.title}
+              </h3>
+            )}
+            <div className="space-y-0.5">
+              {section.items.map((item) => (
+                <NavLink
+                  key={item.to}
+                  to={item.to}
+                  className={({ isActive }) =>
+                    `group flex items-center justify-between rounded-xl px-2.5 py-1.5 text-xs transition-all ${
+                      isActive
+                        ? item.isFlagship
+                          ? 'border border-sky-300/90 bg-gradient-to-r from-sky-100/80 to-cyan-50/70 font-semibold text-sky-950 shadow-[0_2px_10px_rgba(14,165,233,0.12)]'
+                          : 'border border-sky-200/90 bg-sky-50/80 font-semibold text-sky-900 shadow-[0_2px_8px_rgba(14,165,233,0.06)]'
+                        : item.isFlagship
+                          ? 'border border-sky-100 bg-white/60 font-medium text-sky-900 hover:border-sky-200 hover:bg-sky-50/50'
+                          : 'text-zinc-600 hover:bg-sky-50/50 hover:text-zinc-900'
+                    }`
+                  }
+                >
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-lg bg-sky-100/50 text-[11px] group-hover:scale-110 transition-transform">
+                      {item.icon}
+                    </span>
+                    <span className="truncate">{item.label}</span>
+                  </div>
+
+                  {item.badge && (
+                    <span className="rounded-md border border-sky-200 bg-sky-50 px-1.5 py-0.2 text-[9px] font-bold text-sky-700">
+                      {item.badge}
+                    </span>
+                  )}
+                </NavLink>
+              ))}
+            </div>
+          </div>
         ))}
       </nav>
 
-      <AgentStatusPanel />
+      {/* Institutional Harness Telemetry */}
+      <HarnessTelemetryWidget />
 
-      <div className="mt-auto border-t border-sky-100 pt-3">
+      {/* Footer / Logout */}
+      <div className="mt-auto border-t border-sky-100/80 pt-3">
         <button
           onClick={() => logout()}
-          className="w-full rounded-xl px-3 py-2 text-left text-sm text-zinc-500 transition-colors hover:bg-surface-strong hover:text-zinc-800"
+          className="flex w-full items-center gap-2 rounded-xl px-2.5 py-2 text-left text-xs text-zinc-500 transition-colors hover:bg-red-50 hover:text-red-600"
         >
-          ออกจากระบบ
+          <span>🚪</span>
+          <span>ออกจากระบบ</span>
         </button>
       </div>
     </aside>

@@ -10,6 +10,7 @@ from schemas.macro_schemas import (
 from schemas.warning_registry import (
     COVERAGE_WARNING_INCOMPLETE,
     DEFENSIVE_LOW_SUPPORTING_DATA,
+    PT_EXECUTION_GUARDRAIL,
     WarningMessage,
 )
 from validators.structured_output_retry import (
@@ -126,3 +127,53 @@ def test_invoke_with_retry_retries_on_retryable_critical():
     assert mock_structured.invoke.call_count == 2
     assert res_quality.should_retry is False
     assert len(res_dir.asset_allocation) == 5
+
+
+def test_best_of_selection_retains_better_candidate_when_retry_is_worse():
+    """Verify that when a retry candidate has more critical issues, the original better candidate is preserved."""
+    w_bad = str(WarningMessage(COVERAGE_WARNING_INCOMPLETE, {"count": "3"}))
+    w_worse1 = str(WarningMessage(COVERAGE_WARNING_INCOMPLETE, {"count": "3"}))
+    w_worse2 = str(WarningMessage(PT_EXECUTION_GUARDRAIL))
+
+    # Initial candidate has 3 buckets and 1 critical warning
+    initial_dir = MacroStrategyDirection(
+        evaluated_at="2026-07-05T00:00:00Z",
+        overall_regime=EconomicState.GOLDILOCKS,
+        asset_allocation=[
+            AssetAllocationView(asset_class="US Equities", asset_bucket="equities", stance=AssetStance.OVERWEIGHT, rationale="S&P 500", supporting_data=["S&P 500 5000 index"], observable_refs=["obs_1"]),
+            AssetAllocationView(asset_class="Fixed Income", asset_bucket="fixed_income", stance=AssetStance.NEUTRAL, rationale="10Y Yield", supporting_data=["10Y Yield 4.5%"], observable_refs=["obs_1"]),
+            AssetAllocationView(asset_class="Gold", asset_bucket="commodities", stance=AssetStance.OVERWEIGHT, rationale="Gold", supporting_data=["Gold 2400 usd/oz"], observable_refs=["obs_1"]),
+        ],
+        focus_themes=["Test"],
+        conviction_level="high",
+        conviction_rationale="InitialBest",
+        quant_narrative_alignment="aligned",
+        validation_warnings=[w_bad],
+    )
+    # Retry candidate has 2 critical warnings
+    worse_dir = MacroStrategyDirection(
+        evaluated_at="2026-07-05T00:00:00Z",
+        overall_regime=EconomicState.GOLDILOCKS,
+        asset_allocation=[
+            AssetAllocationView(asset_class="US Equities", asset_bucket="equities", stance=AssetStance.OVERWEIGHT, rationale="S&P 500", supporting_data=["S&P 500 5000 index"], observable_refs=["obs_1"]),
+            AssetAllocationView(asset_class="Fixed Income", asset_bucket="fixed_income", stance=AssetStance.NEUTRAL, rationale="10Y Yield", supporting_data=["10Y Yield 4.5%"], observable_refs=["obs_1"]),
+            AssetAllocationView(asset_class="Gold", asset_bucket="commodities", stance=AssetStance.OVERWEIGHT, rationale="Gold", supporting_data=["Gold 2400 usd/oz"], observable_refs=["obs_1"]),
+        ],
+        focus_themes=["Test"],
+        conviction_level="low",
+        conviction_rationale="WorseRetry",
+        quant_narrative_alignment="aligned",
+        validation_warnings=[w_worse1, w_worse2],
+    )
+
+    mock_structured = MagicMock()
+    mock_structured.invoke.side_effect = [initial_dir, worse_dir]
+    mock_model = MagicMock()
+    mock_model.with_structured_output.return_value = mock_structured
+
+    res_dir, res_quality = invoke_with_retry(mock_model, [], MacroStrategyDirection, {}, max_retries=1)
+
+    assert mock_structured.invoke.call_count == 2
+    # The returned candidate must be initial_dir (InitialBest), not worse_dir
+    assert res_dir.conviction_rationale == "InitialBest"
+    assert PT_EXECUTION_GUARDRAIL not in res_quality.critical_ids

@@ -91,14 +91,14 @@ export default function KanbanCardOutputs({ jobId, refreshVersion, onStatusChang
 
       {outputs.executive_summary ? (
         <article className="rounded-xl border border-orange-200/80 bg-orange-50/60 p-3 shadow-[0_8px_22px_rgba(251,140,0,0.06)]">
-          <p className="text-[10px] font-semibold uppercase tracking-wide text-orange-800">Manager Summary</p>
+          <p className="text-[10px] font-semibold uppercase tracking-wide text-orange-800">Executive Research Summary</p>
           <div className="mt-2 text-xs leading-relaxed text-zinc-700">
             <OutputMarkdown content={outputs.executive_summary} />
           </div>
         </article>
       ) : outputs.status === 'error' ? (
         <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
-          {outputs.error_message || 'งานหยุดก่อนที่ Manager Summary จะถูกสร้าง'}
+          {outputs.error_message || 'งานหยุดก่อนที่ Executive Research Summary จะถูกสร้าง'}
         </p>
       ) : outputs.status === 'done_with_errors' ? (
         <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
@@ -110,7 +110,7 @@ export default function KanbanCardOutputs({ jobId, refreshVersion, onStatusChang
         </p>
       ) : (
         <p className="rounded-lg border border-edge bg-surface p-3 text-xs text-zinc-500">
-          Manager Summary จะปรากฏเมื่อการทำงานเสร็จสมบูรณ์
+          Executive Research Summary จะปรากฏเมื่อการทำงานเสร็จสมบูรณ์
         </p>
       )}
 

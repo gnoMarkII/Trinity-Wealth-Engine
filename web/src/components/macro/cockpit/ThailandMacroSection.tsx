@@ -4,17 +4,23 @@ import type {
   ThaiRetailGoldDTO,
   MarketValuationDTO,
   MarketBreadthDTO,
+  ThaiYieldCurveDTO,
+  ThaiPublicDebtDTO,
   MacroDashboardDTO,
 } from '../../../api/types'
 import { DivergingFlowBar } from './DivergingFlowBar'
 import { BreadthStackedBar } from './BreadthStackedBar'
 import { SourceProvenanceBadge } from './SourceProvenanceBadge'
+import { ContextTooltip } from '../explainer/ContextTooltip'
+import { TrafficLightSubtitle } from '../explainer/TrafficLightSubtitle'
 
 interface ThailandMacroSectionProps {
   flow: ThaiFundFlowDTO | null
   gold: ThaiRetailGoldDTO | null
   valuation: MarketValuationDTO | null
   breadth: MarketBreadthDTO | null
+  thaiYieldCurve?: ThaiYieldCurveDTO | null
+  thaiPublicDebt?: ThaiPublicDebtDTO | null
   aiData?: MacroDashboardDTO | null
   globalPolicyRates?: { as_of_date?: string; spreads_vs_bot_repo?: Record<string, number | null> } | null
   aiLoading?: boolean
@@ -107,6 +113,8 @@ export const ThailandMacroSection: React.FC<ThailandMacroSectionProps> = ({
   gold,
   valuation,
   breadth,
+  thaiYieldCurve: liveThaiYieldCurve = null,
+  thaiPublicDebt: liveThaiPublicDebt = null,
   aiData = null,
   globalPolicyRates = null,
   loading = false,
@@ -145,44 +153,61 @@ export const ThailandMacroSection: React.FC<ThailandMacroSectionProps> = ({
   const debtObs = registry?.['obs_th_debt_to_gdp_mof']?.is_valid === false ? null : registry?.['obs_th_debt_to_gdp_mof']
   const debtTotalObs = registry?.['obs_th_public_debt_mof']?.is_valid === false ? null : registry?.['obs_th_public_debt_mof']
   const resolvedDebtToGdp =
-    fiscalHealth?.debt_to_gdp_pct !== undefined && fiscalHealth?.debt_to_gdp_pct !== null
+    liveThaiPublicDebt?.debt_to_gdp_pct !== undefined && liveThaiPublicDebt?.debt_to_gdp_pct !== null
+      ? liveThaiPublicDebt.debt_to_gdp_pct
+      : fiscalHealth?.debt_to_gdp_pct !== undefined && fiscalHealth?.debt_to_gdp_pct !== null
       ? fiscalHealth.debt_to_gdp_pct
       : debtObs?.value
       ? parseFloat(debtObs.value)
       : null
   const resolvedPublicDebtMb =
-    fiscalHealth?.public_debt_million_thb !== undefined && fiscalHealth?.public_debt_million_thb !== null
+    liveThaiPublicDebt?.total_debt_thb !== undefined && liveThaiPublicDebt?.total_debt_thb !== null
+      ? liveThaiPublicDebt.total_debt_thb / 1e6
+      : fiscalHealth?.public_debt_million_thb !== undefined && fiscalHealth?.public_debt_million_thb !== null
       ? fiscalHealth.public_debt_million_thb
       : debtTotalObs?.value
-      ? parseFloat(debtTotalObs.value)
+      ? parseFloat(debtTotalObs.value.replace(/,/g, ''))
       : null
   const statLimit = fiscalHealth?.statutory_limit_pct ?? 70.0
+  const debtObsDate = liveThaiPublicDebt?.reporting_month || debtObs?.observed_at || debtTotalObs?.observed_at
 
-  const thaiYieldCurve = (thAssessment as any)?.thai_yield_curve
+  const aiYieldCurve = (thAssessment as any)?.thai_yield_curve
   const y2Obs = registry?.['obs_th_gov_yield_2y']?.is_valid === false ? null : registry?.['obs_th_gov_yield_2y']
   const y10Obs = registry?.['obs_th_gov_yield_10y']?.is_valid === false ? null : registry?.['obs_th_gov_yield_10y']
   const spreadObs = registry?.['obs_th_gov_10y_2y_spread']?.is_valid === false ? null : registry?.['obs_th_gov_10y_2y_spread']
 
+  const liveY2 = liveThaiYieldCurve?.yields?.find((y) => y.tenor === '2Y')?.yield_percent ?? null
+  const liveY10 = liveThaiYieldCurve?.yields?.find((y) => y.tenor === '10Y')?.yield_percent ?? null
+  const liveSpread = liveThaiYieldCurve?.spread_10y_2y_bps ?? null
+
   const resolvedY2 =
-    thaiYieldCurve?.yield_2y !== undefined && thaiYieldCurve?.yield_2y !== null
-      ? thaiYieldCurve.yield_2y
+    liveY2 !== null && liveY2 !== undefined
+      ? liveY2
+      : aiYieldCurve?.yield_2y !== undefined && aiYieldCurve?.yield_2y !== null
+      ? aiYieldCurve.yield_2y
       : y2Obs?.value
       ? parseFloat(y2Obs.value)
       : null
 
   const resolvedY10 =
-    thaiYieldCurve?.yield_10y !== undefined && thaiYieldCurve?.yield_10y !== null
-      ? thaiYieldCurve.yield_10y
+    liveY10 !== null && liveY10 !== undefined
+      ? liveY10
+      : aiYieldCurve?.yield_10y !== undefined && aiYieldCurve?.yield_10y !== null
+      ? aiYieldCurve.yield_10y
       : y10Obs?.value
       ? parseFloat(y10Obs.value)
       : null
 
   const resolvedSpread =
-    thaiYieldCurve?.spread_10y_2y_bps !== undefined && thaiYieldCurve?.spread_10y_2y_bps !== null
-      ? thaiYieldCurve.spread_10y_2y_bps
+    liveSpread !== null && liveSpread !== undefined
+      ? liveSpread
+      : aiYieldCurve?.spread_10y_2y_bps !== undefined && aiYieldCurve?.spread_10y_2y_bps !== null
+      ? aiYieldCurve.spread_10y_2y_bps
       : spreadObs?.value
       ? parseFloat(spreadObs.value)
       : null
+
+  const yieldCurveObsDate = liveThaiYieldCurve?.observation_date || spreadObs?.observed_at || y10Obs?.observed_at
 
   return (
     <div className="space-y-6">
@@ -266,11 +291,16 @@ export const ThailandMacroSection: React.FC<ThailandMacroSectionProps> = ({
             <p className="text-xs text-zinc-500">
               สถิติหนี้สาธารณะคงค้างและสัดส่วนต่อ GDP จากสำนักงานบริหารหนี้สาธารณะ กระทรวงการคลัง (MOF Data Services)
             </p>
+            {liveThaiPublicDebt?.is_stale && (
+              <p className="text-[11px] text-amber-700 mt-1">
+                เซิร์ฟเวอร์ MOF อยู่ระหว่างบำรุงรักษา แสดงสถิติล่าสุดจากสำนักงานบริหารหนี้สาธารณะ (สบน.)
+              </p>
+            )}
           </div>
           <SourceProvenanceBadge
             origin="provider"
-            sourceName="กระทรวงการคลัง (MOF)"
-            observedAt={debtObs?.observed_at}
+            sourceName={liveThaiPublicDebt?.source || "กระทรวงการคลัง (MOF)"}
+            observedAt={debtObsDate}
             compact
           />
         </div>
@@ -303,7 +333,7 @@ export const ThailandMacroSection: React.FC<ThailandMacroSectionProps> = ({
             <div className="flex items-center justify-between text-[10px] text-zinc-400 mt-1">
               <span>หน่วย: ล้านล้านบาท</span>
               <span className="font-mono text-zinc-500">
-                {resolvedPublicDebtMb !== null ? `${resolvedPublicDebtMb.toLocaleString('th-TH')} ลบ.` : '—'}
+                {resolvedPublicDebtMb !== null ? `${resolvedPublicDebtMb.toLocaleString('th-TH', { maximumFractionDigits: 2 })} ลบ.` : '—'}
               </span>
             </div>
           </div>
@@ -350,7 +380,7 @@ export const ThailandMacroSection: React.FC<ThailandMacroSectionProps> = ({
           <SourceProvenanceBadge
             origin="provider"
             sourceName="สมาคมตลาดตราสารหนี้ไทย (ThaiBMA)"
-            observedAt={spreadObs?.observed_at ?? y10Obs?.observed_at}
+            observedAt={yieldCurveObsDate}
             compact
           />
         </div>
@@ -438,7 +468,9 @@ export const ThailandMacroSection: React.FC<ThailandMacroSectionProps> = ({
                 ? 'text-rose-700'
                 : 'text-zinc-700'
             }`}>
-              {foreignFlowMb !== null ? `${foreignFlowMb.toLocaleString('th-TH')} ลบ.` : 'ไม่มีข้อมูล'}
+              {foreignFlowMb !== null && (foreignFlowMb !== 0 || (flow?.total_value ?? 0) > 0)
+                ? `${foreignFlowMb.toLocaleString('th-TH')} ลบ.`
+                : 'ไม่มีข้อมูล'}
             </span>
             <span className="text-[10px] text-zinc-400 mt-0.5 flex items-center justify-between">
               <span>{foreignFlowMb !== null && foreignFlowMb < 0 ? 'ต่างชาติขายสุทธิ' : foreignFlowMb !== null && foreignFlowMb > 0 ? 'ต่างชาติซื้อสุทธิ' : 'Settrade Data'}</span>
@@ -450,7 +482,7 @@ export const ThailandMacroSection: React.FC<ThailandMacroSectionProps> = ({
           <div className="rounded-xl bg-slate-50 p-3 border border-slate-100">
             <span className="text-[10px] text-zinc-500 block">Market Breadth (A/D)</span>
             <span className="font-mono text-base font-extrabold text-zinc-900 mt-0.5 block">
-              {adRatio !== null ? `${adRatio.toFixed(2)}x` : 'ไม่มีข้อมูล'}
+              {adRatio !== null && adRatio > 0 ? `${adRatio.toFixed(2)}x` : 'ไม่มีข้อมูล'}
             </span>
             <span className="text-[10px] text-zinc-400 mt-0.5 flex items-center justify-between">
               <span className="capitalize">{breadthSentiment ? `Sentiment: ${breadthSentiment}` : 'สัดส่วนหุ้นขึ้น/ตก'}</span>
@@ -461,7 +493,7 @@ export const ThailandMacroSection: React.FC<ThailandMacroSectionProps> = ({
           <div className="rounded-xl bg-slate-50 p-3 border border-slate-100">
             <span className="text-[10px] text-zinc-500 block">SET Valuation P/E</span>
             <span className="font-mono text-base font-extrabold text-zinc-900 mt-0.5 block">
-              {peRatio !== null ? `${peRatio.toFixed(2)}x` : 'ไม่มีข้อมูล'}
+              {peRatio !== null && peRatio > 0 ? `${peRatio.toFixed(2)}x` : 'ไม่มีข้อมูล'}
             </span>
             <span className="text-[10px] text-zinc-400 mt-0.5 flex items-center justify-between">
               <span>ราคาเทียบกำไรตลาด</span>
@@ -508,9 +540,17 @@ export const ThailandMacroSection: React.FC<ThailandMacroSectionProps> = ({
       <div className="space-y-3">
         <div className="flex items-center justify-between border-b border-sky-100/70 pb-2">
           <div>
-            <h2 className="text-base font-bold text-zinc-900 tracking-tight flex items-center gap-2">
-              <span>ข้อมูลจุลภาคตลาดทุนและทองคำไทย (Thai Market Observables)</span>
-            </h2>
+            <div className="flex items-center gap-2">
+              <h2 className="text-base font-bold text-zinc-900 tracking-tight flex items-center gap-2">
+                <span>ข้อมูลจุลภาคตลาดทุนและทองคำไทย (Thai Market Observables)</span>
+              </h2>
+              <ContextTooltip
+                title="กระแสเงินทุนและความกว้างตลาดหุ้นไทย (Fund Flow & Market Breadth)"
+                whatIsIt="ยอดซื้อขายสุทธิของ 4 กลุ่มผู้เล่น (ต่างชาติ, สถาบัน, บัญชีบล., รายย่อย) และอัตราส่วนหุ้นขึ้นต่อหุ้นลง"
+                howToRead="หากต่างชาติขายสุทธิต่อเนื่อง ดัชนี SET มักขึ้นได้ช้าและค่าเงินบาทจะเผชิญแรงกดดันอ่อนค่า"
+                impactOnMoney="บอกว่าตลาดขับเคลื่อนด้วยแรงซื้อจริงของสถาบันหรือเป็นแค่การเก็งกำไรระยะสั้น"
+              />
+            </div>
             <p className="text-xs text-zinc-500">
               ข้อมูลตรวจสอบได้รายวันจาก Settrade และสมาคมค้าทองคำ (GTA)
             </p>
@@ -529,15 +569,35 @@ export const ThailandMacroSection: React.FC<ThailandMacroSectionProps> = ({
         <div className="rounded-2xl border border-sky-100 bg-white/90 p-5 shadow-sm">
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between border-b border-sky-100/70 pb-3">
             <div>
-              <h3 className="font-bold text-zinc-900 text-sm tracking-tight flex items-center gap-2">
-                <span>SET Market Valuation</span>
-                <span className="font-mono text-[10px] bg-slate-100 text-zinc-600 font-semibold px-2 py-0.5 rounded">
-                  {valuation?.market || 'SET'}
-                </span>
-              </h3>
+              <div className="flex items-center gap-2">
+                <h3 className="font-bold text-zinc-900 text-sm tracking-tight flex items-center gap-2">
+                  <span>SET Market Valuation</span>
+                  <span className="font-mono text-[10px] bg-slate-100 text-zinc-600 font-semibold px-2 py-0.5 rounded">
+                    {valuation?.market || 'SET'}
+                  </span>
+                </h3>
+                <ContextTooltip
+                  title="ระดับการประเมินมูลค่าตลาดหุ้นไทย (SET Valuation)"
+                  whatIsIt="อัตราส่วนความถูกแพงของดัชนี SET ได้แก่ P/E (ราคาต่อกำไร) และ Dividend Yield (เงินปันผล)"
+                  howToRead="P/E ต่ำกว่า 15 เท่า และ Dividend Yield สูงกว่า 3.5% สะท้อนว่าตลาดอยู่ในโซนไม่แพงและมีส่วนเผื่อความปลอดภัย"
+                  impactOnMoney="เป็นจังหวะทยอยสะสมหุ้นไทยพื้นฐานดีที่ปันผลสม่ำเสมอสำหรับเงินลงทุนระยะยาว"
+                />
+              </div>
               <p className="text-xs text-zinc-500 mt-0.5">
                 ระดับการประเมินมูลค่าตลาดหลักทรัพย์แห่งประเทศไทย (ไม่ใช้ Badge เกณฑ์สมมติ)
               </p>
+              {valuation?.pe_ratio != null && valuation.pe_ratio > 0 && (
+                <div className="mt-2">
+                  <TrafficLightSubtitle
+                    status={valuation.pe_ratio <= 16 ? 'positive' : 'neutral'}
+                    text={
+                      valuation.pe_ratio <= 16
+                        ? `🟢 SET Valuation น่าสนใจ (P/E ${valuation.pe_ratio.toFixed(2)}x): ราคาหุ้นเทียบกับกำไรอยู่ในระดับสมเหตุสมผล มีปันผลรองรับ`
+                        : `⚪ SET P/E อยู่ที่ ${valuation.pe_ratio.toFixed(2)}x`
+                    }
+                  />
+                </div>
+              )}
             </div>
             <SourceProvenanceBadge
               origin="provider"
@@ -551,9 +611,9 @@ export const ThailandMacroSection: React.FC<ThailandMacroSectionProps> = ({
             <div className="rounded-xl bg-slate-50 p-3 border border-slate-100">
               <span className="text-[10px] text-zinc-500 block">SET P/E Ratio</span>
               <span className="font-mono text-xl font-extrabold text-zinc-900 mt-0.5 block">
-                {valuation?.pe_ratio !== null && valuation?.pe_ratio !== undefined
+                {valuation?.pe_ratio !== null && valuation?.pe_ratio !== undefined && valuation.pe_ratio > 0
                   ? `${valuation.pe_ratio.toFixed(2)}x`
-                  : '—'}
+                  : 'รอข้อมูล'}
               </span>
               <span className="text-[10px] text-zinc-400 mt-1 block">ราคาต่อกำไรสุทธิ</span>
             </div>
@@ -561,9 +621,9 @@ export const ThailandMacroSection: React.FC<ThailandMacroSectionProps> = ({
             <div className="rounded-xl bg-slate-50 p-3 border border-slate-100">
               <span className="text-[10px] text-zinc-500 block">SET P/BV Ratio</span>
               <span className="font-mono text-xl font-extrabold text-zinc-900 mt-0.5 block">
-                {valuation?.pbv_ratio !== null && valuation?.pbv_ratio !== undefined
+                {valuation?.pbv_ratio !== null && valuation?.pbv_ratio !== undefined && valuation.pbv_ratio > 0
                   ? `${valuation.pbv_ratio.toFixed(2)}x`
-                  : '—'}
+                  : 'รอข้อมูล'}
               </span>
               <span className="text-[10px] text-zinc-400 mt-1 block">ราคาต่อมูลค่าทางบัญชี</span>
             </div>
@@ -571,9 +631,9 @@ export const ThailandMacroSection: React.FC<ThailandMacroSectionProps> = ({
             <div className="rounded-xl bg-slate-50 p-3 border border-slate-100">
               <span className="text-[10px] text-zinc-500 block">Dividend Yield</span>
               <span className="font-mono text-xl font-extrabold text-emerald-700 mt-0.5 block">
-                {valuation?.dividend_yield !== null && valuation?.dividend_yield !== undefined
+                {valuation?.dividend_yield !== null && valuation?.dividend_yield !== undefined && valuation.dividend_yield > 0
                   ? `${valuation.dividend_yield.toFixed(2)}%`
-                  : '—'}
+                  : 'รอข้อมูล'}
               </span>
               <span className="text-[10px] text-zinc-400 mt-1 block">อัตราเงินปันผลตอบแทน</span>
             </div>
@@ -581,9 +641,9 @@ export const ThailandMacroSection: React.FC<ThailandMacroSectionProps> = ({
             <div className="rounded-xl bg-slate-50 p-3 border border-slate-100">
               <span className="text-[10px] text-zinc-500 block">Turnover Ratio</span>
               <span className="font-mono text-xl font-extrabold text-zinc-700 mt-0.5 block">
-                {valuation?.turnover_ratio !== null && valuation?.turnover_ratio !== undefined
+                {valuation?.turnover_ratio !== null && valuation?.turnover_ratio !== undefined && valuation.turnover_ratio > 0
                   ? `${valuation.turnover_ratio.toFixed(2)}%`
-                  : '—'}
+                  : 'รอข้อมูล'}
               </span>
               <span className="text-[10px] text-zinc-400 mt-1 block">อัตราการหมุนเวียนซื้อขาย</span>
             </div>
@@ -592,7 +652,7 @@ export const ThailandMacroSection: React.FC<ThailandMacroSectionProps> = ({
           <div className="mt-3 flex justify-between text-[11px] text-zinc-400 border-t border-slate-100 pt-2 font-mono">
             <span>Market Cap รวม:</span>
             <span className="font-semibold text-zinc-700">
-              {valuation?.market_cap ? `${(valuation.market_cap / 1e12).toFixed(2)} ล้านล้านบาท` : '—'}
+              {valuation?.market_cap && valuation.market_cap > 0 ? `${(valuation.market_cap / 1e12).toFixed(2)} ล้านล้านบาท` : 'รอข้อมูล'}
             </span>
           </div>
         </div>
@@ -601,14 +661,22 @@ export const ThailandMacroSection: React.FC<ThailandMacroSectionProps> = ({
         <div className="rounded-2xl border border-sky-100 bg-white/90 p-5 shadow-sm">
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between border-b border-sky-100/70 pb-3">
             <div>
-              <h3 className="font-bold text-zinc-900 text-sm tracking-tight flex items-center gap-2">
-                <span>ราคาทองคำแท่งและรูปพรรณ (GTA Physical Gold)</span>
-                {gold?.revision && (
-                  <span className="font-mono text-[10px] bg-amber-100 text-amber-800 font-semibold px-2 py-0.5 rounded">
-                    รอบที่ {gold.revision}
-                  </span>
-                )}
-              </h3>
+              <div className="flex items-center gap-2">
+                <h3 className="font-bold text-zinc-900 text-sm tracking-tight flex items-center gap-2">
+                  <span>ราคาทองคำแท่งและรูปพรรณ (GTA Physical Gold)</span>
+                  {gold?.revision && (
+                    <span className="font-mono text-[10px] bg-amber-100 text-amber-800 font-semibold px-2 py-0.5 rounded">
+                      รอบที่ {gold.revision}
+                    </span>
+                  )}
+                </h3>
+                <ContextTooltip
+                  title="ราคาทองคำแท่งสมาคมค้าทองคำ (GTA Physical Gold)"
+                  whatIsIt="ราคาประกาศทางการของทองคำแท่งแท้ 96.5% โดยสมาคมค้าทองคำแห่งประเทศไทย"
+                  howToRead="ราคาในไทยคำนวณจาก Gold Spot โลกคูณอัตราแลกเปลี่ยน USD/THB หากบาทอ่อนค่าจะช่วยพยุงราคาทองในประเทศ"
+                  impactOnMoney="คนไทยควรดูทั้งราคาทองโลกและค่าเงินบาทประกอบกัน หากบาทแข็งมาก ราคาทองในไทยอาจขึ้นช้ากว่าตลาดโลก"
+                />
+              </div>
               <p className="text-xs text-zinc-500 mt-0.5">
                 ราคาซื้อขายทองคำแท้ 96.5% ตามประกาศสมาคมค้าทองคำแห่งประเทศไทย
               </p>

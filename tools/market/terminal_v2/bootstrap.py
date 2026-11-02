@@ -14,6 +14,7 @@ from tools.market.terminal_v2.adapters.cftc_cot_adapter import CftcCotHttpAdapte
 from tools.market.terminal_v2.adapters.crypto_benchmark_adapter import CryptoBenchmarkAdapter
 from tools.market.terminal_v2.adapters.defillama_stablecoin_adapter import DefiLlamaStablecoinsAdapter
 from tools.market.terminal_v2.adapters.etf_flows_adapter import SoSoValueEtfFlowsAdapter
+from tools.market.terminal_v2.adapters.farside_adapter import FarsideEtfFlowsAdapter
 from tools.market.terminal_v2.adapters.finra_adapter import FinraAdapter
 from tools.market.terminal_v2.adapters.fred_csv_adapter import FredCsvAdapter
 from tools.market.terminal_v2.adapters.goldtraders_adapter import GoldTradersAdapter
@@ -103,7 +104,8 @@ def create_terminal_data_service(
     sec_th_adapter = SecThailandAdapter(cache=cache)
     mof_adapter = MofThailandAdapter(cache=cache)
     polymarket_adapter = PolymarketAdapter(cache=cache)
-    soso_adapter = SoSoValueEtfFlowsAdapter(cache=cache)
+    farside_adapter = FarsideEtfFlowsAdapter(cache=cache)
+    soso_adapter = SoSoValueEtfFlowsAdapter(cache=cache, secondary_adapter=farside_adapter)
     ofr_adapter = OfrHttpAdapter(cache=cache)
     cot_adapter = CftcCotHttpAdapter(cache=cache)
     bis_adapter = BisPolicyRatesHttpAdapter(cache=cache)

@@ -82,3 +82,7 @@ Thumbs.db
 # =========================================
 node_modules/
 .superpowers/
+
+# Hermes Agent Upstream Clone
+services/hermes_agent/
+

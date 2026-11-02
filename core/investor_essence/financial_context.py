@@ -48,29 +48,56 @@ def parse_numeric_fact(field_name: str, val: Any) -> Optional[Decimal]:
 
 
 def extract_years_from_text(text: Optional[str]) -> Optional[Decimal]:
-    """Extracts numeric years from horizon text such as 'ระยะยาว 10 ปี', '10 years', '5-7 ปี'."""
+    """Extracts numeric years from horizon text such as 'ระยะยาว 10 ปี', '10 years', '5-7 ปี', 'เป้าหมายปี 2030'.
+    
+    Disambiguates between duration in years (e.g. 10 years) and calendar target years (e.g. 2030, 2575 พ.ศ.).
+    """
     if not text:
         return None
     import re
+    from datetime import datetime
+
     cleaned = str(text).strip()
-    # Match specific pattern: digits followed by year/ปี
+    current_year = datetime.now().year
+
+    # 1. Check for calendar year expressions like "ปี 2030", "เป้าหมาย 2575", "by 2032", "เกษียณ2030"
+    year_match = re.search(
+        r"(?:ปี|year|by|target|ถึงปี|เกษียณ|เป้าหมาย|ถึง)?\s*(?<!\d)(19\d{2}|20\d{2}|25\d{2}|26\d{2})(?!\d)",
+        cleaned,
+        re.IGNORECASE,
+    )
+    if year_match and ("ปี" in cleaned or any(k in cleaned.lower() for k in ("target", "by", "goal", "เกษียณ", "ถึง", "เป้าหมาย"))):
+        raw_year = int(year_match.group(1))
+        target_ce = raw_year - 543 if raw_year >= 2400 else raw_year
+        if target_ce >= current_year:
+            return Decimal(str(max(1, target_ce - current_year)))
+
+    # 2. Match duration pattern: digits followed by year/ปี (e.g. "10 ปี", "5.5 years")
     match = re.search(r"(\d+(?:\.\d+)?)\s*(?:ปี|years?|yrs?\b)", cleaned, re.IGNORECASE)
     if match:
         try:
             val = Decimal(match.group(1))
-            if val > 0:
+            if 0 < val <= 100:
                 return val
         except Exception:
             pass
-    # Match standalone number
-    match_num = re.search(r"\b(\d+(?:\.\d+)?)\b", cleaned)
+
+    # 3. Match standalone number, filtering out absurd or calendar years
+    match_num = re.search(r"(?<!\d)(\d+(?:\.\d+)?)(?!\d)", cleaned)
     if match_num:
         try:
             val = Decimal(match_num.group(1))
-            if val > 0:
+            if 0 < val <= 100:
                 return val
+            # If standalone 4-digit future year (e.g. user typed "2030" or "2575")
+            if val == val.to_integral():
+                int_val = int(val)
+                target_ce = int_val - 543 if 2400 <= int_val <= 2650 else int_val
+                if current_year <= target_ce <= 2100:
+                    return Decimal(str(max(1, target_ce - current_year)))
         except Exception:
             pass
+
     return None
 
 

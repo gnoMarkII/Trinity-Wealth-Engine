@@ -68,6 +68,18 @@ def write_equity_sidecar(output: MicroQuantOutput) -> None:
     _atomic_write_to(sys_date_path, json_data)
     _atomic_write_to(sys_dir / f"{ticker} Equity Analysis latest.json", json_data)
 
+    # Format and write human-readable Markdown report alongside JSON sidecar
+    try:
+        from tools.market.equity_report_formatter import format_equity_analysis_report
+        report_md = format_equity_analysis_report(output)
+        md_primary_path = sidecar_dir / f"{ticker} Equity Analysis {date_str}.md"
+        _atomic_write_to(md_primary_path, report_md)
+        md_latest_path = sidecar_dir / f"{ticker} Equity Analysis latest.md"
+        _atomic_write_to(md_latest_path, report_md)
+    except Exception:
+        # Non-blocking if formatting encounters unexpected data
+        pass
+
     # Index in SQLite sidecar_catalog with fallback
     try:
         from tools.archivist.catalog_adapter import SqliteNoteCatalogAdapter

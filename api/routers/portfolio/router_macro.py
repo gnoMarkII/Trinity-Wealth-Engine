@@ -1,10 +1,12 @@
 """Inbound HTTP adapter for Macro and Portfolio Calendar queries."""
-from typing import Optional
+from typing import Any, Optional
 from fastapi import APIRouter, Depends, HTTPException, Query, Response
 from datetime import datetime, timezone
 
 from api.auth import require_session
+
 from api.dependencies import (
+    get_digest_service,
     get_macro_notebooklm_export_service,
     get_macro_service,
     get_portfolio_calendar_service,
@@ -12,6 +14,13 @@ from api.dependencies import (
 )
 from api.error_mapping import handle_domain_exceptions as handle_portfolio_exceptions
 from api.schemas import (
+    DigestCandidatesResponseDTO,
+    DailyDigestResponseDTO,
+    DailyDigestSynthesizeRequestDTO,
+    WeeklyDigestResponseDTO,
+    WeeklyDigestSynthesizeRequestDTO,
+    DigestReadStateRequestDTO,
+    DigestReadStateResponseDTO,
     CalendarEventDTO,
     MacroDashboardDTO,
     MacroIndicatorSeriesDTO,
@@ -274,3 +283,119 @@ def retry_macro_notebooklm_export(
         stage=record.stage,
         message="Macro export retry dispatched to NotebookLM worker",
     )
+
+
+# ---------------------------------------------------------------------------
+# Daily and Weekly Market Intelligence Digest Endpoints
+# ---------------------------------------------------------------------------
+
+@router.get(
+    "/api/macro/digest/candidates",
+    response_model=DigestCandidatesResponseDTO,
+)
+def get_digest_candidates(
+    days: int = Query(7, ge=1, le=14),
+    force_refresh: bool = Query(False),
+    max_news_age_hours: Optional[int] = Query(None, ge=1, le=336),
+    service: Any = Depends(get_digest_service),
+) -> DigestCandidatesResponseDTO:
+    """Fetch pre-LLM news and YouTube candidates with freshness verification."""
+    try:
+        data = service.get_candidates(days=days, force_refresh=force_refresh, max_news_age_hours=max_news_age_hours)
+        return DigestCandidatesResponseDTO.model_validate(data)
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Failed to fetch candidates: {exc}") from exc
+
+
+@router.get(
+    "/api/macro/digest/daily",
+    response_model=DailyDigestResponseDTO,
+)
+def get_daily_digest(
+    date: Optional[str] = Query(None, description="Optional ISO date string YYYY-MM-DD"),
+    service: Any = Depends(get_digest_service),
+) -> DailyDigestResponseDTO:
+    """Get latest or historical daily digest with freshness and read status."""
+    try:
+        data = service.get_daily_digest(target_date=date)
+        return DailyDigestResponseDTO.model_validate(data)
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Failed to load daily digest: {exc}") from exc
+
+
+@router.post(
+    "/api/macro/digest/daily/synthesize",
+    response_model=DailyDigestResponseDTO,
+)
+def synthesize_daily_digest(
+    payload: DailyDigestSynthesizeRequestDTO,
+    service: Any = Depends(get_digest_service),
+) -> DailyDigestResponseDTO:
+    """Trigger single-call one-shot LLM synthesis for Daily Digest."""
+    try:
+        data = service.synthesize_daily(
+            selected_video_ids=payload.selected_video_ids,
+            excluded_news_ids=payload.excluded_news_ids,
+            custom_youtube_urls=payload.custom_youtube_urls,
+            custom_news_items=payload.custom_news_items,
+        )
+        return DailyDigestResponseDTO.model_validate(data)
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Failed to synthesize daily digest: {exc}") from exc
+
+
+@router.get(
+    "/api/macro/digest/weekly",
+    response_model=WeeklyDigestResponseDTO,
+)
+def get_weekly_digest(
+    date: Optional[str] = Query(None, description="Optional target date YYYY-MM-DD"),
+    service: Any = Depends(get_digest_service),
+) -> WeeklyDigestResponseDTO:
+    """Get latest or historical weekly digest."""
+    try:
+        data = service.get_weekly_digest(target_date=date)
+        return WeeklyDigestResponseDTO.model_validate(data)
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Failed to load weekly digest: {exc}") from exc
+
+
+@router.post(
+    "/api/macro/digest/weekly/synthesize",
+    response_model=WeeklyDigestResponseDTO,
+)
+def synthesize_weekly_digest(
+    payload: WeeklyDigestSynthesizeRequestDTO,
+    service: Any = Depends(get_digest_service),
+) -> WeeklyDigestResponseDTO:
+    """Synthesize weekly multi-asset intelligence matrix."""
+    try:
+        data = service.synthesize_weekly(
+            days=payload.days,
+            selected_video_ids=payload.selected_video_ids,
+            excluded_news_ids=payload.excluded_news_ids,
+            custom_youtube_urls=payload.custom_youtube_urls,
+            custom_news_items=payload.custom_news_items,
+        )
+        return WeeklyDigestResponseDTO.model_validate(data)
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Failed to synthesize weekly digest: {exc}") from exc
+
+
+@router.post(
+    "/api/macro/digest/read-state",
+    response_model=DigestReadStateResponseDTO,
+)
+def update_digest_read_state(
+    payload: DigestReadStateRequestDTO,
+    service: Any = Depends(get_digest_service),
+) -> DigestReadStateResponseDTO:
+    """Mark digest items as read or unread."""
+    try:
+        data = service.update_read_state(
+            item_ids=payload.item_ids,
+            mark_as_read=payload.mark_as_read,
+        )
+        return DigestReadStateResponseDTO.model_validate(data)
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Failed to update read state: {exc}") from exc

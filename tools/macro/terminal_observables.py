@@ -10,6 +10,7 @@ from datetime import datetime
 from dataclasses import asdict, is_dataclass
 import re
 from typing import Any, Optional
+from core.datetime_utils import parse_thai_or_iso_date
 from core.logger import get_logger
 from schemas.macro_schemas import MarketObservable
 from tools.market.terminal_v2.ports.driving_ports import (
@@ -26,35 +27,14 @@ def normalize_observed_date(date_raw: Any, default_date: str) -> str:
         return default_date
     val = str(date_raw).strip()
 
-    # 1. Matches YYYY-MM-DD already
-    if re.fullmatch(r"\d{4}-\d{2}-\d{2}", val):
-        return val
+    parsed = parse_thai_or_iso_date(val)
+    if parsed:
+        return parsed.isoformat()
 
-    # 2. ISO timestamp: YYYY-MM-DDTHH:MM:SS or YYYY-MM-DD HH:MM:SS
-    m_iso = re.match(r"^(\d{4}-\d{2}-\d{2})", val)
-    if m_iso:
-        return m_iso.group(1)
-
-    # 3. YYYY-MM (e.g. BIS monthly) -> YYYY-MM-01
+    # YYYY-MM (e.g. BIS monthly) -> YYYY-MM-01
     m_ym = re.fullmatch(r"(\d{4})-(\d{2})", val)
     if m_ym:
         return f"{m_ym.group(1)}-{m_ym.group(2)}-01"
-
-    # 4. DD/MM/YYYY or DD/MM/YYYY HH:MM:SS (including Thai Buddhist Era e.g. 2569)
-    m_dmy = re.match(r"^(\d{1,2})/(\d{1,2})/(\d{4})", val)
-    if m_dmy:
-        d, m, y = int(m_dmy.group(1)), int(m_dmy.group(2)), int(m_dmy.group(3))
-        if y > 2400:
-            y -= 543
-        return f"{y:04d}-{m:02d}-{d:02d}"
-
-    # 5. YYYY/MM/DD
-    m_ymd = re.match(r"^(\d{4})/(\d{1,2})/(\d{1,2})", val)
-    if m_ymd:
-        y, m, d = int(m_ymd.group(1)), int(m_ymd.group(2)), int(m_ymd.group(3))
-        if y > 2400:
-            y -= 543
-        return f"{y:04d}-{m:02d}-{d:02d}"
 
     return default_date
 

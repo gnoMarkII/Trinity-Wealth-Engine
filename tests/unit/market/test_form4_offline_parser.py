@@ -1,4 +1,4 @@
-"""Unit tests for Two-Tier SEC Form 4 Parser, Rule 10b5-1 Flagging, and Multi-Key Amendment Deduplication (Phase 4 / P0.4)."""
+from datetime import datetime, timezone
 import pytest
 from tools.market.sec_form4_pipeline import derive_canonical_transactions, parse_form4_xml
 from tools.market.ownership import compute_canonical_insider_conviction
@@ -121,6 +121,7 @@ def test_derive_canonical_transactions_deduplication():
         market="US",
         canonical_transactions=canonical_txs,
         quarantine_meta=quarantine_meta,
+        as_of=datetime(2026, 7, 10, tzinfo=timezone.utc),
     )
     assert conviction.rule_10b5_1_filing_count_90d == 1
     assert conviction.rule_10b5_1_lot_count_90d == 1

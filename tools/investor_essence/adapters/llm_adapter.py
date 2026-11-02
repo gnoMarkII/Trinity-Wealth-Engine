@@ -10,6 +10,7 @@ from typing import Any, Dict, List, Optional
 from langchain_core.language_models import BaseChatModel
 from langchain_core.messages import HumanMessage, SystemMessage
 
+from core.financial_parsers import extract_json_block
 from core.llm_factory import detect_provider, get_llm
 from application.investor_essence.dto import (
     AllocationPlanRowProposal,
@@ -47,51 +48,12 @@ def _read_prompt(filename: str) -> str:
     return path.read_text(encoding="utf-8")
 
 
-import re
-
-
-def _clean_json_text(text: str) -> str:
-    cleaned = text.strip()
-    match = re.search(r"```(?:json)?\s*([\s\S]*?)\s*```", cleaned)
-    if match:
-        cleaned = match.group(1).strip()
-    elif "{" in cleaned and "}" in cleaned:
-        start = cleaned.find("{")
-        end = cleaned.rfind("}") + 1
-        cleaned = cleaned[start:end].strip()
-    return cleaned
-
-
 def _safe_json_loads(text: str) -> Dict[str, Any]:
-    cleaned = _clean_json_text(text)
-    try:
-        return json.loads(cleaned)
-    except json.JSONDecodeError:
-        pass
-
-    # Pass 1: Remove line comments // ...
-    candidate = re.sub(r"//.*", "", cleaned)
-
-    # Pass 2: Repair trailing commas before closing braces/brackets
-    candidate = re.sub(r",\s*([\]}])", r"\1", candidate)
-
-    # Pass 3: Fix missing commas between key-value lines
-    candidate = re.sub(r'("(?:[^"\\]|\\.)*")\s*\n\s*(")', r'\1,\n\2', candidate)
-
-    try:
-        return json.loads(candidate)
-    except json.JSONDecodeError:
-        pass
-
-    # Pass 4: Fix single quotes replacing double quotes
-    if "'" in candidate and '"' not in candidate:
-        try:
-            return json.loads(candidate.replace("'", '"'))
-        except json.JSONDecodeError:
-            pass
-
-    # Re-raise original error to let caller retry
-    return json.loads(cleaned)
+    parsed = extract_json_block(text)
+    if isinstance(parsed, dict):
+        return parsed
+    # Fallback to json.loads to trigger standard JSONDecodeError if unparseable
+    return json.loads(text)
 
 
 class LlmInvestorEssenceAdapter(
