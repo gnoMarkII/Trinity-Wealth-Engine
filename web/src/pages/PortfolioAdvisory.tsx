@@ -759,7 +759,7 @@ export default function PortfolioAdvisory() {
               <button
                 key={tab.id}
                 onClick={() => setFilterAction(tab.id)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition ${
+                className={`px-3 py-1.5 rounded-lg text-xs sm:text-[13px] font-semibold whitespace-nowrap transition ${
                   filterAction === tab.id
                     ? 'bg-sky-600 text-white shadow-xs'
                     : 'text-slate-600 hover:bg-slate-100'

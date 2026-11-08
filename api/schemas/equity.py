@@ -270,3 +270,72 @@ class EarningsCallListResponse(BaseModel):
     items: list[EarningsCallNoteItem]
 
 
+
+
+class EarningsSurpriseDTO(BaseModel):
+    metric_name: str
+    reported: str
+    consensus: str
+    delta: str
+    surprise_pct: str
+    direction: str
+    unit: str = "USD"
+
+
+class EarningsDriverDTO(BaseModel):
+    name: str
+    category: str
+    impact_value: str
+    unit: str = "USD"
+    narrative: str = ""
+
+
+class EarningsBridgeDTO(BaseModel):
+    ticker: str
+    period: str
+    as_of_date: str
+    revenue_surprise: EarningsSurpriseDTO
+    eps_surprise: EarningsSurpriseDTO
+    ebit_margin_reported: Optional[str] = None
+    ebit_margin_consensus: Optional[str] = None
+    revenue_drivers: list[EarningsDriverDTO] = []
+    sum_drivers: str
+    unallocated_delta: str
+    is_mathematically_balanced: bool
+    thesis_reconciliation_verdict: str
+    thesis_reconciliation_narrative: str
+
+
+class VariantPerceptionSnapshotDTO(BaseModel):
+    """Three-way surprise and variant alpha realization (Chapter 2 & 5)."""
+    ticker: str
+    period: str
+    metric_name: str
+    reported_value: str
+    consensus_value: str
+    fund_thesis_value: str
+    street_surprise: str
+    street_surprise_pct: str
+    variant_spread: str
+    variant_spread_pct: str
+    variant_realization: str
+    variant_realization_pct: str
+    alpha_verdict: str
+    unit: str = "USD_M"
+
+
+class EstimateRecordDTO(BaseModel):
+    """Immutable belief or consensus estimate record."""
+    estimate_id: str
+    ticker: str
+    period: str
+    metric_name: str
+    estimate_type: str
+    value: str
+    unit: str = "USD_M"
+    as_of_utc: str = ""
+    reason_code: str = "baseline"
+    prior_record_id: Optional[str] = None
+    owner: str = "analyst"
+    approval_status: str = "REVIEW_REQUIRED"
+    evidence_label: str = "SYNTHETIC"

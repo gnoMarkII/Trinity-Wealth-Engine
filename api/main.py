@@ -34,6 +34,10 @@ from api.routers.knowledge_writes import router as knowledge_writes_router
 from api.routers.routes_terminal_v2 import router as terminal_v2_router
 from api.routers.investor_essence import router as investor_essence_router
 from api.routers.manager_chat_router import router as manager_chat_router
+from api.routers.pm_review_router import router as pm_review_router
+from api.routers.thesis_router import router as thesis_router
+from api.routers.governance_router import router as governance_router
+from api.routers.resilience_router import router as resilience_router
 
 WEB_DIST = Path(__file__).resolve().parent.parent / "web" / "dist"
 
@@ -161,6 +165,10 @@ app.include_router(knowledge_writes_router)
 app.include_router(terminal_v2_router)
 app.include_router(investor_essence_router)
 app.include_router(manager_chat_router, prefix="/api/manager", tags=["Manager Chat"])
+app.include_router(pm_review_router)
+app.include_router(thesis_router)
+app.include_router(governance_router)
+app.include_router(resilience_router)
 
 
 @app.get("/health")

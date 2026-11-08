@@ -12,7 +12,7 @@
         }
       ],
       "return_annotation": "None",
-      "docstring": "การ์ดเก่าที่มีอยู่ก่อน Rev.2 (ก่อนมีคอลัมน์ display_seq) จะมีค่า NULL — เติมเลขให้\nตามลำดับ created_at เพื่อให้ Linear-style #AG-N ID เรียงลำดับสร้างจริง ไม่ใช่เลขสุ่ม"
+      "docstring": "การ์ดเก่าที่มีอยู่ก่อน Rev.2 (ก่อนมีคอลัมน์ display_seq) จะมีค่า NULL — เติมเลขให้\n\n\n\nตามลำดับ created_at เพื่อให้ Linear-style #AG-N ID เรียงลำดับสร้างจริง ไม่ใช่เลขสุ่ม"
     },
     "_migrate_columns": {
       "name": "_migrate_columns",
@@ -25,7 +25,7 @@
         }
       ],
       "return_annotation": "None",
-      "docstring": "เพิ่มคอลัมน์ใหม่ให้ตารางเก่าที่มีอยู่แล้วในไฟล์ SQLite จริง — `CREATE TABLE IF NOT EXISTS`\nไม่แก้ตารางที่มีอยู่แล้ว ถ้า schema เปลี่ยนหลังจากไฟล์ .sqlite ถูกสร้างไปแล้ว (เช่น\nเพิ่ม flow/interrupt_payload ตอนทำ HITL) คอลัมน์ใหม่จะไม่มีอยู่จริง ทำให้ INSERT/SELECT\nพังด้วย \"table X has no column named Y\" — พบเจอจริงตอน dispatch งานจาก Kanban"
+      "docstring": "เพิ่มคอลัมน์ใหม่ให้ตารางเก่าที่มีอยู่แล้วในไฟล์ SQLite จริง — `CREATE TABLE IF NOT EXISTS`\n\n\n\nไม่แก้ตารางที่มีอยู่แล้ว ถ้า schema เปลี่ยนหลังจากไฟล์ .sqlite ถูกสร้างไปแล้ว (เช่น\n\n\n\nเพิ่ม flow/interrupt_payload ตอนทำ HITL) คอลัมน์ใหม่จะไม่มีอยู่จริง ทำให้ INSERT/SELECT\n\n\n\nพังด้วย \"table X has no column named Y\" — พบเจอจริงตอน dispatch งานจาก Kanban"
     },
     "_migrate_dispatcher_column_cards": {
       "name": "_migrate_dispatcher_column_cards",
@@ -38,7 +38,7 @@
         }
       ],
       "return_annotation": "None",
-      "docstring": "คอลัมน์ 'dispatcher' ถูกตัดออกจาก UI แล้ว (เหลือ backlog/approval/executing/done) —\nการ์ดเก่าที่ยังค้างอยู่ใน 'dispatcher' ต้องย้ายกลับ backlog ไม่งั้นจะไม่โผล่ในหน้าเว็บเลย\nเพราะ frontend ไม่มีคอลัมน์นั้นให้ render อีกต่อไป"
+      "docstring": "คอลัมน์ 'dispatcher' ถูกตัดออกจาก UI แล้ว (เหลือ backlog/approval/executing/done) —\n\n\n\nการ์ดเก่าที่ยังค้างอยู่ใน 'dispatcher' ต้องย้ายกลับ backlog ไม่งั้นจะไม่โผล่ในหน้าเว็บเลย\n\n\n\nเพราะ frontend ไม่มีคอลัมน์นั้นให้ render อีกต่อไป"
     },
     "append_job_log": {
       "name": "append_job_log",

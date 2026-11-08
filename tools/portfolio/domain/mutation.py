@@ -12,6 +12,7 @@ class PortfolioMutation:
     ledger_change: Optional[LedgerChange] = None
     system_journal_events: List[SystemJournalEvent] = field(default_factory=list)
     deleted_symbols: List[str] = field(default_factory=list)
+    durable_events: List[dict] = field(default_factory=list)
 
     @classmethod
     def from_change(cls, change: Optional[Union[LedgerChange, "PortfolioMutation"]] = None) -> "PortfolioMutation":

@@ -19,7 +19,7 @@ from tools.market.evidence_manifest_builder import build_analysis_evidence_snaps
 
 
 def test_atomic_market_snapshot_synced():
-    dates = pd.date_range(end=datetime.now(timezone.utc), periods=10, freq="B")
+    dates = pd.bdate_range(end=pd.Timestamp.now(tz="UTC").normalize() - pd.offsets.BDay(1), periods=10)
     df = pd.DataFrame({"Close": [172.78] * 10}, index=dates)
     info = {"currentPrice": 172.78, "sharesOutstanding": 733713653}
     
@@ -36,7 +36,7 @@ def test_atomic_market_snapshot_quote_ohlcv_mismatch_negative_regression():
     """Negative regression fixture: Live quote $166.00 vs OHLCV close $172.78.
     Must flag quote_ohlcv_mismatch:market_data and strictly bind analysis_price to $172.78.
     """
-    dates = pd.date_range(end=datetime.now(timezone.utc), periods=10, freq="B")
+    dates = pd.bdate_range(end=pd.Timestamp.now(tz="UTC").normalize() - pd.offsets.BDay(1), periods=10)
     df = pd.DataFrame({"Close": [172.78] * 10}, index=dates)
     info = {"currentPrice": 166.00, "sharesOutstanding": 733713653}
     
@@ -82,7 +82,7 @@ def test_ftnt_active_baseline_at_172_78():
     - Breakout Entry Eligible = False
     - Action Stance = ACCUMULATE_ON_DIP
     """
-    dates = pd.date_range(end=datetime.now(timezone.utc), periods=250, freq="B")
+    dates = pd.bdate_range(end=pd.Timestamp.now(tz="UTC").normalize() - pd.offsets.BDay(1), periods=250)
     df = pd.DataFrame(index=dates)
     # Construct series with High max = 169.91 and current close = 172.78
     df["Close"] = [160.0] * 249 + [172.78]

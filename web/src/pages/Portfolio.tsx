@@ -43,7 +43,7 @@ const TABS = [
   {
     key: 'overview',
     label: (
-      <span className="flex items-center gap-1.5 text-xs sm:text-sm font-semibold whitespace-nowrap">
+      <span className="flex items-center gap-1.5 text-sm font-semibold whitespace-nowrap">
         <ChartBarIcon className="w-4 h-4 text-flow-blue shrink-0" />
         <span>Strategy Buckets</span>
         <span className="hidden 2xl:inline">& Allocation</span>
@@ -53,7 +53,7 @@ const TABS = [
   {
     key: 'principles',
     label: (
-      <span className="flex items-center gap-1.5 text-xs sm:text-sm font-semibold whitespace-nowrap">
+      <span className="flex items-center gap-1.5 text-sm font-semibold whitespace-nowrap">
         <span className="text-sm shrink-0">🧭</span>
         <span>หลักการลงทุน</span>
         <span className="hidden 2xl:inline"> (Principles)</span>
@@ -63,7 +63,7 @@ const TABS = [
   {
     key: 'holdings',
     label: (
-      <span className="flex items-center gap-1.5 text-xs sm:text-sm font-semibold whitespace-nowrap">
+      <span className="flex items-center gap-1.5 text-sm font-semibold whitespace-nowrap">
         <BriefcaseIcon className="w-4 h-4 text-emerald-600 shrink-0" />
         <span>Holdings</span>
         <span className="hidden 2xl:inline"> & Trading Journal</span>
@@ -73,7 +73,7 @@ const TABS = [
   {
     key: 'transactions',
     label: (
-      <span className="flex items-center gap-1.5 text-xs sm:text-sm font-semibold whitespace-nowrap">
+      <span className="flex items-center gap-1.5 text-sm font-semibold whitespace-nowrap">
         <TradeIcon className="w-4 h-4 text-sky-500 shrink-0" />
         <span>Transactions</span>
       </span>
@@ -82,7 +82,7 @@ const TABS = [
   {
     key: 'incomes',
     label: (
-      <span className="flex items-center gap-1.5 text-xs sm:text-sm font-semibold whitespace-nowrap">
+      <span className="flex items-center gap-1.5 text-sm font-semibold whitespace-nowrap">
         <IncomeIcon className="w-4 h-4 text-emerald-500 shrink-0" />
         <span>Dividends & Income</span>
       </span>
@@ -91,7 +91,7 @@ const TABS = [
   {
     key: 'watchlist',
     label: (
-      <span className="flex items-center gap-1.5 text-xs sm:text-sm font-semibold whitespace-nowrap">
+      <span className="flex items-center gap-1.5 text-sm font-semibold whitespace-nowrap">
         <WatchlistIcon className="w-4 h-4 text-amber-500 shrink-0" />
         <span>Watchlist</span>
       </span>
@@ -100,7 +100,7 @@ const TABS = [
   {
     key: 'calendar',
     label: (
-      <span className="flex items-center gap-1.5 text-xs sm:text-sm font-semibold whitespace-nowrap">
+      <span className="flex items-center gap-1.5 text-sm font-semibold whitespace-nowrap">
         <span className="text-sm shrink-0">📅</span>
         <span>Calendar</span>
       </span>

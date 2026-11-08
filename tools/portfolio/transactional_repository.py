@@ -8,6 +8,7 @@ never used as the transaction log after the stream has been bootstrapped.
 from __future__ import annotations
 
 import uuid
+from dataclasses import asdict
 from typing import Any, Dict, List, Optional, Union
 
 from tools.portfolio.domain.ledger_change import LedgerChange
@@ -18,10 +19,17 @@ from tools.portfolio.ports.repository_port import PortfolioRepositoryPort, Portf
 from tools.portfolio.transaction_store import PortfolioTransactionStore
 
 
+def _is_portfolio_mutation(value: Any) -> bool:
+    """Recognize mutation envelopes across module reloads used by isolated callers."""
+    return isinstance(value, PortfolioMutation) or (
+        type(value).__name__ == "PortfolioMutation" and hasattr(value, "ledger_change")
+    )
+
+
 def _change(value: Optional[Union[LedgerChange, PortfolioMutation]]) -> Optional[LedgerChange]:
     if value is None:
         return None
-    if isinstance(value, PortfolioMutation):
+    if _is_portfolio_mutation(value):
         return value.ledger_change
     return value
 
@@ -81,19 +89,32 @@ class TransactionalPortfolioUnitOfWork(PortfolioUnitOfWork):
             rows = [dict(row) for row in (change.rows or [])]
         elif change is not None and change.kind == "append" and change.row:
             rows.append(dict(change.row))
-        self.repo.store.append_state(
+        related_events: list[dict[str, Any]] = []
+        if _is_portfolio_mutation(ledger_change):
+            related_events.extend(ledger_change.durable_events)
+            related_events.extend(
+                {"event_type": "system_journal_event", "payload": asdict(event)}
+                for event in ledger_change.system_journal_events
+            )
+        self.sequence = self.repo.store.append_state(
             self.portfolio_id,
             state.model_dump(mode="json"),
             ledger_rows=rows,
             expected_sequence=self.sequence,
             command_receipt=command_receipt,
+            related_events=related_events,
         )
-        self.sequence += 1
         self.ledger_rows = rows
         # The legacy repository is now a projection writer/recovery adapter.
         # It may fail after the transaction source commits; the next rebuild
         # can safely regenerate the Markdown projection from the store.
+        # Preserve the full mutation envelope so the Markdown projection
+        # atomically includes its journal events as well as state and ledger.
         self.underlying.commit(state, ledger_change)
+
+    def commit_mutation(self, state: PortfolioState, mutation: PortfolioMutation) -> bool:
+        self.commit(state, mutation)
+        return True
 
     def rollback(self) -> None:
         self.underlying.rollback()
@@ -134,6 +155,39 @@ class TransactionalPortfolioRepository(PortfolioRepositoryPort):
             item_dict.update({k: v for k, v in r.items()})
             rows.append(item_dict)
         return rows
+
+    def get_cash_flow_event(self, portfolio_id: str, idempotency_key: str) -> Optional[dict[str, Any]]:
+        return self.store.get_cash_flow_event(validate_portfolio_id(portfolio_id), idempotency_key)
+
+    def list_cash_flow_events(
+        self,
+        portfolio_id: str,
+        *,
+        after_sequence: Optional[int] = None,
+        through_sequence: Optional[int] = None,
+    ) -> list[dict[str, Any]]:
+        return self.store.list_cash_flow_events(
+            validate_portfolio_id(portfolio_id),
+            after_sequence=after_sequence,
+            through_sequence=through_sequence,
+        )
+
+    def performance_provenance(self, portfolio_id: str) -> dict[str, Any]:
+        checkpoint = self.store.checkpoint(validate_portfolio_id(portfolio_id))
+        return {
+            "source_state_sequence": checkpoint.sequence,
+            "source_state_sha256": checkpoint.state_hash,
+            "event_log_sha256": checkpoint.event_log_hash,
+        }
+
+    def cash_flow_coverage_between(
+        self, portfolio_id: str, *, after_sequence: int, through_sequence: int
+    ) -> bool:
+        return self.store.cash_flow_coverage_between(
+            validate_portfolio_id(portfolio_id),
+            after_sequence=after_sequence,
+            through_sequence=through_sequence,
+        )
 
     def unit_of_work(self, portfolio_id: str = "default") -> PortfolioUnitOfWork:
         pid = validate_portfolio_id(portfolio_id)

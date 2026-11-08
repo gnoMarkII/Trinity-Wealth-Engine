@@ -1,0 +1,13 @@
+{
+  "task_id": "TSK-E2E-ROUTING-01",
+  "task_description": "Execute batch rebalance trades on external broker",
+  "work_shape": "PORTFOLIO_EXPOSURE_AND_HEDGING",
+  "selected_surface": "HUMAN_PM_DECISION",
+  "authoritative_system": "Portfolio Management / Human PM Review Gate",
+  "reconstructable_artifact": "review/signoffs/trade_rebalance_decision.md",
+  "rejection_gate": "PM explicit sign-off and risk parameter boundary check",
+  "reversal_condition": "Task is purely analytical and completely disconnected from execution authority",
+  "rationale": "Hedging approvals and capital rebalancing require human accountability and regulatory sign-off.",
+  "status": "REVIEW_REQUIRED",
+  "evaluated_at_utc": "2026-11-05T09:18:49Z"
+}

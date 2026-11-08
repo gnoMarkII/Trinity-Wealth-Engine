@@ -3,6 +3,7 @@ import { api } from '../../api/client'
 import type { PositionReviewResponseDTO } from '../../api/types'
 import { PriceReturnDecompositionBar } from './PriceReturnDecompositionBar'
 import { ContextTooltip } from './explainer'
+import StructuredThesisCard from './StructuredThesisCard'
 
 export interface PositionReviewCardProps {
   ticker: string
@@ -309,7 +310,10 @@ export const PositionReviewCard: React.FC<PositionReviewCardProps> = ({
         </div>
       )}
 
-      {/* 5. Portfolio-Aware Decision Triggers */}
+      {/* 5. Active Structured Thesis (Falsifier Bounds & Catalysts) */}
+      <StructuredThesisCard ticker={ticker} />
+
+      {/* 6. Portfolio-Aware Decision Triggers */}
       {data.triggers && data.triggers.length > 0 && (
         <div className="space-y-3 pt-2 border-t border-edge/60">
           <div className="flex items-center justify-between">

@@ -1,4 +1,6 @@
+from dataclasses import dataclass
 import re
+from typing import Any
 
 _THAI_ID_PATTERN = re.compile(r'(?<!\d)(\d)-?(\d{4})-?(\d{5})-?(\d{2})-?(\d)(?!\d)')
 
@@ -36,3 +38,57 @@ def anonymize_pii(text: str) -> tuple[str, bool]:
     for pattern, placeholder in _PII_PATTERNS:
         result = pattern.sub(placeholder, result)
     return result, result != text
+
+
+_TICKER_REGEX = re.compile(r"^[A-Za-z0-9_\.\-]+$")
+
+
+def validate_ticker(ticker: str) -> str:
+    """Validates that a ticker is alphanumeric with standard separators and has no path traversal."""
+    if not isinstance(ticker, str):
+        raise ValueError(f"Ticker must be a string, got {type(ticker).__name__}")
+    clean = ticker.strip().upper()
+    if not clean or not _TICKER_REGEX.match(clean) or ".." in clean or "/" in clean or "\\" in clean:
+        raise ValueError(f"Invalid ticker or path traversal attempt detected: {ticker!r}")
+    return clean
+
+
+
+@dataclass(frozen=True)
+class AuthenticatedPrincipal:
+    """Authenticated user/session principal representing the trusted identity."""
+    subject_id: str
+    session_id: str
+    display_name: str = "HUMAN_PM"
+    role: str = "PORTFOLIO_MANAGER_HERMES"
+    is_authenticated: bool = True
+
+    def get(self, key: str, default: Any = None) -> Any:
+        if key == "user":
+            return self.display_name or self.subject_id
+        if key == "subject":
+            return self.subject_id
+        if key == "session_id":
+            return self.session_id
+        if key == "role":
+            return self.role
+        return default
+
+
+# Re-export Hostile Input Sanitizer (Chapter 4 & Lab 4)
+from core.input_sanitizer import (
+    HostileInstructionSeverity,
+    SanitizationException,
+    SanitizationResult,
+    sanitize_untrusted_input,
+    strip_invisible_characters,
+)
+
+__all__ = [
+    "anonymize_pii",
+    "HostileInstructionSeverity",
+    "SanitizationException",
+    "SanitizationResult",
+    "sanitize_untrusted_input",
+    "strip_invisible_characters",
+]

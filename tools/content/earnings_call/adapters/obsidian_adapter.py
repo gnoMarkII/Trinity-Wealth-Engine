@@ -230,6 +230,7 @@ class ObsidianEarningsCallAdapter:
                         date=str(date),
                         last_updated=str(last_updated),
                         has_full_transcript=has_full_transcript,
+                        reconciliation_bridge=metadata.get("reconciliation_bridge"),
                     )
                 )
             except Exception as exc:

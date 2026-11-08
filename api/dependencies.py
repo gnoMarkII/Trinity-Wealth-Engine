@@ -682,20 +682,6 @@ def get_event_study_service():
     return EventStudyApplicationService(ohlcv_service=_OHLCV_SERVICE)
 
 
-def get_position_review_service():
-    """Dependency provider for PositionReviewApplicationService."""
-    from application.equity.position_review_service import PositionReviewApplicationService
-    from tools.market.adapters.position_review_adapter import YFinancePositionReviewAdapter
-    from tools.portfolio.core import get_structured_portfolio_state
-    return PositionReviewApplicationService(
-        ohlcv_service=_OHLCV_SERVICE,
-        fundamentals_provider=YFinancePositionReviewAdapter(),
-        portfolio_reader=lambda portfolio_id="default", refresh_prices=False: get_structured_portfolio_state(
-            portfolio_id=portfolio_id, refresh_prices=refresh_prices
-        ),
-    )
-
-
 def get_digest_service():
     """Dependency provider for DigestApplicationService."""
     from application.macro.digest_service import DigestApplicationService
@@ -724,6 +710,159 @@ def get_digest_service():
         llm_port=DigestLLMAdapter(),
         storage_port=DigestStorageAdapter(vault_root=str(vault_path)),
         calendar_port=DigestCalendarAdapter(calendar_service=cal_svc),
+    )
+
+
+def get_thesis_service():
+    """Dependency provider for ThesisApplicationService."""
+    from application.thesis.thesis_service import ThesisApplicationService
+    from tools.thesis.thesis_file_store import ThesisFileStore
+    from api.db.adapters import SqliteThesisExceptionRepositoryAdapter
+    from tools.thesis.market_observation_adapter import VaultMarketObservationAdapter
+    return ThesisApplicationService(
+        store=ThesisFileStore(),
+        exception_store=SqliteThesisExceptionRepositoryAdapter(),
+        market_observer=VaultMarketObservationAdapter(),
+    )
+
+
+def get_thesis_synthesis_service():
+    """Dependency provider for ThesisSynthesisApplicationService."""
+    from application.thesis.thesis_synthesis_service import ThesisSynthesisApplicationService
+    from tools.portfolio.adapters.advisory_vault_adapter import EquitySidecarAdapter
+    from tools.portfolio.core import get_structured_portfolio_state
+    from typing import Any, Dict, Optional
+
+    vault_path = _get_vault_path()
+    sidecar_adapter = EquitySidecarAdapter(vault_path=vault_path)
+
+    def _sidecar_reader(ticker: str) -> Optional[Dict[str, Any]]:
+        sidecars = sidecar_adapter.get_all_equity_sidecars()
+        clean = ticker.strip().upper()
+        return sidecars.get(clean) or sidecars.get(clean.replace(".BK", ""))
+
+    return ThesisSynthesisApplicationService(
+        thesis_service=get_thesis_service(),
+        sidecar_reader=_sidecar_reader,
+        portfolio_reader=lambda portfolio_id="default", refresh_prices=False: get_structured_portfolio_state(
+            portfolio_id=portfolio_id, refresh_prices=refresh_prices
+        ),
+    )
+
+
+def get_macro_vintage_service():
+    """Dependency provider for MacroVintageApplicationService (Chapter 6 & App H)."""
+    from application.macro.vintage_service import MacroVintageApplicationService
+    return MacroVintageApplicationService()
+
+
+def get_pm_review_service():
+    """Dependency provider for PMReviewApplicationService (Chapters 6, 8, 9, 10)."""
+    from application.manager.pm_review_service import PMReviewApplicationService
+    from api.db.adapters import SqlitePMReviewSignoffRepositoryAdapter
+    from tools.portfolio.core import get_structured_portfolio_state
+    portfolio_application = get_portfolio_application()
+
+    def _macro_reader():
+        try:
+            macro_svc = get_macro_service()
+            dash = macro_svc.dashboard()
+            if isinstance(dash, dict):
+                by_id = {}
+                indicators_list = dash.get("dashboard_indicators", [])
+                if isinstance(indicators_list, list):
+                    for item in indicators_list:
+                        if isinstance(item, dict):
+                            i_id = item.get("indicator_id") or item.get("observable_id")
+                            if i_id:
+                                by_id[i_id] = item.get("value")
+                if not by_id and isinstance(dash.get("indicators"), dict):
+                    by_id = dash["indicators"]
+
+                strat = dash.get("strategy", {}) or {}
+                regime = (
+                    dash.get("overall_regime")
+                    or strat.get("regime_label")
+                    or strat.get("macro_regime_label")
+                    or "Unavailable"
+                )
+                shift_risk = (
+                    dash.get("regime_shift_risk")
+                    or strat.get("regime_shift_risk")
+                    or "Unavailable"
+                )
+
+                # Helper for selecting first non-None value (preserving valid 0.0)
+                def _first_non_none(*vals):
+                    for v in vals:
+                        if v is not None:
+                            return v
+                    return None
+
+                # Map OFR Stress Index (canonical: obs_ofr_financial_stress)
+                ofr_stress = _first_non_none(
+                    by_id.get("obs_ofr_financial_stress"),
+                    by_id.get("ofr_stress_index"),
+                    by_id.get("ofr_financial_stress_index"),
+                )
+
+                # Map 10Y-2Y Yield Spread (canonical: obs_ust_10y_yield, obs_ust_2y_yield)
+                spread_bps = _first_non_none(
+                    by_id.get("yield_spread_10y_2y_bps"),
+                    by_id.get("yield_spread_10y_2y"),
+                )
+                if spread_bps is None:
+                    y10 = by_id.get("obs_ust_10y_yield")
+                    y2 = by_id.get("obs_ust_2y_yield")
+                    if y10 is not None and y2 is not None:
+                        try:
+                            from decimal import Decimal
+                            spread_bps = float((Decimal(str(y10)) - Decimal(str(y2))) * Decimal("100"))
+                        except Exception:
+                            spread_bps = None
+
+                return {
+                    "yield_spread_10y_2y_bps": float(spread_bps) if spread_bps is not None else None,
+                    "yield_spread_24h_change_bps": float(by_id["yield_spread_24h_change_bps"]) if by_id.get("yield_spread_24h_change_bps") is not None else None,
+                    "ofr_stress_index": float(ofr_stress) if ofr_stress is not None else None,
+                    "macro_regime_label": regime,
+                    "regime_shift_risk": shift_risk,
+                }
+        except Exception:
+            pass
+        return {}
+
+    return PMReviewApplicationService(
+        signoff_repo=SqlitePMReviewSignoffRepositoryAdapter(),
+        thesis_service=get_thesis_service(),
+        portfolio_reader=lambda portfolio_id="default", refresh_prices=False: get_structured_portfolio_state(
+            portfolio_id=portfolio_id, refresh_prices=refresh_prices
+        ),
+        performance_reader=lambda days=5, portfolio_id="default", as_of_utc=None: portfolio_application.performance_service.get_structured_performance_history(
+            days=days, portfolio_id=portfolio_id, as_of_utc=as_of_utc
+        ),
+        advisory_reader=lambda portfolio_id="default": get_portfolio_advisory_service().get_portfolio_advisory(
+            portfolio_id=portfolio_id, refresh_prices=False
+        ),
+        macro_reader=_macro_reader,
+        macro_vintage_service=get_macro_vintage_service(),
+        catalyst_service=get_catalyst_service(),
+        routine_monitor_service=get_routine_monitor_service(),
+    )
+
+
+def get_position_review_service():
+    """Dependency provider for PositionReviewApplicationService."""
+    from application.equity.position_review_service import PositionReviewApplicationService
+    from tools.market.adapters.position_review_adapter import YFinancePositionReviewAdapter
+    from tools.portfolio.core import get_structured_portfolio_state
+    return PositionReviewApplicationService(
+        ohlcv_service=_OHLCV_SERVICE,
+        fundamentals_provider=YFinancePositionReviewAdapter(),
+        portfolio_reader=lambda portfolio_id="default", refresh_prices=False: get_structured_portfolio_state(
+            portfolio_id=portfolio_id, refresh_prices=refresh_prices
+        ),
+        thesis_provider=get_thesis_service(),
     )
 
 
@@ -758,6 +897,10 @@ def get_manager_chat_service(request: Request = None):
         set_save_vault_provider,
         set_screener_provider,
         set_search_vault_provider,
+        set_morning_pm_review_provider,
+        set_stock_theses_provider,
+        set_thesis_synthesizer_provider,
+        set_batch_thesis_synthesizer_provider,
     )
 
     def _dispatch_research(ticker: str, research_type: str) -> str:
@@ -1090,6 +1233,49 @@ def get_manager_chat_service(request: Request = None):
     set_search_vault_provider(_search_vault_data)
     set_save_vault_provider(_save_vault_data)
 
+    def _get_morning_delta_data() -> str:
+        try:
+            svc = get_pm_review_service()
+            packet = svc.build_morning_packet()
+            return json.dumps(packet.to_dict(), ensure_ascii=False, indent=2, default=str)
+        except Exception as exc:
+            return f"ไม่สามารถดึงข้อมูล Morning Delta ได้: {exc}"
+
+    def _get_stock_theses_data(ticker: str = "") -> str:
+        try:
+            svc = get_thesis_service()
+            clean = ticker.strip().upper()
+            if clean:
+                t = svc.get_active_thesis(clean)
+                if t:
+                    return json.dumps(t.to_dict(), ensure_ascii=False, indent=2, default=str)
+                return f"ไม่พบ Thesis สำหรับหุ้น {clean}"
+            theses = svc.list_active_theses()
+            return json.dumps([t.to_dict() for t in theses], ensure_ascii=False, indent=2, default=str)
+        except Exception as exc:
+            return f"ไม่สามารถดึงข้อมูล Theses ได้: {exc}"
+
+    def _synthesize_thesis_data(ticker: str, dry_run: bool = False) -> str:
+        try:
+            synth = get_thesis_synthesis_service()
+            res = synth.synthesize_thesis_for_ticker(ticker=ticker, dry_run=dry_run)
+            return json.dumps(res, ensure_ascii=False, indent=2, default=str)
+        except Exception as exc:
+            return f"ไม่สามารถสังเคราะห์ Thesis ได้: {exc}"
+
+    def _batch_synthesize_theses_data(portfolio_id: str = "default", dry_run: bool = False) -> str:
+        try:
+            synth = get_thesis_synthesis_service()
+            res = synth.batch_synthesize_portfolio_theses(portfolio_id=portfolio_id, dry_run=dry_run)
+            return json.dumps(res, ensure_ascii=False, indent=2, default=str)
+        except Exception as exc:
+            return f"ไม่สามารถรัน Batch สังเคราะห์ Theses ได้: {exc}"
+
+    set_morning_pm_review_provider(_get_morning_delta_data)
+    set_stock_theses_provider(_get_stock_theses_data)
+    set_thesis_synthesizer_provider(_synthesize_thesis_data)
+    set_batch_thesis_synthesizer_provider(_batch_synthesize_theses_data)
+
     repo = SqliteAdvisorSessionRepositoryAdapter()
     sandbox = SandboxAdapter()
     stream_engine = GeminiStreamEngine()
@@ -1105,3 +1291,33 @@ def get_hermes_sync_service():
     """Dependency provider for HermesSyncService (cached singleton)."""
     from application.manager.hermes_sync_service import HermesSyncService
     return HermesSyncService()
+
+@lru_cache(maxsize=1)
+def get_catalyst_service():
+    """Dependency provider for CatalystApplicationService (Chapter 7)."""
+    from application.thesis.catalyst_service import CatalystApplicationService
+    from api.db.adapters import SqliteInstitutionalLedgerRepositoryAdapter
+    return CatalystApplicationService(ledger_repository=SqliteInstitutionalLedgerRepositoryAdapter())
+
+
+@lru_cache(maxsize=1)
+def get_estimate_ledger_service():
+    """Dependency provider for EstimateLedgerApplicationService (Chapter 2 & 5)."""
+    from application.equity.estimate_service import EstimateLedgerApplicationService
+    from api.db.adapters import SqliteInstitutionalLedgerRepositoryAdapter
+    return EstimateLedgerApplicationService(ledger_repository=SqliteInstitutionalLedgerRepositoryAdapter())
+
+
+@lru_cache(maxsize=1)
+def get_task_routing_service():
+    """Dependency provider for TaskRoutingGovernanceService (Chapter 1)."""
+    from application.governance.routing_service import TaskRoutingGovernanceService
+    return TaskRoutingGovernanceService()
+
+
+@lru_cache(maxsize=1)
+def get_routine_monitor_service():
+    """Dependency provider for RoutineMonitorApplicationService (Chapter 10)."""
+    from application.resilience.routine_monitor_service import RoutineMonitorApplicationService
+    from api.db.adapters import SqliteInstitutionalLedgerRepositoryAdapter
+    return RoutineMonitorApplicationService(ledger_repository=SqliteInstitutionalLedgerRepositoryAdapter())

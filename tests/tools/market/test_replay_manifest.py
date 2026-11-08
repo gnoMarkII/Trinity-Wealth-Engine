@@ -18,8 +18,8 @@ from datetime import datetime
 def test_manifest_building_and_offline_replay(tmp_path):
     # 1. Create a synthetic dataset
     ticker = "FTNT"
-    today_str = datetime.now().strftime("%Y-%m-%d")
-    dates = pd.date_range(end=today_str, periods=250, freq="B")
+    today_str = (pd.Timestamp.now(tz="UTC").normalize() - pd.offsets.BDay(1)).strftime("%Y-%m-%d")
+    dates = pd.bdate_range(end=today_str, periods=250)
     prices = [150.0 + i * 0.1 for i in range(250)]
     for k in range(1, 10):
         prices[-k] = 172.78

@@ -10,6 +10,12 @@ import type {
   AdvisorChatMessageDTO,
   SandboxStateSnapshotDTO,
   HermesSyncStatusDTO,
+  MorningReviewPacketDTO,
+  PMSignoffRequestDTO,
+  PMSignoffResponseDTO,
+  MacroVintageWalkResponseDTO,
+  FactorExposureSnapshotDTO,
+  ThesisClaimDTO,
   ActiveAgentStatusDTO,
   JobOutputsDTO,
   JobStatusDTO,
@@ -79,6 +85,11 @@ import type {
   EventStudyRequestDTO,
   EventStudyResponseDTO,
   PositionReviewResponseDTO,
+  CatalystExceptionDTO,
+  VariantPerceptionSnapshotDTO,
+  EstimateRecordDTO,
+  TaskRouteRecordDTO,
+  RoutineStatusReportDTO,
 } from './types'
 
 export class ApiError extends Error {
@@ -306,6 +317,12 @@ export const api = {
     request<import('./types').PromiseSyncResponseDTO>(
       `/api/equity/${encodeURIComponent(ticker)}/earnings-call/sync?force_refresh=${forceRefresh}&limit_calls=${limitCalls}`,
       { method: 'POST', signal }
+    ),
+
+  getEarningsBridge: (ticker: string, period?: string, signal?: AbortSignal) =>
+    request<import('./types').EarningsBridgeDTO>(
+      `/api/equity/${encodeURIComponent(ticker)}/earnings-bridge${period ? `?period=${encodeURIComponent(period)}` : ''}`,
+      { signal }
     ),
 
 
@@ -1570,6 +1587,64 @@ export const api = {
       `/api/manager/sandbox/skills/${encodeURIComponent(skillName)}/promote`,
       { method: 'POST' }
     ),
+
+  getMorningReviewToday: (portfolioId: string = 'default') =>
+    request<MorningReviewPacketDTO>(`/api/manager/pm-review/today?portfolio_id=${encodeURIComponent(portfolioId)}`, { cache: 'no-store' }),
+
+  getMacroVintageWalk: (cutoffDate?: string) => {
+    const qs = cutoffDate ? `?cutoff_date=${encodeURIComponent(cutoffDate)}` : ''
+    return request<MacroVintageWalkResponseDTO>(`/api/macro/vintage-walk${qs}`, { cache: 'no-store' })
+  },
+
+  getFactorExposure: (portfolioId: string = 'default') =>
+    request<FactorExposureSnapshotDTO>(`/api/portfolio/factor-exposure?portfolio_id=${encodeURIComponent(portfolioId)}`, { cache: 'no-store' }),
+
+  getCatalystExceptions: () =>
+    request<CatalystExceptionDTO[]>('/api/thesis/catalyst-exceptions', { cache: 'no-store' }),
+
+  reviewCatalystException: (exceptionId: string, humanAssessment: string) =>
+    request<CatalystExceptionDTO>(`/api/thesis/catalyst-exceptions/${encodeURIComponent(exceptionId)}/review`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ human_assessment: humanAssessment }),
+    }),
+
+  getVariantPerception: (ticker: string, period: string = '2026Q2', metricName: string = 'revenue', reported?: string) => {
+    const params = new URLSearchParams({ period, metric_name: metricName })
+    if (reported) params.append('reported', reported)
+    return request<VariantPerceptionSnapshotDTO>(`/api/equity/${encodeURIComponent(ticker)}/variant-perception?${params.toString()}`, { cache: 'no-store' })
+  },
+
+  getEstimatesLedger: (ticker: string) =>
+    request<EstimateRecordDTO[]>(`/api/equity/${encodeURIComponent(ticker)}/estimates-ledger`, { cache: 'no-store' }),
+
+  routeTaskGovernance: (payload: { task_id: string; task_description: string; work_shape: string; has_authoritative_calculator?: boolean; touches_capital_or_policy?: boolean; contains_mnpi_risk?: boolean }) =>
+    request<TaskRouteRecordDTO>('/api/governance/route-task', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    }),
+
+  getRoutineStatus: (targetDate?: string) => {
+    const qs = targetDate ? `?target_date=${encodeURIComponent(targetDate)}` : ''
+    return request<RoutineStatusReportDTO>(`/api/resilience/routine-status${qs}`, { cache: 'no-store' })
+  },
+
+  signOffMorningReview: (req: PMSignoffRequestDTO) =>
+    request<PMSignoffResponseDTO>('/api/manager/pm-review/sign-off', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(req),
+    }),
+
+  getMorningReviewHistory: (limit: number = 30) =>
+    request<PMSignoffResponseDTO[]>(`/api/manager/pm-review/history?limit=${limit}`, { cache: 'no-store' }),
+
+  getActiveThesis: (ticker: string) =>
+    request<ThesisClaimDTO | null>(`/api/thesis/${encodeURIComponent(ticker)}`, { cache: 'no-store' }),
+
+  getThesisAsOf: (ticker: string, asOfUtc: string) =>
+    request<ThesisClaimDTO | null>(`/api/thesis/${encodeURIComponent(ticker)}/as-of?as_of_utc=${encodeURIComponent(asOfUtc)}`, { cache: 'no-store' }),
   getHarnessTelemetry: () =>
     request<any>('/api/health/harness-telemetry', { cache: 'no-store' }),
 

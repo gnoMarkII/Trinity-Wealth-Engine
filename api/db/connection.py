@@ -1,4 +1,5 @@
 """SQLite connection, schema initialization, and schema migrations."""
+import hashlib
 import os
 import sqlite3
 import threading
@@ -393,12 +394,60 @@ CREATE TABLE IF NOT EXISTS advisor_messages (
     created_at REAL NOT NULL
 );
 CREATE INDEX IF NOT EXISTS idx_advisor_messages_session ON advisor_messages(session_id, created_at);
+
+CREATE TABLE IF NOT EXISTS thesis_claims (
+    claim_id TEXT PRIMARY KEY,
+    ticker TEXT NOT NULL,
+    version INTEGER NOT NULL,
+    prior_claim_id TEXT,
+    as_of_utc TEXT NOT NULL,
+    claim_statement TEXT NOT NULL,
+    falsifiers_json TEXT NOT NULL DEFAULT '[]',
+    catalysts_json TEXT NOT NULL DEFAULT '[]',
+    status TEXT NOT NULL DEFAULT 'ACTIVE',
+    evidence_tier TEXT NOT NULL DEFAULT 'DOCUMENTED',
+    author_role TEXT NOT NULL DEFAULT 'HUMAN_PM',
+    checksum_sha256 TEXT NOT NULL,
+    created_at REAL NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_thesis_claims_ticker ON thesis_claims(ticker, version DESC);
+
+CREATE TABLE IF NOT EXISTS thesis_exceptions (
+    exception_id TEXT PRIMARY KEY,
+    claim_id TEXT NOT NULL,
+    ticker TEXT NOT NULL,
+    detected_at_utc TEXT NOT NULL,
+    exception_type TEXT NOT NULL,
+    metric_name TEXT,
+    expected_value TEXT,
+    observed_value TEXT,
+    source_citation TEXT,
+    human_action TEXT NOT NULL DEFAULT 'REVIEW_REQUIRED',
+    status TEXT NOT NULL DEFAULT 'PENDING'
+);
+CREATE INDEX IF NOT EXISTS idx_thesis_exceptions_ticker ON thesis_exceptions(ticker, status);
+
+CREATE TABLE IF NOT EXISTS pm_review_signoffs (
+    signoff_id TEXT PRIMARY KEY,
+    portfolio_id TEXT NOT NULL DEFAULT 'default',
+    review_date TEXT NOT NULL,
+    signed_off_by TEXT NOT NULL,
+    signed_off_at_utc TEXT NOT NULL,
+    acknowledged_exceptions_count INTEGER NOT NULL,
+    notes TEXT,
+    packet_sha256 TEXT NOT NULL,
+    verified_sample_ids_json TEXT
+);
 """
 
 _INITIALIZED_DB_PATHS: set[str] = set()
 _INIT_LOCK = threading.Lock()
 
 _COLUMN_MIGRATIONS: dict[str, dict[str, str]] = {
+    "pm_review_signoffs": {
+        "portfolio_id": "portfolio_id TEXT NOT NULL DEFAULT 'default'",
+        "verified_sample_ids_json": "verified_sample_ids_json TEXT",
+    },
     "jobs": {
         "flow": "flow TEXT NOT NULL DEFAULT 'manager'",
         "interrupt_payload": "interrupt_payload TEXT",
@@ -493,10 +542,286 @@ def _backfill_kanban_display_seq(conn: sqlite3.Connection) -> None:
     conn.commit()
 
 
+
+def _migrate_pm_review_signoffs(conn: sqlite3.Connection) -> None:
+    """Safely upgrades pm_review_signoffs table schema and indexes across legacy databases."""
+    cur = conn.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='pm_review_signoffs'")
+    if not cur.fetchone():
+        return
+
+    existing = {
+        (row["name"] if (hasattr(row, "keys") or isinstance(row, dict)) else row[1])
+        for row in conn.execute("PRAGMA table_info(pm_review_signoffs)")
+    }
+    if "portfolio_id" not in existing:
+        conn.execute("ALTER TABLE pm_review_signoffs ADD COLUMN portfolio_id TEXT NOT NULL DEFAULT 'default'")
+    if "verified_sample_ids_json" not in existing:
+        conn.execute("ALTER TABLE pm_review_signoffs ADD COLUMN verified_sample_ids_json TEXT")
+
+    # Drop legacy single-column date-only index that breaks portfolio isolation
+    conn.execute("DROP INDEX IF EXISTS idx_pm_signoff_date")
+    conn.execute("DROP INDEX IF EXISTS idx_pm_signoffs_review_date")
+    # Drop legacy unique index on (portfolio_id, review_date) to allow multi-revision append-only history
+    conn.execute("DROP INDEX IF EXISTS idx_pm_signoff_port_date")
+
+    # Recreate composite indexes:
+    # 1. Unique index on (portfolio_id, packet_sha256) for append-only packet revision signoff
+    conn.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_pm_signoff_port_packet ON pm_review_signoffs(portfolio_id, packet_sha256)")
+    # 2. Non-unique index on (portfolio_id, review_date) for fast date-based lookup
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_pm_signoff_port_date ON pm_review_signoffs(portfolio_id, review_date)")
+    conn.commit()
+
+
+
+_ROUND5_MIGRATION_ID = "20261107_institutional_storage_v2"
+_ROUND5_DDL = """
+CREATE TABLE IF NOT EXISTS schema_migrations (
+    migration_id TEXT PRIMARY KEY,
+    checksum_sha256 TEXT NOT NULL,
+    applied_at_utc TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS pm_review_signoffs (
+    signoff_id TEXT PRIMARY KEY,
+    review_date TEXT NOT NULL,
+    signed_off_by TEXT NOT NULL,
+    signed_off_at_utc TEXT NOT NULL,
+    acknowledged_exceptions_count INTEGER NOT NULL,
+    notes TEXT,
+    packet_sha256 TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS pm_review_packets (
+    packet_id TEXT PRIMARY KEY,
+    portfolio_id TEXT NOT NULL,
+    review_date TEXT NOT NULL,
+    revision INTEGER NOT NULL CHECK (revision > 0),
+    cutoff_utc TEXT NOT NULL,
+    input_fingerprint_sha256 TEXT NOT NULL,
+    policy_version TEXT NOT NULL,
+    packet_sha256 TEXT NOT NULL,
+    payload_json TEXT NOT NULL,
+    created_at_utc TEXT NOT NULL,
+    UNIQUE (portfolio_id, packet_sha256),
+    UNIQUE (portfolio_id, review_date, revision),
+    UNIQUE (portfolio_id, review_date, input_fingerprint_sha256, policy_version)
+);
+CREATE INDEX IF NOT EXISTS idx_pm_packet_date
+    ON pm_review_packets(portfolio_id, review_date, revision DESC);
+CREATE TABLE IF NOT EXISTS routine_execution_events (
+    event_id TEXT PRIMARY KEY,
+    execution_id TEXT NOT NULL,
+    event_sequence INTEGER NOT NULL CHECK (event_sequence > 0),
+    portfolio_id TEXT,
+    event_type TEXT NOT NULL,
+    scheduled_at_utc TEXT,
+    started_at_utc TEXT,
+    completed_at_utc TEXT,
+    payload_json TEXT NOT NULL,
+    payload_sha256 TEXT NOT NULL,
+    created_at_utc TEXT NOT NULL,
+    UNIQUE (execution_id, event_sequence)
+);
+CREATE INDEX IF NOT EXISTS idx_routine_execution_stream
+    ON routine_execution_events(execution_id, event_sequence);
+CREATE TABLE IF NOT EXISTS catalyst_revisions (
+    catalyst_id TEXT NOT NULL,
+    revision INTEGER NOT NULL CHECK (revision > 0),
+    portfolio_id TEXT,
+    entity_id TEXT NOT NULL,
+    linked_claim_id TEXT,
+    event_name TEXT NOT NULL,
+    expected_date TEXT,
+    observed_date TEXT,
+    source_id TEXT,
+    source_revision TEXT,
+    prior_revision INTEGER,
+    payload_json TEXT NOT NULL,
+    payload_sha256 TEXT NOT NULL,
+    recorded_at_utc TEXT NOT NULL,
+    PRIMARY KEY (catalyst_id, revision)
+);
+CREATE INDEX IF NOT EXISTS idx_catalyst_entity_revision
+    ON catalyst_revisions(portfolio_id, entity_id, revision);
+CREATE TABLE IF NOT EXISTS source_captures (
+    source_id TEXT NOT NULL,
+    revision TEXT NOT NULL,
+    issuer_id TEXT,
+    ticker TEXT,
+    document_type TEXT NOT NULL,
+    fiscal_period TEXT,
+    source_locator TEXT NOT NULL,
+    artifact_ref TEXT NOT NULL,
+    content_sha256 TEXT NOT NULL,
+    captured_at_utc TEXT NOT NULL,
+    available_at_utc TEXT,
+    metadata_json TEXT NOT NULL,
+    PRIMARY KEY (source_id, revision)
+);
+CREATE INDEX IF NOT EXISTS idx_source_ticker_period_available
+    ON source_captures(ticker, fiscal_period, available_at_utc);
+CREATE TABLE IF NOT EXISTS catalyst_assessments (
+    assessment_id TEXT PRIMARY KEY,
+    idempotency_key TEXT NOT NULL UNIQUE,
+    portfolio_id TEXT,
+    catalyst_id TEXT NOT NULL,
+    exception_fingerprint TEXT NOT NULL,
+    source_id TEXT,
+    source_revision TEXT,
+    reviewer_subject_id TEXT NOT NULL,
+    reviewer_session_id TEXT,
+    assessment_text TEXT NOT NULL,
+    payload_json TEXT NOT NULL,
+    payload_sha256 TEXT NOT NULL,
+    recorded_at_utc TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_catalyst_assessment_scope
+    ON catalyst_assessments(portfolio_id, catalyst_id, exception_fingerprint);
+CREATE TABLE IF NOT EXISTS estimate_records (
+    estimate_id TEXT PRIMARY KEY,
+    prior_record_id TEXT,
+    ticker TEXT NOT NULL,
+    fiscal_period TEXT NOT NULL,
+    metric_name TEXT NOT NULL,
+    estimate_type TEXT NOT NULL,
+    value_decimal_text TEXT NOT NULL,
+    unit TEXT NOT NULL,
+    source_id TEXT,
+    source_revision TEXT,
+    source_as_of_utc TEXT,
+    available_at_utc TEXT NOT NULL,
+    approved_by_subject_id TEXT,
+    payload_json TEXT NOT NULL,
+    payload_sha256 TEXT NOT NULL,
+    recorded_at_utc TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_estimate_ticker_period_metric_available
+    ON estimate_records(ticker, fiscal_period, metric_name, available_at_utc);
+CREATE TABLE IF NOT EXISTS state_import_receipts (
+    receipt_id TEXT PRIMARY KEY,
+    source_digest TEXT NOT NULL,
+    record_family TEXT NOT NULL,
+    legacy_record_id TEXT NOT NULL,
+    payload_sha256 TEXT NOT NULL,
+    target_record_id TEXT NOT NULL,
+    import_status TEXT NOT NULL,
+    imported_at_utc TEXT NOT NULL,
+    UNIQUE (source_digest, record_family, legacy_record_id)
+);
+"""
+_ROUND5_IMMUTABLE_TABLES = (
+    "pm_review_packets",
+    "routine_execution_events",
+    "catalyst_revisions",
+    "source_captures",
+    "catalyst_assessments",
+    "estimate_records",
+    "state_import_receipts",
+)
+_PM_SIGNOFF_NEW_COLUMNS = {
+    "portfolio_id": "portfolio_id TEXT NOT NULL DEFAULT 'default'",
+    "verified_sample_ids_json": "verified_sample_ids_json TEXT",
+    "packet_id": "packet_id TEXT",
+    "acknowledged_exception_ids_json": "acknowledged_exception_ids_json TEXT",
+    "request_digest": "request_digest TEXT",
+    "principal_subject_id": "principal_subject_id TEXT",
+    "principal_session_id": "principal_session_id TEXT",
+}
+
+
+def _apply_round5_storage_migration(conn: sqlite3.Connection) -> None:
+    """Apply the approved append-only institutional storage migration atomically."""
+    if conn.in_transaction:
+        raise RuntimeError("round-5 storage migration requires an idle connection")
+    checksum = hashlib.sha256(_ROUND5_DDL.encode("utf-8")).hexdigest()
+    try:
+        conn.executescript("BEGIN IMMEDIATE;\n" + _ROUND5_DDL)
+        existing = {
+            row["name"] if hasattr(row, "keys") else row[1]
+            for row in conn.execute("PRAGMA table_info(pm_review_signoffs)")
+        }
+        for name, definition in _PM_SIGNOFF_NEW_COLUMNS.items():
+            if name not in existing:
+                conn.execute(f"ALTER TABLE pm_review_signoffs ADD COLUMN {definition}")
+        conn.execute("DROP INDEX IF EXISTS idx_pm_signoff_date")
+        conn.execute("DROP INDEX IF EXISTS idx_pm_signoffs_review_date")
+        conn.execute("DROP INDEX IF EXISTS idx_pm_signoff_port_date")
+        duplicates = conn.execute(
+            """
+            SELECT portfolio_id, packet_sha256, COUNT(*) AS duplicate_count
+            FROM pm_review_signoffs
+            GROUP BY portfolio_id, packet_sha256
+            HAVING COUNT(*) > 1
+            """
+        ).fetchall()
+        if duplicates:
+            raise RuntimeError(
+                "Cannot migrate PM sign-offs: duplicate (portfolio_id, packet_sha256) rows require manual review."
+            )
+        conn.execute(
+            "CREATE UNIQUE INDEX IF NOT EXISTS idx_pm_signoff_port_packet "
+            "ON pm_review_signoffs(portfolio_id, packet_sha256)"
+        )
+        conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_pm_signoff_port_date "
+            "ON pm_review_signoffs(portfolio_id, review_date)"
+        )
+        conn.execute(
+            """
+            CREATE TRIGGER IF NOT EXISTS trg_pm_signoff_packet_scope
+            BEFORE INSERT ON pm_review_signoffs
+            WHEN NEW.packet_id IS NOT NULL AND NOT EXISTS (
+                SELECT 1 FROM pm_review_packets p
+                WHERE p.packet_id = NEW.packet_id
+                  AND p.portfolio_id = NEW.portfolio_id
+                  AND p.packet_sha256 = NEW.packet_sha256
+                  AND p.review_date = NEW.review_date
+            )
+            BEGIN SELECT RAISE(ABORT, 'PM sign-off packet scope mismatch'); END
+            """
+        )
+        for table in _ROUND5_IMMUTABLE_TABLES:
+            conn.execute(
+                f"""
+                CREATE TRIGGER IF NOT EXISTS trg_{table}_immutable_update
+                BEFORE UPDATE ON {table}
+                BEGIN SELECT RAISE(ABORT, '{table} is append-only'); END
+                """
+            )
+            conn.execute(
+                f"""
+                CREATE TRIGGER IF NOT EXISTS trg_{table}_immutable_delete
+                BEFORE DELETE ON {table}
+                BEGIN SELECT RAISE(ABORT, '{table} is append-only'); END
+                """
+            )
+        conn.execute(
+            "INSERT OR IGNORE INTO schema_migrations(migration_id, checksum_sha256, applied_at_utc) "
+            "VALUES (?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now'))",
+            (_ROUND5_MIGRATION_ID, checksum),
+        )
+        stored = conn.execute(
+            "SELECT checksum_sha256 FROM schema_migrations WHERE migration_id = ?",
+            (_ROUND5_MIGRATION_ID,),
+        ).fetchone()
+        stored_checksum = stored["checksum_sha256"] if hasattr(stored, "keys") else stored[0]
+        if stored_checksum != checksum:
+            raise RuntimeError("round-5 migration checksum differs from the recorded migration.")
+        conn.execute("PRAGMA user_version = 6")
+        conn.commit()
+    except Exception:
+        conn.rollback()
+        raise
+
+
+def migrate_round5_storage(conn: sqlite3.Connection) -> None:
+    """Explicit migration entry point; does not run unrelated schema initialization."""
+    _apply_round5_storage_migration(conn)
+
+
 def init_schema(conn: sqlite3.Connection) -> None:
     conn.executescript(_SCHEMA)
     conn.commit()
     _migrate_columns(conn)
+    _migrate_pm_review_signoffs(conn)
     _migrate_dispatcher_column_cards(conn)
     _backfill_kanban_display_seq(conn)
     conn.execute(
@@ -504,6 +829,7 @@ def init_schema(conn: sqlite3.Connection) -> None:
         "ON kanban_cards(source_key) WHERE source_key IS NOT NULL"
     )
     conn.commit()
+    _apply_round5_storage_migration(conn)
 
 
 def get_connection(

@@ -37,7 +37,7 @@ const AGENT_CAPABILITIES: Record<string, { roleTitle: string; tools: string[]; f
   },
 }
 
-export default function ManagerSwarmView({ activeStatus, onTriggerResearch }: ManagerSwarmViewProps) {
+export default function ManagerSwarmView({ activeStatus }: ManagerSwarmViewProps) {
   const isRunning = Boolean(activeStatus?.running)
   const isOtherFlow = isRunning && activeStatus?.flow !== 'manager'
   const activeNode = activeStatus?.node
@@ -92,12 +92,12 @@ export default function ManagerSwarmView({ activeStatus, onTriggerResearch }: Ma
       </div>
 
       {/* Agents Roster Cards */}
-      <div className="space-y-2.5">
+      <div className="space-y-3">
         <div className="flex items-center justify-between px-1">
-          <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400">
+          <span className="text-xs font-bold uppercase tracking-wider text-zinc-400">
             รายชื่อ Institutional Agents
           </span>
-          <span className="text-[10px] text-zinc-400 font-mono">
+          <span className="text-xs text-zinc-400 font-mono">
             Node: {activeNode ? nodeDisplayName(activeNode) : 'idle'}
           </span>
         </div>
@@ -114,7 +114,7 @@ export default function ManagerSwarmView({ activeStatus, onTriggerResearch }: Ma
           return (
             <div
               key={agent.label}
-              className={`relative overflow-hidden rounded-2xl border p-3 transition-all ${
+              className={`relative overflow-hidden rounded-2xl border p-3.5 transition-all ${
                 isActive
                   ? 'border-emerald-300 bg-gradient-to-tr from-emerald-50/95 via-sky-50/80 to-cyan-50/90 shadow-[0_4px_18px_rgba(16,185,129,0.18)] ring-2 ring-emerald-400/60 animate-card-in'
                   : 'border-sky-100/90 bg-white/70 hover:border-sky-200 hover:bg-sky-50/40 hover:shadow-sm'
@@ -126,9 +126,9 @@ export default function ManagerSwarmView({ activeStatus, onTriggerResearch }: Ma
               )}
 
               <div className="flex items-start justify-between gap-2">
-                <div className="flex items-center gap-2.5 min-w-0">
+                <div className="flex items-center gap-3 min-w-0">
                   <div
-                    className={`relative flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-base shadow-sm transition-transform ${
+                    className={`relative flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-lg shadow-sm transition-transform ${
                       isActive
                         ? 'bg-gradient-to-tr from-emerald-400 to-cyan-500 text-white scale-105'
                         : 'bg-sky-100/70 text-zinc-700'
@@ -136,22 +136,22 @@ export default function ManagerSwarmView({ activeStatus, onTriggerResearch }: Ma
                   >
                     <span>{agent.icon}</span>
                     {isActive && (
-                      <span className="absolute -top-1 -right-1 flex h-3 w-3">
+                      <span className="absolute -top-1 -right-1 flex h-3.5 w-3.5">
                         <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
-                        <span className="relative inline-flex h-3 w-3 rounded-full bg-emerald-500 border-2 border-white" />
+                        <span className="relative inline-flex h-3.5 w-3.5 rounded-full bg-emerald-500 border-2 border-white" />
                       </span>
                     )}
                   </div>
 
                   <div className="min-w-0">
                     <h4
-                      className={`text-xs font-bold leading-tight truncate ${
+                      className={`text-sm font-bold leading-tight truncate ${
                         isActive ? 'text-emerald-950 font-bold' : 'text-sky-950'
                       }`}
                     >
                       {agent.label}
                     </h4>
-                    <p className="text-[10px] text-zinc-500 font-medium truncate">
+                    <p className="text-xs text-zinc-500 font-medium truncate mt-0.5">
                       {caps.roleTitle}
                     </p>
                   </div>
@@ -159,12 +159,12 @@ export default function ManagerSwarmView({ activeStatus, onTriggerResearch }: Ma
 
                 <div className="shrink-0">
                   {isActive ? (
-                    <span className="inline-flex items-center gap-1 rounded-full border border-emerald-300 bg-emerald-100/90 px-2 py-0.5 text-[9px] font-bold text-emerald-800 shadow-sm">
+                    <span className="inline-flex items-center gap-1 rounded-full border border-emerald-300 bg-emerald-100/90 px-2.5 py-0.5 text-xs font-bold text-emerald-800 shadow-sm">
                       <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-600" />
                       กำลังทำงาน
                     </span>
                   ) : (
-                    <span className="inline-flex items-center gap-1 rounded-full border border-zinc-200/80 bg-zinc-50 px-1.5 py-0.5 text-[9px] font-semibold text-zinc-500">
+                    <span className="inline-flex items-center gap-1 rounded-full border border-zinc-200/80 bg-zinc-50 px-2 py-0.5 text-xs font-semibold text-zinc-500">
                       Standby
                     </span>
                   )}
@@ -172,16 +172,16 @@ export default function ManagerSwarmView({ activeStatus, onTriggerResearch }: Ma
               </div>
 
               {/* Focus Area Description */}
-              <p className="mt-2 text-[10px] leading-relaxed text-zinc-600">
+              <p className="mt-2.5 text-xs sm:text-[13px] leading-relaxed text-zinc-600">
                 {caps.focusArea}
               </p>
 
               {/* Tool Chips */}
-              <div className="mt-2 flex flex-wrap gap-1">
+              <div className="mt-2.5 flex flex-wrap gap-1.5">
                 {caps.tools.map((tool) => (
                   <span
                     key={tool}
-                    className={`rounded-md border px-1.5 py-0.5 text-[9px] font-medium font-mono ${
+                    className={`rounded-md border px-2 py-0.5 text-xs font-medium font-mono ${
                       isActive
                         ? 'border-emerald-200 bg-emerald-50 text-emerald-800'
                         : 'border-sky-100 bg-sky-50/60 text-sky-700'
@@ -197,45 +197,32 @@ export default function ManagerSwarmView({ activeStatus, onTriggerResearch }: Ma
       </div>
 
       {/* Collaboration Flow Diagram Card */}
-      <div className="rounded-2xl border border-sky-100 bg-white/70 p-3.5 shadow-sm">
-        <h4 className="text-[10px] font-bold uppercase tracking-wider text-zinc-500 mb-2">
+      <div className="rounded-2xl border border-sky-100 bg-white/70 p-4 shadow-sm">
+        <h4 className="text-xs font-bold uppercase tracking-wider text-zinc-500 mb-2.5">
           🏛️ Trinity Multi-Agent Architecture
         </h4>
-        <div className="flex flex-col gap-1.5 text-[10px] font-medium text-zinc-700">
-          <div className="flex items-center gap-2 p-1.5 rounded-xl bg-sky-50/70 border border-sky-100">
-            <span className="font-bold text-sky-900">1. Hermes (Manager)</span>
+        <div className="flex flex-col gap-2 text-xs font-medium text-zinc-700">
+          <div className="flex items-center gap-2.5 p-2 rounded-xl bg-sky-50/70 border border-sky-100">
+            <span className="font-bold text-sky-900 shrink-0">1. Hermes (Manager)</span>
             <span className="text-zinc-400">➔</span>
             <span className="text-zinc-600 truncate">วิเคราะห์เจตนา & สั่งรันสายพานวิจัยอัตโนมัติ</span>
           </div>
-          <div className="flex items-center gap-2 p-1.5 rounded-xl bg-cyan-50/70 border border-cyan-100">
-            <span className="font-bold text-cyan-900">2. Specialists</span>
+          <div className="flex items-center gap-2.5 p-2 rounded-xl bg-cyan-50/70 border border-cyan-100">
+            <span className="font-bold text-cyan-900 shrink-0">2. Specialists</span>
             <span className="text-zinc-400">➔</span>
             <span className="text-zinc-600 truncate">Macro Quant, Economist, Equity Intel</span>
           </div>
-          <div className="flex items-center gap-2 p-1.5 rounded-xl bg-indigo-50/70 border border-indigo-100">
-            <span className="font-bold text-indigo-900">3. Allocator</span>
+          <div className="flex items-center gap-2.5 p-2 rounded-xl bg-indigo-50/70 border border-indigo-100">
+            <span className="font-bold text-indigo-900 shrink-0">3. Allocator</span>
             <span className="text-zinc-400">➔</span>
             <span className="text-zinc-600 truncate">วาง Guardrails & สัดส่วนพอร์ต 3 ถัง</span>
           </div>
-          <div className="flex items-center gap-2 p-1.5 rounded-xl bg-emerald-50/70 border border-emerald-100">
-            <span className="font-bold text-emerald-900">4. Archivist</span>
+          <div className="flex items-center gap-2.5 p-2 rounded-xl bg-emerald-50/70 border border-emerald-100">
+            <span className="font-bold text-emerald-900 shrink-0">4. Archivist</span>
             <span className="text-zinc-400">➔</span>
             <span className="text-zinc-600 truncate">จัดเก็บบันทึกลง Obsidian Memory Vault</span>
           </div>
         </div>
-
-        {onTriggerResearch && (
-          <div className="mt-3 pt-2.5 border-t border-sky-100/80 flex items-center justify-between">
-            <span className="text-[10px] text-zinc-500">ทดสอบสั่งงานทีม Swarm:</span>
-            <button
-              type="button"
-              onClick={() => onTriggerResearch('อัปเดต macro report')}
-              className="rounded-lg border border-sky-200 bg-sky-50 px-2 py-1 text-[10px] font-bold text-sky-800 hover:bg-sky-100 transition-colors"
-            >
-              สั่งรัน Macro Report ⚡
-            </button>
-          </div>
-        )}
       </div>
     </div>
   )

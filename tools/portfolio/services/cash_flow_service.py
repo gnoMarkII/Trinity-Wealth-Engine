@@ -1,5 +1,10 @@
 """PortfolioCashFlowService — Deposit/Withdraw, Record Income, FX, Dividends."""
-from datetime import date as date_type, datetime, timedelta
+from datetime import date as date_type, datetime, timedelta, timezone
+from decimal import Decimal, InvalidOperation
+import hashlib
+import math
+import json
+import uuid
 from typing import Dict, List, Optional, Literal, Tuple
 
 from tools.portfolio.domain.constants import _FLOAT_EPS, _MONEY_DP, CASH_THB_SYMBOL, CASH_USD_SYMBOL, _CASH_SYMBOLS
@@ -83,6 +88,7 @@ class PortfolioCashFlowService:
         date: Optional[str] = None,
         notes: str = "",
         portfolio_id: str = "default",
+        idempotency_key: Optional[str] = None,
     ) -> PortfolioState:
         _, state = self._manage_cash_flow_internal(
             amount=amount,
@@ -92,6 +98,7 @@ class PortfolioCashFlowService:
             date=date,
             notes=notes,
             portfolio_id=portfolio_id,
+            idempotency_key=idempotency_key,
         )
         return state
 
@@ -104,43 +111,137 @@ class PortfolioCashFlowService:
         date: Optional[str] = None,
         notes: str = "",
         portfolio_id: str = "default",
+        idempotency_key: Optional[str] = None,
     ) -> Tuple[str, PortfolioState]:
-        if amount <= 0:
-            raise ValueError("amount ต้องมากกว่า 0")
+        try:
+            amount_decimal = Decimal(str(amount))
+        except (InvalidOperation, TypeError, ValueError) as exc:
+            raise ValueError("amount must be a positive finite decimal") from exc
+        if not amount_decimal.is_finite() or amount_decimal <= Decimal("0"):
+            raise ValueError("amount must be a positive finite decimal")
+        amount_float = float(amount_decimal)
+        if not math.isfinite(amount_float) or amount_float <= 0:
+            raise ValueError("amount is outside the supported numeric range")
         if action not in ("deposit", "withdraw"):
             raise ValueError("action ต้องเป็น 'deposit' หรือ 'withdraw'")
         if currency not in ("THB", "USD"):
             raise ValueError("currency ต้องเป็น 'THB' หรือ 'USD'")
 
         pid = validate_portfolio_id(portfolio_id)
+        idempotency_key = str(idempotency_key or f"cashflow-{uuid.uuid4().hex}").strip()
+        if not idempotency_key:
+            raise ValueError("idempotency_key is required")
+        request_payload = {
+            "portfolio_id": pid,
+            "action": action,
+            "amount_native_decimal": str(amount_decimal),
+            "currency": currency,
+            "date": str(date or ""),
+            "exchange_rate": str(exchange_rate) if exchange_rate is not None else None,
+            "notes": str(notes or "").strip(),
+        }
+        request_digest = hashlib.sha256(
+            json.dumps(request_payload, sort_keys=True, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
+        ).hexdigest()
+        if date:
+            try:
+                parsed_occurred = datetime.fromisoformat(str(date).strip().replace("Z", "+00:00"))
+            except ValueError as exc:
+                raise ValueError("date must be an ISO-8601 date or timestamp") from exc
+            if parsed_occurred.tzinfo is None:
+                parsed_occurred = parsed_occurred.replace(tzinfo=timezone.utc)
+        else:
+            parsed_occurred = datetime.now(timezone.utc)
+        occurred_at_utc = parsed_occurred.astimezone(timezone.utc).isoformat().replace("+00:00", "Z")
+
+        fx_rate_decimal: Optional[Decimal] = Decimal("1") if currency == "THB" else None
+        fx_source_id: Optional[str] = "CURRENCY_IDENTITY" if currency == "THB" else None
+        if currency == "USD":
+            if exchange_rate is not None:
+                try:
+                    candidate = Decimal(str(exchange_rate))
+                except (InvalidOperation, TypeError, ValueError) as exc:
+                    raise ValueError("exchange_rate must be a positive finite decimal") from exc
+                if not candidate.is_finite() or candidate <= Decimal("0"):
+                    raise ValueError("exchange_rate must be a positive finite decimal")
+                fx_rate_decimal = candidate
+                fx_source_id = "REQUEST_SUPPLIED"
+            else:
+                try:
+                    fetched_rate, fetched_source = self.price_provider.fetch_fx_rate(
+                        date_str=occurred_at_utc[:10], fallback_rate=None
+                    )
+                    candidate = Decimal(str(fetched_rate))
+                    if candidate.is_finite() and candidate > Decimal("0") and fetched_source in ("historical", "live"):
+                        fx_rate_decimal = candidate
+                        fx_source_id = f"market_price_provider:{fetched_source}"
+                except Exception:
+                    fx_rate_decimal = None
+                    fx_source_id = None
+
+        lookup_event = getattr(self.repo, "get_cash_flow_event", None)
+        if callable(lookup_event):
+            prior = lookup_event(pid, idempotency_key)
+            if prior:
+                if prior.get("request_digest") != request_digest:
+                    raise ValueError("idempotency_key was reused for a different cash-flow request")
+                return "[CASH FLOW] Duplicate request already committed.", self.repo.load_state(pid)
+
         with self.repo.unit_of_work(pid) as uow:
             state = uow.load_state()
+            # Recheck while holding the portfolio UnitOfWork lock to fence concurrent retries.
+            if callable(lookup_event):
+                prior = lookup_event(pid, idempotency_key)
+                if prior:
+                    if prior.get("request_digest") != request_digest:
+                        raise ValueError("idempotency_key was reused for a different cash-flow request")
+                    return "[CASH FLOW] Duplicate request already committed.", state
             cash = _require_cash(state, currency)
 
             if action == "withdraw":
-                if cash.units < amount - _FLOAT_EPS:
+                if cash.units < amount_float - _FLOAT_EPS:
                     raise ValueError(
-                        f"Insufficient cash in CASH_{currency} (requested: {amount:,.2f}, available: {cash.units:,.2f})"
+                        f"Insufficient cash in CASH_{currency} (requested: {amount_float:,.2f}, available: {cash.units:,.2f})"
                     )
-                cash.units -= amount
+                cash.units -= amount_float
             else:
-                cash.units += amount
+                cash.units += amount_float
 
             res_str = (
                 f"[{action.upper()}] {currency} | "
-                f"{'+' if action == 'deposit' else '-'}{amount:,.2f} {currency} | "
+                f"{'+' if action == 'deposit' else '-'}{amount_decimal:,.2f} {currency} | "
                 f"CASH_{currency} คงเหลือ: {cash.units:,.2f} {currency}"
             )
 
-            content = f"**[CASH FLOW NOTE]** {action.upper()} {amount:,.2f} {currency}"
+            content = f"**[CASH FLOW NOTE]** {action.upper()} {amount_float:,.2f} {currency}"
             if notes and notes.strip():
                 content += f" — {notes.strip()}"
             recalc_all(state)
+            signed_native_amount = amount_decimal if action == "deposit" else -amount_decimal
+            signed_thb_amount = (
+                (signed_native_amount * fx_rate_decimal).quantize(Decimal("0.01"))
+                if fx_rate_decimal is not None else None
+            )
+            cash_flow_event = {
+                "event_id": f"cashflow_{uuid.uuid4().hex}",
+                "idempotency_key": idempotency_key,
+                "request_digest": request_digest,
+                "action": action,
+                "amount_native_decimal": str(signed_native_amount),
+                "currency": currency,
+                "fx_rate_to_thb_decimal": str(fx_rate_decimal) if fx_rate_decimal is not None else None,
+                "fx_source_id": fx_source_id,
+                "amount_thb_decimal": str(signed_thb_amount) if signed_thb_amount is not None else None,
+                "occurred_at_utc": occurred_at_utc,
+                "flow_kind": "EXTERNAL_CONTRIBUTION",
+                "flow_coverage_status": "COMPLETE" if signed_thb_amount is not None else "MISSING_FX",
+            }
             commit_mutation(
                 uow,
                 state,
                 PortfolioMutation(
                     ledger_change=LedgerChange(kind="unchanged"),
+                    durable_events=[{"event_type": "cash_flow_recorded", "payload": cash_flow_event}],
                     system_journal_events=[
                         SystemJournalEvent.from_entry(
                             event_type="cash_flow_recorded",

@@ -8,7 +8,9 @@ import type {
   EarningsCallNoteItem,
   PromiseSyncResponseDTO,
   PromiseItemDTO,
+  EarningsBridgeDTO,
 } from '../../api/types'
+import { EarningsBridgeCard } from './EarningsBridgeCard'
 import { ManagementCredibilityCard } from './promise_check/ManagementCredibilityCard'
 import { GuidanceBiasCard } from './promise_check/GuidanceBiasCard'
 import { StandoutPromisesCard } from './promise_check/StandoutPromisesCard'
@@ -27,8 +29,12 @@ interface EarningsCallTabProps {
 type TabUiStatus = 'idle' | 'loading' | 'pending' | 'success' | 'failed' | 'error'
 
 export const EarningsCallTab: React.FC<EarningsCallTabProps> = ({ ticker }) => {
-  // Sub-tab selection: 'promise_check' vs 'single_call'
-  const [activeSubTab, setActiveSubTab] = useState<'promise_check' | 'single_call'>('promise_check')
+  // Sub-tab selection: 'promise_check' vs 'single_call' vs 'earnings_bridge'
+  const [activeSubTab, setActiveSubTab] = useState<'promise_check' | 'single_call' | 'earnings_bridge'>('promise_check')
+
+  // Earnings Bridge state
+  const [bridgeData, setBridgeData] = useState<EarningsBridgeDTO | null>(null)
+  const [isLoadingBridge, setIsLoadingBridge] = useState<boolean>(false)
 
   // Promise Check (Rolling 8-quarter) state
   const [promiseData, setPromiseData] = useState<PromiseSyncResponseDTO | null>(null)
@@ -141,6 +147,31 @@ export const EarningsCallTab: React.FC<EarningsCallTabProps> = ({ ticker }) => {
     fetchExistingCalls()
     return () => clearPolling()
   }, [fetchPromiseLedger, fetchExistingCalls])
+
+  useEffect(() => {
+    setBridgeData(null)
+  }, [ticker])
+
+  useEffect(() => {
+    if (activeSubTab === 'earnings_bridge') {
+      let cancelled = false
+      setIsLoadingBridge(true)
+      api
+        .getEarningsBridge(ticker)
+        .then((res) => {
+          if (!cancelled) setBridgeData(res)
+        })
+        .catch((err) => {
+          if (!cancelled) console.error('Failed to load earnings bridge:', err)
+        })
+        .finally(() => {
+          if (!cancelled) setIsLoadingBridge(false)
+        })
+      return () => {
+        cancelled = true
+      }
+    }
+  }, [activeSubTab, ticker])
 
   const startPolling = (runId: string) => {
     clearPolling()
@@ -356,6 +387,19 @@ export const EarningsCallTab: React.FC<EarningsCallTabProps> = ({ ticker }) => {
                 {existingCalls.length} ไตรมาส
               </span>
             )}
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveSubTab('earnings_bridge')}
+            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
+              activeSubTab === 'earnings_bridge'
+                ? 'bg-sky-600 text-white shadow-sm ring-2 ring-sky-600/20'
+                : 'bg-surface hover:bg-surface-strong text-zinc-600 dark:text-zinc-400 border border-edge'
+            }`}
+          >
+            <span>📊</span>
+            <span>Earnings Bridge (Surprise Walk)</span>
           </button>
         </div>
       </div>
@@ -803,6 +847,19 @@ export const EarningsCallTab: React.FC<EarningsCallTabProps> = ({ ticker }) => {
               >
                 <span>✨ วาง Transcript ใหม่</span>
               </button>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Tab 3: Earnings Bridge (Reported vs Expected Causal Walk) */}
+      {activeSubTab === 'earnings_bridge' && (
+        <div className="space-y-6">
+          {bridgeData ? (
+            <EarningsBridgeCard data={bridgeData} isLoading={isLoadingBridge} />
+          ) : (
+            <div className="rounded-xl border border-edge bg-panel p-8 text-center text-zinc-500">
+              {isLoadingBridge ? 'กำลังโหลดข้อมูล Earnings Bridge...' : `ไม่มีข้อมูล Earnings Bridge สำหรับ ${ticker}`}
             </div>
           )}
         </div>

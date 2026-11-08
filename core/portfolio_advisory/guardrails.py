@@ -377,3 +377,72 @@ def check_look_through_concentration_cap(
         return True, warn
 
     return False, None
+
+def check_missing_price_policy(
+    current_price_native: Optional[Decimal],
+    holding_units: Optional[Decimal],
+    asset_type: str = "Stock",
+    ticker: str = "",
+) -> Optional[DataAnomalyWarning]:
+    """I8: Hard-Fail Missing Price Policy (Ch. 8, p. 57).
+
+    A missing or non-positive price for an asset that has positive units cannot become zero
+    or be silently ignored. Flags a critical anomaly to quarantine the holding and freeze
+    rebalancing calculations on that asset.
+    """
+    if str(asset_type).strip().lower() == "cash":
+        return None
+
+    units = safe_decimal(holding_units, default=Decimal("0"))
+    if units <= Decimal("0"):
+        return None
+
+    price = safe_decimal(current_price_native, default=Decimal("0"))
+    if price <= Decimal("0"):
+        return DataAnomalyWarning(
+            guardrail_code="MISSING_PRICE_EXCEPTION",
+            ticker=ticker,
+            message=f"Holding {ticker} has positive units ({units}) but missing or zero price ({price}). Quarantining holding.",
+            severity="critical",
+            remedy_hint="Provide a valid As-Of price or price update before executing rebalancing on this asset.",
+        )
+    return None
+
+
+def check_late_run_guard(
+    now_dt: Optional[datetime] = None,
+    target_cutoff_hour: int = 8,
+    target_cutoff_minute: int = 30,
+    max_drift_minutes: int = 120,
+    timezone_offset_hours: int = 7,
+) -> Tuple[str, int]:
+    """T6: Late-Run Guard & Stale Cutoff Rule (Ch. 10, p. 71).
+
+    Checks whether the daily briefing preparation is executed significantly after
+    the pre-market cutoff (default 08:30 UTC+7).
+
+    Returns:
+        (run_quality, drift_minutes)
+        where run_quality is 'ON_TIME' (drift <= max_drift_minutes) or 'LATE_RUN_STALE'.
+    """
+    if now_dt is None:
+        now_dt = datetime.now(timezone.utc)
+
+    from datetime import timedelta, timezone as dt_tz
+    local_tz = dt_tz(timedelta(hours=timezone_offset_hours))
+    local_dt = now_dt.astimezone(local_tz)
+
+    cutoff_dt = local_dt.replace(
+        hour=target_cutoff_hour,
+        minute=target_cutoff_minute,
+        second=0,
+        microsecond=0,
+    )
+
+    diff_seconds = (local_dt - cutoff_dt).total_seconds()
+    drift_minutes = int(diff_seconds // 60)
+
+    if drift_minutes <= max_drift_minutes:
+        return "ON_TIME", max(0, drift_minutes)
+
+    return "LATE_RUN_STALE", drift_minutes

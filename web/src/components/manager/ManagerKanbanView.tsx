@@ -416,14 +416,14 @@ export default function ManagerKanbanView({
   return (
     <div className="flex h-full w-full min-h-0 min-w-0 flex-col overflow-hidden bg-slate-50/50">
       {/* Top Filter and Controls Bar */}
-      <div className="shrink-0 space-y-2 border-b border-sky-100 bg-white/80 p-3 backdrop-blur-md">
+      <div className="shrink-0 space-y-2 border-b border-sky-100/70 bg-white/70 p-2.5 backdrop-blur-md">
         <div className="flex items-center gap-2">
           <TextInput
             uiSize="sm"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="ค้นหาชื่องาน..."
-            className="flex-1 min-w-[140px]"
+            className="flex-1 min-w-[130px]"
           />
           <AddCardDropdown
             quickTemplates={quickTemplates}
@@ -434,18 +434,18 @@ export default function ManagerKanbanView({
         </div>
 
         {/* Filters Row */}
-        <div className="flex flex-wrap items-center justify-between gap-1.5 text-xs">
+        <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
           {/* Status Tabs */}
-          <div className="flex items-center rounded-lg bg-sky-100/60 p-0.5">
+          <div className="flex items-center rounded-lg bg-sky-100/50 p-0.5">
             {STATUS_TABS.map((t) => (
               <button
                 key={t.key}
                 type="button"
                 onClick={() => setStatusFilter(t.key)}
-                className={`rounded-md px-2 py-1 text-[11px] font-semibold transition-all ${
+                className={`rounded-md px-2.5 py-1 text-xs font-semibold transition-all ${
                   statusFilter === t.key
-                    ? 'bg-white text-sky-950 shadow-sm'
-                    : 'text-zinc-600 hover:text-sky-900'
+                    ? 'bg-white text-sky-950 shadow-xs'
+                    : 'text-zinc-500 hover:text-sky-900'
                 }`}
               >
                 {t.label}
@@ -458,7 +458,7 @@ export default function ManagerKanbanView({
             <select
               value={flowFilter}
               onChange={(e) => setFlowFilter(e.target.value as FlowFilter)}
-              className="rounded-lg border border-sky-100 bg-white px-2 py-1 text-[11px] font-medium text-sky-950 shadow-sm focus:outline-none focus:ring-1 focus:ring-sky-300"
+              className="rounded-lg border border-sky-100 bg-white/90 px-2.5 py-1 text-xs font-medium text-sky-950 shadow-xs focus:outline-none focus:ring-1 focus:ring-sky-300"
             >
               <option value="all">ทุกกระบวนงาน (Flows)</option>
               {FLOW_OPTIONS.map((f) => (
@@ -471,7 +471,7 @@ export default function ManagerKanbanView({
               type="button"
               onClick={() => refresh().catch(() => {})}
               title="รีเฟรชข้อมูลบอร์ดงาน"
-              className="flex h-7 w-7 items-center justify-center rounded-lg border border-sky-100 bg-white text-xs text-sky-700 shadow-sm hover:bg-sky-50 transition-colors"
+              className="flex h-7 w-7 items-center justify-center rounded-lg border border-sky-100 bg-white text-xs text-sky-700 shadow-xs hover:bg-sky-50 transition-colors"
             >
               🔄
             </button>
@@ -499,7 +499,7 @@ export default function ManagerKanbanView({
         {layoutMode === 'compact' ? (
           /* COMPACT MODE: 1 Column at a time with quick Swimlane tabs or full-screen card drawer */
           selectedCard ? (
-            <div className="flex h-full flex-col">
+            <div className="flex h-full min-h-0 flex-col overflow-hidden">
               <div className="flex shrink-0 items-center justify-between border-b border-sky-100 bg-sky-50/70 px-3 py-2">
                 <button
                   type="button"
@@ -511,7 +511,7 @@ export default function ManagerKanbanView({
                 </button>
                 <span className="font-mono text-[11px] text-zinc-400">#AG-{selectedCard.display_seq}</span>
               </div>
-              <div className="flex-1 min-h-0">
+              <div className="flex-1 min-h-0 h-full flex flex-col overflow-hidden">
                 <KanbanDetailDrawer
                   card={selectedCard}
                   embedded={true}
@@ -524,9 +524,9 @@ export default function ManagerKanbanView({
               </div>
             </div>
           ) : (
-            <div className="flex h-full flex-col p-2.5">
+            <div className="flex h-full min-h-0 flex-col p-2.5 overflow-hidden">
               {/* Compact Column Tab Selectors */}
-              <div className="mb-2 flex items-center justify-between gap-1 overflow-x-auto rounded-xl bg-sky-100/40 p-1">
+              <div className="mb-2 flex shrink-0 items-center justify-between gap-1 overflow-x-auto rounded-xl bg-sky-100/40 p-1">
                 {visibleColumns.map((col) => {
                   const count = cardsForColumn(col.key).length
                   const isActive = compactActiveTab === col.key
@@ -535,7 +535,7 @@ export default function ManagerKanbanView({
                       key={col.key}
                       type="button"
                       onClick={() => setCompactActiveTab(col.key)}
-                      className={`flex flex-1 min-w-[70px] items-center justify-center gap-1 rounded-lg px-2 py-1.5 text-xs font-semibold transition-all ${
+                      className={`flex flex-1 min-w-[70px] items-center justify-center gap-1.5 rounded-lg px-2 py-1.5 text-xs sm:text-[13px] font-semibold transition-all ${
                         isActive
                           ? 'bg-white text-sky-950 shadow-sm'
                           : 'text-zinc-600 hover:text-sky-900'
@@ -543,7 +543,7 @@ export default function ManagerKanbanView({
                     >
                       <span>{col.icon}</span>
                       <span className="truncate">{col.label}</span>
-                      <span className="rounded-full bg-sky-200/60 px-1 py-0.2 text-[9px] font-mono">
+                      <span className="rounded-full bg-sky-200/60 px-1.5 py-0.5 text-[11px] font-mono font-bold">
                         {count}
                       </span>
                     </button>
@@ -552,7 +552,7 @@ export default function ManagerKanbanView({
               </div>
 
               {/* Render Active Column in Compact Mode */}
-              <div className="flex-1 min-h-0">
+              <div className="flex-1 min-h-0 h-full flex flex-col overflow-hidden">
                 {visibleColumns
                   .filter((col) => col.key === compactActiveTab)
                   .map((col) => (
@@ -616,7 +616,7 @@ export default function ManagerKanbanView({
 
             {/* Split Drawer in Wide/Full Mode */}
             {selectedCard && (
-              <div className="w-[380px] shrink-0 border-l border-sky-100 bg-white">
+              <div className="w-[380px] shrink-0 h-full min-h-0 flex flex-col border-l border-sky-100 bg-white overflow-hidden">
                 <KanbanDetailDrawer
                   card={selectedCard}
                   embedded={true}

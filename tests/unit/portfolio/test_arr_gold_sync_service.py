@@ -8,7 +8,8 @@ from tools.portfolio.services.arr_gold_sync_service import ArrGoldSyncService
 
 
 @pytest.fixture
-def mock_deps():
+def mock_deps(tmp_path, monkeypatch):
+    monkeypatch.setenv("OBSIDIAN_VAULT_PATH", str(tmp_path))
     email_source = MagicMock()
     parser = MagicMock()
     staging = MagicMock()

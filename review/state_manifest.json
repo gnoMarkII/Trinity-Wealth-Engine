@@ -1,0 +1,20 @@
+{
+  "state_id": "frozen_baseline_20261105",
+  "manifest_version": "v1",
+  "cutoff_utc": "2026-11-05T12:00:00Z",
+  "created_at_utc": "2026-11-06T01:28:46.919065+00:00",
+  "immutable_files": [
+    "memories/.system/storage_contract.json",
+    "tests/fixtures/manifest_openapi_schema.json",
+    "tests/fixtures/manifest_state_db_exports.json",
+    "tests/fixtures/manifest_portfolio_service.json",
+    "tests/fixtures/manifest_langchain_tools.json"
+  ],
+  "checksums": {
+    "memories/.system/storage_contract.json": "582a32c3d2bfd68348b7196c92b4cb6d6b750a6c3abdb8a8bb7e127825e2df87",
+    "tests/fixtures/manifest_openapi_schema.json": "5c04cef9b48aef333931c3fc57a8fab0315149f0cf418b59027cc2a6fd7cb0a5",
+    "tests/fixtures/manifest_state_db_exports.json": "6b088d06eb4d949176fe3bbab6e32b82aba6d73159578fce2182e24dbc969031",
+    "tests/fixtures/manifest_portfolio_service.json": "938d92e0e275923ae40cad6df9fb20b122d71e3ba0ac9a81e3338b82bba300aa",
+    "tests/fixtures/manifest_langchain_tools.json": "ceb248c873de32eecad974d4d21d685c307d8d50b6c1b5d2bb5285731996a698"
+  }
+}

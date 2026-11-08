@@ -4,7 +4,8 @@ from typing import Optional
 from fastapi import APIRouter, Depends
 
 from api.auth import require_session
-from api.dependencies import get_portfolio_service
+from api.dependencies import get_portfolio_application, get_portfolio_service
+from tools.portfolio.application import PortfolioApplication
 from tools.portfolio.service import PortfolioService
 from api.schemas import (
     ActualPortfolioStateDTO,
@@ -47,10 +48,10 @@ def execute_trade_endpoint(
 def manage_cash_flow_endpoint(
     payload: CashFlowRequestDTO,
     portfolio_id: str = "default",
-    service: PortfolioService = Depends(get_portfolio_service),
+    application: PortfolioApplication = Depends(get_portfolio_application),
 ) -> ActualPortfolioStateDTO:
     with handle_portfolio_exceptions():
-        state = service.structured_manage_cash_flow(
+        state = application.cash_flow_service.structured_manage_cash_flow(
             amount=payload.amount,
             action=payload.action,
             currency=payload.currency,
@@ -58,6 +59,7 @@ def manage_cash_flow_endpoint(
             date=payload.date,
             notes=payload.notes,
             portfolio_id=portfolio_id,
+            idempotency_key=payload.idempotency_key,
         )
         return ActualPortfolioStateDTO.model_validate(state.model_dump(exclude_none=True))
 

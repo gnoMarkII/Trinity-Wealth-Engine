@@ -130,4 +130,38 @@ describe('ManagerRightPanel', () => {
     fireEvent.click(fullBtn)
     expect(fullBtn).toHaveClass('font-bold')
   })
+
+  it('supports dragging and keyboard resizing the right panel left and right', () => {
+    render(
+      <ManagerRightPanel
+        isOpen={true}
+        onClose={vi.fn()}
+        activeTab="kanban"
+        onTabChange={vi.fn()}
+        selectedJobId={null}
+        onSelectJob={vi.fn()}
+        detectedJobIds={[]}
+      />
+    )
+
+    const panel = screen.getByTestId('manager-right-panel')
+    const resizer = screen.getByRole('separator', { name: 'ปรับขนาดแถบด้านข้าง' })
+    expect(resizer).toBeInTheDocument()
+    expect(panel).toHaveStyle({ width: '420px' })
+
+    // Drag left by 300px (from clientX=800 to clientX=500 -> width increases from 420 to 720)
+    fireEvent.mouseDown(resizer, { clientX: 800 })
+    fireEvent.mouseMove(window, { clientX: 500 })
+    fireEvent.mouseUp(window)
+
+    expect(panel).toHaveStyle({ width: '720px' })
+
+    // Keyboard resize right (decreases width by 40px -> 680px)
+    fireEvent.keyDown(resizer, { key: 'ArrowRight' })
+    expect(panel).toHaveStyle({ width: '680px' })
+
+    // Double click resets to default 420px
+    fireEvent.doubleClick(resizer)
+    expect(panel).toHaveStyle({ width: '420px' })
+  })
 })

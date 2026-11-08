@@ -323,6 +323,49 @@
         ]
       }
     },
+    "/api/equity/{ticker}/earnings-bridge": {
+      "get": {
+        "operationId": "get_earnings_bridge_api_equity__ticker__earnings_bridge_get",
+        "tags": [
+          "equity"
+        ],
+        "summary": "Get Deterministic Reported-vs-Expected Earnings Surprise Bridge",
+        "parameters": [
+          {
+            "name": "ticker",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Ticker"
+            }
+          },
+          {
+            "name": "period",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Reporting period",
+              "default": "Q3 2026",
+              "title": "Period"
+            }
+          }
+        ],
+        "has_request_body": false,
+        "responses": [
+          "200",
+          "422"
+        ]
+      }
+    },
     "/api/equity/{ticker}/earnings-call/ledger": {
       "get": {
         "operationId": "get_promise_ledger_api_equity__ticker__earnings_call_ledger_get",
@@ -493,6 +536,31 @@
           "equity"
         ],
         "summary": "List Existing Earnings Calls for Ticker",
+        "parameters": [
+          {
+            "name": "ticker",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Ticker"
+            }
+          }
+        ],
+        "has_request_body": false,
+        "responses": [
+          "200",
+          "422"
+        ]
+      }
+    },
+    "/api/equity/{ticker}/estimates-ledger": {
+      "get": {
+        "operationId": "get_estimates_ledger_api_equity__ticker__estimates_ledger_get",
+        "tags": [
+          "equity"
+        ],
+        "summary": "Get Estimates Ledger",
         "parameters": [
           {
             "name": "ticker",
@@ -867,6 +935,99 @@
         "responses": [
           "200",
           "422"
+        ]
+      }
+    },
+    "/api/equity/{ticker}/variant-perception": {
+      "get": {
+        "operationId": "get_variant_perception_api_equity__ticker__variant_perception_get",
+        "tags": [
+          "equity"
+        ],
+        "summary": "Get Variant Perception",
+        "parameters": [
+          {
+            "name": "ticker",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Ticker"
+            }
+          },
+          {
+            "name": "period",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "Earnings period e.g. '2026Q2'",
+              "default": "2026Q2",
+              "title": "Period"
+            }
+          },
+          {
+            "name": "metric_name",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "Financial metric name",
+              "default": "revenue",
+              "title": "Metric Name"
+            }
+          },
+          {
+            "name": "reported",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Reported result (Decimal string). Required for surprise realization.",
+              "title": "Reported"
+            }
+          }
+        ],
+        "has_request_body": false,
+        "responses": [
+          "200",
+          "422"
+        ]
+      }
+    },
+    "/api/governance/route-task": {
+      "post": {
+        "operationId": "route_task_api_governance_route_task_post",
+        "tags": [
+          "governance-routing"
+        ],
+        "summary": "Route Task",
+        "parameters": [],
+        "has_request_body": true,
+        "responses": [
+          "200",
+          "422"
+        ]
+      }
+    },
+    "/api/governance/routing-ledger": {
+      "get": {
+        "operationId": "get_routing_ledger_api_governance_routing_ledger_get",
+        "tags": [
+          "governance-routing"
+        ],
+        "summary": "Get Routing Ledger",
+        "parameters": [],
+        "has_request_body": false,
+        "responses": [
+          "200"
         ]
       }
     },
@@ -2217,6 +2378,37 @@
         ]
       }
     },
+    "/api/macro/vintage-walk": {
+      "get": {
+        "operationId": "get_macro_vintage_walk_endpoint_api_macro_vintage_walk_get",
+        "tags": [],
+        "summary": "Point-in-Time Macro Vintage Walk & Subsequent Revision (Chapter 6 & App H)",
+        "parameters": [
+          {
+            "name": "cutoff_date",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Point-in-time cutoff date YYYY-MM-DD",
+              "title": "Cutoff Date"
+            }
+          }
+        ],
+        "has_request_body": false,
+        "responses": [
+          "200",
+          "422"
+        ]
+      }
+    },
     "/api/manager/hermes/sync": {
       "post": {
         "operationId": "trigger_hermes_sync_api_manager_hermes_sync_post",
@@ -2242,6 +2434,91 @@
         "has_request_body": false,
         "responses": [
           "200"
+        ]
+      }
+    },
+    "/api/manager/pm-review/history": {
+      "get": {
+        "operationId": "get_signoff_history_api_manager_pm_review_history_get",
+        "tags": [
+          "pm-review"
+        ],
+        "summary": "Get Signoff History",
+        "parameters": [
+          {
+            "name": "portfolio_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Portfolio Id"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "default": 30,
+              "title": "Limit"
+            }
+          }
+        ],
+        "has_request_body": false,
+        "responses": [
+          "200",
+          "422"
+        ]
+      }
+    },
+    "/api/manager/pm-review/sign-off": {
+      "post": {
+        "operationId": "sign_off_morning_review_api_manager_pm_review_sign_off_post",
+        "tags": [
+          "pm-review"
+        ],
+        "summary": "Sign Off Morning Review",
+        "parameters": [],
+        "has_request_body": true,
+        "responses": [
+          "200",
+          "422"
+        ]
+      }
+    },
+    "/api/manager/pm-review/today": {
+      "get": {
+        "operationId": "get_today_morning_packet_api_manager_pm_review_today_get",
+        "tags": [
+          "pm-review"
+        ],
+        "summary": "Get Today Morning Packet",
+        "parameters": [
+          {
+            "name": "portfolio_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "default",
+              "title": "Portfolio Id"
+            }
+          }
+        ],
+        "has_request_body": false,
+        "responses": [
+          "200",
+          "422"
         ]
       }
     },
@@ -3865,6 +4142,33 @@
         ]
       }
     },
+    "/api/portfolio/factor-exposure": {
+      "get": {
+        "operationId": "get_factor_exposure_endpoint_api_portfolio_factor_exposure_get",
+        "tags": [
+          "Portfolio Advisory"
+        ],
+        "summary": "Get Chapter 8 Factor Exposure & Missing Price Invariant Snapshot",
+        "parameters": [
+          {
+            "name": "portfolio_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "Portfolio identifier to evaluate",
+              "default": "default",
+              "title": "Portfolio Id"
+            }
+          }
+        ],
+        "has_request_body": false,
+        "responses": [
+          "200",
+          "422"
+        ]
+      }
+    },
     "/api/portfolio/funds/{symbol}/constituents": {
       "get": {
         "operationId": "get_fund_constituents_endpoint_api_portfolio_funds__symbol__constituents_get",
@@ -4464,6 +4768,277 @@
           }
         ],
         "has_request_body": true,
+        "responses": [
+          "200",
+          "422"
+        ]
+      }
+    },
+    "/api/resilience/heartbeat": {
+      "post": {
+        "operationId": "record_heartbeat_api_resilience_heartbeat_post",
+        "tags": [
+          "resilience-routines"
+        ],
+        "summary": "Record Heartbeat",
+        "parameters": [],
+        "has_request_body": true,
+        "responses": [
+          "200",
+          "422"
+        ]
+      }
+    },
+    "/api/resilience/routine-history": {
+      "get": {
+        "operationId": "get_routine_history_api_resilience_routine_history_get",
+        "tags": [
+          "resilience-routines"
+        ],
+        "summary": "Get Routine History",
+        "parameters": [],
+        "has_request_body": false,
+        "responses": [
+          "200"
+        ]
+      }
+    },
+    "/api/resilience/routine-status": {
+      "get": {
+        "operationId": "get_routine_status_api_resilience_routine_status_get",
+        "tags": [
+          "resilience-routines"
+        ],
+        "summary": "Get Routine Status",
+        "parameters": [
+          {
+            "name": "target_date",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Date in YYYY-MM-DD format",
+              "title": "Target Date"
+            }
+          }
+        ],
+        "has_request_body": false,
+        "responses": [
+          "200",
+          "422"
+        ]
+      }
+    },
+    "/api/thesis/batch-synthesize": {
+      "post": {
+        "operationId": "batch_synthesize_portfolio_theses_api_thesis_batch_synthesize_post",
+        "tags": [
+          "thesis"
+        ],
+        "summary": "Batch Synthesize Portfolio Theses",
+        "parameters": [],
+        "has_request_body": true,
+        "responses": [
+          "200",
+          "422"
+        ]
+      }
+    },
+    "/api/thesis/catalyst-exceptions": {
+      "get": {
+        "operationId": "get_catalyst_exceptions_api_thesis_catalyst_exceptions_get",
+        "tags": [
+          "thesis"
+        ],
+        "summary": "Get Catalyst Exceptions",
+        "parameters": [],
+        "has_request_body": false,
+        "responses": [
+          "200"
+        ]
+      }
+    },
+    "/api/thesis/catalyst-exceptions/{exception_id}/review": {
+      "post": {
+        "operationId": "review_catalyst_exception_api_thesis_catalyst_exceptions__exception_id__review_post",
+        "tags": [
+          "thesis"
+        ],
+        "summary": "Review Catalyst Exception",
+        "parameters": [
+          {
+            "name": "exception_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Exception Id"
+            }
+          }
+        ],
+        "has_request_body": true,
+        "responses": [
+          "200",
+          "422"
+        ]
+      }
+    },
+    "/api/thesis/earnings-bridge": {
+      "post": {
+        "operationId": "generate_earnings_bridge_api_thesis_earnings_bridge_post",
+        "tags": [
+          "thesis"
+        ],
+        "summary": "Generate Earnings Bridge",
+        "parameters": [],
+        "has_request_body": true,
+        "responses": [
+          "200",
+          "422"
+        ]
+      }
+    },
+    "/api/thesis/evaluate": {
+      "post": {
+        "operationId": "evaluate_watchdog_scan_api_thesis_evaluate_post",
+        "tags": [
+          "thesis"
+        ],
+        "summary": "Evaluate Watchdog Scan",
+        "parameters": [
+          {
+            "name": "ticker",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Ticker"
+            }
+          }
+        ],
+        "has_request_body": false,
+        "responses": [
+          "200",
+          "422"
+        ]
+      }
+    },
+    "/api/thesis/synthesize/{ticker}": {
+      "post": {
+        "operationId": "synthesize_thesis_for_ticker_api_thesis_synthesize__ticker__post",
+        "tags": [
+          "thesis"
+        ],
+        "summary": "Synthesize Thesis For Ticker",
+        "parameters": [
+          {
+            "name": "ticker",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Ticker"
+            }
+          }
+        ],
+        "has_request_body": true,
+        "responses": [
+          "200",
+          "422"
+        ]
+      }
+    },
+    "/api/thesis/{ticker}": {
+      "get": {
+        "operationId": "get_active_thesis_api_thesis__ticker__get",
+        "tags": [
+          "thesis"
+        ],
+        "summary": "Get Active Thesis",
+        "parameters": [
+          {
+            "name": "ticker",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Ticker"
+            }
+          }
+        ],
+        "has_request_body": false,
+        "responses": [
+          "200",
+          "422"
+        ]
+      },
+      "post": {
+        "operationId": "record_or_revise_thesis_api_thesis__ticker__post",
+        "tags": [
+          "thesis"
+        ],
+        "summary": "Record Or Revise Thesis",
+        "parameters": [
+          {
+            "name": "ticker",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Ticker"
+            }
+          }
+        ],
+        "has_request_body": true,
+        "responses": [
+          "200",
+          "422"
+        ]
+      }
+    },
+    "/api/thesis/{ticker}/as-of": {
+      "get": {
+        "operationId": "get_thesis_as_of_api_thesis__ticker__as_of_get",
+        "tags": [
+          "thesis"
+        ],
+        "summary": "Get Thesis As Of",
+        "parameters": [
+          {
+            "name": "ticker",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Ticker"
+            }
+          },
+          {
+            "name": "as_of_utc",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "Historical ISO-8601 UTC timestamp",
+              "title": "As Of Utc"
+            }
+          }
+        ],
+        "has_request_body": false,
         "responses": [
           "200",
           "422"

@@ -22,10 +22,10 @@ export default function ManagerAdvisor() {
   const [searchParams] = useSearchParams()
   const initialView = searchParams.get('view')
 
-  // Right-Hand Tab Panel States (Kanban Board & Trinity Swarm, default: kanban)
+  // Right-Hand Tab Panel States (Morning Review, Kanban Board & Trinity Swarm, default: kanban)
   const [rightPanelOpen, setRightPanelOpen] = useState(true)
   const [activeRightTab, setActiveRightTab] = useState<ManagerRightPanelTab>(
-    initialView === 'swarm' ? 'swarm' : 'kanban'
+    initialView === 'swarm' ? 'swarm' : initialView === 'review' || initialView === 'morning-review' ? 'review' : 'kanban'
   )
   const [selectedJobId, setSelectedJobId] = useState<string | null>(null)
   const [activeAgentStatus, setActiveAgentStatus] = useState<ActiveAgentStatusDTO | null>(null)
@@ -36,6 +36,9 @@ export default function ManagerAdvisor() {
     const view = searchParams.get('view')
     if (view === 'kanban') {
       setActiveRightTab('kanban')
+      setRightPanelOpen(true)
+    } else if (view === 'review' || view === 'morning-review') {
+      setActiveRightTab('review')
       setRightPanelOpen(true)
     }
   }, [searchParams])
@@ -268,54 +271,75 @@ export default function ManagerAdvisor() {
 
   return (
     <div className="flow-theme flex h-full w-full flex-col min-h-0 overflow-hidden bg-transparent">
-      {/* Top Navigation Bar */}
-      <header className="flex h-14 shrink-0 items-center justify-between border-b border-sky-100 bg-white/70 px-4 backdrop-blur-xl sm:px-6">
+      {/* Top Navigation Bar — Minimal & Calm */}
+      <header className="flex h-14 shrink-0 items-center justify-between border-b border-sky-100/70 bg-white/80 px-4 backdrop-blur-xl sm:px-6">
         <div className="flex items-center gap-3">
-          <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-to-tr from-sky-400 to-cyan-500 shadow-[0_2px_10px_rgba(14,165,233,0.3)] text-white text-sm font-bold">
-            ✨
-          </div>
-          <div>
-            <h1 className="text-sm font-bold tracking-tight text-sky-950 flex items-center gap-2">
+          <div className="flex items-center gap-2">
+            <h1 className="text-base font-bold tracking-tight text-sky-950 flex items-center gap-2.5">
               Trinity AI Advisor
-              <span className="rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-700">
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50/90 px-2.5 py-0.5 text-xs font-medium text-emerald-700">
+                <span className="h-2 w-2 rounded-full bg-emerald-500" />
                 พร้อมให้คำปรึกษา
               </span>
             </h1>
           </div>
+
+          <div className="h-4 w-px bg-sky-200/60 mx-1 hidden sm:block" />
+
+          {/* Minimal Session Switcher + New Session */}
+          <div className="flex items-center gap-1.5">
+            <select
+              value={activeSessionId || ''}
+              onChange={(e) => handleSelectSession(e.target.value)}
+              aria-label="เลือกบทสนทนา"
+              className="max-w-[200px] truncate rounded-lg border border-transparent bg-sky-50/70 px-3 py-1.5 text-sm font-medium text-sky-950 hover:border-sky-200/70 hover:bg-sky-50 focus:border-sky-300 focus:outline-none transition-colors"
+            >
+              {sessions.map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.title} ({s.message_count})
+                </option>
+              ))}
+            </select>
+
+            <button
+              type="button"
+              onClick={handleNewSession}
+              title="เริ่มหัวข้อสนทนาใหม่"
+              className="flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-sm font-medium text-sky-700 hover:bg-sky-50 transition-colors"
+            >
+              <span className="text-base leading-none">+</span>
+              <span className="hidden md:inline">เรื่องใหม่</span>
+            </button>
+          </div>
         </div>
 
-        {/* Action Controls */}
+        {/* Right Action Controls — Grouped & Low-Noise */}
         <div className="flex items-center gap-2">
-          {/* Session Switcher */}
-          <select
-            value={activeSessionId || ''}
-            onChange={(e) => handleSelectSession(e.target.value)}
-            className="rounded-xl border border-sky-100 bg-panel px-3 py-1.5 text-xs font-medium text-sky-950 shadow-sm focus:outline-none focus:ring-1 focus:ring-sky-300"
-          >
-            {sessions.map((s) => (
-              <option key={s.id} value={s.id}>
-                {s.title} ({s.message_count})
-              </option>
-            ))}
-          </select>
-
           <button
             type="button"
-            onClick={handleNewSession}
-            title="เริ่มหัวข้อสนทนาใหม่"
-            className="flex items-center gap-1 rounded-xl border border-sky-200 bg-white px-3 py-1.5 text-xs font-medium text-sky-700 shadow-sm hover:bg-sky-50 transition-colors"
+            onClick={() => setDrawerOpen(true)}
+            title="ตั้งค่า Hermes Sandbox & Memory"
+            className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium text-zinc-600 hover:bg-sky-50/80 hover:text-sky-900 transition-colors"
           >
-            <span>+</span>
-            <span className="hidden sm:inline">เรื่องใหม่</span>
+            <span>🛡️</span>
+            <span className="hidden lg:inline">Sandbox & Memory</span>
           </button>
 
           <button
             type="button"
-            onClick={() => setDrawerOpen(true)}
-            className="flex items-center gap-1.5 rounded-xl border border-sky-200 bg-sky-50/70 px-3 py-1.5 text-xs font-semibold text-sky-800 shadow-sm hover:bg-sky-100 transition-colors"
+            onClick={() => {
+              setActiveRightTab('review')
+              setRightPanelOpen(true)
+            }}
+            title="เปิด Morning Review & Delta Watchdog"
+            className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${
+              rightPanelOpen && activeRightTab === 'review'
+                ? 'bg-sky-100/80 text-sky-950 font-semibold'
+                : 'text-zinc-600 hover:bg-sky-50/80 hover:text-sky-900'
+            }`}
           >
-            <span>🛡️</span>
-            <span className="hidden sm:inline">Sandbox & Memory</span>
+            <span>🏛️</span>
+            <span className="hidden md:inline">Morning Review</span>
           </button>
 
           {/* Toggle Right-Hand Swarm & Execution Panel */}
@@ -323,12 +347,12 @@ export default function ManagerAdvisor() {
             type="button"
             onClick={() => setRightPanelOpen((v) => !v)}
             title={rightPanelOpen ? 'ย่อแถบ Swarm & งานวิจัย' : 'เปิดแถบ Swarm & งานวิจัย'}
-            className={`flex items-center gap-1.5 rounded-xl border px-3 py-1.5 text-xs font-semibold shadow-sm transition-all ${
+            className={`flex items-center gap-2 rounded-xl border px-3.5 py-1.5 text-sm font-semibold transition-all ${
               rightPanelOpen
-                ? 'border-sky-300 bg-sky-100/90 text-sky-950 shadow-[0_2px_8px_rgba(14,165,233,0.12)]'
+                ? 'border-sky-200 bg-sky-50/90 text-sky-950'
                 : activeAgentStatus?.running
                   ? 'border-emerald-300 bg-emerald-50 text-emerald-800 animate-pulse'
-                  : 'border-sky-200 bg-white text-sky-800 hover:bg-sky-50'
+                  : 'border-sky-100 bg-white text-sky-800 hover:bg-sky-50'
             }`}
           >
             <span className="relative flex h-2 w-2">
@@ -344,7 +368,6 @@ export default function ManagerAdvisor() {
             <span className="hidden sm:inline">
               {activeAgentStatus?.running ? 'กำลังรันงาน...' : 'Swarm & Jobs'}
             </span>
-            <span className="text-sm">⚡</span>
           </button>
         </div>
       </header>

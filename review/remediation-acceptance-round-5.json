@@ -1,0 +1,1212 @@
+{
+  "schema_version": "1.0",
+  "purpose": "Implementation acceptance inventory; this is not a golden manifest or an assertion that planned cases have passed.",
+  "plan_file": "review/remediation-plan-round-5.md",
+  "source_review": "review/re-review-round-5.md",
+  "baseline": {
+    "captured_at_utc": "2026-11-06T16:37:28.000752+00:00",
+    "head": "fea7fbb8efee190c5e0e6a735c6f2a9315d6cbc6",
+    "source_sha256": {
+      "application/manager/pm_review_service.py": "f1588870b4e2d16b94296a979f31059242dde525e1f3fdd01b18417a79526ab7",
+      "application/manager/ports.py": "85458d13cd5768ab3a2ba25e9039f06797f0cffa96b446d627503ba65d909bfd",
+      "application/thesis/thesis_service.py": "42c93bc8c8b7ce0c359226a4715e31714a9f8ed55d7d061f6fa4cb94c06cd16b",
+      "application/thesis/thesis_synthesis_service.py": "941a5e25cd066ddf2c7178188d9102c63ac76aa1b0a8214ace237619dd8ebf28",
+      "application/thesis/ports.py": "e9589cc6f8f1edb7bfcb4b0efdfd63a7c96e16ec14d9ed25702fdd1f5774c540",
+      "tools/thesis/market_observation_adapter.py": "0164b15b9b4021bdbd3ad12d2d9c57c33a80b0b0ca4d14d9477951f5475ecdb1",
+      "application/resilience/readiness_audit_service.py": "240072ebbdb4fbee36f36e1ba3d9eda3405155c7bcbb878c78b6af14d7100d02",
+      "scripts/institutional_readiness_audit.py": "efb2d8ad0839afe8afd392903f22a11637fe89e6f8ac4dc3522c796ef1c5cfb8",
+      "application/earnings_call/disclosures.py": "c39146347655c64eb22f30138f95c714e57bc2df69d73b7f02a1b5e4aa7a936f",
+      "api/dependencies.py": "d1ab746b6289eadaa0fcdf415abf8691011cc94b92c6638156e78beecd94e99c",
+      "application/resilience/routine_monitor_service.py": "2ec390db718068da07c1b62f8a5e77535dc868b6a53bfe6482b76652e7ccfb96",
+      "application/thesis/catalyst_service.py": "19965651cbab66d91d28cc0aa212c5dd78b787ba507bd22e48babc087e33662d",
+      "application/equity/estimate_service.py": "b8067622b0e1e7534da71fc5e019942d61a767d342e633406231fc192354fde8",
+      "tools/portfolio/services/performance_service.py": "76fbc7f10a5dd08e4837ec2125e2983fb5daa9b9f10be8edec9a61070b060ac8",
+      "tools/portfolio/services/cash_flow_service.py": "3bc2138cdfeb9d6af141871ad99e312fa5d61c61b050dd2e85cfa33ecc41eb0d",
+      "web/src/components/manager/MorningDeltaCard.tsx": "7a13118916f7b0f3ed75a48e34a60c5e4074771bb5a7b61ca8d81181d5755753",
+      "web/src/components/equity/StructuredThesisCard.tsx": "29f0eb882295ae8564fbe416eb9c77f05b0f51f691a617373316e1ffdbf45857",
+      "core/portfolio_advisory/guardrails.py": "667ed425e2140b6384b62be4545cb6e93b53e8f6a532dfcf5485c92da893dd44",
+      "tests/unit/test_portfolio_advisory_guardrails.py": "8ba6857018a74d0a98134fbf9e48d6e56edded980af291b3fb4e15d7831f09bb"
+    },
+    "financial_fixtures": {
+      "position_values_thb": {
+        "usd_long": "7000",
+        "usd_short": "-1750",
+        "thb_long": "600"
+      },
+      "gross_thb": "9350",
+      "net_thb": "5850",
+      "pnl": {
+        "deposit": {
+          "gain": "0",
+          "return_pct": "0.00"
+        },
+        "withdrawal": {
+          "gain": "0",
+          "return_pct": "0.00"
+        },
+        "gain_after_deposit": {
+          "gain": "10",
+          "return_pct": "10.00"
+        },
+        "true_zero": {
+          "gain": "0",
+          "return_pct": "0.00"
+        }
+      }
+    }
+  },
+  "baseline_verification": {
+    "backend": {
+      "passed": 318,
+      "failed": 1,
+      "failed_test": "tests/unit/test_portfolio_advisory_guardrails.py::test_check_missing_price_policy",
+      "scope": "targeted suites with -o addopts=",
+      "command": ".venv\\Scripts\\pytest -o addopts= tests/architecture tests/api/test_auth.py tests/api/test_manager_chat_router.py tests/api/test_earnings_bridge_router.py tests/api/test_institutional_gems_routers.py tests/api/test_macro_vintage_router.py tests/api/test_pm_review_router.py tests/api/test_openapi_contract.py tests/api/test_position_review_api.py tests/api/test_portfolio_advisory_routes.py tests/unit/application/test_pm_review_service.py tests/unit/application/test_thesis_service.py tests/unit/application/test_thesis_synthesis_service.py tests/unit/application/test_durable_audit_state.py tests/unit/core tests/unit/thesis tests/unit/tools tests/unit/db tests/unit/test_portfolio_advisory_guardrails.py tests/unit/test_trinity_mcp_tools.py tests/unit/test_state_db_contract.py tests/unit/test_portfolio_advisory_engine.py tests/unit/market/test_position_review_integrity.py tests/unit/application/test_earnings_call_service.py tests/unit/api/test_router_earnings_call.py tests/unit/api/test_llm_failure_partial_revision.py tests/unit/portfolio/test_arr_gold_sync_service.py -q --tb=short",
+      "exit_code": 1
+    },
+    "frontend": {
+      "files_passed": 123,
+      "tests_passed": 621,
+      "command": "npm --prefix web test -- --run",
+      "exit_code": 0
+    },
+    "typecheck": {
+      "exit_code": 0,
+      "command": "npm --prefix web run typecheck"
+    }
+  },
+  "groups": [
+    {
+      "finding_id": "K01",
+      "title": "Required samples และ immutable approval",
+      "wp": [
+        "WP05",
+        "WP09"
+      ],
+      "test_files": [
+        "tests/unit/application/test_pm_review_service.py",
+        "tests/api/test_pm_review_router.py",
+        "web/src/components/manager/MorningDeltaCard.test.tsx"
+      ],
+      "case_count": 11
+    },
+    {
+      "finding_id": "K02",
+      "title": "Observation mapping และ complete evaluation",
+      "wp": [
+        "WP03"
+      ],
+      "test_files": [
+        "tests/unit/tools/test_market_observation_adapter.py (proposed)",
+        "tests/unit/application/test_thesis_service.py",
+        "tests/api/test_pm_review_router.py"
+      ],
+      "case_count": 10
+    },
+    {
+      "finding_id": "K03",
+      "title": "Readiness จาก DB/state/rebuild จริง",
+      "wp": [
+        "WP10",
+        "WP11"
+      ],
+      "test_files": [
+        "tests/unit/core/test_readiness_audit.py",
+        "tests/unit/tools/test_sqlite_integrity_adapter.py (proposed)",
+        "tests/integration/test_readiness_rebuild.py (proposed)"
+      ],
+      "case_count": 10
+    },
+    {
+      "finding_id": "K04",
+      "title": "Independent primary evidence และ evidence tiers",
+      "wp": [
+        "WP06",
+        "WP07"
+      ],
+      "test_files": [
+        "tests/unit/application/test_thesis_synthesis_service.py",
+        "tests/unit/tools/test_primary_evidence_adapter.py (proposed)",
+        "tests/api/test_earnings_bridge_router.py"
+      ],
+      "case_count": 11
+    },
+    {
+      "finding_id": "K05",
+      "title": "THB valuation และ exact exposure",
+      "wp": [
+        "WP04"
+      ],
+      "test_files": [
+        "tests/unit/core/test_factor_exposure.py",
+        "tests/unit/application/test_pm_review_service.py",
+        "tests/api/test_portfolio_advisory_routes.py"
+      ],
+      "case_count": 10
+    },
+    {
+      "finding_id": "K06",
+      "title": "As-of NAV และ external-flow-aware P&L",
+      "wp": [
+        "WP04"
+      ],
+      "test_files": [
+        "tests/unit/application/test_pm_review_service.py",
+        "tests/tools/portfolio/test_performance.py",
+        "tests/unit/portfolio/test_daily_performance_window.py (proposed)",
+        "tests/api/test_pm_review_router.py"
+      ],
+      "case_count": 12
+    },
+    {
+      "finding_id": "K07",
+      "title": "Durable audit state ผ่าน production wiring",
+      "wp": [
+        "WP08"
+      ],
+      "test_files": [
+        "tests/unit/application/test_durable_audit_state.py",
+        "tests/unit/db/test_audit_repositories.py (proposed)",
+        "tests/integration/test_audit_state_providers.py (proposed)"
+      ],
+      "case_count": 12
+    },
+    {
+      "finding_id": "K08",
+      "title": "Current portfolio/request generation ใน UI",
+      "wp": [
+        "WP09"
+      ],
+      "test_files": [
+        "web/src/components/manager/MorningDeltaCard.test.tsx",
+        "web/src/components/equity/StructuredThesisCard.test.tsx",
+        "web/src/pages/ManagerAdvisor.test.tsx"
+      ],
+      "case_count": 8
+    },
+    {
+      "finding_id": "K09",
+      "title": "Canonical guardrail และ final test gates",
+      "wp": [
+        "WP11"
+      ],
+      "test_files": [
+        "tests/unit/test_portfolio_advisory_guardrails.py",
+        "tests/api/test_portfolio_advisory_routes.py",
+        "tests/architecture/test_dependency_rules.py"
+      ],
+      "case_count": 5
+    },
+    {
+      "finding_id": "RG",
+      "title": "พฤติกรรมที่ปิดแล้วและต้องคงไว้",
+      "wp": [
+        "WP00",
+        "WP11"
+      ],
+      "test_files": [
+        "tests/api/test_auth.py",
+        "tests/api/test_pm_review_router.py",
+        "tests/unit/tools",
+        "tests/unit/db",
+        "tests/unit/application/test_thesis_synthesis_service.py",
+        "web/src/components/manager/MorningDeltaCard.test.tsx"
+      ],
+      "case_count": 9
+    }
+  ],
+  "cases": [
+    {
+      "case_id": "K01-T01",
+      "finding_id": "K01",
+      "level": "api",
+      "scenario": "packet มี CRITICAL breach แต่ส่งเฉพาะ benign/N/A sample",
+      "expected_result": "422; ไม่มี signoff หรือ acknowledgement ใหม่",
+      "status": "planned",
+      "execution_result": "not_run",
+      "evidence": null
+    },
+    {
+      "case_id": "K01-T02",
+      "finding_id": "K01",
+      "level": "api",
+      "scenario": "ข้าม required sample หนึ่งรายการจาก snapshot ที่เปิดตรวจ",
+      "expected_result": "422 พร้อมรายการ required IDs ที่ยังขาด",
+      "status": "planned",
+      "execution_result": "not_run",
+      "evidence": null
+    },
+    {
+      "case_id": "K01-T03",
+      "finding_id": "K01",
+      "level": "api",
+      "scenario": "ส่งครบ required samples และ acknowledge critical exceptions ทุกตัว",
+      "expected_result": "200; read-back มี signer/hash/evidence ตรง canonical record",
+      "status": "planned",
+      "execution_result": "not_run",
+      "evidence": null
+    },
+    {
+      "case_id": "K01-T04",
+      "finding_id": "K01",
+      "level": "api",
+      "scenario": "missing/empty/forged/stale packet checksum",
+      "expected_result": "422; ไม่เปลี่ยน audit state",
+      "status": "planned",
+      "execution_result": "not_run",
+      "evidence": null
+    },
+    {
+      "case_id": "K01-T05",
+      "finding_id": "K01",
+      "level": "api",
+      "scenario": "ส่ง invalid ID, duplicate ID หรือ ID จากอีก portfolio/revision",
+      "expected_result": "invalid/cross-scope IDs ถูกปฏิเสธ; duplicates ถูก deduplicate ก่อนตรวจ required set/count และ persist เป็น unique canonical IDs",
+      "status": "planned",
+      "execution_result": "not_run",
+      "evidence": null
+    },
+    {
+      "case_id": "K01-T06",
+      "finding_id": "K01",
+      "level": "integration",
+      "scenario": "critical exceptions มากกว่า bounded sample cap",
+      "expected_result": "critical ทุกตัวต้องมี acknowledgement แม้ไม่ได้อยู่ใน samples",
+      "status": "planned",
+      "execution_result": "not_run",
+      "evidence": null
+    },
+    {
+      "case_id": "K01-T07",
+      "finding_id": "K01",
+      "level": "api",
+      "scenario": "portfolio มี holdings แต่ evaluator ข้อมูล required ไม่ครบ",
+      "expected_result": "packet BLOCKED และ sign-off ไม่สำเร็จ",
+      "status": "planned",
+      "execution_result": "not_run",
+      "evidence": null
+    },
+    {
+      "case_id": "K01-T08",
+      "finding_id": "K01",
+      "level": "integration",
+      "scenario": "empty portfolio และข้อมูลครบ โดยไม่มี samples จริง",
+      "expected_result": "policy ให้ review ได้โดยไม่สร้าง sample N/A หรือ acknowledgement ปลอม",
+      "status": "planned",
+      "execution_result": "not_run",
+      "evidence": null
+    },
+    {
+      "case_id": "K01-T09",
+      "finding_id": "K01",
+      "level": "integration",
+      "scenario": "concurrent same-packet approvals จากคนละ SQLite connection",
+      "expected_result": "คืน canonical ID/signer/evidence เดียวกัน; แถวเดิมไม่เปลี่ยน",
+      "status": "planned",
+      "execution_result": "not_run",
+      "evidence": null
+    },
+    {
+      "case_id": "K01-T10",
+      "finding_id": "K01",
+      "level": "integration",
+      "scenario": "อ่าน approved snapshot อีกครั้งหลัง restart และ source ใหม่เข้า",
+      "expected_result": "snapshot เดิม reconstruct ได้; source ใหม่เป็น revision ใหม่และต้อง re-review",
+      "status": "planned",
+      "execution_result": "not_run",
+      "evidence": null
+    },
+    {
+      "case_id": "K01-T11",
+      "finding_id": "K01",
+      "level": "ui",
+      "scenario": "ยืนยันเพียงบาง required items หรือกำลังเปลี่ยน portfolio",
+      "expected_result": "ปุ่ม confirm ใช้ไม่ได้ และ request ส่ง exact displayed packet ID/hash/evidence",
+      "status": "planned",
+      "execution_result": "not_run",
+      "evidence": null
+    },
+    {
+      "case_id": "K02-T01",
+      "finding_id": "K02",
+      "level": "adapter",
+      "scenario": "อ่าน sidecar แบบ MicroQuantOutput ผ่าน EquitySidecarAdapter จริง",
+      "expected_result": "revenue_growth_yoy_pct/fcf_margin_pct/raw_analysis_price map ถูก metric/unit",
+      "status": "planned",
+      "execution_result": "not_run",
+      "evidence": null
+    },
+    {
+      "case_id": "K02-T02",
+      "finding_id": "K02",
+      "level": "adapter",
+      "scenario": "growth หรือ margin เท่ากับ 0 หรือเป็นค่าติดลบ",
+      "expected_result": "รักษา valid zero/negative; ไม่เปลี่ยนเป็น None จาก alias truthiness",
+      "status": "planned",
+      "execution_result": "not_run",
+      "evidence": null
+    },
+    {
+      "case_id": "K02-T03",
+      "finding_id": "K02",
+      "level": "domain",
+      "scenario": "metric name ไม่รองรับ หรือ operating/gross margin ไม่มี field จริงใน source",
+      "expected_result": "explicit MISSING/UNSUPPORTED; ไม่สร้างค่าแทน",
+      "status": "planned",
+      "execution_result": "not_run",
+      "evidence": null
+    },
+    {
+      "case_id": "K02-T04",
+      "finding_id": "K02",
+      "level": "integration",
+      "scenario": "PM ส่ง price override พร้อมมี fundamental rules",
+      "expected_result": "อ่าน metrics ที่ยังขาดจาก observer และตรวจพบทุก breach",
+      "status": "planned",
+      "execution_result": "not_run",
+      "evidence": null
+    },
+    {
+      "case_id": "K02-T05",
+      "finding_id": "K02",
+      "level": "domain",
+      "scenario": "override กับ sidecar มี metric เดียวกันแต่ต่าง revision/unit",
+      "expected_result": "เลือกตาม policy/source identity ที่ประกาศ; unit conflict เป็น INVALID",
+      "status": "planned",
+      "execution_result": "not_run",
+      "evidence": null
+    },
+    {
+      "case_id": "K02-T06",
+      "finding_id": "K02",
+      "level": "adapter",
+      "scenario": "NaN/Infinity/string เสีย/alias ให้ค่าขัดกัน",
+      "expected_result": "INVALID พร้อมเหตุผล; JSON ไม่ปล่อย non-finite numeric",
+      "status": "planned",
+      "execution_result": "not_run",
+      "evidence": null
+    },
+    {
+      "case_id": "K02-T07",
+      "finding_id": "K02",
+      "level": "integration",
+      "scenario": "source stale, available_time หลัง cutoff หรือไม่มี provenance ที่จำเป็น",
+      "expected_result": "STALE/NOT_AVAILABLE_AS_OF/MISSING_METADATA; ไม่สรุป NO_BREACH",
+      "status": "planned",
+      "execution_result": "not_run",
+      "evidence": null
+    },
+    {
+      "case_id": "K02-T08",
+      "finding_id": "K02",
+      "level": "integration",
+      "scenario": "provider read error หรือ sidecar เสีย",
+      "expected_result": "ERROR/repair-required; required rule ทำให้ packet BLOCKED",
+      "status": "planned",
+      "execution_result": "not_run",
+      "evidence": null
+    },
+    {
+      "case_id": "K02-T09",
+      "finding_id": "K02",
+      "level": "integration",
+      "scenario": "required rule ไม่มี observation ขณะที่ rules อื่นผ่าน",
+      "expected_result": "ผลประเมินครบทุก rule; completeness false และอนุมัติไม่ได้",
+      "status": "planned",
+      "execution_result": "not_run",
+      "evidence": null
+    },
+    {
+      "case_id": "K02-T10",
+      "finding_id": "K02",
+      "level": "api",
+      "scenario": "production get_thesis_service/get_pm_review_service ใช้ temporary configured vault",
+      "expected_result": "อ่าน actual adapter chain; API แสดง breaches/statuses ตรง frozen input",
+      "status": "planned",
+      "execution_result": "not_run",
+      "evidence": null
+    },
+    {
+      "case_id": "K03-T01",
+      "finding_id": "K03",
+      "level": "adapter",
+      "scenario": "fake SQLite header/page-size/cells/content-offset ที่ดูสมจริง",
+      "expected_result": "Q1 FAIL จาก SQLite read-only query; ไม่ READY",
+      "status": "planned",
+      "execution_result": "not_run",
+      "evidence": null
+    },
+    {
+      "case_id": "K03-T02",
+      "finding_id": "K03",
+      "level": "adapter",
+      "scenario": "มีชื่อ canonical tables ครบแต่ไม่มี required columns",
+      "expected_result": "Q1 FAIL พร้อม missing schema/projection; ไม่ READY",
+      "status": "planned",
+      "execution_result": "not_run",
+      "evidence": null
+    },
+    {
+      "case_id": "K03-T03",
+      "finding_id": "K03",
+      "level": "adapter",
+      "scenario": "DB missing/truncated/corrupt หรือเปิดไม่ได้",
+      "expected_result": "health เป็น FAIL; ไม่มีการ initialize/ALTER/repair ระหว่าง audit",
+      "status": "planned",
+      "execution_result": "not_run",
+      "evidence": null
+    },
+    {
+      "case_id": "K03-T04",
+      "finding_id": "K03",
+      "level": "integration",
+      "scenario": "schema/column/index version ของ legacy ที่ระบบไม่รองรับ",
+      "expected_result": "รายงาน remediation ที่ชัดเจน; ไม่ถือว่าพร้อมโดยอัตโนมัติ",
+      "status": "planned",
+      "execution_result": "not_run",
+      "evidence": null
+    },
+    {
+      "case_id": "K03-T05",
+      "finding_id": "K03",
+      "level": "integration",
+      "scenario": "ไม่มี checker/configuration หรือ authoritative path ผิด",
+      "expected_result": "FAIL/CONDITIONAL; ไม่ใช้ header heuristic เป็น PASS",
+      "status": "planned",
+      "execution_result": "not_run",
+      "evidence": null
+    },
+    {
+      "case_id": "K03-T06",
+      "finding_id": "K03",
+      "level": "integration",
+      "scenario": "manifest ว่าง/ไม่ครบ/file missing/file tampered/storage_contract อย่างเดียว",
+      "expected_result": "Q5 FAIL; หลักฐานต้องเป็น frozen inputs ที่ scoped จริง",
+      "status": "planned",
+      "execution_result": "not_run",
+      "evidence": null
+    },
+    {
+      "case_id": "K03-T07",
+      "finding_id": "K03",
+      "level": "integration",
+      "scenario": "rebuild packet จาก actual persisted adapters ใน fresh process",
+      "expected_result": "payload/hash/source refs ตรง snapshot ที่คาดหวัง โดยไม่ใช้ chat history",
+      "status": "planned",
+      "execution_result": "not_run",
+      "evidence": null
+    },
+    {
+      "case_id": "K03-T08",
+      "finding_id": "K03",
+      "level": "integration",
+      "scenario": "ใช้ empty/mock-free-input builder แต่ production state เสีย",
+      "expected_result": "Q8 FAIL; hash ยาว 64 ตัวอย่างเดียวไม่เป็น proof",
+      "status": "planned",
+      "execution_result": "not_run",
+      "evidence": null
+    },
+    {
+      "case_id": "K03-T09",
+      "finding_id": "K03",
+      "level": "integration",
+      "scenario": "negative human gate หรือ required validator failure",
+      "expected_result": "Q9/validator proof FAIL และ overall ไม่ READY",
+      "status": "planned",
+      "execution_result": "not_run",
+      "evidence": null
+    },
+    {
+      "case_id": "K03-T10",
+      "finding_id": "K03",
+      "level": "integration",
+      "scenario": "valid DB/projections + valid manifest + successful rebuild + gate proofs",
+      "expected_result": "READY เฉพาะ named stage/scope ที่ตรวจครบ; audit ไม่เปลี่ยน source bytes/schema",
+      "status": "planned",
+      "execution_result": "not_run",
+      "evidence": null
+    },
+    {
+      "case_id": "K04-T01",
+      "finding_id": "K04",
+      "level": "application",
+      "scenario": "ไม่มี primary artifact/record แต่มี sidecar metrics",
+      "expected_result": "INFERRED/UNVERIFIED ตามชนิด claim; ไม่ DOCUMENTED",
+      "status": "planned",
+      "execution_result": "not_run",
+      "evidence": null
+    },
+    {
+      "case_id": "K04-T02",
+      "finding_id": "K04",
+      "level": "application",
+      "scenario": "locator มี keyword 10-q/sec.gov แต่ไม่มี verified source body",
+      "expected_result": "ไม่ยกระดับ tier; ไม่มี self-validation",
+      "status": "planned",
+      "execution_result": "not_run",
+      "evidence": null
+    },
+    {
+      "case_id": "K04-T03",
+      "finding_id": "K04",
+      "level": "adapter",
+      "scenario": "source body hash ไม่ตรง snapshot metadata หรือถูกแก้ไข",
+      "expected_result": "INTEGRITY_ERROR/UNVERIFIED; ไม่ใช้ figures",
+      "status": "planned",
+      "execution_result": "not_run",
+      "evidence": null
+    },
+    {
+      "case_id": "K04-T04",
+      "finding_id": "K04",
+      "level": "domain",
+      "scenario": "source ตรง ticker แต่คนละ fiscal period/unit",
+      "expected_result": "CITATION_MISMATCH/INVALID; ไม่อาศัยเลขที่บังเอิญเท่ากัน",
+      "status": "planned",
+      "execution_result": "not_run",
+      "evidence": null
+    },
+    {
+      "case_id": "K04-T05",
+      "finding_id": "K04",
+      "level": "domain",
+      "scenario": "claimed value ต่างจาก independent primary fact",
+      "expected_result": "CITATION_MISMATCH; ไม่ fallback เป็น DIRECTLY_TESTED เพราะมีราคา",
+      "status": "planned",
+      "execution_result": "not_run",
+      "evidence": null
+    },
+    {
+      "case_id": "K04-T06",
+      "finding_id": "K04",
+      "level": "integration",
+      "scenario": "source ที่ตรวจได้ตรง ticker/period/metric/unit/cutoff และ facts match",
+      "expected_result": "factual assertion ได้ DOCUMENTED พร้อม exact artifact/locator/hash",
+      "status": "planned",
+      "execution_result": "not_run",
+      "evidence": null
+    },
+    {
+      "case_id": "K04-T07",
+      "finding_id": "K04",
+      "level": "domain",
+      "scenario": "heuristic stop-loss/growth floor/forward narrative อ้างอิง baseline fact ที่ verified",
+      "expected_result": "derived/forecast claim คง INFERRED; factual provenance แยกจาก inference",
+      "status": "planned",
+      "execution_result": "not_run",
+      "evidence": null
+    },
+    {
+      "case_id": "K04-T08",
+      "finding_id": "K04",
+      "level": "domain",
+      "scenario": "user custom stop/growth/margin หรือ prompt-injection content",
+      "expected_result": "custom inference และ sanitization policy เดิมยังทำงาน",
+      "status": "planned",
+      "execution_result": "not_run",
+      "evidence": null
+    },
+    {
+      "case_id": "K04-T09",
+      "finding_id": "K04",
+      "level": "api",
+      "scenario": "earnings request ไม่พบ verified actual หรือ consensus ของ period",
+      "expected_result": "ตอบ unavailable/404 ตาม final contract; ไม่คืน hardcoded defaults",
+      "status": "planned",
+      "execution_result": "not_run",
+      "evidence": null
+    },
+    {
+      "case_id": "K04-T10",
+      "finding_id": "K04",
+      "level": "integration",
+      "scenario": "consensus เพิ่งเผยแพร่หลัง earnings/cutoff หรือคนละ revision",
+      "expected_result": "ไม่ใช้ข้อมูลอนาคต; ระบุ missing expected baseline",
+      "status": "planned",
+      "execution_result": "not_run",
+      "evidence": null
+    },
+    {
+      "case_id": "K04-T11",
+      "finding_id": "K04",
+      "level": "integration",
+      "scenario": "bridge โหลด actual/consensus/drivers ที่ frozen และมี provenance ครบ",
+      "expected_result": "driver sum/units/period/source refs ตรวจได้; calculation trace แยกจาก source verification",
+      "status": "planned",
+      "execution_result": "not_run",
+      "evidence": null
+    },
+    {
+      "case_id": "K05-T01",
+      "finding_id": "K05",
+      "level": "domain",
+      "scenario": "USD holding: 2 units * USD 100 * THB/USD 35, market_value_thb=0",
+      "expected_result": "มูลค่า THB=7000; ไม่มี USD ปนกับ THB",
+      "status": "planned",
+      "execution_result": "not_run",
+      "evidence": null
+    },
+    {
+      "case_id": "K05-T02",
+      "finding_id": "K05",
+      "level": "domain",
+      "scenario": "long USD + short USD + long THB ใน fixture เดียว",
+      "expected_result": "gross THB=9350; net THB=5850; signs ถูกต้อง",
+      "status": "planned",
+      "execution_result": "not_run",
+      "evidence": null
+    },
+    {
+      "case_id": "K05-T03",
+      "finding_id": "K05",
+      "level": "integration",
+      "scenario": "native price ใช้ได้ แต่ FX missing/stale/future/invalid",
+      "expected_result": "quarantine/unavailable position; ไม่เดา rate หรือใช้ USD เป็น THB",
+      "status": "planned",
+      "execution_result": "not_run",
+      "evidence": null
+    },
+    {
+      "case_id": "K05-T04",
+      "finding_id": "K05",
+      "level": "domain",
+      "scenario": "zero units หรือ holding ที่ปิดสถานะแล้ว",
+      "expected_result": "exposure/count ไม่เพิ่ม; ไม่แทน units ด้วย 1",
+      "status": "planned",
+      "execution_result": "not_run",
+      "evidence": null
+    },
+    {
+      "case_id": "K05-T05",
+      "finding_id": "K05",
+      "level": "domain",
+      "scenario": "shares/price/FX เป็น non-finite หรือ stock price <= 0",
+      "expected_result": "INVALID/quarantine พร้อมชื่อทุก position ที่ผิด",
+      "status": "planned",
+      "execution_result": "not_run",
+      "evidence": null
+    },
+    {
+      "case_id": "K05-T06",
+      "finding_id": "K05",
+      "level": "integration",
+      "scenario": "มี missing-price holdings หลายตัว",
+      "expected_result": "eligible count นับเฉพาะ valid; missing_price_symbols ครบทุกตัว",
+      "status": "planned",
+      "execution_result": "not_run",
+      "evidence": null
+    },
+    {
+      "case_id": "K05-T07",
+      "finding_id": "K05",
+      "level": "domain",
+      "scenario": "price string ความละเอียดสูงและ fractional units",
+      "expected_result": "Decimal ตั้งแต่ input ถึง sum; rounding เฉพาะ boundary ตาม policy",
+      "status": "planned",
+      "execution_result": "not_run",
+      "evidence": null
+    },
+    {
+      "case_id": "K05-T08",
+      "finding_id": "K05",
+      "level": "integration",
+      "scenario": "current_price_thb กับ native*FX ไม่สอดคล้องหรือคนละ as-of",
+      "expected_result": "ใช้ approved coherent source/version หรือ quarantine; ไม่ mix aliases",
+      "status": "planned",
+      "execution_result": "not_run",
+      "evidence": null
+    },
+    {
+      "case_id": "K05-T09",
+      "finding_id": "K05",
+      "level": "api",
+      "scenario": "portfolio ที่มี cash กับหลาย currencies และค่าที่ quarantine",
+      "expected_result": "API totals/counts/currency/partial-quality ตรง domain ไม่เติม 100% default",
+      "status": "planned",
+      "execution_result": "not_run",
+      "evidence": null
+    },
+    {
+      "case_id": "K05-T10",
+      "finding_id": "K05",
+      "level": "domain",
+      "scenario": "long/short input conventions และ exposure percentage denominator",
+      "expected_result": "คำนวณตาม contract เดียวกัน; ไม่ double-negate short หรือเปลี่ยน denominator เงียบ ๆ",
+      "status": "planned",
+      "execution_result": "not_run",
+      "evidence": null
+    },
+    {
+      "case_id": "K06-T01",
+      "finding_id": "K06",
+      "level": "domain",
+      "scenario": "snapshot หลัง review cutoff แม้อยู่ห่างไม่เกิน 4 วัน",
+      "expected_result": "exclude future snapshot; ไม่มี look-ahead",
+      "status": "planned",
+      "execution_result": "not_run",
+      "evidence": null
+    },
+    {
+      "case_id": "K06-T02",
+      "finding_id": "K06",
+      "level": "adapter",
+      "scenario": "historical review date อยู่นอก days ที่นับจากเวลาปัจจุบัน",
+      "expected_result": "query/filter ใช้ requested cutoff ไม่ใช้ wall-clock แทน",
+      "status": "planned",
+      "execution_result": "not_run",
+      "evidence": null
+    },
+    {
+      "case_id": "K06-T03",
+      "finding_id": "K06",
+      "level": "integration",
+      "scenario": "deposit ผ่าน actual cash-flow service -> canonical store -> snapshot reader -> PM",
+      "expected_result": "gain=0; return=0.00% โดยไม่ฉีด field เฉพาะใน mock",
+      "status": "planned",
+      "execution_result": "not_run",
+      "evidence": null
+    },
+    {
+      "case_id": "K06-T04",
+      "finding_id": "K06",
+      "level": "integration",
+      "scenario": "withdraw ผ่าน producer/storage/readback จริง",
+      "expected_result": "gain=0; return=0.00%",
+      "status": "planned",
+      "execution_result": "not_run",
+      "evidence": null
+    },
+    {
+      "case_id": "K06-T05",
+      "finding_id": "K06",
+      "level": "domain",
+      "scenario": "NAV 100 -> 160 และ external deposit 50",
+      "expected_result": "gain=10; return=10.00%",
+      "status": "planned",
+      "execution_result": "not_run",
+      "evidence": null
+    },
+    {
+      "case_id": "K06-T06",
+      "finding_id": "K06",
+      "level": "domain",
+      "scenario": "ไม่มี movement และยืนยัน external flows เป็น 0 จริง",
+      "expected_result": "AVAILABLE; gain=0; return=0.00%",
+      "status": "planned",
+      "execution_result": "not_run",
+      "evidence": null
+    },
+    {
+      "case_id": "K06-T07",
+      "finding_id": "K06",
+      "level": "integration",
+      "scenario": "ไม่มีคู่ snapshot/ข้อมูล stale/flow history ไม่ครบ/legacy note-only flow",
+      "expected_result": "UNAVAILABLE พร้อม reason; values เป็น null ไม่ใช่ 0",
+      "status": "planned",
+      "execution_result": "not_run",
+      "evidence": null
+    },
+    {
+      "case_id": "K06-T08",
+      "finding_id": "K06",
+      "level": "integration",
+      "scenario": "trade, dividend, fee หรือ FX conversion ภายใน portfolio",
+      "expected_result": "classify external/internal ถูก; ไม่หัก capital flow ซ้ำหรือใช้ cash-balance delta แทน",
+      "status": "planned",
+      "execution_result": "not_run",
+      "evidence": null
+    },
+    {
+      "case_id": "K06-T09",
+      "finding_id": "K06",
+      "level": "integration",
+      "scenario": "USD deposit/withdraw มี event FX ที่ cutoff ยืนยันได้",
+      "expected_result": "THB flow ใช้ Decimal และ source FX ของ event; missing FX ทำให้ unavailable",
+      "status": "planned",
+      "execution_result": "not_run",
+      "evidence": null
+    },
+    {
+      "case_id": "K06-T10",
+      "finding_id": "K06",
+      "level": "adapter",
+      "scenario": "CSV/typed snapshot schema v1/v2, unsorted/duplicate/revised rows",
+      "expected_result": "round-trip fields ที่จำเป็นครบ; legacy incomplete ถูกระบุและ revision selection ถูก",
+      "status": "planned",
+      "execution_result": "not_run",
+      "evidence": null
+    },
+    {
+      "case_id": "K06-T11",
+      "finding_id": "K06",
+      "level": "integration",
+      "scenario": "crash/retry ระหว่าง cash-state mutation กับ flow persistence",
+      "expected_result": "ทั้ง balance และ external-flow event commit/rollback ร่วมกัน; retry ไม่บันทึกซ้ำ",
+      "status": "planned",
+      "execution_result": "not_run",
+      "evidence": null
+    },
+    {
+      "case_id": "K06-T12",
+      "finding_id": "K06",
+      "level": "ui",
+      "scenario": "P&L null, true zero, stale status และ lifetime-only mover",
+      "expected_result": "แสดง unavailable/0.00/label ได้ถูกความหมาย; ไม่มี null.toFixed และไม่เรียก lifetime ว่า daily",
+      "status": "planned",
+      "execution_result": "not_run",
+      "evidence": null
+    },
+    {
+      "case_id": "K07-T01",
+      "finding_id": "K07",
+      "level": "integration",
+      "scenario": "ตั้ง temporary DB/AUDIT_STATE_DIR แล้วใช้ get_* providers จริง",
+      "expected_result": "ทุก service ใช้ durable repository/path ที่ตั้งไว้; ไม่ใช่ None",
+      "status": "planned",
+      "execution_result": "not_run",
+      "evidence": null
+    },
+    {
+      "case_id": "K07-T02",
+      "finding_id": "K07",
+      "level": "integration",
+      "scenario": "API heartbeat/catalyst assessment/estimate revision แล้วสร้าง fresh process",
+      "expected_result": "read-back ตรง record/actor/source revision ที่ commit",
+      "status": "planned",
+      "execution_result": "not_run",
+      "evidence": null
+    },
+    {
+      "case_id": "K07-T03",
+      "finding_id": "K07",
+      "level": "integration",
+      "scenario": "สอง instances อ่าน state เดิมก่อน A และ B append คนละ event",
+      "expected_result": "reload มีทั้ง A และ B; ไม่มี lost update",
+      "status": "planned",
+      "execution_result": "not_run",
+      "evidence": null
+    },
+    {
+      "case_id": "K07-T04",
+      "finding_id": "K07",
+      "level": "integration",
+      "scenario": "same event ID/request ID retry payload เดิม",
+      "expected_result": "คืน canonical record เดียว; จำนวน records ไม่เพิ่ม",
+      "status": "planned",
+      "execution_result": "not_run",
+      "evidence": null
+    },
+    {
+      "case_id": "K07-T05",
+      "finding_id": "K07",
+      "level": "integration",
+      "scenario": "same event ID แต่ payload ต่าง หรือ stale parent/revision",
+      "expected_result": "reject conflict ตาม contract; ไม่ overwrite history",
+      "status": "planned",
+      "execution_result": "not_run",
+      "evidence": null
+    },
+    {
+      "case_id": "K07-T06",
+      "finding_id": "K07",
+      "level": "adapter",
+      "scenario": "disk/DB write/commit failure หลัง validate ก่อนตอบรับ",
+      "expected_result": "propagate failure; ไม่มี success/acknowledgement และ cache ไม่แซง durable state",
+      "status": "planned",
+      "execution_result": "not_run",
+      "evidence": null
+    },
+    {
+      "case_id": "K07-T07",
+      "finding_id": "K07",
+      "level": "adapter",
+      "scenario": "corrupted/truncated durable state",
+      "expected_result": "repair-required; ไม่กลับไป seed ค่าเริ่มต้นแล้วเขียนทับหลักฐาน",
+      "status": "planned",
+      "execution_result": "not_run",
+      "evidence": null
+    },
+    {
+      "case_id": "K07-T08",
+      "finding_id": "K07",
+      "level": "integration",
+      "scenario": "import legacy JSON หลายครั้งและมี duplicate IDs ที่ payload ไม่ตรง",
+      "expected_result": "dry-run/integrity report; same-payload import idempotent; conflict หยุดโดยไม่เดาข้อมูล",
+      "status": "planned",
+      "execution_result": "not_run",
+      "evidence": null
+    },
+    {
+      "case_id": "K07-T09",
+      "finding_id": "K07",
+      "level": "migration",
+      "scenario": "upgrade old schema/JSON แล้ว restart ขณะมีประวัติ approvals",
+      "expected_result": "รักษา ID/author/time/hash/ack scope; ไม่ fabricate legacy evidence",
+      "status": "planned",
+      "execution_result": "not_run",
+      "evidence": null
+    },
+    {
+      "case_id": "K07-T10",
+      "finding_id": "K07",
+      "level": "integration",
+      "scenario": "worker crash/retry และเปลี่ยน source/exception fingerprint",
+      "expected_result": "event/assessment ผูก revision ถูก; acknowledgement เก่าไม่ใช้กับ facts ใหม่",
+      "status": "planned",
+      "execution_result": "not_run",
+      "evidence": null
+    },
+    {
+      "case_id": "K07-T11",
+      "finding_id": "K07",
+      "level": "architecture",
+      "scenario": "application services ไม่ทำ file persistence เองและ DAOs ไม่ commit",
+      "expected_result": "ports/adapters/UoW isolation ผ่าน; file artifacts ใช้ _atomic_io",
+      "status": "planned",
+      "execution_result": "not_run",
+      "evidence": null
+    },
+    {
+      "case_id": "K07-T12",
+      "finding_id": "K07",
+      "level": "integration",
+      "scenario": "environment/cache isolation และ rollback หลัง failed migration",
+      "expected_result": "provider cache ไม่ชี้ DB เก่า; failed transaction ไม่ publish state ครึ่งเดียว",
+      "status": "planned",
+      "execution_result": "not_run",
+      "evidence": null
+    },
+    {
+      "case_id": "K08-T01",
+      "finding_id": "K08",
+      "level": "ui",
+      "scenario": "A loaded แล้วเปลี่ยนเป็น B ที่ request ยัง pending",
+      "expected_result": "ไม่แสดงข้อมูล A ในฐานะ B; actions ของ packet เก่าใช้งานไม่ได้",
+      "status": "planned",
+      "execution_result": "not_run",
+      "evidence": null
+    },
+    {
+      "case_id": "K08-T02",
+      "finding_id": "K08",
+      "level": "ui",
+      "scenario": "A1 -> B -> A2 โดย A2 ตอบก่อน A1",
+      "expected_result": "เฉพาะ generation ล่าสุดเปลี่ยน data/error/loading ได้",
+      "status": "planned",
+      "execution_result": "not_run",
+      "evidence": null
+    },
+    {
+      "case_id": "K08-T03",
+      "finding_id": "K08",
+      "level": "ui",
+      "scenario": "refresh สองครั้งใน portfolio เดียวกันและ response สลับลำดับ",
+      "expected_result": "newer request ชนะ; sample selections ผูก packet revision",
+      "status": "planned",
+      "execution_result": "not_run",
+      "evidence": null
+    },
+    {
+      "case_id": "K08-T04",
+      "finding_id": "K08",
+      "level": "ui",
+      "scenario": "request เก่า error/finally หลัง request ใหม่สำเร็จ",
+      "expected_result": "ไม่เขียนทับ current error/loading หรือซ่อนข้อมูลใหม่",
+      "status": "planned",
+      "execution_result": "not_run",
+      "evidence": null
+    },
+    {
+      "case_id": "K08-T05",
+      "finding_id": "K08",
+      "level": "ui",
+      "scenario": "initialPacket เปลี่ยนขณะ request เดิมยังค้าง",
+      "expected_result": "initial context ใหม่ทำให้ generation เก่าเป็น invalid",
+      "status": "planned",
+      "execution_result": "not_run",
+      "evidence": null
+    },
+    {
+      "case_id": "K08-T06",
+      "finding_id": "K08",
+      "level": "ui",
+      "scenario": "เปลี่ยน portfolio/unmount ระหว่าง sign-off หรือ refresh",
+      "expected_result": "ไม่มี post-unmount stale update และไม่ส่ง follow-up ผิด portfolio",
+      "status": "planned",
+      "execution_result": "not_run",
+      "evidence": null
+    },
+    {
+      "case_id": "K08-T07",
+      "finding_id": "K08",
+      "level": "ui",
+      "scenario": "เปิด sign-off modal แล้ว portfolio หรือ packet hash เปลี่ยน",
+      "expected_result": "ปิด/reset หรือ invalidate modal/evidence; ส่ง exact current snapshot เท่านั้น",
+      "status": "planned",
+      "execution_result": "not_run",
+      "evidence": null
+    },
+    {
+      "case_id": "K08-T08",
+      "finding_id": "K08",
+      "level": "ui",
+      "scenario": "ticker A -> B response สลับ และ macro/beta/P&L nullable",
+      "expected_result": "cancellation ที่แก้แล้วคงอยู่; unknown ไม่แสดงเป็นตัวเลขศูนย์",
+      "status": "planned",
+      "execution_result": "not_run",
+      "evidence": null
+    },
+    {
+      "case_id": "K09-T01",
+      "finding_id": "K09",
+      "level": "unit",
+      "scenario": "new missing-price warning จาก check_missing_price_policy",
+      "expected_result": "canonical MISSING_PRICE_EXCEPTION; tests ตรง semantics ของ producer",
+      "status": "planned",
+      "execution_result": "not_run",
+      "evidence": null
+    },
+    {
+      "case_id": "K09-T02",
+      "finding_id": "K09",
+      "level": "adapter",
+      "scenario": "legacy stored warning ใช้ MISSING_AS_OF_PRICE",
+      "expected_result": "boundary compatibility map/read ได้; new records ไม่สลับ codes",
+      "status": "planned",
+      "execution_result": "not_run",
+      "evidence": null
+    },
+    {
+      "case_id": "K09-T03",
+      "finding_id": "K09",
+      "level": "api",
+      "scenario": "factor-exposure warning หลาย holding ผ่าน canonical/legacy data",
+      "expected_result": "missing symbols ครบและ eligible count ถูก ไม่แก้ test เพื่อกลบข้อมูลผิด",
+      "status": "planned",
+      "execution_result": "not_run",
+      "evidence": null
+    },
+    {
+      "case_id": "K09-T04",
+      "finding_id": "K09",
+      "level": "system",
+      "scenario": "full relevant backend + frontend + typecheck และ architecture",
+      "expected_result": "exit 0 ทุก required gate; ไม่มี skipped/xfail ที่ซ่อน K01-K09",
+      "status": "planned",
+      "execution_result": "not_run",
+      "evidence": null
+    },
+    {
+      "case_id": "K09-T05",
+      "finding_id": "K09",
+      "level": "contract",
+      "scenario": "approved schema/API/type changes และ generated manifests",
+      "expected_result": "generator ผลตรง final contracts; ไม่ edit golden fixtures ด้วยมือ",
+      "status": "planned",
+      "execution_result": "not_run",
+      "evidence": null
+    },
+    {
+      "case_id": "RG-T01",
+      "finding_id": "RG",
+      "level": "api",
+      "scenario": "real session principal และ forged signed_off_by ใน body",
+      "expected_result": "signer มาจาก authenticated principal",
+      "status": "planned",
+      "execution_result": "not_run",
+      "evidence": null
+    },
+    {
+      "case_id": "RG-T02",
+      "finding_id": "RG",
+      "level": "integration",
+      "scenario": "same packet concurrent retry และ different packet revision ในวันเดียวกัน",
+      "expected_result": "same packet canonical; different revision เก็บ history ครบ",
+      "status": "planned",
+      "execution_result": "not_run",
+      "evidence": null
+    },
+    {
+      "case_id": "RG-T03",
+      "finding_id": "RG",
+      "level": "integration",
+      "scenario": "legacy DB ไม่มี portfolio_id หรือมี unique date index เดิม",
+      "expected_result": "migration rehearsal ผ่านและ portfolio isolation คงอยู่",
+      "status": "planned",
+      "execution_result": "not_run",
+      "evidence": null
+    },
+    {
+      "case_id": "RG-T04",
+      "finding_id": "RG",
+      "level": "integration",
+      "scenario": "corrupt thesis/stale parent/concurrent thesis writers",
+      "expected_result": "preserve bytes/history, reject invalid write และ packet BLOCKED",
+      "status": "planned",
+      "execution_result": "not_run",
+      "evidence": null
+    },
+    {
+      "case_id": "RG-T05",
+      "finding_id": "RG",
+      "level": "integration",
+      "scenario": "thesis synthesis response เทียบ read-back persisted claim",
+      "expected_result": "ID/version/checksum/payload ตรงกัน",
+      "status": "planned",
+      "execution_result": "not_run",
+      "evidence": null
+    },
+    {
+      "case_id": "RG-T06",
+      "finding_id": "RG",
+      "level": "domain",
+      "scenario": "observed fact เปลี่ยนหลัง acknowledge ค่าเก่า",
+      "expected_result": "new event fingerprint และ pending review ของ facts ใหม่",
+      "status": "planned",
+      "execution_result": "not_run",
+      "evidence": null
+    },
+    {
+      "case_id": "RG-T07",
+      "finding_id": "RG",
+      "level": "integration",
+      "scenario": "canonical Macro IDs, OFR=0 และ spread=0",
+      "expected_result": "รักษา valid zero และ units/as-of",
+      "status": "planned",
+      "execution_result": "not_run",
+      "evidence": null
+    },
+    {
+      "case_id": "RG-T08",
+      "finding_id": "RG",
+      "level": "ui",
+      "scenario": "null macro/beta, zero units และหลาย missing positions",
+      "expected_result": "ไม่มี crash/fake beta; eligible/missing list ตรงข้อมูลจริง",
+      "status": "planned",
+      "execution_result": "not_run",
+      "evidence": null
+    },
+    {
+      "case_id": "RG-T09",
+      "finding_id": "RG",
+      "level": "architecture",
+      "scenario": "single-brain Hermes, dependency isolation และ tool harness",
+      "expected_result": "ข้อกำหนดเดิมผ่าน ไม่เพิ่ม LLM router หรือ service-locator workaround",
+      "status": "planned",
+      "execution_result": "not_run",
+      "evidence": null
+    }
+  ],
+  "required_final_commands": [
+    ".venv\\Scripts\\pytest tests/ -v",
+    "npm --prefix web test -- --run",
+    "npm --prefix web run typecheck"
+  ],
+  "approval_gates": {
+    "DB_A": "not_requested",
+    "DB_B": "not_requested",
+    "STORAGE_CONTRACT": "not_requested",
+    "GOLDEN": "not_requested",
+    "DEP": "not_requested"
+  }
+}

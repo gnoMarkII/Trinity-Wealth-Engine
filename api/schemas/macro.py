@@ -364,3 +364,25 @@ def macro_dashboard_dto_from_raw(raw: dict) -> MacroDashboardDTO:
     )
 
 
+
+
+class MacroAsOfRowDTO(BaseModel):
+    series_id: str
+    observation_date: str
+    cutoff_date: str
+    selected_vintage_date: Optional[str] = None
+    asof_value: Optional[float] = None
+    latest_vintage_date: Optional[str] = None
+    latest_value: Optional[float] = None
+    revision_after_cutoff: Optional[float] = None
+    unit: str
+    seasonal_adjustment: str
+    status: str = "REVIEW_REQUIRED"
+    evidence_label: str = "SYNTHETIC"
+
+
+class MacroVintageWalkResponseDTO(BaseModel):
+    cutoff_date: str
+    rows: list[MacroAsOfRowDTO]
+    total_series_count: int
+    status: str = "REVIEW_REQUIRED"

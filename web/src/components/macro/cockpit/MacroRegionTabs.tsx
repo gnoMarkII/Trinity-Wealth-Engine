@@ -57,14 +57,14 @@ export const MacroRegionTabs: React.FC<MacroRegionTabsProps> = ({
                   : 'text-zinc-600 hover:bg-white/60 hover:text-zinc-900'
               }`}
             >
-              <div className="flex items-center gap-2 font-bold text-sm tracking-tight w-full">
+              <div className="flex items-center gap-2 font-semibold text-sm tracking-tight w-full">
                 <span className="text-base">{tab.flag}</span>
                 <span className="truncate">{tab.label}</span>
                 {isActive && (
                   <span className="ml-auto inline-block h-2 w-2 shrink-0 rounded-full bg-sky-600" />
                 )}
               </div>
-              <p className="mt-0.5 text-[11px] text-zinc-400 line-clamp-1">{tab.subtitle}</p>
+              <p className="mt-0.5 text-xs text-zinc-500 line-clamp-1">{tab.subtitle}</p>
             </button>
           )
         })}

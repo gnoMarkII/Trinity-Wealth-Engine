@@ -483,6 +483,14 @@
       "reason": "telemetry failure log outside canonical markdown",
       "target_pattern": "data/**",
       "test_id": "test_failure_ledger"
+    },
+    {
+      "source": "tools/thesis/thesis_file_store.py",
+      "profile": "external_runtime",
+      "owner": "thesis-store",
+      "reason": "thesis ledger json and markdown projection in data and vault",
+      "target_pattern": "data/theses/**",
+      "test_id": "test_thesis_file_store"
     }
   ],
   "source_prefix_rules": [
@@ -539,6 +547,13 @@
       "prefix": "api/",
       "profile": "api_runtime",
       "owner": "api-boundary",
+      "reason": "classification only; approval is file/sink based",
+      "classification_only": true
+    },
+    {
+      "prefix": "tools/thesis/",
+      "profile": "thesis_adapter",
+      "owner": "thesis-adapter",
       "reason": "classification only; approval is file/sink based",
       "classification_only": true
     }

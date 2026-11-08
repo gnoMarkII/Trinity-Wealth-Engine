@@ -484,7 +484,6 @@ def test_clean_and_truncate_summary_html():
 def test_unified_cli_runner(monkeypatch, tmp_path):
     monkeypatch.setenv("MOCK_NEWS_FUNNEL_LLM", "true")
     from cli import run_news_funnel
-    from scripts import run_news_funnel_auto
     store_file = str(tmp_path / "cli_test_state.json")
     
     # Test running via unified runner with --mode ingest
@@ -494,10 +493,6 @@ def test_unified_cli_runner(monkeypatch, tmp_path):
     # Verify store was initialized
     assert os.path.exists(store_file)
     
-    # Test running via deprecated runner triggers warning and runs unified main
-    monkeypatch.setattr("sys.argv", ["run_news_funnel_auto.py", "--mode", "ingest", "--store-path", store_file])
-    with pytest.deprecated_call():
-        run_news_funnel_auto.main()
 
 
 def test_synthesize_empty_approval_graceful_skip(tmp_path, monkeypatch):

@@ -1,5 +1,7 @@
 """Inbound HTTP adapter for Earnings Call Summarization & Kanban Dispatch."""
-from fastapi import APIRouter, Depends, HTTPException, Response, status
+from decimal import Decimal
+from typing import Any, Dict, Optional, Tuple
+from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 
 from api.schemas.equity import (
     EarningsCallSummarizeRequest,
@@ -7,6 +9,12 @@ from api.schemas.equity import (
     EarningsCallRunResponse,
     EarningsCallListResponse,
     EarningsCallNoteItem,
+    EarningsBridgeDTO,
+)
+from core.equity_analytics.earnings_bridge import (
+    DriverCategory,
+    EarningsBridgeEngine,
+    EarningsDriver,
 )
 from api.dependencies import get_earnings_call_service, get_promise_service
 from application.earnings_call.dto import (
@@ -285,6 +293,51 @@ def sync_promise_ledger(
         ) from exc
 
 
+from application.earnings_call.disclosures import get_verified_earnings_disclosure
+
+
+@router.get(
+    "/{ticker}/earnings-bridge",
+    response_model=EarningsBridgeDTO,
+    status_code=status.HTTP_200_OK,
+    summary="Get Deterministic Reported-vs-Expected Earnings Surprise Bridge",
+)
+def get_earnings_bridge(
+    ticker: str,
+    period: Optional[str] = Query(default="Q3 2026", description="Reporting period"),
+) -> EarningsBridgeDTO:
+    """Computes deterministic driver bridge comparing reported vs consensus earnings (Chapter 5)."""
+    clean_ticker = ticker.strip().upper()
+    period_str = (period or "Q3 2026").strip()
+
+    disclosure = get_verified_earnings_disclosure(clean_ticker, period_str)
+    if not disclosure:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Earnings bridge data unavailable for ticker '{clean_ticker}' and period '{period_str}'. No verified source filing found.",
+        )
+
+    as_of = disclosure.get("as_of_date", "2026-11-05")
+
+    bridge = EarningsBridgeEngine.build_earnings_bridge(
+        ticker=clean_ticker,
+        period=period_str,
+        as_of_date=as_of,
+        revenue_reported=disclosure["revenue_reported"],
+        revenue_consensus=disclosure["revenue_consensus"],
+        eps_reported=disclosure["eps_reported"],
+        eps_consensus=disclosure["eps_consensus"],
+        revenue_unit=disclosure["revenue_unit"],
+        eps_unit=disclosure["eps_unit"],
+        ebit_margin_reported=disclosure["margin_reported"],
+        ebit_margin_consensus=disclosure["margin_consensus"],
+        revenue_drivers=disclosure["drivers"],
+    )
+
+    data = bridge.to_dict()
+    return EarningsBridgeDTO(**data)
+
+
 __all__ = [
     "router",
     "summarize_earnings_call",
@@ -293,4 +346,5 @@ __all__ = [
     "get_earnings_calls",
     "get_promise_ledger",
     "sync_promise_ledger",
+    "get_earnings_bridge",
 ]

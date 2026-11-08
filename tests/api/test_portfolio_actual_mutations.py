@@ -115,11 +115,22 @@ def test_execute_trade_endpoint(authed_client, isolated_mutation_portfolio):
 
 
 def test_manage_cash_flow_endpoint(authed_client, isolated_mutation_portfolio):
-    r = authed_client.post("/api/portfolio/actual/cashflow", json={"amount": 50_000.0, "action": "deposit", "currency": "THB"})
+    payload = {
+        "amount": 50_000.0,
+        "action": "deposit",
+        "currency": "THB",
+        "idempotency_key": "cash-flow-api-replay-1",
+    }
+    r = authed_client.post("/api/portfolio/actual/cashflow", json=payload)
     assert r.status_code == 200
     data = r.json()
     cash = next((h for h in data["holdings"] if h["symbol"] == "CASH_THB"), None)
     assert cash["units"] == 150_000.0
+
+    replay = authed_client.post("/api/portfolio/actual/cashflow", json=payload)
+    assert replay.status_code == 200
+    replay_cash = next((h for h in replay.json()["holdings"] if h["symbol"] == "CASH_THB"), None)
+    assert replay_cash["units"] == 150_000.0
 
 
 def test_record_income_endpoint(authed_client, isolated_mutation_portfolio):

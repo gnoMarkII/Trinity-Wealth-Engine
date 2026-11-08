@@ -8,8 +8,9 @@ from agents.research_swarm_flow import build_graph, AgentState
 from schemas.micro_quant_schemas import MicroQuantOutput, QuantSignals, AtomicMarketSnapshot
 
 
-def test_equity_synthesizer_llm_failure_saves_partial_revision(monkeypatch):
+def test_equity_synthesizer_llm_failure_saves_partial_revision(monkeypatch, tmp_path):
     """Simulate LLM connection refusal during synthesis and verify quant output is preserved."""
+    monkeypatch.setenv("OBSIDIAN_VAULT_PATH", str(tmp_path))
     monkeypatch.setenv("GOOGLE_API_KEY", "mock-google-api-key-for-test")
     monkeypatch.setenv("GEMINI_API_KEY", "mock-google-api-key-for-test")
     monkeypatch.setenv("OPENAI_API_KEY", "mock-openai-api-key-for-test")

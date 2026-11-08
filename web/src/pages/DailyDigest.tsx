@@ -558,7 +558,7 @@ export default function DailyDigest() {
           <div className="flex rounded-xl bg-surface-strong p-1 border border-edge">
             <button
               onClick={() => handleTabChange('daily')}
-              className={`rounded-lg px-3.5 py-1.5 text-xs font-semibold transition-colors ${
+              className={`rounded-lg px-3.5 py-1.5 text-sm font-semibold transition-colors ${
                 activeTab === 'daily'
                   ? 'bg-panel text-sky-700 shadow-sm'
                   : 'text-zinc-600 hover:text-zinc-900'
@@ -568,7 +568,7 @@ export default function DailyDigest() {
             </button>
             <button
               onClick={() => handleTabChange('weekly')}
-              className={`rounded-lg px-3.5 py-1.5 text-xs font-semibold transition-colors ${
+              className={`rounded-lg px-3.5 py-1.5 text-sm font-semibold transition-colors ${
                 activeTab === 'weekly'
                   ? 'bg-panel text-sky-700 shadow-sm'
                   : 'text-zinc-600 hover:text-zinc-900'

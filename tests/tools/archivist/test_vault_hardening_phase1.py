@@ -48,6 +48,9 @@ def test_get_note_lock_concurrent_writes(tmp_path: Path, monkeypatch):
 def test_dual_write_synchronous_catalog_hook(tmp_path: Path, monkeypatch):
     """Verifies that writing a note automatically synchronizes to SQLite catalog without manual sync."""
     monkeypatch.setenv("OBSIDIAN_VAULT_PATH", str(tmp_path))
+    system_dir = tmp_path / ".system"
+    system_dir.mkdir(parents=True, exist_ok=True)
+    (system_dir / "vault_config.json").write_text(json.dumps({"layout_version": 2}), encoding="utf-8")
     db_path = tmp_path / ".system" / "vault_catalog.db"
     cat = SqliteNoteCatalogAdapter(db_path=db_path, vault_root=tmp_path)
 
@@ -57,15 +60,15 @@ def test_dual_write_synchronous_catalog_hook(tmp_path: Path, monkeypatch):
         content="Testing dual-write sync to SQLite catalog.",
         folder_path="30_Knowledge_Base/Stocks/AUTO",
         tags=["test", "dual_write"],
-        entity_type="Company",
+        entity_type="concept",
     )
     assert "สำเร็จ" in res
 
     # 2. Query catalog directly - it MUST exist immediately
-    entry = cat.get_by_path("30_Knowledge_Base/Stocks/AUTO/AutomatedTestCompany.md")
+    entry = cat.get_by_path("30_Knowledge_Base/Concepts/AutomatedTestCompany.md")
     assert entry is not None
     assert entry.title == "AutomatedTestCompany"
-    assert entry.entity_type in ("company", "stock_hub")
+    assert entry.entity_type == "concept"
 
 
 def test_catalog_outbox_fallback_and_recovery(tmp_path: Path, monkeypatch):

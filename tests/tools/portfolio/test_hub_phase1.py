@@ -160,12 +160,13 @@ def test_record_performance_snapshot_atomic_upsert(isolated_portfolio):
     h.units = 150_000.0
     pt._save(post, state)
     res2 = pt.record_performance_snapshot.invoke({"refresh_prices": False})
-    assert "updated" in res2
+    assert "recorded" in res2
 
-    # Should have replaced the same-day row instead of appending
+    # Same-day snapshots are immutable revisions; readers retain both and expose the latest NAV.
     history2 = pt.get_structured_performance_history()
-    assert len(history2) == 1
-    assert history2[0]["Total_NAV"] == 150_000.0
+    assert len(history2) == 2
+    assert [row["Revision"] for row in history2] == [1, 2]
+    assert history2[-1]["Total_NAV"] == 150_000.0
 
 
 def test_structured_read_accessors(isolated_portfolio):

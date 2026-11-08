@@ -19,6 +19,16 @@ _PERFORMANCE_LOG_HEADER = [
     "Realized_PnL_YTD",
     "Passive_Income_YTD",
     "Asset_Class_Values_THB",
+    "Snapshot_ID",
+    "Revision",
+    "Cutoff_UTC",
+    "Recorded_At_UTC",
+    "Source_State_Sequence",
+    "Source_State_SHA256",
+    "Total_NAV_THB",
+    "Net_External_Flow_THB",
+    "Flow_Coverage_Status",
+    "Cash_Flow_Event_IDs_JSON",
 ]
 
 _TRADES_LOG_HEADER = [

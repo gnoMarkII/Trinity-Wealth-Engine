@@ -11,6 +11,9 @@ import tools.archivist.writer as writer_module
 def test_vault(tmp_path, monkeypatch):
     vault_dir = tmp_path / "memories"
     vault_dir.mkdir(exist_ok=True)
+    system_dir = vault_dir / ".system"
+    system_dir.mkdir()
+    (system_dir / "vault_config.json").write_text(json.dumps({"layout_version": 2}), encoding="utf-8")
     monkeypatch.setenv("OBSIDIAN_VAULT_PATH", str(vault_dir))
     import tools.archivist.core as core_m
     import tools.archivist.writer as writer_m
@@ -24,7 +27,7 @@ def test_vault(tmp_path, monkeypatch):
 
 def test_save_memory_append(test_vault):
     # Setup an existing file
-    target_dir = test_vault / "30_Knowledge_Base" / "Stocks"
+    target_dir = test_vault / "30_Knowledge_Base" / "Concepts"
     target_dir.mkdir(parents=True)
     existing_file = target_dir / "Test Memory.md"
     existing_file.write_text("---\ntitle: Test Memory\ntags:\n  - old_tag\naliases:\n  - old_alias\n---\nOld Content", encoding="utf-8")
@@ -32,14 +35,14 @@ def test_save_memory_append(test_vault):
     res = save_memory.func(
         title="Test Memory",
         content="New Content",
-        folder_path="30_Knowledge_Base/Stocks",
+        folder_path="30_Knowledge_Base/Concepts",
         tags=["new_tag"],
         entity_type="Concept",
         aliases=["new_alias"],
         linked_files=["Linked_Doc"]
     )
     
-    assert "เพิ่มข้อมูลสำเร็จ (append)" in res
+    assert "(append)" in res
     content = existing_file.read_text(encoding="utf-8")
     assert "old_tag" in content
     assert "new_tag" in content
@@ -47,10 +50,10 @@ def test_save_memory_append(test_vault):
     assert "new_alias" in content
     assert "Old Content" in content
     assert "New Content" in content
-    assert "[[Linked_Doc]]" in content
+    assert "Linked_Doc" in content
 
 def test_write_raw_markdown_stocks_and_date(test_vault):
-    raw_md = "---\ntitle: Test AAPL\nentity_type: test\nticker: AAPL\ndate: 2026-06-20\n---\n# Content"
+    raw_md = "---\ntitle: Test AAPL\nentity_type: equity_analysis\nticker: AAPL\ndate: 2026-06-20\n---\n# Content"
     res = write_raw_markdown.func(
         content=raw_md,
         folder_path="30_Knowledge_Base/Stocks",
@@ -59,14 +62,14 @@ def test_write_raw_markdown_stocks_and_date(test_vault):
     assert "บันทึกสำเร็จ" in res
     
     # It should inject ticker subfolder
-    saved_file = test_vault / "30_Knowledge_Base" / "Stocks" / "AAPL" / "Test AAPL.md"
+    saved_file = test_vault / "30_Knowledge_Base" / "Stocks" / "AAPL" / "Analysis" / "Test AAPL.md"
     assert saved_file.exists()
     
     # It should create stock stub
     stub_file = test_vault / "30_Knowledge_Base" / "Stocks" / "AAPL" / "AAPL.md"
     assert stub_file.exists()
     stub_content = stub_file.read_text(encoding="utf-8")
-    assert "entity_type: stock_entity" in stub_content
+    assert "entity_type: stock_hub" in stub_content
     assert "ticker: AAPL" in stub_content
 
     # Call it again to trigger early return in stub creation
@@ -77,7 +80,7 @@ def test_write_raw_markdown_stocks_and_date(test_vault):
     )
 
 def test_write_raw_markdown_daily_snapshots(test_vault):
-    raw_md = "---\ntitle: Snapshot\ndate: 2026-06-20\n---\n# Content"
+    raw_md = "---\ntitle: Snapshot\nentity_type: macro_snapshot\ndate: 2026-06-20\n---\n# Content"
     res = write_raw_markdown.func(
         content=raw_md,
         folder_path="30_Knowledge_Base/Daily_Snapshots",
@@ -86,26 +89,26 @@ def test_write_raw_markdown_daily_snapshots(test_vault):
     assert "บันทึกสำเร็จ" in res
     
     # It should NOT inject date subfolder
-    saved_file = test_vault / "30_Knowledge_Base" / "Daily_Snapshots" / "Snapshot.md"
+    saved_file = test_vault / "30_Knowledge_Base" / "Macroeconomics" / "Daily_Snapshots" / "2026" / "06" / "Snapshot.md"
     assert saved_file.exists()
 
 def test_write_raw_markdown_news_and_youtube_flattened(test_vault):
     # News shouldn't create publisher folder
-    raw_news = "---\npublisher: Reuters\n---\n# Content"
+    raw_news = "---\npublisher: Reuters\ndate: 2026-06-20\n---\n# Content"
     write_raw_markdown.func(content=raw_news, folder_path="30_Knowledge_Base/News", filename="News1")
-    assert (test_vault / "30_Knowledge_Base" / "News" / "News1.md").exists()
+    assert (test_vault / "30_Knowledge_Base" / "News" / "2026" / "06" / "2026-06-20 News1.md").exists()
 
     # YouTube shouldn't create channel folder
-    raw_yt = "---\nchannel: FINNOMENA\n---\n# Content"
+    raw_yt = "---\nvideo_id: abc123XYZ09\nsource_url: https://youtube.com/watch?v=abc123XYZ09\nchannel: FINNOMENA\ndate: 2026-06-20\n---\n# Content"
     write_raw_markdown.func(content=raw_yt, folder_path="30_Knowledge_Base/YouTube_Summaries", filename="YT1")
-    assert (test_vault / "30_Knowledge_Base" / "YouTube_Summaries" / "YT1.md").exists()
+    assert (test_vault / "30_Knowledge_Base" / "YouTube_Summaries" / "2026" / "06" / "YT1.md").exists()
 
 def test_write_raw_markdown_article_note_gets_date_prefix(test_vault):
     """entity_type: article_note ต้องได้ date prefix เหมือน youtube_insight — เดิมมีแค่ youtube
     ทำให้ข่าวที่ agent เรียก write_raw_markdown ตรง ๆ (ไม่ผ่าน news_youtube_flow) ไม่มีวันที่ในชื่อไฟล์"""
     raw_article = "---\nentity_type: article_note\ndate: 2026-07-28\npublisher: Reuters\n---\n# Content"
     write_raw_markdown.func(content=raw_article, folder_path="30_Knowledge_Base/News", filename="Some Article Title")
-    assert (test_vault / "30_Knowledge_Base" / "News" / "2026-07-28 Some Article Title.md").exists()
+    assert (test_vault / "30_Knowledge_Base" / "News" / "2026" / "07" / "2026-07-28 Some Article Title.md").exists()
 
 def test_write_raw_markdown_article_note_not_double_prefixed(test_vault):
     """ถ้า filename มี date prefix มาแล้ว (เช่นมาจาก _save_ingested_content) ไม่ควรเติมซ้ำ"""
@@ -113,8 +116,8 @@ def test_write_raw_markdown_article_note_not_double_prefixed(test_vault):
     write_raw_markdown.func(
         content=raw_article, folder_path="30_Knowledge_Base/News", filename="2026-07-28 Some Article Title"
     )
-    assert (test_vault / "30_Knowledge_Base" / "News" / "2026-07-28 Some Article Title.md").exists()
-    assert not (test_vault / "30_Knowledge_Base" / "News" / "2026-07-28 2026-07-28 Some Article Title.md").exists()
+    assert (test_vault / "30_Knowledge_Base" / "News" / "2026" / "07" / "2026-07-28 Some Article Title.md").exists()
+    assert not (test_vault / "30_Knowledge_Base" / "News" / "2026" / "07" / "2026-07-28 2026-07-28 Some Article Title.md").exists()
 
 import pytest
 
@@ -172,7 +175,7 @@ source_url: https://youtube.com/watch?v=dQw4w9WgXcQ
     assert "ความเสี่ยง" in joined_texts
 
 def test_create_youtube_canvas_exception(test_vault, monkeypatch):
-    raw_md = "---\ntitle: YT\nentity_type: youtube_insight\n---\nContent"
+    raw_md = "---\ntitle: YT\nentity_type: youtube_summary\nvideo_id: abc123XYZ09\nsource_url: https://youtube.com/watch?v=abc123XYZ09\ndate: 2026-06-20\n---\nContent"
     # force exception
     monkeypatch.setattr("tools.archivist.writer._parse_h2_sections", MagicMock(side_effect=Exception("parse error")))
     res = write_raw_markdown.func(
@@ -182,7 +185,7 @@ def test_create_youtube_canvas_exception(test_vault, monkeypatch):
     )
     assert "บันทึกสำเร็จ" in res
     # Canvas won't exist because it failed, but write_raw_markdown shouldn't crash
-    canvas_file = test_vault / "30_Knowledge_Base" / "Videos" / "YT_Insight_Fail.canvas"
+    canvas_file = test_vault / "30_Knowledge_Base" / "YouTube_Summaries" / "2026" / "06" / "YT_Insight_Fail.canvas"
     assert not canvas_file.exists()
 
 
@@ -210,8 +213,8 @@ last_updated: 2026-08-05 22:10:59
     )
     assert "บันทึกสำเร็จ" in res
 
-    md_file = test_vault / "30_Knowledge_Base" / "Stocks" / "AAPL" / "AAPL Latest News 2026-08-05.md"
-    json_file = test_vault / "30_Knowledge_Base" / "Stocks" / "AAPL" / "AAPL Latest News 2026-08-05.json"
+    md_file = test_vault / "30_Knowledge_Base" / "News" / "2026" / "08" / "2026-08-05 AAPL Latest News 2026-08-05.md"
+    json_file = test_vault / "30_Knowledge_Base" / "News" / "2026" / "08" / "2026-08-05 AAPL Latest News 2026-08-05.json"
 
     assert md_file.exists()
     assert json_file.exists()

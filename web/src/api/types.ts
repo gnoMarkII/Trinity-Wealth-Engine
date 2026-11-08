@@ -3925,3 +3925,305 @@ export interface HermesSyncStatusDTO {
   has_updates: boolean
   last_synced_at?: string | null
 }
+
+export interface FalsifierRuleDTO {
+  falsifier_id: string
+  metric_name: string
+  operator: string
+  threshold_value: string
+  unit: string
+  period_basis: string
+  invalidation_impact: string
+  narrative_explanation: string
+}
+
+export interface CatalystEventDTO {
+  catalyst_id: string
+  event_name: string
+  expected_date_str: string
+  confidence_window_days: number
+  source_locator: string
+  status: string
+  observed_date_str?: string | null
+}
+
+export interface ThesisClaimDTO {
+  claim_id: string
+  ticker: string
+  version: number
+  prior_claim_id?: string | null
+  as_of_utc: string
+  claim_statement: string
+  falsifiers: FalsifierRuleDTO[]
+  linked_catalysts: CatalystEventDTO[]
+  status: string
+  evidence_tier: string
+  author_role: string
+  checksum_sha256: string
+}
+
+export interface ReviewSampleItemDTO {
+  sample_id: string
+  symbol: string
+  sample_type: 'BREACH' | 'TOP_MOVER' | 'ROTATION'
+  headline: string
+  target_value: string
+  urgency: 'CRITICAL' | 'HIGH' | 'NORMAL'
+}
+
+export interface PMSignoffRequestDTO {
+  portfolio_id?: string
+  review_date: string
+  signed_off_by?: string
+  notes?: string | null
+  packet_sha256?: string | null
+  verified_sample_ids?: string[]
+  acknowledged_exception_ids?: string[]
+}
+
+export interface PMSignoffResponseDTO {
+  signoff_id: string
+  portfolio_id?: string
+  review_date: string
+  status: string
+  signed_off_by: string
+  signed_off_at_utc: string
+  acknowledged_exceptions_count: number
+  notes?: string | null
+  packet_sha256: string
+  verified_sample_ids?: string[] | null
+  acknowledged_exception_ids?: string[] | null
+}
+
+export interface MorningReviewPacketDTO {
+  review_date: string
+  status: string
+  portfolio_delta: {
+    total_nav: number
+    daily_pnl_value: number | null
+    daily_pnl_pct: number | null
+    cash_weight_pct: number
+    bucket_drift_detected?: boolean
+    top_mover?: { ticker: string; change_pct: number; is_lifetime_fallback?: boolean }
+    gross_market_value?: number
+    net_market_value?: number
+    long_market_value?: number
+    short_market_value?: number
+    long_exposure_pct?: number
+    short_exposure_pct?: number
+    net_exposure_pct?: number
+    portfolio_beta?: number | null
+    beta_benchmark?: string
+    factor_observations_count?: number
+    state_integrity?: {
+      is_valid: boolean
+      summary_status: string
+      message: string
+      checked_files_count: number
+      mismatched_files: string[]
+      missing_files: string[]
+    }
+    [key: string]: unknown
+  }
+  macro_delta: {
+    yield_spread_10y_2y_bps: number | null
+    yield_spread_24h_change_bps: number | null
+    ofr_stress_index: number | null
+    macro_regime_label: string
+    regime_shift_risk?: string
+    vintage_walk?: MacroVintageWalkItem[]
+    [key: string]: unknown
+  }
+  thesis_exceptions: Array<{
+    exception_id: string
+    claim_id: string
+    ticker: string
+    detected_at_utc: string
+    exception_type: string
+    metric_name?: string
+    expected_value?: string
+    observed_value?: string
+    source_citation?: string
+    human_action?: string
+    status?: string
+    [key: string]: unknown
+  }>
+  pending_decisions: Array<{
+    decision_id?: string
+    ticker?: string
+    action: string
+    action_code?: string
+    urgency?: string
+    narrative?: string
+    failure_class?: string
+    smallest_repair?: string
+    [key: string]: unknown
+  }>
+  packet_sha256: string
+  signoff_info?: PMSignoffResponseDTO | null
+  thesis_coverage?: {
+    total_holdings_count: number
+    covered_count: number
+    uncovered_count: number
+    coverage_pct: number
+    covered_tickers: string[]
+    uncovered_tickers: string[]
+    [key: string]: unknown
+  }
+  quarantined_holdings?: Array<{
+    symbol: string
+    reason: string
+    guardrail_code: string
+    current_value_thb?: number
+    [key: string]: unknown
+  }>
+  review_sample?: ReviewSampleItemDTO[]
+  run_quality?: string
+  drift_minutes?: number
+}
+
+
+export interface EarningsSurpriseDTO {
+  metric_name: string
+  reported: string
+  consensus: string
+  delta: string
+  surprise_pct: string
+  direction: 'BEAT' | 'INLINE' | 'MISS'
+  unit: string
+}
+
+export interface EarningsDriverDTO {
+  name: string
+  category: 'VOLUME' | 'PRICE_MIX' | 'FX' | 'INORGANIC_MA' | 'COST_PRODUCTIVITY' | 'ONE_OFF_OTHER' | string
+  impact_value: string
+  unit: string
+  narrative: string
+}
+
+export interface EarningsBridgeDTO {
+  ticker: string
+  period: string
+  as_of_date: string
+  revenue_surprise: EarningsSurpriseDTO
+  eps_surprise: EarningsSurpriseDTO
+  ebit_margin_reported?: string | null
+  ebit_margin_consensus?: string | null
+  revenue_drivers: EarningsDriverDTO[]
+  sum_drivers: string
+  unallocated_delta: string
+  is_mathematically_balanced: boolean
+  thesis_reconciliation_verdict: 'THESIS_CONFIRMED' | 'THESIS_UNDER_PRESSURE' | 'THESIS_IMPAIRED' | 'THESIS_ACCELERATING' | string
+  thesis_reconciliation_narrative: string
+}
+
+export interface MacroVintageWalkItem {
+  series_id: string
+  observation_date: string
+  cutoff_date: string
+  selected_vintage_date?: string | null
+  asof_value?: number | null
+  latest_vintage_date?: string | null
+  latest_value?: number | null
+  revision_after_cutoff?: number | null
+  unit: string
+  seasonal_adjustment: string
+  status: string
+  evidence_label?: string
+}
+
+export interface MacroVintageWalkResponseDTO {
+  cutoff_date: string
+  rows: MacroVintageWalkItem[]
+  total_series_count: number
+  status: string
+}
+
+export interface FactorExposureSnapshotDTO {
+  gross_market_value: number
+  net_market_value: number
+  long_market_value: number
+  short_market_value: number
+  long_exposure_pct: number
+  short_exposure_pct: number
+  net_exposure_pct: number
+  eligible_positions_count: number
+  portfolio_beta?: number | null
+  beta_benchmark?: string | null
+  factor_observations_count?: number | null
+  status: string
+  missing_price_symbols: string[]
+}
+
+export interface CatalystExceptionDTO {
+  exception_id: string
+  catalyst_id: string
+  entity_id: string
+  classification: string
+  source_id: string
+  observed_fact: string
+  prior_date?: string | null
+  new_date?: string | null
+  analyst_field: string
+  human_assessment?: string | null
+  status: string
+  detected_utc: string
+}
+
+export interface VariantPerceptionSnapshotDTO {
+  ticker: string
+  period: string
+  metric_name: string
+  reported_value: string
+  consensus_value: string
+  fund_thesis_value: string
+  street_surprise: string
+  street_surprise_pct: string
+  variant_spread: string
+  variant_spread_pct: string
+  variant_realization: string
+  variant_realization_pct: string
+  alpha_verdict: string
+  unit: string
+}
+
+export interface EstimateRecordDTO {
+  estimate_id: string
+  ticker: string
+  period: string
+  metric_name: string
+  estimate_type: string
+  value: string
+  unit: string
+  as_of_utc: string
+  reason_code: string
+  prior_record_id?: string | null
+  owner: string
+  approval_status: string
+  evidence_label: string
+}
+
+export interface TaskRouteRecordDTO {
+  task_id: string
+  task_description: string
+  work_shape: string
+  selected_surface: string
+  authoritative_system: string
+  reconstructable_artifact: string
+  rejection_gate: string
+  reversal_condition: string
+  rationale: string
+  status: string
+  evaluated_at_utc: string
+}
+
+export interface RoutineStatusReportDTO {
+  routine_id: string
+  scheduled_utc: string
+  status: string
+  is_late_run: boolean
+  is_missed_run: boolean
+  delay_minutes: number
+  grace_period_minutes: number
+  freshness_label: string
+}

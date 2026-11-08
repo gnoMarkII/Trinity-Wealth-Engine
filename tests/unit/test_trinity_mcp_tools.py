@@ -41,9 +41,9 @@ from api.dependencies import get_manager_chat_service, get_hermes_sync_service
 
 
 def test_wrapped_trinity_tools_count_and_names():
-    """Verify that exactly 17 tools are registered and wrapped."""
+    """Verify that exactly 21 tools are registered and wrapped."""
     tools = get_wrapped_trinity_tools()
-    assert len(tools) == 17
+    assert len(tools) == 21
     tool_names = {t.name for t in tools}
     expected_names = {
         "get_latest_macro_summary",
@@ -51,10 +51,14 @@ def test_wrapped_trinity_tools_count_and_names():
         "get_upcoming_economic_events",
         "get_equity_report_summary",
         "get_equity_promises_and_reviews",
+        "get_active_stock_theses",
+        "synthesize_and_save_stock_thesis",
+        "batch_synthesize_portfolio_theses",
         "get_portfolio_overview",
         "get_portfolio_look_through",
         "get_portfolio_advisory_and_alerts",
         "get_portfolio_opportunities",
+        "get_morning_delta_briefing",
         "get_investor_essence_and_buckets",
         "query_terminal_v2_screener",
         "search_knowledge_vault",
@@ -199,14 +203,14 @@ def test_get_manager_chat_service_wiring():
 
 
 def test_create_mcp_server_fastmcp():
-    """Verify FastMCP server instance creates and registers all 17 tools."""
+    """Verify FastMCP server instance creates and registers all 21 tools."""
     import asyncio
     from tools.hermes_bridge.trinity_mcp_server import create_mcp_server
 
     server = create_mcp_server()
     assert server is not None
     tools = asyncio.run(server.list_tools())
-    assert len(tools) == 17
+    assert len(tools) == 21
 
 
 def test_hermes_sync_service_singleton():

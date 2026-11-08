@@ -632,7 +632,9 @@ class PortfolioService:
     def get_structured_performance_history(
         self, days: Optional[int] = None, portfolio_id: str = "default"
     ) -> List[Dict]:
-        return self._perf_service.get_structured_performance_history(days=days, portfolio_id=portfolio_id)
+        return self._perf_service.get_structured_performance_history(
+            days=days, portfolio_id=portfolio_id
+        )
 
     # =========================================================================
     # 9. Prices & Dividends Operations

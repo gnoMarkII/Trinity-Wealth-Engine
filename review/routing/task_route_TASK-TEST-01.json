@@ -1,0 +1,13 @@
+{
+  "task_id": "TASK-TEST-01",
+  "task_description": "Calculate factor beta and portfolio exposure with Decimal",
+  "work_shape": "LIVE_FINANCIAL_CALCULATION",
+  "selected_surface": "DETERMINISTIC_TOOL_OR_SCRIPT",
+  "authoritative_system": "Python Core Engine / Decimal Math Tools",
+  "reconstructable_artifact": "data/state_manifest.json and calculation records",
+  "rejection_gate": "Automated mathematical balance test and AST dependency gate",
+  "reversal_condition": "Calculation requires qualitative narrative interpretation of unstructured disclosures",
+  "rationale": "Yields, exposures, and vintage delta calculations must be computed deterministically with Decimal.",
+  "status": "REVIEW_REQUIRED",
+  "evaluated_at_utc": "2026-11-07T09:54:47Z"
+}

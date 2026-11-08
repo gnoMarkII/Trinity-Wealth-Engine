@@ -82,7 +82,7 @@ export default function Sidebar() {
           <h2 className="flex items-center gap-1.5 text-sm font-bold tracking-tight text-sky-950">
             <span>Money ReRoute</span>
           </h2>
-          <p className="text-[10px] font-semibold tracking-wider uppercase text-sky-600/80">
+          <p className="text-xs font-semibold tracking-wider uppercase text-sky-600/80">
             Trinity Wealth Engine
           </p>
         </div>
@@ -93,7 +93,7 @@ export default function Sidebar() {
         {navSections.map((section, sIdx) => (
           <div key={sIdx} className="space-y-1">
             {section.title && (
-              <h3 className="px-2 pb-0.5 text-[9px] font-bold uppercase tracking-[0.16em] text-zinc-400">
+              <h3 className="px-2 pb-0.5 text-[11px] font-bold uppercase tracking-wider text-zinc-400">
                 {section.title}
               </h3>
             )}
@@ -103,7 +103,7 @@ export default function Sidebar() {
                   key={item.to}
                   to={item.to}
                   className={({ isActive }) =>
-                    `group flex items-center justify-between rounded-xl px-2.5 py-1.5 text-xs transition-all ${
+                    `group flex items-center justify-between rounded-xl px-2.5 py-2 text-sm transition-all ${
                       isActive
                         ? item.isFlagship
                           ? 'border border-sky-300/90 bg-gradient-to-r from-sky-100/80 to-cyan-50/70 font-semibold text-sky-950 shadow-[0_2px_10px_rgba(14,165,233,0.12)]'
@@ -115,14 +115,14 @@ export default function Sidebar() {
                   }
                 >
                   <div className="flex items-center gap-2 min-w-0">
-                    <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-lg bg-sky-100/50 text-[11px] group-hover:scale-110 transition-transform">
+                    <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-lg bg-sky-100/50 text-xs group-hover:scale-110 transition-transform">
                       {item.icon}
                     </span>
                     <span className="truncate">{item.label}</span>
                   </div>
 
                   {item.badge && (
-                    <span className="rounded-md border border-sky-200 bg-sky-50 px-1.5 py-0.2 text-[9px] font-bold text-sky-700">
+                    <span className="rounded-md border border-sky-200 bg-sky-50 px-2 py-0.5 text-[11px] font-bold text-sky-700">
                       {item.badge}
                     </span>
                   )}
@@ -140,7 +140,7 @@ export default function Sidebar() {
       <div className="mt-auto border-t border-sky-100/80 pt-3">
         <button
           onClick={() => logout()}
-          className="flex w-full items-center gap-2 rounded-xl px-2.5 py-2 text-left text-xs text-zinc-500 transition-colors hover:bg-red-50 hover:text-red-600"
+          className="flex w-full items-center gap-2 rounded-xl px-2.5 py-2 text-left text-sm text-zinc-500 transition-colors hover:bg-red-50 hover:text-red-600"
         >
           <span>🚪</span>
           <span>ออกจากระบบ</span>

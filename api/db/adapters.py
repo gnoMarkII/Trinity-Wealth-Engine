@@ -1,6 +1,8 @@
 import api.db.repositories.advisor_chat_repository as advisor_chat_repo_dao
-from application.manager.ports import AdvisorSessionRepoPort
+from application.manager.ports import AdvisorSessionRepoPort, PMReviewSignoffRepoPort
+from application.thesis.ports import ThesisExceptionStorePort
 from core.sandbox.models import AdvisorChatMessage, AdvisorSessionSummary
+import tools.thesis.thesis_sqlite_dao as thesis_sqlite_dao
 import uuid
 """SQLite driven adapters for application repository ports.
 
@@ -16,8 +18,10 @@ adapter boundary and contains only connection/row mapping concerns.
 """
 
 from contextlib import closing, contextmanager
+import hashlib
 import json
 import sqlite3
+from pathlib import Path
 from typing import Any, Iterator, List, Optional, Dict, Sequence
 
 from application.jobs.ports import JobRepositoryPort
@@ -35,6 +39,9 @@ from application.equity.ports import (
     InsiderSyncPort,
 )
 from api.db.connection import get_connection
+from api.config import get_state_db_path
+from tools._atomic_io import _atomic_write_to
+import api.db.repositories.institutional_ledger_repository as institutional_ledger_dao
 import api.db.repositories.job_repository as job_repo_dao
 import api.db.repositories.kanban_repository as kanban_repo_dao
 import api.db.repositories.cache_repository as cache_repo_dao
@@ -908,3 +915,298 @@ class SqliteAdvisorSessionRepositoryAdapter(_SqliteAdapterBase, AdvisorSessionRe
             return advisor_chat_repo_dao.append_message(
                 conn, msg_id, session_id, role, content, citations_json
             )
+
+
+class SqlitePMReviewSignoffRepositoryAdapter(_SqliteAdapterBase, PMReviewSignoffRepoPort):
+    """Concrete SQLite adapter for PMReviewSignoffRepoPort."""
+
+    def get_signoff(
+        self,
+        review_date: str,
+        portfolio_id: str = "default",
+        packet_sha256: Optional[str] = None,
+    ) -> Optional[dict[str, Any]]:
+        with self._connection() as conn:
+            return thesis_sqlite_dao.get_signoff(
+                conn,
+                review_date=review_date,
+                portfolio_id=portfolio_id,
+                packet_sha256=packet_sha256,
+            )
+
+    def save_signoff(
+        self,
+        signoff_id: str,
+        review_date: str,
+        signed_off_by: str,
+        signed_off_at_utc: str,
+        acknowledged_exceptions_count: int,
+        notes: Optional[str],
+        packet_sha256: str,
+        portfolio_id: str = "default",
+        verified_sample_ids: Optional[Sequence[str]] = None,
+        acknowledged_exception_ids: Optional[Sequence[str]] = None,
+        packet_id: Optional[str] = None,
+        request_digest: Optional[str] = None,
+        principal_subject_id: Optional[str] = None,
+        principal_session_id: Optional[str] = None,
+    ) -> Optional[dict[str, Any]]:
+        with self._connection(write=True) as conn:
+            return thesis_sqlite_dao.insert_signoff(
+                conn,
+                signoff_id=signoff_id,
+                review_date=review_date,
+                signed_off_by=signed_off_by,
+                signed_off_at_utc=signed_off_at_utc,
+                acknowledged_exceptions_count=acknowledged_exceptions_count,
+                notes=notes,
+                packet_sha256=packet_sha256,
+                portfolio_id=portfolio_id,
+                verified_sample_ids=verified_sample_ids,
+                acknowledged_exception_ids=acknowledged_exception_ids,
+                packet_id=packet_id,
+                request_digest=request_digest,
+                principal_subject_id=principal_subject_id,
+                principal_session_id=principal_session_id,
+            )
+
+    def save_packet_snapshot(
+        self,
+        *,
+        packet_id: str,
+        portfolio_id: str,
+        review_date: str,
+        cutoff_utc: str,
+        input_fingerprint_sha256: str,
+        policy_version: str,
+        packet_sha256: str,
+        payload: Dict[str, Any],
+    ) -> dict[str, Any]:
+        with self._connection(write=True) as conn:
+            return thesis_sqlite_dao.save_packet_snapshot(
+                conn,
+                packet_id=packet_id,
+                portfolio_id=portfolio_id,
+                review_date=review_date,
+                cutoff_utc=cutoff_utc,
+                input_fingerprint_sha256=input_fingerprint_sha256,
+                policy_version=policy_version,
+                packet_sha256=packet_sha256,
+                payload=payload,
+            )
+
+    def get_packet_snapshot(self, portfolio_id: str, packet_sha256: str) -> Optional[dict[str, Any]]:
+        with self._connection() as conn:
+            return thesis_sqlite_dao.get_packet_snapshot(conn, portfolio_id, packet_sha256)
+
+    def list_signoffs(self, limit: int = 30, portfolio_id: Optional[str] = None) -> list[dict[str, Any]]:
+        with self._connection() as conn:
+            return thesis_sqlite_dao.list_signoffs(conn, limit=limit, portfolio_id=portfolio_id)
+
+
+class SqliteThesisExceptionRepositoryAdapter(_SqliteAdapterBase, ThesisExceptionStorePort):
+    """Concrete SQLite adapter for ThesisExceptionStorePort."""
+
+    def insert_exception(self, exc: Any) -> None:
+        with self._connection(write=True) as conn:
+            thesis_sqlite_dao.insert_exception(conn, exc)
+
+    def list_pending_exceptions(self, ticker: Optional[str] = None, limit: int = 50) -> list[Any]:
+        with self._connection() as conn:
+            return thesis_sqlite_dao.list_pending_exceptions(conn, ticker=ticker, limit=limit)
+
+    def acknowledge_exception(self, exception_id: str) -> None:
+        with self._connection(write=True) as conn:
+            thesis_sqlite_dao.acknowledge_exception(conn, exception_id)
+
+
+
+class SqliteInstitutionalLedgerRepositoryAdapter(_SqliteAdapterBase):
+    """Production SQLite adapter for durable routine, catalyst, source and estimate state."""
+
+    def __init__(self, db_path: Optional[str] = None, *, conn: Optional[sqlite3.Connection] = None, artifact_root: Optional[str | Path] = None) -> None:
+        super().__init__(db_path, conn=conn)
+        resolved_db = Path(db_path or get_state_db_path()).resolve()
+        self.artifact_root = Path(artifact_root).resolve() if artifact_root else resolved_db.parent / "source-artifacts"
+
+    def append_routine_event(self, execution_id: str, event_type: str, payload: Dict[str, Any], portfolio_id: Optional[str] = None) -> dict[str, Any]:
+        with self._connection(write=True) as conn:
+            return institutional_ledger_dao.append_routine_event(
+                conn, execution_id=execution_id, event_type=event_type, payload=payload, portfolio_id=portfolio_id
+            )
+
+    def list_routine_events(self) -> list[dict[str, Any]]:
+        with self._connection() as conn:
+            return institutional_ledger_dao.list_routine_events(conn)
+
+    def save_catalyst_revision(self, catalyst: Dict[str, Any], portfolio_id: Optional[str] = None) -> dict[str, Any]:
+        with self._connection(write=True) as conn:
+            return institutional_ledger_dao.append_catalyst_revision(
+                conn, catalyst, portfolio_id=portfolio_id
+            )
+
+    def list_latest_catalysts(self) -> list[dict[str, Any]]:
+        with self._connection() as conn:
+            return institutional_ledger_dao.list_latest_catalysts(conn)
+
+    def _materialize_source(self, source: Dict[str, Any]) -> dict[str, Any]:
+        content = str(source.get("content") or source.get("content_snippet") or "")
+        if not content.strip():
+            raise ValueError("source capture body is required; a locator alone is not evidence")
+        content_sha = hashlib.sha256(content.encode("utf-8")).hexdigest()
+        supplied_sha = str(source.get("content_sha256") or source.get("content_hash") or "").strip()
+        if supplied_sha and supplied_sha != content_sha:
+            raise ValueError("source capture content hash does not match the supplied body")
+        relative_ref = Path("sha256") / content_sha[:2] / f"{content_sha}.txt"
+        target = (self.artifact_root / relative_ref).resolve()
+        if not target.is_relative_to(self.artifact_root):
+            raise ValueError("source artifact path escaped the configured artifact root")
+        if target.exists():
+            existing = target.read_bytes()
+            if hashlib.sha256(existing).hexdigest() != content_sha:
+                raise ValueError("content-addressed source artifact is corrupt")
+        else:
+            _atomic_write_to(target, content)
+            if hashlib.sha256(target.read_bytes()).hexdigest() != content_sha:
+                raise IOError("source artifact failed post-write hash verification")
+        captured_at = str(source.get("captured_at_utc") or "")
+        source_id = str(source.get("source_id") or "").strip()
+        if not source_id or not captured_at:
+            raise ValueError("source_id and captured_at_utc are required")
+        revision = str(source.get("revision") or source.get("source_revision") or content_sha)
+        locator = str(source.get("source_locator") or source.get("source_url") or "").strip()
+        if not locator:
+            raise ValueError("source_locator is required")
+        metadata = {
+            "entity_id": source.get("entity_id"),
+            "source_type": source.get("source_type"),
+            "effective_period": source.get("effective_period"),
+            "is_untrusted_instruction": bool(source.get("is_untrusted_instruction", False)),
+        }
+        return {
+            "source_id": source_id,
+            "revision": revision,
+            "issuer_id": source.get("issuer_id") or source.get("entity_id"),
+            "ticker": source.get("ticker") or source.get("entity_id"),
+            "document_type": str(source.get("document_type") or source.get("source_type") or "UNKNOWN"),
+            "fiscal_period": source.get("fiscal_period") or source.get("effective_period"),
+            "source_locator": locator,
+            "artifact_ref": relative_ref.as_posix(),
+            "content_sha256": content_sha,
+            "captured_at_utc": captured_at,
+            "available_at_utc": source.get("available_at_utc") or captured_at,
+            "metadata": metadata,
+            "content_snippet": content,
+        }
+
+    def capture_source(self, source: Dict[str, Any]) -> dict[str, Any]:
+        materialized = self._materialize_source(dict(source))
+        stored_fields = {k: v for k, v in materialized.items() if k != "content_snippet"}
+        with self._connection(write=True) as conn:
+            stored = institutional_ledger_dao.insert_source_capture(conn, stored_fields)
+        return {**stored, **materialized}
+
+    def list_source_captures(self) -> list[dict[str, Any]]:
+        with self._connection() as conn:
+            rows = institutional_ledger_dao.list_source_captures(conn)
+        result = []
+        for row in rows:
+            target = (self.artifact_root / Path(row["artifact_ref"])).resolve()
+            if not target.is_relative_to(self.artifact_root) or not target.is_file():
+                raise FileNotFoundError(f"source artifact unavailable: {row['artifact_ref']}")
+            content = target.read_bytes()
+            if hashlib.sha256(content).hexdigest() != row["content_sha256"]:
+                raise ValueError(f"source artifact hash mismatch: {row['artifact_ref']}")
+            metadata = row.get("metadata") or {}
+            result.append({
+                **row,
+                "entity_id": metadata.get("entity_id") or row.get("ticker") or row.get("issuer_id") or "",
+                "source_type": metadata.get("source_type") or row["document_type"],
+                "effective_period": metadata.get("effective_period") or row.get("fiscal_period") or "",
+                "is_untrusted_instruction": bool(metadata.get("is_untrusted_instruction", False)),
+                "content_snippet": content.decode("utf-8"),
+                "content_hash": row["content_sha256"],
+            })
+        return result
+
+    def save_catalyst_assessment(self, assessment: Dict[str, Any]) -> dict[str, Any]:
+        with self._connection(write=True) as conn:
+            return institutional_ledger_dao.insert_catalyst_assessment(conn, assessment)
+
+    def list_catalyst_assessments(self) -> list[dict[str, Any]]:
+        with self._connection() as conn:
+            return institutional_ledger_dao.list_catalyst_assessments(conn)
+
+    def save_estimate_record(self, record: Dict[str, Any]) -> dict[str, Any]:
+        with self._connection(write=True) as conn:
+            return institutional_ledger_dao.insert_estimate_record(conn, record)
+
+    def list_estimate_records(self) -> list[dict[str, Any]]:
+        with self._connection() as conn:
+            return institutional_ledger_dao.list_estimate_records(conn)
+
+    def import_legacy_records(self, source_digest: str, record_family: str, records: list[Dict[str, Any]]) -> dict[str, int]:
+        """Idempotently import a validated legacy JSON list in one DB transaction."""
+        if record_family not in {"routine", "catalyst", "estimate", "source"}:
+            raise ValueError(f"unsupported legacy record family: {record_family}")
+        prepared_sources = []
+        if record_family == "source":
+            prepared_sources = [self._materialize_source(dict(row)) for row in records]
+        imported = skipped = 0
+        with self._connection(write=True) as conn:
+            for index, original in enumerate(records):
+                record = dict(original)
+                if record_family == "routine":
+                    legacy_id = str(
+                        record.get("event_id") or record.get("routine_event_id")
+                        or f"{record.get('execution_id', '')}:{record.get('event_sequence', index)}"
+                    )
+                    record.setdefault(
+                        "event_id",
+                        "LEGACY-" + hashlib.sha256(
+                            json.dumps(record, sort_keys=True, ensure_ascii=False, separators=(",", ":"), default=str).encode("utf-8")
+                        ).hexdigest()[:32],
+                    )
+                elif record_family == "source":
+                    legacy_id = f"{record.get('source_id', '')}:{record.get('revision') or record.get('source_revision') or index}"
+                elif record_family == "catalyst":
+                    legacy_id = str(record.get("catalyst_id") or index)
+                else:
+                    legacy_id = str(record.get("estimate_id") or index)
+                payload_json = json.dumps(record, sort_keys=True, ensure_ascii=False, separators=(",", ":"), default=str)
+                payload_sha = hashlib.sha256(payload_json.encode("utf-8")).hexdigest()
+                existing = conn.execute(
+                    """SELECT payload_sha256 FROM state_import_receipts
+                       WHERE source_digest=? AND record_family=? AND legacy_record_id=?""",
+                    (source_digest, record_family, legacy_id),
+                ).fetchone()
+                if existing:
+                    existing_sha = existing[0]
+                    if existing_sha != payload_sha:
+                        raise ValueError(f"import conflict for {record_family}:{legacy_id}")
+                    skipped += 1
+                    continue
+                if record_family == "routine":
+                    institutional_ledger_dao.append_routine_event(
+                        conn, execution_id=str(record["execution_id"]),
+                        event_type=str(record.get("event_type") or record.get("status") or "legacy_import"), payload=record
+                    )
+                    target_id = legacy_id
+                elif record_family == "catalyst":
+                    row = institutional_ledger_dao.append_catalyst_revision(conn, record)
+                    target_id = str(row["catalyst_id"])
+                elif record_family == "estimate":
+                    row = institutional_ledger_dao.insert_estimate_record(conn, record)
+                    target_id = str(row["estimate_id"])
+                else:
+                    materialized = prepared_sources[index]
+                    fields = {k: v for k, v in materialized.items() if k != "content_snippet"}
+                    row = institutional_ledger_dao.insert_source_capture(conn, fields)
+                    target_id = f"{row['source_id']}:{row['revision']}"
+                institutional_ledger_dao.insert_import_receipt(
+                    conn, source_digest=source_digest, record_family=record_family,
+                    legacy_record_id=legacy_id, payload_sha256=payload_sha,
+                    target_record_id=target_id,
+                )
+                imported += 1
+        return {"imported": imported, "skipped": skipped}

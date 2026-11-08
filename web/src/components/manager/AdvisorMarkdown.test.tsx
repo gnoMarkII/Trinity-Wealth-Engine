@@ -59,5 +59,16 @@ describe('AdvisorMarkdown Component', () => {
     expect(screen.getByText('กำลังวิเคราะห์...')).toBeInTheDocument()
     expect(container.querySelector('.animate-stream-caret')).not.toBeNull()
   })
+
+  it('renders institutional evidence badges for DOCUMENTED, TESTED, INFERRED, UNVERIFIED', () => {
+    const content = 'รายได้เติบโต 45% [DOCUMENTED: SEC 10-Q p.12] และ DCF Fair Value คือ $185 [TESTED: Python DCF] คาดว่าจะเร่งตัว [INFERRED] แต่มีข่าวลือชิปรุ่นใหม่ [UNVERIFIED: Twitter leak]'
+
+    render(<AdvisorMarkdown content={content} />)
+
+    expect(screen.getByText('DOC: SEC 10-Q p.12')).toBeInTheDocument()
+    expect(screen.getByText('MATH: Python DCF')).toBeInTheDocument()
+    expect(screen.getByText('INFERRED')).toBeInTheDocument()
+    expect(screen.getByText('UNVERIFIED: Twitter leak')).toBeInTheDocument()
+  })
 })
 

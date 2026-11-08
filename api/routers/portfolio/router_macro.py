@@ -11,6 +11,7 @@ from api.dependencies import (
     get_macro_service,
     get_portfolio_calendar_service,
     get_sector_rotation_service,
+    get_macro_vintage_service,
 )
 from api.error_mapping import handle_domain_exceptions as handle_portfolio_exceptions
 from api.schemas import (
@@ -22,6 +23,8 @@ from api.schemas import (
     DigestReadStateRequestDTO,
     DigestReadStateResponseDTO,
     CalendarEventDTO,
+    MacroAsOfRowDTO,
+    MacroVintageWalkResponseDTO,
     MacroDashboardDTO,
     MacroIndicatorSeriesDTO,
     MacroNotebookLMExportRequestDTO,
@@ -37,6 +40,7 @@ from api.schemas import (
 )
 from application.macro.service import MacroApplicationService, PortfolioCalendarApplicationService
 from application.macro.sector_rotation_service import SectorRotationApplicationService
+from application.macro.vintage_service import MacroVintageApplicationService
 from api.schemas.sector_rotation import (
     SectorRotationHistoryDTO,
     SectorRotationResponseDTO,
@@ -399,3 +403,40 @@ def update_digest_read_state(
         return DigestReadStateResponseDTO.model_validate(data)
     except Exception as exc:
         raise HTTPException(status_code=500, detail=f"Failed to update read state: {exc}") from exc
+
+
+@router.get(
+    "/api/macro/vintage-walk",
+    response_model=MacroVintageWalkResponseDTO,
+    summary="Point-in-Time Macro Vintage Walk & Subsequent Revision (Chapter 6 & App H)",
+)
+def get_macro_vintage_walk_endpoint(
+    cutoff_date: Optional[str] = Query(None, description="Point-in-time cutoff date YYYY-MM-DD"),
+    service: MacroVintageApplicationService = Depends(get_macro_vintage_service),
+) -> MacroVintageWalkResponseDTO:
+    """Calculates Point-in-Time Macro Vintage As-Of values and subsequent revisions without look-ahead bias."""
+    target_cutoff = cutoff_date or datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    walk = service.get_vintage_walk(cutoff_date=target_cutoff)
+    rows = [
+        MacroAsOfRowDTO(
+            series_id=r.series_id,
+            observation_date=r.observation_date,
+            cutoff_date=r.cutoff_date,
+            selected_vintage_date=r.selected_vintage_date,
+            asof_value=float(r.asof_value) if r.asof_value is not None else None,
+            latest_vintage_date=r.latest_vintage_date,
+            latest_value=float(r.latest_value) if r.latest_value is not None else None,
+            revision_after_cutoff=float(r.revision_after_cutoff) if r.revision_after_cutoff is not None else None,
+            unit=r.unit,
+            seasonal_adjustment=r.seasonal_adjustment,
+            status=r.status,
+            evidence_label=r.evidence_label,
+        )
+        for r in walk
+    ]
+    return MacroVintageWalkResponseDTO(
+        cutoff_date=target_cutoff,
+        rows=rows,
+        total_series_count=len(rows),
+        status="REVIEW_REQUIRED",
+    )

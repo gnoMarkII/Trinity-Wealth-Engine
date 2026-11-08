@@ -13,9 +13,11 @@ from api.routers.equity.router_earnings_call import (
     get_earnings_calls,
     get_promise_ledger,
     sync_promise_ledger,
+    get_earnings_bridge,
 )
 from api.routers.equity.router_event_study import router as event_study_router, get_event_study_presets, execute_event_study
 from api.routers.equity.router_position_review import router as position_review_router, get_position_review
+from api.routers.equity.router_estimates import router as estimates_router, get_variant_perception, get_estimates_ledger
 
 router = APIRouter()
 router.include_router(valuation_router)
@@ -25,6 +27,7 @@ router.include_router(financials_router)
 router.include_router(earnings_call_router)
 router.include_router(event_study_router)
 router.include_router(position_review_router)
+router.include_router(estimates_router)
 
 __all__ = [
     "router",
@@ -39,6 +42,7 @@ __all__ = [
     "get_earnings_calls",
     "get_promise_ledger",
     "sync_promise_ledger",
+    "get_earnings_bridge",
     "get_event_study_presets",
     "execute_event_study",
 ]

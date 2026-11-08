@@ -36,6 +36,32 @@ _essence_buckets_provider: Optional[Callable[[], str]] = None
 _screener_provider: Optional[Callable[[list[str]], str]] = None
 _search_vault_provider: Optional[Callable[[str], str]] = None
 _save_vault_provider: Optional[Callable[[str, str], str]] = None
+_morning_pm_review_provider: Optional[Callable[[], str]] = None
+_stock_theses_provider: Optional[Callable[[str], str]] = None
+
+
+def set_morning_pm_review_provider(provider: Callable[[], str]) -> None:
+    global _morning_pm_review_provider
+    _morning_pm_review_provider = provider
+
+
+def set_stock_theses_provider(provider: Callable[[str], str]) -> None:
+    global _stock_theses_provider
+    _stock_theses_provider = provider
+
+
+_thesis_synthesizer_provider: Optional[Callable[[str, bool], str]] = None
+_batch_thesis_synthesizer_provider: Optional[Callable[[str, bool], str]] = None
+
+
+def set_thesis_synthesizer_provider(provider: Callable[[str, bool], str]) -> None:
+    global _thesis_synthesizer_provider
+    _thesis_synthesizer_provider = provider
+
+
+def set_batch_thesis_synthesizer_provider(provider: Callable[[str, bool], str]) -> None:
+    global _batch_thesis_synthesizer_provider
+    _batch_thesis_synthesizer_provider = provider
 
 
 def set_research_job_dispatcher(dispatcher: Callable[[str, str], str]) -> None:
@@ -429,7 +455,67 @@ def update_advisor_memory(target: str, markdown_content: str) -> str:
         return f"ไม่สามารถอัปเดตความจำได้: {exc}"
 
 
-# All 17 Tools
+@tool
+def get_morning_delta_briefing() -> str:
+    """อ่านสรุปส่วนต่างประจำวันรอบ 24 ชม. (Morning Delta-Only Briefing) สำหรับผู้จัดการกองทุน (PM)
+    รวบรวม 4 มิติ: Portfolio Delta, Macro Delta, Breached Thesis Exceptions, และ Pending Actions
+    """
+    if _morning_pm_review_provider:
+        try:
+            return _morning_pm_review_provider()
+        except Exception as e:
+            return f"ไม่สามารถดึงข้อมูล Morning Delta ได้: {e}"
+    return "ระบบ Morning PM Review พร้อมใช้งาน (ยังไม่มีข้อมูลสรุปสำหรับวันนี้)"
+
+
+@tool
+def get_active_stock_theses(ticker: str = "") -> str:
+    """ดึงข้อมูลสมมติฐานการลงทุนที่มีผลบังคับใช้ (Active Thesis Claims) และเกณฑ์ Falsifier Floor ของหุ้น
+    แสดงเกณฑ์ตัวเลขชี้ขาดที่ลบล้างสมมติฐาน, วันที่ Catalyst สำคัญ, และระดับความน่าเชื่อถือ (Evidence Tier)
+    Args:
+        ticker: รหัสหุ้น เช่น 'NVDA', 'MSFT', 'CPALL.BK' (หากไม่ระบุจะดึงหุ้นทั้งหมดที่มีสมมติฐาน)
+    """
+    if _stock_theses_provider:
+        try:
+            return _stock_theses_provider(ticker)
+        except Exception as e:
+            return f"ไม่สามารถดึงข้อมูล Theses ได้: {e}"
+    return f"ไม่พบข้อมูล Thesis สำหรับ {ticker}"
+
+
+@tool
+def synthesize_and_save_stock_thesis(ticker: str, dry_run: bool = False) -> str:
+    """วิเคราะห์และสังเคราะห์สมมติฐานการลงทุน (Investment Thesis) และเกณฑ์ Falsifiers 3 เสาหลัก (Stop Loss, การเติบโต, อัตรากำไร)
+    พร้อมทั้งบันทึก Falsifiers ลงในระบบอัตโนมัติ เพื่อให้ Thesis Watchdog ติดตามเฝ้าระวังพอร์ต
+    Args:
+        ticker: รหัสหุ้น เช่น 'FTNT', 'GOOGL', 'NFLX', 'BDMS.BK'
+        dry_run: หากเป็น True จะเป็นการจำลองผลการสังเคราะห์โดยยังไม่บันทึกจริง (Default: False)
+    """
+    if _thesis_synthesizer_provider:
+        try:
+            return _thesis_synthesizer_provider(ticker, dry_run)
+        except Exception as e:
+            return f"เกิดข้อผิดพลาดในการสังเคราะห์ Thesis สำหรับ {ticker}: {e}"
+    return f"ระบบสังเคราะห์ Thesis ยังไม่ได้เชื่อมต่อสำหรับ {ticker}"
+
+
+@tool
+def batch_synthesize_portfolio_theses(portfolio_id: str = "default", dry_run: bool = False) -> str:
+    """สแกนหุ้นทั้งหมดในพอร์ตที่ยังไม่มี Thesis (Uncovered Holdings) แล้วสังเคราะห์และบันทึก FalsifierRules ครบทุกตัวให้อัตโนมัติ
+    ช่วยยกระดับ Portfolio Thesis Coverage จากเดิมขึ้นสู่มาตรฐานสถาบัน (> 80%) ทันที
+    Args:
+        portfolio_id: รหัสพอร์ต เช่น 'default'
+        dry_run: หากเป็น True จะเป็นการจำลองสแกนและสังเคราะห์โดยยังไม่บันทึกจริง (Default: False)
+    """
+    if _batch_thesis_synthesizer_provider:
+        try:
+            return _batch_thesis_synthesizer_provider(portfolio_id, dry_run)
+        except Exception as e:
+            return f"เกิดข้อผิดพลาดในการรัน Batch สังเคราะห์ Theses: {e}"
+    return "ระบบ Batch สังเคราะห์ Theses ยังไม่ได้เชื่อมต่อ"
+
+
+# All 19 Tools
 ALL_TRINITY_TOOLS = [
     # Domain 1
     get_latest_macro_summary,
@@ -438,11 +524,15 @@ ALL_TRINITY_TOOLS = [
     # Domain 2
     get_equity_report_summary,
     get_equity_promises_and_reviews,
+    get_active_stock_theses,
+    synthesize_and_save_stock_thesis,
+    batch_synthesize_portfolio_theses,
     # Domain 3
     get_portfolio_overview,
     get_portfolio_look_through,
     get_portfolio_advisory_and_alerts,
     get_portfolio_opportunities,
+    get_morning_delta_briefing,
     # Domain 4
     get_investor_essence_and_buckets,
     # Domain 5

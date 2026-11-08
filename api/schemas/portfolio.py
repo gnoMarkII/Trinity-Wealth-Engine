@@ -400,6 +400,7 @@ class CashFlowRequestDTO(BaseModel):
     exchange_rate: Optional[float] = None
     date: Optional[str] = None
     notes: str = ""
+    idempotency_key: Optional[str] = None
 
 
 class IncomeRequestDTO(BaseModel):
@@ -471,3 +472,19 @@ class PortfolioCalendarDTO(BaseModel):
     tickers_failed: list[str] = []
 
 
+
+
+class FactorExposureSnapshotDTO(BaseModel):
+    gross_market_value: float
+    net_market_value: float
+    long_market_value: float
+    short_market_value: float
+    long_exposure_pct: float
+    short_exposure_pct: float
+    net_exposure_pct: float
+    eligible_positions_count: int
+    portfolio_beta: Optional[float] = None
+    beta_benchmark: Optional[str] = None
+    factor_observations_count: Optional[int] = None
+    status: str = "REVIEW_REQUIRED"
+    missing_price_symbols: list[str] = []

@@ -1,6 +1,6 @@
 """Application Layer DTOs for Earnings Call Context."""
 from dataclasses import dataclass
-from typing import Optional
+from typing import Any, Dict, Optional
 
 from application.earnings_call.workflow import (
     EarningsCallRunStatus,
@@ -92,6 +92,7 @@ class EarningsCallNoteDTO:
     date: str
     last_updated: str
     has_full_transcript: bool = True
+    reconciliation_bridge: Optional[Dict[str, Any]] = None
 
 
 @dataclass(frozen=True)

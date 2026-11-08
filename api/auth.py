@@ -10,6 +10,7 @@ from collections import defaultdict, deque
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from itsdangerous import BadSignature, SignatureExpired, URLSafeTimedSerializer
 from pydantic import BaseModel
+from core.security import AuthenticatedPrincipal
 
 from api.config import (
     SESSION_COOKIE_NAME,
@@ -103,17 +104,31 @@ def me(request: Request) -> dict:
     return {"authenticated": True}
 
 
-def require_session(request: Request) -> None:
+def require_session(request: Request) -> AuthenticatedPrincipal:
     """FastAPI dependency — แปะไว้ที่ทุก route ใต้ /api/* ยกเว้น login/health"""
     token = request.cookies.get(SESSION_COOKIE_NAME)
     if not token:
         raise HTTPException(status_code=401, detail="ไม่พบ session — กรุณา login ก่อน")
     try:
-        _serializer().loads(token, max_age=SESSION_MAX_AGE_SECONDS)
+        data = _serializer().loads(token, max_age=SESSION_MAX_AGE_SECONDS)
+        sid = (data.get("sid") if isinstance(data, dict) else None) or "legacy_session"
+        subject = f"session:{sid}"
+        return AuthenticatedPrincipal(
+            subject_id=subject,
+            session_id=str(sid),
+            display_name=subject,
+            role="PORTFOLIO_MANAGER_HERMES",
+            is_authenticated=True,
+        )
     except SignatureExpired:
         raise HTTPException(status_code=401, detail="session หมดอายุ — กรุณา login ใหม่")
     except BadSignature:
         raise HTTPException(status_code=401, detail="session ไม่ถูกต้อง")
+
+
+def get_authenticated_principal(principal: AuthenticatedPrincipal = Depends(require_session)) -> AuthenticatedPrincipal:
+    """Dependency for routes requiring trusted identity context."""
+    return principal
 
 
 def get_session_id(request: Request) -> str:

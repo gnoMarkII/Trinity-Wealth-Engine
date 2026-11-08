@@ -98,6 +98,34 @@ class PortfolioTransactionStore:
                 );
                 CREATE INDEX IF NOT EXISTS idx_portfolio_receipts_cmd
                     ON portfolio_command_receipts(portfolio_id, command_id);
+                CREATE TABLE IF NOT EXISTS portfolio_cash_flow_events (
+                    event_id TEXT PRIMARY KEY,
+                    portfolio_id TEXT NOT NULL,
+                    idempotency_key TEXT NOT NULL,
+                    request_digest TEXT NOT NULL,
+                    action TEXT NOT NULL CHECK (action IN ('deposit','withdraw')),
+                    amount_native_decimal TEXT NOT NULL,
+                    currency TEXT NOT NULL CHECK (currency IN ('THB','USD')),
+                    fx_rate_to_thb_decimal TEXT,
+                    fx_source_id TEXT,
+                    amount_thb_decimal TEXT,
+                    occurred_at_utc TEXT NOT NULL,
+                    recorded_at_utc TEXT NOT NULL,
+                    source_state_sequence INTEGER NOT NULL,
+                    source_state_sha256 TEXT NOT NULL,
+                    flow_kind TEXT NOT NULL,
+                    flow_coverage_status TEXT NOT NULL,
+                    payload_json TEXT NOT NULL,
+                    UNIQUE(portfolio_id, idempotency_key)
+                );
+                CREATE INDEX IF NOT EXISTS idx_cash_flow_portfolio_sequence
+                    ON portfolio_cash_flow_events(portfolio_id, source_state_sequence);
+                CREATE TRIGGER IF NOT EXISTS trg_cash_flow_events_immutable_update
+                    BEFORE UPDATE ON portfolio_cash_flow_events
+                    BEGIN SELECT RAISE(ABORT, 'cash flow events are append-only'); END;
+                CREATE TRIGGER IF NOT EXISTS trg_cash_flow_events_immutable_delete
+                    BEFORE DELETE ON portfolio_cash_flow_events
+                    BEGIN SELECT RAISE(ABORT, 'cash flow events are append-only'); END;
                 """
             )
 
@@ -110,6 +138,7 @@ class PortfolioTransactionStore:
         event_id: Optional[str] = None,
         expected_sequence: Optional[int] = None,
         command_receipt: Optional[Mapping[str, Any]] = None,
+        related_events: Optional[list[Mapping[str, Any]]] = None,
     ) -> int:
         portfolio_id = str(portfolio_id or "").strip()
         event_type = str(event_type or "").strip()
@@ -144,6 +173,57 @@ class PortfolioTransactionStore:
                 "INSERT INTO portfolio_events(event_id, portfolio_id, sequence, event_type, payload_json, occurred_at) VALUES (?, ?, ?, ?, ?, ?)",
                 (event_id, portfolio_id, sequence, event_type, payload_json, now),
             )
+            for related in related_events or []:
+                related_type = str(related.get("event_type") or "").strip()
+                related_payload = dict(related.get("payload") or {})
+                if not related_type or not related_payload:
+                    raise ValueError("related portfolio events require event_type and payload")
+                if related_type == "cash_flow_recorded":
+                    idempotency_key = str(related_payload.get("idempotency_key") or "").strip()
+                    if not idempotency_key:
+                        raise ValueError("cash flow event requires idempotency_key")
+                    prior_flow = conn.execute(
+                        "SELECT request_digest FROM portfolio_cash_flow_events WHERE portfolio_id=? AND idempotency_key=?",
+                        (portfolio_id, idempotency_key),
+                    ).fetchone()
+                    if prior_flow:
+                        raise RuntimeError("cash flow idempotency key was already committed")
+                source_state_sequence = sequence
+                related_payload["source_state_sequence"] = source_state_sequence
+                related_payload["source_state_sha256"] = hashlib.sha256(
+                    _canonical(dict(payload)).encode("utf-8")
+                ).hexdigest()
+                related_payload.setdefault("portfolio_id", portfolio_id)
+                related_payload.setdefault("recorded_at_utc", now)
+                related_id = str(related_payload.get("event_id") or f"evt_{uuid.uuid4().hex}")
+                related_json = _canonical(related_payload)
+                sequence += 1
+                conn.execute(
+                    "INSERT INTO portfolio_events(event_id, portfolio_id, sequence, event_type, payload_json, occurred_at) VALUES (?, ?, ?, ?, ?, ?)",
+                    (related_id, portfolio_id, sequence, related_type, related_json, now),
+                )
+                if related_type == "cash_flow_recorded":
+                    conn.execute(
+                        """
+                        INSERT INTO portfolio_cash_flow_events
+                        (event_id, portfolio_id, idempotency_key, request_digest, action,
+                         amount_native_decimal, currency, fx_rate_to_thb_decimal, fx_source_id,
+                         amount_thb_decimal, occurred_at_utc, recorded_at_utc,
+                         source_state_sequence, source_state_sha256, flow_kind,
+                         flow_coverage_status, payload_json)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        """,
+                        (
+                            related_id, portfolio_id, idempotency_key,
+                            str(related_payload["request_digest"]), str(related_payload["action"]),
+                            str(related_payload["amount_native_decimal"]), str(related_payload["currency"]),
+                            related_payload.get("fx_rate_to_thb_decimal"), related_payload.get("fx_source_id"),
+                            related_payload.get("amount_thb_decimal"), str(related_payload["occurred_at_utc"]),
+                            str(related_payload["recorded_at_utc"]), source_state_sequence,
+                            str(related_payload["source_state_sha256"]), str(related_payload["flow_kind"]),
+                            str(related_payload["flow_coverage_status"]), related_json,
+                        ),
+                    )
             if command_receipt and command_receipt.get("idempotency_key"):
                 conn.execute(
                     """
@@ -176,6 +256,7 @@ class PortfolioTransactionStore:
         event_id: Optional[str] = None,
         expected_sequence: Optional[int] = None,
         command_receipt: Optional[Mapping[str, Any]] = None,
+        related_events: Optional[list[Mapping[str, Any]]] = None,
     ) -> int:
         return self.append_event(
             portfolio_id,
@@ -187,7 +268,78 @@ class PortfolioTransactionStore:
             event_id=event_id,
             expected_sequence=expected_sequence,
             command_receipt=command_receipt,
+            related_events=related_events,
         )
+
+    def cash_flow_coverage_between(
+        self,
+        portfolio_id: str,
+        *,
+        after_sequence: int,
+        through_sequence: int,
+    ) -> bool:
+        """True only when every state snapshot in the interval has a durable event explanation."""
+        events = self.events(portfolio_id, through_sequence=through_sequence)
+        explained = {
+            int(event["payload"]["source_state_sequence"])
+            for event in events
+            if event["event_type"] != "state_snapshot"
+            and isinstance(event.get("payload"), dict)
+            and str(event["payload"].get("source_state_sequence", "")).isdigit()
+        }
+        for event in events:
+            sequence = int(event["sequence"])
+            if sequence <= int(after_sequence) or sequence > int(through_sequence):
+                continue
+            if event["event_type"] != "state_snapshot":
+                continue
+            # The final snapshot is the performance capture itself; it has no preceding user cash flow.
+            if sequence == int(through_sequence):
+                continue
+            if sequence not in explained:
+                return False
+        return True
+
+    def get_cash_flow_event(self, portfolio_id: str, idempotency_key: str) -> Optional[dict[str, Any]]:
+        with self._connect() as conn:
+            row = conn.execute(
+                "SELECT * FROM portfolio_cash_flow_events WHERE portfolio_id=? AND idempotency_key=?",
+                (str(portfolio_id), str(idempotency_key)),
+            ).fetchone()
+            if not row:
+                return None
+            item = dict(row)
+            item["payload"] = json.loads(item.pop("payload_json"))
+            return item
+
+    def list_cash_flow_events(
+        self,
+        portfolio_id: str,
+        *,
+        after_sequence: Optional[int] = None,
+        through_sequence: Optional[int] = None,
+    ) -> list[dict[str, Any]]:
+        clauses = ["portfolio_id=?"]
+        params: list[Any] = [str(portfolio_id)]
+        if after_sequence is not None:
+            clauses.append("source_state_sequence > ?")
+            params.append(int(after_sequence))
+        if through_sequence is not None:
+            clauses.append("source_state_sequence <= ?")
+            params.append(int(through_sequence))
+        with self._connect() as conn:
+            rows = conn.execute(
+                "SELECT * FROM portfolio_cash_flow_events WHERE "
+                + " AND ".join(clauses)
+                + " ORDER BY source_state_sequence, event_id",
+                params,
+            ).fetchall()
+            result = []
+            for row in rows:
+                item = dict(row)
+                item["payload"] = json.loads(item.pop("payload_json"))
+                result.append(item)
+            return result
 
     def get_command_receipt(
         self,

@@ -13,7 +13,9 @@ from typing import Optional
 from fastapi import APIRouter, Depends, Query, status
 
 from api.auth import require_session
-from api.dependencies import get_portfolio_advisory_service
+from api.dependencies import get_portfolio_advisory_service, get_pm_review_service
+from application.manager.pm_review_service import PMReviewApplicationService
+from api.schemas.portfolio import FactorExposureSnapshotDTO
 from api.routers.portfolio.common import handle_portfolio_exceptions
 from application.portfolio.advisory_service import PortfolioAdvisoryService
 from schemas.portfolio_advisory_schemas import (
@@ -65,3 +67,36 @@ async def synthesize_advisory_playbook_endpoint(
             return advisory_service.synthesize_playbook(force_refresh=force_refresh)
         return advisory_service.synthesize_playbook(force_refresh=force_refresh, portfolio_id=target_pid)
 
+
+@router.get(
+    "/api/portfolio/factor-exposure",
+    response_model=FactorExposureSnapshotDTO,
+    summary="Get Chapter 8 Factor Exposure & Missing Price Invariant Snapshot",
+    dependencies=[Depends(require_session)],
+)
+async def get_factor_exposure_endpoint(
+    portfolio_id: str = Query(default="default", description="Portfolio identifier to evaluate"),
+    service: PMReviewApplicationService = Depends(get_pm_review_service),
+) -> FactorExposureSnapshotDTO:
+    """Returns Chapter 8 Gross/Net Exposure, Long/Short breakdown, and 1-Factor Beta."""
+    packet = service.build_morning_packet(portfolio_id=portfolio_id)
+    p_delta = packet.portfolio_delta
+    missing_symbols = [
+        q["symbol"] for q in packet.quarantined_holdings
+        if q.get("guardrail_code") in ("MISSING_PRICE_EXCEPTION", "MISSING_AS_OF_PRICE")
+    ]
+    return FactorExposureSnapshotDTO(
+        gross_market_value=float(p_delta.get("gross_market_value", 0.0)),
+        net_market_value=float(p_delta.get("net_market_value", 0.0)),
+        long_market_value=float(p_delta.get("long_market_value", 0.0)),
+        short_market_value=float(p_delta.get("short_market_value", 0.0)),
+        long_exposure_pct=float(p_delta.get("long_exposure_pct", 100.0)),
+        short_exposure_pct=float(p_delta.get("short_exposure_pct", 0.0)),
+        net_exposure_pct=float(p_delta.get("net_exposure_pct", 100.0)),
+        eligible_positions_count=int(p_delta.get("eligible_positions_count", 0)),
+        portfolio_beta=p_delta.get("portfolio_beta"),
+        beta_benchmark=p_delta.get("beta_benchmark", "SPY"),
+        factor_observations_count=p_delta.get("factor_observations_count"),
+        status="REVIEW_REQUIRED",
+        missing_price_symbols=missing_symbols,
+    )

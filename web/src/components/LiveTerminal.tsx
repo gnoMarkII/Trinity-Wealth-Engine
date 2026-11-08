@@ -159,7 +159,7 @@ export default function LiveTerminal({ jobId, onStatusChange, onNodeUpdate, onAw
           {status}
         </span>
       </div>
-      <div ref={containerRef} className="max-h-96 overflow-y-auto p-3">
+      <div ref={containerRef} className="max-h-96 overflow-y-auto p-3 custom-scrollbar">
         {errorMessage && (
           <p role="alert" className="mb-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-800">
             <span className="font-semibold">ข้อผิดพลาดของงาน: </span>{errorMessage}

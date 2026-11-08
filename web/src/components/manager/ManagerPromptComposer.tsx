@@ -156,11 +156,11 @@ export default function ManagerPromptComposer({
           {/* Active Context Chips (if any selected, shown at top of textarea) */}
           {selectedPills.length > 0 && (
             <div className="mb-2 flex flex-wrap items-center gap-1.5 px-1 animate-notice-in">
-              <span className="text-[11px] font-medium text-sky-800/70">บริบทที่เลือก:</span>
+              <span className="text-xs font-medium text-sky-800/70">บริบทที่เลือก:</span>
               {selectedPills.map((pill) => (
                 <span
                   key={pill}
-                  className="inline-flex items-center gap-1 rounded-full border border-sky-300 bg-sky-100/90 px-2 py-0.5 text-xs font-semibold text-sky-800 shadow-sm"
+                  className="inline-flex items-center gap-1 rounded-full border border-sky-300 bg-sky-100/90 px-2.5 py-0.5 text-xs font-semibold text-sky-800 shadow-sm"
                 >
                   <span>{pill}</span>
                   <button
@@ -176,7 +176,7 @@ export default function ManagerPromptComposer({
               <button
                 type="button"
                 onClick={() => setSelectedPills([])}
-                className="text-[11px] text-zinc-400 hover:text-zinc-600 underline ml-1"
+                className="text-xs text-zinc-400 hover:text-zinc-600 underline ml-1"
               >
                 ล้างทั้งหมด
               </button>
@@ -191,23 +191,23 @@ export default function ManagerPromptComposer({
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder="ปรึกษาการลงทุน, วิเคราะห์พอร์ต, หรือพิมพ์ / เพื่อเปิดคลังคำสั่ง..."
-            className="custom-scrollbar max-h-40 min-h-[42px] w-full resize-none bg-transparent px-2 py-1 text-sm text-sky-950 placeholder-zinc-400 focus:outline-none"
+            className="custom-scrollbar max-h-40 min-h-[48px] w-full resize-none bg-transparent px-2.5 py-1.5 text-[15px] sm:text-base text-sky-950 placeholder-zinc-400 focus:outline-none leading-relaxed"
           />
 
           {/* Integrated Bottom Action Bar */}
           <div className="mt-2 flex flex-wrap items-center justify-between gap-2 border-t border-sky-100/60 pt-2">
             {/* Left Tools & Context Controls */}
             <div className="flex flex-wrap items-center gap-1.5 min-w-0">
-              {/* Command Library Button */}
+              {/* Command Library Button — Calm Minimal Style */}
               <button
                 type="button"
                 onClick={() => setIsPopoverOpen(true)}
                 title="เปิดคลังคำสั่งโปรดครอบคลุมทุกมิติ (Ctrl+K หรือพิมพ์ /)"
-                className="flex shrink-0 items-center gap-1.5 rounded-xl border border-amber-200/90 bg-gradient-to-r from-amber-50 to-orange-50/70 px-2.5 py-1 text-xs font-bold text-amber-900 shadow-sm hover:border-amber-400 hover:bg-amber-100/80 transition-all active:scale-95"
+                className="flex shrink-0 items-center gap-1.5 rounded-xl border border-sky-100 bg-sky-50/60 px-3 py-1.5 text-xs sm:text-sm font-medium text-sky-900 hover:border-sky-200 hover:bg-sky-100/70 transition-all active:scale-95"
               >
-                <span className="text-amber-500">⭐</span>
+                <span className="text-sky-500">✨</span>
                 <span>คลังคำสั่ง</span>
-                <span className="hidden sm:inline font-mono text-[9px] text-amber-800/80 rounded bg-amber-200/60 px-1 py-0.2">
+                <span className="hidden sm:inline font-mono text-[10px] text-sky-700/70 rounded bg-sky-100/80 px-1.5 py-0.5">
                   Ctrl+K
                 </span>
               </button>
@@ -224,7 +224,7 @@ export default function ManagerPromptComposer({
                       type="button"
                       onClick={() => togglePill(pill.label)}
                       title={pill.desc}
-                      className={`rounded-xl px-2 py-1 text-[11px] font-medium transition-all ${
+                      className={`rounded-xl px-2.5 py-1 text-xs font-medium transition-all ${
                         active
                           ? 'border border-sky-400 bg-sky-100 text-sky-900 font-bold shadow-sm'
                           : 'border border-sky-100/80 bg-white/80 text-zinc-600 hover:border-sky-200 hover:bg-sky-50/70 hover:text-sky-800'
@@ -243,7 +243,7 @@ export default function ManagerPromptComposer({
                 <button
                   type="button"
                   onClick={onStop}
-                  className="flex h-8 items-center gap-1.5 rounded-xl border border-rose-200 bg-rose-50 px-3 text-xs font-semibold text-rose-600 shadow-sm transition-colors hover:bg-rose-100"
+                  className="flex h-9 items-center gap-1.5 rounded-xl border border-rose-200 bg-rose-50 px-3.5 text-xs sm:text-sm font-semibold text-rose-600 shadow-sm transition-colors hover:bg-rose-100"
                 >
                   <span className="h-2 w-2 rounded-full bg-rose-500 animate-pulse" />
                   <span>หยุดตอบ</span>
@@ -253,14 +253,14 @@ export default function ManagerPromptComposer({
                   type="button"
                   disabled={!input.trim()}
                   onClick={handleSend}
-                  className={`flex h-8 items-center justify-center gap-1.5 rounded-xl px-3.5 text-xs font-semibold shadow-sm transition-all ${
+                  className={`flex h-9 items-center justify-center gap-1.5 rounded-xl px-4 text-xs sm:text-sm font-semibold shadow-sm transition-all ${
                     input.trim()
                       ? 'bg-sky-500 hover:bg-sky-600 text-white shadow-[0_4px_16px_rgba(14,165,233,0.3)] hover:brightness-105 active:scale-95'
                       : 'cursor-not-allowed bg-zinc-100 text-zinc-400'
                   }`}
                 >
                   <span>ส่งคำถาม</span>
-                  <span className="text-xs">➔</span>
+                  <span className="text-sm">➔</span>
                 </button>
               )}
             </div>

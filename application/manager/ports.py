@@ -1,7 +1,7 @@
 """Hexagonal Ports for Manager Chat & Hermes Sandbox."""
 from __future__ import annotations
 
-from typing import AsyncIterator, Optional, Protocol, Sequence
+from typing import Any, AsyncIterator, Dict, Optional, Protocol, Sequence
 from core.sandbox.models import (
     AdvisorChatMessage,
     AdvisorSessionSummary,
@@ -52,3 +52,39 @@ class HermesSyncPort(Protocol):
     def get_sync_status(self) -> HermesSyncStatus: ...
     def trigger_sync(self) -> tuple[bool, str]: ...
 
+
+class PMReviewSignoffRepoPort(Protocol):
+    """Port for immutable packet snapshots and daily PM sign-off audit rows."""
+
+    def save_packet_snapshot(
+        self, *, packet_id: str, portfolio_id: str, review_date: str,
+        cutoff_utc: str, input_fingerprint_sha256: str, policy_version: str,
+        packet_sha256: str, payload: Dict[str, Any],
+    ) -> Dict[str, Any]: ...
+    def get_packet_snapshot(
+        self, portfolio_id: str, packet_sha256: str,
+    ) -> Optional[Dict[str, Any]]: ...
+    def get_signoff(
+        self,
+        review_date: str,
+        portfolio_id: str = "default",
+        packet_sha256: Optional[str] = None,
+    ) -> Optional[dict[str, Any]]: ...
+    def save_signoff(
+        self,
+        signoff_id: str,
+        review_date: str,
+        signed_off_by: str,
+        signed_off_at_utc: str,
+        acknowledged_exceptions_count: int,
+        notes: Optional[str],
+        packet_sha256: str,
+        portfolio_id: str = "default",
+        verified_sample_ids: Optional[Sequence[str]] = None,
+        acknowledged_exception_ids: Optional[Sequence[str]] = None,
+        packet_id: Optional[str] = None,
+        request_digest: Optional[str] = None,
+        principal_subject_id: Optional[str] = None,
+        principal_session_id: Optional[str] = None,
+    ) -> Optional[Dict[str, Any]]: ...
+    def list_signoffs(self, limit: int = 30, portfolio_id: Optional[str] = None) -> list[dict[str, Any]]: ...

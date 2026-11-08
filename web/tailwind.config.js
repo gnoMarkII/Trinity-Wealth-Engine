@@ -4,6 +4,27 @@ export default {
   content: ['./index.html', './src/**/*.{ts,tsx}'],
   theme: {
     extend: {
+      fontFamily: {
+        sans: [
+          '"Plus Jakarta Sans"',
+          '"Noto Sans Thai"',
+          'system-ui',
+          '-apple-system',
+          'BlinkMacSystemFont',
+          '"Segoe UI"',
+          'Roboto',
+          'sans-serif',
+        ],
+        mono: [
+          '"JetBrains Mono"',
+          'ui-monospace',
+          'SFMono-Regular',
+          'Menlo',
+          'Monaco',
+          'Consolas',
+          'monospace',
+        ],
+      },
       colors: {
         // Semantic tokens ของธีม Flow — ค่าจริงประกาศเป็น CSS vars ใน index.css (:root)
         // ใช้แทนชั้น `.flow-theme .bg-white { !important }` เดิมที่ override รายคลาส

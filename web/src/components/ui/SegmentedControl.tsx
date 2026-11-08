@@ -35,7 +35,7 @@ export default function SegmentedControl({
           type="button"
           onClick={() => onChange(opt.key)}
           aria-pressed={value === opt.key}
-          className={`rounded-xl px-2.5 sm:px-3.5 py-1.5 sm:py-2 text-xs sm:text-sm font-semibold transition-all duration-150 flex items-center gap-1.5 shrink-0 whitespace-nowrap ${
+          className={`rounded-xl px-3 sm:px-4 py-1.5 sm:py-2 text-sm font-semibold transition-all duration-150 flex items-center gap-1.5 shrink-0 whitespace-nowrap ${
             value === opt.key
               ? 'bg-gradient-to-r from-sky-600 to-blue-600 text-white shadow-md shadow-sky-500/25 font-bold'
               : 'text-zinc-600 hover:bg-sky-50 hover:text-zinc-900'

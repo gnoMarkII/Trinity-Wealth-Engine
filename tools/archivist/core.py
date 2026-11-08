@@ -146,9 +146,9 @@ def init_vault_structure() -> None:
     system_dir.mkdir(parents=True, exist_ok=True)
     cfg_file = system_dir / "vault_config.json"
     if not cfg_file.exists():
-        cfg_file.write_text(
+        _atomic_write_text(
+            cfg_file,
             json.dumps({"layout_version": 2, "vault_id": current_vault.name}, indent=2),
-            encoding="utf-8"
         )
 
 

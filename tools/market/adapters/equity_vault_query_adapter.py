@@ -84,19 +84,20 @@ class EquityVaultQueryAdapter:
     def _date_key(path: Path) -> tuple[str, bool, str]:
         m = re.search(r"20\d{2}-\d{2}-\d{2}", path.stem)
         date_str = m.group(0) if m else ""
-        if not date_str:
-            try:
-                with path.open("r", encoding="utf-8") as handle:
-                    payload = json.load(handle)
-                evaluated_at = payload.get("quant_signals", {}).get("evaluated_at", "")
-                if evaluated_at:
-                    date_str = str(evaluated_at)
-            except Exception:
-                pass
-        if not date_str:
-            date_str = path.stem.split(" ")[-1]
+        eval_time = ""
+        try:
+            with path.open("r", encoding="utf-8") as handle:
+                payload = json.load(handle)
+            evaluated_at = payload.get("quant_signals", {}).get("evaluated_at", "")
+            if evaluated_at:
+                eval_time = str(evaluated_at)
+        except Exception:
+            pass
+        effective_date = eval_time or date_str
+        if not effective_date:
+            effective_date = path.stem.split(" ")[-1]
         is_clean = not bool(re.search(r"_[a-f0-9]{6}\.json$", path.name))
-        return date_str, is_clean, path.name
+        return effective_date, is_clean, path.name
 
     def _sidecar_files(self, ticker: Optional[str] = None) -> list[Path]:
         all_files: list[Path] = []

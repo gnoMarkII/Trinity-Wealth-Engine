@@ -17,6 +17,7 @@ from core.portfolio_advisory.guardrails import (
     check_future_date_anomaly,
     check_look_through_concentration_cap,
     check_macro_cross_scale_drift,
+    check_missing_price_policy,
     check_price_scale_anomaly,
     check_stale_portfolio_price,
     check_unassigned_holdings_drift,
@@ -365,6 +366,43 @@ def evaluate_portfolio_advisory(
             warnings.append(replace(stale_warn, ticker=sym))
 
         sidecar_price = safe_decimal(_extract(sidecar_signals, "raw_analysis_price"), default=None, quantum="0.0001")
+
+        # Hard-Fail Missing Price Policy (Ch. 8, p. 57)
+        missing_price_warn = check_missing_price_policy(
+            current_price_native=current_price_native,
+            holding_units=current_units,
+            asset_type=asset_type,
+            ticker=sym,
+        )
+        if missing_price_warn:
+            warnings.append(missing_price_warn)
+            quarantined.append(QuarantinedHoldingItem(
+                symbol=sym,
+                reason=missing_price_warn.message,
+                guardrail_code=missing_price_warn.guardrail_code,
+                current_value_thb=h_val_thb,
+                details=f"Holding units={current_units}, Current price={current_price_native}",
+            ))
+            holdings_advisory.append(HoldingAdvisoryItem(
+                symbol=sym,
+                asset_name=name,
+                asset_type=asset_type,
+                market=market,
+                native_currency=native_curr,
+                evaluation_track=eval_track,
+                bucket_id=_extract(h, "bucket_id"),
+                bucket_name=bucket_name_map.get(str(_extract(h, "bucket_id", ""))),
+                current_units=current_units,
+                current_price_native=current_price_native,
+                current_value_thb=h_val_thb,
+                current_weight_pct=current_weight_pct,
+                target_weight_pct=current_weight_pct,
+                weight_drift_pct=Decimal("0.0"),
+                action_code=AdvisoryActionCode.QUARANTINED_DATA_ANOMALY,
+                action_rationale=f"กักกันสินทรัพย์ชั่วคราว: {missing_price_warn.message}",
+                data_warnings=[missing_price_warn.message],
+            ))
+            continue
 
         price_anomaly_warn = check_price_scale_anomaly(current_price_native, sidecar_price, ticker=sym)
         if price_anomaly_warn:

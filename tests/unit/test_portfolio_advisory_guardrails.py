@@ -15,6 +15,8 @@ import pytest
 from core.portfolio_advisory.guardrails import (
     check_future_date_anomaly,
     check_price_scale_anomaly,
+    check_missing_price_policy,
+    check_late_run_guard,
     check_stale_portfolio_price,
     check_unassigned_holdings_drift,
     compute_live_upside,
@@ -206,3 +208,37 @@ def test_sector_canonical_matching():
     assert is_sector_match("Financial Services", "XLF") is True
     assert is_sector_match("Healthcare", "XLV") is True
     assert is_sector_match("Energy", "Technology") is False
+
+def test_check_missing_price_policy():
+    # Case 1: Cash is exempted
+    assert check_missing_price_policy(Decimal("0"), Decimal("100"), asset_type="Cash", ticker="CASH") is None
+
+    # Case 2: Zero units is exempted
+    assert check_missing_price_policy(Decimal("0"), Decimal("0"), asset_type="Stock", ticker="EMPTY") is None
+
+    # Case 3: Positive units but None / zero price -> Critical Warning
+    warn = check_missing_price_policy(Decimal("0"), Decimal("50"), asset_type="Stock", ticker="BROKEN")
+    assert warn is not None
+    assert warn.guardrail_code == "MISSING_PRICE_EXCEPTION"
+    assert warn.severity == "critical"
+    assert "BROKEN" in warn.message
+
+    # Case 4: Valid price -> None
+    assert check_missing_price_policy(Decimal("150.25"), Decimal("50"), asset_type="Stock", ticker="VALID") is None
+
+
+def test_check_late_run_guard():
+    from datetime import datetime, timezone, timedelta
+
+    # On-time run (08:45 Bangkok time is 15 mins drift from 08:30)
+    bkk_tz = timezone(timedelta(hours=7))
+    on_time_dt = datetime(2026, 11, 4, 8, 45, tzinfo=bkk_tz)
+    quality, drift = check_late_run_guard(on_time_dt, max_drift_minutes=120)
+    assert quality == "ON_TIME"
+    assert drift == 15
+
+    # Stale late run (13:30 Bangkok time is 300 mins drift from 08:30)
+    late_dt = datetime(2026, 11, 4, 13, 30, tzinfo=bkk_tz)
+    quality, drift = check_late_run_guard(late_dt, max_drift_minutes=120)
+    assert quality == "LATE_RUN_STALE"
+    assert drift == 300

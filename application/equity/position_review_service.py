@@ -46,10 +46,12 @@ class PositionReviewApplicationService:
         ohlcv_service: OhlcvDataServicePort,
         fundamentals_provider: Optional[FundamentalsDataProviderPort] = None,
         portfolio_reader: Optional[Any] = None,
+        thesis_provider: Optional[Any] = None,
     ):
         self._ohlcv_service = ohlcv_service
         self._fundamentals_provider = fundamentals_provider
         self._portfolio_reader = portfolio_reader
+        self._thesis_provider = thesis_provider
 
     def run_position_review(
         self,
@@ -229,9 +231,29 @@ class PositionReviewApplicationService:
             now_growth_pct=round(rev_growth, 1),
         )
 
-        # 6. Portfolio-Aware Decision Triggers
-        triggers = PortfolioTriggerResolver.resolve_triggers(
-            falsifiers=[
+        # 6. Portfolio-Aware Decision Triggers (Dynamic Institutional Theses)
+        resolved_falsifiers = []
+        if self._thesis_provider:
+            try:
+                claim = (
+                    self._thesis_provider.get_active_thesis(clean_ticker)
+                    if hasattr(self._thesis_provider, "get_active_thesis")
+                    else self._thesis_provider(clean_ticker)
+                )
+                if claim and getattr(claim, "falsifiers", None):
+                    for f in claim.falsifiers:
+                        resolved_falsifiers.append({
+                            "falsifier_id": getattr(f, "falsifier_id", "FALSIFIER"),
+                            "metric_name": getattr(f, "metric_name", "Metric"),
+                            "condition": getattr(f, "operator", "<"),
+                            "threshold_value": float(getattr(f, "threshold_value", 0.0)),
+                            "narrative_explanation": getattr(f, "narrative_explanation", ""),
+                        })
+            except Exception as f_err:
+                log.debug("Could not resolve dynamic falsifiers for %s: %s", clean_ticker, f_err)
+
+        if not resolved_falsifiers:
+            resolved_falsifiers = [
                 {
                     "falsifier_id": "MARGIN_FLOOR",
                     "metric_name": "Operating Margin Floor",
@@ -246,7 +268,9 @@ class PositionReviewApplicationService:
                     "threshold_value": 0.0,
                     "narrative_explanation": "Value destruction if ROIC falls below cost of capital.",
                 },
-            ],
+            ]
+        triggers = PortfolioTriggerResolver.resolve_triggers(
+            falsifiers=resolved_falsifiers,
             holding_context=holding_summary,
             technical_stage=2 if decomp_1y.total_return_pct >= 0 else 4,
             upcoming_earnings_date=upcoming_earnings or "Q3 Results",

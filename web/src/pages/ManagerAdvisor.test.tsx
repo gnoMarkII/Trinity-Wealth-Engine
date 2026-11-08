@@ -96,6 +96,8 @@ describe('ManagerAdvisor Page', () => {
 
     expect(screen.getByText('บอร์ดงาน')).toBeInTheDocument()
     expect(screen.getByText('Trinity Swarm')).toBeInTheDocument()
+    expect(screen.getByText('Morning Delta')).toBeInTheDocument()
+    expect(screen.getByText('Morning Review')).toBeInTheDocument()
     expect(screen.getByText('Swarm & Jobs')).toBeInTheDocument()
   })
 })

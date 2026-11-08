@@ -1,7 +1,7 @@
 """Unit tests สำหรับ cli/run_news_funnel.py: Global Pipeline Lock, Synthesis Recovery Fallback และ CLI Routing"""
 import argparse
 from pathlib import Path
-from unittest.mock import MagicMock, patch
+from unittest.mock import ANY, MagicMock, patch
 import pytest
 from filelock import FileLock
 
@@ -42,6 +42,7 @@ def test_synthesize_with_recovery_triggers_ingest_when_no_pending_and_has_raw(mo
         store_path="/fake/store.json",
         vault_root="/fake/vault",
         allow_autonomous=False,
+        note_writer=ANY,
     )
     mock_handle.assert_called_once_with(mock_synth.return_value)
     assert res == mock_synth.return_value

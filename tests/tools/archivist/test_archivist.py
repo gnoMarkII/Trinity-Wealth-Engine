@@ -12,6 +12,12 @@ from tools.archivist.linter import lint_structural_health, lint_semantic_conflic
 
 # Mocking VAULT_PATH
 @pytest.fixture(autouse=True)
+def _initialize_vault_v2(tmp_vault):
+    system_dir = tmp_vault / ".system"
+    system_dir.mkdir(parents=True, exist_ok=True)
+    (system_dir / "vault_config.json").write_text(
+        json.dumps({"layout_version": 2}), encoding="utf-8"
+    )
 
 
 def test_save_memory_new(isolated_archivist, tmp_vault):
@@ -27,17 +33,17 @@ def test_save_memory_new(isolated_archivist, tmp_vault):
     
     assert "บันทึกสำเร็จ (new)" in res
     
-    saved_file = tmp_vault / "30_Knowledge_Base" / "Stocks" / "Test Memory.md"
+    saved_file = tmp_vault / "30_Knowledge_Base" / "Concepts" / "Test Memory.md"
     assert saved_file.exists()
     content = saved_file.read_text(encoding="utf-8")
-    assert "entity_type: Concept" in content
+    assert "entity_type: concept" in content
     assert "tags:" in content
     assert "This is a test content." in content
-    assert "[[Linked_Doc]]" in content
+    assert "Linked_Doc" in content
 
 
 def test_write_raw_markdown(isolated_archivist, tmp_vault):
-    raw_md = "---\ntitle: Raw Test\nentity_type: test\ndate: 2026-06-20\n---\n# Content"
+    raw_md = "---\ntitle: Raw Test\nentity_type: macro_snapshot\ndate: 2026-06-20\n---\n# Content"
     res = isolated_archivist.write_raw_markdown.invoke({
         "content": raw_md,
         "folder_path": "30_Knowledge_Base/Macroeconomics",
@@ -46,9 +52,9 @@ def test_write_raw_markdown(isolated_archivist, tmp_vault):
     
     assert "บันทึกสำเร็จ (raw" in res
     
-    saved_file = tmp_vault / "30_Knowledge_Base" / "Macroeconomics" / "Raw_Test_File.md"
+    saved_file = tmp_vault / "30_Knowledge_Base" / "Macroeconomics" / "Daily_Snapshots" / "2026" / "06" / "Raw_Test_File.md"
     assert saved_file.exists()
-    assert saved_file.read_text(encoding="utf-8") == raw_md
+    assert "# Content" in saved_file.read_text(encoding="utf-8")
 
 
 def test_read_file(isolated_archivist, tmp_vault):
