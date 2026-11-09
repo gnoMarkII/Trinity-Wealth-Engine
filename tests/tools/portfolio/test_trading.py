@@ -671,10 +671,13 @@ class TestTradingExceptions:
         pt = isolated_portfolio
         pt._manage_cash_flow_locked(500_000, "deposit", "THB")
         pt._execute_trade_locked("PTT", "Stock", "buy", 100, 30.0, "THB")
-        pt._execute_trade_locked("PTT", "Stock", "sell", 100, 35.0, "THB")
+        sell_msg = pt._execute_trade_locked("PTT", "Stock", "sell", 100, 35.0, "THB")
+        assert "[SELL] PTT" in sell_msg
         _, state = pt._load_or_init()
         ptt = pt._find_holding(state, "PTT")
         assert ptt is None
+        cash_thb = pt._find_holding(state, "CASH_THB")
+        assert cash_thb.units == pytest.approx(500_500.0)
 
     def test_record_income_lock_timeout(self, isolated_portfolio, monkeypatch):
         pt = isolated_portfolio

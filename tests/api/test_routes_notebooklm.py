@@ -1,4 +1,4 @@
-"""Unit tests สำหรับ api/routes_notebooklm.py — การ์ด flow="notebooklm" สร้างเองผ่าน Kanban ปกติ
+"""Unit tests สำหรับ /api/notebooklm routes — การ์ด flow="notebooklm" สร้างเองผ่าน Kanban ปกติ
 เลือกไฟล์ Briefing Book ทีหลังผ่าน available-sources + generate(briefing_file_path)
 """
 import uuid
@@ -8,7 +8,7 @@ import time
 
 import pytest
 
-from api import routes_notebooklm, state_db
+from api import state_db
 import api.dependencies as dependencies
 from tools.content.notebooklm import manifest as manifest_mod
 from tools.content.notebooklm.models import PreflightError
@@ -18,10 +18,8 @@ from tools.content.notebooklm.models import PreflightError
 def _isolate_sources_dir(tmp_path, monkeypatch):
     sources_dir = tmp_path / "NotebookLM_Sources"
     sources_dir.mkdir()
-    monkeypatch.setattr(routes_notebooklm, "NOTEBOOKLM_SOURCES_DIR", sources_dir.resolve())
     monkeypatch.setattr(dependencies, "NOTEBOOKLM_SOURCES_DIR", sources_dir.resolve())
     monkeypatch.setattr(manifest_mod, "MANIFEST_DIR", tmp_path / "notebooklm_runs")
-    monkeypatch.setattr(routes_notebooklm, "check_binary_available", lambda: None)
     monkeypatch.setattr(dependencies, "check_binary_available", lambda: None)
     return sources_dir
 
@@ -119,7 +117,6 @@ def test_generate_returns_503_when_binary_not_available(authed_client, _isolate_
     def _raise_preflight():
         raise PreflightError("ไม่พบคำสั่ง 'notebooklm-mcp'")
 
-    monkeypatch.setattr(routes_notebooklm, "check_binary_available", _raise_preflight)
     monkeypatch.setattr(dependencies, "check_binary_available", _raise_preflight)
 
     r = authed_client.post("/api/notebooklm/generate", json={"card_id": card_id})

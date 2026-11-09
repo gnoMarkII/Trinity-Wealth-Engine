@@ -114,3 +114,116 @@ def test_synthesize_advisory_playbook_endpoint(authed_client):
         assert data["consistency_verified"] is True
     finally:
         app.dependency_overrides.pop(get_portfolio_advisory_service, None)
+
+
+def test_get_portfolio_advisory_end_to_end_new_radar_and_holding_fields_survive_json(authed_client):
+    """R08: Real service + engine domain->DTO->JSON serialization carries risk/friction/active-share fields."""
+    from decimal import Decimal
+    from types import SimpleNamespace
+    from api.dependencies import get_portfolio_advisory_service
+    from api.main import app
+    from application.portfolio.advisory_service import PortfolioAdvisoryService
+
+    state = SimpleNamespace(
+        holdings=[
+            SimpleNamespace(
+                symbol="PTT.BK",
+                name="PTT PCL",
+                asset_type="Stock",
+                status="active",
+                units=Decimal("5000"),
+                current_price_thb=Decimal("100"),
+                current_price_usd=None,
+                market_value_thb=Decimal("500000"),
+                avg_cost_thb=Decimal("95"),
+                avg_cost_usd=None,
+                bucket_id="core",
+                market="TH",
+                currency="THB",
+                sector="Energy",
+                unrealized_pnl_percent=Decimal("5.0"),
+            ),
+            SimpleNamespace(
+                symbol="SCB.BK",
+                name="SCB X",
+                asset_type="Stock",
+                status="active",
+                units=Decimal("5000"),
+                current_price_thb=Decimal("100"),
+                current_price_usd=None,
+                market_value_thb=Decimal("500000"),
+                avg_cost_thb=Decimal("95"),
+                avg_cost_usd=None,
+                bucket_id="core",
+                market="TH",
+                currency="THB",
+                sector="Financials",
+                unrealized_pnl_percent=Decimal("5.0"),
+            ),
+        ],
+        allocation_targets=[
+            SimpleNamespace(bucket_id="core", name="Core Equities", target_percent=Decimal("100.0")),
+        ],
+        summary=SimpleNamespace(usd_thb_rate=Decimal("35.5"), cash_balance_thb=Decimal("0")),
+    )
+    sidecars = {
+        "PTT": {
+            "ticker": "PTT.BK",
+            "market": "TH",
+            "quant_signals": {
+                "raw_analysis_price": 100.0,
+                "volatility_pct": 10.0,
+                "adtv_local_currency": 10_000_000.0,
+                "deterministic_scorecard": {"core_conviction_score": 7.5, "action_stance": "HOLD"},
+            },
+        },
+        "SCB.BK": {
+            "ticker": "SCB.BK",
+            "market": "TH",
+            "quant_signals": {
+                "raw_analysis_price": 100.0,
+                "volatility_pct": 40.0,
+                "adtv_local_currency": 1_000_000.0,
+                "deterministic_scorecard": {"core_conviction_score": 8.5, "action_stance": "ACCUMULATE_NOW"},
+                "tactical_setup": {"buy_zone_max": 105.0, "buy_zone_min": 95.0},
+            },
+        },
+    }
+
+    state_reader = MagicMock()
+    state_reader.get_current_portfolio_state.return_value = state
+    macro_reader = MagicMock()
+    macro_reader.get_latest_macro_strategy.return_value = None
+    macro_reader.get_latest_sector_rotation.return_value = None
+    sidecar_reader = MagicMock()
+    sidecar_reader.get_all_equity_sidecars.return_value = sidecars
+    sidecar_reader.get_watchlist_sidecars.return_value = {}
+    vault_port = MagicMock()
+    vault_port.load_latest_advisory_sidecar.return_value = None
+
+    real_svc = PortfolioAdvisoryService(
+        portfolio_reader=state_reader,
+        macro_reader=macro_reader,
+        sidecar_reader=sidecar_reader,
+        vault_port=vault_port,
+        synthesizer_port=MagicMock(),
+    )
+
+    app.dependency_overrides[get_portfolio_advisory_service] = lambda: real_svc
+    try:
+        r = authed_client.get("/api/portfolio/advisory?refresh_prices=false")
+        assert r.status_code == 200
+        data = r.json()
+        assert data["risk_radar"]["bucket_active_share_pct"] == 0.0
+        assert data["risk_radar"]["bucket_active_share_status"] == "AVAILABLE"
+        assert data["risk_radar"]["risk_contribution_status"] == "AVAILABLE"
+        assert data["risk_radar"]["risk_contributions_pct"] == {"PTT.BK": 11.34, "SCB.BK": 88.66}
+        assert data["risk_radar"]["inverse_vol_weights_pct"] == {"PTT.BK": 80.0, "SCB.BK": 20.0}
+        assert data["risk_radar"]["total_portfolio_volatility_pct"] > 0
+        scb = next(h for h in data["holdings_advisory"] if h["symbol"] == "SCB.BK")
+        assert scb["risk_contribution_pct"] == 88.66
+        assert scb["estimated_friction_bps"] > 25.0
+        assert scb["volatility_pct"] == 40.0
+        assert scb["volatility_source"] == "observed"
+    finally:
+        app.dependency_overrides.pop(get_portfolio_advisory_service, None)

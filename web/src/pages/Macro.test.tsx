@@ -206,6 +206,8 @@ describe('Macro Page - Dual Track Cockpit', () => {
       expect(screen.getByText(/สถานะเศรษฐกิจไทย: ยังประเมินไม่ได้/i)).toBeInTheDocument()
       expect(screen.getByText(/SET 4-Investor Flow/i)).toBeInTheDocument()
       expect(screen.getByText(/SET Market Breadth/i)).toBeInTheDocument()
+      expect(screen.getByText('Thailand Market Radar & Stance')).toBeInTheDocument()
+      expect(screen.getByText('TERMINAL V2')).toBeInTheDocument()
     })
 
     // Switch to Cross-Border tab

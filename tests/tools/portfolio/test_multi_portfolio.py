@@ -222,7 +222,8 @@ def test_load_or_init_rejects_nonexistent_non_default_portfolio(isolated_portfol
 
     # default ต้องยัง auto-bootstrap ได้ตามเดิม (ไม่ error)
     post, state = core._load_or_init(portfolio_id="default")
-    assert state is not None
+    assert isinstance(state, core.PortfolioState)
+    assert {h.symbol for h in state.holdings} == {"CASH_THB", "CASH_USD"}
 
 
 def test_journal_entries_land_in_correct_portfolio_not_default(isolated_portfolio):

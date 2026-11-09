@@ -116,12 +116,11 @@ def test_extract_active_ledger_identities_filters_voided():
     assert ("C2", "O2") not in active
 
 
-def test_reimport_after_transaction_void():
+def test_reimport_after_transaction_void(monkeypatch):
     """Verify that a trade can be re-imported after being voided (Requirement: ลบแล้วดึงกลับมาใหม่ได้)."""
     with tempfile.TemporaryDirectory() as tmpdir:
         vault = Path(tmpdir)
-        import os
-        os.environ["OBSIDIAN_VAULT_PATH"] = str(vault)
+        monkeypatch.setenv("OBSIDIAN_VAULT_PATH", str(vault))
 
         repo = MarkdownVaultRepositoryAdapter()
         importer = BatchTradeImportService(repo=repo)
@@ -164,12 +163,11 @@ def test_reimport_after_transaction_void():
             assert len(rows4) == 3  # Original BUY + VOID_BUY + New Restored BUY!
 
 
-def test_dime_sync_dynamic_reconciliation_and_skip_active():
+def test_dime_sync_dynamic_reconciliation_and_skip_active(monkeypatch):
     """Verify that DimeSyncService skips active items and automatically re-syncs voided items."""
     with tempfile.TemporaryDirectory() as tmpdir:
         vault = Path(tmpdir)
-        import os
-        os.environ["OBSIDIAN_VAULT_PATH"] = str(vault)
+        monkeypatch.setenv("OBSIDIAN_VAULT_PATH", str(vault))
 
         repo = MarkdownVaultRepositoryAdapter()
         staging = InMemoryStagingAdapter()
@@ -261,12 +259,11 @@ def test_dime_sync_dynamic_reconciliation_and_skip_active():
         assert aapl.units == 10.0
 
 
-def test_remove_holding_voids_transactions_and_allows_resync():
+def test_remove_holding_voids_transactions_and_allows_resync(monkeypatch):
     """Verify that deleting a holding from Holdings tab voids its transactions and enables trade resync."""
     with tempfile.TemporaryDirectory() as tmpdir:
         vault = Path(tmpdir)
-        import os
-        os.environ["OBSIDIAN_VAULT_PATH"] = str(vault)
+        monkeypatch.setenv("OBSIDIAN_VAULT_PATH", str(vault))
 
         repo = MarkdownVaultRepositoryAdapter()
         staging = InMemoryStagingAdapter()

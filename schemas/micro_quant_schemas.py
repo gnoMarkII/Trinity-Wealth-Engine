@@ -548,6 +548,10 @@ class QuantSignals(BaseModel):
         default=None,
         description="มูลค่าซื้อขายเฉลี่ยต่อวัน สกุลท้องถิ่น (THB สำหรับ TH, USD สำหรับ US) — ไม่ใช่ USD-normalized ห้ามเทียบข้าม market ตรงๆ",
     )
+    amihud_illiquidity_20d: Optional[float] = Field(
+        default=None,
+        description="Amihud Illiquidity Ratio (20d) scaled x1e6 — ค่าสูงหมายถึงสภาพคล่องตื้น สั่งซื้อปริมาณมากส่งผลกระทบต่อราคาสูง",
+    )
     # Composite
     composite_score: Optional[float] = Field(
         default=None,
@@ -595,6 +599,9 @@ class QuantSignals(BaseModel):
     sector_kpis: Optional[dict[str, Any]] = None
     net_buyback_yield_pct: Optional[float] = None
     net_shareholder_yield_pct: Optional[float] = None
+    dupont_breakdown: Optional[dict[str, Any]] = None
+    sloan_accrual: Optional[dict[str, Any]] = None
+    composite_score_waterfall: Optional[dict[str, Any]] = None
 
 
 class EvidenceItemMetadata(BaseModel):

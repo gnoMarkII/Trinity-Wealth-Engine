@@ -29,6 +29,8 @@ _PERFORMANCE_LOG_HEADER = [
     "Net_External_Flow_THB",
     "Flow_Coverage_Status",
     "Cash_Flow_Event_IDs_JSON",
+    "Accrued_Dividend_Receivable_THB",
+    "Economic_NAV_THB",
 ]
 
 _TRADES_LOG_HEADER = [

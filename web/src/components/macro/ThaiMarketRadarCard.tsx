@@ -37,10 +37,10 @@ export function ThaiMarketRadarCard({ className = '' }: Props) {
     setRefreshError(null)
     try {
       const [f, g, v, b] = await Promise.allSettled([
-        api.getThaiInvestorFlow('SET'),
-        api.getThaiRetailGold(),
-        api.getThaiMarketValuation('SET'),
-        api.getThaiMarketBreadth('SET'),
+        Promise.resolve(api.getThaiInvestorFlow?.('SET')),
+        Promise.resolve(api.getThaiRetailGold?.()),
+        Promise.resolve(api.getThaiMarketValuation?.('SET')),
+        Promise.resolve(api.getThaiMarketBreadth?.('SET')),
       ])
 
       if (f.status === 'fulfilled') setFlow(f.value)

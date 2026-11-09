@@ -129,8 +129,8 @@ describe('Portfolio Page', () => {
       expect(api.getActualBucketAllocations).toHaveBeenCalled()
     })
 
-    expect(screen.getByText(/Total Portfolio NAV/i)).toBeInTheDocument()
-    expect(screen.getAllByText('Core Equities').length).toBeGreaterThanOrEqual(1)
+    expect(await screen.findByText(/Total Portfolio NAV/i)).toBeInTheDocument()
+    expect((await screen.findAllByText('Core Equities')).length).toBeGreaterThanOrEqual(1)
   })
 
 
@@ -393,6 +393,40 @@ describe('Portfolio Page', () => {
     await waitFor(() => {
       expect(screen.getByText(/ยืนยันการล้างข้อมูลพอร์ต/i)).toBeInTheDocument()
     })
+  })
+
+  it('switches to Analytics tab and renders PortfolioAnalyticsTab with charts and table', async () => {
+    vi.mocked(api.getActualPerformance).mockResolvedValue([
+      {
+        Date: '2026-07-15',
+        Total_NAV: 980000,
+        Total_Cost: 900000,
+        Unrealized_PnL: 80000,
+        Cash_Balance: 45000,
+      },
+      {
+        Date: '2026-07-16',
+        Total_NAV: 1000000,
+        Total_Cost: 900000,
+        Unrealized_PnL: 100000,
+        Cash_Balance: 50000,
+      },
+    ])
+
+    render(
+      <MemoryRouter>
+        <Portfolio />
+      </MemoryRouter>
+    )
+
+    await waitFor(() => expect(api.getActualPortfolioState).toHaveBeenCalled())
+    const analyticsTabBtn = screen.getByRole('button', { name: /Analytics/i })
+    fireEvent.click(analyticsTabBtn)
+
+    expect(await screen.findByText(/Performance History \(2 จุดข้อมูล\)/i)).toBeInTheDocument()
+    expect(screen.getByText('Asset-Type Allocation (Current Holdings)')).toBeInTheDocument()
+    expect(screen.getByText('Trading Performance & Daily NAV Heatmap')).toBeInTheDocument()
+    expect(screen.getByText('ตารางบันทึกประวัติ Snapshot (Table Data)')).toBeInTheDocument()
   })
 })
 

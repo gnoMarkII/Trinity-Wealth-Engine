@@ -20,6 +20,8 @@ def _normalize_yf_symbol(symbol: str) -> str:
 class DividendYFinanceAdapter(DividendHistoryPort):
     """Adapter fetching dividend history from yfinance."""
 
+    requires_network: bool = True
+
     def fetch_dividend_history(self, symbols: List[str]) -> Dict[str, List[Dict]]:
         results: Dict[str, List[Dict]] = {}
 

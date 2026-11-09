@@ -59,6 +59,9 @@ class CandidateEvaluationResultDTO(BaseModel):
     research_priority: int = Field(default=3, description="1: High Conviction, 2: Secondary, 3: Watch/Monitor, 4: Review Needed")
     priority_reasons: List[str] = Field(default_factory=list, description="Priority determination rationale")
     is_actionable: bool = Field(default=False, description="True if passes policy, has room, and ready for study")
+    liquidity_status: Optional[str] = Field(default=None, description="ADTV liquidity check status")
+    adtv_thb: Optional[float] = Field(default=None, description="Dated 20-day ADTV converted to THB")
+    liquidity_room_thb: Optional[float] = Field(default=None, description="5% ADTV liquidity participation cap in THB")
 
 
 class PortfolioOpportunitiesResponseDTO(BaseModel):

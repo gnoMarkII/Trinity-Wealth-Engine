@@ -12,6 +12,7 @@ from typing import Any, List, Literal, Optional, Tuple
 
 import yaml
 
+from core.equity_analytics.canary_guard import scan_untrusted_text
 from core.logger import get_logger
 from schemas.micro_quant_schemas import (
     DataStatus,
@@ -131,6 +132,12 @@ def extract_verified_earnings_guidance(
                 metadata = {}
             body = parts[2]
 
+    # Guard untrusted external transcript text against prompt injection / delimiter escapes
+    body_scan = scan_untrusted_text(body, raise_on_critical=False)
+    if not body_scan.is_safe:
+        flags.append("prompt_injection_detected:earnings_guidance")
+        body = body_scan.sanitized_text
+
     period = str(metadata.get("period") or selected_file.stem.split("_")[0])
     rel_path = str(selected_file.relative_to(base_path)).replace("\\", "/")
 
@@ -150,6 +157,11 @@ def extract_verified_earnings_guidance(
 
     for q in candidate_quotes:
         quote_str = str(q).strip()
+        q_scan = scan_untrusted_text(quote_str, raise_on_critical=False)
+        if not q_scan.is_safe:
+            if "prompt_injection_quote_dropped:earnings_guidance" not in flags:
+                flags.append("prompt_injection_quote_dropped:earnings_guidance")
+            continue
         is_verified, start, end = verify_quote_presence(quote_str, body)
         if is_verified:
             q_hash = compute_quote_hash(quote_str)
@@ -163,6 +175,11 @@ def extract_verified_earnings_guidance(
         for match in re.finditer(r'>\s*["“](.+?)["”]', body):
             q_text = match.group(1).strip()
             if len(q_text) >= 15:
+                q_scan = scan_untrusted_text(q_text, raise_on_critical=False)
+                if not q_scan.is_safe:
+                    if "prompt_injection_quote_dropped:earnings_guidance" not in flags:
+                        flags.append("prompt_injection_quote_dropped:earnings_guidance")
+                    continue
                 is_v, start, end = verify_quote_presence(q_text, body)
                 if is_v:
                     q_hash = compute_quote_hash(q_text)

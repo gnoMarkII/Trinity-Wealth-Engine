@@ -179,9 +179,13 @@ def test_fix_3_five_core_buckets_coverage():
         risk_scenarios=[]
     )
     
+    from schemas.warning_registry import WarningMessage
     dir_val = direction.revalidate_with_registry({})
-    has_cov_warning = any("COVERAGE_WARNING_INCOMPLETE" in str(w) or "missing" in str(w).lower() for w in dir_val.validation_warnings)
-    assert has_cov_warning, "Must warn when any of the 5 core buckets is missing even if asset count >= 5"
+    parsed_warnings = [WarningMessage.from_str(str(w)) for w in dir_val.validation_warnings]
+    cov_warnings = [pw for pw in parsed_warnings if pw is not None and pw.id == COVERAGE_WARNING_INCOMPLETE]
+    assert len(cov_warnings) == 1, f"Expected COVERAGE_WARNING_INCOMPLETE warning, got: {dir_val.validation_warnings}"
+    assert cov_warnings[0].params.get("missing") == ["cash", "commodities", "fixed_income", "fx"]
+    assert cov_warnings[0].params.get("count") == "5"
 
 
 # ──────────────────────────────────────────────────────────────────────────────

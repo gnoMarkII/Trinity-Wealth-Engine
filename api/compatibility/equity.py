@@ -1,8 +1,7 @@
 """Compatibility helpers for historical Equity imports and test patches.
 
-New routers use application ports.  This module exists only for direct legacy
-imports from ``api.routes_equity`` and will be removed after downstream callers
-move to dependency overrides.
+New routers use application ports.  This module exists only for legacy helper
+compatibility and will be removed after downstream callers move to ports.
 """
 from __future__ import annotations
 

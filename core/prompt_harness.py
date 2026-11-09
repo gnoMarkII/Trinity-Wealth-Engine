@@ -143,6 +143,57 @@ class PromptHarness:
         metrics["total_est_tokens"] = total_tokens
         return metrics
 
+    _INJECTION_PATTERNS = (
+        re.compile(r"ignore\s+(?:all\s+)?previous\s+instructions", re.IGNORECASE),
+        re.compile(r"disregard\s+(?:all\s+)?(?:system|prior)\s+(?:prompt|instructions)", re.IGNORECASE),
+        re.compile(r"(?:curl|wget)\s+https?://", re.IGNORECASE),
+        re.compile(r"\brm\s+-rf\s+/", re.IGNORECASE),
+    )
+
+    def audit_skill_integrity(self) -> list[str]:
+        """Bounded static lint check scanning skill markdown for malformed Mustache syntax and specific documented injection patterns.
+
+        Note: This is a deterministic pre-flight guard (unbalanced/misordered Mustache braces and known
+        exfiltration/override regexes), not a complete proof of general prompt-injection immunity.
+        """
+        issues: list[str] = []
+        if not self.agent_dir.exists():
+            return [f"Skill directory does not exist: {self.agent_dir}"]
+
+        md_files = sorted(self.agent_dir.glob("*.md"))
+        if not md_files:
+            return [f"No skill markdown files found in: {self.agent_dir}"]
+
+        tag_token_re = re.compile(r"(\{\{|\}\})")
+        for path in md_files:
+            content = self._load_file_with_cache(path.name, required=False)
+            for idx, line in enumerate(content.splitlines(), start=1):
+                open_count = line.count("{{")
+                close_count = line.count("}}")
+                depth = 0
+                misordered = False
+                for tok in tag_token_re.findall(line):
+                    if tok == "{{":
+                        depth += 1
+                        if depth > 1:
+                            misordered = True
+                            break
+                    else:
+                        depth -= 1
+                        if depth < 0:
+                            misordered = True
+                            break
+                if open_count != close_count or misordered or depth != 0:
+                    issues.append(
+                        f"{self.agent_name}/{path.name}:L{idx}: Unbalanced Mustache braces ('{{{{'={open_count}, '}}}}'={close_count})"
+                    )
+                for pattern in self._INJECTION_PATTERNS:
+                    if pattern.search(line):
+                        issues.append(
+                            f"{self.agent_name}/{path.name}:L{idx}: Suspicious injection/exfiltration pattern matched ({pattern.pattern})"
+                        )
+        return issues
+
     def get_few_shots_feedback(self, base_feedback: str, strict: bool = True, **kwargs: Any) -> str:
         """
         Appends few_shots.md to retry feedback if available.

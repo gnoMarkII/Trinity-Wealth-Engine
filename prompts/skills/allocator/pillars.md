@@ -11,7 +11,7 @@
    - ประเมินความมั่นใจผ่าน 3 แกน พร้อมระบุเหตุผลภาษาไทยใน `why_not_high` เสมอหากความมั่นใจไม่ถึง HIGH (แต่หากความมั่นใจเป็น HIGH ให้ใส่ '-' ในฟิลด์ why_not_high เสมอ ห้ามใส่เหตุผลอื่นเพราะจะขัดแย้งกับระดับความมั่นใจ)
 4. Contradiction Guardrails & Observables:
    - ทุกเหตุผลต้องมีตัวเลขเชิงปริมาณจริงใน `supporting_data` เสมอ โดยให้คัดลอกตัวเลข Hard Data จากคำอธิบาย `rationale` หรือ `thesis` ลงใน `supporting_data` ด้วยเพื่อรับประกันหลักฐานเชิงตัวเลข
-   - หากเงินเฟ้อสูงกว่า 3% หรือเร่งตัวขึ้น ห้ามสรุปสภาวะเป็น Dovish Reflation ง่ายๆ และหากแนะนำ Overweight หุ้นเติบโตแต่มีสัญญาณขัดแย้ง (เช่น Yields พุ่ง, Nasdaq อ่อน, Consumer sentiment ต่ำ, Housing starts อ่อน) ให้ลดความมั่นใจเหลือ MEDIUM
+   - หากเงินเฟ้อสูงหรือกำลังเร่งตัวขึ้น ห้ามสรุปสภาวะเป็น `Goldilocks` และต้องแยกแยะระหว่างระดับ (Level) กับทิศทาง (Direction/Momentum) ของเงินเฟ้อตามเกณฑ์ `EconomicState` (`Goldilocks`, `Reflation`, `Stagflation`, `Recession`, `Unknown`) โดยคงหลักฐานจาก `valid_observables` ไว้ครบถ้วน หากแนะนำ Overweight หุ้นเติบโตแต่มีสัญญาณขัดแย้ง (เช่น Yields พุ่ง, Nasdaq อ่อน, Consumer sentiment ต่ำ, Housing starts อ่อน) ให้ลดความมั่นใจเหลือ MEDIUM
    - หากแนะนำ Overweight หุ้นเติบโตและพันธบัตรระยะยาวพร้อมกัน ต้องอธิบายภาษาไทยให้ชัดเจนว่าเป็น "Barbell Strategy" หรือ "Duration Hedge"
    - หากแนะนำ Overweight ใน Gold หรือ โลหะมีค่า ต้องอธิบายโดยยึดโยงกับอัตราดอกเบี้ยที่แท้จริง (Real Yields), เงินเฟ้อ, ค่าเงินดอลลาร์ หรือนโยบายการเงินของ Fed เสมอ เพราะ Real Yield คือต้นทุนค่าเสียโอกาส (Opportunity Cost) ของการถือทองคำ ห้ามอ้างอิงเพียงความตึงเครียดทางภูมิรัฐศาสตร์เพียงอย่างเดียวเด็ดขาด มิฉะนั้นระบบจะทำการดาวน์เกรดความมั่นใจของท่านทันที (เช่น DFII10 / TIPS Yield หรือ DTWEXBGS ดัชนีดอลลาร์แบบกว้างของ FRED ซึ่งแตกต่างจาก DXY ของ Yahoo)
 5. Executable Relative Value (Pair Trades):

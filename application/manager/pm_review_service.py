@@ -434,8 +434,15 @@ class PMReviewApplicationService:
                             portfolio_delta["daily_pnl_reason"] = flow_coverage if flow_coverage != "COMPLETE" else "MISSING_EXTERNAL_FLOW_VALUE"
                         else:
                             try:
-                                prev_nav = Decimal(str(prev_p.get("Total_NAV_THB") or prev_p.get("Total_NAV")))
-                                today_nav = Decimal(str(last_p.get("Total_NAV_THB") or last_p.get("Total_NAV")))
+                                prev_econ = prev_p.get("Economic_NAV_THB")
+                                today_econ = last_p.get("Economic_NAV_THB")
+                                using_economic = prev_econ not in (None, "") or today_econ not in (None, "")
+                                prev_nav = Decimal(
+                                    str(prev_econ if prev_econ not in (None, "") else (prev_p.get("Total_NAV_THB") or prev_p.get("Total_NAV")))
+                                )
+                                today_nav = Decimal(
+                                    str(today_econ if today_econ not in (None, "") else (last_p.get("Total_NAV_THB") or last_p.get("Total_NAV")))
+                                )
                                 net_flow = Decimal(str(last_p[flow_key]))
                                 if (
                                     prev_nav.is_finite() and today_nav.is_finite() and net_flow.is_finite()
@@ -445,6 +452,7 @@ class PMReviewApplicationService:
                                     gain_pct = (gain / prev_nav) * Decimal("100")
                                     portfolio_delta["daily_pnl_value"] = float(gain.quantize(Decimal("0.01")))
                                     portfolio_delta["daily_pnl_pct"] = float(gain_pct.quantize(Decimal("0.01")))
+                                    portfolio_delta["daily_pnl_nav_basis"] = "economic_nav" if using_economic else "settled_nav"
                                     portfolio_delta["daily_pnl_status"] = "AVAILABLE"
                                     portfolio_delta["daily_pnl_reason"] = None
                                 else:

@@ -99,6 +99,85 @@ def test_get_portfolio_opportunities_success(authed_client, mock_opportunity_dto
 
 def test_get_portfolio_opportunity_service_provider():
     from api.dependencies import get_portfolio_opportunity_service
+    from application.portfolio.opportunity_service import PortfolioOpportunityService
+
     svc = get_portfolio_opportunity_service()
-    assert svc is not None
+    assert isinstance(svc, PortfolioOpportunityService)
+    assert callable(getattr(svc, "get_opportunities", None))
+
+
+def test_w02_opportunity_service_end_to_end_wires_fx_and_adtv_limit(authed_client):
+    """W02: Real PortfolioOpportunityService extracts portfolio FX rate and sidecar ADTV -> JSON response."""
+    from decimal import Decimal
+    from types import SimpleNamespace
+    from api.dependencies import get_portfolio_opportunity_service
+    from api.main import app
+    from application.portfolio.opportunity_service import PortfolioOpportunityService
+    from core.opportunity_finder.models import OpportunityCandidate
+
+    state = SimpleNamespace(
+        summary=SimpleNamespace(market_value_thb=Decimal("1000000"), available_cash_thb=Decimal("200000"), usd_thb_rate=Decimal("35.0")),
+        fx_rates={"USDTHB": 35.0},
+        holdings=[],
+        allocation_targets=[],
+    )
+    portfolio_reader = MagicMock()
+    portfolio_reader.get_current_portfolio_state.return_value = state
+
+    equity_reader = MagicMock()
+    equity_reader.get_all_equity_sidecars.return_value = {
+        "MSFT": {
+            "market": "US",
+            "analysis_date": "2026-10-15",
+            "quant_signals": {
+                "composite_score": 84.0,
+                "adtv_local_currency": 40000.0,  # $40k * 35 = 1,400,000 THB -> 5% = 70,000 THB cap
+            },
+        }
+    }
+    policy_reader = MagicMock()
+    policy_reader.get_confirmed_investment_axis.return_value = {"prohibited_symbols": []}
+    policy_reader.get_applied_bucket_policy.return_value = []
+    macro_reader = MagicMock()
+    macro_reader.get_latest_sector_rotation.return_value = {
+        "sectors": {"information technology": {"quadrant": "Leading"}}
+    }
+    candidate_pool = MagicMock()
+    candidate_pool.discover_candidates.return_value = [
+        OpportunityCandidate(
+            security_id="US:MSFT",
+            issuer_id="MSFT",
+            symbol="MSFT",
+            market="US",
+            currency="USD",
+            asset_type="EQUITY",
+            company_name="Microsoft",
+            sector_name="Information Technology",
+            sector_name_th="เทคโนโลยี",
+        )
+    ]
+
+    svc = PortfolioOpportunityService(
+        portfolio_reader=portfolio_reader,
+        fund_port=MagicMock(),
+        equity_reader=equity_reader,
+        policy_reader=policy_reader,
+        macro_reader=macro_reader,
+        watchlist_reader=MagicMock(),
+        candidate_pool_service=candidate_pool,
+    )
+
+    app.dependency_overrides[get_portfolio_opportunity_service] = lambda: svc
+    try:
+        r = authed_client.get("/api/portfolio/watchlist/opportunities?portfolio_id=default&force_refresh=true")
+        assert r.status_code == 200
+        data = r.json()
+        assert data["snapshot_meta"]["usd_thb_fx_rate"] == 35.0
+        cand = data["candidates"][0]
+        assert cand["liquidity_status"] == "verified"
+        assert cand["adtv_thb"] == 1400000.0
+        assert cand["liquidity_room_thb"] == 70000.0
+        assert cand["remaining_capacity_thb"] == 70000.0
+    finally:
+        app.dependency_overrides.pop(get_portfolio_opportunity_service, None)
 

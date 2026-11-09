@@ -8,12 +8,17 @@ Single Source of Truth ตามกฎ 5.3) แต่ต่างจาก basel
 ไม่ใช่ Backtest ย้อนอดีต — yfinance ไม่มี point-in-time fundamentals ให้ backtest จริงได้
 """
 import json
+import math
 import os
 import re
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 from pathlib import Path
-from typing import Any
+from typing import Any, Optional
 
+from core.equity_analytics.signal_audit import (
+    compute_newey_west_hac_tstat,
+    compute_rank_ic,
+)
 from core.financial_parsers import extract_json_block
 from core.logger import get_logger
 from schemas.micro_quant_schemas import QuantSignals
@@ -88,11 +93,29 @@ def save_equity_quant_snapshot(signals: QuantSignals, *, note_writer: KnowledgeN
             body=body_content,
             filename=f"{ticker_upper}_{date_str}.md",
         )
+        raw_price = signals.raw_analysis_price
+        if raw_price is not None and math.isfinite(raw_price) and raw_price > 0:
+            try:
+                from tools.market.pit_fundamentals_ledger import PITLedgerEntry, append_pit_entry
+
+                append_pit_entry(
+                    PITLedgerEntry(
+                        as_of_date=date_str,
+                        ticker=ticker_upper,
+                        valuation_price=float(raw_price),
+                    )
+                )
+            except Exception as pit_exc:
+                log.warning("append_pit_entry failed for %s (non-fatal): %s", ticker_upper, pit_exc)
     except Exception as e:
         log.warning("save_equity_quant_snapshot failed for %s (non-fatal): %s", signals.ticker, e)
 
 
-def get_equity_score_trend(ticker: str, days: int = 90) -> list[dict[str, Any]]:
+def get_equity_score_trend(
+    ticker: str,
+    days: int = 90,
+    as_of: Optional[datetime | date] = None,
+) -> list[dict[str, Any]]:
     """อ่าน Forward-tracking snapshot ย้อนหลังของ ticker จาก Vault — เรียงจากเก่าไปใหม่ตามชื่อไฟล์
 
     Returns:
@@ -102,7 +125,12 @@ def get_equity_score_trend(ticker: str, days: int = 90) -> list[dict[str, Any]]:
     if not history_dir.exists():
         return []
 
-    cutoff_date = datetime.now(timezone.utc).date()
+    if as_of is None:
+        cutoff_date = datetime.now(timezone.utc).date()
+    elif callable(getattr(as_of, "date", None)):
+        cutoff_date = as_of.date()
+    else:
+        cutoff_date = as_of
     t_up = ticker.upper()
     candidate_files = list(history_dir.glob(f"{t_up}_*.md")) + list(history_dir.glob(f"*{t_up}*.md"))
     seen_paths: set[Path] = set()
@@ -130,3 +158,19 @@ def get_equity_score_trend(ticker: str, days: int = 90) -> list[dict[str, Any]]:
             continue
 
     return results
+
+
+def evaluate_signal_factor_efficacy(
+    factor_values: list[float],
+    forward_returns: list[float],
+    ic_series: Optional[list[float]] = None,
+    max_lags: int = 2,
+) -> dict[str, Optional[float]]:
+    """Evaluates cross-sectional Rank IC and Newey-West HAC t-statistic for quant signals."""
+    rank_ic = compute_rank_ic(factor_values, forward_returns)
+    series = ic_series if ic_series is not None else []
+    hac_tstat = compute_newey_west_hac_tstat(series, max_lags=max_lags) if series else None
+    return {
+        "rank_ic": rank_ic,
+        "newey_west_tstat": hac_tstat,
+    }

@@ -13,6 +13,7 @@ import HoldingCorrectionModal from './Modals/HoldingCorrectionModal'
 import JournalModal from './Modals/JournalModal'
 import FundLookThroughDrawer, { type AvailableFundItem } from './FundLookThroughDrawer'
 import WatchlistModal, { type WatchlistDraft } from './Modals/WatchlistModal'
+import { PositionReviewModal } from '../equity/PositionReviewModal'
 import Modal from '../ui/Modal'
 import { TradeIcon, EditIcon, DeleteIcon, FolderIcon, JournalIcon } from './icons/PortfolioIcons'
 import { isPvdHolding, isValidIsoDate } from '../../lib/pvdPresentation'
@@ -67,6 +68,7 @@ export default function PortfolioHoldingsTab({
   const [fundConstituentsCache, setFundConstituentsCache] = useState<Record<string, FundConstituentsDTO>>({})
   const [fundLoadingMap, setFundLoadingMap] = useState<Record<string, boolean>>({})
   const [watchlistDraft, setWatchlistDraft] = useState<WatchlistDraft | null>(null)
+  const [reviewHolding, setReviewHolding] = useState<ActualHoldingDTO | null>(null)
 
   const directHoldingsSymbols = useMemo(() => holdings.map((h) => h.symbol), [holdings])
 
@@ -823,6 +825,18 @@ export default function PortfolioHoldingsTab({
                             </button>
                           )}
 
+                          {/* Position Review Modal Trigger Button */}
+                          {!isPvd && (
+                            <button
+                              type="button"
+                              onClick={() => setReviewHolding(h)}
+                              className="h-8 px-2 rounded-lg border border-indigo-200 bg-indigo-50 text-xs font-bold text-indigo-700 hover:bg-indigo-600 hover:text-white transition-all flex items-center justify-center shadow-2xs"
+                              title={`ดู Position Review ของ ${h.symbol}`}
+                            >
+                              🔍
+                            </button>
+                          )}
+
                           {/* Edit Button */}
                           {!isPvd && (
                             <button
@@ -1108,6 +1122,22 @@ export default function PortfolioHoldingsTab({
             setWatchlistDraft(null)
             onWatchlistChanged?.()
           }}
+        />
+      )}
+
+      {reviewHolding && (
+        <PositionReviewModal
+          isOpen={true}
+          onClose={() => setReviewHolding(null)}
+          ticker={reviewHolding.symbol}
+          market={
+            reviewHolding.avg_cost_usd != null ||
+            reviewHolding.current_price_usd != null ||
+            reviewHolding.asset_type.toUpperCase().startsWith('US')
+              ? 'US'
+              : 'TH'
+          }
+          portfolioId={portfolioId}
         />
       )}
     </div>

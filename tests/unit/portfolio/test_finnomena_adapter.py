@@ -87,16 +87,24 @@ def test_fetch_nav_unknown_fund_returns_none(tmp_path, sample_catalog_json):
     mock_catalog_resp.json.return_value = sample_catalog_json
     mock_catalog_resp.raise_for_status.return_value = None
 
-    with patch.object(adapter._session, "get", return_value=mock_catalog_resp):
+    with patch.object(adapter._session, "get", return_value=mock_catalog_resp) as mock_get:
         nav_data = adapter.fetch_nav("NOT-A-FUND")
         assert nav_data is None
+        called_urls = [c.args[0] for c in mock_get.call_args_list]
+        assert len(called_urls) >= 1
+        assert all("public/list" in u for u in called_urls)
+        assert not any("/nav/" in u for u in called_urls)
 
 
-def test_fetch_nav_network_error_returns_none(tmp_path, sample_catalog_json):
+def test_fetch_nav_network_error_returns_none(tmp_path, sample_catalog_json, caplog):
     adapter = FinnomenaFundAdapter(cache_dir=str(tmp_path))
     adapter._catalog = {"PRINCIPAL VNEQ-A": "F00000ZMXD"}
     adapter._catalog_loaded_at = 9999999999.0
 
-    with patch.object(adapter._session, "get", side_effect=Exception("Connection reset")):
+    with patch.object(adapter._session, "get", side_effect=Exception("Connection reset")) as mock_get:
         nav_data = adapter.fetch_nav("PRINCIPAL VNEQ-A")
         assert nav_data is None
+        mock_get.assert_called_once()
+        assert "F00000ZMXD" in mock_get.call_args.args[0]
+        assert "/nav/" in mock_get.call_args.args[0]
+        assert "Connection reset" in caplog.text

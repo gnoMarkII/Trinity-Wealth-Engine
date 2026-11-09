@@ -147,7 +147,8 @@ def test_validate_generated_pitch_success():
         thumbnail_concept="ภาพกราฟตลาดหุ้นพุ่งขึ้นแต่กระเป๋าเงินโล่ง",
     )
     batch = YouTubeContentPitchBatch(pitches=[item], date_range_summary="summary", total_source_events=2)
-    validate_generated_pitch(batch)
+    assert validate_generated_pitch(batch) is None
+    assert batch.pitches[0].primary_anchor_event_id == "ev-1"
 
 
 def test_validate_generated_pitch_failure_when_core_thesis_short():

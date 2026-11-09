@@ -55,6 +55,7 @@ def record_performance_snapshot(refresh_prices: bool = True, portfolio_id: str =
                 return result
 
             current_fx = _require_fx(state)
+            fx_dec = decimal_value(current_fx)
             total_nav = decimal_value(state.summary.total_value_thb)
             total_cost = decimal_value(_compute_total_cost(state, current_fx))
             unrealized = decimal_value(state.summary.total_unrealized_profit)
@@ -66,6 +67,19 @@ def record_performance_snapshot(refresh_prices: bool = True, portfolio_id: str =
             passive_ytd = decimal_value(state.summary.passive_income_ytd)
             cutoff = datetime.now(timezone.utc)
             cutoff_utc = cutoff.isoformat().replace("+00:00", "Z")
+            from tools.portfolio.adapters.markdown.paths import get_trades_log_filepath
+            from tools.portfolio.adapters.markdown.repository_adapter import _read_and_migrate_trade_log_locked
+            from tools.portfolio.services.performance_service import build_accrued_dividend_context
+
+            trade_rows = _read_and_migrate_trade_log_locked(get_trades_log_filepath(portfolio_id))
+            accrual_ctx = build_accrued_dividend_context(
+                state=state,
+                trade_rows=trade_rows,
+                as_of_date=cutoff.date().isoformat(),
+                fx_dec=fx_dec,
+            )
+            accrued_receivable = accrual_ctx["accrued_receivable_thb"]
+            economic_nav = total_nav + accrued_receivable
             asset_class_values: dict[str, Decimal] = {}
             for holding in state.holdings:
                 asset_type = holding.asset_type or "Unknown"
@@ -74,6 +88,8 @@ def record_performance_snapshot(refresh_prices: bool = True, portfolio_id: str =
             row = {
                 "Date": cutoff.date().isoformat(),
                 "Total_NAV_THB": str(total_nav.quantize(Decimal("0.01"))),
+                "Accrued_Dividend_Receivable_THB": str(accrued_receivable.quantize(Decimal("0.01"))),
+                "Economic_NAV_THB": str(economic_nav.quantize(Decimal("0.01"))),
                 "Total_Cost": str(total_cost.quantize(Decimal("0.01"))),
                 "Unrealized_PnL": str(unrealized.quantize(Decimal("0.01"))),
                 "Cash_Balance": str(cash_balance.quantize(Decimal("0.01"))),
@@ -115,6 +131,7 @@ def get_structured_performance_history(days: int | None = None, portfolio_id: st
     numeric_fields = (
         "Total_NAV", "Total_Cost", "Unrealized_PnL", "Cash_Balance",
         "Realized_PnL_YTD", "Passive_Income_YTD", "Total_NAV_THB",
+        "Accrued_Dividend_Receivable_THB", "Economic_NAV_THB",
         "Net_External_Flow_THB",
     )
     result = []
@@ -169,11 +186,15 @@ def read_performance_history(days: int = 30, portfolio_id: str = "default") -> s
     if not rows:
         return json.dumps({"error": "Performance_Log.csv ว่างเปล่า"}, ensure_ascii=False)
 
-    navs = [
+    settled_navs = [
         Decimal(str(row.get("Total_NAV_THB") or row.get("Total_NAV")))
         for row in rows
     ]
-    if any(not nav.is_finite() for nav in navs):
+    navs = [
+        Decimal(str(row.get("Economic_NAV_THB") or row.get("Total_NAV_THB") or row.get("Total_NAV")))
+        for row in rows
+    ]
+    if any(not nav.is_finite() for nav in settled_navs) or any(not nav.is_finite() for nav in navs):
         return json.dumps({"error": "Performance_Log.csv contains an invalid NAV"}, ensure_ascii=False)
     first_nav = navs[0]
     latest_nav = navs[-1]
@@ -193,10 +214,15 @@ def read_performance_history(days: int = 30, portfolio_id: str = "default") -> s
         {
             "window_days": days,
             "n_observations": len(rows),
+            "nav_basis": "economic_nav",
             "first_date": rows[0]["Date"],
             "latest_date": rows[-1]["Date"],
             "first_nav": float(first_nav.quantize(Decimal("0.01"))),
             "latest_nav": float(latest_nav.quantize(Decimal("0.01"))),
+            "first_settled_nav": float(settled_navs[0].quantize(Decimal("0.01"))),
+            "latest_settled_nav": float(settled_navs[-1].quantize(Decimal("0.01"))),
+            "first_economic_nav": float(first_nav.quantize(Decimal("0.01"))),
+            "latest_economic_nav": float(latest_nav.quantize(Decimal("0.01"))),
             "change_abs": float(change_abs.quantize(Decimal("0.01"))),
             "change_pct": float(change_pct.quantize(Decimal("0.01"))),
             "max_nav": float(max(navs).quantize(Decimal("0.01"))),

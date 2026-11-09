@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
@@ -26,7 +27,11 @@ class TaskRoutingGovernanceService:
     """Pre-flight governance service evaluating tasks before dispatch to AI, tools, or PM."""
 
     def __init__(self, routing_audit_dir: Optional[Path] = None) -> None:
-        self._audit_dir = routing_audit_dir or Path("review/routing")
+        if routing_audit_dir is not None:
+            self._audit_dir = routing_audit_dir
+        else:
+            audit_root = os.environ.get("AUDIT_STATE_DIR")
+            self._audit_dir = (Path(audit_root) / "routing") if audit_root else Path("review/routing")
         self._in_memory_records: List[TaskRouteRecord] = []
         self._load_persisted_artifacts()
 

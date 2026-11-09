@@ -1,14 +1,43 @@
 """Tests for the 4 Institutional Hedge Fund REST APIs (Chapters 1, 2, 5, 7, 10)."""
+from contextlib import closing
 import pytest
 from fastapi.testclient import TestClient
 
 from api.auth import require_session
+from api.db import get_connection, init_schema
+from api.db.adapters import SqliteInstitutionalLedgerRepositoryAdapter
+from api.dependencies import (
+    get_catalyst_service,
+    get_estimate_ledger_service,
+    get_routine_monitor_service,
+    get_task_routing_service,
+)
 from api.main import app
+from application.equity.estimate_service import EstimateLedgerApplicationService
+from application.governance.routing_service import TaskRoutingGovernanceService
+from application.resilience.routine_monitor_service import RoutineMonitorApplicationService
+from application.thesis.catalyst_service import CatalystApplicationService
 
 
 @pytest.fixture
-def auth_client():
+def auth_client(tmp_path):
+    db_path = str(tmp_path / "institutional.sqlite")
+    with closing(get_connection(db_path)) as conn:
+        init_schema(conn)
+    repo = SqliteInstitutionalLedgerRepositoryAdapter(
+        db_path=db_path,
+        artifact_root=tmp_path / "source-artifacts",
+    )
+    catalyst_svc = CatalystApplicationService(ledger_repository=repo)
+    estimate_svc = EstimateLedgerApplicationService(ledger_repository=repo)
+    routing_svc = TaskRoutingGovernanceService(routing_audit_dir=tmp_path / "routing")
+    routine_svc = RoutineMonitorApplicationService(ledger_repository=repo)
+
     app.dependency_overrides[require_session] = lambda: {"user": "test_pm", "role": "PORTFOLIO_MANAGER_HERMES"}
+    app.dependency_overrides[get_catalyst_service] = lambda: catalyst_svc
+    app.dependency_overrides[get_estimate_ledger_service] = lambda: estimate_svc
+    app.dependency_overrides[get_task_routing_service] = lambda: routing_svc
+    app.dependency_overrides[get_routine_monitor_service] = lambda: routine_svc
     client = TestClient(app)
     yield client
     app.dependency_overrides.clear()

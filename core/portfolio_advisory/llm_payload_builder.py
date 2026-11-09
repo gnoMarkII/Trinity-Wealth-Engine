@@ -36,13 +36,21 @@ def build_advisory_llm_payload(report: PortfolioAdvisoryQuantReport) -> Dict[str
             item["business_conviction_score"] = float(h.business_conviction_score)
         if h.live_upside_12m_pct is not None:
             item["live_upside_12m_pct"] = float(h.live_upside_12m_pct)
+        if h.risk_contribution_pct is not None:
+            item["risk_contribution_pct"] = float(h.risk_contribution_pct)
+        if h.estimated_friction_bps is not None:
+            item["estimated_friction_bps"] = float(h.estimated_friction_bps)
+        if h.volatility_pct is not None:
+            item["volatility_pct"] = float(h.volatility_pct)
+        item["volatility_source"] = h.volatility_source
+        item["is_volatility_estimated"] = h.is_volatility_estimated
         if h.conditional_buy_zone_min is not None and h.conditional_buy_zone_max is not None:
             item["buy_zone"] = f"{h.conditional_buy_zone_min} - {h.conditional_buy_zone_max}"
         if h.lot_sizing:
             item["recommended_lots"] = {
                 "board_lot_shares": h.lot_sizing.board_lot_shares,
                 "whole_shares": h.lot_sizing.whole_shares,
-                "fractional_shares": float(h.lot_sizing.fractional_shares) if h.lot_sizing.fractional_shares else None,
+                "fractional_shares": float(h.lot_sizing.fractional_shares) if h.lot_sizing.fractional_shares is not None else None,
                 "amount_native": float(h.lot_sizing.amount_native),
                 "native_currency": h.lot_sizing.native_currency,
                 "amount_thb": float(h.lot_sizing.amount_thb),
@@ -65,6 +73,7 @@ def build_advisory_llm_payload(report: PortfolioAdvisoryQuantReport) -> Dict[str
         "evaluated_at": report.evaluated_at,
         "data_mode": report.data_mode.value,
         "portfolio_state_hash": report.portfolio_state_hash,
+        "synthesis_input_hash": getattr(report, "synthesis_input_hash", ""),
         "total_nav_thb": float(report.total_nav_thb),
         "cash_ledger": {
             "cash_thb_available": float(cash_plan.cash_thb_available),
@@ -80,6 +89,7 @@ def build_advisory_llm_payload(report: PortfolioAdvisoryQuantReport) -> Dict[str
             "weighted_beta": float(radar.weighted_beta) if radar.weighted_beta is not None else None,
             "sector_crowding": {k: float(v) for k, v in radar.sector_crowding.items()},
             "fx_exposure_pct": {k: float(v) for k, v in radar.fx_exposure_pct.items()},
+            "purpose_bucket_drift": {k: float(v) for k, v in radar.purpose_bucket_drift.items()},
             "unassigned_holdings_nav_pct": float(radar.unassigned_holdings_nav_pct),
             "unassigned_drift_guard_active": radar.unassigned_drift_guard_active,
             "hhi": float(radar.hhi) if radar.hhi is not None else None,
@@ -88,6 +98,30 @@ def build_advisory_llm_payload(report: PortfolioAdvisoryQuantReport) -> Dict[str
             "top_3_weight_pct": float(radar.top_3_weight_pct) if getattr(radar, "top_3_weight_pct", None) is not None else 0.0,
             "top_5_weight_pct": float(radar.top_5_weight_pct) if getattr(radar, "top_5_weight_pct", None) is not None else 0.0,
             "concentration_risk_level": getattr(radar, "concentration_risk_level", "LOW") or "LOW",
+            "bucket_active_share_pct": (
+                float(radar.bucket_active_share_pct)
+                if getattr(radar, "bucket_active_share_pct", None) is not None
+                else None
+            ),
+            "bucket_active_share_status": getattr(radar, "bucket_active_share_status", "AVAILABLE"),
+            "risk_contributions_pct": {k: float(v) for k, v in getattr(radar, "risk_contributions_pct", {}).items()},
+            "inverse_vol_weights_pct": {k: float(v) for k, v in getattr(radar, "inverse_vol_weights_pct", {}).items()},
+            "total_portfolio_volatility_pct": (
+                float(radar.total_portfolio_volatility_pct)
+                if getattr(radar, "total_portfolio_volatility_pct", None) is not None
+                else None
+            ),
+            "risk_contribution_status": getattr(radar, "risk_contribution_status", "AVAILABLE"),
+            "volatility_estimated_symbols": list(getattr(radar, "volatility_estimated_symbols", [])),
+            "drawdown_pct": float(radar.drawdown_pct) if getattr(radar, "drawdown_pct", None) is not None else None,
+            "drawdown_posture_tier": getattr(radar, "drawdown_posture_tier", "NORMAL"),
+            "drawdown_status": getattr(radar, "drawdown_status", "UNAVAILABLE_UNKNOWN_PEAK"),
+            "drawdown_hurdle_adjustment": (
+                float(radar.drawdown_hurdle_adjustment)
+                if getattr(radar, "drawdown_hurdle_adjustment", None) is not None
+                else 0.0
+            ),
+            "drawdown_action_restrictions": list(getattr(radar, "drawdown_action_restrictions", [])),
         },
         "holdings_advisory": holdings_summary,
         "quarantined_holdings": quarantined_summary,

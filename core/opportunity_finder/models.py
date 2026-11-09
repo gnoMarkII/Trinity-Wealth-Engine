@@ -17,6 +17,15 @@ PolicyFitStatus = Literal["pass", "fail", "needs_review"]
 EvidenceReadiness = Literal["sufficient", "partial", "stale", "unavailable"]
 MacroAlignment = Literal["tailwind", "neutral", "headwind", "unavailable"]
 CapacityStatus = Literal["available", "constrained", "unknown", "not_applicable"]
+LiquidityStatus = Literal[
+    "verified",
+    "constrained",
+    "unverified_missing_adtv",
+    "unverified_stale_adtv",
+    "unverified_invalid_adtv",
+    "unverified_missing_fx",
+    "not_applicable",
+]
 ReportReadiness = Literal["ready", "degraded", "not_ready"]
 CandidatePool = Literal["POOL_A_FUND_LOOK_THROUGH", "POOL_B_EQUITY_SIDECAR"]
 
@@ -78,6 +87,9 @@ class CandidateEvaluationResult:
     research_priority: int = 3                 # 1: High Conviction, 2: Secondary, 3: Watch/Monitor, 4: Review Needed
     priority_reasons: List[str] = field(default_factory=list)
     is_actionable: bool = False                # True if pass, tailwind/neutral, and capacity available
+    liquidity_status: LiquidityStatus = "unverified_missing_adtv"
+    adtv_thb: Optional[Decimal] = None
+    liquidity_room_thb: Optional[Decimal] = None
 
 
 @dataclass

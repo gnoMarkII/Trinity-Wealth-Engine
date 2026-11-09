@@ -82,6 +82,32 @@ _INVALID_QUALITY = PriceSeriesQuality(trading_days=5, is_valid=False, stale_reas
 
 
 class TestComputeEquityQuantSignalsHappyPath:
+    @pytest.fixture(autouse=True)
+    def _isolate_offline_providers(self, monkeypatch):
+        """Isolate happy-path unit tests from live SEC Form 4, Nasdaq, and market network calls."""
+        monkeypatch.setattr(
+            "tools.market.equity_quant_tool.compute_canonical_insider_conviction",
+            lambda *args, **kwargs: (None, []),
+        )
+        fake_terminal_service = MagicMock()
+        fake_terminal_service.get_nasdaq_consensus.return_value = None
+        monkeypatch.setattr(
+            "tools.market.terminal_v2.bootstrap.get_terminal_data_service",
+            lambda *args, **kwargs: fake_terminal_service,
+        )
+        monkeypatch.setattr(
+            "tools.market.equity_quant_tool.compute_tactical_setup",
+            lambda *args, **kwargs: (None, []),
+        )
+        monkeypatch.setattr(
+            "tools.market.guidance_engine.extract_verified_earnings_guidance",
+            lambda *args, **kwargs: (None, []),
+        )
+        monkeypatch.setattr(
+            "tools.market.equity_quant_tool.load_latest_macro_regime_context",
+            lambda: None,
+        )
+
     @patch("tools.market.equity_quant_tool._get_price_history")
     @patch("tools.market.equity_quant_tool.compute_smart_money_flags")
     @patch("tools.market.equity_quant_tool.compute_dcf_valuation")
@@ -398,3 +424,246 @@ class TestComputeEquityQuantSignalsErrorPath:
         mock_resolve.side_effect = RuntimeError("boom")
         result = compute_equity_quant_signals.invoke({"ticker": "BROKEN", "market": "US"})
         assert "QUANT_EXECUTION_ERROR" in result or result.startswith("Error:")
+
+
+class TestDuPontAndSloanAutopsyIntegration:
+    """W05: Exercise DuPont/Sloan through real FinancialAutopsyPeriod models & verify provenance/flags."""
+
+    def _run_with_periods(self, monkeypatch, periods):
+        _INFO_CACHE.clear()
+        _INFO_ERROR_CACHE.clear()
+        monkeypatch.setattr(
+            "tools.market.equity_quant_tool.resolve_asset",
+            lambda ticker, market_hint="US": _resolved_asset(ticker, market_hint),
+        )
+        snapshot = FinancialAutopsySnapshot(
+            ticker="DUPONTCO",
+            provider_symbol="DUPONTCO",
+            market="US",
+            currency="USD",
+            unit="raw",
+            retrieval_timestamp="2026-07-20 12:00:00",
+            periods=periods,
+            current_pe=15.0,
+            source_tier="primary_best_effort",
+            period_type=periods[0].period_type if periods else "annual",
+        )
+        monkeypatch.setattr(
+            "tools.market.equity_quant_tool.get_financial_autopsy",
+            lambda resolved: FinancialAutopsyFetchResult(asset=resolved, status="success", snapshot=snapshot),
+        )
+        monkeypatch.setattr(
+            "tools.market.equity_quant_tool._yf_info",
+            lambda sym: {"shortName": "DuPont Co", "currentPrice": 100.0, "numberOfAnalystOpinions": 5},
+        )
+        monkeypatch.setattr("tools.market.equity_quant_tool._get_price_history", lambda *args, **kwargs: pd.DataFrame())
+        monkeypatch.setattr("tools.market.equity_quant_tool.compute_beta", lambda *args, **kwargs: (1.0, _VALID_QUALITY))
+        monkeypatch.setattr("tools.market.equity_quant_tool.compute_volatility", lambda *args, **kwargs: (20.0, _VALID_QUALITY))
+        monkeypatch.setattr("tools.market.equity_quant_tool.compute_mdd", lambda *args, **kwargs: (-10.0, _VALID_QUALITY))
+        monkeypatch.setattr(
+            "tools.market.equity_quant_tool.compute_technical_indicators",
+            lambda *args, **kwargs: ({"rsi_14": 50.0, "macd_signal": "neutral"}, _VALID_QUALITY),
+        )
+        monkeypatch.setattr("tools.market.equity_quant_tool.fetch_peer_metrics", lambda *args, **kwargs: [])
+        monkeypatch.setattr("tools.market.equity_quant_tool.compute_price_percentile", lambda *args, **kwargs: (50.0, 0.0, _VALID_QUALITY))
+        monkeypatch.setattr("tools.market.equity_quant_tool.fetch_earnings_revision_data", lambda *args, **kwargs: (None, None))
+        monkeypatch.setattr("tools.market.equity_quant_tool.load_latest_macro_observables", lambda: {})
+        monkeypatch.setattr("tools.market.equity_quant_tool.compute_dcf_valuation", lambda *args, **kwargs: (None, []))
+        monkeypatch.setattr("tools.market.equity_quant_tool.compute_smart_money_flags", lambda *args, **kwargs: (SmartMoneyFlags(), []))
+        monkeypatch.setattr("tools.market.equity_quant_tool.compute_canonical_insider_conviction", lambda *args, **kwargs: (None, []))
+        monkeypatch.setattr("tools.market.equity_quant_tool.compute_tactical_setup", lambda *args, **kwargs: (None, []))
+        monkeypatch.setattr("tools.market.guidance_engine.extract_verified_earnings_guidance", lambda *args, **kwargs: (None, []))
+        monkeypatch.setattr("tools.market.equity_quant_tool.load_latest_macro_regime_context", lambda: None)
+        raw = compute_equity_quant_signals.invoke({"ticker": "DUPONTCO", "market": "US"})
+        return QuantSignals.model_validate(json.loads(raw))
+
+    def test_selects_comparable_prior_period_and_emits_provenance(self, monkeypatch):
+        periods = [
+            FinancialAutopsyPeriod(
+                fiscal_period_end="2026-06-30",
+                period_type="annual",
+                net_income=120.0,
+                total_revenue=1000.0,
+                total_assets=2000.0,
+                stockholders_equity=800.0,
+                operating_cash_flow=200.0,
+                source_tier="primary_best_effort",
+            ),
+            # Interleaved quarterly period must be skipped in favor of annual_2025
+            FinancialAutopsyPeriod(
+                fiscal_period_end="2026-03-31",
+                period_type="quarterly",
+                total_assets=9999.0,
+                source_tier="primary_best_effort",
+            ),
+            FinancialAutopsyPeriod(
+                fiscal_period_end="2025-06-30",
+                period_type="annual",
+                total_assets=1000.0,
+                source_tier="primary_best_effort",
+            ),
+        ]
+        signals = self._run_with_periods(monkeypatch, periods)
+        assert signals.dupont_breakdown is not None
+        assert signals.dupont_breakdown["roe_pct"] == pytest.approx(15.0, abs=0.01)
+        assert signals.dupont_breakdown["is_published_reconciled"] is True
+        assert signals.dupont_breakdown["fiscal_period_end"] == "2026-06-30"
+        assert signals.sloan_accrual is not None
+        assert signals.sloan_accrual["assets_basis"] == "two_period_average"
+        assert signals.sloan_accrual["prior_fiscal_period_end"] == "2025-06-30"
+        assert signals.metric_basis["dupont_3factor"] == "annual:2026-06-30"
+        assert signals.metric_basis["sloan_accrual"] == "two_period_average:annual:2026-06-30"
+
+    def test_non_comparable_prior_falls_back_to_ending_assets_and_flags_bad_inputs(self, monkeypatch):
+        # 1) Mixed period types only -> must use "single_period_ending" assets, never quarterly prior for annual current
+        periods_mixed = [
+            FinancialAutopsyPeriod(
+                fiscal_period_end="2026-06-30",
+                period_type="annual",
+                net_income=1.0,
+                total_revenue=100.0,
+                total_assets=10_000_000.0,
+                stockholders_equity=10.0,
+                operating_cash_flow=1.0,
+                source_tier="primary_best_effort",
+            ),
+            FinancialAutopsyPeriod(
+                fiscal_period_end="2026-03-31",
+                period_type="quarterly",
+                total_assets=500.0,
+                source_tier="primary_best_effort",
+            ),
+        ]
+        signals = self._run_with_periods(monkeypatch, periods_mixed)
+        assert signals.sloan_accrual is not None
+        assert signals.sloan_accrual["assets_basis"] == "single_period_ending"
+        assert signals.sloan_accrual["prior_fiscal_period_end"] is None
+        assert "dupont_display_reconciliation_gap:quality" in signals.data_quality_flags
+        assert signals.dupont_breakdown["is_published_reconciled"] is False
+
+        # 2) Non-positive denominators & assets -> explicit quality flags, never silent None without provenance
+        periods_bad = [
+            FinancialAutopsyPeriod(
+                fiscal_period_end="2026-06-30",
+                period_type="annual",
+                net_income=50.0,
+                total_revenue=0.0,
+                total_assets=-10.0,
+                stockholders_equity=100.0,
+                operating_cash_flow=40.0,
+                source_tier="primary_best_effort",
+            ),
+        ]
+        signals_bad = self._run_with_periods(monkeypatch, periods_bad)
+        assert signals_bad.dupont_breakdown is None
+        assert signals_bad.sloan_accrual is None
+        assert "dupont_unavailable:non_positive_denominator" in signals_bad.data_quality_flags
+        assert "sloan_unavailable:non_positive_assets" in signals_bad.data_quality_flags
+        assert signals_bad.metric_basis["dupont_3factor"] == "unavailable_non_positive_denominator"
+        assert signals_bad.metric_basis["sloan_accrual"] == "unavailable_non_positive_assets"
+
+        # 3) Non-finite input raises inside calculation -> explicit calculation_failed flags & provenance
+        periods_nan = [
+            FinancialAutopsyPeriod(
+                fiscal_period_end="2026-06-30",
+                period_type="annual",
+                net_income=float("nan"),
+                total_revenue=1000.0,
+                total_assets=2000.0,
+                stockholders_equity=500.0,
+                operating_cash_flow=50.0,
+                source_tier="primary_best_effort",
+            ),
+        ]
+        signals_nan = self._run_with_periods(monkeypatch, periods_nan)
+        assert signals_nan.dupont_breakdown is None
+        assert signals_nan.sloan_accrual is None
+        assert "dupont_calculation_failed:quality" in signals_nan.data_quality_flags
+        assert "sloan_calculation_failed:quality" in signals_nan.data_quality_flags
+        assert signals_nan.metric_basis["dupont_3factor"] == "calculation_failed"
+        assert signals_nan.metric_basis["sloan_accrual"] == "calculation_failed"
+
+
+def test_signal_audit_consensus_and_pit_wiring(monkeypatch, tmp_vault):
+    """Step 3.4: Signal maturity embargo guard, consensus gap, and PIT bands are wired into quant tool."""
+    _INFO_CACHE.clear()
+    _INFO_ERROR_CACHE.clear()
+    monkeypatch.setattr("tools.market.equity_quant_tool.resolve_asset", lambda ticker, market_hint="US": _resolved_asset(ticker, market_hint))
+    immature_snapshot = FinancialAutopsySnapshot(
+        ticker="IMMATURE",
+        provider_symbol="IMMATURE",
+        market="US",
+        currency="USD",
+        unit="raw",
+        retrieval_timestamp="2026-06-30 12:00:00",
+        periods=[
+            FinancialAutopsyPeriod(
+                fiscal_period_end="2026-06-30",
+                period_type="annual",
+                net_income=100.0,
+                total_revenue=1000.0,
+                total_assets=2000.0,
+                stockholders_equity=800.0,
+                source_tier="primary_best_effort",
+            )
+        ],
+        current_pe=20.0,
+        source_tier="primary_best_effort",
+        period_type="annual",
+    )
+    monkeypatch.setattr(
+        "tools.market.equity_quant_tool.get_financial_autopsy",
+        lambda resolved: FinancialAutopsyFetchResult(asset=resolved, status="success", snapshot=immature_snapshot),
+    )
+    monkeypatch.setattr("tools.market.equity_quant_tool._yf_info", lambda sym: {"shortName": "Immature Co", "currentPrice": 50.0})
+    dates = pd.date_range(end=pd.Timestamp("2026-07-01", tz="UTC"), periods=10, freq="B")
+    monkeypatch.setattr(
+        "tools.market.equity_quant_tool._get_price_history",
+        lambda *args, **kwargs: pd.DataFrame(
+            {"Close": [50.0] * len(dates), "High": [51.0] * len(dates), "Low": [49.0] * len(dates), "Open": [50.0] * len(dates), "Volume": [1000] * len(dates)},
+            index=dates,
+        ),
+    )
+    monkeypatch.setattr("tools.market.equity_quant_tool.compute_beta", lambda *args, **kwargs: (1.0, _VALID_QUALITY))
+    monkeypatch.setattr("tools.market.equity_quant_tool.compute_volatility", lambda *args, **kwargs: (20.0, _VALID_QUALITY))
+    monkeypatch.setattr("tools.market.equity_quant_tool.compute_mdd", lambda *args, **kwargs: (-10.0, _VALID_QUALITY))
+    monkeypatch.setattr("tools.market.equity_quant_tool.compute_technical_indicators", lambda *args, **kwargs: ({"rsi_14": 50.0, "macd_signal": "neutral"}, _VALID_QUALITY))
+    monkeypatch.setattr("tools.market.equity_quant_tool.fetch_peer_metrics", lambda *args, **kwargs: [])
+    monkeypatch.setattr("tools.market.equity_quant_tool.compute_price_percentile", lambda *args, **kwargs: (50.0, 0.0, _VALID_QUALITY))
+    monkeypatch.setattr(
+        "tools.market.equity_quant_tool.fetch_earnings_revision_data",
+        lambda *args, **kwargs: (
+            {"up_last_30d": 3, "down_last_30d": 1, "estimate_current": 5.0, "estimate_30d_ago": 4.8, "revenue_growth_next_year_pct": 12.0},
+            None,
+        ),
+    )
+    monkeypatch.setattr("tools.market.equity_quant_tool.load_latest_macro_observables", lambda: {})
+    from schemas.micro_quant_schemas import ReverseDCFResult
+    monkeypatch.setattr(
+        "tools.market.equity_quant_tool.compute_institutional_reverse_dcf",
+        lambda *args, **kwargs: (ReverseDCFResult(status="available", is_eligible=True, market_implied_growth_pct=18.0), []),
+    )
+    monkeypatch.setattr("tools.market.equity_quant_tool.compute_dcf_valuation", lambda *args, **kwargs: (None, []))
+    monkeypatch.setattr("tools.market.equity_quant_tool.compute_smart_money_flags", lambda *args, **kwargs: (SmartMoneyFlags(), []))
+    monkeypatch.setattr("tools.market.equity_quant_tool.compute_canonical_insider_conviction", lambda *args, **kwargs: (None, []))
+    monkeypatch.setattr("tools.market.equity_quant_tool.compute_tactical_setup", lambda *args, **kwargs: (None, []))
+    monkeypatch.setattr("tools.market.guidance_engine.extract_verified_earnings_guidance", lambda *args, **kwargs: (None, []))
+    monkeypatch.setattr("tools.market.equity_quant_tool.load_latest_macro_regime_context", lambda: None)
+
+    raw = compute_equity_quant_signals.invoke({"ticker": "IMMATURE", "market": "US"})
+    signals = QuantSignals.model_validate(json.loads(raw))
+
+    # Filing date 2026-06-30 vs as_of 2026-07-01 (< 2 days embargo) -> flagged
+    assert signals.metric_basis["signal_maturity"] == "immature_disclosure"
+    assert "immature_financial_disclosure:signal_audit" in signals.data_quality_flags
+    assert signals.evidence_snapshot is not None
+    assert signals.evidence_snapshot.derived_features["signal_maturity_passed"] is False
+
+    # Consensus expectation gap: market_implied 18.0 - consensus 12.0 = +6.0
+    assert signals.metric_basis["consensus_expectation"] == "available"
+    cons_feat = signals.evidence_snapshot.derived_features["consensus_expectation"]
+    assert cons_feat["expectation_gap_pct"] == pytest.approx(6.0, abs=0.01)
+
+    # PIT bands queried from isolated tmp_vault ledger
+    assert signals.metric_basis["pit_multiple_bands"] == "unavailable"
+    assert signals.metric_basis["pit_observations_count"] == "0"

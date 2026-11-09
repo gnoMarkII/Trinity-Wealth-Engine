@@ -437,11 +437,28 @@ class SqliteInsiderSyncAdapter(InsiderSyncPort):
 
     def sync(self, ticker: str) -> None:
         from api.db.uow import DbUnitOfWork
+        from tools.market.sec_form4_pipeline import derive_canonical_transactions
 
         records = self._provider.fetch(ticker)
+        has_amendment = any(isinstance(parsed, dict) and parsed.get("is_amendment") for parsed in records)
+        canonical_accessions = None
+        if has_amendment:
+            canonical_lots, q_meta = derive_canonical_transactions(records)
+            if not q_meta.get("requires_review"):
+                canonical_accessions = {
+                    lot.get("accession_number")
+                    for lot in canonical_lots
+                    if lot.get("accession_number")
+                }
+
         with DbUnitOfWork(db_path=self._db_path) as uow:
             for parsed in records:
-                insider_repo_dao.record_parsed_filing(uow.conn, parsed)
+                payload = parsed
+                if has_amendment and isinstance(parsed, dict) and not parsed.get("is_amendment"):
+                    acc = parsed.get("accession_number")
+                    if canonical_accessions is None or (acc and acc not in canonical_accessions):
+                        payload = {**parsed, "transactions": []}
+                insider_repo_dao.record_parsed_filing(uow.conn, payload)
 
 
 class SqliteEarningsCallWorkflowAdapter(_SqliteAdapterBase, EarningsCallWorkflowPort):

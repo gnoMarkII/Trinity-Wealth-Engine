@@ -127,6 +127,11 @@ class HoldingAdvisoryItem:
     sector_quadrant: Optional[str] = None
     breached_falsifiers: list[str] = field(default_factory=list)
     data_warnings: list[str] = field(default_factory=list)
+    risk_contribution_pct: Optional[Decimal] = None
+    estimated_friction_bps: Optional[Decimal] = None
+    volatility_pct: Optional[Decimal] = None
+    volatility_source: Literal["observed", "estimated_default", "unavailable"] = "unavailable"
+    is_volatility_estimated: bool = False
 
 
 @dataclass
@@ -145,6 +150,18 @@ class PortfolioRiskRadar:
     top_3_weight_pct: Decimal = Decimal("0")
     top_5_weight_pct: Decimal = Decimal("0")
     concentration_risk_level: Literal["LOW", "MODERATE", "HIGH"] = "LOW"
+    bucket_active_share_pct: Optional[Decimal] = None
+    bucket_active_share_status: Literal["AVAILABLE", "UNAVAILABLE"] = "AVAILABLE"
+    risk_contributions_pct: dict[str, Decimal] = field(default_factory=dict)
+    inverse_vol_weights_pct: dict[str, Decimal] = field(default_factory=dict)
+    total_portfolio_volatility_pct: Optional[Decimal] = None
+    risk_contribution_status: Literal["AVAILABLE", "UNAVAILABLE_ZERO_VARIANCE", "NO_ACTIVE_ASSETS"] = "AVAILABLE"
+    volatility_estimated_symbols: list[str] = field(default_factory=list)
+    drawdown_pct: Optional[Decimal] = None
+    drawdown_posture_tier: Literal["NORMAL", "TIER_1_CAUTION", "TIER_2_THROTTLE", "TIER_3_DEFENSIVE"] = "NORMAL"
+    drawdown_status: Literal["AVAILABLE", "UNAVAILABLE_UNKNOWN_PEAK"] = "UNAVAILABLE_UNKNOWN_PEAK"
+    drawdown_hurdle_adjustment: Decimal = Decimal("0.0")
+    drawdown_action_restrictions: list[str] = field(default_factory=list)
 
 
 @dataclass
@@ -162,6 +179,7 @@ class PortfolioAdvisoryQuantReport:
     macro_regime_summary: Optional[dict[str, Any]] = None
     cached_narrative: Optional[dict[str, Any]] = None
     look_through_summary: Optional[Any] = None
+    synthesis_input_hash: str = ""
 
 
 @dataclass

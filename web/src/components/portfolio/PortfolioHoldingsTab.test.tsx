@@ -1,5 +1,5 @@
 import { render, screen, fireEvent, within, waitFor } from '@testing-library/react'
-import { describe, expect, it, vi } from 'vitest'
+import { describe, expect, it, vi, beforeEach } from 'vitest'
 import PortfolioHoldingsTab from './PortfolioHoldingsTab'
 import { api } from '../../api/client'
 
@@ -8,10 +8,14 @@ vi.mock('../../api/client', () => ({
     getFundConstituents: vi.fn(),
     batchRemoveHoldings: vi.fn(),
     removeHolding: vi.fn(),
+    getPositionReview: vi.fn(),
   },
 }))
 
 describe('PortfolioHoldingsTab', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
   const holdings = [
     {
       symbol: 'AAPL',
@@ -427,6 +431,62 @@ describe('PortfolioHoldingsTab', () => {
 
     await waitFor(() => {
       expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    })
+  })
+
+  it('opens PositionReviewModal when review action button is clicked for non-PVD holding', async () => {
+    vi.mocked(api.getPositionReview).mockResolvedValue({
+      ticker: 'AAPL',
+      company_name: 'Apple Inc.',
+      current_price: 180.0,
+      as_of_date: '2026-08-03',
+      action_stance: 'HOLD',
+      action_stance_reason: 'Thesis remains intact.',
+      holding_summary: {
+        is_held: true,
+        units: 10,
+        avg_cost: 150.0,
+        unrealized_pnl_pct: 20.0,
+        current_weight_pct: 47.37,
+        bucket_id: 'CORE',
+        entry_date: '2025-05-01',
+        added_direction: 'single_entry',
+      },
+      decompositions: [],
+      then_vs_now: {
+        is_held: true,
+        period_label: 'since_entry',
+        then_date: '2025-05-01',
+        now_date: '2026-08-03',
+        then_price: 150.0,
+        now_price: 180.0,
+        then_pe: 25.0,
+        now_pe: 28.5,
+        then_growth_pct: 10.0,
+        now_growth_pct: 12.0,
+        what_was_true_then: 'Core compounder.',
+        what_is_true_now: 'Margin expansion steady.',
+        thesis_reflection_question: 'Would you initiate AAPL today?',
+      },
+      triggers: [],
+      honest_gaps: [],
+    })
+
+    render(
+      <PortfolioHoldingsTab
+        portfolioId="default"
+        holdings={holdings}
+        selectedBucket={null}
+        onClearBucketFilter={vi.fn()}
+      />
+    )
+
+    const reviewBtn = screen.getByTitle('ดู Position Review ของ AAPL')
+    fireEvent.click(reviewBtn)
+
+    await waitFor(() => {
+      expect(api.getPositionReview).toHaveBeenCalledWith('AAPL', 'US', 'default')
+      expect(screen.getByText('AAPL Position Review')).toBeInTheDocument()
     })
   })
 })

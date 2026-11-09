@@ -104,9 +104,26 @@ def get_knowledge_write_service() -> KnowledgeWriteService:
     vault_paths = VaultPaths(_get_vault_path())
     return KnowledgeWriteService(build_knowledge_write_port(vault_paths=vault_paths))
 
+
+def get_knowledge_query_service():
+    """Compose KnowledgeQueryService backed by the Vault note catalog and link resolver."""
+    from application.knowledge.query_service import KnowledgeQueryService
+    from tools.archivist.catalog_adapter import SqliteNoteCatalogAdapter
+    from tools.archivist.catalog_runtime import resolve_catalog_path
+    from tools.archivist.link_resolver import VaultLinkResolver
+
+    vault_root = _get_vault_path()
+    try:
+        resolve_catalog_path(vault_root, require_exists=True)
+        read_only = True
+    except FileNotFoundError:
+        read_only = False
+    catalog = SqliteNoteCatalogAdapter(vault_root=vault_root, read_only=read_only)
+    resolver = VaultLinkResolver(catalog=catalog, vault_root=vault_root)
+    return KnowledgeQueryService(catalog=catalog, link_resolver=resolver)
+
 # Process-scoped query service: the cache is application state, not a new
-# object per request.  Tests and compatibility callers can clear the exposed
-# cache through ``api.routes_ohlcv``.
+# object per request.  Tests can clear ``_OHLCV_SERVICE._cache`` directly.
 _OHLCV_SERVICE = build_ohlcv_service()
 
 
@@ -1321,3 +1338,9 @@ def get_routine_monitor_service():
     from application.resilience.routine_monitor_service import RoutineMonitorApplicationService
     from api.db.adapters import SqliteInstitutionalLedgerRepositoryAdapter
     return RoutineMonitorApplicationService(ledger_repository=SqliteInstitutionalLedgerRepositoryAdapter())
+
+
+def get_readiness_audit_service(repo_root: Optional[Path] = None):
+    """Dependency provider for InstitutionalReadinessAuditService (Appendix J)."""
+    from application.resilience.readiness_audit_service import InstitutionalReadinessAuditService
+    return InstitutionalReadinessAuditService(repo_root=repo_root)

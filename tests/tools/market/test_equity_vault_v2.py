@@ -9,6 +9,7 @@ Verifies:
 """
 from __future__ import annotations
 
+from datetime import datetime, timezone
 import json
 from pathlib import Path
 
@@ -132,7 +133,7 @@ def test_ftnt_quant_and_earnings_v2(tmp_path: Path, monkeypatch) -> None:
     quant_file = vault_dir / "30_Knowledge_Base" / "Stocks" / "FTNT" / "Quant" / "FTNT_2026-09-05.md"
     assert quant_file.exists()
 
-    trend = get_equity_score_trend("FTNT")
+    trend = get_equity_score_trend("FTNT", as_of=datetime(2026, 9, 10, tzinfo=timezone.utc))
     assert len(trend) == 1
     assert trend[0]["composite_score"] == 78.5
 

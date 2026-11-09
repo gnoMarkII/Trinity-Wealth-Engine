@@ -59,7 +59,7 @@ def test_synthesize_node(tmp_path, monkeypatch):
 
 def test_build_news_funnel_graph():
     graph = build_news_funnel_graph()
-    assert graph is not None
+    assert {"load_pending", "gate", "synthesize"}.issubset(set(graph.nodes.keys()))
 
 
 def test_gate_node_fail_closed(monkeypatch):

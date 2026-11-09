@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta, timezone
+from datetime import date, datetime, time, timedelta, timezone
 from decimal import Decimal
 from typing import Any, List, Optional, Tuple
 import pandas as pd
@@ -12,6 +12,14 @@ _INSIDER_WINDOW_DAYS = 90
 log = get_logger(__name__)
 
 
+def _normalize_as_of_utc(as_of: Optional[datetime | date]) -> datetime:
+    if as_of is None:
+        return datetime.now(timezone.utc)
+    if callable(getattr(as_of, "astimezone", None)):
+        return as_of.astimezone(timezone.utc) if as_of.tzinfo is not None else as_of.replace(tzinfo=timezone.utc)
+    return datetime.combine(as_of, time.min, tzinfo=timezone.utc)
+
+
 @traceable(run_type="parser")
 def compute_smart_money_flags(
     ticker: str,
@@ -19,6 +27,7 @@ def compute_smart_money_flags(
     has_10b51_filtered_data: bool = False,
     discretionary_buy_count: Optional[int] = None,
     discretionary_sell_count: Optional[int] = None,
+    as_of: Optional[datetime | date] = None,
 ) -> tuple[SmartMoneyFlags, list[str]]:
     """ประเมินสัญญาณ Smart Money (Insider buying/selling, Short Interest, Institutional Ownership)
 
@@ -62,7 +71,7 @@ def compute_smart_money_flags(
             if insiders is not None and not insiders.empty and "Transaction" in insiders.columns:
                 date_col = next((c for c in ("Start Date", "Date") if c in insiders.columns), None)
                 if date_col is not None:
-                    cutoff = datetime.now(timezone.utc) - timedelta(days=_INSIDER_WINDOW_DAYS)
+                    cutoff = _normalize_as_of_utc(as_of) - timedelta(days=_INSIDER_WINDOW_DAYS)
                     tx_dates = pd.to_datetime(insiders[date_col], errors="coerce", utc=True)
                     recent = insiders[tx_dates >= cutoff]
                 else:
@@ -111,7 +120,7 @@ def compute_canonical_insider_conviction(
     market: str = "US",
     canonical_transactions: Optional[List[dict[str, Any]]] = None,
     quarantine_meta: Optional[dict[str, Any]] = None,
-    as_of: Optional[datetime] = None,
+    as_of: Optional[datetime | date] = None,
 ) -> Tuple[InsiderConviction, List[str]]:
     """คำนวณ Insider Conviction จาก Canonical SEC Form 4 Ledger
     - Code P (Open Market Purchase) สำหรับ Insider Timing
@@ -131,24 +140,59 @@ def compute_canonical_insider_conviction(
     # If canonical_transactions not passed, try to fetch from SEC Form 4 adapter first, then yfinance fallback
     txs = canonical_transactions
     from_sec_form4 = False
+    derived_q_meta = None
     if txs is None and mkt == "US":
         try:
             from tools.market.terminal_v2.bootstrap import get_terminal_data_service
+            from tools.market.sec_form4_pipeline import derive_canonical_transactions
+
             sec_snap = get_terminal_data_service().get_insider_trades(ticker, limit=30)
-            if sec_snap and sec_snap.transactions:
-                txs = []
-                for it in sec_snap.transactions:
-                    txs.append({
-                        "transaction_date": it.transaction_date,
-                        "transaction_code": it.transaction_code,
-                        "shares": it.shares or 0.0,
-                        "price_per_share": it.price_per_share or 0.0,
-                        "officer_title": it.officer_title or "",
-                        "is_c_suite": bool(it.is_officer and any(t in (it.officer_title or "").lower() for t in ["ceo", "cfo", "coo", "chief", "president"])),
-                        "is_10b5_1_plan": it.is_10b51,
-                        "accession_number": it.accession_number,
-                    })
-                from_sec_form4 = True
+            if sec_snap:
+                if any("quarantined" in str(lim).lower() for lim in (getattr(sec_snap, "limitations", ()) or ())):
+                    derived_q_meta = {
+                        "requires_review": True,
+                        "quarantined_filing_count_90d": max(1, len({it.accession_number for it in (sec_snap.transactions or ()) if it.accession_number})),
+                        "quarantined_lot_count_90d": len(sec_snap.transactions or ()),
+                    }
+                if sec_snap.transactions:
+                    filings_by_acc: dict[str, dict[str, Any]] = {}
+                    for it in sec_snap.transactions:
+                        acc = it.accession_number or f"{it.reporting_owner}_{it.transaction_date}"
+                        filing = filings_by_acc.setdefault(
+                            acc,
+                            {
+                                "accession_number": acc,
+                                "issuer_cik": getattr(sec_snap, "cik", ""),
+                                "ticker": ticker.upper(),
+                                "filed_at": it.transaction_date,
+                                "original_submission_date": it.transaction_date,
+                                "reporting_owner_cik": it.reporting_owner,
+                                "reporting_owner_name": it.reporting_owner,
+                                "officer_title": it.officer_title or "",
+                                "is_officer": bool(it.is_officer),
+                                "is_director": bool(it.is_director),
+                                "is_ten_percent_owner": bool(it.is_ten_percent_owner),
+                                "is_amendment": bool(getattr(it, "is_amendment", False)),
+                                "transactions": [],
+                            },
+                        )
+                        shares_val = float(it.shares or 0.0)
+                        price_val = float(it.price_per_share or 0.0)
+                        lot_cents = int(round(shares_val * price_val * 100))
+                        filing["transactions"].append({
+                            "transaction_date": it.transaction_date,
+                            "transaction_code": it.transaction_code,
+                            "security_title": "Common Stock",
+                            "ownership_nature": getattr(it, "direct_or_indirect", "D") or "D",
+                            "shares": shares_val,
+                            "price_per_share": price_val,
+                            "lot_value_cents": lot_cents,
+                            "is_10b5_1_plan": bool(it.is_10b51),
+                            "accession_number": it.accession_number,
+                        })
+                    filings_list = list(filings_by_acc.values())
+                    txs, derived_q_meta = derive_canonical_transactions(filings_list)
+                    from_sec_form4 = True
         except Exception as e:
             log.debug("SEC EDGAR insider trades not available via bootstrap for %s: %s", ticker, e)
 
@@ -191,7 +235,7 @@ def compute_canonical_insider_conviction(
     if txs is None:
         return InsiderConviction(status="unavailable", data_status="unavailable"), ["form4_data_unavailable:insider"]
 
-    now_dt = as_of if as_of is not None else datetime.now(timezone.utc)
+    now_dt = _normalize_as_of_utc(as_of)
     cutoff = now_dt - timedelta(days=_INSIDER_WINDOW_DAYS)
     p_filing_accs = set()
     p_lot_count = 0
@@ -277,7 +321,7 @@ def compute_canonical_insider_conviction(
     buy_max = max(buy_prices) if buy_prices else None
 
     # Determine quarantine metadata
-    q_meta = quarantine_meta or (getattr(canonical_transactions, "quarantine_meta", None) if canonical_transactions is not None else None)
+    q_meta = quarantine_meta or derived_q_meta or (getattr(canonical_transactions, "quarantine_meta", None) if canonical_transactions is not None else None)
     requires_review = q_meta.get("requires_review", False) if isinstance(q_meta, dict) else False
     quarantined_filings = q_meta.get("quarantined_filing_count_90d", 0) if isinstance(q_meta, dict) else 0
     quarantined_lots = q_meta.get("quarantined_lot_count_90d", 0) if isinstance(q_meta, dict) else 0

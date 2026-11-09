@@ -726,3 +726,35 @@ def test_pm_review_mixed_currency_long_short_exposure_uses_decimal_fx():
     assert delta["net_market_value"] == 5850.0
     assert delta["eligible_positions_count"] == 3
 
+
+def test_r07_pm_review_uses_economic_nav_for_xd_continuity():
+    """R07 regression: XD mechanical price drop offset by dividend receivable preserves return continuity."""
+    perf_rows = [
+        {
+            "Date": "2026-11-05",
+            "Total_NAV": "350000.00",
+            "Total_NAV_THB": "350000.00",
+            "Accrued_Dividend_Receivable_THB": "0.00",
+            "Economic_NAV_THB": "350000.00",
+            "Net_External_Flow_THB": "0.00",
+            "Flow_Coverage_Status": "COMPLETE",
+        },
+        {
+            "Date": "2026-11-06",
+            "Total_NAV": "339200.00",
+            "Total_NAV_THB": "339200.00",
+            "Accrued_Dividend_Receivable_THB": "10800.00",
+            "Economic_NAV_THB": "350000.00",
+            "Net_External_Flow_THB": "0.00",
+            "Flow_Coverage_Status": "COMPLETE",
+        },
+    ]
+    service = PMReviewApplicationService(
+        signoff_repo=InMemorySignoffRepo(),
+        performance_reader=lambda days=5, portfolio_id="default", as_of_utc=None: perf_rows,
+    )
+    delta = service.build_morning_packet(review_date="2026-11-06").portfolio_delta
+    assert delta["daily_pnl_status"] == "AVAILABLE"
+    assert delta["daily_pnl_value"] == 0.0
+    assert delta["daily_pnl_pct"] == 0.0
+    assert delta["daily_pnl_nav_basis"] == "economic_nav"

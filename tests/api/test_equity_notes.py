@@ -5,7 +5,7 @@ from pathlib import Path
 from fastapi.testclient import TestClient
 
 from api.main import app
-from api.routes_equity import _is_agent_generated
+from api.compatibility.equity import _is_agent_generated
 
 client = TestClient(app)
 
@@ -45,13 +45,11 @@ def test_is_agent_generated_filtering():
 
 def test_get_equity_notes_integration(tmp_path, monkeypatch):
     import tools.archivist.core as archivist_core
-    import api.routes_equity as routes_equity
 
     vault_path = tmp_path / "ObsidianVault"
     vault_path.mkdir()
 
     monkeypatch.setattr(archivist_core, "VAULT_PATH", vault_path)
-    monkeypatch.setattr(routes_equity, "VAULT_PATH", vault_path)
 
     # 1. Setup Watchlist item
     wl_dir = vault_path / "20_Portfolio_Management" / "Current_Holdings" / "WatchlistItems"
@@ -111,13 +109,11 @@ def test_get_equity_notes_integration(tmp_path, monkeypatch):
 
 def test_get_equity_note_content_and_path_traversal(tmp_path, monkeypatch):
     import tools.archivist.core as archivist_core
-    import api.routes_equity as routes_equity
 
     vault_path = tmp_path / "ObsidianVault"
     vault_path.mkdir()
 
     monkeypatch.setattr(archivist_core, "VAULT_PATH", vault_path)
-    monkeypatch.setattr(routes_equity, "VAULT_PATH", vault_path)
 
     # Valid note
     note_file = vault_path / "30_Knowledge_Base" / "Stocks" / "AAPL" / "Thesis.md"

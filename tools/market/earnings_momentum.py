@@ -53,6 +53,26 @@ def _fetch_earnings_revision_raw(provider_symbol: str) -> Tuple[Optional[dict], 
         "estimate_current": _safe_num(trend_row, "current", float),
         "estimate_30d_ago": _safe_num(trend_row, "30daysAgo", float),
     }
+    try:
+        from tools.market.consensus_engine import probe_consensus_runtime
+
+        consensus_payload, _consensus_flags = probe_consensus_runtime(
+            provider_symbol,
+            ticker_obj=tk,
+            revisions=revisions,
+            trend=trend,
+        )
+        if isinstance(consensus_payload, dict):
+            if consensus_payload.get("revenue_growth_next_year_pct") is not None:
+                data["revenue_growth_next_year_pct"] = consensus_payload["revenue_growth_next_year_pct"]
+            if consensus_payload.get("analyst_count") is not None:
+                data["analyst_count"] = consensus_payload["analyst_count"]
+            if consensus_payload.get("coverage_level") is not None:
+                data["coverage_level"] = consensus_payload["coverage_level"]
+            if consensus_payload.get("trend_0y") is not None:
+                data["trend_0y"] = consensus_payload["trend_0y"]
+    except Exception as e:
+        log.debug("probe_consensus_runtime enrichment skipped for %s: %s", provider_symbol, e)
     return data, None
 
 

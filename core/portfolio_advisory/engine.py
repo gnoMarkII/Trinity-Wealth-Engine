@@ -28,7 +28,19 @@ from core.portfolio_advisory.guardrails import (
     validate_fx_rate,
     verify_ticker_market_identity,
 )
-from core.portfolio_advisory.lot_rounding import calculate_market_lot_sizing
+from core.portfolio_advisory.lot_rounding import (
+    calculate_fee_inclusive_lot_sizing,
+    calculate_market_lot_sizing,
+)
+from core.portfolio_advisory.friction import estimate_order_friction
+from core.portfolio_advisory.circuit_breaker import (
+    DrawdownPostureTier,
+    evaluate_drawdown_circuit_breaker,
+)
+from core.portfolio_advisory.risk_parity import (
+    compute_bucket_active_share_pct,
+    compute_risk_contributions_and_parity,
+)
 from core.portfolio_advisory.models import (
     AdvisoryActionCode,
     AdvisoryDataMode,
@@ -59,6 +71,9 @@ def compute_portfolio_state_hash(holdings: List[Any], cash_thb: Decimal, cash_us
     return hashlib.sha256(raw_str.encode("utf-8")).hexdigest()[:16]
 
 
+_SYNTHESIS_METHODOLOGY_VERSION = "v2"
+
+
 def _extract(obj: Any, key: str, default: Any = None) -> Any:
     """Safely extracts a field from a dataclass, pydantic model, dict, or mock."""
     if obj is None:
@@ -71,6 +86,187 @@ def _extract(obj: Any, key: str, default: Any = None) -> Any:
     return val
 
 
+def _extract_positive_decimal(obj: Any, key: str, quantum: str = "0.0001") -> Optional[Decimal]:
+    raw = _extract(obj, key)
+    if isinstance(raw, bool) or raw is None:
+        return None
+    dec = safe_decimal(raw, default=None, quantum=quantum)
+    if dec is None or dec <= Decimal("0"):
+        return None
+    return dec
+
+
+def _extract_unrounded_positive_decimal(val: Any) -> Optional[Decimal]:
+    if isinstance(val, bool) or val is None or val.__class__.__name__ == "MagicMock":
+        return None
+    if isinstance(val, (int, float, str, Decimal)):
+        dec = safe_decimal(val, default=None, quantum=None)
+        if dec is not None and dec > Decimal("0"):
+            return dec
+    return None
+
+
+def _resolve_validated_sidecar(
+    sym: str,
+    clean_sym: str,
+    holding_market: str,
+    equity_sidecars: Optional[Dict[str, Any]],
+) -> Tuple[Optional[Any], Optional[Any]]:
+    """Finds market-validated sidecar and nested quant_signals supporting dict and model shapes."""
+    if not equity_sidecars:
+        return None, None
+
+    candidates: List[Any] = []
+    seen_ids: set[int] = set()
+    preferred_keys = [sym, f"{clean_sym}.BK" if holding_market == "TH" else "", clean_sym]
+    for k in preferred_keys:
+        if k and k in equity_sidecars:
+            sc = equity_sidecars[k]
+            if id(sc) not in seen_ids:
+                candidates.append(sc)
+                seen_ids.add(id(sc))
+
+    for k, sc in equity_sidecars.items():
+        if id(sc) in seen_ids:
+            continue
+        k_norm = str(k).strip().upper()
+        if k_norm == sym or k_norm.replace(".BK", "") == clean_sym:
+            candidates.append(sc)
+            seen_ids.add(id(sc))
+
+    for sc in candidates:
+        sig = _extract(sc, "quant_signals")
+        sc_market = _extract(sc, "market") or _extract(sig, "market")
+        sc_ticker = str(_extract(sc, "ticker") or _extract(sig, "ticker") or clean_sym).strip().upper()
+        if sc_market:
+            if not verify_ticker_market_identity(sym, holding_market, sc_ticker, str(sc_market)):
+                continue
+        else:
+            sc_clean = sc_ticker.replace(".BK", "")
+            if sc_clean != clean_sym:
+                continue
+        return sc, sig
+
+    return None, None
+
+
+def _compute_synthesis_input_hash(
+    *,
+    portfolio_state_hash: str,
+    data_mode: AdvisoryDataMode,
+    macro_direction: Optional[Any],
+    sector_rotation_snapshot: Optional[Any],
+    risk_radar: PortfolioRiskRadar,
+    holdings_advisory: List[HoldingAdvisoryItem],
+    quarantined_holdings: List[QuarantinedHoldingItem],
+    anomaly_warnings: List[DataAnomalyWarning],
+    look_through_summary: Optional[Any],
+) -> str:
+    """Computes complete deterministic cache key covering all Tier 2 synthesis inputs."""
+    macro_digest = None
+    if macro_direction is not None:
+        sa = _extract(macro_direction, "sector_analysis") or {}
+        macro_digest = {
+            "overall_regime": _extract(macro_direction, "overall_regime") or _extract(macro_direction, "regime_name"),
+            "evaluated_at": _extract(macro_direction, "evaluated_at"),
+            "conviction_level": _extract(macro_direction, "conviction_level"),
+            "focus_themes": list(_extract(macro_direction, "focus_themes", []) or []),
+            "leading_sectors": list(_extract(sa, "leading_sectors", []) or []),
+            "lagging_sectors": list(_extract(sa, "lagging_sectors", []) or []),
+            "asset_allocation": _extract(macro_direction, "asset_allocation", []) or [],
+        }
+
+    sector_digest = None
+    if sector_rotation_snapshot is not None:
+        rows = _extract(sector_rotation_snapshot, "rows", []) or []
+        row_pairs = []
+        for r in rows:
+            t = str(_extract(r, "ticker", "") or "").upper()
+            q = _extract(r, "quadrant") or _extract(_extract(r, "current"), "quadrant")
+            if not q:
+                history = _extract(r, "history")
+                pts = history if isinstance(history, list) else (
+                    (history.get("weekly") or history.get("daily") or []) if isinstance(history, dict) else []
+                )
+                if pts:
+                    q = _extract(pts[-1], "quadrant")
+            row_pairs.append([t, q])
+        row_pairs.sort()
+        sector_digest = {
+            "as_of_date": _extract(sector_rotation_snapshot, "as_of_date"),
+            "snapshot_id": _extract(sector_rotation_snapshot, "snapshot_id"),
+            "rows": row_pairs,
+        }
+
+    lt_digest = None
+    if look_through_summary is not None:
+        top_stocks = _extract(look_through_summary, "top_overlapped_stocks", []) or []
+        secs = _extract(look_through_summary, "sector_exposure", []) or []
+        lt_digest = {
+            "top": [
+                [
+                    str(_extract(s, "ticker", "")),
+                    str(_extract(s, "total_weight_pct", "")),
+                    bool(_extract(s, "is_cap_breached", False)),
+                ]
+                for s in top_stocks[:10]
+            ],
+            "sectors": [
+                [str(_extract(sec, "sector_name", "")), str(_extract(sec, "weight_pct", ""))]
+                for sec in secs
+            ],
+            "warnings": list(_extract(look_through_summary, "hidden_concentration_warnings", []) or []),
+        }
+
+    canonical_payload = {
+        "methodology_version": _SYNTHESIS_METHODOLOGY_VERSION,
+        "portfolio_state_hash": portfolio_state_hash,
+        "data_mode": data_mode.value,
+        "macro": macro_digest,
+        "sector_rotation": sector_digest,
+        "risk_radar": {
+            "weighted_beta": str(risk_radar.weighted_beta) if risk_radar.weighted_beta is not None else None,
+            "hhi": str(risk_radar.hhi) if risk_radar.hhi is not None else None,
+            "bucket_active_share_pct": str(risk_radar.bucket_active_share_pct) if risk_radar.bucket_active_share_pct is not None else None,
+            "bucket_active_share_status": risk_radar.bucket_active_share_status,
+            "risk_contribution_status": risk_radar.risk_contribution_status,
+            "risk_contributions_pct": {k: str(v) for k, v in sorted(risk_radar.risk_contributions_pct.items())},
+            "inverse_vol_weights_pct": {k: str(v) for k, v in sorted(risk_radar.inverse_vol_weights_pct.items())},
+            "total_portfolio_volatility_pct": str(risk_radar.total_portfolio_volatility_pct) if risk_radar.total_portfolio_volatility_pct is not None else None,
+            "volatility_estimated_symbols": sorted(risk_radar.volatility_estimated_symbols),
+            "drawdown_pct": str(risk_radar.drawdown_pct) if risk_radar.drawdown_pct is not None else None,
+            "drawdown_posture_tier": risk_radar.drawdown_posture_tier,
+            "drawdown_status": risk_radar.drawdown_status,
+            "drawdown_hurdle_adjustment": str(risk_radar.drawdown_hurdle_adjustment),
+            "purpose_bucket_drift": {k: str(v) for k, v in sorted(risk_radar.purpose_bucket_drift.items())},
+        },
+        "holdings": [
+            {
+                "symbol": h.symbol,
+                "action_code": h.action_code.value,
+                "target_weight_pct": str(h.target_weight_pct),
+                "weight_drift_pct": str(h.weight_drift_pct),
+                "is_immediate_execution": h.is_immediate_execution,
+                "risk_contribution_pct": str(h.risk_contribution_pct) if h.risk_contribution_pct is not None else None,
+                "estimated_friction_bps": str(h.estimated_friction_bps) if h.estimated_friction_bps is not None else None,
+                "volatility_source": h.volatility_source,
+                "core_conviction_score": str(h.core_conviction_score) if h.core_conviction_score is not None else None,
+                "live_upside_12m_pct": str(h.live_upside_12m_pct) if h.live_upside_12m_pct is not None else None,
+                "macro_alignment": h.macro_alignment,
+                "sector_quadrant": h.sector_quadrant,
+                "lot_amount_native": str(h.lot_sizing.amount_native) if h.lot_sizing else None,
+                "breached_falsifiers": list(h.breached_falsifiers),
+            }
+            for h in holdings_advisory
+        ],
+        "quarantined": [[q.symbol, q.guardrail_code] for q in quarantined_holdings],
+        "warnings": [[w.guardrail_code, w.ticker, w.severity] for w in anomaly_warnings],
+        "look_through": lt_digest,
+    }
+    encoded = json.dumps(canonical_payload, sort_keys=True, ensure_ascii=False, default=str)
+    return hashlib.sha256(encoded.encode("utf-8")).hexdigest()[:24]
+
+
 def evaluate_portfolio_advisory(
     portfolio_state: Any,
     macro_direction: Optional[Any] = None,
@@ -79,6 +275,9 @@ def evaluate_portfolio_advisory(
     watchlist_sidecars: Optional[Dict[str, Any]] = None,
     cached_narrative: Optional[Dict[str, Any]] = None,
     look_through_summary: Optional[Any] = None,
+    peak_nav_thb: Optional[Decimal] = None,
+    flow_adjusted_current_nav_thb: Optional[Decimal] = None,
+    enable_drawdown_defense: bool = True,
 ) -> PortfolioAdvisoryQuantReport:
     """Deterministic Tier 1 Advisory Engine executing Stages A through D."""
     evaluated_at = datetime.now(timezone.utc).isoformat()
@@ -198,41 +397,89 @@ def evaluate_portfolio_advisory(
 
     bucket_holding_counts: dict[str, int] = {}
     bucket_actual_val_thb: dict[str, Decimal] = {bid: Decimal("0") for bid in bucket_target_map}
-    if "cash" in bucket_actual_val_thb and not cash_bucket_val_thb:
-        bucket_actual_val_thb["cash"] += cash_thb + (cash_usd * fx_rate)
+    total_cash_thb = cash_thb + (cash_usd * fx_rate)
+    bucketed_cash_total = Decimal("0")
     for cb_id, cb_val in cash_bucket_val_thb.items():
-        bucket_actual_val_thb[cb_id] = bucket_actual_val_thb.get(cb_id, Decimal("0")) + cb_val
+        if cb_val > Decimal("0"):
+            bucket_actual_val_thb[cb_id] = bucket_actual_val_thb.get(cb_id, Decimal("0")) + cb_val
+            bucketed_cash_total += cb_val
+
+    unbucketed_cash_thb = max(Decimal("0"), total_cash_thb - bucketed_cash_total)
+    if unbucketed_cash_thb > Decimal("0"):
+        cash_bucket_key = "cash" if "cash" in bucket_target_map else "__unbucketed_cash__"
+        bucket_actual_val_thb[cash_bucket_key] = (
+            bucket_actual_val_thb.get(cash_bucket_key, Decimal("0")) + unbucketed_cash_thb
+        )
+
+    unassigned_val_thb = Decimal("0")
     for h in active_holdings:
-        bid = _extract(h, "bucket_id")
-        if isinstance(bid, str) and bid:
+        h_mkt_val = safe_decimal(getattr(h, "market_value_thb", None))
+        raw_bid = _extract(h, "bucket_id")
+        bid = raw_bid.strip() if isinstance(raw_bid, str) else ""
+        if bid:
             bucket_holding_counts[bid] = bucket_holding_counts.get(bid, 0) + 1
-            bucket_actual_val_thb[bid] = bucket_actual_val_thb.get(bid, Decimal("0")) + safe_decimal(
-                getattr(h, "market_value_thb", None)
-            )
+            bucket_actual_val_thb[bid] = bucket_actual_val_thb.get(bid, Decimal("0")) + h_mkt_val
+        else:
+            unassigned_val_thb += h_mkt_val
+            if h_mkt_val > Decimal("0"):
+                bucket_actual_val_thb["__unassigned__"] = (
+                    bucket_actual_val_thb.get("__unassigned__", Decimal("0")) + h_mkt_val
+                )
 
     # =================================================================
     # Stage B: Risk Radar, Concentration & Sector Alignment
     # =================================================================
     total_holdings_val_thb = sum(
-        safe_decimal(getattr(h, "market_value_thb", None)) for h in active_holdings
+        (safe_decimal(getattr(h, "market_value_thb", None)) for h in active_holdings),
+        Decimal("0"),
     )
-    total_nav_thb = total_holdings_val_thb + cash_thb + (cash_usd * fx_rate)
+    total_nav_thb = total_holdings_val_thb + total_cash_thb
+
+    # Drawdown Circuit Breaker Evaluation (R16 / W03)
+    summary_obj = getattr(portfolio_state, "summary", None)
+    effective_peak_nav = (
+        _extract_unrounded_positive_decimal(peak_nav_thb)
+        if peak_nav_thb is not None
+        else _extract_unrounded_positive_decimal(_extract(summary_obj, "flow_adjusted_peak_nav_thb"))
+    )
+    effective_dd_current_nav = (
+        _extract_unrounded_positive_decimal(flow_adjusted_current_nav_thb)
+        if flow_adjusted_current_nav_thb is not None
+        else (
+            _extract_unrounded_positive_decimal(_extract(summary_obj, "flow_adjusted_nav_thb"))
+            or total_nav_thb
+        )
+    )
+    drawdown_posture = evaluate_drawdown_circuit_breaker(
+        current_nav_thb=effective_dd_current_nav,
+        peak_nav_thb=effective_peak_nav if enable_drawdown_defense else None,
+    )
+    if drawdown_posture.is_peak_available and drawdown_posture.posture_tier != DrawdownPostureTier.NORMAL:
+        warnings.append(
+            DataAnomalyWarning(
+                guardrail_code="DRAWDOWN_CIRCUIT_BREAKER_ACTIVE",
+                ticker="PORTFOLIO",
+                message=(
+                    f"Drawdown circuit breaker {drawdown_posture.posture_tier.value} active "
+                    f"(DD={drawdown_posture.drawdown_pct}%, hurdle +{drawdown_posture.hurdle_adjustment})."
+                ),
+                severity="critical" if drawdown_posture.posture_tier == DrawdownPostureTier.TIER_3_DEFENSIVE else "warning",
+                remedy_hint="; ".join(drawdown_posture.action_restrictions),
+            )
+        )
 
     bucket_actual_pct_map: dict[str, Decimal] = {}
+    active_share_actual_pct_map: dict[str, Decimal] = {}
     purpose_bucket_drift: dict[str, Decimal] = {}
     if total_nav_thb > Decimal("0"):
+        for bid, actual_val in bucket_actual_val_thb.items():
+            if bid in bucket_target_map or actual_val > Decimal("0"):
+                raw_pct = (actual_val / total_nav_thb) * Decimal("100")
+                active_share_actual_pct_map[bid] = raw_pct
+                bucket_actual_pct_map[bid] = safe_decimal(raw_pct, quantum="0.1")
         for bid, target_pct in bucket_target_map.items():
-            actual_val = bucket_actual_val_thb.get(bid, Decimal("0"))
-            actual_pct = safe_decimal((actual_val / total_nav_thb) * Decimal("100"), quantum="0.1")
-            bucket_actual_pct_map[bid] = actual_pct
+            actual_pct = bucket_actual_pct_map.get(bid, Decimal("0.0"))
             purpose_bucket_drift[bid] = safe_decimal(actual_pct - target_pct, quantum="0.1")
-
-    # Check Unassigned Holdings Drift (I7)
-    unassigned_val_thb = Decimal("0")
-    for h in active_holdings:
-        bid = getattr(h, "bucket_id", None)
-        if not bid:
-            unassigned_val_thb += safe_decimal(getattr(h, "market_value_thb", None))
 
     unassigned_nav_pct = (
         (unassigned_val_thb / total_nav_thb * Decimal("100")) if total_nav_thb > Decimal("0") else Decimal("0")
@@ -245,14 +492,6 @@ def evaluate_portfolio_advisory(
     sector_exposure_thb: dict[str, Decimal] = {}
     thb_exposure = cash_thb
     usd_exposure = cash_usd * fx_rate
-
-    # Build sidecar lookup index (support dual-key: ADVANC and ADVANC.BK)
-    sidecar_lookup: dict[str, Any] = {}
-    if equity_sidecars:
-        for k, sc in equity_sidecars.items():
-            clean_k = k.replace(".BK", "").strip().upper()
-            sidecar_lookup[clean_k] = sc
-            sidecar_lookup[k.strip().upper()] = sc
 
     # Macro leading/lagging sectors and quadrants
     leading_sectors: list[str] = []
@@ -302,8 +541,12 @@ def evaluate_portfolio_advisory(
     # Stage C & D: Decision Matrix, Lot Rounding & Dual-Currency Budget
     # =================================================================
     holdings_advisory: list[HoldingAdvisoryItem] = []
+    validated_signals_by_idx: dict[int, Any] = {}
+    execution_market_by_idx: dict[int, Literal["TH", "US", "GLOBAL"]] = {}
     immediate_deploy_thb = Decimal("0")
     immediate_deploy_usd = Decimal("0")
+    immediate_friction_thb = Decimal("0")
+    immediate_friction_usd = Decimal("0")
     conditional_limit_thb = Decimal("0")
     conditional_limit_usd = Decimal("0")
 
@@ -344,14 +587,8 @@ def evaluate_portfolio_advisory(
         else:
             eval_track = AssetEvaluationTrack.TRACK_1_DIRECT_EQUITIES
 
-        # Find sidecar if available
-        sidecar = sidecar_lookup.get(clean_sym) or sidecar_lookup.get(sym)
-        sidecar_signals = _extract(sidecar, "quant_signals")
-        if sidecar:
-            sc_market = _extract(sidecar, "market") or _extract(sidecar_signals, "market")
-            if sc_market and not verify_ticker_market_identity(sym, market, clean_sym, sc_market):
-                sidecar = None
-                sidecar_signals = None
+        # Find market-validated sidecar and nested quant_signals
+        sidecar, sidecar_signals = _resolve_validated_sidecar(sym, clean_sym, market, equity_sidecars)
 
         # Sector tracking
         stock_sector = _extract(sidecar_signals, "peer_sector") or _extract(h, "sector", "Other")
@@ -383,6 +620,7 @@ def evaluate_portfolio_advisory(
                 current_value_thb=h_val_thb,
                 details=f"Holding units={current_units}, Current price={current_price_native}",
             ))
+            validated_signals_by_idx[len(holdings_advisory)] = sidecar_signals
             holdings_advisory.append(HoldingAdvisoryItem(
                 symbol=sym,
                 asset_name=name,
@@ -415,6 +653,7 @@ def evaluate_portfolio_advisory(
                 details=f"Portfolio price={current_price_native}, Sidecar price={sidecar_price}",
             ))
             # Quarantined: Skip rebalancing advice
+            validated_signals_by_idx[len(holdings_advisory)] = sidecar_signals
             holdings_advisory.append(HoldingAdvisoryItem(
                 symbol=sym,
                 asset_name=name,
@@ -673,7 +912,67 @@ def evaluate_portfolio_advisory(
                         f"กำไร/ขาดทุนสะสม {pnl_pct:+.1f}%) — ถือครองตามกรอบสมดุล"
                     )
 
-        # Lot Sizing Calculation
+        # Enforce Drawdown Circuit Breaker posture restrictions & raised conviction hurdles (R16 / W03)
+        holding_warnings: list[str] = []
+        if (
+            drawdown_posture.is_peak_available
+            and drawdown_posture.posture_tier != DrawdownPostureTier.NORMAL
+            and action_code in (
+                AdvisoryActionCode.ACCUMULATE_NOW,
+                AdvisoryActionCode.BREAKOUT_BUY,
+                AdvisoryActionCode.ACCUMULATE_ON_DIP,
+            )
+        ):
+            base_hurdle = (
+                Decimal("6.5")
+                if action_code == AdvisoryActionCode.ACCUMULATE_ON_DIP
+                else Decimal("7.5")
+            )
+            effective_hurdle = base_hurdle + drawdown_posture.hurdle_adjustment
+            bid_lower = str(bid or "").strip().lower()
+            bname_lower = bname.lower()
+            is_core_bucket = ("core" in bid_lower) or ("core" in bname_lower)
+
+            block_reason: Optional[str] = None
+            if drawdown_posture.posture_tier == DrawdownPostureTier.TIER_3_DEFENSIVE:
+                block_reason = (
+                    f"Drawdown Circuit Breaker (TIER_3_DEFENSIVE, DD {drawdown_posture.drawdown_pct}%): "
+                    "ระงับคำสั่งซื้อใหม่ทั้งหมดเพื่อรักษาเงินต้น"
+                )
+            elif drawdown_posture.posture_tier == DrawdownPostureTier.TIER_2_THROTTLE:
+                if not is_core_bucket:
+                    block_reason = (
+                        f"Drawdown Circuit Breaker (TIER_2_THROTTLE, DD {drawdown_posture.drawdown_pct}%): "
+                        f"จำกัดคำสั่งซื้อเฉพาะสินทรัพย์ถัง Core เท่านั้น (ถัง '{bname}' ถูกชะลอ)"
+                    )
+                elif core_conv is None or core_conv < effective_hurdle:
+                    block_reason = (
+                        f"Drawdown Circuit Breaker (TIER_2_THROTTLE, +1.0 hurdle): "
+                        f"Core Conviction ({core_conv}) ต่ำกว่าเกณฑ์ขั้นต่ำที่ปรับเพิ่ม ({effective_hurdle}/10)"
+                    )
+            elif drawdown_posture.posture_tier == DrawdownPostureTier.TIER_1_CAUTION:
+                if core_conv is None or core_conv < effective_hurdle:
+                    block_reason = (
+                        f"Drawdown Circuit Breaker (TIER_1_CAUTION, +0.5 hurdle): "
+                        f"Core Conviction ({core_conv}) ต่ำกว่าเกณฑ์ขั้นต่ำที่ปรับเพิ่ม ({effective_hurdle}/10)"
+                    )
+
+            if block_reason:
+                action_code = AdvisoryActionCode.HOLD_WITHIN_BAND
+                target_rebalance_val_thb = Decimal("0")
+                is_immediate = False
+                rationale = block_reason
+                holding_warnings.append(block_reason)
+
+        # Lot Sizing Calculation (fee-inclusive for BUY budgets, exchange-aware for Track 2 funds/bonds/gold)
+        execution_market: Literal["TH", "US", "GLOBAL"] = (
+            "GLOBAL"
+            if (eval_track == AssetEvaluationTrack.TRACK_2_MACRO_LIQUID and "etf" not in lower_type)
+            else ("US" if market == "US" else "TH")
+        )
+        adtv_obs = _extract_positive_decimal(sidecar_signals, "adtv_local_currency", quantum="0.01")
+        vol_obs = _extract_positive_decimal(sidecar_signals, "volatility_pct", quantum="0.0001")
+
         lot_sizing = None
         if target_rebalance_val_thb != Decimal("0") and current_price_native > Decimal("0"):
             execution_price_native = (
@@ -688,25 +987,47 @@ def evaluate_portfolio_advisory(
             native_amt = (
                 target_rebalance_val_thb / fx_rate if native_curr == "USD" else target_rebalance_val_thb
             )
-            lot_sizing = calculate_market_lot_sizing(
-                market=market,
-                native_currency=native_curr,
-                target_amount_native=abs(native_amt),
-                current_price_native=execution_price_native,
-                fx_rate=fx_rate,
-                is_tax_locked=(eval_track == AssetEvaluationTrack.TRACK_3_LOCKED_VEHICLE),
-            )
             if target_rebalance_val_thb > Decimal("0"):
-                if is_immediate:
-                    if native_curr == "USD":
-                        immediate_deploy_usd += lot_sizing.amount_native
+                budget_native = safe_decimal(abs(native_amt), quantum="0.01") or Decimal("0.00")
+                lot_sizing = calculate_fee_inclusive_lot_sizing(
+                    market=execution_market,
+                    native_currency=native_curr,
+                    max_cash_budget_native=budget_native,
+                    current_price_native=execution_price_native,
+                    fx_rate=fx_rate,
+                    adtv_native=adtv_obs,
+                    annualized_volatility_pct=vol_obs,
+                    is_tax_locked=(eval_track == AssetEvaluationTrack.TRACK_3_LOCKED_VEHICLE),
+                )
+                if lot_sizing.amount_native > Decimal("0"):
+                    f_buy = estimate_order_friction(
+                        market=execution_market,
+                        action_side="BUY",
+                        order_amount_native=lot_sizing.amount_native,
+                        adtv_native=adtv_obs,
+                        annualized_volatility_pct=vol_obs,
+                    )
+                    if is_immediate:
+                        if native_curr == "USD":
+                            immediate_deploy_usd += lot_sizing.amount_native
+                            immediate_friction_usd += f_buy.total_friction_native
+                        else:
+                            immediate_deploy_thb += lot_sizing.amount_thb
+                            immediate_friction_thb += f_buy.total_friction_native
                     else:
-                        immediate_deploy_thb += lot_sizing.amount_thb
-                else:
-                    if native_curr == "USD":
-                        conditional_limit_usd += lot_sizing.amount_native
-                    else:
-                        conditional_limit_thb += lot_sizing.amount_thb
+                        if native_curr == "USD":
+                            conditional_limit_usd += lot_sizing.amount_native
+                        else:
+                            conditional_limit_thb += lot_sizing.amount_thb
+            else:
+                lot_sizing = calculate_market_lot_sizing(
+                    market=execution_market,
+                    native_currency=native_curr,
+                    target_amount_native=abs(native_amt),
+                    current_price_native=execution_price_native,
+                    fx_rate=fx_rate,
+                    is_tax_locked=(eval_track == AssetEvaluationTrack.TRACK_3_LOCKED_VEHICLE),
+                )
 
         item = HoldingAdvisoryItem(
             symbol=sym,
@@ -736,33 +1057,37 @@ def evaluate_portfolio_advisory(
             macro_alignment=macro_align,
             sector_quadrant=quadrant,
             breached_falsifiers=breached_falsifiers,
-            data_warnings=[],
+            data_warnings=holding_warnings,
         )
+        validated_signals_by_idx[len(holdings_advisory)] = sidecar_signals
+        execution_market_by_idx[len(holdings_advisory)] = execution_market
         holdings_advisory.append(item)
 
-    # Cash Overdraft & FX Pool Guard (I5)
+    # Cash Overdraft & FX Pool Guard (I5) — includes estimated transaction friction
+    immediate_cash_req_usd = immediate_deploy_usd + immediate_friction_usd
+    immediate_cash_req_thb = immediate_deploy_thb + immediate_friction_thb
     fx_conversion_needed_thb = Decimal("0")
-    if immediate_deploy_usd > cash_usd:
-        usd_deficit = immediate_deploy_usd - cash_usd
+    if immediate_cash_req_usd > cash_usd:
+        usd_deficit = immediate_cash_req_usd - cash_usd
         fx_conversion_needed_thb = safe_decimal(usd_deficit * fx_rate, quantum="0.01")
         warnings.append(DataAnomalyWarning(
             guardrail_code="CASH_OVERDRAFT_AND_FX_POOL_GUARD",
             ticker="CASH_USD",
-            message=f"คำสั่งซื้อหุ้น US วันนี้ (${immediate_deploy_usd}) เกินเงินสดดอลลาร์ในพอร์ต (${cash_usd}). ต้องแลกเงินบาทเพิ่ม {fx_conversion_needed_thb:,.2f} THB",
+            message=f"คำสั่งซื้อหุ้น US วันนี้รวมค่าธรรมเนียม (${immediate_cash_req_usd}) เกินเงินสดดอลลาร์ในพอร์ต (${cash_usd}). ต้องแลกเงินบาทเพิ่ม {fx_conversion_needed_thb:,.2f} THB",
             severity="warning",
             remedy_hint="Convert THB to USD in Dime/broker before executing US buy orders.",
         ))
 
-    thb_surplus = cash_thb - immediate_deploy_thb - fx_conversion_needed_thb
+    thb_surplus = cash_thb - immediate_cash_req_thb - fx_conversion_needed_thb
     if thb_surplus < Decimal("0"):
         warnings.append(DataAnomalyWarning(
             guardrail_code="CASH_OVERDRAFT_AND_FX_POOL_GUARD",
             ticker="CASH_THB",
-            message=f"ยอดซื้อวันนี้รวม ({immediate_deploy_thb + fx_conversion_needed_thb:,.2f} THB) เกินเงินสดบาทที่มีอยู่ ({cash_thb:,.2f} THB)",
+            message=f"ยอดซื้อวันนี้รวมค่าธรรมเนียม ({immediate_cash_req_thb + fx_conversion_needed_thb:,.2f} THB) เกินเงินสดบาทที่มีอยู่ ({cash_thb:,.2f} THB)",
             severity="warning",
             remedy_hint="Reduce buy order size or sell overweight positions before executing.",
         ))
-    usd_surplus = cash_usd - immediate_deploy_usd if cash_usd >= immediate_deploy_usd else Decimal("0")
+    usd_surplus = cash_usd - immediate_cash_req_usd if cash_usd >= immediate_cash_req_usd else Decimal("0")
 
     cash_plan = DualCurrencyCashPlan(
         cash_thb_available=cash_thb,
@@ -835,6 +1160,83 @@ def evaluate_portfolio_advisory(
         else:
             concentration_level = "LOW"
 
+    # Bucket Active Share (%)
+    bucket_active_share: Optional[Decimal] = None
+    bucket_active_share_status: Literal["AVAILABLE", "UNAVAILABLE"] = "UNAVAILABLE"
+    if total_nav_thb > Decimal("0") and bucket_target_map:
+        bucket_active_share = compute_bucket_active_share_pct(active_share_actual_pct_map, bucket_target_map)
+        bucket_active_share_status = "AVAILABLE"
+
+    # Risk Contributions & Risk Parity Weights (via validated nested quant_signals)
+    holdings_weights_map: dict[str, Decimal] = {}
+    holdings_vols_map: dict[str, Decimal] = {}
+    estimated_vol_syms: set[str] = set()
+    for idx, h in enumerate(holdings_advisory):
+        sym = h.symbol
+        if sym and h.current_value_thb > Decimal("0") and not h.asset_type.lower().startswith("cash"):
+            holdings_weights_map[sym] = holdings_weights_map.get(sym, Decimal("0")) + h.current_value_thb
+            sig = validated_signals_by_idx.get(idx)
+            vol_obs = _extract_positive_decimal(sig, "volatility_pct", quantum="0.0001")
+            if vol_obs is not None:
+                holdings_vols_map[sym] = vol_obs
+                h.volatility_pct = vol_obs.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+                h.volatility_source = "observed"
+                h.is_volatility_estimated = False
+            else:
+                holdings_vols_map.setdefault(sym, Decimal("20.0"))
+                estimated_vol_syms.add(sym)
+                h.volatility_pct = None
+                h.volatility_source = "estimated_default"
+                h.is_volatility_estimated = True
+                est_msg = "Observed volatility unavailable; using 20.0% estimated default for risk parity weighting."
+                if est_msg not in h.data_warnings:
+                    h.data_warnings.append(est_msg)
+
+    risk_contrib_summary = compute_risk_contributions_and_parity(
+        weights=holdings_weights_map,
+        volatilities=holdings_vols_map,
+    )
+
+    # Attach risk contribution & estimated order friction to each HoldingAdvisoryItem
+    for idx, h in enumerate(holdings_advisory):
+        if (
+            risk_contrib_summary.risk_contribution_status == "AVAILABLE"
+            and h.symbol in risk_contrib_summary.risk_contributions_pct
+        ):
+            h.risk_contribution_pct = risk_contrib_summary.risk_contributions_pct[h.symbol]
+        else:
+            h.risk_contribution_pct = None
+
+        if h.lot_sizing and h.lot_sizing.amount_native > Decimal("0"):
+            is_buy = h.action_code in (
+                AdvisoryActionCode.ACCUMULATE_NOW,
+                AdvisoryActionCode.ACCUMULATE_ON_DIP,
+                AdvisoryActionCode.BREAKOUT_BUY,
+                AdvisoryActionCode.INITIATE_WATCHLIST,
+            )
+            side = "BUY" if is_buy else "SELL"
+            sig = validated_signals_by_idx.get(idx)
+            adtv = _extract_positive_decimal(sig, "adtv_local_currency", quantum="0.01")
+            vol_obs = _extract_positive_decimal(sig, "volatility_pct", quantum="0.0001")
+            exec_market = execution_market_by_idx.get(idx, "US" if h.market == "US" else "TH")
+
+            f_est = estimate_order_friction(
+                market=exec_market,
+                action_side=side,
+                order_amount_native=h.lot_sizing.amount_native,
+                adtv_native=adtv,
+                annualized_volatility_pct=vol_obs,
+            )
+            h.estimated_friction_bps = f_est.total_friction_bps
+            if f_est.liquidity_warning and f_est.liquidity_warning not in h.data_warnings:
+                h.data_warnings.append(f_est.liquidity_warning)
+
+    total_port_vol = (
+        risk_contrib_summary.total_portfolio_volatility_pct
+        if risk_contrib_summary.risk_contribution_status != "NO_ACTIVE_ASSETS"
+        else None
+    )
+
     risk_radar = PortfolioRiskRadar(
         weighted_beta=weighted_beta,
         sector_crowding=crowded_sectors,
@@ -849,6 +1251,18 @@ def evaluate_portfolio_advisory(
         top_3_weight_pct=top_3_weight_pct,
         top_5_weight_pct=top_5_weight_pct,
         concentration_risk_level=concentration_level,
+        bucket_active_share_pct=bucket_active_share,
+        bucket_active_share_status=bucket_active_share_status,
+        risk_contributions_pct=risk_contrib_summary.risk_contributions_pct,
+        inverse_vol_weights_pct=risk_contrib_summary.inverse_vol_weights_pct,
+        total_portfolio_volatility_pct=total_port_vol,
+        risk_contribution_status=risk_contrib_summary.risk_contribution_status,
+        volatility_estimated_symbols=sorted(estimated_vol_syms),
+        drawdown_pct=drawdown_posture.drawdown_pct if drawdown_posture.is_peak_available else None,
+        drawdown_posture_tier=drawdown_posture.posture_tier.value,
+        drawdown_status=drawdown_posture.status,
+        drawdown_hurdle_adjustment=drawdown_posture.hurdle_adjustment,
+        drawdown_action_restrictions=list(drawdown_posture.action_restrictions),
     )
 
     state_hash = compute_portfolio_state_hash(active_holdings, cash_thb, cash_usd)
@@ -871,6 +1285,18 @@ def evaluate_portfolio_advisory(
             if is_breach and cap_warn:
                 warnings.append(cap_warn)
 
+    synthesis_input_hash = _compute_synthesis_input_hash(
+        portfolio_state_hash=state_hash,
+        data_mode=data_mode,
+        macro_direction=macro_direction,
+        sector_rotation_snapshot=sector_rotation_snapshot,
+        risk_radar=risk_radar,
+        holdings_advisory=holdings_advisory,
+        quarantined_holdings=quarantined,
+        anomaly_warnings=warnings,
+        look_through_summary=look_through_summary,
+    )
+
     return PortfolioAdvisoryQuantReport(
         evaluated_at=evaluated_at,
         data_mode=data_mode,
@@ -888,4 +1314,5 @@ def evaluate_portfolio_advisory(
         ),
         cached_narrative=cached_narrative,
         look_through_summary=look_through_summary,
+        synthesis_input_hash=synthesis_input_hash,
     )

@@ -286,12 +286,17 @@ class TestHoldingSidecars:
             cl.structured_reset_clean_slate()
 
 class TestRecalcEdgeCases:
-    def test_recalc_fx_missing(self, isolated_portfolio):
+    def test_recalc_fx_missing(self, isolated_portfolio, caplog):
         pt = isolated_portfolio
-        post, state = pt._load_or_init()
+        pt._manage_cash_flow_locked(1_000.0, "deposit", "USD")
+        _, state = pt._load_or_init()
         state.fx_rates = {} # Empty
-        pt._recalc_all(state)
-        # Should not crash but log warning
+        with caplog.at_level("WARNING"):
+            pt._recalc_all(state)
+        cash_usd = pt._find_holding(state, "CASH_USD")
+        assert cash_usd is not None
+        assert cash_usd.market_value_thb == 0.0
+        assert "fx_rates.USDTHB missing" in caplog.text
         
     def test_require_cash_lazy_creation(self, isolated_portfolio):
         pt = isolated_portfolio

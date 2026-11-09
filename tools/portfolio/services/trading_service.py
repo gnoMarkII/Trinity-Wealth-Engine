@@ -32,6 +32,13 @@ from tools.portfolio.domain.validator import validate_portfolio_id
 from tools.portfolio.ports.repository_port import PortfolioRepositoryPort
 from tools.portfolio.ports.price_port import MarketPricePort
 from tools.portfolio.ports.journal_port import TradeJournalPort
+from tools.market.portfolio_action_engine import (
+    PortfolioActionVerdict,
+    build_action_portfolio_state,
+    compute_portfolio_action,
+)
+from schemas.micro_quant_schemas import DeterministicScorecard, QuantSignals
+from schemas.portfolio_policy_schemas import PortfolioPolicy
 from ._mutation_commit import commit_mutation
 
 
@@ -879,3 +886,67 @@ class PortfolioTradingService:
             return LOCK_TIMEOUT.format(detail=f"portfolio lock '{pid}'")
         except Exception as exc:
             return f"Error: {exc}"
+
+    # =========================================================================
+    # Pre-Trade Policy Action Evaluation
+    # =========================================================================
+
+    def evaluate_pretrade_action_policy(
+        self,
+        ticker: str,
+        market: Literal["TH", "US"],
+        scorecard: DeterministicScorecard,
+        quant_signals: QuantSignals,
+        policy: Optional[PortfolioPolicy] = None,
+        current_price: Optional[float] = None,
+        fx_rate_portfolio_to_asset: Optional[float] = 1.0,
+        portfolio_id: str = "default",
+        sector_map: Optional[Dict[str, str]] = None,
+    ) -> PortfolioActionVerdict:
+        """Evaluates pre-trade multi-constraint sizing against current portfolio UoW state."""
+        san_ticker = ticker.strip().upper()
+        local_currency = "THB" if market == "TH" else "USD"
+        if policy is None:
+            return compute_portfolio_action(
+                ticker=san_ticker,
+                market=market,
+                scorecard=scorecard,
+                quant_signals=quant_signals,
+                policy=None,
+                portfolio_state=None,
+                current_price=current_price,
+                fx_rate_portfolio_to_asset=fx_rate_portfolio_to_asset,
+            )
+
+        pid = validate_portfolio_id(portfolio_id)
+        with self.repo.unit_of_work(pid) as uow:
+            state = uow.load_state()
+
+        action_state, missing_fx_reason = build_action_portfolio_state(
+            state,
+            market=market,
+            target_ticker=san_ticker,
+            target_sector=quant_signals.peer_sector,
+            sector_map=sector_map,
+        )
+        if missing_fx_reason is not None or action_state is None:
+            return PortfolioActionVerdict(
+                ticker=san_ticker,
+                portfolio_id=policy.portfolio_id,
+                action="RESTRICTED_MISSING_FX",
+                security_stance=scorecard.action_stance,
+                currency=local_currency,
+                action_reasoning=missing_fx_reason or "Missing valid FX rate for cross-currency action evaluation",
+                status="unavailable",
+            )
+
+        return compute_portfolio_action(
+            ticker=san_ticker,
+            market=market,
+            scorecard=scorecard,
+            quant_signals=quant_signals,
+            policy=policy,
+            portfolio_state=action_state,
+            current_price=current_price,
+            fx_rate_portfolio_to_asset=fx_rate_portfolio_to_asset,
+        )

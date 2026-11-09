@@ -165,20 +165,32 @@ class TestFetchLastPrice:
 
     def test_fetch_last_price_history_empty(self, monkeypatch):
         import pandas as pd
+        ticker_calls = []
+        history_calls = []
         class MockFastInfo:
             last_price = None
         class MockTicker:
             fast_info = MockFastInfo()
             def history(self, period):
+                history_calls.append(period)
                 return pd.DataFrame({"Close": []})
-        monkeypatch.setattr(prices.yf, "Ticker", lambda sym: MockTicker())
+        def fake_ticker(sym):
+            ticker_calls.append(sym)
+            return MockTicker()
+        monkeypatch.setattr(prices.yf, "Ticker", fake_ticker)
         assert _fetch_last_price("AAPL") is None
+        assert ticker_calls == ["AAPL"]
+        assert history_calls == ["1d"]
 
-    def test_fetch_last_price_exception(self, monkeypatch):
+    def test_fetch_last_price_exception(self, monkeypatch, caplog):
+        ticker_calls = []
         def mock_raise(sym):
+            ticker_calls.append(sym)
             raise ValueError("API Down")
         monkeypatch.setattr(prices.yf, "Ticker", mock_raise)
         assert _fetch_last_price("AAPL") is None
+        assert ticker_calls == ["AAPL"]
+        assert "API Down" in caplog.text
 
 class TestFetchFxRate:
     def test_fetch_fx_rate_success(self, monkeypatch):

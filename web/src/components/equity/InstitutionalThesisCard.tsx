@@ -285,7 +285,7 @@ export const InstitutionalThesisCard: React.FC<InstitutionalThesisCardProps> = (
           <div className="text-[11px] font-medium text-zinc-500">SEC Form 4 Conviction</div>
           <div className="mt-1 flex items-baseline gap-1.5">
             <span className="text-base font-bold text-zinc-900 uppercase">
-              {insider?.status.replace('_', ' ') || 'N/A'}
+              {insider?.status?.replace('_', ' ') || 'N/A'}
             </span>
           </div>
           <p className="mt-1 text-[11px] text-zinc-500 leading-tight">

@@ -23,7 +23,13 @@ _CONSENSUS_SUCCESS_TTL_SECONDS = 6 * 3600
 _CONSENSUS_ERROR_TTL_SECONDS = 60.0
 
 
-def probe_consensus_runtime(provider_symbol: str) -> Tuple[Optional[dict], list[str]]:
+def probe_consensus_runtime(
+    provider_symbol: str,
+    *,
+    ticker_obj: Any = None,
+    revisions: Any = None,
+    trend: Any = None,
+) -> Tuple[Optional[dict], list[str]]:
     """Probes YFinance consensus tables (eps_revisions, eps_trend, growth_estimates).
 
     Returns:
@@ -31,9 +37,11 @@ def probe_consensus_runtime(provider_symbol: str) -> Tuple[Optional[dict], list[
     """
     flags: list[str] = []
     try:
-        tk = yf.Ticker(provider_symbol)
-        revisions = _with_retry(lambda: tk.eps_revisions)
-        trend = _with_retry(lambda: tk.eps_trend)
+        tk = ticker_obj if ticker_obj is not None else yf.Ticker(provider_symbol)
+        if revisions is None:
+            revisions = _with_retry(lambda: tk.eps_revisions)
+        if trend is None:
+            trend = _with_retry(lambda: tk.eps_trend)
         growth = _with_retry(lambda: getattr(tk, "growth_estimates", None))
     except Exception as e:
         log.warning("probe_consensus_runtime: yfinance fetch failed for %s: %s", provider_symbol, e)
@@ -82,7 +90,7 @@ def probe_consensus_runtime(provider_symbol: str) -> Tuple[Optional[dict], list[
         }
 
     # 3. Growth Estimates (Horizon matching)
-    if growth is not None and not growth.empty:
+    if isinstance(growth, pd.DataFrame) and not growth.empty:
         # Check Next Year revenue/earnings growth
         if "+1y" in growth.index:
             g_1y = growth.loc["+1y"].get(provider_symbol)

@@ -11,6 +11,7 @@ Asserts layer boundaries and dependency directions using AST parsing:
 import ast
 import os
 from pathlib import Path
+import subprocess
 import pytest
 
 from tests.architecture.allowlists import ARCHITECTURE_ALLOWLIST, is_allowed
@@ -189,10 +190,6 @@ def test_application_and_router_layers_do_not_import_infrastructure():
     router_forbidden = (
         "api.db",
         "api.state_db",
-        "api.routes_portfolio",
-        "api.routes_equity",
-        "api.routes_notebooklm",
-        "api.routes_ohlcv",
         "api.compatibility",
         "api.news_funnel_cards",
         "sqlite3",
@@ -464,3 +461,99 @@ def test_allowlist_entries_are_valid():
         assert entry.reason, f"Allowlist entry missing reason: {entry.source_file}"
         assert entry.removal_phase.startswith("Phase "), f"Invalid removal phase: {entry.removal_phase}"
         assert entry.removal_condition, f"Allowlist entry missing removal condition: {entry.source_file}"
+
+
+def test_core_and_application_modules_are_imported_by_production_code():
+    """Phase 6 Gate: No stranded modules under core/ or application/ without a production caller."""
+    prod_roots = ("api", "application", "agents", "core", "tools", "schemas")
+    all_prod_files: list[Path] = []
+    for dir_name in prod_roots:
+        base_dir = PROJECT_ROOT / dir_name
+        if not base_dir.is_dir():
+            continue
+        for root, dirs, files in os.walk(base_dir):
+            dirs[:] = [d for d in dirs if d != "__pycache__"]
+            for file in files:
+                if file.endswith(".py"):
+                    all_prod_files.append(Path(root) / file)
+
+    imported_by: dict[str, set[str]] = {}
+    for file_path in all_prod_files:
+        rel_no_ext = file_path.relative_to(PROJECT_ROOT).with_suffix("")
+        importer_mod = ".".join(
+            rel_no_ext.parts[:-1] if rel_no_ext.parts[-1] == "__init__" else rel_no_ext.parts
+        )
+        pkg_parts = list(rel_no_ext.parts[:-1])
+        content = file_path.read_text(encoding="utf-8-sig")
+        tree = ast.parse(content, filename=str(file_path))
+
+        targets: set[str] = set()
+        for node in ast.walk(tree):
+            if isinstance(node, ast.Import):
+                for alias in node.names:
+                    targets.add(alias.name)
+            elif isinstance(node, ast.ImportFrom):
+                if node.level and node.level > 0:
+                    trim = max(0, len(pkg_parts) - (node.level - 1))
+                    base = pkg_parts[:trim]
+                    if node.module:
+                        mod_path = ".".join(base + node.module.split("."))
+                        targets.add(mod_path)
+                        for alias in node.names:
+                            if alias.name != "*":
+                                targets.add(f"{mod_path}.{alias.name}")
+                    else:
+                        for alias in node.names:
+                            if alias.name != "*":
+                                targets.add(".".join(base + [alias.name]))
+                elif node.module:
+                    targets.add(node.module)
+                    for alias in node.names:
+                        if alias.name != "*":
+                            targets.add(f"{node.module}.{alias.name}")
+
+        for target in targets:
+            imported_by.setdefault(target, set()).add(importer_mod)
+
+    stranded: list[str] = []
+    for file_path in all_prod_files:
+        rel = file_path.relative_to(PROJECT_ROOT)
+        if rel.parts[0] not in ("core", "application") or rel.name == "__init__.py":
+            continue
+        mod = ".".join(rel.with_suffix("").parts)
+        if mod.startswith("application.investor_essence.testing"):
+            continue
+        external_importers = {
+            importer
+            for target, importers in imported_by.items()
+            if target == mod or target.startswith(mod + ".")
+            for importer in importers
+            if importer != mod
+        }
+        if not external_importers:
+            stranded.append(mod)
+
+    assert not stranded, (
+        "Found core/ or application/ modules with zero production callers (wire them or remove them):\n"
+        + "\n".join(sorted(stranded))
+    )
+
+
+def test_tracked_review_artifacts_unmodified():
+    """Phase 6 Gate: Tests and CLI runs must never mutate tracked review/ artifacts."""
+    review_dir = PROJECT_ROOT / "review"
+    if not (PROJECT_ROOT / ".git").exists() or not review_dir.is_dir():
+        pytest.skip("Not running inside a git repository with review/ directory")
+
+    result = subprocess.run(
+        ["git", "status", "--porcelain", "--", "review/"],
+        cwd=PROJECT_ROOT,
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    dirty_lines = [line for line in result.stdout.splitlines() if line.strip()]
+    assert not dirty_lines, (
+        "Tracked review/ artifacts were modified or polluted (use tmp_path in tests):\n"
+        + "\n".join(dirty_lines)
+    )

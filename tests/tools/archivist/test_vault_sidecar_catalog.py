@@ -37,7 +37,7 @@ def _dummy_output(ticker: str = "TEST", date: str = "2026-09-07") -> MicroQuantO
     )
 
 
-def test_sidecar_catalog_indexing_and_fast_query(tmp_path: Path):
+def test_sidecar_catalog_indexing_and_fast_query(tmp_path: Path, monkeypatch):
     """Verifies write_equity_sidecar registers records in sidecar_catalog and EquityVaultQueryAdapter queries it directly."""
     vault = tmp_path / "vault"
     vault.mkdir()
@@ -46,31 +46,26 @@ def test_sidecar_catalog_indexing_and_fast_query(tmp_path: Path):
     # 1. Write sidecar
     out = _dummy_output("NVDA", "2026-09-07")
     
-    import os
-    os.environ["OBSIDIAN_VAULT_PATH"] = str(vault)
-    try:
-        write_equity_sidecar(out)
+    monkeypatch.setenv("OBSIDIAN_VAULT_PATH", str(vault))
+    write_equity_sidecar(out)
 
-        cat = SqliteNoteCatalogAdapter(vault_root=vault)
-        sidecars = cat.get_sidecars("NVDA")
-        assert len(sidecars) >= 2  # user and system tier
-        assert any("30_Knowledge_Base" in s for s in sidecars)
-        assert any(".system/sidecars" in s for s in sidecars)
+    cat = SqliteNoteCatalogAdapter(vault_root=vault)
+    sidecars = cat.get_sidecars("NVDA")
+    assert len(sidecars) >= 2  # user and system tier
+    assert any("30_Knowledge_Base" in s for s in sidecars)
+    assert any(".system/sidecars" in s for s in sidecars)
 
-        # 2. Query via EquityVaultQueryAdapter
-        adapter = EquityVaultQueryAdapter(vault_path=vault)
-        files = adapter._sidecar_files("NVDA")
-        assert len(files) >= 1
-        assert files[0].exists()
+    # 2. Query via EquityVaultQueryAdapter
+    adapter = EquityVaultQueryAdapter(vault_path=vault)
+    files = adapter._sidecar_files("NVDA")
+    assert len(files) >= 1
+    assert files[0].exists()
 
-        # Query detail
-        detail = adapter.get_detail("NVDA")
-        assert detail is not None
-        assert detail["ticker"] == "NVDA"
-        assert detail["composite_score"] == 85.0
-
-    finally:
-        os.environ.pop("OBSIDIAN_VAULT_PATH", None)
+    # Query detail
+    detail = adapter.get_detail("NVDA")
+    assert detail is not None
+    assert detail["ticker"] == "NVDA"
+    assert detail["composite_score"] == 85.0
 
 
 def test_vault_maintenance_and_compaction(tmp_path: Path):

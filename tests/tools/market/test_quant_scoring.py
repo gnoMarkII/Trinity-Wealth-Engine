@@ -9,6 +9,7 @@ from tools.market.quant_scoring import (
     compute_solvency_score,
     compute_trading_liquidity,
     compute_composite_score,
+    compute_composite_score_waterfall,
 )
 
 
@@ -155,7 +156,8 @@ class TestDividendScore:
         assert flag == "unsustainable_payout:dividend"
 
     def test_normal_payout_no_flag(self):
-        _, flag = compute_dividend_score(dividend_yield_pct=3.0, payout_ratio_pct=50.0)
+        score, flag = compute_dividend_score(dividend_yield_pct=3.0, payout_ratio_pct=50.0)
+        assert score == 60.0
         assert flag is None
 
 
@@ -259,3 +261,29 @@ class TestCompositeScore:
         # weights: value 0.25, quality 0.25, growth 0.25, dividend 0.10 (sum=0.85)
         # sum = (0*0.25) + (100*0.25) + (71.7*0.25) + (0*0.10) = 42.925 / 0.85 = 50.5
         assert score == 50.5
+
+    def test_r10_composite_and_waterfall_always_agree_and_reconcile(self):
+        """R10: Exact boundary scores (4.6, 64.9, 54.7, 7.5, None) produce identical composite & waterfall scores."""
+        cases = [
+            (4.6, 64.9, 54.7, 7.5, None),
+            (33.3, 66.7, 12.5, 88.9, 41.1),
+            (55.55, 44.45, None, None, 10.0),
+            (0.0, 100.0, 71.7, None, 0.0),
+        ]
+        for args in cases:
+            score, flag = compute_composite_score(*args)
+            waterfall = compute_composite_score_waterfall(*args)
+            assert flag is None
+            assert waterfall["composite_score"] == score
+            reconciled = round(
+                waterfall["pillar_contributions_sum"] + waterfall["rounding_reconciliation_delta"],
+                2,
+            )
+            assert reconciled == score
+
+    def test_non_finite_composite_input_raises(self):
+        import pytest
+        with pytest.raises(ValueError, match="finite"):
+            compute_composite_score(float("nan"), 50.0, 50.0, None, None)
+        with pytest.raises(ValueError, match="numeric, not bool"):
+            compute_composite_score_waterfall(True, 50.0, 50.0, None, None)

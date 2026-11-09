@@ -4,25 +4,7 @@
 1. Raw Filing Ledger (`sec_form4_raw_ledger`) — Immutable append-only audit trail
 2. Normalized Insider Transactions (`sec_insider_transactions`) — Canonical transaction records
 """
-import sqlite3
-import time
-import xml.etree.ElementTree as ET
-from datetime import datetime, timezone
-
-# Weight mapping by transaction code
-TRANSACTION_CODE_WEIGHTS = {
-    "P": 1.0,   # Open market purchase (highest conviction)
-    "S": 0.8,   # Open market sale
-    "M": 0.3,   # Option exercise
-    "A": 0.1,   # Grant/Award
-    "F": 0.05,  # Tax withholding
-    "G": 0.05,  # Gift
-}
-
-
 import hashlib
-import os
-import sqlite3
 import threading
 import time
 import xml.etree.ElementTree as ET
@@ -121,8 +103,22 @@ def parse_form4_xml(
             officer_title = rel.findtext("officerTitle", "").strip() or None
 
     # Detect 10b5-1 flag from XML or footnotes
-    is_global_10b51 = root.findtext(".//rule10b51Flag", "0").strip() in ("1", "true", "TRUE")
-    all_footnotes = " ".join([fn.text or "" for fn in root.findall(".//footnote")])
+    doc_10b51_flags = (
+        root.findtext(".//aff10b5One", "0"),
+        root.findtext(".//rule10b51TransactionInd", "0"),
+        root.findtext(".//rule10b51Flag", "0"),
+    )
+    is_global_10b51 = any(v.strip().lower() in ("1", "true") for v in doc_10b51_flags if v)
+    footnotes_10b51: Set[str] = set()
+    footnote_texts: List[str] = []
+    for fn in root.findall(".//footnote"):
+        fn_text = fn.text or ""
+        footnote_texts.append(fn_text)
+        fn_id = fn.attrib.get("id")
+        fn_low = fn_text.lower()
+        if fn_id and ("10b5-1" in fn_low or "10b-5-1" in fn_low):
+            footnotes_10b51.add(fn_id)
+    all_footnotes = " ".join(footnote_texts)
 
     transactions = []
     # Table I: Non-Derivative Transactions
@@ -137,7 +133,19 @@ def parse_form4_xml(
         ownership_nature = tx_node.findtext(".//ownershipNature/directOrIndirectOwnership/value", default="D").strip().upper()
 
         # Check transaction-specific 10b5-1 flag
-        tx_10b51 = is_global_10b51 or ("10b5-1" in all_footnotes.lower()) or ("rule 10b5-1" in all_footnotes.lower())
+        tx_fn_ids = {
+            fn_elem.attrib.get("id")
+            for fn_elem in tx_node.findall(".//footnoteId")
+            if fn_elem.attrib.get("id")
+        }
+        tx_node_flag = any(
+            (tx_node.findtext(tag, "0") or "").strip().lower() in ("1", "true")
+            for tag in (".//rule10b51Flag", ".//rule10b51TransactionInd")
+        )
+        fn_10b51 = bool(tx_fn_ids.intersection(footnotes_10b51)) if tx_fn_ids else (
+            ("10b5-1" in all_footnotes.lower()) or ("rule 10b5-1" in all_footnotes.lower()) or ("10b-5-1" in all_footnotes.lower())
+        )
+        tx_10b51 = is_global_10b51 or tx_node_flag or fn_10b51
 
         try:
             shares_dec = Decimal(shares_str)
@@ -258,8 +266,14 @@ def derive_canonical_transactions(parsed_filings: List[Dict[str, Any]]) -> Tuple
                     tx_c = dict(tx)
                     tx_c["accession_number"] = f.get("accession_number")
                     tx_c["ticker"] = f.get("ticker")
+                    tx_c["issuer_cik"] = f.get("issuer_cik")
+                    tx_c["reporting_owner_cik"] = f.get("reporting_owner_cik")
                     tx_c["reporting_owner_name"] = f.get("reporting_owner_name")
                     tx_c["officer_title"] = f.get("officer_title")
+                    tx_c["is_officer"] = bool(f.get("is_officer", False))
+                    tx_c["is_director"] = bool(f.get("is_director", False))
+                    tx_c["is_ten_percent_owner"] = bool(f.get("is_ten_percent_owner", False))
+                    tx_c["is_amendment"] = bool(f.get("is_amendment", False))
                     tx_c["is_c_suite"] = any(t in str(f.get("officer_title") or "").lower() for t in ["ceo", "cfo", "coo", "chief", "president"])
                     canonical_lots.append(tx_c)
             continue
@@ -313,8 +327,14 @@ def derive_canonical_transactions(parsed_filings: List[Dict[str, Any]]) -> Tuple
                 tx_c = dict(amd_lot)
                 tx_c["accession_number"] = latest_amd_filing.get("accession_number")
                 tx_c["ticker"] = latest_amd_filing.get("ticker")
+                tx_c["issuer_cik"] = latest_amd_filing.get("issuer_cik")
+                tx_c["reporting_owner_cik"] = latest_amd_filing.get("reporting_owner_cik")
                 tx_c["reporting_owner_name"] = latest_amd_filing.get("reporting_owner_name")
                 tx_c["officer_title"] = latest_amd_filing.get("officer_title")
+                tx_c["is_officer"] = bool(latest_amd_filing.get("is_officer", False))
+                tx_c["is_director"] = bool(latest_amd_filing.get("is_director", False))
+                tx_c["is_ten_percent_owner"] = bool(latest_amd_filing.get("is_ten_percent_owner", False))
+                tx_c["is_amendment"] = bool(latest_amd_filing.get("is_amendment", True))
                 tx_c["is_c_suite"] = any(t in str(latest_amd_filing.get("officer_title") or "").lower() for t in ["ceo", "cfo", "coo", "chief", "president"])
                 canonical_lots.append(tx_c)
 
@@ -327,75 +347,10 @@ def derive_canonical_transactions(parsed_filings: List[Dict[str, Any]]) -> Tuple
     return canonical_lots, meta
 
 
-def ingest_form4_data(conn: sqlite3.Connection, parsed_data: dict) -> None:
-    """บันทึก parsed form 4 เข้า raw ledger และ transactions"""
-    now = time.time()
-    is_amendment = parsed_data.get("is_amendment", False)
-    amends_accession = parsed_data.get("amends_accession_number")
-    if is_amendment and amends_accession:
-        conn.execute("DELETE FROM sec_insider_transactions WHERE accession_number = ?", (amends_accession,))
-
-    conn.execute(
-        """
-        INSERT OR REPLACE INTO sec_form4_raw_ledger (
-            accession_number, issuer_cik, ticker, filing_url, filed_at,
-            reporting_owner_cik, reporting_owner_name, is_director,
-            is_officer, is_ten_percent_owner, officer_title, raw_xml_payload,
-            is_amendment, amends_accession_number, created_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        """,
-        (
-            parsed_data["accession_number"],
-            parsed_data["issuer_cik"],
-            parsed_data["ticker"].upper(),
-            parsed_data["filing_url"],
-            parsed_data["filed_at"],
-            parsed_data.get("reporting_owner_cik"),
-            parsed_data.get("reporting_owner_name"),
-            1 if parsed_data.get("is_director", False) else 0,
-            1 if parsed_data.get("is_officer", False) else 0,
-            1 if parsed_data.get("is_ten_percent_owner", False) else 0,
-            parsed_data.get("officer_title"),
-            parsed_data.get("raw_xml_payload"),
-            1 if is_amendment else 0,
-            amends_accession,
-            now,
-        ),
-    )
-
-    for tx in parsed_data.get("transactions", []):
-        conn.execute(
-            """
-            INSERT OR REPLACE INTO sec_insider_transactions (
-                transaction_id, accession_number, ticker, transaction_date,
-                transaction_code, shares, price_per_share, acquired_or_disposed,
-                shares_owned_following, ownership_nature, is_derivative,
-                normalized_weight, created_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """,
-            (
-                tx["transaction_id"],
-                parsed_data["accession_number"],
-                parsed_data["ticker"].upper(),
-                tx["transaction_date"],
-                tx["transaction_code"].upper(),
-                tx["shares"],
-                tx["price_per_share"],
-                tx["acquired_or_disposed"].upper(),
-                tx.get("shares_owned_following"),
-                tx.get("ownership_nature"),
-                1 if tx.get("is_derivative", False) else 0,
-                tx.get("normalized_weight", 1.0),
-                now,
-            ),
-        )
-    conn.commit()
-
-
-def sync_insider_filings_from_yfinance(conn: sqlite3.Connection, ticker: str) -> None:
+def sync_insider_filings_from_yfinance(record_fn: Any, ticker: str) -> None:
     """Deprecated compatibility wrapper; production uses SqliteInsiderSyncAdapter."""
     from tools.market.adapters.insider_provider import YFinanceInsiderHistoryAdapter
 
     for parsed in YFinanceInsiderHistoryAdapter().fetch(ticker):
-        ingest_form4_data(conn, parsed)
+        record_fn(parsed)
 

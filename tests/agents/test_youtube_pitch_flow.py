@@ -164,7 +164,14 @@ def test_synthesize_notebooklm_node_marks_partial_failure(mock_synth, monkeypatc
 
 def test_build_youtube_pitch_graph():
     graph = build_youtube_pitch_graph()
-    assert graph is not None
+    assert {
+        "fetch_topics",
+        "generate_pitches",
+        "gate",
+        "provenance_unavailable",
+        "synthesize_notebooklm",
+        "persist_parking_lot",
+    }.issubset(set(graph.nodes.keys()))
 
 
 @patch("agents.youtube_pitch_flow.interrupt", return_value={"action": "refresh_sources"})

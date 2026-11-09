@@ -307,5 +307,110 @@ def test_evaluator_stale_sidecar(base_candidate):
     res = report.candidates[0]
     assert res.evidence_readiness == "stale"
     assert any("stale" in r.lower() for r in res.evidence_reasons)
+    assert res.liquidity_status != "verified"
+
+
+def test_w02_evaluator_wires_fx_converted_adtv_and_rejects_stale_zero_or_invalid_adtv(base_candidate):
+    """W02: Evaluator passes FX-converted 20d ADTV to capacity and never treats stale/zero/invalid ADTV as ample."""
+    confirmed_axis = {"prohibited_symbols": [], "prohibited_sectors": []}
+    sector_rotation = {"sectors": {"information technology": {"quadrant": "Leading"}}}
+
+    # 1. Valid US ADTV = $50,000 * FX 35.0 = 1,750,000 THB -> 5% cap = 87,500 THB (< 100k issuer room)
+    fresh_sidecar = {
+        "analysis_date": "2026-10-01",
+        "quant_signals": {
+            "composite_score": 82.0,
+            "adtv_local_currency": 50000.0,
+        },
+    }
+    rep_ok = OpportunityEvaluator.evaluate_all(
+        candidates=[base_candidate],
+        total_nav_thb=Decimal("1000000.00"),
+        available_cash_thb=Decimal("200000.00"),
+        sector_exposures_thb={},
+        confirmed_axis=confirmed_axis,
+        sidecars_map={"MSFT": fresh_sidecar},
+        sector_rotation_data=sector_rotation,
+        usd_thb_fx_rate=Decimal("35.0"),
+    )
+    cand_ok = rep_ok.candidates[0]
+    assert cand_ok.liquidity_status == "verified"
+    assert cand_ok.adtv_thb == Decimal("1750000.00")
+    assert cand_ok.liquidity_room_thb == Decimal("87500.00")
+    assert cand_ok.remaining_capacity_thb == Decimal("87500.00")
+    assert any("Liquidity capacity limit reached" in r for r in cand_ok.capacity_reasons)
+
+    # 2. Zero ADTV -> illiquid -> constrained capacity & not actionable
+    zero_sidecar = {
+        "analysis_date": "2026-10-01",
+        "quant_signals": {"composite_score": 82.0, "adtv_local_currency": 0.0},
+    }
+    rep_zero = OpportunityEvaluator.evaluate_all(
+        candidates=[base_candidate],
+        total_nav_thb=Decimal("1000000.00"),
+        available_cash_thb=Decimal("200000.00"),
+        sector_exposures_thb={},
+        confirmed_axis=confirmed_axis,
+        sidecars_map={"MSFT": zero_sidecar},
+        sector_rotation_data=sector_rotation,
+        usd_thb_fx_rate=Decimal("35.0"),
+    )
+    cand_zero = rep_zero.candidates[0]
+    assert cand_zero.capacity_status == "constrained"
+    assert cand_zero.liquidity_status == "constrained"
+    assert cand_zero.remaining_capacity_thb == Decimal("0.00")
+    assert cand_zero.is_actionable is False
+
+    # 3. Stale ADTV -> ignored as unverified (does not use stale 50k ADTV cap!)
+    stale_sidecar = {
+        "analysis_date": "2024-01-01",
+        "is_stale": True,
+        "quant_signals": {"composite_score": 82.0, "adtv_local_currency": 1000.0},
+    }
+    rep_stale = OpportunityEvaluator.evaluate_all(
+        candidates=[base_candidate],
+        total_nav_thb=Decimal("1000000.00"),
+        available_cash_thb=Decimal("200000.00"),
+        sector_exposures_thb={},
+        confirmed_axis=confirmed_axis,
+        sidecars_map={"MSFT": stale_sidecar},
+        sector_rotation_data=sector_rotation,
+        usd_thb_fx_rate=Decimal("35.0"),
+    )
+    assert rep_stale.candidates[0].liquidity_status == "unverified_stale_adtv"
+    assert rep_stale.candidates[0].adtv_thb is None
+
+    # 4. Non-finite / negative ADTV -> capacity unknown & not actionable
+    bad_sidecar = {
+        "analysis_date": "2026-10-01",
+        "quant_signals": {"composite_score": 82.0, "adtv_local_currency": "NaN"},
+    }
+    rep_bad = OpportunityEvaluator.evaluate_all(
+        candidates=[base_candidate],
+        total_nav_thb=Decimal("1000000.00"),
+        available_cash_thb=Decimal("200000.00"),
+        sector_exposures_thb={},
+        confirmed_axis=confirmed_axis,
+        sidecars_map={"MSFT": bad_sidecar},
+        sector_rotation_data=sector_rotation,
+        usd_thb_fx_rate=Decimal("35.0"),
+    )
+    assert rep_bad.candidates[0].capacity_status == "unknown"
+    assert rep_bad.candidates[0].liquidity_status == "unverified_invalid_adtv"
+    assert rep_bad.candidates[0].is_actionable is False
+
+    # 5. Missing FX for USD candidate leaves liquidity unverified instead of treating USD 1:1 with THB
+    rep_no_fx = OpportunityEvaluator.evaluate_all(
+        candidates=[base_candidate],
+        total_nav_thb=Decimal("1000000.00"),
+        available_cash_thb=Decimal("200000.00"),
+        sector_exposures_thb={},
+        confirmed_axis=confirmed_axis,
+        sidecars_map={"MSFT": fresh_sidecar},
+        sector_rotation_data=sector_rotation,
+        usd_thb_fx_rate=None,
+    )
+    assert rep_no_fx.candidates[0].liquidity_status == "unverified_missing_fx"
+    assert rep_no_fx.candidates[0].adtv_thb is None
 
 

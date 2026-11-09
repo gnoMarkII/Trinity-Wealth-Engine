@@ -1,11 +1,11 @@
 ```json
 {
-  "overall_regime": "Dovish Reflation",
+  "overall_regime": "Reflation",
   "regime_probabilities": {
-    "Dovish Reflation": 60,
-    "Soft Landing / Goldilocks": 25,
-    "Stagflationary Pressure": 10,
-    "Recession / Deflation": 5
+    "Reflation": 60,
+    "Goldilocks": 25,
+    "Stagflation": 10,
+    "Recession": 5
   },
   "regime_evidence": [
     {"dimension": "Growth", "signal": "Expansion", "evidence": "US Real GDP YoY 2.5%", "conflict": "-", "confidence": "high", "observable_refs": ["obs_us_gdp", "obs_us_indpro"], "source_refs": ["us_macro.md"]},
@@ -98,10 +98,12 @@
       "max_drawdown_limit": "-4.5% of risk budget",
       "review_frequency": "Weekly",
       "sizing_guidance": "5% of total portfolio",
+      "confidence": "HIGH",
+      "why_not_high": "-",
       "thesis": "หุ้นเทคโนโลยีสหรัฐฯ มีอัตราการเติบโตของกำไรสูงกว่ายุโรปอย่างมีนัยสำคัญ",
       "catalyst": "รายงานผลประกอบการไตรมาสและแนวโน้มการลงทุน AI",
       "risk": "ความเสี่ยงด้านกฎระเบียบเทคโนโลยีและอัตราแลกเปลี่ยน EUR/USD",
-      "supporting_data": ["QQQ Forward P/E 26.5x", "VGK Forward P/E 13.2x"],
+      "supporting_data": ["QQQ Forward P/E 26.5x", "VGK Forward P/E 13.2x", "P/E Spread 13.3x"],
       "observable_refs": ["obs_pe_qqq", "obs_pe_vgk"]
     }
   ],

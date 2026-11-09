@@ -208,6 +208,9 @@ class PerformanceSnapshotDTO(BaseModel):
     Cash_Balance: float
     realized_pnl_ytd: Optional[float] = None
     passive_income_ytd: Optional[float] = None
+    Total_NAV_THB: Optional[float] = None
+    Accrued_Dividend_Receivable_THB: Optional[float] = None
+    Economic_NAV_THB: Optional[float] = None
     Asset_Class_Values_THB: Optional[dict[str, float]] = None
     coverage_warning: Optional[str] = None
 

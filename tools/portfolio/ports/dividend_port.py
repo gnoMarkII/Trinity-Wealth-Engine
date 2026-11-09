@@ -5,6 +5,8 @@ from typing import Dict, List, Optional
 class DividendHistoryPort(ABC):
     """Port interface for fetching external dividend historical records."""
 
+    requires_network: bool = False
+
     @abstractmethod
     def fetch_dividend_history(self, symbols: List[str]) -> Dict[str, List[Dict]]:
         """Fetch dividend payout history for a list of ticker symbols.

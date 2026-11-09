@@ -1,7 +1,17 @@
 """Unit test ตรง JobQueue — ไม่ผ่าน HTTP layer เพื่อกัน timing flakiness ของ async worker"""
 from api import state_db
+from api.db.adapters import SqliteJobRepositoryAdapter
 from api.jobs import JobQueue
-from api.routes_agents import _job_to_dto
+from api.routers.agents_router import _status_to_dto
+from api.schemas import JobStatusDTO
+from application.jobs.service import JobApplicationService
+
+
+def _job_to_dto(conn, job) -> JobStatusDTO:
+    service = JobApplicationService(repo=SqliteJobRepositoryAdapter(conn=conn))
+    status = service.get_status(job["job_id"])
+    assert status is not None
+    return _status_to_dto(status)
 
 
 def _noop_run_fn(**kwargs) -> None:

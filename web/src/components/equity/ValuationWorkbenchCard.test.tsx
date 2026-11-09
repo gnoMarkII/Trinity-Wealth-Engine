@@ -836,6 +836,20 @@ describe('ValuationWorkbenchCard', () => {
     expect(screen.getByText('In Buy Zone')).toBeInTheDocument()
     expect(screen.getAllByText('$120.00').length).toBeGreaterThanOrEqual(1)
   })
+
+  it('renders embedded DCFScenariosChart breakdown inside Right Pane when dcf scenarios exist', () => {
+    render(
+      <ValuationWorkbenchCard
+        reverseDcf={mockReverseDcf}
+        dcf={mockDcf}
+      />
+    )
+
+    expect(screen.getByText('Scenarios Target Price')).toBeInTheDocument()
+    expect(screen.getByText(/Ke: 10\.2%, Kd: 5%/i)).toBeInTheDocument()
+    expect(screen.getByText('-45%')).toBeInTheDocument()
+    expect(screen.getByText('+15%')).toBeInTheDocument()
+  })
 })
 
 

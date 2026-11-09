@@ -7,6 +7,7 @@ ticker/market จาก instruction แล้วส่งต่อผลลั�
 import math
 import os
 import time
+from decimal import Decimal, InvalidOperation
 from datetime import datetime, timezone
 from typing import Literal, Optional
 
@@ -25,6 +26,7 @@ from tools.market.quant_engine import (
     compute_price_percentile,
     create_atomic_market_snapshot,
     _get_price_history,
+    compute_amihud_illiquidity_20d_with_metadata,
 )
 from tools.market.quant_scoring import (
     compute_value_score,
@@ -36,10 +38,18 @@ from tools.market.quant_scoring import (
     compute_solvency_score,
     compute_trading_liquidity,
     compute_composite_score,
+    compute_composite_score_waterfall,
     compute_fcf_quality_score,
     compute_debt_quality_score,
     compute_net_shareholder_yield,
 )
+from core.equity_analytics.dupont_accrual import (
+    compute_dupont_3factor,
+    compute_sloan_accrual_ratio,
+)
+from core.equity_analytics.signal_audit import audit_signal_maturity
+from tools.market.consensus_engine import compute_horizon_matched_expectation_gap
+from tools.market.pit_fundamentals_ledger import compute_pit_multiple_bands
 from tools.market.peer_valuation import fetch_peer_metrics, compute_peer_relative_score
 from tools.market.earnings_momentum import fetch_earnings_revision_data, compute_earnings_revision_score
 from tools.macro.evaluation import load_latest_macro_observables
@@ -159,6 +169,11 @@ def compute_equity_quant_signals(ticker: str, market: Literal["TH", "US"] = "US"
         volatility_pct, vol_q = compute_volatility(provider_symbol)
         mdd_pct, mdd_q = compute_mdd(provider_symbol)
         tech, tech_q = compute_technical_indicators(provider_symbol)
+        amihud_meta = compute_amihud_illiquidity_20d_with_metadata(
+            df_1y,
+            currency="THB" if market == "TH" else "USD",
+        )
+        amihud_illiquidity_20d = amihud_meta["value"]
 
         company_name = info.get("shortName")
         peer_sector = info.get("sector")
@@ -220,6 +235,9 @@ def compute_equity_quant_signals(ticker: str, market: Literal["TH", "US"] = "US"
         )
 
         composite_score, composite_flag = compute_composite_score(
+            value_score, quality_score, growth_score, momentum_score, dividend_score
+        )
+        composite_score_waterfall = compute_composite_score_waterfall(
             value_score, quality_score, growth_score, momentum_score, dividend_score
         )
 
@@ -396,6 +414,98 @@ def compute_equity_quant_signals(ticker: str, market: Literal["TH", "US"] = "US"
         # Declarative Sector KPIs
         sector_kpis_summary = compute_sector_kpis(peer_sector or "", autopsy.periods if autopsy else [])
         sector_kpis_dict = sector_kpis_summary.model_dump() if sector_kpis_summary else None
+
+        # DuPont 3-Factor & Sloan Accrual Analysis (period-consistent & non-silent error reporting)
+        dupont_dict = None
+        sloan_dict = None
+        dupont_sloan_flags: list[str] = []
+        dupont_basis = "unavailable_missing_inputs"
+        sloan_basis = "unavailable_missing_inputs"
+        if autopsy and autopsy.periods:
+            p0 = autopsy.periods[0]
+            p0_type = getattr(p0, "period_type", None)
+            p0_end = str(getattr(p0, "fiscal_period_end", "") or "")
+            p1 = None
+            for cand in autopsy.periods[1:]:
+                c_type = getattr(cand, "period_type", None)
+                c_end = str(getattr(cand, "fiscal_period_end", "") or "")
+                if (p0_type or c_type) and c_type != p0_type:
+                    continue
+                if p0_end and c_end and c_end >= p0_end:
+                    continue
+                p1 = cand
+                break
+
+            ni = getattr(p0, "net_income", None)
+            rev = getattr(p0, "total_revenue", None)
+            ta0 = getattr(p0, "total_assets", None)
+            eq0 = getattr(p0, "stockholders_equity", None)
+            ocf = getattr(p0, "operating_cash_flow", None)
+            ta1 = getattr(p1, "total_assets", None) if p1 else None
+
+            if ni is not None and rev is not None and ta0 is not None and eq0 is not None:
+                try:
+                    dp = compute_dupont_3factor(
+                        net_income=Decimal(str(ni)),
+                        revenue=Decimal(str(rev)),
+                        total_assets=Decimal(str(ta0)),
+                        stockholders_equity=Decimal(str(eq0)),
+                    )
+                    if dp is None:
+                        dupont_sloan_flags.append("dupont_unavailable:non_positive_denominator")
+                        dupont_basis = "unavailable_non_positive_denominator"
+                    else:
+                        dupont_dict = {
+                            "net_profit_margin_pct": float(dp.net_profit_margin_pct),
+                            "asset_turnover": float(dp.asset_turnover),
+                            "equity_multiplier": float(dp.equity_multiplier),
+                            "roe_pct": float(dp.roe_pct),
+                            "closure_error": float(dp.closure_error),
+                            "internal_closure_error": float(dp.internal_closure_error),
+                            "published_roe_reconstructed_pct": float(dp.published_roe_reconstructed_pct),
+                            "is_published_reconciled": dp.is_published_reconciled,
+                            "fiscal_period_end": p0_end or None,
+                            "period_type": p0_type or None,
+                        }
+                        dupont_basis = f"{p0_type or 'unknown'}:{p0_end or 'unknown'}"
+                        if not dp.is_published_reconciled:
+                            dupont_sloan_flags.append("dupont_display_reconciliation_gap:quality")
+                except (InvalidOperation, ValueError, TypeError) as exc:
+                    log.warning("DuPont calculation failed for %s: %s", provider_symbol, exc)
+                    dupont_sloan_flags.append("dupont_calculation_failed:quality")
+                    dupont_basis = "calculation_failed"
+
+            if ni is not None and ocf is not None and ta0 is not None:
+                try:
+                    sl = compute_sloan_accrual_ratio(
+                        net_income=Decimal(str(ni)),
+                        operating_cash_flow=Decimal(str(ocf)),
+                        total_assets_current=Decimal(str(ta0)),
+                        total_assets_prior=Decimal(str(ta1)) if ta1 is not None else None,
+                    )
+                    if sl is None:
+                        dupont_sloan_flags.append("sloan_unavailable:non_positive_assets")
+                        sloan_basis = "unavailable_non_positive_assets"
+                    else:
+                        sloan_dict = {
+                            "sloan_accrual_ratio": float(sl.sloan_accrual_ratio),
+                            "raw_sloan_accrual_ratio": (
+                                float(sl.raw_sloan_accrual_ratio)
+                                if sl.raw_sloan_accrual_ratio is not None
+                                else float(sl.sloan_accrual_ratio)
+                            ),
+                            "earnings_quality_rating": sl.earnings_quality_rating,
+                            "assets_basis": sl.assets_basis,
+                            "interpretation": sl.interpretation,
+                            "fiscal_period_end": p0_end or None,
+                            "period_type": p0_type or None,
+                            "prior_fiscal_period_end": str(getattr(p1, "fiscal_period_end", "") or "") or None if p1 else None,
+                        }
+                        sloan_basis = f"{sl.assets_basis}:{p0_type or 'unknown'}:{p0_end or 'unknown'}"
+                except (InvalidOperation, ValueError, TypeError) as exc:
+                    log.warning("Sloan accrual calculation failed for %s: %s", provider_symbol, exc)
+                    dupont_sloan_flags.append("sloan_calculation_failed:quality")
+                    sloan_basis = "calculation_failed"
 
         # -------------------------------------------------------------
         # Institutional 4-Pillar Integration
@@ -589,13 +699,67 @@ def compute_equity_quant_signals(ticker: str, market: Literal["TH", "US"] = "US"
         )
 
         # 5. Canonical SEC Form 4 Insider Conviction (computed above with Smart Money)
+        now_iso = datetime.now(timezone.utc).isoformat()
+        as_of_date = atomic_snapshot.latest_ohlcv_date or now_iso[:10]
+
+        # 5b. Point-in-Time Signal Maturity Guard (embargo buffer check)
+        signal_maturity_basis = "not_evaluated"
+        signal_maturity_passed: Optional[bool] = None
+        signal_audit_flags: list[str] = []
+        if autopsy and autopsy.periods:
+            latest_disclosure = (
+                getattr(autopsy.periods[0], "reported_at", None)
+                or getattr(autopsy.periods[0], "fiscal_period_end", None)
+            )
+            if latest_disclosure:
+                is_mature = audit_signal_maturity(
+                    as_of_date=as_of_date,
+                    filing_date=str(latest_disclosure),
+                    embargo_days=2,
+                )
+                signal_maturity_passed = is_mature
+                signal_maturity_basis = "mature" if is_mature else "immature_disclosure"
+                if not is_mature:
+                    signal_audit_flags.append("immature_financial_disclosure:signal_audit")
+
+        # 5c. Horizon-Matched Consensus Expectation Gap & Historical PIT Bands
+        consensus_payload: Optional[dict] = None
+        if revision_data is not None:
+            consensus_payload = dict(revision_data)
+            if "trend_0y" not in consensus_payload:
+                consensus_payload["trend_0y"] = {
+                    "current_estimate": revision_data.get("estimate_current"),
+                    "estimate_30d_ago": revision_data.get("estimate_30d_ago"),
+                    "change_30d_pct": eps_estimate_change_30d_pct,
+                }
+        expectation_gap_pct, consensus_eps_momentum, consensus_status, consensus_flags = (
+            compute_horizon_matched_expectation_gap(
+                consensus_data=consensus_payload,
+                market_implied_growth_pct=reverse_dcf_result.market_implied_growth_pct if reverse_dcf_result else None,
+            )
+        )
+
+        pit_bands_dict: Optional[dict] = None
+        pit_bands_status = "unavailable"
+        pit_observations_count = 0
+        try:
+            pit_bands = compute_pit_multiple_bands(
+                resolved.raw_symbol.strip().upper(),
+                current_pe=pe,
+            )
+            pit_bands_status = pit_bands.status
+            pit_observations_count = pit_bands.observations_count
+            pit_bands_dict = pit_bands.model_dump()
+        except Exception as pit_err:
+            log.debug("compute_pit_multiple_bands skipped for %s: %s", provider_symbol, pit_err)
 
         flags = [
             f for f in [
                 *snapshot_flags, value_flag, quality_flag, momentum_flag, *growth_flags, growth_score_flag,
                 dividend_flag, solvency_flag, liquidity_flag, composite_flag, peer_flag,
                 revision_fetch_flag or revision_score_flag, fcf_q_flag, debt_q_flag,
-                *dcf_flags, *ownership_flags, *rdcf_flags, *tac_flags, *ins_flags, *margin_flags, dilution_flag,
+                *dcf_flags, *ownership_flags, *rdcf_flags, *tac_flags, *ins_flags, *margin_flags,
+                dilution_flag, *dupont_sloan_flags, *signal_audit_flags,
             ] if f
         ]
         for name, q in [
@@ -613,6 +777,17 @@ def compute_equity_quant_signals(ticker: str, market: Literal["TH", "US"] = "US"
             "fcf_margin": "annual_reported" if (latest_p and latest_p.free_cash_flow is not None) else ("ttm" if fcf_raw is not None else "fallback"),
             "fcf_yield": "ttm" if fcf_raw is not None else "fallback",
             "ebit_margin": ebit_basis,
+            "amihud_return_price_basis": str(amihud_meta["return_price_basis"]),
+            "amihud_sample_window_days": str(amihud_meta["window_days"]),
+            "amihud_valid_days": str(amihud_meta["valid_days"]),
+            "amihud_quality_status": str(amihud_meta["status"]),
+            "amihud_currency": str(amihud_meta["currency"]),
+            "dupont_3factor": dupont_basis,
+            "sloan_accrual": sloan_basis,
+            "signal_maturity": signal_maturity_basis,
+            "consensus_expectation": consensus_status,
+            "pit_multiple_bands": pit_bands_status,
+            "pit_observations_count": str(pit_observations_count),
         }
 
         signals = QuantSignals(
@@ -646,6 +821,7 @@ def compute_equity_quant_signals(ticker: str, market: Literal["TH", "US"] = "US"
             fcf_quality_score=fcf_quality_score,
             debt_quality_score=debt_quality_score,
             adtv_local_currency=adtv_local_currency,
+            amihud_illiquidity_20d=amihud_illiquidity_20d,
             composite_score=composite_score,
             peer_sector=peer_sector,
             peer_count=peer_count,
@@ -671,11 +847,12 @@ def compute_equity_quant_signals(ticker: str, market: Literal["TH", "US"] = "US"
             sector_kpis=sector_kpis_dict,
             net_buyback_yield_pct=net_buyback_yield_pct,
             net_shareholder_yield_pct=net_shareholder_yield_pct,
+            dupont_breakdown=dupont_dict,
+            sloan_accrual=sloan_dict,
+            composite_score_waterfall=composite_score_waterfall,
         )
 
         # 6. Guidance Extraction & Verification (Phase 1 & v3.1)
-        now_iso = datetime.now(timezone.utc).isoformat()
-        as_of_date = atomic_snapshot.latest_ohlcv_date or now_iso[:10]
         autopsy_periods = autopsy.periods if autopsy and autopsy.periods else []
 
         from tools.market.guidance_engine import extract_verified_earnings_guidance
@@ -859,6 +1036,14 @@ def compute_equity_quant_signals(ticker: str, market: Literal["TH", "US"] = "US"
                 "price_stage": tactical_setup.price_stage if tactical_setup else None,
                 "piotroski_f_score": piotroski_breakdown.f_score if piotroski_breakdown else None,
                 "reverse_dcf_implied_growth": reverse_dcf_result.market_implied_growth_pct if reverse_dcf_result else None,
+                "signal_maturity_passed": signal_maturity_passed,
+                "consensus_expectation": {
+                    "expectation_gap_pct": expectation_gap_pct,
+                    "eps_momentum_score": consensus_eps_momentum,
+                    "status": consensus_status,
+                    "flags": consensus_flags,
+                },
+                "pit_multiple_bands": pit_bands_dict,
             },
             data_quality_flags=flags,
         )

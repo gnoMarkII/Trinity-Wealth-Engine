@@ -18,3 +18,16 @@
 - ห้ามนำตัวชี้วัดที่อยู่ในกลุ่ม `invalid_observables` (เช่น `RSAFS` หรือตัวชี้วัดที่ stale/unverified) ไปเป็นหลักฐานสนับสนุน (supporting evidence) สำหรับ Growth หรือยกระดับความมั่นใจเป็น MEDIUM หรือ HIGH หากตัวชี้วัดใด invalid ให้ระบุว่าเป็นข้อจำกัดของข้อมูลเท่านั้น
 - ห้ามกล่าวอ้างตัวเลขส่วนต่างอัตราดอกเบี้ยนโยบาย Fed–BoT (Policy Rate Differential / Spread) หรือระบุตัวเลข เช่น +275 bps เว้นแต่จะมี observable `obs_diff_us_th_policy_rate_bis` อยู่ในกลุ่ม `valid_observables` จริงเท่านั้น หากไม่มีข้อมูลส่วนต่างที่ยืนยันได้ ให้ระบุว่า "ปัจจุบันยังไม่มีข้อมูลส่วนต่างอัตราดอกเบี้ยนโยบายที่ยืนยันได้ จึงยังไม่สามารถประเมินส่วนต่างได้" และจำกัดระดับความมั่นใจของ FX เป็น LOW หรือไม่เกิน MEDIUM
 
+[Regime Consistency & Inflation Contract Guardrail (สอดคล้องกับ EconomicState Enum และ Scoring Matrix)]:
+- ฟิลด์ `overall_regime` ต้องเลือกใช้เฉพาะค่ามาตรฐานใน `EconomicState` enum เท่านั้น ได้แก่ `"Goldilocks"`, `"Reflation"`, `"Stagflation"`, `"Recession"`, หรือ `"Unknown"` (ห้ามสร้างหรือประดิษฐ์ชื่อสภาวะนอก Enum โดยเด็ดขาด มิฉะนั้นระบบจะเกิด Schema Validation Error)
+- ให้จำแนกสภาวะเศรษฐกิจโดยแยกแยะ **ระดับเงินเฟ้อ (Inflation Level)** ออกจาก **ทิศทาง/โมเมนตัมของเงินเฟ้อ (Inflation Direction / Momentum)** ตามเกณฑ์ Scoring Matrix (`tools/macro/scoring.py`) และรายงานหลักฐานเงินเฟ้อจริงอย่างซื่อสัตย์ (ห้ามสั่งตัดหรือละเว้นตัวชี้วัด `CPI`, `PCE`, `Core PCE` ที่ผ่านการตรวจสอบใน `valid_observables` เด็ดขาด):
+  1. `Goldilocks`: เศรษฐกิจขยายตัว (`Growth > 0`) ร่วมกับแรงกดดันเงินเฟ้อต่ำหรือชะลอตัวลงอย่างชัดเจน (`Inflation Score >= 0`) ห้ามระบุเป็น Goldilocks หากข้อมูลจริงชี้ว่าเงินเฟ้อกำลังเร่งตัวหรือยังตึงตัวเหนียวหนึบ
+  2. `Reflation`: เศรษฐกิจขยายตัว (`Growth > 0`) ร่วมกับแรงกดดันเงินเฟ้อที่สูงขึ้นหรือตึงตัว (`Inflation Score < 0`) ในสภาวะนี้ให้รายงานตัวเลขเงินเฟ้อจริงจาก `valid_observables` (ทั้งระดับ % YoY และทิศทางเทียบกับอดีต/MA) ใน `regime_evidence`, `supporting_data` และ `rationale` อย่างครบถ้วน ห้ามสลับไปเลือก `Stagflation` (ซึ่งใช้เฉพาะกรณีที่ `Growth <= 0`) และห้ามประดิษฐ์ชื่อสภาวะนอก Enum
+  3. `Stagflation`: เศรษฐกิจชะลอหรือหดตัว (`Growth <= 0`) ร่วมกับเงินเฟ้อสูงหรือยืดเยื้อ (`Inflation Score < 0`)
+  4. `Recession`: เศรษฐกิจชะลอหรือหดตัว (`Growth <= 0`) ร่วมกับเงินเฟ้อชะลอตัวลง (`Inflation Score >= 0`)
+  5. `Unknown`: ข้อมูล Growth หรือ Inflation ที่ผ่านการตรวจสอบไม่เพียงพอ
+
+[Pair Trade Quantitative Evidence & Grounding Guardrail (ป้องกัน PT_DEFENSIVE_LOW และ GRACEFUL_DROP_PAIR_TRADES)]:
+- ทุกรายการใน `pair_trades`:
+  1. [Hard Numbers in Supporting Data]: ในฟิลด์ `supporting_data` บังคับต้องระบุตัวเลขและหน่วยทางการเงินจริงอย่างน้อย 1 รายการเสมอ (เช่น "Spread: +18 bps", "Price Ratio: 1.42x", "Yield Gap: 1.25%", หรือ "Forward P/E Spread: 13.3x") ห้ามใส่เพียงข้อความบรรยายเชิงคุณภาพเด็ดขาด มิฉะนั้นระบบจะลดระดับความเชื่อมั่นเป็น LOW ทันที (PT_DEFENSIVE_LOW)
+  2. [Valid Observable Grounding]: ฟิลด์ `observable_refs` ต้องระบุรหัสตัวชี้วัดที่ถูกต้องจากกลุ่ม `valid_observables` อย่างน้อย 2 รหัสที่แตกต่างกัน (สำหรับความเชื่อมั่น MEDIUM หรือ HIGH) หรืออย่างน้อย 1 รหัส (สำหรับ LOW) และต้องมีตัวเลขในพารามิเตอร์การเทรดจริง ห้ามอ้างอิงรหัสที่ไม่มีอยู่จริงหรือตัวชี้วัดที่เป็น invalid มิฉะนั้นระบบ Guardrail จะตัดรายการ Pair Trade นั้นทิ้งทันที (GRACEFUL_DROP_PAIR_TRADES)

@@ -134,7 +134,7 @@ def get_us_early_close_days(year: int) -> set[date]:
 
 def is_us_trading_day(dt_or_date: Union[datetime, date]) -> bool:
     """Checks if the given date is a valid US equity trading day (Mon-Fri, non-holiday)."""
-    d = dt_or_date.date() if isinstance(dt_or_date, datetime) else dt_or_date
+    d = dt_or_date.date() if callable(getattr(dt_or_date, "date", None)) else dt_or_date
     if d.weekday() >= 5:  # Saturday or Sunday
         return False
     holidays = get_us_market_holidays(d.year)

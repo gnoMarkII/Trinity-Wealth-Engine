@@ -10,7 +10,7 @@ Adheres strictly to Hexagonal Architecture: depends only on ports and domain.
 """
 from __future__ import annotations
 
-from decimal import Decimal
+from decimal import Decimal, InvalidOperation
 import logging
 import time
 from typing import Any, Dict, List, Optional
@@ -185,6 +185,23 @@ class PortfolioOpportunityService:
         except Exception as e:
             log.warning("Could not load equity sidecars for opportunity evaluation: %s", e)
 
+        # 6.1 Resolve USD/THB FX rate for ADTV conversion
+        usd_thb_fx_rate: Optional[Decimal] = Decimal("35.50")
+        raw_fx = getattr(summary, "usd_thb_rate", None)
+        if raw_fx is None and portfolio_state is not None:
+            fx_dict = getattr(portfolio_state, "fx_rates", None)
+            if isinstance(fx_dict, dict):
+                raw_fx = fx_dict.get("USDTHB") if "USDTHB" in fx_dict else fx_dict.get("USD_THB")
+        if raw_fx is not None:
+            try:
+                fx_dec = raw_fx if isinstance(raw_fx, Decimal) else Decimal(str(raw_fx))
+                if isinstance(raw_fx, bool) or not fx_dec.is_finite() or fx_dec <= Decimal("0"):
+                    usd_thb_fx_rate = Decimal("-1")
+                else:
+                    usd_thb_fx_rate = fx_dec
+            except (InvalidOperation, ValueError, TypeError):
+                usd_thb_fx_rate = Decimal("-1")
+
         # 7. Pure Domain Evaluation
         report = OpportunityEvaluator.evaluate_all(
             candidates=candidates,
@@ -199,6 +216,7 @@ class PortfolioOpportunityService:
             single_stock_cap_pct=Decimal("15.0"),
             sector_cap_pct=Decimal("30.0"),
             look_through_coverage_pct=look_through_coverage_pct,
+            usd_thb_fx_rate=usd_thb_fx_rate,
         )
 
         # 8. Convert to API DTO
@@ -262,6 +280,9 @@ class PortfolioOpportunityService:
                 research_priority=r.research_priority,
                 priority_reasons=r.priority_reasons,
                 is_actionable=r.is_actionable,
+                liquidity_status=r.liquidity_status,
+                adtv_thb=float(r.adtv_thb) if r.adtv_thb is not None else None,
+                liquidity_room_thb=float(r.liquidity_room_thb) if r.liquidity_room_thb is not None else None,
             )
             candidate_dtos.append(r_dto)
 

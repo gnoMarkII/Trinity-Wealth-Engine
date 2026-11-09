@@ -284,3 +284,70 @@ def test_full_portfolio_flow_with_di():
     assert "[PERF SNAPSHOT]" in msg
     hist = svc.get_structured_performance_history()
     assert len(hist) == 1
+
+
+def test_r03_and_r07_usd_dividend_snapshot_with_float_fx_and_dict_schedules():
+    """R03/R02/R07 integration: float fx_rates['USDTHB'] + dict schedule + pre-XD trade persists economic NAV."""
+    from tools.portfolio.services.performance_service import PortfolioPerformanceService
+
+    repo = InMemoryPortfolioRepository()
+    watchlist_repo = InMemoryWatchlistRepository()
+    goals_repo = InMemoryGoalsRepository()
+    perf_repo = InMemoryPerformanceRepository()
+    journal_provider = InMemoryJournalAdapter()
+    price_provider = MockPriceAdapter()
+
+    svc = PortfolioService(
+        repo=repo,
+        watchlist_repo=watchlist_repo,
+        goals_repo=goals_repo,
+        perf_repo=perf_repo,
+        journal_provider=journal_provider,
+        price_provider=price_provider,
+    )
+    svc.manage_cash_flow(amount=5000.0, action="deposit", currency="USD")
+    with repo.unit_of_work("default") as uow:
+        state = uow.load_state()
+        state.fx_rates["USDTHB"] = 35.5  # Float FX shape from live portfolio state
+        from tools.portfolio.domain.ledger_change import LedgerChange
+        uow.commit(state, LedgerChange(kind="unchanged"))
+
+    # Buy AAPL before ex_date
+    svc.structured_execute_trade(
+        symbol="AAPL",
+        asset_type="Stock",
+        action="buy",
+        units=10.0,
+        price=150.0,
+        currency="USD",
+        date="2026-02-01",
+    )
+
+    perf_service = PortfolioPerformanceService(
+        repo=repo, perf_repo=perf_repo, price_provider=price_provider
+    )
+    dict_schedule = [
+        {
+            "ticker": "AAPL",
+            "ex_date": "2026-02-10",
+            "pay_date": "2026-02-25",
+            "dps_native": "0.25",
+            "market": "US",
+            "currency": "USD",
+            "withholding_tax_pct": 15.0,
+        }
+    ]
+    msg = perf_service.record_performance_snapshot(
+        refresh_prices=False,
+        portfolio_id="default",
+        dividend_schedules=dict_schedule,
+        as_of_date="2026-02-15",
+    )
+    assert "[PERF SNAPSHOT]" in msg
+    hist = perf_service.get_structured_performance_history()
+    assert len(hist) == 1
+    row = hist[0]
+    # Net USD = 10 * 0.25 * 0.85 = 2.125 -> Tax: round(2.50 * 0.15) = 0.38 -> Net USD = 2.12
+    # 2.12 * 35.5 = 75.26 THB
+    assert row["Accrued_Dividend_Receivable_THB"] == "75.26"
+    assert float(row["Economic_NAV_THB"]) == pytest.approx(float(row["Total_NAV_THB"]) + 75.26, abs=0.01)

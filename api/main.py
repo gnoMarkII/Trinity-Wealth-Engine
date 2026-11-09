@@ -94,11 +94,21 @@ async def lifespan(app: FastAPI):
         app.state.notebooklm_job_queue.start()
 
     from api.workers.earnings_call_outbox_worker import EarningsCallOutboxWorker
+    from api.workers.investor_workflow_worker import InvestorWorkflowWorker
     from api.workers.portfolio_snapshot_worker import PortfolioDailySnapshotWorker
     app.state.earnings_call_outbox_worker = None
     app.state.portfolio_snapshot_worker = None
+    app.state.investor_workflow_worker = None
     if workers_enabled:
-        from api.dependencies import get_earnings_call_service, get_portfolio_service
+        from api.dependencies import (
+            get_bucket_planning_service,
+            get_claim_review_service,
+            get_earnings_call_service,
+            get_interview_service,
+            get_investment_axis_service,
+            get_investor_uow_factory,
+            get_portfolio_service,
+        )
 
         app.state.earnings_call_outbox_worker = EarningsCallOutboxWorker(
             service=get_earnings_call_service()
@@ -110,7 +120,18 @@ async def lifespan(app: FastAPI):
         )
         app.state.portfolio_snapshot_worker.start()
 
+        app.state.investor_workflow_worker = InvestorWorkflowWorker(
+            uow_factory=get_investor_uow_factory(),
+            interview_service=get_interview_service(),
+            claim_review_service=get_claim_review_service(),
+            axis_service=get_investment_axis_service(),
+            bucket_service=get_bucket_planning_service(),
+        )
+        app.state.investor_workflow_worker.start()
+
     yield
+    if app.state.investor_workflow_worker is not None:
+        await app.state.investor_workflow_worker.stop()
     if app.state.portfolio_snapshot_worker is not None:
         await app.state.portfolio_snapshot_worker.stop()
     if app.state.earnings_call_outbox_worker is not None:

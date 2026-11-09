@@ -127,3 +127,16 @@ def test_analysis_evidence_snapshot_serialization():
     assert reloaded.corporate_actions.chart_price_basis == "split_and_dividend_adjusted"
     assert reloaded.corporate_actions.valuation_price_basis == "unadjusted_close"
     assert reloaded.derived_features["atr_14"] == 4.5
+
+
+def test_get_default_cas_dir_resolves_env_dynamically_and_respects_override(tmp_path, monkeypatch):
+    import tools.market.evidence_store as ev_store
+
+    monkeypatch.setattr(ev_store, "_DEFAULT_CAS_DIR", ev_store._INITIAL_DEFAULT_CAS_DIR)
+    vault_a = (tmp_path / "vault_a").resolve()
+    monkeypatch.setenv("OBSIDIAN_VAULT_PATH", str(vault_a))
+    assert ev_store.get_default_cas_dir() == vault_a / "30_Knowledge_Base" / ".evidence_cache"
+
+    custom_dir = (tmp_path / "custom_cas").resolve()
+    monkeypatch.setattr(ev_store, "_DEFAULT_CAS_DIR", custom_dir)
+    assert ev_store.get_cas_storage_path("deadbeef") == custom_dir / "deadbeef.json"

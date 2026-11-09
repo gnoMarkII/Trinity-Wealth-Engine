@@ -5,6 +5,7 @@ import re
 from typing import Any, Dict, List, Optional
 import httpx
 
+from core.equity_analytics.canary_guard import scan_untrusted_text
 from core.financial_parsers import extract_json_block
 from core.llm_factory import get_llm, detect_provider
 from core.model_registry import get_model_name
@@ -20,6 +21,20 @@ def _extract_json_block(text: Any) -> Optional[dict]:
             for part in text
         )
     return extract_json_block(text)
+
+
+def _sanitize_transcript_for_llm(transcript_text: str) -> str:
+    """Scan untrusted earnings call text before LLM synthesis and neutralize injection strings."""
+    scan = scan_untrusted_text(transcript_text or "", raise_on_critical=False)
+    safe_text = scan.sanitized_text
+    if not scan.is_safe:
+        rules = [v.get("rule", "UNKNOWN") for v in scan.violations]
+        log.warning("Canary guard sanitized prompt injection patterns in transcript: %s", rules)
+        for violation in scan.violations:
+            matched = violation.get("matched_text")
+            if matched:
+                safe_text = safe_text.replace(matched, "[REDACTED_INJECTION]")
+    return safe_text
 
 
 class PromiseExtractorAdapter:
@@ -88,7 +103,7 @@ Timing → due quarter: explicit date/quarter → that quarter [explicit]; "this
 {open_context}
 
 TRANSCRIPT TEXT:
-{transcript_text[:90000]}
+{_sanitize_transcript_for_llm(transcript_text)[:90000]}
 
 Return JSON only with this schema:
 {{
@@ -155,7 +170,7 @@ Decide the status using this order, first match wins:
  - Unverifiable: due passed, but transcript does not provide sufficient data to judge.
 
 TRANSCRIPT TEXT:
-{transcript_text[:90000]}
+{_sanitize_transcript_for_llm(transcript_text)[:90000]}
 
 Return JSON only:
 {{

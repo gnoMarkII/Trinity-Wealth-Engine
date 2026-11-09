@@ -3,7 +3,8 @@
 ห้าม LLM คำนวณคะแนนพวกนี้เองเด็ดขาด (กฎ 4.2/4.6/Final Doctrine ข้อ 3) — ทุกฟังก์ชันในไฟล์นี้
 รับตัวเลขดิบจาก yfinance/financial_autopsy แล้ว Return คะแนนที่ deterministic 100%
 """
-from typing import Optional, Tuple
+from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
+from typing import Any, Dict, List, Optional, Tuple
 
 from langsmith import traceable
 
@@ -334,7 +335,74 @@ def compute_trading_liquidity(
     return adtv, None
 
 
-_COMPOSITE_WEIGHTS = {"value": 0.25, "quality": 0.25, "growth": 0.25, "momentum": 0.15, "dividend": 0.10}
+_COMPOSITE_WEIGHTS_DEC: Dict[str, Decimal] = {
+    "value": Decimal("0.25"),
+    "quality": Decimal("0.25"),
+    "growth": Decimal("0.25"),
+    "momentum": Decimal("0.15"),
+    "dividend": Decimal("0.10"),
+}
+_COMPOSITE_WEIGHTS = {k: float(v) for k, v in _COMPOSITE_WEIGHTS_DEC.items()}
+
+
+def _to_finite_decimal(val: Optional[float], label: str) -> Optional[Decimal]:
+    if val is None:
+        return None
+    if isinstance(val, bool):
+        raise ValueError(f"{label} must be numeric, not bool")
+    try:
+        dec = val if isinstance(val, Decimal) else Decimal(str(val))
+    except (InvalidOperation, TypeError, ValueError) as exc:
+        raise ValueError(f"invalid decimal for {label}: {val!r}") from exc
+    if not dec.is_finite():
+        raise ValueError(f"{label} must be finite, got {val!r}")
+    return dec
+
+
+def _compute_composite_canonical(
+    value_score: Optional[float],
+    quality_score: Optional[float],
+    growth_score: Optional[float],
+    momentum_score: Optional[float],
+    dividend_score: Optional[float],
+) -> Tuple[Optional[Decimal], Dict[str, Decimal], Dict[str, Decimal], int]:
+    """Canonical Decimal composite & waterfall math (rounds only at output boundaries)."""
+    raw_scores = {
+        "value": value_score,
+        "quality": quality_score,
+        "growth": growth_score,
+        "momentum": momentum_score,
+        "dividend": dividend_score,
+    }
+    available: Dict[str, Decimal] = {}
+    for k, v in raw_scores.items():
+        dec = _to_finite_decimal(v, f"{k}_score")
+        if dec is not None:
+            available[k] = dec
+
+    if len(available) < 2:
+        return None, {}, {}, len(available)
+
+    total_weight = sum((_COMPOSITE_WEIGHTS_DEC[k] for k in available), Decimal("0"))
+    exact_composite = sum(
+        (v * _COMPOSITE_WEIGHTS_DEC[k] for k, v in available.items()),
+        Decimal("0"),
+    ) / total_weight
+    composite_rounded = exact_composite.quantize(Decimal("0.1"), rounding=ROUND_HALF_UP)
+
+    norm_weights = {
+        k: ((_COMPOSITE_WEIGHTS_DEC[k] / total_weight) * Decimal("100")).quantize(
+            Decimal("0.01"), rounding=ROUND_HALF_UP
+        )
+        for k in available
+    }
+    contributions = {
+        k: ((v * _COMPOSITE_WEIGHTS_DEC[k]) / total_weight).quantize(
+            Decimal("0.01"), rounding=ROUND_HALF_UP
+        )
+        for k, v in available.items()
+    }
+    return composite_rounded, norm_weights, contributions, len(available)
 
 
 @traceable(run_type="parser")
@@ -353,20 +421,62 @@ def compute_composite_score(
     ข้ามมิติที่เป็น None แล้ว re-normalize weight ที่เหลือ (ไม่บังคับให้มีครบทุกมิติ)
     ถ้ามีข้อมูลไม่ถึง 2 มิติ → None พร้อม flag (ไม่น่าเชื่อถือพอจะสรุปเป็นคะแนนเดียว)
     """
-    scores = {
-        "value": value_score,
-        "quality": quality_score,
-        "growth": growth_score,
-        "momentum": momentum_score,
-        "dividend": dividend_score,
-    }
-    available = {k: v for k, v in scores.items() if v is not None}
-    if len(available) < 2:
+    composite_rounded, _, _, available_count = _compute_composite_canonical(
+        value_score=value_score,
+        quality_score=quality_score,
+        growth_score=growth_score,
+        momentum_score=momentum_score,
+        dividend_score=dividend_score,
+    )
+    if composite_rounded is None or available_count < 2:
         return None, "insufficient_dimensions:composite"
 
-    total_weight = sum(_COMPOSITE_WEIGHTS[k] for k in available)
-    composite = sum(v * _COMPOSITE_WEIGHTS[k] for k, v in available.items()) / total_weight
-    return round(composite, 1), None
+    return float(composite_rounded), None
+
+
+@traceable(run_type="parser")
+def compute_composite_score_waterfall(
+    value_score: Optional[float],
+    quality_score: Optional[float],
+    growth_score: Optional[float],
+    momentum_score: Optional[float],
+    dividend_score: Optional[float],
+) -> Dict[str, Any]:
+    """Calculates deterministic sub-pillar point contributions to the composite score.
+
+    Uses the identical canonical Decimal calculation as compute_composite_score(), rounding
+    only at output and returning explicit rounding reconciliation metadata.
+    """
+    composite_rounded, norm_weights, contributions_dec, available_count = _compute_composite_canonical(
+        value_score=value_score,
+        quality_score=quality_score,
+        growth_score=growth_score,
+        momentum_score=momentum_score,
+        dividend_score=dividend_score,
+    )
+    if composite_rounded is None or available_count < 2:
+        return {
+            "composite_score": None,
+            "base_weight_normalized_pct": {},
+            "pillar_contributions": {},
+            "pillar_contributions_sum": None,
+            "rounding_reconciliation_delta": None,
+            "available_dimensions_count": available_count,
+        }
+
+    contrib_sum_dec = sum(contributions_dec.values(), Decimal("0.00"))
+    reconciliation_delta_dec = (composite_rounded - contrib_sum_dec).quantize(
+        Decimal("0.01"), rounding=ROUND_HALF_UP
+    )
+
+    return {
+        "composite_score": float(composite_rounded),
+        "base_weight_normalized_pct": {k: float(v) for k, v in norm_weights.items()},
+        "pillar_contributions": {k: float(v) for k, v in contributions_dec.items()},
+        "pillar_contributions_sum": float(contrib_sum_dec),
+        "rounding_reconciliation_delta": float(reconciliation_delta_dec),
+        "available_dimensions_count": available_count,
+    }
 
 
 @traceable(run_type="parser")

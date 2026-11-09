@@ -139,7 +139,7 @@ export default function ManagerChatStream({
                 )}
 
                 {/* Message Body */}
-                <AdvisorMarkdown content={msg.content} />
+                <AdvisorMarkdown content={msg.content} onActionClick={onQuickPromptClick} />
 
                 {/* Job Card (if message spawned a research job) */}
                 {(() => {
@@ -185,7 +185,7 @@ export default function ManagerChatStream({
           <div className="flex justify-start gap-3 animate-chat-turn-in">
             <ManagerFluidOrb mode="avatar" />
             <div className="max-w-[85%] sm:max-w-[78%] rounded-2xl border border-sky-100/70 bg-white/90 p-4 text-zinc-800 shadow-[0_4px_20px_rgba(14,165,233,0.04)] backdrop-blur-md">
-              <AdvisorMarkdown content={streamingText} />
+              <AdvisorMarkdown content={streamingText} isStreaming onActionClick={onQuickPromptClick} />
 
               {/* Job Card (if streaming text already spawned or contains a research job) */}
               {(() => {

@@ -18,6 +18,7 @@ Covers:
 15. News search & discovery (RSS Google News)
 """
 import json
+from datetime import datetime, timezone
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 import pytest
@@ -509,7 +510,10 @@ def test_bis_policy_rates_adapter_with_fixture():
     fixture_path = FIXTURES_DIR / "bis_cbpol_fixture.csv"
     assert fixture_path.exists(), f"Missing BIS fixture: {fixture_path}"
 
-    adapter = BisPolicyRatesHttpAdapter(fixture_path=fixture_path)
+    adapter = BisPolicyRatesHttpAdapter(
+        fixture_path=fixture_path,
+        as_of=datetime(2026, 10, 1, tzinfo=timezone.utc),
+    )
     snapshot = adapter.fetch_global_policy_rates()
 
     assert snapshot.source == "BIS"

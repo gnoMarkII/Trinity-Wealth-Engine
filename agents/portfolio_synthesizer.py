@@ -143,6 +143,7 @@ def build_deterministic_fallback_narrative(
     return PortfolioAdvisoryNarrativeDTO(
         synthesized_at=datetime.now(timezone.utc).isoformat(),
         portfolio_state_hash=quant_report.portfolio_state_hash,
+        synthesis_input_hash=getattr(quant_report, "synthesis_input_hash", ""),
         macro_executive_summary=summary_text,
         immediate_action_playbook=immediate_items,
         conditional_dip_plan=dip_items,
@@ -197,6 +198,7 @@ def invoke_portfolio_synthesizer(
             )
 
         narrative.portfolio_state_hash = quant_report.portfolio_state_hash
+        narrative.synthesis_input_hash = getattr(quant_report, "synthesis_input_hash", "")
         if not getattr(narrative, "synthesized_at", None):
             narrative.synthesized_at = datetime.now(timezone.utc).isoformat()
         narrative.consistency_verified = True

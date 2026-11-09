@@ -393,16 +393,45 @@ class SecEdgarAdapter(SecFinancialsPort, SecInsiderTradesPort):
                 if len(form4_targets) >= limit:
                     break
 
-        all_transactions: List[InsiderTransaction] = []
+        from tools.market.sec_form4_pipeline import (
+            derive_canonical_transactions,
+            parse_form4_xml,
+        )
+
+        parsed_filings: List[Dict[str, Any]] = []
+        raw_transactions_by_key: Dict[Tuple[str, int], InsiderTransaction] = {}
+        fallback_transactions: List[InsiderTransaction] = []
         for acc, doc, form_type, is_amend in form4_targets:
             acc_clean = acc.replace("-", "")
             try:
                 xml_text = self._fetch_form4_xml(cik_int, acc_clean, doc)
                 parsed_txs = self._parse_form4_xml(xml_text, acc, is_amend)
-                all_transactions.extend(parsed_txs)
+                fallback_transactions.extend(parsed_txs)
+                for idx, it in enumerate(parsed_txs):
+                    raw_transactions_by_key[(acc, idx)] = it
+                parsed_dict = parse_form4_xml(xml_text, accession_number=acc)
+                if is_amend:
+                    parsed_dict["is_amendment"] = True
+                parsed_filings.append(parsed_dict)
             except Exception as exc:
                 logger.debug("Skipping Form 4 %s: %s", acc, exc)
                 continue
+
+        all_transactions: List[InsiderTransaction] = fallback_transactions
+        limitations = SecInsiderTradeSnapshot.__dataclass_fields__["limitations"].default
+        if parsed_filings:
+            canonical_lots, q_meta = derive_canonical_transactions(parsed_filings)
+            if q_meta.get("requires_review"):
+                limitations = (
+                    *limitations,
+                    "Ambiguous Form 4/A amendment quarantined pending manual review.",
+                )
+            if any(pf.get("is_amendment") for pf in parsed_filings) or canonical_lots or not fallback_transactions:
+                all_transactions = [
+                    raw_transactions_by_key[(lot["accession_number"], lot["lot_ordinal"])]
+                    for lot in canonical_lots
+                    if (lot.get("accession_number"), lot.get("lot_ordinal")) in raw_transactions_by_key
+                ]
 
         as_of = datetime.utcnow().strftime("%Y-%m-%d")
         if all_transactions:
@@ -425,4 +454,5 @@ class SecEdgarAdapter(SecFinancialsPort, SecInsiderTradesPort):
             fetched_at=time.time(),
             is_stale=False,
             stale_reason=None,
+            limitations=limitations,
         )

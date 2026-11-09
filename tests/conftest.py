@@ -44,7 +44,7 @@ import pytest  # noqa: E402
 def _snapshot_protected_dirs():
     """บันทึก snapshot ของ memories/ และ data/ เพื่อป้องกัน test leakage"""
     snapshot = {}
-    for d_name in ("memories", "data"):
+    for d_name in ("memories", "data", "review"):
         d = Path(d_name)
         if d.exists():
             for f in d.glob("**/*"):
@@ -110,13 +110,11 @@ def equity_tmp_vault(tmp_path, monkeypatch):
     import tools.archivist.search as search
     import tools.archivist.linter as linter
     import tools.archivist.parser as parser
-    import api.routes_equity
 
     vpath = tmp_path.resolve()
     monkeypatch.setenv("OBSIDIAN_VAULT_PATH", str(vpath))
     for mod in [core, writer, indexer, search, linter, parser]:
         monkeypatch.setattr(mod, "VAULT_PATH", vpath, raising=False)
-    monkeypatch.setattr(api.routes_equity, "VAULT_PATH", vpath, raising=False)
 
     yield tmp_path
 
@@ -125,14 +123,18 @@ def equity_tmp_vault(tmp_path, monkeypatch):
 def _pin_portfolio_vault_baseline(monkeypatch):
     """Safety net (defense-in-depth): ก่อน**ทุก**test ไม่ว่าจะ opt-in portfolio isolation หรือไม่
     บังคับให้ tools.portfolio.* module ที่ live อยู่ใน sys.modules ตอนนี้ (เผื่อค้างจาก test อื่น
-    ในเซสชันเดียวกัน) ชี้ VAULT_PATH ไปที่ safe global test path เสมอ และให้
-    api.routes_portfolio.portfolio_* (ถ้าโหลดอยู่) ชี้ตาม module เดียวกันนี้ — กัน test ที่ไม่ได้ตั้งใจ
+    ในเซสชันเดียวกัน) ชี้ VAULT_PATH ไปที่ safe global test path เสมอ — กัน test ที่ไม่ได้ตั้งใจ
     แตะ portfolio (เช่น test_auth.py, test_equity.py ที่ใช้ authed_client เฉยๆ) หลุดไปอ้างอิง module
     reference ค้างจาก test isolated ก่อนหน้า ซึ่งเป็น root cause ของ vault leak ที่เจอตอนรัน full suite
     (pytest instantiates autouse fixtures ก่อน fixture ที่ระบุชื่อตรงๆ ในสโคปเดียวกันเสมอ — ดังนั้น
     isolated_portfolio/isolated_mutation_portfolio/isolated_calendar_portfolio ที่ test เรียกใช้เองจะ
     รันทับ baseline นี้ทีหลังเสมอ ไม่ชนกัน)"""
     safe_vault = _GLOBAL_TEST_TEMP / "vault"
+    monkeypatch.setenv("OBSIDIAN_VAULT_PATH", str(safe_vault))
+    monkeypatch.setenv("NEWS_FUNNEL_STORE_PATH", str(_GLOBAL_TEST_TEMP / "news_funnel_state.json"))
+    arch_core_mod = sys.modules.get("tools.archivist.core")
+    if arch_core_mod is not None:
+        monkeypatch.setattr(arch_core_mod, "VAULT_PATH", safe_vault, raising=False)
 
     mod_key_by_name = {
         "tools.portfolio.constants": "constants",
@@ -173,24 +175,6 @@ def _pin_portfolio_vault_baseline(monkeypatch):
             monkeypatch.setattr(mod, "JOURNAL_DIR", journal_dir, raising=False)
             live_mods[key] = mod
 
-    rp = sys.modules.get("api.routes_portfolio")
-    if rp is not None:
-        rp_attr_by_key = {
-            "core": "portfolio_core",
-            "trading": "portfolio_trading",
-            "watchlist": "portfolio_watchlist",
-            "goals": "portfolio_goals",
-            "perf": "portfolio_perf",
-            "journal": "portfolio_journal",
-            "prices": "portfolio_prices",
-            "dividends": "portfolio_dividends",
-            "ledger_replay": "portfolio_ledger_replay",
-        }
-        for key, rp_attr in rp_attr_by_key.items():
-            mod = live_mods.get(key)
-            if mod is not None and hasattr(rp, rp_attr):
-                monkeypatch.setattr(rp, rp_attr, mod, raising=False)
-
     yield
 
 
@@ -225,7 +209,7 @@ def _bind_test_knowledge_note_writer():
 
 
 def _reset_portfolio_modules(tmp_vault, monkeypatch):
-    """Reset and reimport all tools.portfolio.* submodules, patch paths, and reattach to api.routes_portfolio."""
+    """Reset and reimport all tools.portfolio.* submodules, and patch vault paths."""
     from types import SimpleNamespace
     import sys
 
@@ -290,22 +274,6 @@ def _reset_portfolio_modules(tmp_vault, monkeypatch):
 
     journal_lock = FileLock(str(journal_path) + ".lock", timeout=15)
     monkeypatch.setattr(journal, "_journal_lock", journal_lock, raising=False)
-
-    if "api.routes_portfolio" in sys.modules:
-        import api.routes_portfolio as rp
-        # monkeypatch.setattr (ไม่ใช่ plain assignment) เพื่อให้ revert อัตโนมัติตอน test จบ —
-        # ป้องกัน rp.portfolio_* ค้างชี้ไปที่ module ของ test ก่อนหน้า (root cause ของ vault leak
-        # ที่เจอตอนรัน full suite: plain assignment ไม่ revert ทำให้ test อื่นในเซสชันเดียวกัน
-        # ที่ไม่ได้ opt-in isolation ไปเจอ module reference ค้างจาก test isolated ก่อนหน้า)
-        monkeypatch.setattr(rp, "portfolio_core", core, raising=False)
-        monkeypatch.setattr(rp, "portfolio_trading", trading, raising=False)
-        monkeypatch.setattr(rp, "portfolio_watchlist", watchlist, raising=False)
-        monkeypatch.setattr(rp, "portfolio_goals", goals, raising=False)
-        monkeypatch.setattr(rp, "portfolio_perf", perf, raising=False)
-        monkeypatch.setattr(rp, "portfolio_journal", journal, raising=False)
-        monkeypatch.setattr(rp, "portfolio_prices", prices, raising=False)
-        monkeypatch.setattr(rp, "portfolio_dividends", dividends, raising=False)
-        monkeypatch.setattr(rp, "portfolio_ledger_replay", ledger_replay, raising=False)
 
     return SimpleNamespace(
         constants=constants,

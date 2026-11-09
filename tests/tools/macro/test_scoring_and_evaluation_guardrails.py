@@ -450,3 +450,30 @@ def test_observable_region_canonicalization_merges_us_and_united_states():
     assert us_data["inflation"] is not None
 
 
+def test_r04_allocator_prompt_contract_aligns_with_economic_state_and_scoring():
+    """R04 regression: allocator skill files must use valid EconomicState enums and retain inflation evidence for Reflation."""
+    from core.prompt_harness import PromptHarness
+
+    harness = PromptHarness("allocator")
+    system_prompt = harness.get_system_prompt()
+    human_prompt = harness.get_skill_text("HUMAN.md", quant_json="{}", narrative_json="{}")
+    few_shots = harness._load_file_with_cache("few_shots.md")
+
+    combined = "\n".join([system_prompt, human_prompt, few_shots])
+    # Unsupported enum name must not appear anywhere in allocator prompts
+    assert "INFLATIONARY_GROWTH" not in combined
+    assert "Dovish Reflation" not in combined
+
+    # All supported EconomicState enum values must be preserved in scoring/enum contract
+    for state in EconomicState:
+        assert state.value in combined
+
+    # Positive growth + high inflation maps to Reflation in scoring and retains CPI/PCE evidence
+    assert _determine_economic_state(growth_score=0.6, inflation_score=-0.5) == EconomicState.REFLATION.value
+    assert _determine_economic_state(growth_score=0.6, inflation_score=0.4) == EconomicState.GOLDILOCKS.value
+    assert _determine_economic_state(growth_score=-0.4, inflation_score=-0.5) == EconomicState.STAGFLATION.value
+    assert _determine_economic_state(growth_score=-0.4, inflation_score=0.4) == EconomicState.RECESSION.value
+    assert _determine_economic_state(growth_score=None, inflation_score=0.4) == EconomicState.UNKNOWN.value
+    assert "ห้ามสั่งตัดหรือละเว้นตัวชี้วัด `CPI`" in system_prompt or "ห้ามละเว้นข้อมูลจริง" in human_prompt
+
+

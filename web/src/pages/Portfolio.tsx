@@ -26,6 +26,7 @@ import PortfolioTransactionsTab from '../components/portfolio/PortfolioTransacti
 import type { TransactionView } from '../lib/pvdStatementHistory'
 import { getPvdValuationContext } from '../lib/pvdPresentation'
 import PortfolioIncomesTab from '../components/portfolio/PortfolioIncomesTab'
+import PortfolioAnalyticsTab from '../components/portfolio/PortfolioAnalyticsTab'
 import InvestorPrinciplesTab from '../components/portfolio/essence/InvestorPrinciplesTab'
 import { TopLoadingRibbon } from '../components/ui/FlowSkeleton'
 import {
@@ -85,6 +86,16 @@ const TABS = [
       <span className="flex items-center gap-1.5 text-sm font-semibold whitespace-nowrap">
         <IncomeIcon className="w-4 h-4 text-emerald-500 shrink-0" />
         <span>Dividends & Income</span>
+      </span>
+    ),
+  },
+  {
+    key: 'analytics',
+    label: (
+      <span className="flex items-center gap-1.5 text-sm font-semibold whitespace-nowrap">
+        <span className="text-sm shrink-0">📈</span>
+        <span>Analytics</span>
+        <span className="hidden 2xl:inline"> & History</span>
       </span>
     ),
   },
@@ -304,7 +315,7 @@ export default function Portfolio() {
 
   // Auto-redirect legacy tabs to overview or holdings
   useEffect(() => {
-    if (activeTab === 'goals' || activeTab === 'analytics') {
+    if (activeTab === 'goals') {
       const nextParams = new URLSearchParams(searchParams)
       nextParams.set('tab', 'overview')
       setSearchParams(nextParams, { replace: true })
@@ -830,6 +841,17 @@ export default function Portfolio() {
               selectedPortfolioId={selectedPortfolioId}
               onSuccess={handlePortfolioStateSuccess}
               onOpenIncomeModal={() => setIncomeModalOpen(true)}
+            />
+          </div>
+        )}
+
+        {mountedTabs['analytics'] && (
+          <div className={activeTab === 'analytics' ? 'block' : 'hidden'}>
+            <PortfolioAnalyticsTab
+              performanceRows={performanceRows}
+              daysRange={daysRange}
+              onChangeDaysRange={setDaysRange}
+              holdings={portfolioState?.holdings ?? []}
             />
           </div>
         )}

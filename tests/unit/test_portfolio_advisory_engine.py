@@ -459,3 +459,276 @@ def test_hhi_and_effective_holdings_math():
     assert report_div.risk_radar.top_3_weight_pct == Decimal("30.0")
     assert report_div.risk_radar.concentration_risk_level == "LOW"
 
+
+def test_r08_new_radar_and_holding_fields_survive_dto_mapping_and_llm_payload():
+    """R08: Newly computed risk/friction/active-share fields survive DTO mapping and synthesis payload."""
+    from application.portfolio.advisory_service import _convert_report_to_dto
+    from core.portfolio_advisory.llm_payload_builder import build_advisory_llm_payload
+
+    mock_state = MagicMock()
+    h1 = _build_mock_holding("PTT.BK", 500, 100.0, bucket_id="core")
+    h2 = _build_mock_holding("SCB.BK", 500, 100.0, bucket_id="core")
+    mock_state.holdings = [h1, h2]
+    mock_state.buckets = [MagicMock(id="core", target_percent=100.0)]
+    mock_state.summary = MagicMock(usd_thb_rate=35.50, cash_balance_thb=100000.0)
+
+    sidecars = {
+        "PTT.BK": {
+            "ticker": "PTT.BK",
+            "market": "TH",
+            "quant_signals": {
+                "raw_analysis_price": 100.0,
+                "volatility_pct": 10.0,
+                "adtv_local_currency": 2_000_000.0,
+                "deterministic_scorecard": {"core_conviction_score": 0.0, "action_stance": "HOLD"},
+            },
+        },
+        "SCB.BK": {
+            "ticker": "SCB.BK",
+            "market": "TH",
+            "quant_signals": {
+                "raw_analysis_price": 100.0,
+                "volatility_pct": 40.0,
+                "adtv_local_currency": 1_000_000.0,
+                "deterministic_scorecard": {"core_conviction_score": 8.5, "action_stance": "ACCUMULATE_NOW"},
+                "tactical_setup": {"buy_zone_max": 105.0, "buy_zone_min": 95.0},
+            },
+        },
+    }
+
+    report = evaluate_portfolio_advisory(portfolio_state=mock_state, equity_sidecars=sidecars)
+    dto = _convert_report_to_dto(report)
+    payload = build_advisory_llm_payload(report)
+
+    # Radar fields preserved in DTO & LLM payload
+    assert dto.risk_radar.bucket_active_share_pct == float(report.risk_radar.bucket_active_share_pct)
+    assert dto.risk_radar.bucket_active_share_status == "AVAILABLE"
+    assert dto.risk_radar.risk_contribution_status == "AVAILABLE"
+    assert dto.risk_radar.total_portfolio_volatility_pct == float(report.risk_radar.total_portfolio_volatility_pct)
+    assert dto.risk_radar.risk_contributions_pct["PTT.BK"] == 11.34
+    assert dto.risk_radar.risk_contributions_pct["SCB.BK"] == 88.66
+    assert dto.risk_radar.inverse_vol_weights_pct["PTT.BK"] == 80.0
+    assert dto.risk_radar.inverse_vol_weights_pct["SCB.BK"] == 20.0
+    assert dto.synthesis_input_hash == report.synthesis_input_hash != ""
+
+    assert payload["risk_radar"]["bucket_active_share_pct"] == float(report.risk_radar.bucket_active_share_pct)
+    assert payload["risk_radar"]["risk_contributions_pct"] == {"PTT.BK": 11.34, "SCB.BK": 88.66}
+    assert payload["risk_radar"]["inverse_vol_weights_pct"] == {"PTT.BK": 80.0, "SCB.BK": 20.0}
+    assert payload["risk_radar"]["total_portfolio_volatility_pct"] == float(report.risk_radar.total_portfolio_volatility_pct)
+    assert payload["synthesis_input_hash"] == report.synthesis_input_hash
+
+    # Holding fields preserved (including 0.0 core_conviction_score not dropped!)
+    ptt_dto = next(h for h in dto.holdings_advisory if h.symbol == "PTT.BK")
+    assert ptt_dto.core_conviction_score == 0.0
+    assert ptt_dto.risk_contribution_pct == 11.34
+    assert ptt_dto.volatility_pct == 10.0
+    assert ptt_dto.volatility_source == "observed"
+    assert ptt_dto.is_volatility_estimated is False
+
+    scb_dto = next(h for h in dto.holdings_advisory if h.symbol == "SCB.BK")
+    scb_payload = next(h for h in payload["holdings_advisory"] if h["symbol"] == "SCB.BK")
+    assert scb_dto.risk_contribution_pct == 88.66
+    assert scb_dto.estimated_friction_bps == float(next(h for h in report.holdings_advisory if h.symbol == "SCB.BK").estimated_friction_bps)
+    assert scb_payload["risk_contribution_pct"] == 88.66
+    assert scb_payload["estimated_friction_bps"] == scb_dto.estimated_friction_bps
+    assert scb_payload["volatility_pct"] == 40.0
+    assert scb_payload["volatility_source"] == "observed"
+
+
+def test_w04_synthesis_cache_invalidates_on_macro_sector_or_sidecar_changes():
+    """W04: Cached playbook is invalidated if macro, sector rotation, or sidecars change despite identical holdings hash."""
+    from application.portfolio.advisory_service import PortfolioAdvisoryService
+    from schemas.portfolio_advisory_schemas import AdvisorySidecarRecord, PortfolioAdvisoryNarrativeDTO
+
+    mock_state = MagicMock()
+    mock_state.holdings = [_build_mock_holding("ADVANC.BK", 100, 240.0)]
+    mock_state.allocation_targets = []
+    mock_state.buckets = [MagicMock(id="core_equities", target_percent=100.0)]
+    mock_state.summary = MagicMock(usd_thb_rate=35.50, cash_balance_thb=50000.0)
+
+    state_reader = MagicMock()
+    state_reader.get_current_portfolio_state.return_value = mock_state
+
+    macro_state = {"val": {"overall_regime": "Goldilocks", "evaluated_at": "2026-11-01"}}
+    sector_state = {"val": {"as_of_date": "2026-11-01", "rows": [{"ticker": "XLC", "quadrant": "Leading"}]}}
+    sidecar_state = {
+        "val": {
+            "ADVANC": {
+                "ticker": "ADVANC.BK",
+                "market": "TH",
+                "quant_signals": {
+                    "raw_analysis_price": 240.0,
+                    "volatility_pct": 15.0,
+                    "deterministic_scorecard": {"core_conviction_score": 8.0, "action_stance": "ACCUMULATE_NOW"},
+                },
+            }
+        }
+    }
+
+    macro_reader = MagicMock()
+    macro_reader.get_latest_macro_strategy.side_effect = lambda: macro_state["val"]
+    macro_reader.get_latest_sector_rotation.side_effect = lambda: sector_state["val"]
+    sidecar_reader = MagicMock()
+    sidecar_reader.get_all_equity_sidecars.side_effect = lambda: sidecar_state["val"]
+    sidecar_reader.get_watchlist_sidecars.return_value = {}
+
+    saved_records: list[AdvisorySidecarRecord] = []
+    vault_port = MagicMock()
+    vault_port.load_latest_advisory_sidecar.side_effect = lambda portfolio_id="default": (
+        saved_records[-1] if saved_records else None
+    )
+    vault_port.save_advisory_sidecar.side_effect = lambda rec, portfolio_id="default": saved_records.append(rec)
+
+    synth_calls = {"count": 0}
+
+    def fake_synth(payload_json, report):
+        synth_calls["count"] += 1
+        return PortfolioAdvisoryNarrativeDTO(
+            synthesized_at=f"2026-11-09T12:00:0{synth_calls['count']}Z",
+            portfolio_state_hash=report.portfolio_state_hash,
+            macro_executive_summary=f"Regime={macro_state['val']['overall_regime']} run={synth_calls['count']}",
+            immediate_action_playbook=["Hold ADVANC.BK"],
+            conditional_dip_plan=[],
+            risk_mitigation_and_hedging=[],
+            consistency_verified=True,
+        )
+
+    synthesizer = MagicMock()
+    synthesizer.synthesize_playbook.side_effect = fake_synth
+
+    svc = PortfolioAdvisoryService(
+        portfolio_reader=state_reader,
+        macro_reader=macro_reader,
+        sidecar_reader=sidecar_reader,
+        vault_port=vault_port,
+        synthesizer_port=synthesizer,
+    )
+
+    # 1. Initial synthesis
+    n1 = svc.synthesize_playbook()
+    assert synth_calls["count"] == 1
+    assert n1.synthesis_input_hash != ""
+
+    # 2. Same inputs -> cache hit in both synthesize_playbook and get_portfolio_advisory
+    n2 = svc.synthesize_playbook()
+    assert synth_calls["count"] == 1
+    assert n2.macro_executive_summary == n1.macro_executive_summary
+    dto_hit = svc.get_portfolio_advisory()
+    assert dto_hit.cached_narrative is not None
+
+    # 3. Change macro regime -> portfolio_state_hash identical, MUST invalidate cache!
+    macro_state["val"] = {"overall_regime": "Stagflation", "evaluated_at": "2026-11-08"}
+    dto_stale = svc.get_portfolio_advisory()
+    assert dto_stale.cached_narrative is None
+    n3 = svc.synthesize_playbook()
+    assert synth_calls["count"] == 2
+    assert "Stagflation" in n3.macro_executive_summary
+
+    # 4. Change sidecar conviction/stance -> MUST invalidate cache!
+    sidecar_state["val"]["ADVANC"]["quant_signals"]["deterministic_scorecard"] = {
+        "core_conviction_score": 4.0,
+        "action_stance": "REDUCE",
+    }
+    assert svc.get_portfolio_advisory().cached_narrative is None
+    n4 = svc.synthesize_playbook()
+    assert synth_calls["count"] == 3
+    assert n4.synthesis_input_hash != n3.synthesis_input_hash
+
+    # 5. Legacy cached narrative missing synthesis_input_hash must NOT be treated as fresh
+    saved_records[-1].synthesis_input_hash = ""
+    saved_records[-1].narrative.synthesis_input_hash = ""
+    assert svc.get_portfolio_advisory().cached_narrative is None
+
+
+def test_w01_engine_fee_inclusive_buy_sizing_and_mutual_fund_global_schedule():
+    """W01: BUY recommendations use fee-inclusive lot sizing (order + friction <= target budget)
+    and cash surplus accounts for friction; Track 2 mutual funds use 0-bps GLOBAL friction schedule."""
+    from core.portfolio_advisory.friction import estimate_order_friction
+
+    # Setup: 1 TH equity with high minimum commission boundary + 1 Mutual Fund
+    mock_state = MagicMock()
+    h_th = _build_mock_holding("SCB.BK", 50, 100.0, bucket_id="core")  # 5,000 THB
+    h_mf = _build_mock_holding("K-USA-A", 1000, 10.0, asset_type="Mutual_Fund", bucket_id="core")  # 10,000 THB
+    # Cash = 4,000 THB -> NAV = 19,000 THB
+    # For SCB.BK: target weight = 50%, current = 5000/19000 = 26.3% -> drift = -23.7% -> add_pct = 4.0% -> target budget = 760 THB
+    # Without fee-inclusive sizing: 7 shares * 100 = 700 + 50 fee = 750 THB <= 760, or if budget is 749:
+    # Let's craft exact boundary: 1,000,000 NAV -> 4% add = 40,000 THB, or custom exact boundary:
+    # Let's make holding=28,500 at 285/share, or make total NAV so 4% = 28,549.88? Easy:
+    # NAV = 28,549.88 / 0.04 = 713,747.00 THB!
+    h_edge = _build_mock_holding("BIGP.BK", 0.5, 28500.0, bucket_id="core")  # wait units=1 -> 28,500
+    mock_state.holdings = [
+        _build_mock_holding("BIGP.BK", 1, 28500.0, bucket_id="core"),  # 28,500 (weight ~4.0%, target 50%)
+        _build_mock_holding("K-USA-A", 1000, 10.0, asset_type="Mutual_Fund", bucket_id="core"),  # 10,000
+    ]
+    # Cash THB = 713,747 - 38,500 = 675,247.00 THB -> total NAV = 713,747.00 THB -> 4% target budget = 28,549.88 THB!
+    mock_state.buckets = [MagicMock(id="core", target_percent=100.0)]
+    mock_state.summary = MagicMock(usd_thb_rate=35.50, cash_balance_thb=675247.00)
+
+    sidecars = {
+        "BIGP.BK": {
+            "ticker": "BIGP.BK",
+            "market": "TH",
+            "quant_signals": {
+                "raw_analysis_price": 28500.0,
+                "volatility_pct": 15.0,
+                "adtv_local_currency": 50000000.0,
+                "deterministic_scorecard": {"core_conviction_score": 8.0, "action_stance": "ACCUMULATE_NOW"},
+                "tactical_setup": {"buy_zone_max": 30000.0},
+            },
+        },
+        "K-USA-A": {
+            "ticker": "K-USA-A",
+            "market": "TH",
+            "quant_signals": {
+                "raw_analysis_price": 10.0,
+                "deterministic_scorecard": {"core_conviction_score": 8.0, "action_stance": "ACCUMULATE_NOW"},
+                "tactical_setup": {"buy_zone_max": 12.0},
+            },
+        },
+    }
+
+    report = evaluate_portfolio_advisory(portfolio_state=mock_state, equity_sidecars=sidecars)
+    bigp = next(h for h in report.holdings_advisory if h.symbol == "BIGP.BK")
+    assert bigp.action_code == AdvisoryActionCode.ACCUMULATE_NOW
+    # Target budget was 28,549.88 THB, 1 share costs 28,500 + 50.00 fee = 28,550.00 > 28,549.88!
+    # Fee-inclusive lot sizing must size 0 shares rather than breaching budget with 50 THB fee!
+    assert bigp.lot_sizing is not None
+    assert bigp.lot_sizing.amount_native == Decimal("0.00")
+
+    # Mutual fund uses GLOBAL schedule (0 bps explicit brokerage fee instead of 50 THB equity min fee)
+    mf = next(h for h in report.holdings_advisory if h.symbol == "K-USA-A")
+    assert mf.action_code == AdvisoryActionCode.ACCUMULATE_NOW
+    assert mf.lot_sizing is not None
+    assert mf.lot_sizing.market == "GLOBAL"
+    assert mf.lot_sizing.amount_native > Decimal("0")
+    assert mf.estimated_friction_bps == Decimal("0.0")
+
+    # Verify cash surplus deducts friction when equity order actually executes with fees
+    mock_state2 = MagicMock()
+    mock_state2.holdings = [_build_mock_holding("PTT.BK", 100, 30.0, bucket_id="core")]  # 3,000 (3.0% weight < 15% cap -> BUY!)
+    # NAV = 100,000 -> 4% budget = 4,000 THB -> 1 board lot (100 sh @ 30 = 3,000) + 50 fee = 3,050 <= 4,000
+    mock_state2.buckets = [MagicMock(id="core", target_percent=100.0)]
+    mock_state2.summary = MagicMock(usd_thb_rate=35.50, cash_balance_thb=97000.0)
+    sidecars2 = {
+        "PTT.BK": {
+            "ticker": "PTT.BK",
+            "market": "TH",
+            "quant_signals": {
+                "raw_analysis_price": 30.0,
+                "deterministic_scorecard": {"core_conviction_score": 8.0, "action_stance": "ACCUMULATE_NOW"},
+                "tactical_setup": {"buy_zone_max": 35.0},
+            },
+        }
+    }
+    rep2 = evaluate_portfolio_advisory(portfolio_state=mock_state2, equity_sidecars=sidecars2)
+    ptt = rep2.holdings_advisory[0]
+    assert ptt.action_code == AdvisoryActionCode.ACCUMULATE_NOW
+    assert ptt.lot_sizing is not None
+    assert ptt.lot_sizing.amount_native == Decimal("3930.00")
+    f_ptt = estimate_order_friction("TH", "BUY", ptt.lot_sizing.amount_native)
+    assert f_ptt.total_friction_native == Decimal("50.00")
+    assert ptt.lot_sizing.amount_native + f_ptt.total_friction_native <= Decimal("4000.00")
+    assert rep2.cash_plan.thb_surplus_after_immediate == (
+        Decimal("97000.00") - rep2.cash_plan.immediate_deploy_thb - f_ptt.total_friction_native
+    )
+

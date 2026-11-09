@@ -23,7 +23,6 @@ const navSections: NavSection[] = [
         label: 'Trinity AI Advisor',
         icon: '✨',
         isFlagship: true,
-        badge: 'Advisor',
       },
       {
         to: '/digest',

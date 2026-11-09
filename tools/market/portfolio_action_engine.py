@@ -10,11 +10,135 @@ Transforms single-security stances into portfolio-executable decisions constrain
 7. Valuation Margin of Safety gate (graceful NOT_APPLICABLE for Banks/REITs)
 8. 20D ADTV Market Participation Liquidity limit: Order Notional / 20D ADTV <= Limit
 """
-from typing import Any, Dict, List, Literal, Optional
+from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
+from typing import Any, Dict, List, Literal, Optional, Tuple
 from pydantic import BaseModel, Field
 
 from schemas.micro_quant_schemas import DataStatus, DeterministicScorecard, QuantSignals
 from schemas.portfolio_policy_schemas import PortfolioPolicy
+
+
+def _to_decimal(val: Any) -> Optional[Decimal]:
+    if val is None or isinstance(val, bool):
+        return None
+    try:
+        d = Decimal(str(val))
+    except (InvalidOperation, ValueError, TypeError):
+        return None
+    return d if d.is_finite() else None
+
+
+def _norm_ticker_key(symbol: str) -> str:
+    clean = symbol.strip().upper()
+    return clean[:-3] if clean.endswith(".BK") else clean
+
+
+def build_action_portfolio_state(
+    portfolio_state: Any,
+    market: Literal["TH", "US"],
+    target_ticker: str = "",
+    target_sector: Optional[str] = None,
+    sector_map: Optional[Dict[str, str]] = None,
+) -> Tuple[Optional[dict[str, Any]], Optional[str]]:
+    """Converts a PortfolioState model/dict into native-currency dict for compute_portfolio_action.
+
+    Uses Decimal arithmetic for THB <-> USD scaling so NAV, cash reserve, holding value,
+    and sector allocations match `current_price` and `adtv_local_currency` units.
+    Returns `(portfolio_dict, missing_fx_reason)`.
+    """
+    if portfolio_state is None:
+        return None, None
+    if isinstance(portfolio_state, dict):
+        return portfolio_state, None
+
+    summary = getattr(portfolio_state, "summary", None)
+    holdings = list(getattr(portfolio_state, "holdings", None) or [])
+    fx_rates = getattr(portfolio_state, "fx_rates", None) or {}
+    base_currency = str(getattr(portfolio_state, "base_currency", "THB") or "THB").strip().upper()
+    native_currency = "THB" if market == "TH" else "USD"
+
+    usd_thb = _to_decimal(fx_rates.get("USDTHB"))
+    if base_currency != native_currency:
+        if usd_thb is None or usd_thb <= Decimal("0"):
+            return None, f"Missing or non-positive USDTHB FX rate required for {native_currency} action evaluation"
+        divisor = usd_thb if native_currency == "USD" else (Decimal("1") / usd_thb)
+    else:
+        divisor = Decimal("1")
+
+    money_q = Decimal("0.01")
+    total_nav_thb = _to_decimal(getattr(summary, "total_value_thb", None)) if summary is not None else None
+    if total_nav_thb is None or total_nav_thb <= Decimal("0"):
+        calc_nav = Decimal("0")
+        for h in holdings:
+            if getattr(h, "status", "active") == "archived":
+                continue
+            mv = _to_decimal(getattr(h, "market_value_thb", None))
+            if mv is not None and mv > Decimal("0"):
+                calc_nav += mv
+        total_nav_thb = calc_nav
+
+    total_nav_native = (total_nav_thb / divisor).quantize(money_q, rounding=ROUND_HALF_UP)
+
+    cash_thb_total = Decimal("0")
+    positions: dict[str, dict[str, float]] = {}
+    sector_totals_native: dict[str, Decimal] = {}
+    san_target = target_ticker.strip().upper()
+    san_target_base = _norm_ticker_key(san_target) if san_target else ""
+    norm_sectors = {k.strip().upper(): v for k, v in (sector_map or {}).items() if v}
+
+    for h in holdings:
+        if getattr(h, "status", "active") == "archived":
+            continue
+        sym = str(getattr(h, "symbol", "") or "").strip().upper()
+        if not sym:
+            continue
+        asset_type = str(getattr(h, "asset_type", "") or "").strip()
+        is_cash = asset_type.lower() == "cash" or sym in {"CASH_THB", "CASH_USD", "CASH"}
+        mv_thb = _to_decimal(getattr(h, "market_value_thb", None))
+        units_dec = _to_decimal(getattr(h, "units", None)) or Decimal("0")
+
+        if is_cash:
+            if mv_thb is not None and mv_thb > Decimal("0"):
+                cash_thb_total += mv_thb
+            elif units_dec > Decimal("0"):
+                if sym == "CASH_USD" and usd_thb is not None and usd_thb > Decimal("0"):
+                    cash_thb_total += units_dec * usd_thb
+                elif sym != "CASH_USD":
+                    cash_thb_total += units_dec
+            continue
+
+        if units_dec <= Decimal("0"):
+            continue
+
+        mv_native = (mv_thb / divisor).quantize(money_q, rounding=ROUND_HALF_UP) if mv_thb is not None else Decimal("0.00")
+        pos_entry = {"market_value": float(mv_native)}
+        positions[sym] = pos_entry
+        is_target_alias = bool(san_target and _norm_ticker_key(sym) == san_target_base)
+        if is_target_alias and san_target not in positions:
+            positions[san_target] = pos_entry
+
+        sym_base = _norm_ticker_key(sym)
+        sector_name = (
+            norm_sectors.get(sym)
+            or norm_sectors.get(sym_base)
+            or (target_sector if is_target_alias and target_sector else None)
+            or getattr(h, "sector", None)
+            or asset_type
+            or "Unknown"
+        )
+        sector_totals_native[sector_name] = sector_totals_native.get(sector_name, Decimal("0")) + mv_native
+
+    cash_native = (cash_thb_total / divisor).quantize(money_q, rounding=ROUND_HALF_UP)
+    sector_allocations = {
+        k: float(v.quantize(money_q, rounding=ROUND_HALF_UP))
+        for k, v in sector_totals_native.items()
+    }
+    return {
+        "total_nav": float(total_nav_native),
+        "cash": float(cash_native),
+        "positions": positions,
+        "sector_allocations": sector_allocations,
+    }, None
 
 
 class ConstraintCheckResult(BaseModel):

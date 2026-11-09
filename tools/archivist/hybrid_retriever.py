@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 import re
 from dataclasses import dataclass
 from pathlib import Path
@@ -21,6 +22,7 @@ from tools.archivist.metadata import parse_note
 
 _TOKEN_RE = re.compile(r"[\w\u0E00-\u0E7F]+", re.UNICODE)
 _TICKER_RE = re.compile(r"(?<![A-Za-z0-9])[A-Z][A-Z0-9.-]{1,9}(?![A-Za-z0-9])")
+_SHA256_HEX_RE = re.compile(r"^[0-9a-f]{64}$")
 
 
 @dataclass(frozen=True)
@@ -32,34 +34,186 @@ class _Record:
     text: str
     body: str
     metadata: dict[str, Any]
+    file_mtime_ns: int = 0
+    file_size: int = 0
+    actual_sha256: str = ""
+    frontmatter_title: str = ""
+    frontmatter_ticker: str = ""
+    stem: str = ""
+    base_metadata: Optional[dict[str, Any]] = None
 
 
 def _terms(value: str) -> list[str]:
     return [token.lower() for token in _TOKEN_RE.findall(value.lower()) if token.strip()]
 
 
-def _retired_stock_tickers(vault_root: Path) -> set[str]:
+@dataclass(frozen=True)
+class _RetiredTombstones:
+    stock_tickers: frozenset[str]
+    relative_paths: frozenset[str]
+    note_ids: frozenset[str]
+    document_keys: frozenset[str]
+    unreadable: bool = False
+
+
+def _load_retired_tombstones(vault_root: Path) -> _RetiredTombstones:
     path = vault_root / ".system" / "retired_notes.jsonl"
-    result: set[str] = set()
     if not path.is_file():
-        return result
+        return _RetiredTombstones(frozenset(), frozenset(), frozenset(), frozenset())
+    ticker_retired: dict[str, bool] = {}
+    retired_paths: set[str] = set()
+    retired_note_ids: set[str] = set()
+    retired_doc_keys: set[str] = set()
     try:
         for line in path.read_text(encoding="utf-8").splitlines():
             if not line.strip():
                 continue
             value = json.loads(line)
-            rel = str(value.get("relative_path") or "").replace("\\", "/")
-            parts = rel.split("/")
-            if len(parts) >= 4 and parts[:3] == ["30_Knowledge_Base", "Stocks", parts[2]]:
-                result.add(parts[2].upper())
+            if not isinstance(value, dict):
+                continue
+            status = str(value.get("status") or "retired").strip().lower()
+            is_retired = status != "restored"
+            rel = str(value.get("relative_path") or "").replace("\\", "/").lstrip("/")
+            if rel:
+                if is_retired:
+                    retired_paths.add(rel)
+                else:
+                    retired_paths.discard(rel)
+                parts = rel.split("/")
+                if len(parts) >= 4 and parts[:2] == ["30_Knowledge_Base", "Stocks"]:
+                    ticker_retired[parts[2].upper()] = is_retired
+            raw_ticker = str(value.get("ticker") or "").strip().upper()
+            if raw_ticker:
+                ticker_retired[raw_ticker] = is_retired
+            raw_note_id = str(value.get("note_id") or "").strip()
+            if raw_note_id:
+                if is_retired:
+                    retired_note_ids.add(raw_note_id)
+                else:
+                    retired_note_ids.discard(raw_note_id)
+            raw_doc_key = str(value.get("document_key") or "").strip()
+            if raw_doc_key:
+                if is_retired:
+                    retired_doc_keys.add(raw_doc_key)
+                else:
+                    retired_doc_keys.discard(raw_doc_key)
     except (OSError, UnicodeDecodeError, ValueError, TypeError):
-        return set()
-    return result
+        return _RetiredTombstones(frozenset(), frozenset(), frozenset(), frozenset(), unreadable=True)
+    return _RetiredTombstones(
+        stock_tickers=frozenset(ticker for ticker, flag in ticker_retired.items() if flag),
+        relative_paths=frozenset(retired_paths),
+        note_ids=frozenset(retired_note_ids),
+        document_keys=frozenset(retired_doc_keys),
+        unreadable=False,
+    )
 
 
-def _cache_key(vault_root: Path, catalog_path: Path) -> tuple[str, int, int]:
+def _retired_stock_tickers(vault_root: Path) -> set[str]:
+    return set(_load_retired_tombstones(vault_root).stock_tickers)
+
+
+def _tombstone_signature(vault_root: Path) -> tuple[int, int, int]:
+    path = vault_root / ".system" / "retired_notes.jsonl"
+    try:
+        if path.is_file():
+            st = path.stat()
+            return (1, st.st_mtime_ns, st.st_size)
+    except OSError:
+        return (2, 0, 0)
+    return (0, 0, 0)
+
+
+def _cache_key(vault_root: Path, catalog_path: Path) -> tuple[str, int, int, int, int, int]:
+    resolved_vault = vault_root.resolve()
     stat = catalog_path.stat()
-    return (str(vault_root.resolve()), stat.st_mtime_ns, stat.st_size)
+    tomb_sig = _tombstone_signature(resolved_vault)
+    return (str(resolved_vault), stat.st_mtime_ns, stat.st_size, *tomb_sig)
+
+
+_RECORD_CACHE_MAX = 4096
+_RECORD_CACHE: dict[tuple[str, str, str], _Record] = {}
+
+
+def _evict_record_cache_for_path(vault_key: str, rel: str, specific_key: Optional[tuple[str, str, str]] = None) -> None:
+    if specific_key is not None:
+        _RECORD_CACHE.pop(specific_key, None)
+    for k in [key for key in _RECORD_CACHE if key[0] == vault_key and key[1] == rel]:
+        _RECORD_CACHE.pop(k, None)
+
+
+def _parse_catalog_metadata_json(entry: Any) -> dict[str, Any]:
+    raw_json = getattr(entry, "metadata_json", None)
+    if isinstance(raw_json, dict):
+        return dict(raw_json)
+    if isinstance(raw_json, str) and raw_json.strip() and raw_json.strip() != "{}":
+        try:
+            parsed = json.loads(raw_json)
+            if isinstance(parsed, dict):
+                return parsed
+        except (ValueError, TypeError):
+            return {}
+    return {}
+
+
+def _apply_catalog_metadata(
+    *,
+    rel: str,
+    stem: str,
+    body: str,
+    base_metadata: dict[str, Any],
+    frontmatter_title: str,
+    frontmatter_ticker: str,
+    file_mtime_ns: int,
+    file_size: int,
+    actual_sha256: str,
+    entry: Any,
+) -> _Record:
+    metadata = dict(base_metadata)
+    catalog_meta = _parse_catalog_metadata_json(entry)
+    if catalog_meta:
+        metadata.update(catalog_meta)
+
+    entry_note_id = str(getattr(entry, "note_id", "") or "")
+    entry_title = str(getattr(entry, "title", "") or "").strip()
+    entry_ticker = str(getattr(entry, "ticker", "") or "").strip()
+    title = entry_title or frontmatter_title or stem
+    ticker = (entry_ticker or frontmatter_ticker or "").upper()
+    metadata["note_id"] = entry_note_id
+    metadata["title"] = title
+    if ticker:
+        metadata["ticker"] = ticker
+
+    for attr, meta_key in (
+        ("document_key", "document_key"),
+        ("current_revision_id", "current_revision_id"),
+        ("current_revision", "current_revision"),
+        ("date", "date"),
+        ("entity_type", "entity_type"),
+        ("source_key", "source_key"),
+    ):
+        val = getattr(entry, attr, None)
+        if val is not None and val != "":
+            metadata[meta_key] = val
+
+    tickers = metadata.get("tickers") or []
+    ticker_text = " ".join(str(item).upper() for item in tickers) if isinstance(tickers, list) else str(tickers)
+    searchable = " ".join((title, ticker, ticker_text, body))
+    return _Record(
+        relative_path=rel,
+        note_id=entry_note_id,
+        title=title,
+        ticker=ticker,
+        text=searchable.lower(),
+        body=body,
+        metadata=metadata,
+        file_mtime_ns=file_mtime_ns,
+        file_size=file_size,
+        actual_sha256=actual_sha256,
+        frontmatter_title=frontmatter_title,
+        frontmatter_ticker=frontmatter_ticker,
+        stem=stem,
+        base_metadata=dict(base_metadata),
+    )
 
 
 class HybridRetriever:
@@ -70,40 +224,163 @@ class HybridRetriever:
         self.key = _cache_key(self.vault_root, self.catalog_path)
         self.records: list[_Record] = []
         self.by_path: dict[str, _Record] = {}
-        self.retired_tickers = _retired_stock_tickers(self.vault_root)
+        self.tombstones = _load_retired_tombstones(self.vault_root)
+        self.retired_tickers = set(self.tombstones.stock_tickers)
+        self._file_sigs: dict[str, tuple[Path, int, int]] = {}
         self._build()
 
+    def _is_entry_retired(self, rel: str, entry: Any) -> bool:
+        if self.tombstones.unreadable:
+            return True
+        if rel in self.tombstones.relative_paths:
+            return True
+        entry_note_id = str(getattr(entry, "note_id", "") or "").strip()
+        if entry_note_id and entry_note_id in self.tombstones.note_ids:
+            return True
+        entry_doc_key = str(getattr(entry, "document_key", "") or "").strip()
+        if entry_doc_key and entry_doc_key in self.tombstones.document_keys:
+            return True
+        parts = rel.split("/")
+        if len(parts) >= 4 and parts[:2] == ["30_Knowledge_Base", "Stocks"] and parts[2].upper() in self.retired_tickers:
+            return True
+        entry_ticker = str(getattr(entry, "ticker", "") or "").strip().upper()
+        if entry_ticker and entry_ticker in self.retired_tickers:
+            return True
+        return False
+
+    def _records_still_current(self) -> bool:
+        for path, expected_mtime_ns, expected_size in self._file_sigs.values():
+            try:
+                if not path.is_file() or not os.access(path, os.R_OK):
+                    return False
+                stat = path.stat()
+                if stat.st_mtime_ns != expected_mtime_ns or stat.st_size != expected_size:
+                    return False
+                with path.open("rb"):
+                    pass
+            except OSError:
+                return False
+        return True
+
     def _build(self) -> None:
+        vault_key = str(self.vault_root)
         entries = self.catalog.iter_notes(page_size=500)
         for entry in entries:
-            rel = str(entry.relative_path).replace("\\", "/")
-            parts = rel.split("/")
-            if len(parts) >= 4 and parts[:3] == ["30_Knowledge_Base", "Stocks", parts[2]] and parts[2].upper() in self.retired_tickers:
+            rel = str(getattr(entry, "relative_path", "") or "").replace("\\", "/").lstrip("/")
+            content_sha256 = str(getattr(entry, "content_sha256", "") or "").strip()
+            cache_key = (vault_key, rel, content_sha256) if (rel and content_sha256) else None
+
+            if not rel:
                 continue
-            path = self.vault_root / rel
-            if not path.is_file():
+
+            record_state = str(getattr(entry, "record_state", "active") or "active").strip().lower()
+            storage_scope = str(getattr(entry, "storage_scope", "active") or "active").strip().lower()
+            if record_state != "active" or storage_scope != "active":
+                _evict_record_cache_for_path(vault_key, rel, cache_key)
                 continue
+
+            if self._is_entry_retired(rel, entry):
+                _evict_record_cache_for_path(vault_key, rel, cache_key)
+                continue
+
+            try:
+                path = (self.vault_root / rel).resolve()
+                if path == self.vault_root or not path.is_relative_to(self.vault_root):
+                    _evict_record_cache_for_path(vault_key, rel, cache_key)
+                    continue
+                if not path.is_file() or not os.access(path, os.R_OK):
+                    _evict_record_cache_for_path(vault_key, rel, cache_key)
+                    continue
+                stat = path.stat()
+                with path.open("rb"):
+                    pass
+            except (OSError, ValueError):
+                _evict_record_cache_for_path(vault_key, rel, cache_key)
+                continue
+
+            entry_file_size = getattr(entry, "file_size", 0) or 0
+            if entry_file_size and int(entry_file_size) != stat.st_size:
+                _evict_record_cache_for_path(vault_key, rel, cache_key)
+                # Catalog file size disagrees with disk; fall through to read disk below.
+
+            if cache_key is not None:
+                cached_record = _RECORD_CACHE.get(cache_key)
+                if cached_record is not None:
+                    size_matches_entry = (not entry_file_size) or (int(entry_file_size) == stat.st_size)
+                    if (
+                        size_matches_entry
+                        and cached_record.file_mtime_ns == stat.st_mtime_ns
+                        and cached_record.file_size == stat.st_size
+                    ):
+                        refreshed = _apply_catalog_metadata(
+                            rel=rel,
+                            stem=cached_record.stem or path.stem,
+                            body=cached_record.body,
+                            base_metadata=cached_record.base_metadata or cached_record.metadata,
+                            frontmatter_title=cached_record.frontmatter_title,
+                            frontmatter_ticker=cached_record.frontmatter_ticker,
+                            file_mtime_ns=stat.st_mtime_ns,
+                            file_size=stat.st_size,
+                            actual_sha256=cached_record.actual_sha256,
+                            entry=entry,
+                        )
+                        self._file_sigs[rel] = (path, stat.st_mtime_ns, stat.st_size)
+                        self.records.append(refreshed)
+                        self.by_path[rel] = refreshed
+                        continue
+                    _RECORD_CACHE.pop(cache_key, None)
+
             try:
                 raw = path.read_text(encoding="utf-8")
                 metadata, body, issues = parse_note(raw)
                 if issues:
                     body = raw
             except (OSError, UnicodeDecodeError):
+                _evict_record_cache_for_path(vault_key, rel, cache_key)
                 continue
-            title = str(metadata.get("title") or entry.title or path.stem)
-            ticker = str(metadata.get("ticker") or entry.ticker or "").upper()
-            tickers = metadata.get("tickers") or []
-            ticker_text = " ".join(str(item).upper() for item in tickers) if isinstance(tickers, list) else str(tickers)
-            searchable = " ".join((title, ticker, ticker_text, body))
-            record = _Record(
-                relative_path=rel,
-                note_id=str(entry.note_id),
-                title=title,
-                ticker=ticker,
-                text=searchable.lower(),
+
+            actual_sha256 = hashlib.sha256(raw.encode("utf-8")).hexdigest()
+            if (
+                content_sha256
+                and _SHA256_HEX_RE.match(content_sha256.lower())
+                and actual_sha256 != content_sha256.lower()
+            ):
+                # Stale catalog row: evict any entry cached under the stale digest
+                # and refuse to cache the modified disk body under the stale key.
+                _evict_record_cache_for_path(vault_key, rel, cache_key)
+
+            frontmatter_title = str(metadata.get("title") or "")
+            frontmatter_ticker = str(metadata.get("ticker") or "").upper()
+            record = _apply_catalog_metadata(
+                rel=rel,
+                stem=path.stem,
                 body=body,
-                metadata=metadata,
+                base_metadata=metadata,
+                frontmatter_title=frontmatter_title,
+                frontmatter_ticker=frontmatter_ticker,
+                file_mtime_ns=stat.st_mtime_ns,
+                file_size=stat.st_size,
+                actual_sha256=actual_sha256,
+                entry=entry,
             )
+
+            cache_sha = (
+                content_sha256
+                if (
+                    content_sha256
+                    and (
+                        not _SHA256_HEX_RE.match(content_sha256.lower())
+                        or actual_sha256 == content_sha256.lower()
+                    )
+                )
+                else actual_sha256
+            )
+            effective_cache_key = (vault_key, rel, cache_sha)
+            if len(_RECORD_CACHE) >= _RECORD_CACHE_MAX:
+                for old_k in list(_RECORD_CACHE.keys())[: _RECORD_CACHE_MAX // 2]:
+                    _RECORD_CACHE.pop(old_k, None)
+            _RECORD_CACHE[effective_cache_key] = record
+            self._file_sigs[rel] = (path, stat.st_mtime_ns, stat.st_size)
             self.records.append(record)
             self.by_path[rel] = record
 
@@ -237,14 +514,20 @@ class HybridRetriever:
         ]
 
 
-_CACHE: dict[tuple[str, int, int], HybridRetriever] = {}
+_CACHE: dict[tuple[str, int, int, int, int, int], HybridRetriever] = {}
 
 
 def get_retriever(vault_root: Path, catalog: Any, catalog_path: Path) -> HybridRetriever:
-    key = _cache_key(vault_root.resolve(), catalog_path.resolve())
+    resolved_vault = vault_root.resolve()
+    resolved_catalog = catalog_path.resolve()
+    key = _cache_key(resolved_vault, resolved_catalog)
     retriever = _CACHE.get(key)
-    if retriever is None:
-        retriever = HybridRetriever(vault_root.resolve(), catalog, catalog_path.resolve())
+    if (
+        retriever is None
+        or retriever.catalog is not catalog
+        or not retriever._records_still_current()
+    ):
+        retriever = HybridRetriever(resolved_vault, catalog, resolved_catalog)
         _CACHE.clear()
         _CACHE[key] = retriever
     return retriever

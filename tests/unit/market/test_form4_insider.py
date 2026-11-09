@@ -1,6 +1,10 @@
 """Unit tests for Canonical Form 4 Insider Conviction."""
+from datetime import datetime, timezone
 import pytest
 from tools.market.ownership import compute_canonical_insider_conviction
+
+
+_PINNED_AS_OF = datetime(2026, 8, 20, tzinfo=timezone.utc)
 
 
 def test_form4_th_market_not_applicable():
@@ -39,7 +43,12 @@ def test_form4_code_p_csuite_cluster():
         },
     ]
 
-    res, flags = compute_canonical_insider_conviction("FTNT", market="US", canonical_transactions=txs)
+    res, flags = compute_canonical_insider_conviction(
+        "FTNT",
+        market="US",
+        canonical_transactions=txs,
+        as_of=_PINNED_AS_OF,
+    )
     assert res.status == "bullish_cluster"
     assert res.data_status == "available"
     assert res.open_market_p_count_90d == 2
@@ -62,11 +71,38 @@ def test_form4_code_s_contextual_selling():
         }
     ]
 
-    res, flags = compute_canonical_insider_conviction("AAPL", market="US", canonical_transactions=txs)
+    res, flags = compute_canonical_insider_conviction(
+        "AAPL",
+        market="US",
+        canonical_transactions=txs,
+        as_of=_PINNED_AS_OF,
+    )
     assert res.status == "selling_activity"
     assert res.open_market_p_count_90d == 0
     assert res.open_market_s_count_90d == 1
     assert res.open_market_s_value_usd == (50_000 * 85.0)
+
+
+def test_form4_excludes_transactions_older_than_90_days():
+    """Transactions strictly older than 90 days before as_of are excluded."""
+    txs = [
+        {
+            "transaction_date": "2026-05-01",
+            "transaction_code": "P",
+            "shares": 10_000,
+            "price_per_share": 75.0,
+            "officer_title": "CEO",
+            "is_c_suite": True,
+        }
+    ]
+    res, _ = compute_canonical_insider_conviction(
+        "FTNT",
+        market="US",
+        canonical_transactions=txs,
+        as_of=_PINNED_AS_OF,
+    )
+    assert res.status == "neutral_no_signal"
+    assert res.open_market_p_count_90d == 0
 
 
 def test_form4_neutral_no_signal():

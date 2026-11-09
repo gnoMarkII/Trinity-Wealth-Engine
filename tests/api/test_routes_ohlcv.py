@@ -6,7 +6,15 @@ import pytest
 from fastapi.testclient import TestClient
 
 from api.main import app
-from api.routes_ohlcv import _calculate_pivot_levels, _CACHE
+from api.dependencies import _OHLCV_SERVICE
+from tools.market.ohlcv.service import (
+    _calculate_pivot_levels,
+    _calculate_warmup_metadata,
+    _get_fetch_period,
+)
+
+_CACHE = _OHLCV_SERVICE._cache
+_ACTION_CACHE = _OHLCV_SERVICE._action_cache
 
 client = TestClient(app)
 
@@ -113,7 +121,7 @@ def test_pivot_levels_calculation_past_month_completed():
     assert levels.s4 == 60.0 - (150.0 - 100.0)  # 10.0
 
 
-@patch("api.routes_ohlcv.yf.Ticker")
+@patch("yfinance.Ticker")
 def test_get_equity_ohlcv_success_us(mock_ticker_cls):
     mock_instance = MagicMock()
     mock_ticker_cls.return_value = mock_instance
@@ -169,7 +177,7 @@ def test_get_equity_ohlcv_success_us(mock_ticker_cls):
     assert data["pivot_period"] == "monthly"
 
 
-@patch("api.routes_ohlcv.yf.Ticker")
+@patch("yfinance.Ticker")
 def test_get_equity_ohlcv_th_market(mock_ticker_cls):
     mock_instance = MagicMock()
     mock_ticker_cls.return_value = mock_instance
@@ -186,7 +194,7 @@ def test_get_equity_ohlcv_th_market(mock_ticker_cls):
     assert data["currency"] == "THB"
 
 
-@patch("api.routes_ohlcv.yf.Ticker")
+@patch("yfinance.Ticker")
 def test_get_equity_ohlcv_caching(mock_ticker_cls):
     mock_instance = MagicMock()
     mock_ticker_cls.return_value = mock_instance
@@ -221,7 +229,7 @@ def test_get_equity_ohlcv_invalid_params():
     assert "Invalid ticker format" in res4.json()["detail"]
 
 
-@patch("api.routes_ohlcv.yf.Ticker")
+@patch("yfinance.Ticker")
 def test_get_equity_ohlcv_not_found(mock_ticker_cls):
     mock_instance = MagicMock()
     mock_ticker_cls.return_value = mock_instance
@@ -232,7 +240,6 @@ def test_get_equity_ohlcv_not_found(mock_ticker_cls):
 
 
 def test_get_fetch_period_strategy():
-    from api.routes_ohlcv import _get_fetch_period
     assert _get_fetch_period("6mo", "1d") == "2y"
     assert _get_fetch_period("1mo", "1d") == "2y"
     assert _get_fetch_period("3mo", "1d") == "2y"
@@ -245,7 +252,6 @@ def test_get_fetch_period_strategy():
 
 def test_calculate_warmup_metadata_max_range():
     from api.schemas import OHLCVCandleDTO
-    from api.routes_ohlcv import _calculate_warmup_metadata
 
     candles = [
         OHLCVCandleDTO(timestamp=1000, open=10, high=11, low=9, close=10, volume=100),
@@ -262,7 +268,6 @@ def test_calculate_warmup_metadata_max_range():
 
 def test_calculate_warmup_metadata_sufficient_and_insufficient():
     from api.schemas import OHLCVCandleDTO
-    from api.routes_ohlcv import _calculate_warmup_metadata
 
     # 1d series: 350 daily bars spaced by 86400 * 1000 ms
     base_ts = 1700000000000
@@ -299,7 +304,6 @@ def test_calculate_warmup_metadata_sufficient_and_insufficient():
 
 def test_calculate_warmup_metadata_leap_year_and_month_end():
     from api.schemas import OHLCVCandleDTO
-    from api.routes_ohlcv import _calculate_warmup_metadata
     from datetime import datetime
     from zoneinfo import ZoneInfo
 
@@ -331,7 +335,7 @@ def test_calculate_warmup_metadata_leap_year_and_month_end():
     assert start_ts_leap == int(dt_2023_feb28.timestamp() * 1000)
 
 
-@patch("api.routes_ohlcv.yf.Ticker")
+@patch("yfinance.Ticker")
 def test_get_equity_ohlcv_metadata_and_invariants(mock_ticker_cls):
     mock_instance = MagicMock()
     mock_ticker_cls.return_value = mock_instance
@@ -363,10 +367,8 @@ def test_get_equity_ohlcv_metadata_and_invariants(mock_ticker_cls):
 
 
 
-@patch("tools.market.earnings.yf.Ticker")
-@patch("api.routes_ohlcv.yf.Ticker")
-def test_corporate_actions_raw_cache_multi_interval_reuse(mock_ticker_cls, mock_earnings_ticker_cls):
-    from api.routes_ohlcv import _ACTION_CACHE
+@patch("yfinance.Ticker")
+def test_corporate_actions_raw_cache_multi_interval_reuse(mock_ticker_cls):
     import tools.market.earnings as earn_mod
     _ACTION_CACHE.clear()
     earn_mod._CACHE.clear()
@@ -374,7 +376,6 @@ def test_corporate_actions_raw_cache_multi_interval_reuse(mock_ticker_cls, mock_
 
     mock_instance = MagicMock()
     mock_ticker_cls.return_value = mock_instance
-    mock_earnings_ticker_cls.return_value = mock_instance
 
     # Mock OHLCV history
     daily_df = _make_sample_df("2024-01-01", 300, base_price=100.0)
@@ -441,10 +442,8 @@ def test_corporate_actions_raw_cache_multi_interval_reuse(mock_ticker_cls, mock_
     assert mock_instance.get_earnings_dates.call_count == 1
 
 
-@patch("tools.market.earnings.yf.Ticker")
-@patch("api.routes_ohlcv.yf.Ticker")
-def test_corporate_actions_future_scheduled_earnings_filtered(mock_ticker_cls, mock_earnings_ticker_cls):
-    from api.routes_ohlcv import _ACTION_CACHE
+@patch("yfinance.Ticker")
+def test_corporate_actions_future_scheduled_earnings_filtered(mock_ticker_cls):
     import tools.market.earnings as earn_mod
     _ACTION_CACHE.clear()
     earn_mod._CACHE.clear()
@@ -452,7 +451,6 @@ def test_corporate_actions_future_scheduled_earnings_filtered(mock_ticker_cls, m
 
     mock_instance = MagicMock()
     mock_ticker_cls.return_value = mock_instance
-    mock_earnings_ticker_cls.return_value = mock_instance
 
     daily_df = _make_sample_df("2024-01-01", 100, base_price=100.0) # Ends ~2024-04-10
     mock_instance.history.return_value = daily_df
@@ -477,10 +475,8 @@ def test_corporate_actions_future_scheduled_earnings_filtered(mock_ticker_cls, m
     assert len(earnings_events) == 0
 
 
-@patch("tools.market.earnings.yf.Ticker")
-@patch("api.routes_ohlcv.yf.Ticker")
-def test_corporate_actions_partial_status_and_missing_sources(mock_ticker_cls, mock_earnings_ticker_cls):
-    from api.routes_ohlcv import _ACTION_CACHE
+@patch("yfinance.Ticker")
+def test_corporate_actions_partial_status_and_missing_sources(mock_ticker_cls):
     import tools.market.earnings as earn_mod
     _ACTION_CACHE.clear()
     earn_mod._CACHE.clear()
@@ -488,7 +484,6 @@ def test_corporate_actions_partial_status_and_missing_sources(mock_ticker_cls, m
 
     mock_instance = MagicMock()
     mock_ticker_cls.return_value = mock_instance
-    mock_earnings_ticker_cls.return_value = mock_instance
 
     daily_df = _make_sample_df("2024-01-01", 100, base_price=100.0)
     mock_instance.history.return_value = daily_df
@@ -522,10 +517,8 @@ def test_corporate_actions_partial_status_and_missing_sources(mock_ticker_cls, m
     assert data["events"][0]["color"] == "blue" # In-line
 
 
-@patch("tools.market.earnings.yf.Ticker")
-@patch("api.routes_ohlcv.yf.Ticker")
-def test_corporate_actions_failure_isolation(mock_ticker_cls, mock_earnings_ticker_cls):
-    from api.routes_ohlcv import _ACTION_CACHE
+@patch("yfinance.Ticker")
+def test_corporate_actions_failure_isolation(mock_ticker_cls):
     import tools.market.earnings as earn_mod
     _ACTION_CACHE.clear()
     earn_mod._CACHE.clear()
@@ -533,7 +526,6 @@ def test_corporate_actions_failure_isolation(mock_ticker_cls, mock_earnings_tick
 
     mock_instance = MagicMock()
     mock_ticker_cls.return_value = mock_instance
-    mock_earnings_ticker_cls.return_value = mock_instance
 
     daily_df = _make_sample_df("2024-01-01", 100, base_price=100.0)
     mock_instance.history.return_value = daily_df
@@ -554,7 +546,7 @@ def test_corporate_actions_failure_isolation(mock_ticker_cls, mock_earnings_tick
     assert data["events_metadata"]["status"] == "unavailable"
 
 
-@patch("api.routes_ohlcv.yf.Ticker")
+@patch("yfinance.Ticker")
 def test_52w_high_low_consistency_and_coverage(mock_ticker_cls):
     mock_instance = MagicMock()
     mock_ticker_cls.return_value = mock_instance
@@ -597,7 +589,7 @@ def test_capability_matrix_invalid_combinations_400():
         assert f"Invalid interval and range combination '{intv}' with '{rng}'" in resp.json()["detail"]
 
 
-@patch("api.routes_ohlcv.yf.Ticker")
+@patch("yfinance.Ticker")
 def test_capability_matrix_valid_combinations_success(mock_ticker_cls):
     mock_instance = MagicMock()
     mock_ticker_cls.return_value = mock_instance
@@ -627,7 +619,7 @@ def test_capability_matrix_valid_combinations_success(mock_ticker_cls):
         assert "effective_capabilities" in data
 
 
-@patch("api.routes_ohlcv.yf.Ticker")
+@patch("yfinance.Ticker")
 def test_3tier_warmup_contract_and_burn_in(mock_ticker_cls):
     mock_instance = MagicMock()
     mock_ticker_cls.return_value = mock_instance
@@ -646,7 +638,6 @@ def test_3tier_warmup_contract_and_burn_in(mock_ticker_cls):
     assert data_full["indicator_warmup"]["EMA200"]["burn_in_bars_remaining"] == 0
 
     # 2. Dataset with 220 bars (total bars >= 200, but pre-roll before 6mo cutoff is only ~95 bars -> EMA200 status="partial")
-    from api.routes_ohlcv import _CACHE
     _CACHE.clear()
     df_220 = _make_sample_df("2024-01-01", 220, base_price=150.0)
     mock_instance.history.return_value = df_220

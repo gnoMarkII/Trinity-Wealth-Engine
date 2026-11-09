@@ -52,6 +52,7 @@ class BisPolicyRatesHttpAdapter(GlobalPolicyRatesPort):
         cache: Optional[TerminalTtlCache] = None,
         fixture_path: Optional[Path] = None,
         timeout: int = 20,
+        as_of: Optional[datetime] = None,
     ) -> None:
         self._cache = cache or TerminalTtlCache(
             default_ttl_seconds=43200,  # 12 hours
@@ -60,9 +61,15 @@ class BisPolicyRatesHttpAdapter(GlobalPolicyRatesPort):
         )
         self._fixture_path = fixture_path
         self._timeout = timeout
+        self._as_of = as_of
 
-    def fetch_global_policy_rates(self) -> GlobalPolicyRateSnapshot:
-        cache_key = "bis:policy_rates:latest"
+    def fetch_global_policy_rates(self, as_of: Optional[datetime] = None) -> GlobalPolicyRateSnapshot:
+        ref_dt = as_of if as_of is not None else self._as_of
+        cache_key = (
+            f"bis:policy_rates:{ref_dt.strftime('%Y-%m-%d')}"
+            if ref_dt is not None
+            else "bis:policy_rates:latest"
+        )
 
         def _fetch() -> GlobalPolicyRateSnapshot:
             if self._fixture_path and self._fixture_path.exists():
@@ -76,11 +83,18 @@ class BisPolicyRatesHttpAdapter(GlobalPolicyRatesPort):
                 resp.raise_for_status()
                 text = resp.text
 
-            return self._parse_csv(text)
+            return self._parse_csv(text, as_of=ref_dt)
 
         return self._cache.get_or_compute(cache_key, _fetch, ttl_seconds=43200)
 
-    def _parse_csv(self, csv_text: str) -> GlobalPolicyRateSnapshot:
+    def _parse_csv(self, csv_text: str, as_of: Optional[datetime] = None) -> GlobalPolicyRateSnapshot:
+        ref_dt = as_of if as_of is not None else self._as_of
+        if ref_dt is None:
+            now_utc = datetime.now(timezone.utc)
+        elif ref_dt.tzinfo is not None:
+            now_utc = ref_dt.astimezone(timezone.utc)
+        else:
+            now_utc = ref_dt.replace(tzinfo=timezone.utc)
         reader = csv.DictReader(io.StringIO(csv_text.strip()))
         rows_by_country: Dict[str, List[Dict[str, str]]] = {}
 
@@ -144,7 +158,7 @@ class BisPolicyRatesHttpAdapter(GlobalPolicyRatesPort):
                         p_dt = datetime.strptime(effective_date, "%Y-%m").replace(tzinfo=timezone.utc)
                     else:
                         p_dt = datetime.strptime(effective_date, "%Y-%m-%d").replace(tzinfo=timezone.utc)
-                    if (datetime.now(timezone.utc) - p_dt).days > 180:
+                    if (now_utc - p_dt).days > 180:
                         item_stale = True
                 except Exception:
                     pass
@@ -163,13 +177,13 @@ class BisPolicyRatesHttpAdapter(GlobalPolicyRatesPort):
             policy_items.append(item)
 
         spreads = calculate_policy_rate_spreads(policy_items, benchmark_country="TH")
-        as_of = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+        as_of_str = now_utc.strftime("%Y-%m-%d")
 
         # Snapshot is stale if all items are stale or empty
         snapshot_stale = bool(policy_items and all(item.is_stale for item in policy_items))
 
         return GlobalPolicyRateSnapshot(
-            as_of_date=as_of,
+            as_of_date=as_of_str,
             rates=tuple(policy_items),
             spreads_vs_bot_repo=spreads,
             source="BIS",
@@ -189,7 +203,11 @@ class BisPolicyRatesHttpAdapter(GlobalPolicyRatesPort):
                 logger.warning("Could not fetch BIS policy rates for observables: %s", exc)
                 return []
 
-        today_str = as_of_date or datetime.now(timezone.utc).strftime("%Y-%m-%d")
+        today_str = as_of_date or (
+            self._as_of.strftime("%Y-%m-%d")
+            if self._as_of is not None
+            else datetime.now(timezone.utc).strftime("%Y-%m-%d")
+        )
         obs_date = snapshot.as_of_date or today_str
         if len(obs_date) == 7:
             obs_date = f"{obs_date}-01"

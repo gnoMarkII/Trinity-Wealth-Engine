@@ -356,6 +356,25 @@ export default function PortfolioAdvisory() {
             </span>
           </div>
 
+          {(data.risk_radar.bucket_active_share_pct !== undefined &&
+            data.risk_radar.bucket_active_share_pct !== null) ||
+          data.risk_radar.total_portfolio_volatility_pct !== undefined ? (
+            <div className="flex items-center justify-between text-xs">
+              <span className="text-slate-500">Active Share / Vol:</span>
+              <span className="font-semibold text-slate-700 font-mono">
+                {data.risk_radar.bucket_active_share_pct !== undefined &&
+                data.risk_radar.bucket_active_share_pct !== null
+                  ? `${data.risk_radar.bucket_active_share_pct.toFixed(1)}%`
+                  : 'N/A'}{' '}
+                /{' '}
+                {data.risk_radar.total_portfolio_volatility_pct !== undefined &&
+                data.risk_radar.total_portfolio_volatility_pct !== null
+                  ? `${data.risk_radar.total_portfolio_volatility_pct.toFixed(1)}%`
+                  : 'N/A'}
+              </span>
+            </div>
+          ) : null}
+
           <div className="flex items-center gap-2 text-xs">
             <span className="text-slate-500">FX Exposure:</span>
             <div className="flex items-center gap-1.5 flex-1 justify-end font-mono">
@@ -925,6 +944,16 @@ function HoldingRow({ holding: h }: { holding: HoldingAdvisoryDTO }) {
           >
             Drift: {h.weight_drift_pct > 0 ? `+${h.weight_drift_pct.toFixed(1)}` : h.weight_drift_pct.toFixed(1)}%
           </div>
+          {h.risk_contribution_pct !== undefined && h.risk_contribution_pct !== null && (
+            <div className="text-[10px] text-slate-500 font-mono">
+              Risk: {h.risk_contribution_pct.toFixed(1)}%
+              {h.is_volatility_estimated && (
+                <span className="ml-1 text-amber-600" title="Estimated 20% default volatility">
+                  (est. vol)
+                </span>
+              )}
+            </div>
+          )}
         </div>
       </td>
 
@@ -940,7 +969,14 @@ function HoldingRow({ holding: h }: { holding: HoldingAdvisoryDTO }) {
       </td>
 
       {/* Lot Sizing */}
-      <td className="py-3 px-3">{formatLotSizing(h.lot_sizing)}</td>
+      <td className="py-3 px-3">
+        {formatLotSizing(h.lot_sizing)}
+        {h.estimated_friction_bps !== undefined && h.estimated_friction_bps !== null && (
+          <div className="text-[10px] text-slate-400 font-mono mt-0.5">
+            Est. friction: {h.estimated_friction_bps.toFixed(1)} bps
+          </div>
+        )}
+      </td>
 
       {/* Conviction & Stage */}
       <td className="py-3 px-3">

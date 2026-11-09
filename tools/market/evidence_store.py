@@ -23,7 +23,18 @@ from tools.archivist.core import VAULT_PATH
 
 log = get_logger(__name__)
 
-_DEFAULT_CAS_DIR = VAULT_PATH / "30_Knowledge_Base" / ".evidence_cache"
+_INITIAL_DEFAULT_CAS_DIR = VAULT_PATH / "30_Knowledge_Base" / ".evidence_cache"
+_DEFAULT_CAS_DIR = _INITIAL_DEFAULT_CAS_DIR
+
+
+def get_default_cas_dir() -> Path:
+    """Resolves CAS storage directory dynamically from OBSIDIAN_VAULT_PATH unless overridden."""
+    if _DEFAULT_CAS_DIR != _INITIAL_DEFAULT_CAS_DIR:
+        return _DEFAULT_CAS_DIR
+    vault_env = os.getenv("OBSIDIAN_VAULT_PATH")
+    if vault_env:
+        return Path(vault_env).resolve() / "30_Knowledge_Base" / ".evidence_cache"
+    return _DEFAULT_CAS_DIR
 
 
 def canonical_json_dumps(obj: Any) -> str:
@@ -41,7 +52,7 @@ def compute_payload_sha256(payload: Any) -> str:
 
 def get_cas_storage_path(sha256_hash: str, base_dir: Optional[Path] = None) -> Path:
     """Returns absolute path to CAS file for given hash."""
-    target_dir = base_dir or _DEFAULT_CAS_DIR
+    target_dir = base_dir or get_default_cas_dir()
     return target_dir / f"{sha256_hash}.json"
 
 

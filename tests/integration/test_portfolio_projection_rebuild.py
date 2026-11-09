@@ -3,6 +3,8 @@ from __future__ import annotations
 import os
 from pathlib import Path
 
+import pytest
+
 from tools.portfolio.adapters.markdown.repository_adapter import MarkdownVaultRepositoryAdapter
 from tools.portfolio.adapters.sqlite_mirror_decorator import SqliteMirroredPortfolioRepository
 from tools.portfolio.domain.ledger_change import LedgerChange
@@ -11,9 +13,9 @@ from tools.portfolio.transaction_store import PortfolioTransactionStore
 from tools.portfolio.transactional_repository import TransactionalPortfolioRepository
 
 
-def _repo(tmp_path: Path) -> tuple[TransactionalPortfolioRepository, PortfolioTransactionStore]:
+def _repo(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> tuple[TransactionalPortfolioRepository, PortfolioTransactionStore]:
     vault = tmp_path / "memories"
-    os.environ["OBSIDIAN_VAULT_PATH"] = str(vault)
+    monkeypatch.setenv("OBSIDIAN_VAULT_PATH", str(vault))
     store = PortfolioTransactionStore(vault_paths=VaultPaths(vault), runtime_root=tmp_path / "runtime")
     legacy = SqliteMirroredPortfolioRepository(
         underlying_repo=MarkdownVaultRepositoryAdapter(),
@@ -22,8 +24,8 @@ def _repo(tmp_path: Path) -> tuple[TransactionalPortfolioRepository, PortfolioTr
     return TransactionalPortfolioRepository(underlying_repo=legacy, store=store), store
 
 
-def test_transaction_source_bootstrap_and_projection_commit(tmp_path: Path) -> None:
-    repo, store = _repo(tmp_path)
+def test_transaction_source_bootstrap_and_projection_commit(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    repo, store = _repo(tmp_path, monkeypatch)
     initial = repo.load_state("default")
     assert store.checkpoint("default").sequence == 1
     with repo.unit_of_work("default") as uow:
@@ -36,8 +38,8 @@ def test_transaction_source_bootstrap_and_projection_commit(tmp_path: Path) -> N
     assert initial.last_updated
 
 
-def test_transaction_source_ledger_replay_is_not_markdown_read(tmp_path: Path) -> None:
-    repo, store = _repo(tmp_path)
+def test_transaction_source_ledger_replay_is_not_markdown_read(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    repo, store = _repo(tmp_path, monkeypatch)
     repo.load_state("default")
     row = {"Transaction_ID": "tx-1", "Symbol": "AAPL", "Action": "BUY"}
     with repo.unit_of_work("default") as uow:

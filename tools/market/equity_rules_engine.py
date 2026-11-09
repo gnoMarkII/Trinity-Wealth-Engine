@@ -199,6 +199,11 @@ def compute_deterministic_scorecard(
             analyst_scores.append(65.0)
         else:
             analyst_scores.append(35.0)
+    else:
+        derived_features = getattr(quant_signals.evidence_snapshot, "derived_features", None) or {}
+        consensus_meta = derived_features.get("consensus_expectation")
+        if isinstance(consensus_meta, dict) and consensus_meta.get("eps_momentum_score") is not None:
+            analyst_scores.append(float(consensus_meta["eps_momentum_score"]))
 
     management_guidance_score = round(sum(mgmt_scores) / len(mgmt_scores), 1) if mgmt_scores else None
     analyst_expectations_score = round(sum(analyst_scores) / len(analyst_scores), 1) if analyst_scores else None

@@ -45,7 +45,9 @@ def test_ohlcv_service_instantiation_with_mocks():
     mock_actions = MagicMock(spec=CorporateActionProviderPort)
 
     service = OhlcvService(ohlcv_provider=mock_ohlcv, action_provider=mock_actions)
-    assert service is not None
+    assert isinstance(service, OhlcvService)
+    assert service._delegate._ohlcv_provider is mock_ohlcv
+    assert service._delegate._action_provider is mock_actions
 
 
 def test_ohlcv_legacy_facade_delegates_to_composition_root(monkeypatch):

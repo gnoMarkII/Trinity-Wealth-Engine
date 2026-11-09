@@ -64,9 +64,27 @@ def _get_price_history(provider_symbol: str, period: str) -> pd.DataFrame:
 
     if df is not None and not df.empty and "Close" in df:
         df = df.dropna(subset=["Close"])
+        cond = (df["Close"] > 0)
+        if "High" in df and "Low" in df:
+            cond = cond & (df["High"] >= df["Low"]) & (df["High"] > 0) & (df["Low"] >= 0)
+        if "Volume" in df:
+            cond = cond & (df["Volume"] >= 0)
+        df = df[cond]
 
     _HISTORY_CACHE[key] = (df, now)
     return df
+
+
+def _select_return_price_series(df: pd.DataFrame) -> pd.Series:
+    """Select appropriate price series for return/volatility/beta calculation.
+    Prefers 'Adj Close' when available and strictly positive/finite to remove artificial jumps from splits/dividends;
+    falls back to finite positive 'Close'."""
+    if "Adj Close" in df.columns:
+        adj = pd.to_numeric(df["Adj Close"], errors="coerce")
+        if len(adj) == len(df) and bool(np.isfinite(adj).all()) and bool((adj > 0).all()):
+            return adj.astype(float)
+    close = pd.to_numeric(df["Close"], errors="coerce")
+    return close.where(np.isfinite(close) & (close > 0))
 
 
 def _quality_from_df(df: Optional[pd.DataFrame]) -> PriceSeriesQuality:
@@ -92,8 +110,8 @@ def compute_beta(provider_symbol: str, benchmark: str = "^GSPC", period: str = "
     if stock_df.empty or bench_df.empty or "Close" not in stock_df or "Close" not in bench_df:
         return None, PriceSeriesQuality(trading_days=0, is_valid=False, stale_reason="insufficient_trading_history")
 
-    stock_ret = stock_df["Close"].pct_change().dropna()
-    bench_ret = bench_df["Close"].pct_change().dropna()
+    stock_ret = _select_return_price_series(stock_df).pct_change().dropna()
+    bench_ret = _select_return_price_series(bench_df).pct_change().dropna()
     aligned = pd.concat([stock_ret, bench_ret], axis=1, join="inner")
     aligned.columns = ["stock", "bench"]
     overlapping_days = len(aligned)
@@ -122,7 +140,7 @@ def compute_volatility(provider_symbol: str, period: str = "1y") -> Tuple[Option
     if not quality.is_valid or "Close" not in df or df["Close"].empty:
         return None, quality
 
-    returns = df["Close"].pct_change().dropna()
+    returns = _select_return_price_series(df).pct_change().dropna()
     if returns.empty:
         return None, PriceSeriesQuality(trading_days=quality.trading_days, is_valid=False, stale_reason="insufficient_trading_history")
 
@@ -562,4 +580,86 @@ def create_atomic_market_snapshot(
     )
     return snapshot, flags
 
+
+def compute_amihud_illiquidity_20d_with_metadata(
+    df: Optional[pd.DataFrame],
+    *,
+    currency: Optional[str] = None,
+) -> Dict[str, Any]:
+    """คำนวณ Amihud Illiquidity Ratio จาก 20 วันทำการล่าสุดพร้อมข้อมูล provenance:
+    (1/N) * sum(|R_t| / (Close_t * Volume_t)) * 1e6
+    กรองเฉพาะแถวที่มี Close > 0, Volume > 0 และค่าทั้งหมด finite เท่านั้น"""
+    resolved_currency = currency or "local"
+    base_meta: Dict[str, Any] = {
+        "value": None,
+        "return_price_basis": "unavailable",
+        "window_days": 20,
+        "valid_days": 0,
+        "status": "unavailable",
+        "currency": resolved_currency,
+    }
+    if df is None or df.empty or len(df) < 5 or "Close" not in df or "Volume" not in df:
+        return base_meta
+
+    used_adj = False
+    if "Adj Close" in df.columns:
+        adj_check = pd.to_numeric(df["Adj Close"], errors="coerce")
+        if len(adj_check) == len(df) and bool(np.isfinite(adj_check).all()) and bool((adj_check > 0).all()):
+            used_adj = True
+
+    return_series = _select_return_price_series(df)
+    daily_returns = return_series.pct_change()
+
+    sub_df = pd.DataFrame({
+        "ret": pd.to_numeric(daily_returns, errors="coerce").abs(),
+        "close": pd.to_numeric(df["Close"], errors="coerce"),
+        "volume": pd.to_numeric(df["Volume"], errors="coerce"),
+    })
+    sub_df = sub_df.replace([np.inf, -np.inf], np.nan).dropna()
+    sub_df = sub_df[(sub_df["close"] > 0) & (sub_df["volume"] > 0)]
+
+    basis = "adj_close" if used_adj else "close"
+    if len(sub_df) < 5:
+        return {
+            **base_meta,
+            "return_price_basis": basis,
+            "valid_days": len(sub_df),
+        }
+
+    window = sub_df.tail(20)
+    valid_days = len(window)
+    dollar_volume = window["close"] * window["volume"]
+    impact_ratios = window["ret"] / dollar_volume
+    impact_ratios = impact_ratios.replace([np.inf, -np.inf], np.nan).dropna()
+    if len(impact_ratios) < 5:
+        return {
+            **base_meta,
+            "return_price_basis": basis,
+            "valid_days": len(impact_ratios),
+        }
+
+    amihud_val = float(impact_ratios.mean() * 1e6)
+    if not math.isfinite(amihud_val):
+        return {
+            **base_meta,
+            "return_price_basis": basis,
+            "valid_days": len(impact_ratios),
+        }
+
+    status = "available" if len(impact_ratios) >= 20 else "partial"
+    return {
+        "value": round(amihud_val, 6),
+        "return_price_basis": basis,
+        "window_days": 20,
+        "valid_days": len(impact_ratios),
+        "status": status,
+        "currency": resolved_currency,
+    }
+
+
+def compute_amihud_illiquidity_20d(df: Optional[pd.DataFrame]) -> Optional[float]:
+    """คำนวณ Amihud Illiquidity Ratio จาก 20 วันทำการล่าสุด:
+    (1/N) * sum(|R_t| / (Close_t * Volume_t)) * 1e6
+    คืนค่า None หากข้อมูลไม่พอ, volume เป็น 0 ทั้งหมด หรือไม่มีคอลัมน์ที่จำเป็น"""
+    return compute_amihud_illiquidity_20d_with_metadata(df)["value"]
 

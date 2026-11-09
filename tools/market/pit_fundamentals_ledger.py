@@ -6,6 +6,7 @@ historical multiple bands are marked 'unavailable' instead of backfilling from t
 """
 from datetime import datetime, timezone
 import json
+import os
 from pathlib import Path
 from typing import Any, Dict, List, Literal, Optional, Tuple
 
@@ -21,6 +22,14 @@ log = get_logger(__name__)
 
 _DEFAULT_PIT_DIR = VAULT_PATH / "30_Knowledge_Base" / ".pit_ledger"
 _MIN_PIT_OBSERVATIONS_FOR_BANDS = 250  # ~1 trading year
+
+
+def get_default_pit_dir() -> Path:
+    """Resolves the PIT ledger directory dynamically from OBSIDIAN_VAULT_PATH."""
+    vault_env = os.getenv("OBSIDIAN_VAULT_PATH")
+    if vault_env:
+        return Path(vault_env).resolve() / "30_Knowledge_Base" / ".pit_ledger"
+    return _DEFAULT_PIT_DIR
 
 
 class PITLedgerEntry(BaseModel):
@@ -50,7 +59,7 @@ def append_pit_entry(
     base_dir: Optional[Path] = None,
 ) -> Path:
     """Appends an immutable PIT snapshot to the ticker's ledger file."""
-    target_dir = base_dir or _DEFAULT_PIT_DIR
+    target_dir = base_dir or get_default_pit_dir()
     assert_write_allowed(target_dir)
     target_dir.mkdir(parents=True, exist_ok=True)
     
@@ -84,7 +93,7 @@ def compute_pit_multiple_bands(
         If observations < 250, returns status='unavailable' with flag
         'insufficient_pit_history'. NEVER backfills from current TTM.
     """
-    target_dir = base_dir or _DEFAULT_PIT_DIR
+    target_dir = base_dir or get_default_pit_dir()
     file_path = target_dir / f"{ticker.upper()}.json"
 
     if not file_path.exists():

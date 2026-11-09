@@ -3,6 +3,7 @@ import { api } from '../../api/client'
 import type {
   EquityDetailDTO,
   EarningsCallNoteItem,
+  VariantPerceptionSnapshotDTO,
 } from '../../api/types'
 import ScoreRing from './ScoreRing'
 import { sentimentClass } from '../../lib/sentiment'
@@ -14,7 +15,9 @@ import { DataQualityFlagsCard } from './DataQualityFlagsCard'
 import { EarningsCallTab } from './EarningsCallTab'
 import { EventStudyTab } from './EventStudyTab'
 import ExecutiveThesisHero from './ExecutiveThesisHero'
+import { InstitutionalThesisCard } from './InstitutionalThesisCard'
 import ValuationWorkbenchCard from './ValuationWorkbenchCard'
+import { VariantPerceptionCard } from './VariantPerceptionCard'
 import TacticalFlowMatrixCard from './TacticalFlowMatrixCard'
 import { EvidenceProvenanceDrawer } from './EvidenceProvenanceDrawer'
 import { NasdaqConsensusCard } from './NasdaqConsensusCard'
@@ -23,6 +26,7 @@ import { OptionsVolSmile } from '../charts/OptionsVolSmile'
 import { EquityNotebookLMExport } from './EquityNotebookLMExport'
 import { EquityDetailSkeleton } from '../ui/FlowSkeleton'
 import { PositionReviewCard } from './PositionReviewCard'
+import { PositionReviewModal } from './PositionReviewModal'
 import { ExpectationGapCard } from './ExpectationGapCard'
 import { KillSwitchProximityMeter } from './KillSwitchProximityMeter'
 import { EquityGlossaryDrawer, StockWayfinderBanner, SectionWaypointHeader } from './explainer'
@@ -58,11 +62,15 @@ export const EquityDetail: React.FC<EquityDetailProps> = ({
   const [nasdaqConsensus, setNasdaqConsensus] = useState<any | null>(null)
   const [optionsChain, setOptionsChain] = useState<any | null>(null)
   const [maxPain, setMaxPain] = useState<any | null>(null)
+  const [variantPerception, setVariantPerception] = useState<VariantPerceptionSnapshotDTO | null>(null)
+  const [isPositionReviewModalOpen, setIsPositionReviewModalOpen] = useState(false)
   const [isGlossaryOpen, setIsGlossaryOpen] = useState(false)
 
   useEffect(() => {
     if (data?.ticker) {
       setVisitedTabs(new Set([activeTab]))
+      setVariantPerception(null)
+      setIsPositionReviewModalOpen(false)
     }
   }, [data?.ticker])
 
@@ -87,8 +95,10 @@ export const EquityDetail: React.FC<EquityDetailProps> = ({
 
   useEffect(() => {
     if (!data?.ticker) return
+    let cancelled = false
     api.getEarningsCalls(data.ticker)
       .then((res) => {
+        if (cancelled) return
         if (res.items && res.items.length > 0) {
           setLatestEarningsCall(res.items[0] ?? null)
         } else {
@@ -96,19 +106,37 @@ export const EquityDetail: React.FC<EquityDetailProps> = ({
         }
       })
       .catch(() => {
-        setLatestEarningsCall(null)
+        if (!cancelled) setLatestEarningsCall(null)
       })
+
+    if (typeof api.getVariantPerception === 'function') {
+      Promise.resolve(api.getVariantPerception(data.ticker))
+        .then((res) => {
+          if (!cancelled) {
+            setVariantPerception(res && res.alpha_verdict ? res : null)
+          }
+        })
+        .catch(() => {
+          if (!cancelled) setVariantPerception(null)
+        })
+    } else {
+      setVariantPerception(null)
+    }
 
     const sym = data.ticker
     // Keyless US Institutional Intelligence
     if (data.market === 'US' || !sym.includes('.')) {
-      api.getNasdaqConsensus?.(sym)?.then(setNasdaqConsensus)?.catch(() => setNasdaqConsensus(null))
-      api.getOptionsChain?.(sym)?.then(setOptionsChain)?.catch(() => setOptionsChain(null))
-      api.getOptionsMaxPain?.(sym)?.then(setMaxPain)?.catch(() => setMaxPain(null))
+      api.getNasdaqConsensus?.(sym)?.then((res) => { if (!cancelled) setNasdaqConsensus(res) })?.catch(() => { if (!cancelled) setNasdaqConsensus(null) })
+      api.getOptionsChain?.(sym)?.then((res) => { if (!cancelled) setOptionsChain(res) })?.catch(() => { if (!cancelled) setOptionsChain(null) })
+      api.getOptionsMaxPain?.(sym)?.then((res) => { if (!cancelled) setMaxPain(res) })?.catch(() => { if (!cancelled) setMaxPain(null) })
     } else {
       setNasdaqConsensus(null)
       setOptionsChain(null)
       setMaxPain(null)
+    }
+
+    return () => {
+      cancelled = true
     }
   }, [data?.ticker, data?.market])
 
@@ -449,6 +477,17 @@ export const EquityDetail: React.FC<EquityDetailProps> = ({
                 <EvidenceProvenanceDrawer snapshot={evidenceSnapshot} />
               </div>
             )}
+
+            {/* 4-Pillars Investment Committee Scorecard */}
+            <InstitutionalThesisCard
+              scorecard={scorecard as any}
+              piotroski={quant.piotroski_breakdown as any}
+              reverseDcf={reverseDcf as any}
+              tactical={tactical as any}
+              insider={insider as any}
+              falsifiers={falsifiers as any}
+              evidenceSnapshot={evidenceSnapshot as any}
+            />
           </div>
 
           {/* =========================================================
@@ -463,6 +502,16 @@ export const EquityDetail: React.FC<EquityDetailProps> = ({
               frameworkLabel="Position & Decision Review"
               id="position-review-section"
             />
+            <div className="flex justify-end">
+              <button
+                type="button"
+                onClick={() => setIsPositionReviewModalOpen(true)}
+                className="rounded-xl border border-sky-200 bg-sky-50 px-3 py-1.5 text-xs font-bold text-sky-700 hover:bg-sky-100 transition-colors shadow-2xs flex items-center gap-1.5"
+              >
+                <span>🔍</span>
+                <span>เปิด Position Review (Full View)</span>
+              </button>
+            </div>
             <PositionReviewCard
               ticker={data.ticker}
               market={data.market}
@@ -494,6 +543,11 @@ export const EquityDetail: React.FC<EquityDetailProps> = ({
                 enterpriseValue={reverseDcf.enterprise_value}
                 currency={currencySymbol}
               />
+            )}
+
+            {/* Variant Perception: Two-Sided Estimate Ledger */}
+            {variantPerception && (
+              <VariantPerceptionCard data={variantPerception} />
             )}
 
             {/* Section 3B: Valuation Workbench & Quality Forensics */}
@@ -655,6 +709,14 @@ export const EquityDetail: React.FC<EquityDetailProps> = ({
       <EquityGlossaryDrawer
         isOpen={isGlossaryOpen}
         onClose={() => setIsGlossaryOpen(false)}
+      />
+
+      <PositionReviewModal
+        isOpen={isPositionReviewModalOpen}
+        onClose={() => setIsPositionReviewModalOpen(false)}
+        ticker={data.ticker}
+        market={data.market || 'US'}
+        portfolioId={portfolioId}
       />
     </div>
   )

@@ -210,4 +210,136 @@ class TestReadPerformanceHistoryAddons:
         assert len(history) == 2
         assert history[0]["Date"] == "2026-01-01"
         assert history[0]["Realized_PnL_YTD"] is None
+        assert history[0]["Accrued_Dividend_Receivable_THB"] == 0.0
+        assert history[0]["Economic_NAV_THB"] == 100_000.0
         assert history[1]["Realized_PnL_YTD"] == 0.0
+
+    def test_r07_economic_nav_persistence_roundtrip_and_xd_return_continuity(self, isolated_portfolio, tmp_vault):
+        """R07 regression: persist Accrued_Dividend_Receivable_THB & Economic_NAV_THB and keep XD-to-pay return continuity."""
+        from tools.portfolio.adapters.markdown.performance_adapter import MarkdownPerformanceAdapter
+        import tools.portfolio.performance as perf
+
+        adapter = MarkdownPerformanceAdapter()
+        # Day 1 pre-XD: NAV 350,000, accrued 0 -> Economic 350,000
+        adapter.upsert_snapshot("default", {
+            "Date": "2026-03-04",
+            "Total_NAV_THB": "350000.00",
+            "Total_Cost": "300000.00",
+            "Unrealized_PnL": "50000.00",
+            "Cash_Balance": "0.00",
+            "Realized_PnL_YTD": "0.00",
+            "Passive_Income_YTD": "0.00",
+            "Accrued_Dividend_Receivable_THB": "0.00",
+            "Economic_NAV_THB": "350000.00",
+            "Flow_Coverage_Status": "COMPLETE",
+            "Net_External_Flow_THB": "0.00",
+        })
+        # Day 2 XD: market price drops 10,800 (Total_NAV_THB=339,200), accrued=10,800 -> Economic 350,000
+        adapter.upsert_snapshot("default", {
+            "Date": "2026-03-05",
+            "Total_NAV_THB": "339200.00",
+            "Total_Cost": "300000.00",
+            "Unrealized_PnL": "39200.00",
+            "Cash_Balance": "0.00",
+            "Realized_PnL_YTD": "0.00",
+            "Passive_Income_YTD": "0.00",
+            "Accrued_Dividend_Receivable_THB": "10800.00",
+            "Economic_NAV_THB": "350000.00",
+            "Flow_Coverage_Status": "COMPLETE",
+            "Net_External_Flow_THB": "0.00",
+        })
+        # Day 3 Pay date: settled cash +10,800 (Total_NAV_THB=350,000), accrued=0 -> Economic 350,000
+        adapter.upsert_snapshot("default", {
+            "Date": "2026-03-25",
+            "Total_NAV_THB": "350000.00",
+            "Total_Cost": "300000.00",
+            "Unrealized_PnL": "50000.00",
+            "Cash_Balance": "10800.00",
+            "Realized_PnL_YTD": "0.00",
+            "Passive_Income_YTD": "10800.00",
+            "Accrued_Dividend_Receivable_THB": "0.00",
+            "Economic_NAV_THB": "350000.00",
+            "Flow_Coverage_Status": "COMPLETE",
+            "Net_External_Flow_THB": "0.00",
+        })
+
+        structured = perf.get_structured_performance_history()
+        assert len(structured) == 3
+        assert structured[1]["Accrued_Dividend_Receivable_THB"] == 10800.0
+        assert structured[1]["Economic_NAV_THB"] == 350000.0
+
+        summary = json.loads(perf.read_performance_history.invoke({"days": 30}))
+        assert summary["nav_basis"] == "economic_nav"
+        assert summary["first_economic_nav"] == 350000.0
+        assert summary["latest_economic_nav"] == 350000.0
+        assert summary["max_drawdown_pct"] == 0.0
+        assert summary["change_abs"] == 0.0
+
+
+class TestPortfolioAttributionServiceWiring:
+    def test_single_and_multi_period_brinson_attribution(self, isolated_portfolio):
+        """Step 3.2: PortfolioPerformanceService exposes single & Carino multi-period Brinson attribution."""
+        from tools.portfolio.service import PortfolioService
+
+        pt = isolated_portfolio
+        pt._manage_cash_flow_locked(100_000.0, "deposit", "THB")
+        perf_service = PortfolioService()._perf_service
+
+        bucket_report = perf_service.compute_portfolio_bucket_attribution(
+            portfolio_id="default",
+            benchmark_weights={"core_equities": 0.6, "defensive": 0.2, "cash": 0.2},
+            portfolio_returns={"core_equities": 0.0, "defensive": 0.0, "cash": 0.01},
+            benchmark_returns={"core_equities": 0.08, "defensive": 0.02, "cash": 0.01},
+        )
+        assert bucket_report["is_reconciled"] is True
+        assert bucket_report["cash_drag_effect"] < 0.0
+        assert len(bucket_report["rows"]) == 3
+
+        multi = perf_service.compute_multi_period_attribution(
+            [
+                {
+                    "buckets": [
+                        {
+                            "bucket_id": "core_equities",
+                            "bucket_name": "Core Equities",
+                            "portfolio_weight": 0.7,
+                            "benchmark_weight": 0.6,
+                            "portfolio_return": 0.10,
+                            "benchmark_return": 0.06,
+                        },
+                        {
+                            "bucket_id": "cash",
+                            "bucket_name": "Cash",
+                            "portfolio_weight": 0.3,
+                            "benchmark_weight": 0.4,
+                            "portfolio_return": 0.01,
+                            "benchmark_return": 0.01,
+                        },
+                    ]
+                },
+                {
+                    "buckets": [
+                        {
+                            "bucket_id": "core_equities",
+                            "bucket_name": "Core Equities",
+                            "portfolio_weight": 0.6,
+                            "benchmark_weight": 0.6,
+                            "portfolio_return": 0.04,
+                            "benchmark_return": 0.02,
+                        },
+                        {
+                            "bucket_id": "cash",
+                            "bucket_name": "Cash",
+                            "portfolio_weight": 0.4,
+                            "benchmark_weight": 0.4,
+                            "portfolio_return": 0.01,
+                            "benchmark_return": 0.01,
+                        },
+                    ]
+                },
+            ]
+        )
+        assert multi["period_count"] == 2
+        assert multi["is_reconciled"] is True
+        assert multi["net_active_return"] > 0.0
+

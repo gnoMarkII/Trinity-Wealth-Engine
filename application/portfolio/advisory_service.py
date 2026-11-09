@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import json
 import logging
-from typing import Any, Optional
+from typing import Any, Literal, Optional
 
 from application.portfolio.advisory_ports import (
     AdvisorySynthesizerPort,
@@ -21,6 +21,13 @@ from application.portfolio.advisory_ports import (
 from core.portfolio_advisory.engine import evaluate_portfolio_advisory
 from core.portfolio_advisory.llm_payload_builder import build_advisory_llm_payload
 from core.portfolio_advisory.models import PortfolioAdvisoryQuantReport
+from schemas.micro_quant_schemas import DeterministicScorecard, QuantSignals
+from schemas.portfolio_policy_schemas import PortfolioPolicy
+from tools.market.portfolio_action_engine import (
+    PortfolioActionVerdict,
+    build_action_portfolio_state,
+    compute_portfolio_action,
+)
 from schemas.portfolio_advisory_schemas import (
     AdvisorySidecarRecord,
     DataAnomalyWarningDTO,
@@ -71,6 +78,34 @@ def _convert_report_to_dto(
         top_3_weight_pct=float(radar.top_3_weight_pct) if getattr(radar, "top_3_weight_pct", None) is not None else 0.0,
         top_5_weight_pct=float(radar.top_5_weight_pct) if getattr(radar, "top_5_weight_pct", None) is not None else 0.0,
         concentration_risk_level=getattr(radar, "concentration_risk_level", "LOW") or "LOW",
+        bucket_active_share_pct=(
+            float(radar.bucket_active_share_pct)
+            if getattr(radar, "bucket_active_share_pct", None) is not None
+            else None
+        ),
+        bucket_active_share_status=getattr(radar, "bucket_active_share_status", "AVAILABLE"),
+        risk_contributions_pct={k: float(v) for k, v in getattr(radar, "risk_contributions_pct", {}).items()},
+        inverse_vol_weights_pct={k: float(v) for k, v in getattr(radar, "inverse_vol_weights_pct", {}).items()},
+        total_portfolio_volatility_pct=(
+            float(radar.total_portfolio_volatility_pct)
+            if getattr(radar, "total_portfolio_volatility_pct", None) is not None
+            else None
+        ),
+        risk_contribution_status=getattr(radar, "risk_contribution_status", "AVAILABLE"),
+        volatility_estimated_symbols=list(getattr(radar, "volatility_estimated_symbols", [])),
+        drawdown_pct=(
+            float(radar.drawdown_pct)
+            if getattr(radar, "drawdown_pct", None) is not None
+            else None
+        ),
+        drawdown_posture_tier=getattr(radar, "drawdown_posture_tier", "NORMAL"),
+        drawdown_status=getattr(radar, "drawdown_status", "UNAVAILABLE_UNKNOWN_PEAK"),
+        drawdown_hurdle_adjustment=(
+            float(radar.drawdown_hurdle_adjustment)
+            if getattr(radar, "drawdown_hurdle_adjustment", None) is not None
+            else 0.0
+        ),
+        drawdown_action_restrictions=list(getattr(radar, "drawdown_action_restrictions", [])),
     )
 
     holdings_dtos = []
@@ -82,7 +117,7 @@ def _convert_report_to_dto(
                 board_lot_shares=h.lot_sizing.board_lot_shares,
                 odd_lot_shares=h.lot_sizing.odd_lot_shares,
                 whole_shares=h.lot_sizing.whole_shares,
-                fractional_shares=float(h.lot_sizing.fractional_shares) if h.lot_sizing.fractional_shares else None,
+                fractional_shares=float(h.lot_sizing.fractional_shares) if h.lot_sizing.fractional_shares is not None else None,
                 amount_thb=float(h.lot_sizing.amount_thb),
                 amount_native=float(h.lot_sizing.amount_native),
                 estimated_execution_price_native=float(h.lot_sizing.estimated_execution_price_native),
@@ -108,16 +143,21 @@ def _convert_report_to_dto(
             action_rationale=h.action_rationale,
             lot_sizing=lot_dto,
             is_immediate_execution=h.is_immediate_execution,
-            conditional_buy_zone_min=float(h.conditional_buy_zone_min) if h.conditional_buy_zone_min else None,
-            conditional_buy_zone_max=float(h.conditional_buy_zone_max) if h.conditional_buy_zone_max else None,
-            core_conviction_score=float(h.core_conviction_score) if h.core_conviction_score else None,
-            business_conviction_score=float(h.business_conviction_score) if h.business_conviction_score else None,
+            conditional_buy_zone_min=float(h.conditional_buy_zone_min) if h.conditional_buy_zone_min is not None else None,
+            conditional_buy_zone_max=float(h.conditional_buy_zone_max) if h.conditional_buy_zone_max is not None else None,
+            core_conviction_score=float(h.core_conviction_score) if h.core_conviction_score is not None else None,
+            business_conviction_score=float(h.business_conviction_score) if h.business_conviction_score is not None else None,
             price_stage=h.price_stage,
-            live_upside_12m_pct=float(h.live_upside_12m_pct) if h.live_upside_12m_pct else None,
+            live_upside_12m_pct=float(h.live_upside_12m_pct) if h.live_upside_12m_pct is not None else None,
             macro_alignment=h.macro_alignment,
             sector_quadrant=h.sector_quadrant,
             breached_falsifiers=h.breached_falsifiers,
             data_warnings=h.data_warnings,
+            risk_contribution_pct=float(h.risk_contribution_pct) if getattr(h, "risk_contribution_pct", None) is not None else None,
+            estimated_friction_bps=float(h.estimated_friction_bps) if getattr(h, "estimated_friction_bps", None) is not None else None,
+            volatility_pct=float(h.volatility_pct) if getattr(h, "volatility_pct", None) is not None else None,
+            volatility_source=getattr(h, "volatility_source", "unavailable"),
+            is_volatility_estimated=getattr(h, "is_volatility_estimated", False),
         ))
 
     quarantined_dtos = [
@@ -146,6 +186,7 @@ def _convert_report_to_dto(
         evaluated_at=report.evaluated_at,
         data_mode=report.data_mode.value,
         portfolio_state_hash=report.portfolio_state_hash,
+        synthesis_input_hash=getattr(report, "synthesis_input_hash", ""),
         total_nav_thb=float(report.total_nav_thb),
         cash_plan=cash_dto,
         risk_radar=radar_dto,
@@ -156,6 +197,25 @@ def _convert_report_to_dto(
         cached_narrative=narrative,
         look_through_summary=look_through_summary,
     )
+
+
+def _is_cached_narrative_fresh(
+    cached_record: Optional[AdvisorySidecarRecord],
+    report: PortfolioAdvisoryQuantReport,
+) -> bool:
+    """Checks both portfolio composition hash and full synthesis input digest."""
+    if not cached_record or not cached_record.narrative:
+        return False
+    if cached_record.narrative.portfolio_state_hash != report.portfolio_state_hash:
+        return False
+    expected_synth_hash = getattr(report, "synthesis_input_hash", "")
+    if expected_synth_hash:
+        cached_synth_hash = (
+            getattr(cached_record.narrative, "synthesis_input_hash", "")
+            or getattr(cached_record, "synthesis_input_hash", "")
+        )
+        return bool(cached_synth_hash) and cached_synth_hash == expected_synth_hash
+    return True
 
 
 class PortfolioAdvisoryService:
@@ -219,10 +279,8 @@ class PortfolioAdvisoryService:
         # Check for cached narrative in vault
         cached_record = self._vault_port.load_latest_advisory_sidecar(portfolio_id=portfolio_id)
         valid_narrative = None
-        if cached_record and cached_record.narrative:
-            # Hash matching: Ensure narrative was synthesized against the EXACT current portfolio state
-            if cached_record.narrative.portfolio_state_hash == report.portfolio_state_hash:
-                valid_narrative = cached_record.narrative
+        if _is_cached_narrative_fresh(cached_record, report):
+            valid_narrative = cached_record.narrative  # type: ignore[union-attr]
 
         # Calculate look-through summary if service is wired
         lt_summary = None
@@ -245,12 +303,8 @@ class PortfolioAdvisoryService:
         # Cache hit check
         if not force_refresh:
             cached_record = self._vault_port.load_latest_advisory_sidecar(portfolio_id=portfolio_id)
-            if (
-                cached_record
-                and cached_record.narrative
-                and cached_record.narrative.portfolio_state_hash == report.portfolio_state_hash
-            ):
-                return cached_record.narrative
+            if _is_cached_narrative_fresh(cached_record, report):
+                return cached_record.narrative  # type: ignore[union-attr, return-value]
 
         # Calculate look-through summary and attach to report
         lt_summary = None
@@ -268,12 +322,15 @@ class PortfolioAdvisoryService:
 
         # Synthesize via port
         narrative = self._synthesizer_port.synthesize_playbook(payload_json, report)
+        narrative.portfolio_state_hash = report.portfolio_state_hash
+        narrative.synthesis_input_hash = getattr(report, "synthesis_input_hash", "")
 
         # Persist full advisory sidecar to Vault
         response_dto = _convert_report_to_dto(report, narrative=narrative, look_through_summary=lt_summary)
         sidecar_record = AdvisorySidecarRecord(
             evaluated_at=response_dto.evaluated_at,
             portfolio_state_hash=response_dto.portfolio_state_hash,
+            synthesis_input_hash=response_dto.synthesis_input_hash,
             data_mode=response_dto.data_mode,
             total_nav_thb=response_dto.total_nav_thb,
             cash_plan=response_dto.cash_plan,
@@ -290,3 +347,89 @@ class PortfolioAdvisoryService:
             log.warning("Failed to save advisory sidecar: %s", e)
 
         return narrative
+
+    def evaluate_holding_action_policy(
+        self,
+        ticker: str,
+        scorecard: DeterministicScorecard,
+        quant_signals: QuantSignals,
+        policy: Optional[PortfolioPolicy] = None,
+        market: Optional[Literal["TH", "US"]] = None,
+        current_price: Optional[float] = None,
+        portfolio_id: str = "default",
+        refresh_prices: bool = False,
+    ) -> PortfolioActionVerdict:
+        """Evaluates multi-constraint single-holding sizing policy against live portfolio state."""
+        san_ticker = ticker.strip().upper()
+        resolved_market: Literal["TH", "US"] = market or (
+            "TH" if quant_signals.market == "TH" or san_ticker.endswith(".BK") else "US"
+        )
+        local_currency = "THB" if resolved_market == "TH" else "USD"
+        if policy is None:
+            return compute_portfolio_action(
+                ticker=san_ticker,
+                market=resolved_market,
+                scorecard=scorecard,
+                quant_signals=quant_signals,
+                policy=None,
+                portfolio_state=None,
+                current_price=current_price,
+            )
+
+        portfolio_state = self._portfolio_reader.get_current_portfolio_state(
+            refresh_prices=refresh_prices,
+            portfolio_id=portfolio_id,
+        )
+        sidecars = self._sidecar_reader.get_all_equity_sidecars() or {}
+        sector_map: dict[str, str] = {}
+        for sc_sym, sc_data in sidecars.items():
+            q = sc_data.get("quant_signals") if isinstance(sc_data, dict) else getattr(sc_data, "quant_signals", None)
+            peer_sec = q.get("peer_sector") if isinstance(q, dict) else getattr(q, "peer_sector", None)
+            if peer_sec:
+                sector_map[str(sc_sym).strip().upper()] = str(peer_sec)
+
+        effective_price = current_price
+        if effective_price is None and portfolio_state is not None and not isinstance(portfolio_state, dict):
+            base_target = san_ticker[:-3] if san_ticker.endswith(".BK") else san_ticker
+            for h in getattr(portfolio_state, "holdings", None) or []:
+                h_sym = str(getattr(h, "symbol", "") or "").strip().upper()
+                h_base = h_sym[:-3] if h_sym.endswith(".BK") else h_sym
+                if h_sym == san_ticker or h_base == base_target:
+                    effective_price = (
+                        getattr(h, "current_price_thb", None)
+                        if resolved_market == "TH"
+                        else getattr(h, "current_price_usd", None)
+                    )
+                    if effective_price and effective_price > 0:
+                        break
+                    effective_price = None
+        if effective_price is None and quant_signals.raw_analysis_price and quant_signals.raw_analysis_price > 0:
+            effective_price = float(quant_signals.raw_analysis_price)
+
+        action_state, missing_fx_reason = build_action_portfolio_state(
+            portfolio_state,
+            market=resolved_market,
+            target_ticker=san_ticker,
+            target_sector=quant_signals.peer_sector,
+            sector_map=sector_map,
+        )
+        if missing_fx_reason is not None or action_state is None:
+            return PortfolioActionVerdict(
+                ticker=san_ticker,
+                portfolio_id=policy.portfolio_id,
+                action="RESTRICTED_MISSING_FX",
+                security_stance=scorecard.action_stance,
+                currency=local_currency,
+                action_reasoning=missing_fx_reason or "Missing valid FX rate for cross-currency action evaluation",
+                status="unavailable",
+            )
+
+        return compute_portfolio_action(
+            ticker=san_ticker,
+            market=resolved_market,
+            scorecard=scorecard,
+            quant_signals=quant_signals,
+            policy=policy,
+            portfolio_state=action_state,
+            current_price=effective_price,
+        )

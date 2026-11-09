@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import CapitalAllocationYieldMeter from './CapitalAllocationYieldMeter'
 import ScenarioTargetSpreadBar from './ScenarioTargetSpreadBar'
+import { DCFScenariosChart } from './DCFScenariosChart'
 import { IllustrativeValueScale } from './explainer/IllustrativeValueScale'
 import { ContextTooltip } from '../macro/explainer/ContextTooltip'
 import type {
@@ -1041,6 +1042,12 @@ export default function ValuationWorkbenchCard({
           ) : (
             <div className="rounded-xl border border-dashed border-edge p-5 text-center text-xs text-zinc-400">
               ไม่มีข้อมูล Scenario Model
+            </div>
+          )}
+
+          {dcf && (
+            <div className="rounded-xl border border-edge/60 bg-surface/50 px-4 py-2">
+              <DCFScenariosChart dcf={dcf} />
             </div>
           )}
         </div>

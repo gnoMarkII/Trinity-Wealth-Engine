@@ -222,6 +222,7 @@ def build_portfolio_application(
         repo=resolved_deps.repo,
         perf_repo=resolved_deps.perf_repo,
         price_provider=resolved_deps.price_provider,
+        dividend_provider=resolved_deps.dividend_provider,
     )
     watchlist_service = PortfolioWatchlistService(
         watchlist_repo=resolved_deps.watchlist_repo,

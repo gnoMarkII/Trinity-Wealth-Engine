@@ -168,11 +168,21 @@ def test_worker_discord_error_does_not_crash_job(mock_db, tmp_path, monkeypatch)
         manifest_path=tmp_path / "manifest.json",
     )
     monkeypatch.setattr("api.notebooklm_worker.run_notebooklm_post_production_pipeline", AsyncMock(return_value=mock_result))
-    # Notifier raises unexpected exception
-    monkeypatch.setattr("core.discord_notifier.send_notebooklm_audio_discord", MagicMock(side_effect=RuntimeError("Discord API down")))
+    mock_send = MagicMock(side_effect=RuntimeError("Discord API down"))
+    monkeypatch.setattr("core.discord_notifier.send_notebooklm_audio_discord", mock_send)
 
-    # Must complete cleanly without raising
+    # Must complete cleanly without raising and record failed delivery without marking card sent
     notebooklm_worker.notebooklm_run_fn("job-4", "thread-4", str(briefing))
+    mock_send.assert_called_once()
+    conn = state_db.get_connection()
+    try:
+        card = state_db.get_kanban_card(conn, "card-4")
+        sent_events = json.loads(card["discord_sent_events"] or "[]")
+        assert "notebooklm:hash12345678" not in sent_events
+        log_rows = conn.execute("SELECT node_name, content FROM job_logs WHERE job_id = ?", ("job-4",)).fetchall()
+        assert any(r["node_name"] == "discord_failed" and "Discord API down" in r["content"] for r in log_rows)
+    finally:
+        conn.close()
 
 
 

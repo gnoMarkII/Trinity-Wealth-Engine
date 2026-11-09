@@ -23,6 +23,7 @@ import { AiBriefingCard } from '../components/macro/cockpit/AiBriefingCard'
 import { AiAnalysisSection } from '../components/macro/cockpit/AiAnalysisSection'
 import { UsMacroSection } from '../components/macro/cockpit/UsMacroSection'
 import { ThailandMacroSection } from '../components/macro/cockpit/ThailandMacroSection'
+import { ThaiMarketRadarCard } from '../components/macro/ThaiMarketRadarCard'
 import { CrossBorderSection } from '../components/macro/cockpit/CrossBorderSection'
 import { SourceProvenanceBadge } from '../components/macro/cockpit/SourceProvenanceBadge'
 import { MacroNotebookLMExport } from '../components/macro/cockpit/MacroNotebookLMExport'
@@ -481,18 +482,21 @@ export default function Macro() {
       )}
 
       {activeTab === 'th' && (
-        <ThailandMacroSection
-          flow={flow}
-          gold={gold}
-          valuation={valuation}
-          breadth={breadth}
-          thaiYieldCurve={thaiYieldCurve}
-          thaiPublicDebt={thaiPublicDebt}
-          aiData={aiData}
-          globalPolicyRates={globalPolicyRates}
-          loading={loadingThai}
-          error={errorThai}
-        />
+        <div className="space-y-6">
+          <ThailandMacroSection
+            flow={flow}
+            gold={gold}
+            valuation={valuation}
+            breadth={breadth}
+            thaiYieldCurve={thaiYieldCurve}
+            thaiPublicDebt={thaiPublicDebt}
+            aiData={aiData}
+            globalPolicyRates={globalPolicyRates}
+            loading={loadingThai}
+            error={errorThai}
+          />
+          <ThaiMarketRadarCard />
+        </div>
       )}
 
       {activeTab === 'cross-border' && (

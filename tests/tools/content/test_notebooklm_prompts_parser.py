@@ -72,6 +72,8 @@ def test_build_research_query_combines_research_tagged_only():
 def test_build_research_query_returns_none_when_no_research_tagged_prompt():
     text = "## NotebookLM Prompts\n\n- [SOCRATIC] คำถาม\n  *Output Format: สั้นๆ*\n"
     prompts = extract_notebooklm_prompts(text)
+    assert len(prompts) == 1
+    assert prompts[0].prompt_type == "SOCRATIC"
     assert build_research_query(prompts) is None
 
 

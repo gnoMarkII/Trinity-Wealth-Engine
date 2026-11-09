@@ -83,6 +83,11 @@ class MarkdownPerformanceAdapter(PerformanceRepositoryPort):
             recorded = _parse_utc(recorded).isoformat().replace("+00:00", "Z")
 
             nav = _decimal(row.get("Total_NAV_THB", row.get("Total_NAV")), default=Decimal("0"))
+            accrued = _decimal(row.get("Accrued_Dividend_Receivable_THB"), default=Decimal("0"))
+            if accrued < Decimal("0"):
+                raise ValueError(f"Accrued_Dividend_Receivable_THB must be non-negative, got {accrued}")
+            econ_raw = row.get("Economic_NAV_THB")
+            economic_nav = _decimal(econ_raw) if econ_raw not in (None, "") else (nav + accrued)
             net_flow = _decimal(row.get("Net_External_Flow_THB", row.get("Net_Cash_Flow")))
             coverage = str(row.get("Flow_Coverage_Status") or _MISSING_FLOW).upper()
             if coverage == "COMPLETE" and net_flow is None:
@@ -132,6 +137,8 @@ class MarkdownPerformanceAdapter(PerformanceRepositoryPort):
                 "Net_External_Flow_THB": _money(net_flow) if net_flow is not None else "",
                 "Flow_Coverage_Status": coverage,
                 "Cash_Flow_Event_IDs_JSON": event_ids_json,
+                "Accrued_Dividend_Receivable_THB": _money(accrued),
+                "Economic_NAV_THB": _money(economic_nav),
             }
             if any(item["Snapshot_ID"] == snapshot_id for item in existing):
                 raise ValueError(f"performance Snapshot_ID already exists: {snapshot_id}")
@@ -172,6 +179,20 @@ class MarkdownPerformanceAdapter(PerformanceRepositoryPort):
                     item["Date"] = date_value[:10]
                     item["Flow_Coverage_Status"] = str(item.get("Flow_Coverage_Status") or _MISSING_FLOW).upper()
                     item["Total_NAV_THB"] = item.get("Total_NAV_THB") or item.get("Total_NAV")
+                    raw_accrued = item.get("Accrued_Dividend_Receivable_THB")
+                    item["Accrued_Dividend_Receivable_THB"] = (
+                        raw_accrued if raw_accrued not in (None, "") else "0.00"
+                    )
+                    raw_econ = item.get("Economic_NAV_THB")
+                    if raw_econ not in (None, ""):
+                        item["Economic_NAV_THB"] = raw_econ
+                    else:
+                        try:
+                            settled_d = _decimal(item["Total_NAV_THB"], default=Decimal("0"))
+                            accrued_d = _decimal(item["Accrued_Dividend_Receivable_THB"], default=Decimal("0"))
+                            item["Economic_NAV_THB"] = _money(settled_d + accrued_d)
+                        except ValueError:
+                            item["Economic_NAV_THB"] = item["Total_NAV_THB"]
                     item["Net_External_Flow_THB"] = item.get("Net_External_Flow_THB") or None
                     if item["Flow_Coverage_Status"] != "COMPLETE":
                         item["Net_External_Flow_THB"] = None

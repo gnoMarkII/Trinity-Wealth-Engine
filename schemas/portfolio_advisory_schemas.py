@@ -79,6 +79,11 @@ class HoldingAdvisoryDTO(BaseModel):
     sector_quadrant: Optional[str] = None
     breached_falsifiers: list[str] = Field(default_factory=list)
     data_warnings: list[str] = Field(default_factory=list)
+    risk_contribution_pct: Optional[float] = None
+    estimated_friction_bps: Optional[float] = None
+    volatility_pct: Optional[float] = None
+    volatility_source: Literal["observed", "estimated_default", "unavailable"] = "unavailable"
+    is_volatility_estimated: bool = False
 
 
 class PortfolioRiskRadarDTO(BaseModel):
@@ -95,11 +100,24 @@ class PortfolioRiskRadarDTO(BaseModel):
     top_3_weight_pct: float = 0.0
     top_5_weight_pct: float = 0.0
     concentration_risk_level: Literal["LOW", "MODERATE", "HIGH"] = "LOW"
+    bucket_active_share_pct: Optional[float] = None
+    bucket_active_share_status: Literal["AVAILABLE", "UNAVAILABLE"] = "AVAILABLE"
+    risk_contributions_pct: dict[str, float] = Field(default_factory=dict)
+    inverse_vol_weights_pct: dict[str, float] = Field(default_factory=dict)
+    total_portfolio_volatility_pct: Optional[float] = None
+    risk_contribution_status: Literal["AVAILABLE", "UNAVAILABLE_ZERO_VARIANCE", "NO_ACTIVE_ASSETS"] = "AVAILABLE"
+    volatility_estimated_symbols: list[str] = Field(default_factory=list)
+    drawdown_pct: Optional[float] = None
+    drawdown_posture_tier: Literal["NORMAL", "TIER_1_CAUTION", "TIER_2_THROTTLE", "TIER_3_DEFENSIVE"] = "NORMAL"
+    drawdown_status: Literal["AVAILABLE", "UNAVAILABLE_UNKNOWN_PEAK"] = "UNAVAILABLE_UNKNOWN_PEAK"
+    drawdown_hurdle_adjustment: float = 0.0
+    drawdown_action_restrictions: list[str] = Field(default_factory=list)
 
 
 class PortfolioAdvisoryNarrativeDTO(BaseModel):
     synthesized_at: str = Field(default="")
     portfolio_state_hash: str = Field(default="")
+    synthesis_input_hash: str = Field(default="")
     macro_executive_summary: str = Field(default="")
     immediate_action_playbook: list[str] = Field(default_factory=list)
     conditional_dip_plan: list[str] = Field(default_factory=list)
@@ -175,6 +193,7 @@ class PortfolioAdvisoryResponseDTO(BaseModel):
     evaluated_at: str
     data_mode: str
     portfolio_state_hash: str
+    synthesis_input_hash: str = ""
     total_nav_thb: float
     cash_plan: DualCurrencyCashPlanDTO
     risk_radar: PortfolioRiskRadarDTO
@@ -195,6 +214,7 @@ class AdvisorySidecarRecord(BaseModel):
     """Obsidian Vault record schema for Portfolio Advisory Sidecars."""
     evaluated_at: str
     portfolio_state_hash: str
+    synthesis_input_hash: str = ""
     data_mode: str
     total_nav_thb: float
     cash_plan: DualCurrencyCashPlanDTO

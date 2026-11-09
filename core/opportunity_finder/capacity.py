@@ -23,6 +23,9 @@ def calculate_candidate_capacity(
     single_stock_cap_pct: Decimal = Decimal("15.0"),
     sector_cap_pct: Decimal = Decimal("30.0"),
     coverage_pct: Decimal = Decimal("100.0"),
+    adtv_thb: Optional[Decimal] = None,
+    max_adv_participation_pct: Decimal = Decimal("5.0"),
+    adtv_unverified_reason: Optional[str] = None,
 ) -> Tuple[CapacityStatus, Optional[Decimal], Optional[Decimal], Optional[Decimal], List[str]]:
     """Compute capacity and exposure room for candidate under existing cash scenario.
 
@@ -31,9 +34,13 @@ def calculate_candidate_capacity(
     """
     reasons: List[str] = []
 
-    if total_nav_thb <= Decimal("0"):
-        reasons.append("Portfolio NAV is zero; capacity not applicable.")
+    if not total_nav_thb.is_finite() or total_nav_thb <= Decimal("0"):
+        reasons.append("Portfolio NAV is zero or non-finite; capacity not applicable.")
         return "not_applicable", Decimal("0"), Decimal("0"), Decimal("0"), reasons
+
+    if not max_adv_participation_pct.is_finite() or max_adv_participation_pct <= Decimal("0"):
+        reasons.append("Max ADV participation threshold is invalid; capacity marked as unknown.")
+        return "unknown", None, None, None, reasons
 
     # 1. Check data coverage completeness (D06 / 8.2)
     # If fund constituent coverage is below 60%, exact room cannot be guaranteed
@@ -78,14 +85,38 @@ def calculate_candidate_capacity(
             f"Deployable cash balance is {deployable_cash:,.0f} THB; cash addition currently constrained under existing-cash scenario."
         )
 
+    # 4.1 Liquidity Room: max_adv_participation_pct of 20d ADTV (fail closed on non-finite / negative / zero ADTV)
+    raw_liq_room: Optional[Decimal] = None
+    if adtv_thb is not None:
+        if not isinstance(adtv_thb, Decimal) or not adtv_thb.is_finite() or adtv_thb < Decimal("0"):
+            reasons.append("20d ADTV value is invalid or non-finite; usable liquidity capacity is unknown.")
+            return "unknown", None, max(Decimal("0"), issuer_room), max(Decimal("0"), sector_room), reasons
+        if adtv_thb == Decimal("0"):
+            raw_liq_room = Decimal("0.00")
+            reasons.append("20d ADTV is 0 THB; no executable market liquidity capacity available.")
+        else:
+            raw_liq_room = ((adtv_thb * max_adv_participation_pct) / Decimal("100.0")).quantize(
+                Decimal("0.01"), rounding=ROUND_HALF_UP
+            )
+    else:
+        reasons.append(
+            adtv_unverified_reason or "20d ADTV unavailable; liquidity capacity is unverified."
+        )
+
     if is_issuer_constrained or is_sector_constrained:
         status: CapacityStatus = "constrained"
         usable_capacity = Decimal("0")
+    elif raw_liq_room is not None and raw_liq_room <= Decimal("0"):
+        status = "constrained"
+        usable_capacity = Decimal("0.00")
     elif is_cash_constrained:
         # Cash account is 0, but portfolio has structural room under policy caps
         status = "available"
         usable_capacity = Decimal("0")
-        structural_room = max(Decimal("0"), min(raw_issuer_room, raw_sector_room)).quantize(
+        caps_to_min = [raw_issuer_room, raw_sector_room]
+        if raw_liq_room is not None:
+            caps_to_min.append(raw_liq_room)
+        structural_room = max(Decimal("0"), min(caps_to_min)).quantize(
             Decimal("0.01"), rounding=ROUND_HALF_UP
         )
         reasons.append(
@@ -94,12 +125,25 @@ def calculate_candidate_capacity(
         )
     else:
         status = "available"
-        usable_capacity = max(Decimal("0"), min(raw_issuer_room, raw_sector_room, deployable_cash)).quantize(
+        caps_to_min = [raw_issuer_room, raw_sector_room, deployable_cash]
+        is_liq_binding = False
+        if raw_liq_room is not None:
+            if raw_liq_room < min(caps_to_min):
+                is_liq_binding = True
+            caps_to_min.append(raw_liq_room)
+
+        usable_capacity = max(Decimal("0"), min(caps_to_min)).quantize(
             Decimal("0.01"), rounding=ROUND_HALF_UP
         )
-        reasons.append(
-            f"Capacity available: up to {usable_capacity:,.0f} THB under {single_stock_cap_pct}% single-stock "
-            f"and {sector_cap_pct}% sector limits."
-        )
+        if is_liq_binding:
+            reasons.append(
+                f"Liquidity capacity limit reached: capped at {usable_capacity:,.0f} THB "
+                f"({max_adv_participation_pct}% of 20d ADTV)."
+            )
+        else:
+            reasons.append(
+                f"Capacity available: up to {usable_capacity:,.0f} THB under {single_stock_cap_pct}% single-stock "
+                f"and {sector_cap_pct}% sector limits."
+            )
 
     return status, usable_capacity, max(Decimal("0"), issuer_room), max(Decimal("0"), sector_room), reasons

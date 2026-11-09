@@ -1,4 +1,5 @@
 """Unit tests for Form 4 bipartite lineage matching, cent precision lot pricing, rate limiter, and quarantine state."""
+from datetime import datetime, timezone
 import pytest
 from decimal import Decimal
 from tools.market.sec_form4_pipeline import parse_form4_xml, derive_canonical_transactions, SecRateLimiter
@@ -187,9 +188,149 @@ def test_form4_ambiguous_amendment_quarantined_not_zero():
         market="US",
         canonical_transactions=canonical,
         quarantine_meta=meta,
+        as_of=datetime(2026, 8, 20, tzinfo=timezone.utc),
     )
 
     assert conviction.status == "requires_review"
     assert conviction.signal_confidence == "unavailable"
     assert conviction.quarantined_filing_count_90d == 2
     assert conviction.quarantined_lot_count_90d == 3
+
+
+def test_sec_edgar_adapter_runs_bipartite_deduplication_on_amendments(monkeypatch):
+    """SecEdgarAdapter._load_insider_trades must supersede original Form 4 via Form 4/A."""
+    from tools.market.terminal_v2.adapters.sec_edgar_adapter import SecEdgarAdapter
+    from tools.market.terminal_v2.application.cache import ThreadSafeTTLCache
+
+    xml_orig = """<?xml version="1.0"?>
+    <ownershipDocument>
+        <documentType>4</documentType>
+        <issuer><issuerCik>0001045810</issuerCik><issuerTradingSymbol>NVDA</issuerTradingSymbol></issuer>
+        <periodOfReport>2026-08-15</periodOfReport>
+        <dateOfOriginalSubmission>2026-08-16</dateOfOriginalSubmission>
+        <reportingOwner><rptOwnerCik>0001234567</rptOwnerCik><rptOwnerName>Doe Jane</rptOwnerName>
+            <reportingOwnerRelationship><isOfficer>1</isOfficer><officerTitle>Chief Financial Officer</officerTitle></reportingOwnerRelationship>
+        </reportingOwner>
+        <nonDerivativeTransaction>
+            <securityTitle><value>Common Stock</value></securityTitle>
+            <transactionDate><value>2026-08-15</value></transactionDate>
+            <transactionCoding><transactionCode>P</transactionCode></transactionCoding>
+            <transactionAmounts>
+                <transactionShares><value>1000</value></transactionShares>
+                <transactionPricePerShare><value>100.00</value></transactionPricePerShare>
+                <transactionAcquiredDisposedCode><value>A</value></transactionAcquiredDisposedCode>
+            </transactionAmounts>
+        </nonDerivativeTransaction>
+    </ownershipDocument>
+    """
+    xml_amd = """<?xml version="1.0"?>
+    <ownershipDocument>
+        <documentType>4/A</documentType>
+        <issuer><issuerCik>0001045810</issuerCik><issuerTradingSymbol>NVDA</issuerTradingSymbol></issuer>
+        <periodOfReport>2026-08-15</periodOfReport>
+        <dateOfOriginalSubmission>2026-08-16</dateOfOriginalSubmission>
+        <reportingOwner><rptOwnerCik>0001234567</rptOwnerCik><rptOwnerName>Doe Jane</rptOwnerName>
+            <reportingOwnerRelationship><isOfficer>1</isOfficer><officerTitle>Chief Financial Officer</officerTitle></reportingOwnerRelationship>
+        </reportingOwner>
+        <nonDerivativeTransaction>
+            <securityTitle><value>Common Stock</value></securityTitle>
+            <transactionDate><value>2026-08-15</value></transactionDate>
+            <transactionCoding><transactionCode>P</transactionCode></transactionCoding>
+            <transactionAmounts>
+                <transactionShares><value>1500</value></transactionShares>
+                <transactionPricePerShare><value>100.00</value></transactionPricePerShare>
+                <transactionAcquiredDisposedCode><value>A</value></transactionAcquiredDisposedCode>
+            </transactionAmounts>
+        </nonDerivativeTransaction>
+    </ownershipDocument>
+    """
+
+    adapter = SecEdgarAdapter(cache=ThreadSafeTTLCache(default_ttl_seconds=60.0))
+    monkeypatch.setattr(
+        adapter,
+        "_fetch_submissions_payload",
+        lambda _cik: {
+            "filings": {
+                "recent": {
+                    "form": ["4", "4/A"],
+                    "accessionNumber": ["0001045810-26-000001", "0001045810-26-000002"],
+                    "primaryDocument": ["orig.xml", "amd.xml"],
+                }
+            }
+        },
+    )
+    monkeypatch.setattr(
+        adapter,
+        "_fetch_form4_xml",
+        lambda _cik_int, acc_clean, _doc: xml_amd if acc_clean.endswith("000002") else xml_orig,
+    )
+
+    snap = adapter.get_insider_trades("NVDA", limit=10)
+    assert len(snap.transactions) == 1
+    assert snap.transactions[0].accession_number == "0001045810-26-000002"
+    assert snap.transactions[0].shares == 1500.0
+    assert snap.p_notional_sum_90d == 150000.0
+
+
+def test_ownership_uses_derive_canonical_transactions_for_sec_snapshot(monkeypatch):
+    """compute_canonical_insider_conviction must supersede Form 4 with Form 4/A when returned in SecInsiderTradeSnapshot."""
+    from types import SimpleNamespace
+    from tools.market.terminal_v2.domain.models import InsiderTransaction
+
+    fake_snap = SimpleNamespace(
+        cik="0001045810",
+        limitations=(),
+        transactions=(
+            InsiderTransaction(
+                transaction_date="2026-08-15",
+                reporting_owner="Doe Jane",
+                officer_title="Chief Financial Officer",
+                is_officer=True,
+                is_director=False,
+                is_ten_percent_owner=False,
+                transaction_code="P",
+                shares=1000.0,
+                price_per_share=100.0,
+                notional_usd=100000.0,
+                direct_or_indirect="D",
+                accession_number="0001-orig",
+                is_amendment=False,
+                is_10b51=False,
+            ),
+            InsiderTransaction(
+                transaction_date="2026-08-15",
+                reporting_owner="Doe Jane",
+                officer_title="Chief Financial Officer",
+                is_officer=True,
+                is_director=False,
+                is_ten_percent_owner=False,
+                transaction_code="P",
+                shares=1500.0,
+                price_per_share=100.0,
+                notional_usd=150000.0,
+                direct_or_indirect="D",
+                accession_number="0001-amd",
+                is_amendment=True,
+                is_10b51=False,
+            ),
+        ),
+    )
+
+    class _FakeTerminal:
+        def get_insider_trades(self, ticker, limit=30):
+            return fake_snap
+
+    monkeypatch.setattr(
+        "tools.market.terminal_v2.bootstrap.get_terminal_data_service",
+        lambda: _FakeTerminal(),
+    )
+
+    conviction, _ = compute_canonical_insider_conviction(
+        ticker="NVDA",
+        market="US",
+        as_of=datetime(2026, 8, 20, tzinfo=timezone.utc),
+    )
+    assert conviction.open_market_p_count_90d == 1
+    assert conviction.open_market_p_value_cents == 15_000_000
+    assert conviction.amendment_unresolved is False
+

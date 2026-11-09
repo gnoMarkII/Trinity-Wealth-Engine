@@ -589,6 +589,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/portfolio/actual/performance/snapshot-all": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Trigger Performance Snapshot All */
+        post: operations["trigger_performance_snapshot_all_api_portfolio_actual_performance_snapshot_all_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/macro/sector-rotation/latest": {
         parameters: {
             query?: never;
@@ -855,6 +872,266 @@ export interface paths {
         put?: never;
         /** Retry Macro Notebooklm Export */
         post: operations["retry_macro_notebooklm_export_api_macro_notebooklm_exports__export_id__retry_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/macro/digest/candidates": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Digest Candidates
+         * @description Fetch pre-LLM news and YouTube candidates with freshness verification.
+         */
+        get: operations["get_digest_candidates_api_macro_digest_candidates_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/macro/digest/daily": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Daily Digest
+         * @description Get latest or historical daily digest with freshness and read status.
+         */
+        get: operations["get_daily_digest_api_macro_digest_daily_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/macro/digest/daily/synthesize": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Synthesize Daily Digest
+         * @description Trigger single-call one-shot LLM synthesis for Daily Digest.
+         */
+        post: operations["synthesize_daily_digest_api_macro_digest_daily_synthesize_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/macro/digest/weekly": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Weekly Digest
+         * @description Get latest or historical weekly digest.
+         */
+        get: operations["get_weekly_digest_api_macro_digest_weekly_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/macro/digest/weekly/synthesize": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Synthesize Weekly Digest
+         * @description Synthesize weekly multi-asset intelligence matrix.
+         */
+        post: operations["synthesize_weekly_digest_api_macro_digest_weekly_synthesize_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/macro/digest/read-state": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Update Digest Read State
+         * @description Mark digest items as read or unread.
+         */
+        post: operations["update_digest_read_state_api_macro_digest_read_state_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/macro/vintage-walk": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Point-in-Time Macro Vintage Walk & Subsequent Revision (Chapter 6 & App H)
+         * @description Calculates Point-in-Time Macro Vintage As-Of values and subsequent revisions without look-ahead bias.
+         */
+        get: operations["get_macro_vintage_walk_endpoint_api_macro_vintage_walk_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/portfolio/advisory": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Tier 1 Portfolio Advisory Report and Cached Playbook
+         * @description Returns deterministic Tier 1 cross-scale advice and cached AI playbook in < 50ms.
+         */
+        get: operations["get_portfolio_advisory_endpoint_api_portfolio_advisory_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/portfolio/advisory/synthesize": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Synthesize AI Strategic Playbook
+         * @description Executes single-pass Tier 2 strategic playbook synthesis and validates consistency against numbers.
+         */
+        post: operations["synthesize_advisory_playbook_endpoint_api_portfolio_advisory_synthesize_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/portfolio/factor-exposure": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Chapter 8 Factor Exposure & Missing Price Invariant Snapshot
+         * @description Returns Chapter 8 Gross/Net Exposure, Long/Short breakdown, and 1-Factor Beta.
+         */
+        get: operations["get_factor_exposure_endpoint_api_portfolio_factor_exposure_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/portfolio/funds/{symbol}/constituents": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get single fund top holdings, sector breakdown, and asset allocation
+         * @description Returns look-through constituent holdings and sector distributions for a Thai mutual fund or PVD symbol.
+         */
+        get: operations["get_fund_constituents_endpoint_api_portfolio_funds__symbol__constituents_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/portfolio/{portfolio_id}/look-through": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get portfolio-wide look-through overlap and true economic exposure
+         * @description Calculates cross-fund equity overlaps, true sector allocations, and hidden concentration caps for a portfolio.
+         */
+        get: operations["get_portfolio_look_through_endpoint_api_portfolio__portfolio_id__look_through_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/portfolio/watchlist/opportunities": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get 3D Smart Opportunity Finder candidates for portfolio watchlist
+         * @description Evaluate investable candidates across Macro Alignment, Investor Axis, and Portfolio Capacity.
+         */
+        get: operations["get_portfolio_opportunities_api_portfolio_watchlist_opportunities_get"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -1648,6 +1925,74 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/equity/{ticker}/notebooklm/exports": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Freeze equity corpus bundle and dispatch to NotebookLM research pipeline */
+        post: operations["export_equity_to_notebooklm_api_equity__ticker__notebooklm_exports_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/equity/{ticker}/notebooklm/exports/latest": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get the most recent NotebookLM export status for a ticker */
+        get: operations["get_latest_equity_notebooklm_export_api_equity__ticker__notebooklm_exports_latest_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/equity/notebooklm/exports/{export_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get export status and manifest source details by export ID */
+        get: operations["get_equity_notebooklm_export_by_id_api_equity_notebooklm_exports__export_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/equity/notebooklm/exports/{export_id}/retry": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Retry a failed or partial equity export using its existing frozen bundle */
+        post: operations["retry_equity_notebooklm_export_api_equity_notebooklm_exports__export_id__retry_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/equity/{ticker}/valuation-targets": {
         parameters: {
             query?: never;
@@ -1799,6 +2144,166 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/equity/{ticker}/earnings-call/ledger": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get 8-Quarter Promise Check Ledger & Scores
+         * @description Retrieve existing 8-quarter earnings commitments, resolution status, and credibility metrics.
+         */
+        get: operations["get_promise_ledger_api_equity__ticker__earnings_call_ledger_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/equity/{ticker}/earnings-call/sync": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Sync Rolling 8-Quarter Earnings Transcripts & Recalculate Scores
+         * @description Discovers earnings calls, ingests transcripts, resolves promises, and persists credibility metrics.
+         */
+        post: operations["sync_promise_ledger_api_equity__ticker__earnings_call_sync_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/equity/{ticker}/earnings-bridge": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Deterministic Reported-vs-Expected Earnings Surprise Bridge
+         * @description Computes deterministic driver bridge comparing reported vs consensus earnings (Chapter 5).
+         */
+        get: operations["get_earnings_bridge_api_equity__ticker__earnings_bridge_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/equity/event-study/presets": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Event Study Presets
+         * @description Lists all available historical event study presets.
+         */
+        get: operations["get_event_study_presets_api_equity_event_study_presets_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/equity/{ticker}/event-study": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Execute Event Study
+         * @description Executes a quantitative Event Study for a stock across specified event dates.
+         */
+        post: operations["execute_event_study_api_equity__ticker__event_study_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/equity/{ticker}/position-review": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Position Review
+         * @description Retrieves comprehensive single-stock Position Review analysis.
+         */
+        get: operations["get_position_review_api_equity__ticker__position_review_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/equity/{ticker}/variant-perception": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Variant Perception
+         * @description Computes three-way surprise: Street Surprise vs Fund Variant Realization vs Prior Spread.
+         */
+        get: operations["get_variant_perception_api_equity__ticker__variant_perception_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/equity/{ticker}/estimates-ledger": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Estimates Ledger
+         * @description Retrieves immutable chronological revision trail of estimates for a ticker.
+         */
+        get: operations["get_estimates_ledger_api_equity__ticker__estimates_ledger_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/equity/{ticker}": {
         parameters: {
             query?: never;
@@ -1879,6 +2384,26 @@ export interface paths {
          * @description ตรวจสอบสุขภาพของ components ต่างๆ ในระบบ (API, Database, Job Worker, Market Provider, LLM)
          */
         get: operations["get_component_health_api_health_components_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/health/harness-telemetry": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Harness Telemetry
+         * @description สถิติรวมของ Probe Telemetry และ Continuous Learning Loop (Pareto issues, recovery rates)
+         */
+        get: operations["get_harness_telemetry_api_health_harness_telemetry_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -2994,6 +3519,474 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/manager/sessions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Sessions
+         * @description Retrieve chat sessions ordered by latest activity.
+         */
+        get: operations["list_sessions_api_manager_sessions_get"];
+        put?: never;
+        /**
+         * Create Session
+         * @description Create a new chat session.
+         */
+        post: operations["create_session_api_manager_sessions_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/manager/sessions/{session_id}/messages": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Messages
+         * @description Retrieve chat history for a session.
+         */
+        get: operations["get_messages_api_manager_sessions__session_id__messages_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/manager/sessions/{session_id}/stream": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Stream Chat
+         * @description Stream advisor response turns via clean SSE events without technical telemetry noise.
+         */
+        post: operations["stream_chat_api_manager_sessions__session_id__stream_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/manager/sandbox/state": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Sandbox State
+         * @description Retrieve current state of files, skills, and memory in manager_sandbox/.
+         */
+        get: operations["get_sandbox_state_api_manager_sandbox_state_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/manager/hermes/sync-status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Hermes Sync Status
+         * @description Check git status of upstream NousResearch/hermes-agent.
+         */
+        get: operations["get_hermes_sync_status_api_manager_hermes_sync_status_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/manager/hermes/sync": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Trigger Hermes Sync
+         * @description Pull upstream updates for NousResearch/hermes-agent.
+         */
+        post: operations["trigger_hermes_sync_api_manager_hermes_sync_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/manager/sandbox/skills/{skill_name}/promote": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Promote Skill
+         * @description Promote a verified quarantined skill to active status.
+         */
+        post: operations["promote_skill_api_manager_sandbox_skills__skill_name__promote_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/manager/pm-review/today": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Today Morning Packet
+         * @description Retrieves the 2-minute morning delta briefing packet for today.
+         */
+        get: operations["get_today_morning_packet_api_manager_pm_review_today_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/manager/pm-review/sign-off": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Sign Off Morning Review
+         * @description Records human PM sign-off and acknowledges exceptions with tamper-proof checksum.
+         */
+        post: operations["sign_off_morning_review_api_manager_pm_review_sign_off_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/manager/pm-review/history": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Signoff History
+         * @description Retrieves historical morning review sign-offs.
+         */
+        get: operations["get_signoff_history_api_manager_pm_review_history_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/thesis/catalyst-exceptions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Catalyst Exceptions
+         * @description Retrieves all active factual catalyst exceptions awaiting PM review.
+         */
+        get: operations["get_catalyst_exceptions_api_thesis_catalyst_exceptions_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/thesis/catalyst-exceptions/{exception_id}/review": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Review Catalyst Exception
+         * @description PM enters human materiality assessment and acknowledges the factual exception.
+         */
+        post: operations["review_catalyst_exception_api_thesis_catalyst_exceptions__exception_id__review_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/thesis/{ticker}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Active Thesis
+         * @description Retrieves the current active thesis claim for a ticker.
+         */
+        get: operations["get_active_thesis_api_thesis__ticker__get"];
+        put?: never;
+        /**
+         * Record Or Revise Thesis
+         * @description Records a new thesis or appends a revision to the append-only ledger.
+         */
+        post: operations["record_or_revise_thesis_api_thesis__ticker__post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/thesis/{ticker}/as-of": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Thesis As Of
+         * @description Time-travel query: returns the active thesis in effect at a historical point in time.
+         */
+        get: operations["get_thesis_as_of_api_thesis__ticker__as_of_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/thesis/evaluate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Evaluate Watchdog Scan
+         * @description Manually triggers watchdog evaluation for active theses.
+         */
+        post: operations["evaluate_watchdog_scan_api_thesis_evaluate_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/thesis/synthesize/{ticker}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Synthesize Thesis For Ticker
+         * @description Synthesizes structured thesis and 3-pillar falsifiers for a ticker.
+         */
+        post: operations["synthesize_thesis_for_ticker_api_thesis_synthesize__ticker__post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/thesis/batch-synthesize": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Batch Synthesize Portfolio Theses
+         * @description Batch-synthesizes theses for all uncovered assets in the portfolio.
+         */
+        post: operations["batch_synthesize_portfolio_theses_api_thesis_batch_synthesize_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/thesis/earnings-bridge": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Generate Earnings Bridge
+         * @description Calculates deterministic reported-vs-expected driver bridge with math invariant validation.
+         */
+        post: operations["generate_earnings_bridge_api_thesis_earnings_bridge_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/governance/route-task": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Route Task
+         * @description Evaluates the Six-Condition Test and selects the execution surface.
+         */
+        post: operations["route_task_api_governance_route_task_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/governance/routing-ledger": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Routing Ledger
+         * @description Retrieves immutable audit history of all routed tasks.
+         */
+        get: operations["get_routing_ledger_api_governance_routing_ledger_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/resilience/routine-status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Routine Status
+         * @description Returns freshness report and late/missed run status for the morning review.
+         */
+        get: operations["get_routine_status_api_resilience_routine_status_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/resilience/heartbeat": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Record Heartbeat
+         * @description Records an automated worker routine execution heartbeat.
+         */
+        post: operations["record_heartbeat_api_resilience_heartbeat_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/resilience/routine-history": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Routine History
+         * @description Retrieves full audit log of all scheduled routine runs.
+         */
+        get: operations["get_routine_history_api_resilience_routine_history_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/health": {
         parameters: {
             query?: never;
@@ -3057,6 +4050,32 @@ export interface components {
             portfolio_id: string | null;
             /** Bucket Id */
             bucket_id?: string | null;
+            /**
+             * Priority Tier
+             * @default wants
+             */
+            priority_tier: ("needs" | "wants" | "wishes") | null;
+            /**
+             * Flexibility
+             * @default none
+             */
+            flexibility: ("none" | "timeline_flexible" | "amount_flexible" | "fully_flexible") | null;
+            /**
+             * Monthly Savings Thb
+             * @default 0
+             */
+            monthly_savings_thb: number;
+            /** Required Return Pct */
+            required_return_pct?: number | null;
+            /**
+             * Tension Level
+             * @default BALANCED
+             */
+            tension_level: ("BALANCED" | "MODERATE_TENSION" | "CRITICAL_TENSION" | "INSUFFICIENT_DATA") | null;
+            /** Adjustment Levers */
+            adjustment_levers?: {
+                [key: string]: unknown;
+            } | null;
         };
         /** ActualGoalsResponseDTO */
         ActualGoalsResponseDTO: {
@@ -3232,6 +4251,18 @@ export interface components {
             added_date: string;
             /** Notes */
             notes?: string | null;
+            /** Suggested Bucket Id */
+            suggested_bucket_id?: string | null;
+            /** Applied Bucket Name */
+            applied_bucket_name?: string | null;
+            /** Target Price Basis */
+            target_price_basis?: string | null;
+            /** Target Currency */
+            target_currency?: string | null;
+            /** Evaluation Ref */
+            evaluation_ref?: string | null;
+            /** Source Refs */
+            source_refs?: string[] | null;
         };
         /** ActualWatchlistStateDTO */
         ActualWatchlistStateDTO: {
@@ -3252,6 +4283,47 @@ export interface components {
              * @default 1.0
              */
             prompt_version: string;
+        };
+        /** AdvisorChatMessageDTO */
+        AdvisorChatMessageDTO: {
+            /** Id */
+            id: string;
+            /** Session Id */
+            session_id: string;
+            /** Role */
+            role: string;
+            /** Content */
+            content: string;
+            /** Citations */
+            citations: string[];
+            /** Created At */
+            created_at: string;
+        };
+        /** AdvisorChatPromptRequest */
+        AdvisorChatPromptRequest: {
+            /**
+             * Message
+             * @description User prompt message
+             */
+            message: string;
+            /**
+             * Context Refs
+             * @description Referenced context items (@Portfolio, $Ticker, etc.)
+             */
+            context_refs?: string[];
+        };
+        /** AdvisorSessionDTO */
+        AdvisorSessionDTO: {
+            /** Id */
+            id: string;
+            /** Title */
+            title: string;
+            /** Created At */
+            created_at: string;
+            /** Updated At */
+            updated_at: string;
+            /** Message Count */
+            message_count: number;
         };
         /** AllocationApplyReceiptResponse */
         AllocationApplyReceiptResponse: {
@@ -3724,6 +4796,15 @@ export interface components {
             /** Limitations */
             limitations?: string[];
         };
+        /** AverageTrajectoryPointDTO */
+        AverageTrajectoryPointDTO: {
+            /** Day Offset */
+            day_offset: number;
+            /** Avg Return Pct */
+            avg_return_pct: number;
+            /** Sample Count */
+            sample_count: number;
+        };
         /** AxisDraftResponse */
         AxisDraftResponse: {
             /** Draft Id */
@@ -3806,6 +4887,19 @@ export interface components {
              * @default []
              */
             symbols: string[];
+        };
+        /** BatchSynthesizeRequestDTO */
+        BatchSynthesizeRequestDTO: {
+            /**
+             * Portfolio Id
+             * @default default
+             */
+            portfolio_id: string;
+            /**
+             * Dry Run
+             * @default false
+             */
+            dry_run: boolean;
         };
         /** Body_analyze_pvd_upload_api_portfolio_pvd_analyze_upload_post */
         Body_analyze_pvd_upload_api_portfolio_pvd_analyze_upload_post: {
@@ -3946,6 +5040,141 @@ export interface components {
             /** Eps High */
             eps_high?: number | null;
         };
+        /**
+         * CandidateEvaluationResultDTO
+         * @description Consolidated 3D evaluation result for a candidate.
+         */
+        CandidateEvaluationResultDTO: {
+            /** @description Candidate details */
+            candidate: components["schemas"]["OpportunityCandidateDTO"];
+            /**
+             * Policy Fit
+             * @description Investor principles fit: pass, fail, needs_review
+             */
+            policy_fit: string;
+            /**
+             * Policy Reasons
+             * @description Provenance rationale for policy evaluation
+             */
+            policy_reasons?: string[];
+            /**
+             * Suggested Bucket Id
+             * @description Suggested allocation bucket ID from applied policy
+             */
+            suggested_bucket_id?: string | null;
+            /**
+             * Applied Bucket Name
+             * @description Applied allocation bucket display name
+             */
+            applied_bucket_name?: string | null;
+            /**
+             * Evidence Readiness
+             * @description Equity research readiness: sufficient, partial, stale, unavailable
+             */
+            evidence_readiness: string;
+            /**
+             * Composite Score
+             * @description Micro quant composite score (0-100)
+             */
+            composite_score?: number | null;
+            /**
+             * Valuation Upside Pct
+             * @description Estimated fundamental upside percentage
+             */
+            valuation_upside_pct?: number | null;
+            /**
+             * Target Price
+             * @description Fair value / target price in local currency
+             */
+            target_price?: number | null;
+            /**
+             * Target Price Basis
+             * @description Methodology basis of target price
+             */
+            target_price_basis?: string | null;
+            /**
+             * Moat Rating
+             * @description Economic moat rating (Wide, Narrow, None)
+             */
+            moat_rating?: string | null;
+            /**
+             * Evidence Reasons
+             * @description Evidence status rationale
+             */
+            evidence_reasons?: string[];
+            /**
+             * Macro Alignment
+             * @description Macro sector alignment: tailwind, neutral, headwind, unavailable
+             */
+            macro_alignment: string;
+            /**
+             * Macro Stage
+             * @description Sector rotation quadrant (Leading, Improving, Weakening, Lagging)
+             */
+            macro_stage?: string | null;
+            /**
+             * Macro Reasons
+             * @description Macro alignment rationale
+             */
+            macro_reasons?: string[];
+            /**
+             * Capacity Status
+             * @description Portfolio room status: available, constrained, unknown, not_applicable
+             */
+            capacity_status: string;
+            /**
+             * Remaining Capacity Thb
+             * @description Remaining deployable capacity in THB
+             */
+            remaining_capacity_thb?: number | null;
+            /**
+             * Issuer Room Thb
+             * @description Remaining single-stock room in THB before Cap
+             */
+            issuer_room_thb?: number | null;
+            /**
+             * Sector Room Thb
+             * @description Remaining sector room in THB before Cap
+             */
+            sector_room_thb?: number | null;
+            /**
+             * Capacity Reasons
+             * @description Capacity calculation rationale
+             */
+            capacity_reasons?: string[];
+            /**
+             * Research Priority
+             * @description 1: High Conviction, 2: Secondary, 3: Watch/Monitor, 4: Review Needed
+             * @default 3
+             */
+            research_priority: number;
+            /**
+             * Priority Reasons
+             * @description Priority determination rationale
+             */
+            priority_reasons?: string[];
+            /**
+             * Is Actionable
+             * @description True if passes policy, has room, and ready for study
+             * @default false
+             */
+            is_actionable: boolean;
+            /**
+             * Liquidity Status
+             * @description ADTV liquidity check status
+             */
+            liquidity_status?: string | null;
+            /**
+             * Adtv Thb
+             * @description Dated 20-day ADTV converted to THB
+             */
+            adtv_thb?: number | null;
+            /**
+             * Liquidity Room Thb
+             * @description 5% ADTV liquidity participation cap in THB
+             */
+            liquidity_room_thb?: number | null;
+        };
         /** CashFlowRequestDTO */
         CashFlowRequestDTO: {
             /** Amount */
@@ -3970,6 +5199,73 @@ export interface components {
              * @default
              */
             notes: string;
+            /** Idempotency Key */
+            idempotency_key?: string | null;
+        };
+        /** CatalystEventDTO */
+        CatalystEventDTO: {
+            /** Catalyst Id */
+            catalyst_id: string;
+            /** Event Name */
+            event_name: string;
+            /** Expected Date Str */
+            expected_date_str: string;
+            /**
+             * Confidence Window Days
+             * @default 7
+             */
+            confidence_window_days: number;
+            /**
+             * Source Locator
+             * @default
+             */
+            source_locator: string;
+            /**
+             * Status
+             * @default PENDING
+             */
+            status: string;
+            /** Observed Date Str */
+            observed_date_str?: string | null;
+        };
+        /**
+         * CatalystExceptionDTO
+         * @description Factual catalyst exception item awaiting human PM review.
+         */
+        CatalystExceptionDTO: {
+            /** Exception Id */
+            exception_id: string;
+            /** Catalyst Id */
+            catalyst_id: string;
+            /** Entity Id */
+            entity_id: string;
+            /** Classification */
+            classification: string;
+            /** Source Id */
+            source_id: string;
+            /** Observed Fact */
+            observed_fact: string;
+            /** Prior Date */
+            prior_date?: string | null;
+            /** New Date */
+            new_date?: string | null;
+            /**
+             * Analyst Field
+             * @default materiality_assessment
+             */
+            analyst_field: string;
+            /** Human Assessment */
+            human_assessment?: string | null;
+            /**
+             * Status
+             * @default REVIEW_REQUIRED
+             */
+            status: string;
+            /**
+             * Detected Utc
+             * @default
+             */
+            detected_utc: string;
         };
         /** ClaimSchema */
         ClaimSchema: {
@@ -4262,6 +5558,44 @@ export interface components {
             /** Portfolio Id */
             portfolio_id?: string | null;
         };
+        /** CreateSessionRequest */
+        CreateSessionRequest: {
+            /**
+             * Title
+             * @description Session title
+             * @default บทสนทนาใหม่
+             */
+            title: string | null;
+        };
+        /** CreateThesisRequestDTO */
+        CreateThesisRequestDTO: {
+            /**
+             * Claim Statement
+             * @description Core thesis statement
+             */
+            claim_statement: string;
+            /** Falsifiers */
+            falsifiers?: components["schemas"]["FalsifierRuleDTO"][];
+            /** Catalysts */
+            catalysts?: components["schemas"]["CatalystEventDTO"][];
+            /**
+             * Evidence Tier
+             * @default DOCUMENTED
+             */
+            evidence_tier: string;
+            /**
+             * Author Role
+             * @default HUMAN_PM
+             */
+            author_role: string;
+            /**
+             * Prior Claim Id
+             * @description Set for revisions
+             */
+            prior_claim_id?: string | null;
+            /** As Of Utc */
+            as_of_utc?: string | null;
+        };
         /** CryptoBenchmarkResponse */
         CryptoBenchmarkResponse: {
             /**
@@ -4386,6 +5720,353 @@ export interface components {
              * @enum {string}
              */
             color: "emerald" | "green" | "rose" | "zinc";
+        };
+        /** DailyDigestItemDTO */
+        DailyDigestItemDTO: {
+            /** Source Candidate Id */
+            source_candidate_id: string;
+            /** Thai Headline */
+            thai_headline: string;
+            /** What Happened */
+            what_happened: string;
+            /** Why It Matters */
+            why_it_matters: string;
+            /**
+             * Thesis Signal
+             * @enum {string}
+             */
+            thesis_signal: "thesis_breaker" | "buy_on_dip" | "thesis_reinforcer" | "noise";
+            /**
+             * Impact Type
+             * @enum {string}
+             */
+            impact_type: "direct_holding" | "fund_lookthrough" | "watchlist" | "second_order" | "macro_general";
+            /** Affected Tickers */
+            affected_tickers?: string[];
+            /** Affected Sectors */
+            affected_sectors?: string[];
+            /**
+             * Macro Impact Score
+             * @default 5
+             */
+            macro_impact_score: number;
+            /**
+             * Asset Impact Score
+             * @default 5
+             */
+            asset_impact_score: number;
+            /**
+             * Time Horizon
+             * @default short_term
+             * @enum {string}
+             */
+            time_horizon: "short_term" | "structural";
+            /** Youtube Corroboration */
+            youtube_corroboration?: string | null;
+            /**
+             * Source
+             * @default Daily Digest
+             */
+            source: string;
+            /**
+             * Link
+             * @default
+             */
+            link: string;
+            /** Links */
+            links?: string[];
+            /** Published At */
+            published_at?: string | null;
+            /**
+             * Age Hours
+             * @default 0
+             */
+            age_hours: number;
+            /**
+             * Freshness Tier
+             * @default ultra_fresh
+             */
+            freshness_tier: string;
+            /**
+             * Freshness Label
+             * @default
+             */
+            freshness_label: string;
+            /** Portfolio Badges */
+            portfolio_badges?: components["schemas"]["DigestPortfolioBadgeDTO"][];
+            /**
+             * Is Read
+             * @default false
+             */
+            is_read: boolean;
+            /**
+             * Is New
+             * @default false
+             */
+            is_new: boolean;
+        };
+        /** DailyDigestPayloadDTO */
+        DailyDigestPayloadDTO: {
+            /** Digest Id */
+            digest_id: string;
+            /** Date */
+            date: string;
+            /** Period */
+            period: string;
+            /** Generated At */
+            generated_at: string;
+            /**
+             * Market Mood
+             * @enum {string}
+             */
+            market_mood: "risk_on" | "risk_off" | "mixed";
+            /** Market Mood Summary */
+            market_mood_summary: string;
+            /** Transmission Chain */
+            transmission_chain: string;
+            /** Top Portfolio Focus */
+            top_portfolio_focus: string;
+            /** Selected Video Ids */
+            selected_video_ids?: string[];
+            /**
+             * Items
+             * @default []
+             */
+            items: components["schemas"]["DailyDigestItemDTO"][];
+            /**
+             * Youtube Highlights
+             * @default []
+             */
+            youtube_highlights: components["schemas"]["DailyYouTubeHighlightDTO"][];
+        };
+        /** DailyDigestResponseDTO */
+        DailyDigestResponseDTO: {
+            /** Has Digest */
+            has_digest: boolean;
+            digest?: components["schemas"]["DailyDigestPayloadDTO"] | null;
+            /**
+             * Snapshot Age Hours
+             * @default 0
+             */
+            snapshot_age_hours: number;
+            /**
+             * Is Snapshot Stale
+             * @default false
+             */
+            is_snapshot_stale: boolean;
+            /**
+             * Fresh Pending Count
+             * @default 0
+             */
+            fresh_pending_count: number;
+            /** Available Dates */
+            available_dates?: string[];
+        };
+        /** DailyDigestSynthesizeRequestDTO */
+        DailyDigestSynthesizeRequestDTO: {
+            /** Selected Video Ids */
+            selected_video_ids?: string[];
+            /** Excluded News Ids */
+            excluded_news_ids?: string[];
+            /** Custom Youtube Urls */
+            custom_youtube_urls?: string[];
+            /** Custom News Items */
+            custom_news_items?: string[];
+        };
+        /** DailyYouTubeHighlightDTO */
+        DailyYouTubeHighlightDTO: {
+            /** Video Id */
+            video_id: string;
+            /** Thai Title */
+            thai_title: string;
+            /** Channel */
+            channel: string;
+            /** Key Takeaways */
+            key_takeaways?: string[];
+            /** Mentioned Tickers */
+            mentioned_tickers?: string[];
+            /**
+             * Alignment With News
+             * @default independent
+             * @enum {string}
+             */
+            alignment_with_news: "confirmed" | "contrarian" | "independent";
+            /**
+             * Alignment Note
+             * @default
+             */
+            alignment_note: string;
+        };
+        /** DataAnomalyWarningDTO */
+        DataAnomalyWarningDTO: {
+            /** Guardrail Code */
+            guardrail_code: string;
+            /** Ticker */
+            ticker: string;
+            /** Message */
+            message: string;
+            /**
+             * Severity
+             * @default warning
+             * @enum {string}
+             */
+            severity: "critical" | "warning" | "info";
+            /**
+             * Remedy Hint
+             * @default
+             */
+            remedy_hint: string;
+        };
+        /** DigestCandidatesResponseDTO */
+        DigestCandidatesResponseDTO: {
+            /** Last Fetched At */
+            last_fetched_at?: string | null;
+            /**
+             * News Candidates
+             * @default []
+             */
+            news_candidates: components["schemas"]["DigestNewsCandidateDTO"][];
+            /**
+             * Youtube Candidates
+             * @default []
+             */
+            youtube_candidates: components["schemas"]["DigestYouTubeCandidateDTO"][];
+            /**
+             * Stale Dropped Count
+             * @default 0
+             */
+            stale_dropped_count: number;
+        };
+        /** DigestNewsCandidateDTO */
+        DigestNewsCandidateDTO: {
+            /** Candidate Id */
+            candidate_id: string;
+            /** Title */
+            title: string;
+            /**
+             * Summary
+             * @default
+             */
+            summary: string;
+            /** Source */
+            source: string;
+            /** Links */
+            links?: string[];
+            /**
+             * Sources Count
+             * @default 1
+             */
+            sources_count: number;
+            /** Published At */
+            published_at?: string | null;
+            /**
+             * Age Hours
+             * @default 0
+             */
+            age_hours: number;
+            /**
+             * Freshness Tier
+             * @default fresh_today
+             */
+            freshness_tier: string;
+            /**
+             * Freshness Label
+             * @default
+             */
+            freshness_label: string;
+            /**
+             * Is Stale
+             * @default false
+             */
+            is_stale: boolean;
+            /** Matched Tickers */
+            matched_tickers?: string[];
+            /** Portfolio Badges */
+            portfolio_badges?: components["schemas"]["DigestPortfolioBadgeDTO"][];
+        };
+        /** DigestPortfolioBadgeDTO */
+        DigestPortfolioBadgeDTO: {
+            /** Symbol */
+            symbol: string;
+            /** Company Name */
+            company_name?: string | null;
+            /**
+             * Impact Type
+             * @enum {string}
+             */
+            impact_type: "direct_holding" | "fund_lookthrough" | "watchlist";
+            /** Weight Pct */
+            weight_pct?: number | null;
+            /** Unrealized Pnl Pct */
+            unrealized_pnl_pct?: number | null;
+            /** Source Fund Codes */
+            source_fund_codes?: string[];
+            /** Target Entry Price */
+            target_entry_price?: number | null;
+            /** Sector */
+            sector?: string | null;
+        };
+        /** DigestReadStateRequestDTO */
+        DigestReadStateRequestDTO: {
+            /** Item Ids */
+            item_ids?: string[];
+            /**
+             * Mark As Read
+             * @default true
+             */
+            mark_as_read: boolean;
+        };
+        /** DigestReadStateResponseDTO */
+        DigestReadStateResponseDTO: {
+            /**
+             * Ok
+             * @default true
+             */
+            ok: boolean;
+            /** Read Item Ids */
+            read_item_ids?: string[];
+        };
+        /** DigestYouTubeCandidateDTO */
+        DigestYouTubeCandidateDTO: {
+            /** Video Id */
+            video_id: string;
+            /** Title */
+            title: string;
+            /** Channel */
+            channel: string;
+            /** Link */
+            link: string;
+            /** Published At */
+            published_at?: string | null;
+            /**
+             * Age Hours
+             * @default 0
+             */
+            age_hours: number;
+            /**
+             * Freshness Tier
+             * @default fresh_today
+             */
+            freshness_tier: string;
+            /**
+             * Freshness Label
+             * @default
+             */
+            freshness_label: string;
+            /**
+             * Thumbnail
+             * @default
+             */
+            thumbnail: string;
+            /**
+             * Is Fetched
+             * @default false
+             */
+            is_fetched: boolean;
+            /** Cached Summary Snippet */
+            cached_summary_snippet?: string | null;
+            /** Cached Tickers */
+            cached_tickers?: string[];
         };
         /** DimeBatchScanRequestDTO */
         DimeBatchScanRequestDTO: {
@@ -4638,6 +6319,132 @@ export interface components {
              */
             fx_rate: number;
         };
+        /** DualCurrencyCashPlanDTO */
+        DualCurrencyCashPlanDTO: {
+            /** Cash Thb Available */
+            cash_thb_available: number;
+            /** Cash Usd Available */
+            cash_usd_available: number;
+            /** Usd Thb Fx Rate */
+            usd_thb_fx_rate: number;
+            /**
+             * Immediate Deploy Thb
+             * @default 0
+             */
+            immediate_deploy_thb: number;
+            /**
+             * Immediate Deploy Usd
+             * @default 0
+             */
+            immediate_deploy_usd: number;
+            /**
+             * Conditional Limit Order Thb
+             * @default 0
+             */
+            conditional_limit_order_thb: number;
+            /**
+             * Conditional Limit Order Usd
+             * @default 0
+             */
+            conditional_limit_order_usd: number;
+            /**
+             * Thb Surplus After Immediate
+             * @default 0
+             */
+            thb_surplus_after_immediate: number;
+            /**
+             * Usd Surplus After Immediate
+             * @default 0
+             */
+            usd_surplus_after_immediate: number;
+            /**
+             * Fx Conversion Needed Thb
+             * @default 0
+             */
+            fx_conversion_needed_thb: number;
+        };
+        /** EarningsBridgeDTO */
+        EarningsBridgeDTO: {
+            /** Ticker */
+            ticker: string;
+            /** Period */
+            period: string;
+            /** As Of Date */
+            as_of_date: string;
+            revenue_surprise: components["schemas"]["EarningsSurpriseDTO"];
+            eps_surprise: components["schemas"]["EarningsSurpriseDTO"];
+            /** Ebit Margin Reported */
+            ebit_margin_reported?: string | null;
+            /** Ebit Margin Consensus */
+            ebit_margin_consensus?: string | null;
+            /**
+             * Revenue Drivers
+             * @default []
+             */
+            revenue_drivers: components["schemas"]["EarningsDriverDTO"][];
+            /** Sum Drivers */
+            sum_drivers: string;
+            /** Unallocated Delta */
+            unallocated_delta: string;
+            /** Is Mathematically Balanced */
+            is_mathematically_balanced: boolean;
+            /** Thesis Reconciliation Verdict */
+            thesis_reconciliation_verdict: string;
+            /** Thesis Reconciliation Narrative */
+            thesis_reconciliation_narrative: string;
+        };
+        /** EarningsBridgeDriverDTO */
+        EarningsBridgeDriverDTO: {
+            /** Name */
+            name: string;
+            /** Category */
+            category: string;
+            /** Impact Value */
+            impact_value: string;
+            /**
+             * Unit
+             * @default USD
+             */
+            unit: string;
+            /**
+             * Narrative
+             * @default
+             */
+            narrative: string;
+        };
+        /** EarningsBridgeRequestDTO */
+        EarningsBridgeRequestDTO: {
+            /** Ticker */
+            ticker: string;
+            /** Period */
+            period: string;
+            /** As Of Date */
+            as_of_date?: string | null;
+            /** Revenue Reported */
+            revenue_reported: string;
+            /** Revenue Consensus */
+            revenue_consensus: string;
+            /** Eps Reported */
+            eps_reported: string;
+            /** Eps Consensus */
+            eps_consensus: string;
+            /**
+             * Revenue Unit
+             * @default USD_M
+             */
+            revenue_unit: string;
+            /**
+             * Eps Unit
+             * @default USD
+             */
+            eps_unit: string;
+            /** Ebit Margin Reported */
+            ebit_margin_reported?: string | null;
+            /** Ebit Margin Consensus */
+            ebit_margin_consensus?: string | null;
+            /** Revenue Drivers */
+            revenue_drivers?: components["schemas"]["EarningsBridgeDriverDTO"][] | null;
+        };
         /** EarningsCallListResponse */
         EarningsCallListResponse: {
             /** Ticker */
@@ -4765,6 +6572,25 @@ export interface components {
             /** Estimate Count */
             estimate_count?: number | null;
         };
+        /** EarningsDriverDTO */
+        EarningsDriverDTO: {
+            /** Name */
+            name: string;
+            /** Category */
+            category: string;
+            /** Impact Value */
+            impact_value: string;
+            /**
+             * Unit
+             * @default USD
+             */
+            unit: string;
+            /**
+             * Narrative
+             * @default
+             */
+            narrative: string;
+        };
         /** EarningsHistoryEntryDTO */
         EarningsHistoryEntryDTO: {
             /** Date Str */
@@ -4773,6 +6599,26 @@ export interface components {
             eps_actual?: number | null;
             /** Eps Estimate */
             eps_estimate?: number | null;
+        };
+        /** EarningsSurpriseDTO */
+        EarningsSurpriseDTO: {
+            /** Metric Name */
+            metric_name: string;
+            /** Reported */
+            reported: string;
+            /** Consensus */
+            consensus: string;
+            /** Delta */
+            delta: string;
+            /** Surprise Pct */
+            surprise_pct: string;
+            /** Direction */
+            direction: string;
+            /**
+             * Unit
+             * @default USD
+             */
+            unit: string;
         };
         /** EarningsSurpriseItemSchema */
         EarningsSurpriseItemSchema: {
@@ -4868,6 +6714,14 @@ export interface components {
              * @default equity_intel
              */
             generated_by: string;
+            /** Portfolio Context */
+            portfolio_context?: {
+                [key: string]: unknown;
+            } | null;
+            /** Thesis Delta */
+            thesis_delta?: {
+                [key: string]: unknown;
+            } | null;
         };
         /** EquityNewsDTO */
         EquityNewsDTO: {
@@ -4887,6 +6741,11 @@ export interface components {
              * @default []
              */
             items: components["schemas"]["EquityNewsItemDTO"][];
+            /**
+             * Youtube Mentions
+             * @default []
+             */
+            youtube_mentions: components["schemas"]["EquityYouTubeMentionDTO"][];
         };
         /** EquityNewsItemDTO */
         EquityNewsItemDTO: {
@@ -4909,6 +6768,20 @@ export interface components {
              * @default 1
              */
             sources_count: number;
+            /** Summary */
+            summary?: string | null;
+            /** What Happened */
+            what_happened?: string | null;
+            /** Why It Matters */
+            why_it_matters?: string | null;
+            /** Thesis Signal */
+            thesis_signal?: string | null;
+            /** Impact Type */
+            impact_type?: string | null;
+            /** Macro Impact Score */
+            macro_impact_score?: number | null;
+            /** Asset Impact Score */
+            asset_impact_score?: number | null;
         };
         /** EquityNoteContentDTO */
         EquityNoteContentDTO: {
@@ -4937,6 +6810,163 @@ export interface components {
             modified_at: string;
             /** Matched By */
             matched_by: string;
+        };
+        /** EquityNotebookLMCoverageDTO */
+        EquityNotebookLMCoverageDTO: {
+            /**
+             * Has Latest Analysis
+             * @default false
+             */
+            has_latest_analysis: boolean;
+            /**
+             * Historical Analyses Count
+             * @default 0
+             */
+            historical_analyses_count: number;
+            /**
+             * Has Financials
+             * @default false
+             */
+            has_financials: boolean;
+            /**
+             * Has Sec Filings
+             * @default false
+             */
+            has_sec_filings: boolean;
+            /**
+             * Has Insider Trades
+             * @default false
+             */
+            has_insider_trades: boolean;
+            /**
+             * Earnings Calls Count
+             * @default 0
+             */
+            earnings_calls_count: number;
+            /**
+             * News Count
+             * @default 0
+             */
+            news_count: number;
+            /**
+             * Has Options Derivatives
+             * @default false
+             */
+            has_options_derivatives: boolean;
+            /**
+             * Has Portfolio Holding
+             * @default false
+             */
+            has_portfolio_holding: boolean;
+            /**
+             * User Notes Count
+             * @default 0
+             */
+            user_notes_count: number;
+        };
+        /** EquityNotebookLMExportRequestDTO */
+        EquityNotebookLMExportRequestDTO: {
+            /**
+             * Market
+             * @default US
+             */
+            market: string | null;
+            /**
+             * Mode
+             * @default all_retained
+             * @constant
+             */
+            mode: "all_retained";
+        };
+        /** EquityNotebookLMExportResponseDTO */
+        EquityNotebookLMExportResponseDTO: {
+            /** Export Id */
+            export_id: string;
+            /** Ticker */
+            ticker: string;
+            /** Market */
+            market: string;
+            /** Job Id */
+            job_id?: string | null;
+            /** State */
+            state: string;
+            /** Stage */
+            stage: string;
+            /** Message */
+            message: string;
+        };
+        /** EquityNotebookLMExportStatusDTO */
+        EquityNotebookLMExportStatusDTO: {
+            /** Export Id */
+            export_id: string;
+            /** Ticker */
+            ticker: string;
+            /** Market */
+            market: string;
+            /** Job Id */
+            job_id?: string | null;
+            /**
+             * Mode
+             * @default all_retained
+             */
+            mode: string;
+            /** State */
+            state: string;
+            /** Stage */
+            stage: string;
+            /** Snapshot At */
+            snapshot_at: string;
+            /** Bundle Hash */
+            bundle_hash: string;
+            /** Notebooks */
+            notebooks?: components["schemas"]["EquityNotebookLMNotebookDTO"][];
+            /** Counts */
+            counts?: {
+                [key: string]: unknown;
+            };
+            /** Source Results */
+            source_results?: components["schemas"]["EquityNotebookLMSourceResultDTO"][];
+            coverage: components["schemas"]["EquityNotebookLMCoverageDTO"];
+            /** Warnings */
+            warnings?: string[];
+            /** Error Code */
+            error_code?: string | null;
+            /** Error */
+            error?: string | null;
+            /**
+             * Can Retry
+             * @default false
+             */
+            can_retry: boolean;
+        };
+        /** EquityNotebookLMNotebookDTO */
+        EquityNotebookLMNotebookDTO: {
+            /** Notebook Id */
+            notebook_id: string;
+            /** Title */
+            title: string;
+            /** Url */
+            url: string;
+            /** Status */
+            status: string;
+            /**
+             * Source Count
+             * @default 0
+             */
+            source_count: number;
+        };
+        /** EquityNotebookLMSourceResultDTO */
+        EquityNotebookLMSourceResultDTO: {
+            /** File Name */
+            file_name: string;
+            /** Title */
+            title: string;
+            /** Status */
+            status: string;
+            /** Source Id */
+            source_id?: string | null;
+            /** Error */
+            error?: string | null;
         };
         /** EquityNotesDTO */
         EquityNotesDTO: {
@@ -5011,6 +7041,174 @@ export interface components {
             /** Sidecar File */
             sidecar_file?: string | null;
         };
+        /** EquityYouTubeMentionDTO */
+        EquityYouTubeMentionDTO: {
+            /** Video Id */
+            video_id: string;
+            /** Title */
+            title: string;
+            /** Thai Title */
+            thai_title?: string | null;
+            /** Channel */
+            channel: string;
+            /** Link */
+            link: string;
+            /** Published At */
+            published_at?: string | null;
+            /** Key Takeaways */
+            key_takeaways?: string[];
+            /** Alignment With News */
+            alignment_with_news?: string | null;
+            /** Alignment Note */
+            alignment_note?: string | null;
+        };
+        /**
+         * EstimateRecordDTO
+         * @description Immutable belief or consensus estimate record.
+         */
+        EstimateRecordDTO: {
+            /** Estimate Id */
+            estimate_id: string;
+            /** Ticker */
+            ticker: string;
+            /** Period */
+            period: string;
+            /** Metric Name */
+            metric_name: string;
+            /** Estimate Type */
+            estimate_type: string;
+            /** Value */
+            value: string;
+            /**
+             * Unit
+             * @default USD_M
+             */
+            unit: string;
+            /**
+             * As Of Utc
+             * @default
+             */
+            as_of_utc: string;
+            /**
+             * Reason Code
+             * @default baseline
+             */
+            reason_code: string;
+            /** Prior Record Id */
+            prior_record_id?: string | null;
+            /**
+             * Owner
+             * @default analyst
+             */
+            owner: string;
+            /**
+             * Approval Status
+             * @default REVIEW_REQUIRED
+             */
+            approval_status: string;
+            /**
+             * Evidence Label
+             * @default SYNTHETIC
+             */
+            evidence_label: string;
+        };
+        /** EventInstanceDTO */
+        EventInstanceDTO: {
+            /** Event Id */
+            event_id: string;
+            /** Event Date */
+            event_date: string;
+            /** Entry Date */
+            entry_date: string;
+            /** Entry Price */
+            entry_price: number;
+            /** Description */
+            description?: string | null;
+            /** Forward Returns */
+            forward_returns?: {
+                [key: string]: number | null;
+            };
+            /** Daily Trajectory */
+            daily_trajectory?: components["schemas"]["EventPathPointDTO"][];
+            /** Is Win By Horizon */
+            is_win_by_horizon?: {
+                [key: string]: boolean | null;
+            };
+        };
+        /** EventPathPointDTO */
+        EventPathPointDTO: {
+            /** Day Offset */
+            day_offset: number;
+            /** Date */
+            date: string;
+            /** Close */
+            close: number;
+            /** Cumulative Return Pct */
+            cumulative_return_pct: number;
+        };
+        /** EventPresetItemDTO */
+        EventPresetItemDTO: {
+            /** Preset Id */
+            preset_id: string;
+            /** Name */
+            name: string;
+            /** Category */
+            category: string;
+            /** Description */
+            description: string;
+            /** Recommended Ticker */
+            recommended_ticker?: string | null;
+        };
+        /** EventStudyGuardrailWarningDTO */
+        EventStudyGuardrailWarningDTO: {
+            /** Code */
+            code: string;
+            /** Message */
+            message: string;
+        };
+        /** EventStudyRequestDTO */
+        EventStudyRequestDTO: {
+            /**
+             * Preset Id
+             * @description Preset ID (earnings, apple_iphone, nvidia_gtc, tesla_events, fed_fomc, custom)
+             * @default earnings
+             */
+            preset_id: string;
+            /**
+             * Custom Dates
+             * @description Custom event dates in YYYY-MM-DD
+             */
+            custom_dates?: string[] | null;
+            /**
+             * Custom Event Name
+             * @description Custom event title
+             */
+            custom_event_name?: string | null;
+            /**
+             * Horizons
+             * @description Target forward horizons in trading days
+             */
+            horizons?: number[] | null;
+        };
+        /** EventStudyResponseDTO */
+        EventStudyResponseDTO: {
+            /** Ticker */
+            ticker: string;
+            /** Event Name */
+            event_name: string;
+            /** Horizons */
+            horizons: number[];
+            /** Events */
+            events: components["schemas"]["EventInstanceDTO"][];
+            /** Horizon Stats */
+            horizon_stats: {
+                [key: string]: components["schemas"]["HorizonStatsDTO"];
+            };
+            /** Average Trajectory */
+            average_trajectory: components["schemas"]["AverageTrajectoryPointDTO"][];
+            /** Warnings */
+            warnings?: components["schemas"]["EventStudyGuardrailWarningDTO"][];
+        };
         /** EvidenceRefSchema */
         EvidenceRefSchema: {
             /** Answer Id */
@@ -5040,6 +7238,72 @@ export interface components {
              * @enum {string}
              */
             source: "historical" | "live" | "fallback";
+        };
+        /** FactorExposureSnapshotDTO */
+        FactorExposureSnapshotDTO: {
+            /** Gross Market Value */
+            gross_market_value: number;
+            /** Net Market Value */
+            net_market_value: number;
+            /** Long Market Value */
+            long_market_value: number;
+            /** Short Market Value */
+            short_market_value: number;
+            /** Long Exposure Pct */
+            long_exposure_pct: number;
+            /** Short Exposure Pct */
+            short_exposure_pct: number;
+            /** Net Exposure Pct */
+            net_exposure_pct: number;
+            /** Eligible Positions Count */
+            eligible_positions_count: number;
+            /** Portfolio Beta */
+            portfolio_beta?: number | null;
+            /** Beta Benchmark */
+            beta_benchmark?: string | null;
+            /** Factor Observations Count */
+            factor_observations_count?: number | null;
+            /**
+             * Status
+             * @default REVIEW_REQUIRED
+             */
+            status: string;
+            /**
+             * Missing Price Symbols
+             * @default []
+             */
+            missing_price_symbols: string[];
+        };
+        /** FalsifierRuleDTO */
+        FalsifierRuleDTO: {
+            /** Falsifier Id */
+            falsifier_id: string;
+            /** Metric Name */
+            metric_name: string;
+            /** Operator */
+            operator: string;
+            /** Threshold Value */
+            threshold_value: string;
+            /**
+             * Unit
+             * @default USD
+             */
+            unit: string;
+            /**
+             * Period Basis
+             * @default QUARTERLY
+             */
+            period_basis: string;
+            /**
+             * Invalidation Impact
+             * @default BREAKS_BUY_CASE
+             */
+            invalidation_impact: string;
+            /**
+             * Narrative Explanation
+             * @default
+             */
+            narrative_explanation: string;
         };
         /** FinancialCellDTO */
         FinancialCellDTO: {
@@ -5400,6 +7664,50 @@ export interface components {
             /** Stale Reason */
             stale_reason?: string | null;
         };
+        /** FundConstituentsDTO */
+        FundConstituentsDTO: {
+            /** Fund Id */
+            fund_id: string;
+            /** Symbol */
+            symbol: string;
+            /** As Of Date */
+            as_of_date: string;
+            /** Master Fund Name */
+            master_fund_name?: string | null;
+            /** Master Fund Ticker */
+            master_fund_ticker?: string | null;
+            /** Top Holdings */
+            top_holdings?: components["schemas"]["FundHoldingItemDTO"][];
+            /** Sector Breakdown */
+            sector_breakdown?: components["schemas"]["FundSectorItemDTO"][];
+            /** Asset Allocation */
+            asset_allocation?: {
+                [key: string]: number;
+            };
+        };
+        /** FundHoldingItemDTO */
+        FundHoldingItemDTO: {
+            /** Name */
+            name: string;
+            /** Percent */
+            percent: number;
+            /** Ticker */
+            ticker?: string | null;
+            /**
+             * Asset Type
+             * @default EQUITY
+             */
+            asset_type: string;
+        };
+        /** FundSectorItemDTO */
+        FundSectorItemDTO: {
+            /** Sector Name Th */
+            sector_name_th: string;
+            /** Sector Name En */
+            sector_name_en: string;
+            /** Percent */
+            percent: number;
+        };
         /** GeneratedQuestionSchema */
         GeneratedQuestionSchema: {
             /** Question Id */
@@ -5457,10 +7765,154 @@ export interface components {
              */
             sell: number;
         };
+        /**
+         * GuidanceBiasDTO
+         * @description Categorization of management guidance tendencies.
+         */
+        GuidanceBiasDTO: {
+            /**
+             * Label
+             * @description Display label: Sandbagger, Straight shooter, Overpromiser, Mixed
+             */
+            label: string;
+            /**
+             * Code
+             * @description Short code: sandbagger, straight, overpromiser, mixed, insufficient
+             */
+            code: string;
+            /**
+             * Message
+             * @description Actionable guidance interpretation advice
+             */
+            message: string;
+            /**
+             * Median Delta Pct
+             * @description Median percentage beat/miss (e.g. +3.5%)
+             */
+            median_delta_pct?: number | null;
+            /**
+             * Beat Rate
+             * @description Percentage of numeric guidance beaten
+             */
+            beat_rate?: number | null;
+            /**
+             * N
+             * @description Number of resolved numeric guidance items
+             * @default 0
+             */
+            n: number;
+            /**
+             * Min N
+             * @description Minimum sample size required for confident bias classification
+             * @default 5
+             */
+            min_n: number;
+        };
         /** HTTPValidationError */
         HTTPValidationError: {
             /** Detail */
             detail?: components["schemas"]["ValidationError"][];
+        };
+        /** HermesSyncStatusDTO */
+        HermesSyncStatusDTO: {
+            /** Is Installed */
+            is_installed: boolean;
+            /** Current Commit */
+            current_commit: string;
+            /** Upstream Commit */
+            upstream_commit: string;
+            /** Has Updates */
+            has_updates: boolean;
+            /** Last Synced At */
+            last_synced_at?: string | null;
+        };
+        /** HoldingAdvisoryDTO */
+        HoldingAdvisoryDTO: {
+            /** Symbol */
+            symbol: string;
+            /** Asset Name */
+            asset_name: string;
+            /** Asset Type */
+            asset_type: string;
+            /**
+             * Market
+             * @enum {string}
+             */
+            market: "TH" | "US";
+            /**
+             * Native Currency
+             * @enum {string}
+             */
+            native_currency: "THB" | "USD";
+            /** Evaluation Track */
+            evaluation_track: string;
+            /** Bucket Id */
+            bucket_id?: string | null;
+            /** Bucket Name */
+            bucket_name?: string | null;
+            /** Current Units */
+            current_units: number;
+            /** Current Price Native */
+            current_price_native: number;
+            /** Current Value Thb */
+            current_value_thb: number;
+            /** Current Weight Pct */
+            current_weight_pct: number;
+            /** Target Weight Pct */
+            target_weight_pct: number;
+            /** Weight Drift Pct */
+            weight_drift_pct: number;
+            /** Action Code */
+            action_code: string;
+            /** Action Rationale */
+            action_rationale: string;
+            lot_sizing?: components["schemas"]["LotSizingDTO"] | null;
+            /**
+             * Is Immediate Execution
+             * @default false
+             */
+            is_immediate_execution: boolean;
+            /** Conditional Buy Zone Min */
+            conditional_buy_zone_min?: number | null;
+            /** Conditional Buy Zone Max */
+            conditional_buy_zone_max?: number | null;
+            /** Core Conviction Score */
+            core_conviction_score?: number | null;
+            /** Business Conviction Score */
+            business_conviction_score?: number | null;
+            /** Price Stage */
+            price_stage?: string | null;
+            /** Live Upside 12M Pct */
+            live_upside_12m_pct?: number | null;
+            /**
+             * Macro Alignment
+             * @default unavailable
+             * @enum {string}
+             */
+            macro_alignment: "tailwind" | "neutral" | "headwind" | "unavailable";
+            /** Sector Quadrant */
+            sector_quadrant?: string | null;
+            /** Breached Falsifiers */
+            breached_falsifiers?: string[];
+            /** Data Warnings */
+            data_warnings?: string[];
+            /** Risk Contribution Pct */
+            risk_contribution_pct?: number | null;
+            /** Estimated Friction Bps */
+            estimated_friction_bps?: number | null;
+            /** Volatility Pct */
+            volatility_pct?: number | null;
+            /**
+             * Volatility Source
+             * @default unavailable
+             * @enum {string}
+             */
+            volatility_source: "observed" | "estimated_default" | "unavailable";
+            /**
+             * Is Volatility Estimated
+             * @default false
+             */
+            is_volatility_estimated: boolean;
         };
         /** HoldingBucketAssignmentItemDTO */
         HoldingBucketAssignmentItemDTO: {
@@ -5484,6 +7936,34 @@ export interface components {
             /** Reason */
             reason: string;
         };
+        /** HoldingSummaryDTO */
+        HoldingSummaryDTO: {
+            /**
+             * Is Held
+             * @default false
+             */
+            is_held: boolean;
+            /**
+             * Units
+             * @default 0
+             */
+            units: number;
+            /** Avg Cost */
+            avg_cost?: number | null;
+            /** Unrealized Pnl Pct */
+            unrealized_pnl_pct?: number | null;
+            /**
+             * Current Weight Pct
+             * @default 0
+             */
+            current_weight_pct: number;
+            /** Bucket Id */
+            bucket_id?: string | null;
+            /** Entry Date */
+            entry_date?: string | null;
+            /** Added Direction */
+            added_direction?: string | null;
+        };
         /** HoldingsBucketRecommendationResponseDTO */
         HoldingsBucketRecommendationResponseDTO: {
             /**
@@ -5506,6 +7986,39 @@ export interface components {
              * @default 0
              */
             total_mismatched: number;
+        };
+        /** HorizonStatsDTO */
+        HorizonStatsDTO: {
+            /** Horizon Days */
+            horizon_days: number;
+            /** Sample Size */
+            sample_size: number;
+            /** Hit Rate Pct */
+            hit_rate_pct: number;
+            /** Avg Return Pct */
+            avg_return_pct: number;
+            /** Median Return Pct */
+            median_return_pct: number;
+            /** Best Return Pct */
+            best_return_pct?: number | null;
+            /** Worst Return Pct */
+            worst_return_pct?: number | null;
+            /** Avg Win Pct */
+            avg_win_pct?: number | null;
+            /** Avg Loss Pct */
+            avg_loss_pct?: number | null;
+            /** Risk Reward Ratio */
+            risk_reward_ratio?: number | null;
+            /**
+             * Win Count
+             * @default 0
+             */
+            win_count: number;
+            /**
+             * Loss Count
+             * @default 0
+             */
+            loss_count: number;
         };
         /** IncomeRequestDTO */
         IncomeRequestDTO: {
@@ -6050,6 +8563,103 @@ export interface components {
             /** Password */
             password: string;
         };
+        /** LookThroughHoldingExposureDTO */
+        LookThroughHoldingExposureDTO: {
+            /** Ticker */
+            ticker: string;
+            /** Company Name */
+            company_name: string;
+            /** Market */
+            market: string;
+            /** Direct Value Thb */
+            direct_value_thb: number;
+            /** Direct Weight Pct */
+            direct_weight_pct: number;
+            /** Indirect Value Thb */
+            indirect_value_thb: number;
+            /** Indirect Weight Pct */
+            indirect_weight_pct: number;
+            /** Total Value Thb */
+            total_value_thb: number;
+            /** Total Weight Pct */
+            total_weight_pct: number;
+            /** Source Funds */
+            source_funds?: [
+                string,
+                number
+            ][];
+            /**
+             * Is Cap Breached
+             * @default false
+             */
+            is_cap_breached: boolean;
+            /**
+             * Is Hidden Concentration
+             * @default false
+             */
+            is_hidden_concentration: boolean;
+        };
+        /** LotSizingDTO */
+        LotSizingDTO: {
+            /**
+             * Market
+             * @enum {string}
+             */
+            market: "TH" | "US" | "GLOBAL";
+            /** Board Lot Shares */
+            board_lot_shares?: number | null;
+            /** Odd Lot Shares */
+            odd_lot_shares?: number | null;
+            /** Whole Shares */
+            whole_shares?: number | null;
+            /** Fractional Shares */
+            fractional_shares?: number | null;
+            /** Amount Thb */
+            amount_thb: number;
+            /** Amount Native */
+            amount_native: number;
+            /** Estimated Execution Price Native */
+            estimated_execution_price_native: number;
+            /**
+             * Native Currency
+             * @default THB
+             * @enum {string}
+             */
+            native_currency: "THB" | "USD";
+        };
+        /** MacroAsOfRowDTO */
+        MacroAsOfRowDTO: {
+            /** Series Id */
+            series_id: string;
+            /** Observation Date */
+            observation_date: string;
+            /** Cutoff Date */
+            cutoff_date: string;
+            /** Selected Vintage Date */
+            selected_vintage_date?: string | null;
+            /** Asof Value */
+            asof_value?: number | null;
+            /** Latest Vintage Date */
+            latest_vintage_date?: string | null;
+            /** Latest Value */
+            latest_value?: number | null;
+            /** Revision After Cutoff */
+            revision_after_cutoff?: number | null;
+            /** Unit */
+            unit: string;
+            /** Seasonal Adjustment */
+            seasonal_adjustment: string;
+            /**
+             * Status
+             * @default REVIEW_REQUIRED
+             */
+            status: string;
+            /**
+             * Evidence Label
+             * @default SYNTHETIC
+             */
+            evidence_label: string;
+        };
         /** MacroDashboardDTO */
         MacroDashboardDTO: {
             /** Evaluated At */
@@ -6487,6 +9097,20 @@ export interface components {
             /** Stale Reason */
             stale_reason?: string | null;
         };
+        /** MacroVintageWalkResponseDTO */
+        MacroVintageWalkResponseDTO: {
+            /** Cutoff Date */
+            cutoff_date: string;
+            /** Rows */
+            rows: components["schemas"]["MacroAsOfRowDTO"][];
+            /** Total Series Count */
+            total_series_count: number;
+            /**
+             * Status
+             * @default REVIEW_REQUIRED
+             */
+            status: string;
+        };
         /** MappingWeightSchema */
         MappingWeightSchema: {
             /** Axis Allocation Id */
@@ -6592,6 +9216,60 @@ export interface components {
              * @default false
              */
             is_stale: boolean;
+        };
+        /** MorningReviewPacketDTO */
+        MorningReviewPacketDTO: {
+            /** Review Date */
+            review_date: string;
+            /** Status */
+            status: string;
+            /** Portfolio Delta */
+            portfolio_delta: {
+                [key: string]: unknown;
+            };
+            /** Macro Delta */
+            macro_delta: {
+                [key: string]: unknown;
+            };
+            /** Thesis Exceptions */
+            thesis_exceptions: {
+                [key: string]: unknown;
+            }[];
+            /** Pending Decisions */
+            pending_decisions: {
+                [key: string]: unknown;
+            }[];
+            /** Packet Sha256 */
+            packet_sha256: string;
+            /** Signoff Info */
+            signoff_info?: {
+                [key: string]: unknown;
+            } | null;
+            /** Thesis Coverage */
+            thesis_coverage?: {
+                [key: string]: unknown;
+            } | null;
+            /** Quarantined Holdings */
+            quarantined_holdings?: {
+                [key: string]: unknown;
+            }[];
+            /**
+             * Review Sample
+             * @description 3-5 risk-based sample items for PM inspection
+             */
+            review_sample?: {
+                [key: string]: unknown;
+            }[];
+            /**
+             * Run Quality
+             * @default ON_TIME
+             */
+            run_quality: string;
+            /**
+             * Drift Minutes
+             * @default 0
+             */
+            drift_minutes: number;
         };
         /** MoveCardRequest */
         MoveCardRequest: {
@@ -6934,6 +9612,103 @@ export interface components {
              */
             week52_coverage_calendar_days: number;
         };
+        /**
+         * OpportunityCandidateDTO
+         * @description Investable candidate metadata and current exposure.
+         */
+        OpportunityCandidateDTO: {
+            /**
+             * Security Id
+             * @description Unique security identity, e.g. 'US:MSFT' or 'TH:CPALL'
+             */
+            security_id: string;
+            /**
+             * Issuer Id
+             * @description Issuer root ticker symbol
+             */
+            issuer_id: string;
+            /**
+             * Symbol
+             * @description Stock symbol / ticker
+             */
+            symbol: string;
+            /**
+             * Market
+             * @description Market classification: US, TH, or GLOBAL
+             */
+            market: string;
+            /**
+             * Currency
+             * @description Quotation currency (USD, THB)
+             */
+            currency: string;
+            /**
+             * Asset Type
+             * @description Asset classification (EQUITY, REIT, etc.)
+             */
+            asset_type: string;
+            /**
+             * Company Name
+             * @description Legal entity or display name
+             */
+            company_name: string;
+            /**
+             * Sector Name
+             * @description Mapped GICS English sector name
+             */
+            sector_name: string;
+            /**
+             * Sector Name Th
+             * @description Sector name in Thai
+             */
+            sector_name_th: string;
+            /**
+             * Source Pools
+             * @description Candidate origin pools: POOL_A_FUND_LOOK_THROUGH, POOL_B_EQUITY_SIDECAR
+             */
+            source_pools?: string[];
+            /**
+             * Source Refs
+             * @description Provenance references, e.g. ['fund:SCBS&P500E', 'sidecar:MSFT']
+             */
+            source_refs?: string[];
+            /**
+             * Already Directly Held
+             * @description True if stock already held as a direct position
+             * @default false
+             */
+            already_directly_held: boolean;
+            /**
+             * Already Watchlisted
+             * @description True if stock already present in current portfolio's watchlist
+             * @default false
+             */
+            already_watchlisted: boolean;
+            /**
+             * Current Direct Value Thb
+             * @description Direct market value in THB
+             * @default 0
+             */
+            current_direct_value_thb: number;
+            /**
+             * Current Indirect Value Thb
+             * @description Underlying mutual fund exposure in THB
+             * @default 0
+             */
+            current_indirect_value_thb: number;
+            /**
+             * Current Total Exposure Thb
+             * @description Consolidated direct + indirect exposure in THB
+             * @default 0
+             */
+            current_total_exposure_thb: number;
+            /**
+             * Current Total Weight Pct
+             * @description Consolidated portfolio weight percentage
+             * @default 0
+             */
+            current_total_weight_pct: number;
+        };
         /** OptionContractSchema */
         OptionContractSchema: {
             /** Occ Symbol */
@@ -7040,6 +9815,74 @@ export interface components {
             /** Oi Ratio */
             oi_ratio: number | null;
         };
+        /** PMSignoffRequestDTO */
+        PMSignoffRequestDTO: {
+            /**
+             * Review Date
+             * @description Review date YYYY-MM-DD
+             */
+            review_date: string;
+            /**
+             * Portfolio Id
+             * @description Portfolio identifier being signed off
+             * @default default
+             */
+            portfolio_id: string;
+            /**
+             * Signed Off By
+             * @description Identifier of the Portfolio Manager
+             * @default HUMAN_PM
+             */
+            signed_off_by: string;
+            /**
+             * Notes
+             * @description Optional rationale or review notes
+             */
+            notes?: string | null;
+            /**
+             * Packet Sha256
+             * @description Checksum of the packet being approved (mandatory)
+             */
+            packet_sha256: string;
+            /**
+             * Verified Sample Ids
+             * @description List of sample IDs explicitly inspected and verified by the PM
+             */
+            verified_sample_ids?: string[];
+            /**
+             * Acknowledged Exception Ids
+             * @description List of pending exception IDs explicitly reviewed and acknowledged by the PM
+             */
+            acknowledged_exception_ids?: string[];
+        };
+        /** PMSignoffResponseDTO */
+        PMSignoffResponseDTO: {
+            /** Signoff Id */
+            signoff_id: string;
+            /**
+             * Portfolio Id
+             * @default default
+             */
+            portfolio_id: string;
+            /** Review Date */
+            review_date: string;
+            /** Status */
+            status: string;
+            /** Signed Off By */
+            signed_off_by: string;
+            /** Signed Off At Utc */
+            signed_off_at_utc: string;
+            /** Acknowledged Exceptions Count */
+            acknowledged_exceptions_count: number;
+            /** Notes */
+            notes?: string | null;
+            /** Packet Sha256 */
+            packet_sha256: string;
+            /** Verified Sample Ids */
+            verified_sample_ids?: string[] | null;
+            /** Acknowledged Exception Ids */
+            acknowledged_exception_ids?: string[] | null;
+        };
         /** PairTradeDTO */
         PairTradeDTO: {
             /** Long Leg */
@@ -7131,6 +9974,12 @@ export interface components {
             realized_pnl_ytd?: number | null;
             /** Passive Income Ytd */
             passive_income_ytd?: number | null;
+            /** Total Nav Thb */
+            Total_NAV_THB?: number | null;
+            /** Accrued Dividend Receivable Thb */
+            Accrued_Dividend_Receivable_THB?: number | null;
+            /** Economic Nav Thb */
+            Economic_NAV_THB?: number | null;
             /** Asset Class Values Thb */
             Asset_Class_Values_THB?: {
                 [key: string]: number;
@@ -7181,6 +10030,102 @@ export interface components {
             previous_rate?: number | null;
             /** Last Change Date */
             last_change_date?: string | null;
+        };
+        /** PortfolioAdvisoryNarrativeDTO */
+        PortfolioAdvisoryNarrativeDTO: {
+            /**
+             * Synthesized At
+             * @default
+             */
+            synthesized_at: string;
+            /**
+             * Portfolio State Hash
+             * @default
+             */
+            portfolio_state_hash: string;
+            /**
+             * Synthesis Input Hash
+             * @default
+             */
+            synthesis_input_hash: string;
+            /**
+             * Macro Executive Summary
+             * @default
+             */
+            macro_executive_summary: string;
+            /** Immediate Action Playbook */
+            immediate_action_playbook?: string[];
+            /** Conditional Dip Plan */
+            conditional_dip_plan?: string[];
+            /** Risk Mitigation And Hedging */
+            risk_mitigation_and_hedging?: string[];
+            /** Whats Working */
+            whats_working?: string[];
+            /** What Concerns Me */
+            what_concerns_me?: string[];
+            /** Strategic Discussion Points */
+            strategic_discussion_points?: string[];
+            /**
+             * Consistency Verified
+             * @default true
+             */
+            consistency_verified: boolean;
+            /**
+             * Generated By
+             * @default portfolio_synthesizer
+             */
+            generated_by: string;
+        };
+        /** PortfolioAdvisoryResponseDTO */
+        PortfolioAdvisoryResponseDTO: {
+            /** Evaluated At */
+            evaluated_at: string;
+            /** Data Mode */
+            data_mode: string;
+            /** Portfolio State Hash */
+            portfolio_state_hash: string;
+            /**
+             * Synthesis Input Hash
+             * @default
+             */
+            synthesis_input_hash: string;
+            /** Total Nav Thb */
+            total_nav_thb: number;
+            cash_plan: components["schemas"]["DualCurrencyCashPlanDTO"];
+            risk_radar: components["schemas"]["PortfolioRiskRadarDTO"];
+            /** Holdings Advisory */
+            holdings_advisory?: components["schemas"]["HoldingAdvisoryDTO"][];
+            /** Quarantined Holdings */
+            quarantined_holdings?: components["schemas"]["QuarantinedHoldingDTO"][];
+            /** Anomaly Warnings */
+            anomaly_warnings?: components["schemas"]["DataAnomalyWarningDTO"][];
+            /** Macro Regime Summary */
+            macro_regime_summary?: {
+                [key: string]: unknown;
+            } | null;
+            cached_narrative?: components["schemas"]["PortfolioAdvisoryNarrativeDTO"] | null;
+            look_through_summary?: components["schemas"]["PortfolioLookThroughReportDTO"] | null;
+        };
+        /** PortfolioAwareTriggerDTO */
+        PortfolioAwareTriggerDTO: {
+            /** Trigger Id */
+            trigger_id: string;
+            /** Title */
+            title: string;
+            /** Condition Text */
+            condition_text: string;
+            /** Category */
+            category: string;
+            /** Case Impact */
+            case_impact: string;
+            /** Impact Description */
+            impact_description: string;
+            /** Is Currently Triggered */
+            is_currently_triggered: boolean;
+            /** Metric Current Value */
+            metric_current_value?: number | null;
+            /** Metric Threshold Value */
+            metric_threshold_value?: number | null;
         };
         /** PortfolioCalendarDTO */
         PortfolioCalendarDTO: {
@@ -7247,6 +10192,28 @@ export interface components {
              */
             warnings: components["schemas"]["WarningDTO"][];
         };
+        /** PortfolioLookThroughReportDTO */
+        PortfolioLookThroughReportDTO: {
+            /** Portfolio Id */
+            portfolio_id: string;
+            /** Evaluated At */
+            evaluated_at: string;
+            /** Total Nav Thb */
+            total_nav_thb: number;
+            /** Holdings Exposure */
+            holdings_exposure?: components["schemas"]["LookThroughHoldingExposureDTO"][];
+            /** Top Overlapped Stocks */
+            top_overlapped_stocks?: components["schemas"]["LookThroughHoldingExposureDTO"][];
+            /** Sector Exposure */
+            sector_exposure?: components["schemas"]["TrueSectorExposureDTO"][];
+            /** Hidden Concentration Warnings */
+            hidden_concentration_warnings?: string[];
+            /**
+             * Cap Breached Count
+             * @default 0
+             */
+            cap_breached_count: number;
+        };
         /** PortfolioMetaDTO */
         PortfolioMetaDTO: {
             /** Id */
@@ -7260,6 +10227,193 @@ export interface components {
             is_default: boolean;
             /** Created At */
             created_at?: string | null;
+        };
+        /**
+         * PortfolioOpportunitiesResponseDTO
+         * @description Full API Response for Portfolio Opportunity Finder.
+         */
+        PortfolioOpportunitiesResponseDTO: {
+            /**
+             * Portfolio Id
+             * @description Evaluated portfolio ID
+             */
+            portfolio_id: string;
+            /**
+             * Evaluation Id
+             * @description Unique evaluation snapshot ID
+             */
+            evaluation_id: string;
+            /**
+             * Evaluated At
+             * @description ISO timestamp of evaluation
+             */
+            evaluated_at: string;
+            /**
+             * Readiness
+             * @description Report readiness: ready, degraded, not_ready
+             */
+            readiness: string;
+            /**
+             * Total Candidates Scanned
+             * @description Total candidates identified across Pool A + B
+             * @default 0
+             */
+            total_candidates_scanned: number;
+            /**
+             * Passed Candidates Count
+             * @description Count of candidates passing investor principles
+             * @default 0
+             */
+            passed_candidates_count: number;
+            /**
+             * Candidates
+             * @description Ranked candidate evaluation results
+             */
+            candidates?: components["schemas"]["CandidateEvaluationResultDTO"][];
+            /**
+             * Warnings
+             * @description Operational warnings or degraded data notices
+             */
+            warnings?: string[];
+            /**
+             * Missing Requirements
+             * @description Missing prerequisites (e.g., unconfirmed axis)
+             */
+            missing_requirements?: string[];
+            /**
+             * Snapshot Meta
+             * @description Metadata and parameters used during evaluation
+             */
+            snapshot_meta?: {
+                [key: string]: unknown;
+            };
+        };
+        /** PortfolioRiskRadarDTO */
+        PortfolioRiskRadarDTO: {
+            /** Weighted Beta */
+            weighted_beta?: number | null;
+            /** Sector Crowding */
+            sector_crowding?: {
+                [key: string]: number;
+            };
+            /** Fx Exposure Pct */
+            fx_exposure_pct?: {
+                [key: string]: number;
+            };
+            /** Purpose Bucket Drift */
+            purpose_bucket_drift?: {
+                [key: string]: number;
+            };
+            /**
+             * Unassigned Holdings Value Thb
+             * @default 0
+             */
+            unassigned_holdings_value_thb: number;
+            /**
+             * Unassigned Holdings Nav Pct
+             * @default 0
+             */
+            unassigned_holdings_nav_pct: number;
+            /**
+             * Unassigned Drift Guard Active
+             * @default false
+             */
+            unassigned_drift_guard_active: boolean;
+            /** Hhi */
+            hhi?: number | null;
+            /** Effective Holdings Count */
+            effective_holdings_count?: number | null;
+            /**
+             * Top 1 Weight Pct
+             * @default 0
+             */
+            top_1_weight_pct: number;
+            /**
+             * Top 3 Weight Pct
+             * @default 0
+             */
+            top_3_weight_pct: number;
+            /**
+             * Top 5 Weight Pct
+             * @default 0
+             */
+            top_5_weight_pct: number;
+            /**
+             * Concentration Risk Level
+             * @default LOW
+             * @enum {string}
+             */
+            concentration_risk_level: "LOW" | "MODERATE" | "HIGH";
+            /** Bucket Active Share Pct */
+            bucket_active_share_pct?: number | null;
+            /**
+             * Bucket Active Share Status
+             * @default AVAILABLE
+             * @enum {string}
+             */
+            bucket_active_share_status: "AVAILABLE" | "UNAVAILABLE";
+            /** Risk Contributions Pct */
+            risk_contributions_pct?: {
+                [key: string]: number;
+            };
+            /** Inverse Vol Weights Pct */
+            inverse_vol_weights_pct?: {
+                [key: string]: number;
+            };
+            /** Total Portfolio Volatility Pct */
+            total_portfolio_volatility_pct?: number | null;
+            /**
+             * Risk Contribution Status
+             * @default AVAILABLE
+             * @enum {string}
+             */
+            risk_contribution_status: "AVAILABLE" | "UNAVAILABLE_ZERO_VARIANCE" | "NO_ACTIVE_ASSETS";
+            /** Volatility Estimated Symbols */
+            volatility_estimated_symbols?: string[];
+            /** Drawdown Pct */
+            drawdown_pct?: number | null;
+            /**
+             * Drawdown Posture Tier
+             * @default NORMAL
+             * @enum {string}
+             */
+            drawdown_posture_tier: "NORMAL" | "TIER_1_CAUTION" | "TIER_2_THROTTLE" | "TIER_3_DEFENSIVE";
+            /**
+             * Drawdown Status
+             * @default UNAVAILABLE_UNKNOWN_PEAK
+             * @enum {string}
+             */
+            drawdown_status: "AVAILABLE" | "UNAVAILABLE_UNKNOWN_PEAK";
+            /**
+             * Drawdown Hurdle Adjustment
+             * @default 0
+             */
+            drawdown_hurdle_adjustment: number;
+            /** Drawdown Action Restrictions */
+            drawdown_action_restrictions?: string[];
+        };
+        /** PositionReviewResponseDTO */
+        PositionReviewResponseDTO: {
+            /** Ticker */
+            ticker: string;
+            /** Company Name */
+            company_name?: string | null;
+            /** Current Price */
+            current_price: number;
+            /** As Of Date */
+            as_of_date: string;
+            /** Action Stance */
+            action_stance: string;
+            /** Action Stance Reason */
+            action_stance_reason?: string | null;
+            holding_summary: components["schemas"]["HoldingSummaryDTO"];
+            /** Decompositions */
+            decompositions?: components["schemas"]["PriceMoveDecompositionDTO"][];
+            then_vs_now?: components["schemas"]["ThenVsNowSnapshotDTO"] | null;
+            /** Triggers */
+            triggers?: components["schemas"]["PortfolioAwareTriggerDTO"][];
+            /** Honest Gaps */
+            honest_gaps?: string[];
         };
         /** PredictionMarketResponse */
         PredictionMarketResponse: {
@@ -7294,6 +10448,392 @@ export interface components {
             label: string;
             /** Price */
             price: number;
+        };
+        /** PriceMoveDecompositionDTO */
+        PriceMoveDecompositionDTO: {
+            /**
+             * Horizon Label
+             * @description Horizon e.g. 1Y, 3Y, since_entry
+             */
+            horizon_label: string;
+            /** Start Date */
+            start_date: string;
+            /** End Date */
+            end_date: string;
+            /** Start Price */
+            start_price: number;
+            /** End Price */
+            end_price: number;
+            /** Total Return Pct */
+            total_return_pct: number;
+            /** Start Eps */
+            start_eps: number;
+            /** End Eps */
+            end_eps: number;
+            /** Eps Growth Pct */
+            eps_growth_pct: number;
+            /** Start Pe */
+            start_pe: number;
+            /** End Pe */
+            end_pe: number;
+            /** Pe Expansion Pct */
+            pe_expansion_pct: number;
+            /** Primary Driver */
+            primary_driver: string;
+            /** Diagnosis Tier */
+            diagnosis_tier: string;
+            /** Diagnosis Summary */
+            diagnosis_summary: string;
+        };
+        /**
+         * PromiseItemDTO
+         * @description An individual checkable commitment made by corporate management.
+         */
+        PromiseItemDTO: {
+            /**
+             * Id
+             * @description Canonical ID, e.g. P-NVDA-FY2026Q2-01
+             */
+            id: string;
+            /**
+             * Made In
+             * @description Fiscal quarter call when commitment was made, e.g. FY2026Q2
+             */
+            made_in: string;
+            /**
+             * Speaker
+             * @description Name and title of speaking executive
+             */
+            speaker: string;
+            /**
+             * Section
+             * @description Call section where statement occurred
+             * @enum {string}
+             */
+            section: "prepared" | "qa";
+            /**
+             * Type
+             * @description A: numeric guidance, B: strategic milestone
+             * @enum {string}
+             */
+            type: "A_numeric" | "B_milestone";
+            /**
+             * Category
+             * @description Financial or operational category
+             * @enum {string}
+             */
+            category: "revenue" | "eps" | "margin" | "opex" | "capex" | "fcf" | "units" | "growth" | "product" | "capacity" | "regulatory" | "org" | "other";
+            /**
+             * Scope
+             * @description Organizational scope
+             * @default company
+             * @enum {string}
+             */
+            scope: "company" | "segment" | "n/a";
+            /**
+             * Quote
+             * @description Verbatim quote from transcript (max 40 words)
+             */
+            quote: string;
+            /**
+             * Metric
+             * @description Headline summary of metric or deliverable in English
+             */
+            metric: string;
+            /**
+             * Metric Th
+             * @description Headline summary in natural Thai
+             */
+            metric_th?: string | null;
+            /**
+             * Target Kind
+             * @description Target structure
+             * @enum {string}
+             */
+            target_kind: "range" | "point" | "floor" | "ceiling" | "direction" | "milestone";
+            /**
+             * Target Low
+             * @description Lower bound for range or floor
+             */
+            target_low?: number | null;
+            /**
+             * Target High
+             * @description Upper bound for range or ceiling
+             */
+            target_high?: number | null;
+            /**
+             * Target Point
+             * @description Specific target point
+             */
+            target_point?: number | null;
+            /**
+             * Direction
+             * @description Directional guidance
+             */
+            direction?: ("up" | "down" | "flat") | null;
+            /**
+             * Unit
+             * @description Measurement unit, e.g. USD bn, %, pts
+             */
+            unit?: string | null;
+            /**
+             * Basis
+             * @description Accounting basis (GAAP, non-GAAP, constant currency, organic, reported, cash, n/a)
+             * @default n/a
+             */
+            basis: string | null;
+            /**
+             * Due
+             * @description Fiscal quarter when commitment is due, e.g. FY2026Q3
+             */
+            due: string;
+            /**
+             * Due Precision
+             * @description Whether deadline was explicitly stated or inferred
+             * @default explicit
+             * @enum {string}
+             */
+            due_precision: "explicit" | "inferred";
+            /**
+             * Notes
+             * @description Explanatory notes in English
+             * @default
+             */
+            notes: string | null;
+            /**
+             * Notes Th
+             * @description Explanatory notes in Thai
+             * @default
+             */
+            notes_th: string | null;
+            /**
+             * Status
+             * @description Resolution outcome
+             * @default Pending
+             * @enum {string}
+             */
+            status: "Delivered" | "Partial" | "Missed" | "Restated" | "Quietly dropped" | "Pending" | "Unverifiable";
+            /**
+             * Restated Direction
+             * @description Direction if restated before due date
+             */
+            restated_direction?: ("raised" | "lowered") | null;
+            /**
+             * Resolved In
+             * @description Fiscal quarter call that settled the promise
+             */
+            resolved_in?: string | null;
+            /**
+             * Evidence Quote
+             * @description Verbatim resolving quote (max 40 words)
+             */
+            evidence_quote?: string | null;
+            /**
+             * Outcome Value
+             * @description Reported actual outcome value
+             */
+            outcome_value?: number | null;
+            /**
+             * Actual Numeric
+             * @description Actual numeric outcome parsed from resolution
+             */
+            actual_numeric?: number | null;
+            /**
+             * Extraction Method
+             * @description Extraction provenance method, e.g. direct_http
+             */
+            extraction_method?: string | null;
+            /**
+             * Delta Pct
+             * @description Fractional delta (actual - target) / target
+             */
+            delta_pct?: number | null;
+            /**
+             * Slip Quarters
+             * @description Quarters delayed past due date for milestones
+             */
+            slip_quarters?: number | null;
+            /**
+             * Reiterated In
+             * @description Calls where target was reaffirmed unchanged
+             */
+            reiterated_in?: string[];
+            /**
+             * Supersedes
+             * @description ID of earlier promise superseded by this one
+             */
+            supersedes?: string | null;
+            /**
+             * Retired
+             * @description True if rolled out of 8-call scoring window
+             * @default false
+             */
+            retired: boolean | null;
+        };
+        /**
+         * PromiseLedgerDTO
+         * @description Full Promise Check ledger containing rolling 8-quarter calls and extracted promises.
+         */
+        PromiseLedgerDTO: {
+            /**
+             * Ticker
+             * @description Ticker symbol
+             */
+            ticker: string;
+            /**
+             * Company
+             * @description Company legal name
+             */
+            company: string;
+            /**
+             * Fiscal Year End Month
+             * @description Month of fiscal year end (1-12)
+             * @default 12
+             */
+            fiscal_year_end_month: number;
+            /**
+             * Framework Version
+             * @default 0.1
+             */
+            framework_version: string;
+            /**
+             * Run Date
+             * @description Date of compilation YYYY-MM-DD
+             */
+            run_date: string;
+            /**
+             * Calls
+             * @description Rolling 8 earnings calls
+             */
+            calls?: components["schemas"]["TranscriptCallDTO"][];
+            /**
+             * Promises
+             * @description List of commitments
+             */
+            promises?: components["schemas"]["PromiseItemDTO"][];
+        };
+        /**
+         * PromiseScoresDTO
+         * @description Aggregated quantitative scores and credibility metrics.
+         */
+        PromiseScoresDTO: {
+            /**
+             * Framework Version
+             * @default 0.1
+             */
+            framework_version: string;
+            /**
+             * Ticker
+             * @description Ticker symbol
+             */
+            ticker: string;
+            /**
+             * Company
+             * @description Company name
+             */
+            company: string;
+            /**
+             * Run Date
+             * @description Date of evaluation YYYY-MM-DD
+             */
+            run_date: string;
+            /**
+             * Window
+             * @description Rolling window boundaries and missing call list
+             */
+            window: {
+                [key: string]: unknown;
+            };
+            /**
+             * Credibility
+             * @description Overall Credibility Score 0-100
+             */
+            credibility?: number | null;
+            /**
+             * Grade
+             * @description Letter grade: A, B, C, D, F
+             */
+            grade?: string | null;
+            /**
+             * Confidence
+             * @description Statistical confidence based on sample size
+             * @enum {string}
+             */
+            confidence: "Low" | "Medium" | "High";
+            /**
+             * Delivery
+             * @description Delivery component score 0-100
+             */
+            delivery?: number | null;
+            /**
+             * Transparency
+             * @description Transparency component score 0-100
+             * @default 100
+             */
+            transparency: number;
+            /**
+             * N Promises
+             * @description Total active promises in 8-call window
+             */
+            n_promises: number;
+            /**
+             * N Resolved
+             * @description Total resolved promises
+             */
+            n_resolved: number;
+            /**
+             * Counts
+             * @description Count per status
+             */
+            counts: {
+                [key: string]: number;
+            };
+            /** @description Guidance bias analysis */
+            bias: components["schemas"]["GuidanceBiasDTO"];
+            /**
+             * Milestone Slip Quarters
+             * @description Average quarters delayed for milestones
+             */
+            milestone_slip_quarters?: number | null;
+            /**
+             * Milestone Slip N
+             * @description Count of resolved milestones
+             * @default 0
+             */
+            milestone_slip_n: number;
+            /**
+             * Trend
+             * @description 8-cohort delivery trend and verdict
+             */
+            trend: {
+                [key: string]: unknown;
+            };
+            /**
+             * Top Kept
+             * @description IDs of top 3 standout kept promises
+             */
+            top_kept?: string[];
+            /**
+             * Top Broken
+             * @description IDs of top 3 broken or dropped promises
+             */
+            top_broken?: string[];
+        };
+        /**
+         * PromiseSyncResponseDTO
+         * @description Response returned when syncing or inspecting a company's Promise Check.
+         */
+        PromiseSyncResponseDTO: {
+            /** @description Full ledger data */
+            ledger: components["schemas"]["PromiseLedgerDTO"];
+            /** @description Calculated credibility metrics */
+            scores: components["schemas"]["PromiseScoresDTO"];
+            /**
+             * From Cache
+             * @description True if served from local cache
+             * @default false
+             */
+            from_cache: boolean;
         };
         /** PurposeBucketSchema */
         PurposeBucketSchema: {
@@ -7548,6 +11088,22 @@ export interface components {
              */
             event_type: "transition" | "confirmed_transition";
         };
+        /** QuarantinedHoldingDTO */
+        QuarantinedHoldingDTO: {
+            /** Symbol */
+            symbol: string;
+            /** Reason */
+            reason: string;
+            /** Guardrail Code */
+            guardrail_code: string;
+            /** Current Value Thb */
+            current_value_thb: number;
+            /**
+             * Details
+             * @default
+             */
+            details: string;
+        };
         /** RecordAnswerRequest */
         RecordAnswerRequest: {
             /**
@@ -7717,6 +11273,17 @@ export interface components {
             /** Reason */
             reason?: string | null;
         };
+        /**
+         * ReviewCatalystRequestDTO
+         * @description Payload submitted by PM to acknowledge and assess a catalyst exception.
+         */
+        ReviewCatalystRequestDTO: {
+            /**
+             * Human Assessment
+             * @description Materiality assessment entered by PM
+             */
+            human_assessment: string;
+        };
         /** ReviewClaimRequest */
         ReviewClaimRequest: {
             /** Fit Rating */
@@ -7802,6 +11369,96 @@ export interface components {
             status: "available" | "unavailable";
             /** Reason */
             reason?: string | null;
+        };
+        /**
+         * RoutineExecutionRecordDTO
+         * @description Immutable audit record of an executed routine run.
+         */
+        RoutineExecutionRecordDTO: {
+            /** Execution Id */
+            execution_id: string;
+            /** Routine Id */
+            routine_id: string;
+            /** Name */
+            name: string;
+            /** Cadence */
+            cadence: string;
+            /** Scheduled Utc */
+            scheduled_utc: string;
+            /** Actual Start Utc */
+            actual_start_utc: string;
+            /** Completed Utc */
+            completed_utc?: string | null;
+            /** Elapsed Seconds */
+            elapsed_seconds: string;
+            /** Delay Minutes */
+            delay_minutes: string;
+            /** Status */
+            status: string;
+            /**
+             * Target Artifacts
+             * @default []
+             */
+            target_artifacts: string[];
+            /** Error Message */
+            error_message?: string | null;
+            /**
+             * Is Transcript Free
+             * @default true
+             */
+            is_transcript_free: boolean;
+        };
+        /**
+         * RoutineHeartbeatRequestDTO
+         * @description Payload to record an automated background worker heartbeat.
+         */
+        RoutineHeartbeatRequestDTO: {
+            /**
+             * Execution Id
+             * @description Unique run ID, e.g. 'RUN-2026-08-06-01'
+             */
+            execution_id: string;
+            /**
+             * Routine Id
+             * @description Schedule ID, e.g. 'ROUTINE-AM-REVIEW'
+             */
+            routine_id: string;
+            /**
+             * Scheduled Utc
+             * @description Scheduled target time in UTC
+             */
+            scheduled_utc: string;
+            /**
+             * Actual Start Utc
+             * @description Actual execution start time in UTC
+             */
+            actual_start_utc: string;
+            /** Completed Utc */
+            completed_utc?: string | null;
+            /** Error Message */
+            error_message?: string | null;
+        };
+        /**
+         * RoutineStatusReportDTO
+         * @description Freshness status of an institutional routine.
+         */
+        RoutineStatusReportDTO: {
+            /** Routine Id */
+            routine_id: string;
+            /** Scheduled Utc */
+            scheduled_utc: string;
+            /** Status */
+            status: string;
+            /** Is Late Run */
+            is_late_run: boolean;
+            /** Is Missed Run */
+            is_missed_run: boolean;
+            /** Delay Minutes */
+            delay_minutes: number;
+            /** Grace Period Minutes */
+            grace_period_minutes: number;
+            /** Freshness Label */
+            freshness_label: string;
         };
         /** SCBAMBatchScanRequestDTO */
         SCBAMBatchScanRequestDTO: {
@@ -7965,6 +11622,19 @@ export interface components {
              * @default THB
              */
             fee_currency: string;
+        };
+        /** SandboxStateSnapshotDTO */
+        SandboxStateSnapshotDTO: {
+            /** Memory Files */
+            memory_files: string[];
+            /** Active Skills */
+            active_skills: components["schemas"]["SkillManifestDTO"][];
+            /** Quarantined Skills */
+            quarantined_skills: components["schemas"]["SkillManifestDTO"][];
+            /** Scratch Files Count */
+            scratch_files_count: number;
+            /** Last Audit Entry */
+            last_audit_entry?: string | null;
         };
         /** SecCompanyFactsSnapshotSchema */
         SecCompanyFactsSnapshotSchema: {
@@ -8388,6 +12058,22 @@ export interface components {
             /** Qa History */
             qa_history?: components["schemas"]["QAItemSchema"][];
         };
+        /** SkillManifestDTO */
+        SkillManifestDTO: {
+            /** Name */
+            name: string;
+            /** Description */
+            description: string;
+            /** Is Quarantined */
+            is_quarantined: boolean;
+            /** Path */
+            path: string;
+            /**
+             * Created At
+             * @default
+             */
+            created_at: string;
+        };
         /** SourceOverrideAck */
         SourceOverrideAck: {
             /**
@@ -8609,6 +12295,117 @@ export interface components {
                 [key: string]: components["schemas"]["DividendRoundDTO"][];
             };
         };
+        /** SynthesizeAdvisoryPlaybookRequest */
+        SynthesizeAdvisoryPlaybookRequest: {
+            /**
+             * Force Refresh
+             * @default false
+             */
+            force_refresh: boolean;
+            /**
+             * Portfolio Id
+             * @default default
+             */
+            portfolio_id: string;
+        };
+        /** SynthesizeThesisRequestDTO */
+        SynthesizeThesisRequestDTO: {
+            /**
+             * Dry Run
+             * @default false
+             */
+            dry_run: boolean;
+            /** Custom Stop Loss */
+            custom_stop_loss?: number | null;
+            /** Custom Growth Floor */
+            custom_growth_floor?: number | null;
+            /** Custom Margin Floor */
+            custom_margin_floor?: number | null;
+            /**
+             * Author Role
+             * @default HERMES_ADVISOR
+             */
+            author_role: string;
+        };
+        /**
+         * TaskRouteRecordDTO
+         * @description Immutable audit record justifying the selected execution surface.
+         */
+        TaskRouteRecordDTO: {
+            /** Task Id */
+            task_id: string;
+            /** Task Description */
+            task_description: string;
+            /** Work Shape */
+            work_shape: string;
+            /** Selected Surface */
+            selected_surface: string;
+            /** Authoritative System */
+            authoritative_system: string;
+            /** Reconstructable Artifact */
+            reconstructable_artifact: string;
+            /** Rejection Gate */
+            rejection_gate: string;
+            /** Reversal Condition */
+            reversal_condition: string;
+            /** Rationale */
+            rationale: string;
+            /** Status */
+            status: string;
+            /** Evaluated At Utc */
+            evaluated_at_utc: string;
+        };
+        /**
+         * TaskRouteRequestDTO
+         * @description Payload to evaluate pre-flight task execution surface.
+         */
+        TaskRouteRequestDTO: {
+            /**
+             * Task Id
+             * @description Unique task identifier, e.g. 'TASK-101'
+             */
+            task_id: string;
+            /**
+             * Task Description
+             * @description Summary of the proposed task
+             */
+            task_description: string;
+            /**
+             * Work Shape
+             * @description Canonical shape, e.g. 'LIVE_FINANCIAL_CALCULATION', 'PORTFOLIO_EXPOSURE_AND_HEDGING'
+             */
+            work_shape: string;
+            /**
+             * Has Authoritative Calculator
+             * @default false
+             */
+            has_authoritative_calculator: boolean;
+            /**
+             * Requires Reconstructability
+             * @default false
+             */
+            requires_reconstructability: boolean;
+            /**
+             * Has Rejection Test Gate
+             * @default false
+             */
+            has_rejection_test_gate: boolean;
+            /**
+             * Touches Capital Or Policy
+             * @default false
+             */
+            touches_capital_or_policy: boolean;
+            /**
+             * Is Data Approved And Sanitized
+             * @default true
+             */
+            is_data_approved_and_sanitized: boolean;
+            /**
+             * Contains Mnpi Risk
+             * @default false
+             */
+            contains_mnpi_risk: boolean;
+        };
         /** ThaiBondMarketStatsResponse */
         ThaiBondMarketStatsResponse: {
             /** Reporting Period */
@@ -8802,6 +12599,62 @@ export interface components {
             /** Yield Percent */
             yield_percent: number | null;
         };
+        /** ThenVsNowSnapshotDTO */
+        ThenVsNowSnapshotDTO: {
+            /** Is Held */
+            is_held: boolean;
+            /** Period Label */
+            period_label: string;
+            /** Then Date */
+            then_date: string;
+            /** Now Date */
+            now_date: string;
+            /** Then Price */
+            then_price: number;
+            /** Now Price */
+            now_price: number;
+            /** Then Pe */
+            then_pe?: number | null;
+            /** Now Pe */
+            now_pe?: number | null;
+            /** Then Growth Pct */
+            then_growth_pct?: number | null;
+            /** Now Growth Pct */
+            now_growth_pct?: number | null;
+            /** What Was True Then */
+            what_was_true_then: string;
+            /** What Is True Now */
+            what_is_true_now: string;
+            /** Thesis Reflection Question */
+            thesis_reflection_question: string;
+        };
+        /** ThesisClaimDTO */
+        ThesisClaimDTO: {
+            /** Claim Id */
+            claim_id: string;
+            /** Ticker */
+            ticker: string;
+            /** Version */
+            version: number;
+            /** Prior Claim Id */
+            prior_claim_id?: string | null;
+            /** As Of Utc */
+            as_of_utc: string;
+            /** Claim Statement */
+            claim_statement: string;
+            /** Falsifiers */
+            falsifiers: components["schemas"]["FalsifierRuleDTO"][];
+            /** Linked Catalysts */
+            linked_catalysts: components["schemas"]["CatalystEventDTO"][];
+            /** Status */
+            status: string;
+            /** Evidence Tier */
+            evidence_tier: string;
+            /** Author Role */
+            author_role: string;
+            /** Checksum Sha256 */
+            checksum_sha256: string;
+        };
         /** ToggleDiscordRequest */
         ToggleDiscordRequest: {
             /** Enabled */
@@ -8968,6 +12821,62 @@ export interface components {
              */
             total_realized_pnl_thb: number;
         };
+        /**
+         * TranscriptCallDTO
+         * @description Metadata for an individual earnings call in the rolling 8-quarter window.
+         */
+        TranscriptCallDTO: {
+            /**
+             * Quarter
+             * @description Fiscal quarter label, e.g. FY2026Q2
+             */
+            quarter: string;
+            /**
+             * Date
+             * @description Call date YYYY-MM-DD
+             */
+            date: string;
+            /**
+             * Status
+             * @description Availability status of the transcript
+             * @default ok
+             * @enum {string}
+             */
+            status: "ok" | "missing";
+            /**
+             * Source
+             * @description Source provider of transcript
+             * @default stockanalysis
+             */
+            source: ("stockanalysis" | "fool" | "investing" | "alphastreet" | "edgar" | "other") | null;
+            /**
+             * Source Url
+             * @description Original source web URL
+             */
+            source_url?: string | null;
+            /**
+             * Words
+             * @description Word count of parsed transcript
+             */
+            words?: number | null;
+            /**
+             * Cached File
+             * @description Relative path to cached transcript text
+             */
+            cached_file?: string | null;
+            /**
+             * Fetch Method
+             * @description Ingestion mechanism
+             * @default direct_http
+             */
+            fetch_method: ("direct_http" | "browser" | "webfetch" | "manual") | null;
+            /**
+             * Retired
+             * @description True if rolled out of current 8-call window
+             * @default false
+             */
+            retired: boolean | null;
+        };
         /** TreasuryAuctionResponse */
         TreasuryAuctionResponse: {
             /** Auction Date */
@@ -9028,6 +12937,26 @@ export interface components {
             maturity: string;
             /** Yield Percent */
             yield_percent: number | null;
+        };
+        /** TrueSectorExposureDTO */
+        TrueSectorExposureDTO: {
+            /** Sector Name */
+            sector_name: string;
+            /** Sector Name Th */
+            sector_name_th: string;
+            /** Total Value Thb */
+            total_value_thb: number;
+            /** Weight Pct */
+            weight_pct: number;
+            /** Direct Stocks Pct */
+            direct_stocks_pct: number;
+            /** Funds Pct */
+            funds_pct: number;
+            /**
+             * Is Crowded
+             * @default false
+             */
+            is_crowded: boolean;
         };
         /** UnverifiedDraftSelection */
         UnverifiedDraftSelection: {
@@ -9172,6 +13101,21 @@ export interface components {
             bucket_id?: string | null;
             /** New Name */
             new_name?: string | null;
+            /**
+             * Priority Tier
+             * @default wants
+             */
+            priority_tier: ("needs" | "wants" | "wishes") | null;
+            /**
+             * Flexibility
+             * @default none
+             */
+            flexibility: ("none" | "timeline_flexible" | "amount_flexible" | "fully_flexible") | null;
+            /**
+             * Monthly Savings Thb
+             * @default 0
+             */
+            monthly_savings_thb: number | null;
         };
         /** UpsertWatchlistItemRequestDTO */
         UpsertWatchlistItemRequestDTO: {
@@ -9184,6 +13128,18 @@ export interface components {
              * @default
              */
             notes: string;
+            /** Suggested Bucket Id */
+            suggested_bucket_id?: string | null;
+            /** Applied Bucket Name */
+            applied_bucket_name?: string | null;
+            /** Target Currency */
+            target_currency?: string | null;
+            /** Evaluation Ref */
+            evaluation_ref?: string | null;
+            /** Source Refs */
+            source_refs?: string[] | null;
+            /** Target Price Basis */
+            target_price_basis?: string | null;
         };
         /** UsNationalDebtResponse */
         UsNationalDebtResponse: {
@@ -9319,6 +13275,43 @@ export interface components {
             scenarios?: components["schemas"]["DCFScenarioLevelDTO"][];
         };
         /**
+         * VariantPerceptionSnapshotDTO
+         * @description Three-way surprise and variant alpha realization (Chapter 2 & 5).
+         */
+        VariantPerceptionSnapshotDTO: {
+            /** Ticker */
+            ticker: string;
+            /** Period */
+            period: string;
+            /** Metric Name */
+            metric_name: string;
+            /** Reported Value */
+            reported_value: string;
+            /** Consensus Value */
+            consensus_value: string;
+            /** Fund Thesis Value */
+            fund_thesis_value: string;
+            /** Street Surprise */
+            street_surprise: string;
+            /** Street Surprise Pct */
+            street_surprise_pct: string;
+            /** Variant Spread */
+            variant_spread: string;
+            /** Variant Spread Pct */
+            variant_spread_pct: string;
+            /** Variant Realization */
+            variant_realization: string;
+            /** Variant Realization Pct */
+            variant_realization_pct: string;
+            /** Alpha Verdict */
+            alpha_verdict: string;
+            /**
+             * Unit
+             * @default USD_M
+             */
+            unit: string;
+        };
+        /**
          * WarningDTO
          * @description แสดง warning แบบ generic — code อาจเป็น ID ที่ registry ยังไม่มี Thai template ก็ยังโชว์ได้
          *     (ไม่ hardcode switch-case ตาม warning_registry.py วันนี้ ดู Rev.5 ข้อ 7)
@@ -9328,6 +13321,15 @@ export interface components {
             code?: string | null;
             /** Message */
             message: string;
+        };
+        /** WatchdogScanResponseDTO */
+        WatchdogScanResponseDTO: {
+            /** Exceptions Detected */
+            exceptions_detected: number;
+            /** Exceptions */
+            exceptions: {
+                [key: string]: unknown;
+            }[];
         };
         /** WealthXBatchScanRequestDTO */
         WealthXBatchScanRequestDTO: {
@@ -9511,6 +13513,71 @@ export interface components {
              * @default THB
              */
             fee_currency: string;
+        };
+        /** WeeklyDigestPayloadDTO */
+        WeeklyDigestPayloadDTO: {
+            /** Digest Id */
+            digest_id: string;
+            /** From Date */
+            from_date: string;
+            /** To Date */
+            to_date: string;
+            /** Generated At */
+            generated_at: string;
+            /** Executive Themes */
+            executive_themes?: string[];
+            /** Portfolio Health Summary */
+            portfolio_health_summary: string;
+            /** Portfolio Matrix */
+            portfolio_matrix?: components["schemas"]["WeeklyPortfolioMatrixRowDTO"][];
+            /** Consensus Narratives */
+            consensus_narratives?: string[];
+            /** Contrarian And Pitches */
+            contrarian_and_pitches?: string[];
+            /** Week Ahead Checklist */
+            week_ahead_checklist?: string[];
+            /** Items */
+            items?: components["schemas"]["DailyDigestItemDTO"][];
+            /** Youtube Highlights */
+            youtube_highlights?: components["schemas"]["DailyYouTubeHighlightDTO"][];
+        };
+        /** WeeklyDigestResponseDTO */
+        WeeklyDigestResponseDTO: {
+            /** Has Digest */
+            has_digest: boolean;
+            digest?: components["schemas"]["WeeklyDigestPayloadDTO"] | null;
+            /** Available Dates */
+            available_dates?: string[];
+        };
+        /** WeeklyDigestSynthesizeRequestDTO */
+        WeeklyDigestSynthesizeRequestDTO: {
+            /**
+             * Days
+             * @default 7
+             */
+            days: number;
+            /** Selected Video Ids */
+            selected_video_ids?: string[];
+            /** Excluded News Ids */
+            excluded_news_ids?: string[];
+            /** Custom Youtube Urls */
+            custom_youtube_urls?: string[];
+            /** Custom News Items */
+            custom_news_items?: string[];
+        };
+        /** WeeklyPortfolioMatrixRowDTO */
+        WeeklyPortfolioMatrixRowDTO: {
+            /** Ticker */
+            ticker: string;
+            /**
+             * Thesis Status
+             * @enum {string}
+             */
+            thesis_status: "strong_hold" | "watch_closely" | "accumulate_zone" | "review_thesis";
+            /** Thesis Status Label */
+            thesis_status_label: string;
+            /** Weekly Summary */
+            weekly_summary: string;
         };
     };
     responses: never;
@@ -10766,6 +14833,39 @@ export interface operations {
             };
         };
     };
+    trigger_performance_snapshot_all_api_portfolio_actual_performance_snapshot_all_post: {
+        parameters: {
+            query?: {
+                refresh_prices?: boolean;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: string;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     get_sector_rotation_latest_api_macro_sector_rotation_latest_get: {
         parameters: {
             query?: {
@@ -11207,6 +15307,432 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["MacroNotebookLMExportResponseDTO"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_digest_candidates_api_macro_digest_candidates_get: {
+        parameters: {
+            query?: {
+                days?: number;
+                force_refresh?: boolean;
+                max_news_age_hours?: number | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DigestCandidatesResponseDTO"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_daily_digest_api_macro_digest_daily_get: {
+        parameters: {
+            query?: {
+                /** @description Optional ISO date string YYYY-MM-DD */
+                date?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DailyDigestResponseDTO"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    synthesize_daily_digest_api_macro_digest_daily_synthesize_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DailyDigestSynthesizeRequestDTO"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DailyDigestResponseDTO"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_weekly_digest_api_macro_digest_weekly_get: {
+        parameters: {
+            query?: {
+                /** @description Optional target date YYYY-MM-DD */
+                date?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WeeklyDigestResponseDTO"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    synthesize_weekly_digest_api_macro_digest_weekly_synthesize_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WeeklyDigestSynthesizeRequestDTO"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WeeklyDigestResponseDTO"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_digest_read_state_api_macro_digest_read_state_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DigestReadStateRequestDTO"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DigestReadStateResponseDTO"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_macro_vintage_walk_endpoint_api_macro_vintage_walk_get: {
+        parameters: {
+            query?: {
+                /** @description Point-in-time cutoff date YYYY-MM-DD */
+                cutoff_date?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MacroVintageWalkResponseDTO"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_portfolio_advisory_endpoint_api_portfolio_advisory_get: {
+        parameters: {
+            query?: {
+                /** @description Whether to trigger an immediate live price fetch before evaluation */
+                refresh_prices?: boolean;
+                /** @description Portfolio identifier to evaluate */
+                portfolio_id?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PortfolioAdvisoryResponseDTO"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    synthesize_advisory_playbook_endpoint_api_portfolio_advisory_synthesize_post: {
+        parameters: {
+            query?: {
+                /** @description Portfolio identifier to synthesize */
+                portfolio_id?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["SynthesizeAdvisoryPlaybookRequest"] | null;
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PortfolioAdvisoryNarrativeDTO"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_factor_exposure_endpoint_api_portfolio_factor_exposure_get: {
+        parameters: {
+            query?: {
+                /** @description Portfolio identifier to evaluate */
+                portfolio_id?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FactorExposureSnapshotDTO"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_fund_constituents_endpoint_api_portfolio_funds__symbol__constituents_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                symbol: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FundConstituentsDTO"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_portfolio_look_through_endpoint_api_portfolio__portfolio_id__look_through_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                portfolio_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PortfolioLookThroughReportDTO"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_portfolio_opportunities_api_portfolio_watchlist_opportunities_get: {
+        parameters: {
+            query?: {
+                /** @description Portfolio ID to evaluate opportunities for */
+                portfolio_id?: string;
+                /** @description Bypass cache and force re-evaluation */
+                force_refresh?: boolean;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PortfolioOpportunitiesResponseDTO"];
                 };
             };
             /** @description Validation Error */
@@ -12733,6 +17259,137 @@ export interface operations {
             };
         };
     };
+    export_equity_to_notebooklm_api_equity__ticker__notebooklm_exports_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                ticker: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["EquityNotebookLMExportRequestDTO"] | null;
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EquityNotebookLMExportResponseDTO"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_latest_equity_notebooklm_export_api_equity__ticker__notebooklm_exports_latest_get: {
+        parameters: {
+            query?: {
+                /** @description Market identifier (e.g. US, TH) */
+                market?: string;
+            };
+            header?: never;
+            path: {
+                ticker: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EquityNotebookLMExportStatusDTO"] | null;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_equity_notebooklm_export_by_id_api_equity_notebooklm_exports__export_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                export_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EquityNotebookLMExportStatusDTO"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    retry_equity_notebooklm_export_api_equity_notebooklm_exports__export_id__retry_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                export_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EquityNotebookLMExportResponseDTO"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     get_equity_valuation_targets_api_equity__ticker__valuation_targets_get: {
         parameters: {
             query?: never;
@@ -12993,6 +17650,263 @@ export interface operations {
             };
         };
     };
+    get_promise_ledger_api_equity__ticker__earnings_call_ledger_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                ticker: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PromiseSyncResponseDTO"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    sync_promise_ledger_api_equity__ticker__earnings_call_sync_post: {
+        parameters: {
+            query?: {
+                force_refresh?: boolean;
+                limit_calls?: number;
+            };
+            header?: never;
+            path: {
+                ticker: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PromiseSyncResponseDTO"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_earnings_bridge_api_equity__ticker__earnings_bridge_get: {
+        parameters: {
+            query?: {
+                /** @description Reporting period */
+                period?: string | null;
+            };
+            header?: never;
+            path: {
+                ticker: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EarningsBridgeDTO"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_event_study_presets_api_equity_event_study_presets_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EventPresetItemDTO"][];
+                };
+            };
+        };
+    };
+    execute_event_study_api_equity__ticker__event_study_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                ticker: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["EventStudyRequestDTO"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EventStudyResponseDTO"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_position_review_api_equity__ticker__position_review_get: {
+        parameters: {
+            query?: {
+                market?: string;
+                portfolio_id?: string;
+            };
+            header?: never;
+            path: {
+                ticker: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PositionReviewResponseDTO"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_variant_perception_api_equity__ticker__variant_perception_get: {
+        parameters: {
+            query?: {
+                /** @description Earnings period e.g. '2026Q2' */
+                period?: string;
+                /** @description Financial metric name */
+                metric_name?: string;
+                /** @description Reported result (Decimal string). Required for surprise realization. */
+                reported?: string | null;
+            };
+            header?: never;
+            path: {
+                ticker: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VariantPerceptionSnapshotDTO"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_estimates_ledger_api_equity__ticker__estimates_ledger_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                ticker: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EstimateRecordDTO"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     get_equity_detail_api_equity__ticker__get: {
         parameters: {
             query?: never;
@@ -13141,6 +18055,28 @@ export interface operations {
                 content: {
                     "application/json": {
                         [key: string]: string;
+                    };
+                };
+            };
+        };
+    };
+    get_harness_telemetry_api_health_harness_telemetry_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
                     };
                 };
             };
@@ -15039,6 +19975,758 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_sessions_api_manager_sessions_get: {
+        parameters: {
+            query?: {
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdvisorSessionDTO"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_session_api_manager_sessions_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["CreateSessionRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdvisorSessionDTO"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_messages_api_manager_sessions__session_id__messages_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                session_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdvisorChatMessageDTO"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    stream_chat_api_manager_sessions__session_id__stream_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                session_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AdvisorChatPromptRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_sandbox_state_api_manager_sandbox_state_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SandboxStateSnapshotDTO"];
+                };
+            };
+        };
+    };
+    get_hermes_sync_status_api_manager_hermes_sync_status_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HermesSyncStatusDTO"];
+                };
+            };
+        };
+    };
+    trigger_hermes_sync_api_manager_hermes_sync_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+        };
+    };
+    promote_skill_api_manager_sandbox_skills__skill_name__promote_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                skill_name: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_today_morning_packet_api_manager_pm_review_today_get: {
+        parameters: {
+            query?: {
+                portfolio_id?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MorningReviewPacketDTO"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    sign_off_morning_review_api_manager_pm_review_sign_off_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PMSignoffRequestDTO"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PMSignoffResponseDTO"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_signoff_history_api_manager_pm_review_history_get: {
+        parameters: {
+            query?: {
+                portfolio_id?: string | null;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PMSignoffResponseDTO"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_catalyst_exceptions_api_thesis_catalyst_exceptions_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CatalystExceptionDTO"][];
+                };
+            };
+        };
+    };
+    review_catalyst_exception_api_thesis_catalyst_exceptions__exception_id__review_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                exception_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReviewCatalystRequestDTO"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CatalystExceptionDTO"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_active_thesis_api_thesis__ticker__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                ticker: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ThesisClaimDTO"] | null;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    record_or_revise_thesis_api_thesis__ticker__post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                ticker: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateThesisRequestDTO"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ThesisClaimDTO"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_thesis_as_of_api_thesis__ticker__as_of_get: {
+        parameters: {
+            query: {
+                /** @description Historical ISO-8601 UTC timestamp */
+                as_of_utc: string;
+            };
+            header?: never;
+            path: {
+                ticker: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ThesisClaimDTO"] | null;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    evaluate_watchdog_scan_api_thesis_evaluate_post: {
+        parameters: {
+            query?: {
+                ticker?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WatchdogScanResponseDTO"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    synthesize_thesis_for_ticker_api_thesis_synthesize__ticker__post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                ticker: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["SynthesizeThesisRequestDTO"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    batch_synthesize_portfolio_theses_api_thesis_batch_synthesize_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["BatchSynthesizeRequestDTO"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    generate_earnings_bridge_api_thesis_earnings_bridge_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["EarningsBridgeRequestDTO"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    route_task_api_governance_route_task_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TaskRouteRequestDTO"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TaskRouteRecordDTO"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_routing_ledger_api_governance_routing_ledger_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TaskRouteRecordDTO"][];
+                };
+            };
+        };
+    };
+    get_routine_status_api_resilience_routine_status_get: {
+        parameters: {
+            query?: {
+                /** @description Date in YYYY-MM-DD format */
+                target_date?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RoutineStatusReportDTO"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    record_heartbeat_api_resilience_heartbeat_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RoutineHeartbeatRequestDTO"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RoutineExecutionRecordDTO"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_routine_history_api_resilience_routine_history_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RoutineExecutionRecordDTO"][];
                 };
             };
         };

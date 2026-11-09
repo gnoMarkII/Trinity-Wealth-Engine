@@ -766,6 +766,9 @@ export interface PerformanceSnapshotDTO {
   Cash_Balance: number
   realized_pnl_ytd?: number | null
   passive_income_ytd?: number | null
+  Total_NAV_THB?: number | null
+  Accrued_Dividend_Receivable_THB?: number | null
+  Economic_NAV_THB?: number | null
   Asset_Class_Values_THB?: Record<string, number> | null
   coverage_warning?: string | null
 }
@@ -1315,6 +1318,7 @@ export interface QuantSignalsDTO {
   fcf_quality_score: number | null
   debt_quality_score: number | null
   adtv_local_currency: number | null
+  amihud_illiquidity_20d?: number | null
   composite_score: number | null
   peer_sector: string | null
   peer_count: number | null
@@ -1346,6 +1350,9 @@ export interface QuantSignalsDTO {
   sector_kpis?: any | null
   net_buyback_yield_pct?: number | null
   net_shareholder_yield_pct?: number | null
+  dupont_breakdown?: Record<string, any> | null
+  sloan_accrual?: Record<string, any> | null
+  composite_score_waterfall?: Record<string, any> | null
 }
 
 export interface EquityDetailDTO extends EquitySummaryDTO {
@@ -3397,6 +3404,11 @@ export interface HoldingAdvisoryDTO {
   sector_quadrant?: string | null
   breached_falsifiers: string[]
   data_warnings: string[]
+  risk_contribution_pct?: number | null
+  estimated_friction_bps?: number | null
+  volatility_pct?: number | null
+  volatility_source?: 'observed' | 'estimated_default' | 'unavailable'
+  is_volatility_estimated?: boolean
 }
 
 export interface PortfolioRiskRadarDTO {
@@ -3413,11 +3425,24 @@ export interface PortfolioRiskRadarDTO {
   top_3_weight_pct?: number
   top_5_weight_pct?: number
   concentration_risk_level?: 'LOW' | 'MODERATE' | 'HIGH'
+  bucket_active_share_pct?: number | null
+  bucket_active_share_status?: 'AVAILABLE' | 'UNAVAILABLE'
+  risk_contributions_pct?: Record<string, number>
+  inverse_vol_weights_pct?: Record<string, number>
+  total_portfolio_volatility_pct?: number | null
+  risk_contribution_status?: 'AVAILABLE' | 'UNAVAILABLE_ZERO_VARIANCE' | 'NO_ACTIVE_ASSETS'
+  volatility_estimated_symbols?: string[]
+  drawdown_pct?: number | null
+  drawdown_posture_tier?: 'NORMAL' | 'TIER_1_CAUTION' | 'TIER_2_THROTTLE' | 'TIER_3_DEFENSIVE'
+  drawdown_status?: 'AVAILABLE' | 'UNAVAILABLE_UNKNOWN_PEAK'
+  drawdown_hurdle_adjustment?: number
+  drawdown_action_restrictions?: string[]
 }
 
 export interface PortfolioAdvisoryNarrativeDTO {
   synthesized_at: string
   portfolio_state_hash: string
+  synthesis_input_hash?: string
   macro_executive_summary: string
   immediate_action_playbook: string[]
   conditional_dip_plan: string[]
@@ -3493,6 +3518,7 @@ export interface PortfolioAdvisoryResponseDTO {
   evaluated_at: string
   data_mode: AdvisoryDataMode | string
   portfolio_state_hash: string
+  synthesis_input_hash?: string
   total_nav_thb: number
   cash_plan: DualCurrencyCashPlanDTO
   risk_radar: PortfolioRiskRadarDTO
@@ -3556,6 +3582,9 @@ export interface CandidateEvaluationResultDTO {
   research_priority: number
   priority_reasons: string[]
   is_actionable: boolean
+  liquidity_status?: string | null
+  adtv_thb?: number | null
+  liquidity_room_thb?: number | null
 }
 
 export interface PortfolioOpportunitiesResponseDTO {

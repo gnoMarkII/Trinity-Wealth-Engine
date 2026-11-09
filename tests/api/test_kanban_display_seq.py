@@ -2,7 +2,17 @@
 import sqlite3
 
 from api import state_db
-from api.routes_agents import _job_to_dto
+from api.db.adapters import SqliteJobRepositoryAdapter
+from api.routers.agents_router import _status_to_dto
+from api.schemas import JobStatusDTO
+from application.jobs.service import JobApplicationService
+
+
+def _job_to_dto(conn, job) -> JobStatusDTO:
+    service = JobApplicationService(repo=SqliteJobRepositoryAdapter(conn=conn))
+    status = service.get_status(job["job_id"])
+    assert status is not None
+    return _status_to_dto(status)
 
 
 def test_create_kanban_card_assigns_sequential_display_seq(tmp_path):

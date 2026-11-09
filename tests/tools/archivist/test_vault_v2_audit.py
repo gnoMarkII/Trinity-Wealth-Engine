@@ -184,3 +184,152 @@ def test_cli_audit_execution(tmp_path: Path, capsys: pytest.CaptureFixture[str])
     audit_text = audit_file.read_text(encoding="utf-8")
     assert "# Vault V2 Audit Report" in audit_text
     assert "File Breakdown by Extension" in audit_text
+
+
+def test_cli_extended_subcommands_end_to_end(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """Exercises newly wired vault_v2_cli subcommands on an isolated temp vault."""
+    vault_dir = tmp_path / "vault"
+    runtime_base = tmp_path / "runtime_base"
+    create_comprehensive_test_vault(vault_dir)
+
+    # Clear test-mode maintenance locks if any, and ensure writes target tmp_path only
+    monkeypatch.setenv("VAULT_RUNTIME_BASE", str(runtime_base))
+
+    # 1. nav-index
+    assert cli_main(["nav-index", "--vault", str(vault_dir)]) == 0
+    assert (vault_dir / "00_Index" / "Home.md").is_file()
+
+    # 2. archive (dry-run and apply on dated news note)
+    old_news = vault_dir / "30_Knowledge_Base" / "News" / "2020-01-01 Old Macro News.md"
+    old_news.parent.mkdir(parents=True, exist_ok=True)
+    old_news.write_text("# Old News\n", encoding="utf-8")
+    assert cli_main(["archive", "--vault", str(vault_dir), "--max-age-days", "30"]) == 0
+    assert old_news.exists()  # dry-run keeps file in place
+    assert cli_main(["archive", "--vault", str(vault_dir), "--max-age-days", "30", "--apply"]) == 0
+    assert not old_news.exists()
+    assert (vault_dir / "40_Archive" / "News" / "2020" / old_news.name).is_file()
+
+    # 3. query-notes (populates empty catalog if missing + resolves stock_hub path via link resolver)
+    capsys.readouterr()
+    assert cli_main(["query-notes", "--vault", str(vault_dir), "--wikilink", "[[FTNT]]"]) == 0
+    q_out = json.loads(capsys.readouterr().out)
+    assert q_out["resolved_wikilink"] == "30_Knowledge_Base/Stocks/FTNT/FTNT.md"
+
+    # 4. maintain (runs against the initialized SQLite catalog)
+    assert cli_main(["maintain", "--vault", str(vault_dir), "--no-vacuum"]) == 0
+    m_out = json.loads(capsys.readouterr().out)
+    assert "maintenance" in m_out and "orphaned_sidecars" in m_out
+
+    # 5. reconcile (shadow scan)
+    assert cli_main(["reconcile", "--vault", str(vault_dir), "--runtime-base", str(runtime_base)]) == 0
+    r_out = json.loads(capsys.readouterr().out)
+    assert "scanned" in r_out and "findings" in r_out
+
+    # 6. runtime-migrate (dry-run pass)
+    mig_report = tmp_path / "mig_report.json"
+    assert (
+        cli_main(
+            [
+                "runtime-migrate",
+                "--vault",
+                str(vault_dir),
+                "--runtime-base",
+                str(runtime_base),
+                "--output",
+                str(mig_report),
+            ]
+        )
+        == 0
+    )
+    assert mig_report.is_file()
+    mig_out = json.loads(capsys.readouterr().out)
+    assert mig_out["status"] == "PASS"
+
+    # 7. projection-rebuild
+    proj_input = tmp_path / "proj_input.json"
+    proj_input.write_text(
+        json.dumps(
+            {
+                "source_state": {"nav": 100000.0},
+                "projections": [
+                    {
+                        "entity_type": "holding",
+                        "title": "PTT Projection",
+                        "generated_text": "PTT 100 shares",
+                        "stable_key": "PTT",
+                        "metadata": {"document_key": "projection:default:PTT"},
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+    assert (
+        cli_main(
+            [
+                "projection-rebuild",
+                "--vault",
+                str(vault_dir),
+                "--portfolio-id",
+                "default",
+                "--input-json",
+                str(proj_input),
+                "--runtime-base",
+                str(runtime_base),
+            ]
+        )
+        == 0
+    )
+    p_out = json.loads(capsys.readouterr().out)
+    assert len(p_out) == 1
+    assert p_out[0]["status"] in {"committed", "applied", "replayed"}
+
+    # 8. concepts-cleanup argument validation + actual policy-only cleanup
+    assert cli_main(["concepts-cleanup", "--vault", str(vault_dir)]) == 2
+    from tools.archivist.concepts_cleanup import scan_concepts
+    snap = scan_concepts(vault_dir)
+    plan_file = tmp_path / "concepts_plan.json"
+    plan_file.write_text(json.dumps(snap), encoding="utf-8")
+    quarantine_dir = tmp_path / "quarantine"
+    assert (
+        cli_main(
+            [
+                "concepts-cleanup",
+                "--vault",
+                str(vault_dir),
+                "--plan",
+                str(plan_file),
+                "--quarantine",
+                str(quarantine_dir),
+                "--run-id",
+                "run_test_cli",
+                "--policy-only",
+            ]
+        )
+        == 0
+    )
+    c_out = json.loads(capsys.readouterr().out)
+    assert c_out["status"] == "PASS"
+
+    # 9. readiness-audit (write into tmp_path so repo files remain untouched)
+    readiness_out = tmp_path / "readiness-decision.md"
+    assert (
+        cli_main(
+            [
+                "readiness-audit",
+                "--repo-root",
+                ".",
+                "--output",
+                str(readiness_out),
+            ]
+        )
+        == 0
+    )
+    assert readiness_out.is_file()
+    audit_summary = json.loads(capsys.readouterr().out)
+    assert audit_summary["total"] == 10
+    assert "sha256_checksum" in audit_summary

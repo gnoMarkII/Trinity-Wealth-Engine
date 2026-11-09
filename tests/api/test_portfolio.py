@@ -36,8 +36,9 @@ _SAMPLE_DIRECTION = {
 }
 
 
-def _write_sidecar(tmp_path, monkeypatch, module, payload=_SAMPLE_DIRECTION):
+def _write_sidecar(tmp_path, monkeypatch, payload=_SAMPLE_DIRECTION):
     import api.dependencies as dependencies
+    import tools.archivist.core as archivist_core
 
     vault_dir = tmp_path / "vault"
     strategy_dir = vault_dir / "30_Knowledge_Base" / "Strategies"
@@ -45,14 +46,12 @@ def _write_sidecar(tmp_path, monkeypatch, module, payload=_SAMPLE_DIRECTION):
     (strategy_dir / "Macro_Strategy_Direction_2026-07-06.json").write_text(
         json.dumps(payload, ensure_ascii=False), encoding="utf-8"
     )
-    monkeypatch.setattr(module, "VAULT_PATH", vault_dir)
+    monkeypatch.setattr(archivist_core, "VAULT_PATH", vault_dir)
     monkeypatch.setattr(dependencies, "VAULT_PATH", vault_dir)
 
 
 def test_portfolio_latest_maps_dto_fields(authed_client, tmp_path, monkeypatch):
-    import api.routes_portfolio as routes_portfolio_module
-
-    _write_sidecar(tmp_path, monkeypatch, routes_portfolio_module)
+    _write_sidecar(tmp_path, monkeypatch)
 
     r = authed_client.get("/api/portfolio/latest")
     assert r.status_code == 200
@@ -64,9 +63,7 @@ def test_portfolio_latest_maps_dto_fields(authed_client, tmp_path, monkeypatch):
 
 def test_portfolio_warnings_render_generically_for_unknown_id(authed_client, tmp_path, monkeypatch):
     """Warning ID ที่ registry ยังไม่มี Thai template ต้องยัง fallback แสดงได้ ไม่ crash/หาย (Rev.5 ข้อ 7)"""
-    import api.routes_portfolio as routes_portfolio_module
-
-    _write_sidecar(tmp_path, monkeypatch, routes_portfolio_module)
+    _write_sidecar(tmp_path, monkeypatch)
 
     r = authed_client.get("/api/portfolio/latest")
     body = r.json()
@@ -81,9 +78,7 @@ def test_portfolio_warnings_render_generically_for_unknown_id(authed_client, tmp
 
 
 def test_macro_dashboard_maps_regime_evidence(authed_client, tmp_path, monkeypatch):
-    import api.routes_portfolio as routes_portfolio_module
-
-    _write_sidecar(tmp_path, monkeypatch, routes_portfolio_module)
+    _write_sidecar(tmp_path, monkeypatch)
 
     r = authed_client.get("/api/macro/dashboard")
     assert r.status_code == 200
@@ -93,8 +88,6 @@ def test_macro_dashboard_maps_regime_evidence(authed_client, tmp_path, monkeypat
 
 
 def test_macro_dashboard_returns_chart_and_content_metadata(authed_client, tmp_path, monkeypatch):
-    import api.routes_portfolio as routes_portfolio_module
-
     payload = json.loads(json.dumps(_SAMPLE_DIRECTION))
     payload["dashboard_indicators"] = [
         {
@@ -124,7 +117,7 @@ def test_macro_dashboard_returns_chart_and_content_metadata(authed_client, tmp_p
         },
         {"reference_id": "ignored", "kind": "news", "title": "Bad", "url": "javascript:alert(1)"},
     ]
-    _write_sidecar(tmp_path, monkeypatch, routes_portfolio_module, payload)
+    _write_sidecar(tmp_path, monkeypatch, payload)
 
     r = authed_client.get("/api/macro/dashboard")
 
@@ -135,8 +128,6 @@ def test_macro_dashboard_returns_chart_and_content_metadata(authed_client, tmp_p
 
 
 def test_macro_indicator_series_uses_registered_latest_indicator(authed_client, tmp_path, monkeypatch):
-    import api.routes_portfolio as routes_portfolio_module
-
     payload = json.loads(json.dumps(_SAMPLE_DIRECTION))
     payload["dashboard_indicators"] = [
         {
@@ -146,7 +137,7 @@ def test_macro_indicator_series_uses_registered_latest_indicator(authed_client, 
             "unit": "%",
         }
     ]
-    _write_sidecar(tmp_path, monkeypatch, routes_portfolio_module, payload)
+    _write_sidecar(tmp_path, monkeypatch, payload)
     series_dir = tmp_path / "vault" / "30_Knowledge_Base" / "Strategies" / "Macro_Indicator_Series"
     series_dir.mkdir(parents=True)
     (series_dir / "obs_us10y.json").write_text(
@@ -162,12 +153,12 @@ def test_macro_indicator_series_uses_registered_latest_indicator(authed_client, 
 
 
 def test_portfolio_latest_404_when_no_report_exists(authed_client, tmp_path, monkeypatch):
-    import api.routes_portfolio as routes_portfolio_module
     import api.dependencies as dependencies
 
     vault_dir = tmp_path / "empty_vault"
     (vault_dir / "30_Knowledge_Base" / "Strategies").mkdir(parents=True)
-    monkeypatch.setattr(routes_portfolio_module, "VAULT_PATH", vault_dir)
+    import tools.archivist.core as archivist_core
+    monkeypatch.setattr(archivist_core, "VAULT_PATH", vault_dir)
     monkeypatch.setattr(dependencies, "VAULT_PATH", vault_dir)
 
     r = authed_client.get("/api/portfolio/latest")
@@ -175,8 +166,6 @@ def test_portfolio_latest_404_when_no_report_exists(authed_client, tmp_path, mon
 
 
 def test_macro_dashboard_contract_ag215_fields(authed_client, tmp_path, monkeypatch):
-    import api.routes_portfolio as routes_portfolio_module
-
     payload = json.loads(json.dumps(_SAMPLE_DIRECTION))
     payload["run_id"] = "run-20260927-01"
     payload["job_id"] = "macro_daily_allocator"
@@ -215,7 +204,7 @@ def test_macro_dashboard_contract_ag215_fields(authed_client, tmp_path, monkeypa
             "chart_available": False,
         }
     ]
-    _write_sidecar(tmp_path, monkeypatch, routes_portfolio_module, payload)
+    _write_sidecar(tmp_path, monkeypatch, payload)
 
     r = authed_client.get("/api/macro/dashboard")
     assert r.status_code == 200

@@ -11,13 +11,14 @@ Produces deterministic research priority (1 to 4) with stable ties.
 from __future__ import annotations
 
 from datetime import datetime, timezone
-from decimal import Decimal
-from typing import Any, Dict, List, Optional
+from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
+from typing import Any, Dict, List, Optional, Tuple
 
 from core.opportunity_finder.capacity import calculate_candidate_capacity
 from core.opportunity_finder.models import (
     CandidateEvaluationResult,
     EvidenceReadiness,
+    LiquidityStatus,
     MacroAlignment,
     OpportunityCandidate,
     OpportunityReport,
@@ -28,12 +29,119 @@ from core.portfolio.sector_taxonomy import normalize_sector_name
 
 
 def _to_decimal(val: Any) -> Optional[Decimal]:
-    if val is None:
+    if isinstance(val, bool) or val is None:
         return None
     try:
-        return Decimal(str(val))
-    except Exception:
+        dec = val if isinstance(val, Decimal) else Decimal(str(val))
+        return dec if dec.is_finite() else None
+    except (InvalidOperation, ValueError, TypeError):
         return None
+
+
+def _resolve_opportunity_sidecar(
+    cand: OpportunityCandidate,
+    sidecars: Dict[str, Any],
+) -> Optional[Dict[str, Any]]:
+    """Resolves market-compatible Equity Sidecar dict for candidate without market-mismatch bleed."""
+    if not sidecars:
+        return None
+    sym_u = cand.symbol.strip().upper()
+    clean_u = sym_u.replace(".BK", "").strip()
+    preferred = [sym_u]
+    if cand.market == "TH" and f"{clean_u}.BK" not in preferred:
+        preferred.append(f"{clean_u}.BK")
+    if clean_u not in preferred:
+        preferred.append(clean_u)
+
+    candidates: List[Any] = []
+    for k in preferred:
+        if k in sidecars:
+            candidates.append(sidecars[k])
+    for k, v in sidecars.items():
+        ku = str(k).strip().upper()
+        if ku == sym_u or ku.replace(".BK", "") == clean_u:
+            candidates.append(v)
+
+    for sc in candidates:
+        if not isinstance(sc, dict):
+            continue
+        sc_mkt = str(sc.get("market") or "").strip().upper()
+        if sc_mkt and cand.market in ("TH", "US") and sc_mkt != cand.market:
+            continue
+        return sc
+    return None
+
+
+def _resolve_candidate_adtv_thb(
+    candidate: OpportunityCandidate,
+    sidecar_data: Optional[Dict[str, Any]],
+    evidence_readiness: EvidenceReadiness,
+    usd_thb_fx_rate: Optional[Decimal],
+    max_adv_participation_pct: Decimal = Decimal("5.0"),
+) -> Tuple[Optional[Decimal], LiquidityStatus, Optional[str], Optional[Decimal]]:
+    """Extracts and validates dated 20d ADTV converted to THB from Equity Sidecar."""
+    if not sidecar_data or not isinstance(sidecar_data, dict):
+        return None, "unverified_missing_adtv", "20d ADTV unavailable (no Equity Sidecar); liquidity capacity unverified.", None
+
+    quant = sidecar_data.get("quant_signals")
+    if not isinstance(quant, dict):
+        quant = {}
+
+    has_direct_thb = False
+    raw_val: Any = None
+    for src in (quant, sidecar_data):
+        if "adtv_thb" in src and src["adtv_thb"] is not None:
+            raw_val = src["adtv_thb"]
+            has_direct_thb = True
+            break
+    if raw_val is None:
+        for src in (quant, sidecar_data):
+            if "adtv_local_currency" in src and src["adtv_local_currency"] is not None:
+                raw_val = src["adtv_local_currency"]
+                break
+
+    if raw_val is None:
+        return None, "unverified_missing_adtv", "20d ADTV unavailable in Equity Sidecar; liquidity capacity unverified.", None
+
+    adtv_as_of = str(quant.get("adtv_as_of") or sidecar_data.get("analysis_date") or "").strip()
+    is_adtv_stale = (
+        evidence_readiness == "stale"
+        or quant.get("adtv_is_stale") is True
+        or "stale" in str(quant.get("adtv_status", "")).lower()
+    )
+    if not is_adtv_stale and adtv_as_of:
+        try:
+            dt = datetime.strptime(adtv_as_of[:10], "%Y-%m-%d").replace(tzinfo=timezone.utc)
+            if (datetime.now(timezone.utc) - dt).days > 365:
+                is_adtv_stale = True
+        except Exception:
+            pass
+
+    if is_adtv_stale:
+        return None, "unverified_stale_adtv", f"20d ADTV data is stale ({adtv_as_of or 'unknown date'}); liquidity capacity unverified.", None
+
+    dec_val = _to_decimal(raw_val)
+    if dec_val is None or dec_val < Decimal("0"):
+        return Decimal("NaN"), "unverified_invalid_adtv", "20d ADTV value is invalid or negative; usable liquidity capacity is unknown.", None
+
+    if not has_direct_thb and (candidate.currency.strip().upper() == "USD" or candidate.market == "US"):
+        if usd_thb_fx_rate is None:
+            return None, "unverified_missing_fx", "USD/THB FX rate unavailable to convert US 20d ADTV; liquidity capacity unverified.", None
+        fx_dec = _to_decimal(usd_thb_fx_rate)
+        if fx_dec is None or fx_dec <= Decimal("0"):
+            return Decimal("NaN"), "unverified_missing_fx", "USD/THB FX rate is invalid or non-positive; US liquidity capacity is unknown.", None
+        adtv_thb = (dec_val * fx_dec).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+    else:
+        adtv_thb = dec_val.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+
+    if adtv_thb <= Decimal("0"):
+        return Decimal("0.00"), "constrained", None, Decimal("0.00")
+
+    liq_room = ((adtv_thb * max_adv_participation_pct) / Decimal("100.0")).quantize(
+        Decimal("0.01"), rounding=ROUND_HALF_UP
+    )
+    liq_status: LiquidityStatus = "constrained" if liq_room <= Decimal("0") else "verified"
+    return adtv_thb, liq_status, None, liq_room
 
 
 class OpportunityEvaluator:
@@ -52,6 +160,7 @@ class OpportunityEvaluator:
         single_stock_cap_pct: Decimal = Decimal("15.0"),
         sector_cap_pct: Decimal = Decimal("30.0"),
         look_through_coverage_pct: Decimal = Decimal("100.0"),
+        usd_thb_fx_rate: Optional[Decimal] = None,
     ) -> CandidateEvaluationResult:
         """Run 3-dimensional evaluation on a single candidate."""
 
@@ -220,7 +329,13 @@ class OpportunityEvaluator:
             macro_alignment = "unavailable"
             macro_reasons.append("Sector rotation snapshot unavailable.")
 
-        # 4. Dimension 4: Capacity & Exposure Guard
+        # 4. Dimension 4: Capacity & Exposure Guard (including dated FX-converted 20d ADTV)
+        adtv_thb_arg, liq_status, adtv_unverified_reason, liq_room = _resolve_candidate_adtv_thb(
+            candidate=candidate,
+            sidecar_data=sidecar_data,
+            evidence_readiness=evidence_readiness,
+            usd_thb_fx_rate=usd_thb_fx_rate,
+        )
         cap_status, usable_capacity, issuer_room, sector_room, cap_reasons = calculate_candidate_capacity(
             candidate=candidate,
             total_nav_thb=total_nav_thb,
@@ -229,7 +344,13 @@ class OpportunityEvaluator:
             single_stock_cap_pct=single_stock_cap_pct,
             sector_cap_pct=sector_cap_pct,
             coverage_pct=look_through_coverage_pct,
+            adtv_thb=adtv_thb_arg,
+            adtv_unverified_reason=adtv_unverified_reason,
         )
+        if cap_status == "not_applicable":
+            liq_status = "not_applicable"
+        elif adtv_thb_arg is not None and not adtv_thb_arg.is_finite():
+            adtv_thb_arg = None
 
         # 5. Deterministic Research Priority Scoring
         priority = 3
@@ -241,9 +362,9 @@ class OpportunityEvaluator:
         elif policy_fit == "needs_review":
             priority = 4
             priority_reasons.append("Policy Fit Unconfirmed: Needs Investor Axis review.")
-        elif cap_status == "constrained":
+        elif cap_status in ("constrained", "unknown"):
             priority = 3
-            priority_reasons.append("Capacity Constrained: Portfolio room exhausted for single-stock/sector.")
+            priority_reasons.append("Capacity Constrained or Unverified: Portfolio/liquidity room unavailable or unknown.")
         elif evidence_readiness == "sufficient" and (composite_score or 0) >= 70.0 and macro_alignment == "tailwind":
             priority = 1
             priority_reasons.append("High Conviction: Strong Quant score (>= 70), Macro tailwind, and Portfolio capacity available.")
@@ -280,6 +401,9 @@ class OpportunityEvaluator:
             research_priority=priority,
             priority_reasons=priority_reasons,
             is_actionable=is_actionable,
+            liquidity_status=liq_status,
+            adtv_thb=adtv_thb_arg,
+            liquidity_room_thb=liq_room,
         )
 
     @classmethod
@@ -298,6 +422,7 @@ class OpportunityEvaluator:
         single_stock_cap_pct: Decimal = Decimal("15.0"),
         sector_cap_pct: Decimal = Decimal("30.0"),
         look_through_coverage_pct: Decimal = Decimal("100.0"),
+        usd_thb_fx_rate: Optional[Decimal] = None,
     ) -> OpportunityReport:
         """Batch evaluate all candidates and build sorted OpportunityReport."""
         now_iso = datetime.now(timezone.utc).isoformat()
@@ -321,7 +446,7 @@ class OpportunityEvaluator:
 
         for cand in candidates:
             sec_exp = sector_exposures_thb.get(cand.sector_name, Decimal("0"))
-            sidecar = sidecars.get(cand.symbol) or sidecars.get(cand.symbol.replace(".BK", ""))
+            sidecar = _resolve_opportunity_sidecar(cand, sidecars)
 
             res = cls.evaluate_candidate(
                 candidate=cand,
@@ -335,6 +460,7 @@ class OpportunityEvaluator:
                 single_stock_cap_pct=single_stock_cap_pct,
                 sector_cap_pct=sector_cap_pct,
                 look_through_coverage_pct=look_through_coverage_pct,
+                usd_thb_fx_rate=usd_thb_fx_rate,
             )
             results.append(res)
 
@@ -371,5 +497,10 @@ class OpportunityEvaluator:
                 "single_stock_cap_pct": float(single_stock_cap_pct),
                 "sector_cap_pct": float(sector_cap_pct),
                 "look_through_coverage_pct": float(look_through_coverage_pct),
+                "usd_thb_fx_rate": (
+                    float(usd_thb_fx_rate)
+                    if usd_thb_fx_rate is not None and isinstance(usd_thb_fx_rate, Decimal) and usd_thb_fx_rate.is_finite()
+                    else None
+                ),
             },
         )
