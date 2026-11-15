@@ -49,10 +49,19 @@ class JobQueue:
                 pass
             self._worker_task = None
 
-    def dispatch(self, instruction: str, card_id: Optional[str], flow: str = "manager", scope: str = "both") -> str:
+    def dispatch(
+        self,
+        instruction: str,
+        card_id: Optional[str],
+        flow: str = "manager",
+        scope: str = "both",
+        *,
+        require_approval: bool = False,
+        approval_metadata: Optional[dict[str, Any]] = None,
+    ) -> str:
         """คืน job_id — ถ้ามีงานเดียวกัน (flow เดิม + card_id เดิม + instruction เดิม + scope เดิม)
-        กำลัง queued/running อยู่แล้ว คืน job_id เดิมแทนการรันซ้ำ (กันลาก/กด dispatch ซ้ำเปลืองงบ LLM)
-        flow ต้องอยู่ใน key ด้วย ไม่งั้นงานชื่อเดียวกัน scope เดียวกันแต่คนละ flow จะ dedup ผิดตัว
+        กำลัง queued/running/awaiting_approval อยู่แล้ว คืน job_id เดิมแทนการรันซ้ำ (กันลาก/กด dispatch ซ้ำเปลืองงบ LLM)
+        เมื่อ require_approval=True งานจะหยุดรอที่ status='awaiting_approval' + คอลัมน์ approval จนกว่าผู้ใช้จะกดยอมรับ
         """
         idempotency_key = f"{flow}:{card_id or 'nocard'}:{instruction.strip()}:{scope}"
         with DbUnitOfWork(db_path=self._db_path) as uow:
@@ -66,20 +75,149 @@ class JobQueue:
             if existing is not None:
                 # เคยมีงานเดิม (done/error) ใช้ key นี้แล้ว — เติม job_id กันชน UNIQUE constraint
                 key = f"{idempotency_key}:{job_id}"
+
+            initial_status = "awaiting_approval" if require_approval else "queued"
+            target_column = "approval" if require_approval else "executing"
             uow.jobs.create_job(
                 job_id,
                 thread_id,
                 card_id,
                 key,
                 instruction,
-                status="queued",
+                status=initial_status,
                 flow=flow,
                 scope=scope,
             )
+            if require_approval:
+                meta = dict(approval_metadata or {})
+                approval_payload = {
+                    "type": "pre_run_approval",
+                    "title": str(meta.get("title") or instruction.strip()),
+                    "instruction": instruction,
+                    "flow": flow,
+                    "scope": scope,
+                    **meta,
+                }
+                uow.jobs.set_job_awaiting_approval(
+                    job_id,
+                    json.dumps(approval_payload, ensure_ascii=False),
+                )
             if card_id:
-                uow.kanban.move_kanban_card(card_id, "executing", job_id)
+                uow.kanban.move_kanban_card(card_id, target_column, job_id)
 
-        self.enqueue(job_id)
+        if not require_approval:
+            self.enqueue(job_id)
+        return job_id
+
+    def dispatch_approval_with_card(
+        self,
+        *,
+        source_key: str,
+        title: str,
+        instruction: str,
+        flow: str,
+        scope: str,
+        approval_metadata: dict[str, Any],
+    ) -> str:
+        """Atomically upsert a stable prerequisite card and its approval job."""
+        clean_source_key = (source_key or "").strip()
+        clean_title = (title or "").strip()
+        clean_instruction = (instruction or "").strip()
+        if not clean_source_key or not clean_instruction:
+            raise ValueError("source_key and instruction are required")
+
+        identity_key = f"roundtable:{clean_source_key}"
+        with DbUnitOfWork(db_path=self._db_path) as uow:
+            card = uow.kanban.find_kanban_card_by_source_key(clean_source_key)
+            if card is None:
+                # Reuse a legacy card created before stable roundtable source keys
+                # were introduced. Restrict the fallback to an exact manager card.
+                legacy = next(
+                    (
+                        row for row in uow.kanban.list_kanban_cards()
+                        if row.get("source_key") is None
+                        and row.get("flow") == flow
+                        and row.get("title") == clean_title
+                        and (row.get("prompt") or "") == clean_instruction
+                    ),
+                    None,
+                )
+                card = legacy
+            if card is None:
+                proposed_card_id = str(uuid.uuid4())
+                uow.kanban.create_kanban_card(
+                    card_id=proposed_card_id,
+                    title=clean_title,
+                    column_name="backlog",
+                    flow=flow,
+                    prompt=clean_instruction,
+                    source_key=clean_source_key,
+                    scope=scope,
+                )
+                card = uow.kanban.find_kanban_card_by_source_key(clean_source_key)
+                if card is None:
+                    card = uow.kanban.get_kanban_card(proposed_card_id)
+                if card is None:
+                    raise RuntimeError("Roundtable prerequisite card could not be persisted")
+
+            card_id = str(card["card_id"])
+            active_jobs = uow.jobs.list_jobs_by_status(
+                ["queued", "running", "awaiting_approval"], flows=[flow]
+            )
+            active_for_card = [
+                job for job in active_jobs
+                if job.get("card_id") == card_id and job.get("scope", "both") == scope
+            ]
+            if active_for_card:
+                existing_job = active_for_card[0]
+                if existing_job.get("status") != "awaiting_approval":
+                    raise RuntimeError(
+                        "Roundtable prerequisite already has an active job outside the approval state"
+                    )
+                try:
+                    existing_payload = json.loads(existing_job.get("interrupt_payload") or "{}")
+                except (TypeError, ValueError):
+                    existing_payload = {}
+                if existing_payload.get("type") != "pre_run_approval":
+                    raise RuntimeError("Active roundtable prerequisite is missing approval metadata")
+                uow.kanban.move_kanban_card(card_id, "approval", existing_job["job_id"])
+                return str(existing_job["job_id"])
+
+            existing_identity_job = uow.jobs.find_job_by_idempotency_key(identity_key)
+            job_id = str(uuid.uuid4())
+            idempotency_key = identity_key
+            if existing_identity_job is not None:
+                # Terminal jobs may be explicitly rerun; the suffix preserves
+                # the unique index while subsequent active retries still reuse
+                # the job by its stable card association above.
+                idempotency_key = f"{identity_key}:{job_id}"
+
+            thread_id = str(uuid.uuid4())
+            uow.jobs.create_job(
+                job_id,
+                thread_id,
+                card_id,
+                idempotency_key,
+                clean_instruction,
+                status="awaiting_approval",
+                flow=flow,
+                scope=scope,
+            )
+            metadata = dict(approval_metadata or {})
+            approval_payload = {
+                **metadata,
+                "type": "pre_run_approval",
+                "title": clean_title or clean_instruction,
+                "instruction": clean_instruction,
+                "flow": flow,
+                "scope": scope,
+            }
+            uow.jobs.set_job_awaiting_approval(
+                job_id,
+                json.dumps(approval_payload, ensure_ascii=False),
+            )
+            uow.kanban.move_kanban_card(card_id, "approval", job_id)
+
         return job_id
 
     def resume(self, job_id: str, resume_value: dict[str, Any]) -> None:

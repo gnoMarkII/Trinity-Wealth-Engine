@@ -38,12 +38,12 @@ export const PriceReturnDecompositionBar: React.FC<PriceReturnDecompositionBarPr
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-2">
           <span className="text-base">📈</span>
-          <span className="text-xs font-bold text-zinc-900 tracking-tight">
+          <span className="text-xs font-bold text-slate-900 tracking-tight">
             Price Move Decomposition ({horizon_label})
           </span>
         </div>
         <span
-          className={`px-2.5 py-0.5 text-[10px] font-bold rounded-full uppercase tracking-wider border ${
+          className={`px-2.5 py-0.5 text-[11px] font-bold rounded-full uppercase tracking-wider border ${
             isFundamentalDriven
               ? 'bg-emerald-50 text-emerald-800 border-emerald-300'
               : isSpeculative
@@ -59,7 +59,7 @@ export const PriceReturnDecompositionBar: React.FC<PriceReturnDecompositionBarPr
       <div className="grid grid-cols-3 gap-2.5 text-center">
         {/* Total Return */}
         <div className="p-2.5 rounded-lg bg-surface border border-edge/60">
-          <span className="text-[10px] font-semibold text-zinc-500 uppercase tracking-wider block">
+          <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider block">
             Total Return
           </span>
           <span
@@ -74,7 +74,7 @@ export const PriceReturnDecompositionBar: React.FC<PriceReturnDecompositionBarPr
 
         {/* EPS Growth Driver */}
         <div className="p-2.5 rounded-lg bg-surface border border-edge/60">
-          <span className="text-[10px] font-semibold text-zinc-500 uppercase tracking-wider block">
+          <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider block">
             Earnings Growth
           </span>
           <span
@@ -89,12 +89,12 @@ export const PriceReturnDecompositionBar: React.FC<PriceReturnDecompositionBarPr
 
         {/* P/E Expansion Driver */}
         <div className="p-2.5 rounded-lg bg-surface border border-edge/60">
-          <span className="text-[10px] font-semibold text-zinc-500 uppercase tracking-wider block">
+          <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider block">
             P/E Expansion
           </span>
           <span
             className={`text-lg sm:text-xl font-black tracking-tight ${
-              pe_expansion_pct >= 0 ? 'text-amber-700' : 'text-zinc-600'
+              pe_expansion_pct >= 0 ? 'text-amber-700' : 'text-slate-600'
             }`}
           >
             {pe_expansion_pct >= 0 ? '+' : ''}
@@ -105,7 +105,7 @@ export const PriceReturnDecompositionBar: React.FC<PriceReturnDecompositionBarPr
 
       {/* Visual Stacked Waterfall Breakdown Bar */}
       <div className="space-y-1.5 pt-1">
-        <div className="flex items-center justify-between text-[11px] font-medium text-zinc-500">
+        <div className="flex items-center justify-between text-[11px] font-medium text-slate-500">
           <span className="flex items-center gap-1.5 text-emerald-800">
             <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block" />
             Earnings Driver ({epsRatio}%)
@@ -116,7 +116,7 @@ export const PriceReturnDecompositionBar: React.FC<PriceReturnDecompositionBarPr
           </span>
         </div>
 
-        <div className="w-full h-3 rounded-full bg-zinc-200/80 overflow-hidden flex shadow-inner">
+        <div className="w-full h-3 rounded-full bg-slate-200/80 overflow-hidden flex shadow-inner">
           <div
             className="h-full bg-gradient-to-r from-emerald-500 to-emerald-600 transition-all duration-500"
             style={{ width: `${epsRatio}%` }}
@@ -132,8 +132,8 @@ export const PriceReturnDecompositionBar: React.FC<PriceReturnDecompositionBarPr
 
       {/* Summary Narrative */}
       {diagnosis_summary && (
-        <div className="rounded-lg bg-zinc-50/90 border border-zinc-200/80 p-2.5 text-xs text-zinc-700 leading-relaxed">
-          <span className="font-semibold text-zinc-900 block mb-0.5">💡 Driver Assessment:</span>
+        <div className="rounded-lg bg-slate-50/90 border border-slate-200/80 p-2.5 text-xs text-slate-700 leading-relaxed">
+          <span className="font-semibold text-slate-900 block mb-0.5">💡 Driver Assessment:</span>
           {diagnosis_summary}
         </div>
       )}

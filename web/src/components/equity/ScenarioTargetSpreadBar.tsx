@@ -41,11 +41,11 @@ export const ScenarioTargetSpreadBar: React.FC<ScenarioTargetSpreadBarProps> = (
       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-edge/50 pb-2.5">
         <div className="flex items-center gap-2">
           <span className="text-base">🎯</span>
-          <span className="text-xs font-bold text-zinc-800 tracking-tight">
+          <span className="text-xs font-bold text-slate-800 tracking-tight">
             DCF Valuation Scenario Spread (Bear vs Base vs Bull)
           </span>
         </div>
-        <span className="text-[11px] text-zinc-400">
+        <span className="text-[11px] text-slate-500">
           คลิกที่การ์ดเพื่อสลับสมมติฐานการเติบโตและอัตราคิดลด
         </span>
       </div>
@@ -63,20 +63,20 @@ export const ScenarioTargetSpreadBar: React.FC<ScenarioTargetSpreadBarProps> = (
               className={`p-3.5 rounded-xl border text-left transition-all cursor-pointer ${
                 isSelected
                   ? `${sc.bgCol} ring-2 ring-offset-2 ring-offset-surface ring-current shadow-sm scale-[1.02]`
-                  : 'bg-surface border-edge/60 hover:border-zinc-300 opacity-80 hover:opacity-100'
+                  : 'bg-surface border-edge/60 hover:border-slate-300 opacity-80 hover:opacity-100'
               }`}
             >
               <div className="flex items-center justify-between text-xs font-bold mb-1.5">
                 <span className={sc.textCol}>{sc.label}</span>
                 {isSelected && (
-                  <span className="text-[9px] font-black uppercase px-1.5 py-0.2 rounded bg-black/10">
+                  <span className="text-[11px] font-black uppercase px-1.5 py-0.5 rounded bg-black/10">
                     ACTIVE
                   </span>
                 )}
               </div>
 
               <div className="flex items-baseline justify-between">
-                <span className="font-mono font-black text-xl sm:text-2xl text-zinc-900 tracking-tight">
+                <span className="font-mono font-black text-xl sm:text-2xl text-slate-900 tracking-tight">
                   {currency}{sc.data.target_price.toFixed(2)}
                 </span>
                 <span
@@ -90,7 +90,7 @@ export const ScenarioTargetSpreadBar: React.FC<ScenarioTargetSpreadBarProps> = (
                 </span>
               </div>
 
-              <div className="mt-2 pt-2 border-t border-edge/40 flex items-center justify-between text-[10px] text-zinc-500 font-mono">
+              <div className="mt-2 pt-2 border-t border-edge/40 flex items-center justify-between text-[11px] text-slate-500 font-mono">
                 <span>MoS: {sc.data.margin_of_safety_pct != null ? `${sc.data.margin_of_safety_pct.toFixed(1)}%` : 'N/A'}</span>
                 <span>Exit: {sc.data.implied_exit_ebitda_multiple != null ? `${sc.data.implied_exit_ebitda_multiple.toFixed(1)}x` : 'N/A'}</span>
               </div>
@@ -101,7 +101,7 @@ export const ScenarioTargetSpreadBar: React.FC<ScenarioTargetSpreadBarProps> = (
 
       {/* Visual Relative Spread Bar */}
       <div className="space-y-1.5 pt-1">
-        <div className="flex items-center justify-between text-[10px] font-mono text-zinc-400">
+        <div className="flex items-center justify-between text-[11px] font-mono text-slate-500">
           <span>MIN {currency}{minPrice.toFixed(0)}</span>
           {currentPrice != null && (
             <span className="text-sky-700 font-bold">ANALYSIS CLOSE: {currency}{currentPrice.toFixed(2)}</span>
@@ -109,7 +109,7 @@ export const ScenarioTargetSpreadBar: React.FC<ScenarioTargetSpreadBarProps> = (
           <span>MAX {currency}{maxPrice.toFixed(0)}</span>
         </div>
 
-        <div className="relative w-full h-3 rounded-full bg-zinc-200/80 overflow-hidden shadow-inner border border-edge/50">
+        <div className="relative w-full h-3 rounded-full bg-slate-200/80 overflow-hidden shadow-inner border border-edge/50">
           {scenarios.map((sc) => {
             const pos = Math.min(95, Math.max(5, ((sc.data.target_price - minPrice) / priceRange) * 100))
             const isSelected = selectedScenarioKey === sc.key

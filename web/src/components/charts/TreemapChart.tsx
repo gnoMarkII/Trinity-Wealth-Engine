@@ -142,29 +142,29 @@ export const TreemapChart: React.FC<TreemapChartProps> = ({
 
   if (validItems.length === 0) {
     return (
-      <div className={`rounded-xl border border-slate-800 bg-slate-900/80 p-6 text-center ${className}`}>
-        {title && <h4 className="text-sm font-semibold text-slate-300">{title}</h4>}
+      <div className={`flow-panel rounded-2xl border border-edge bg-panel p-6 text-center shadow-sm ${className}`}>
+        {title && <h4 className="text-sm font-semibold text-slate-800">{title}</h4>}
         <p className="mt-4 text-xs text-slate-500">No holdings or asset-class breakdown available to render treemap.</p>
       </div>
     )
   }
 
   return (
-    <div className={`relative rounded-xl border border-slate-800 bg-slate-900/90 p-5 shadow-lg backdrop-blur-sm ${className}`}>
-      <div className="mb-4 flex flex-wrap items-baseline justify-between gap-2 border-b border-slate-800/80 pb-3">
+    <div className={`relative flow-panel rounded-2xl border border-edge bg-panel p-5 shadow-sm backdrop-blur-md ${className}`}>
+      <div className="mb-4 flex flex-wrap items-baseline justify-between gap-2 border-b border-edge pb-3">
         <div>
-          {title && <h3 className="text-base font-semibold text-slate-100">{title}</h3>}
-          {subtitle && <p className="text-xs text-slate-400">{subtitle}</p>}
+          {title && <h3 className="text-base font-semibold text-slate-900">{title}</h3>}
+          {subtitle && <p className="text-xs text-slate-600">{subtitle}</p>}
         </div>
         <div className="text-right">
-          <span className="text-xs text-slate-400">Total Value: </span>
-          <span className="text-sm font-bold text-slate-100">
+          <span className="text-xs text-slate-600">Total Value: </span>
+          <span className="text-sm font-bold text-slate-900 font-mono tabular-nums">
             {totalValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} {unit}
           </span>
         </div>
       </div>
 
-      <div className="relative w-full overflow-hidden rounded-lg border border-slate-800 bg-slate-950">
+      <div className="relative w-full overflow-hidden rounded-xl border border-sky-100 bg-white/90 p-1 shadow-sm">
         <svg
           viewBox={`0 0 800 ${height}`}
           className="h-full w-full select-none"
@@ -181,11 +181,17 @@ export const TreemapChart: React.FC<TreemapChartProps> = ({
             return (
               <g
                 key={rect.item.id || `${rect.item.label}-${idx}`}
-                className="cursor-pointer transition-opacity duration-150 hover:opacity-90 focus:outline-none"
+                className="cursor-pointer transition-opacity duration-150 hover:opacity-90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-sky-500"
                 tabIndex={0}
                 role="button"
                 aria-label={`${rect.item.label}: ${rect.item.value.toLocaleString()} ${unit} (${pct.toFixed(1)}%)`}
                 onClick={() => onItemClick?.(rect.item)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault()
+                    onItemClick?.(rect.item)
+                  }
+                }}
                 onMouseEnter={(e) => {
                   const bounds = e.currentTarget.getBoundingClientRect()
                   setHoveredItem({ item: rect.item, x: bounds.left + bounds.width / 2, y: bounds.top })
@@ -203,10 +209,10 @@ export const TreemapChart: React.FC<TreemapChartProps> = ({
                   width={Math.max(0, rect.w - 2)}
                   height={Math.max(0, rect.h - 2)}
                   fill={fillColor}
-                  fillOpacity={0.85}
-                  stroke="#0f172a"
+                  fillOpacity={0.88}
+                  stroke="#ffffff"
                   strokeWidth={2}
-                  rx={4}
+                  rx={6}
                 />
                 {showDetails ? (
                   <>
@@ -223,9 +229,9 @@ export const TreemapChart: React.FC<TreemapChartProps> = ({
                     <text
                       x={rect.x + 8}
                       y={rect.y + 36}
-                      fill="#e2e8f0"
+                      fill="#f8fafc"
                       fontSize="11"
-                      className="pointer-events-none opacity-90"
+                      className="pointer-events-none opacity-95"
                     >
                       {pct.toFixed(1)}%
                     </text>
@@ -249,23 +255,23 @@ export const TreemapChart: React.FC<TreemapChartProps> = ({
 
         {hoveredItem && (
           <div
-            className="pointer-events-none fixed z-50 -translate-x-1/2 -translate-y-full transform rounded-lg border border-slate-700 bg-slate-900/95 px-3 py-2 text-xs shadow-xl backdrop-blur-md"
+            className="pointer-events-none fixed z-50 -translate-x-1/2 -translate-y-full transform rounded-xl border border-sky-200 bg-white/95 px-3 py-2 text-xs shadow-lg backdrop-blur-md"
             style={{ left: hoveredItem.x, top: hoveredItem.y - 8 }}
           >
-            <div className="font-semibold text-slate-100">{hoveredItem.item.label}</div>
+            <div className="font-semibold text-slate-900">{hoveredItem.item.label}</div>
             {hoveredItem.item.group && (
-              <div className="text-[11px] text-slate-400">Class: {hoveredItem.item.group}</div>
+              <div className="text-[11px] text-slate-500">Class: {hoveredItem.item.group}</div>
             )}
-            <div className="mt-1 font-mono text-emerald-400">
+            <div className="mt-1 font-mono font-semibold text-emerald-700">
               {hoveredItem.item.value.toLocaleString(undefined, { minimumFractionDigits: 2 })} {unit}
             </div>
-            <div className="text-[11px] text-slate-400">
+            <div className="text-[11px] text-slate-600">
               Share: {((hoveredItem.item.value / totalValue) * 100).toFixed(2)}%
             </div>
             {hoveredItem.item.return_pct !== undefined && hoveredItem.item.return_pct !== null && (
               <div
                 className={`text-[11px] font-semibold ${
-                  hoveredItem.item.return_pct >= 0 ? 'text-emerald-400' : 'text-red-400'
+                  hoveredItem.item.return_pct >= 0 ? 'text-emerald-700' : 'text-rose-700'
                 }`}
               >
                 Return: {hoveredItem.item.return_pct >= 0 ? '+' : ''}

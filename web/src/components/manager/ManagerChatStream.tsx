@@ -68,7 +68,7 @@ export default function ManagerChatStream({
           <h2 className="text-2xl sm:text-3xl font-semibold tracking-tight text-sky-950 mb-2">
             มีอะไรให้ช่วยวิเคราะห์วันนี้ไหมครับ?
           </h2>
-          <p className="text-sm text-zinc-500 mb-6 max-w-md">
+          <p className="text-sm text-slate-500 mb-6 max-w-md">
             ผู้จัดการกองทุนและที่ปรึกษา AI พร้อมเชื่อมโยงข้อมูลพอร์ตและสภาวะตลาด
           </p>
 
@@ -79,7 +79,7 @@ export default function ManagerChatStream({
                 key={item.title}
                 type="button"
                 onClick={() => onQuickPromptClick?.(item.prompt, item.contextRefs)}
-                className="group flex items-center justify-between rounded-xl border border-sky-100/80 bg-white/80 px-4 py-3 text-sm font-medium text-sky-950 shadow-xs hover:border-sky-300 hover:bg-sky-50/70 transition-all"
+                className="group flex items-center justify-between rounded-xl border border-sky-100/80 bg-white/80 px-4 py-3 text-sm font-medium text-sky-950 shadow-sm hover:border-sky-300 hover:bg-sky-50/70 transition-all"
               >
                 <span className="flex items-center gap-2.5 truncate">
                   <span className="text-base shrink-0">{item.icon}</span>
@@ -87,14 +87,14 @@ export default function ManagerChatStream({
                     {item.title}
                   </span>
                 </span>
-                <span className="text-zinc-300 group-hover:translate-x-0.5 group-hover:text-sky-500 transition-all text-sm shrink-0 ml-1">
+                <span className="text-slate-300 group-hover:translate-x-0.5 group-hover:text-sky-500 transition-all text-sm shrink-0 ml-1">
                   →
                 </span>
               </button>
             ))}
           </div>
 
-          <p className="mt-6 text-xs text-zinc-400">
+          <p className="mt-6 text-xs text-slate-500">
             กด <kbd className="rounded bg-sky-100/70 px-1.5 py-0.5 font-mono text-xs text-sky-800">Ctrl+K</kbd> หรือพิมพ์ <kbd className="rounded bg-sky-100/70 px-1.5 py-0.5 font-mono text-xs text-sky-800">/</kbd> เพื่อเปิดคลังคำสั่งทั้งหมด
           </p>
         </div>
@@ -120,8 +120,8 @@ export default function ManagerChatStream({
               <div
                 className={`max-w-[85%] sm:max-w-[78%] rounded-2xl p-4 transition-all ${
                   isUser
-                    ? 'border border-sky-300/60 bg-sky-500/10 text-sky-950 shadow-xs'
-                    : 'border border-sky-100/70 bg-white/90 text-zinc-800 shadow-[0_4px_20px_rgba(14,165,233,0.04)] backdrop-blur-md'
+                    ? 'border border-sky-300/60 bg-sky-500/10 text-sky-950 shadow-sm'
+                    : 'border border-sky-100/70 bg-white/90 text-slate-800 shadow-[0_4px_20px_rgba(14,165,233,0.04)] backdrop-blur-md'
                 }`}
               >
                 {/* Citations / Context Tags */}
@@ -184,7 +184,7 @@ export default function ManagerChatStream({
         {isStreaming && streamingText && (
           <div className="flex justify-start gap-3 animate-chat-turn-in">
             <ManagerFluidOrb mode="avatar" />
-            <div className="max-w-[85%] sm:max-w-[78%] rounded-2xl border border-sky-100/70 bg-white/90 p-4 text-zinc-800 shadow-[0_4px_20px_rgba(14,165,233,0.04)] backdrop-blur-md">
+            <div className="max-w-[85%] sm:max-w-[78%] rounded-2xl border border-sky-100/70 bg-white/90 p-4 text-slate-800 shadow-[0_4px_20px_rgba(14,165,233,0.04)] backdrop-blur-md">
               <AdvisorMarkdown content={streamingText} isStreaming onActionClick={onQuickPromptClick} />
 
               {/* Job Card (if streaming text already spawned or contains a research job) */}

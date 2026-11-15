@@ -69,12 +69,12 @@ export const PolicyRateComparisonBar: React.FC<PolicyRateComparisonBarProps> = (
     >
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-sky-100/60 pb-3">
         <div>
-          <h3 className="font-semibold text-zinc-900 tracking-tight">{title}</h3>
-          <p className="text-xs text-zinc-500 mt-0.5">{subtitle}</p>
+          <h3 className="font-semibold text-slate-900 tracking-tight">{title}</h3>
+          <p className="text-xs text-slate-500 mt-0.5">{subtitle}</p>
         </div>
 
         <div className="rounded-lg bg-sky-50 px-3 py-1.5 text-right">
-          <span className="block text-[10px] uppercase font-bold text-sky-700">BOT Benchmark</span>
+          <span className="block text-[11px] uppercase font-bold text-sky-700">BOT Benchmark</span>
           <span className="font-mono text-xs font-extrabold text-sky-800">
             {typeof botRepoRate === 'number' ? botRepoRate.toFixed(2) : '2.50'}% (1D Repo)
           </span>
@@ -112,11 +112,11 @@ export const PolicyRateComparisonBar: React.FC<PolicyRateComparisonBarProps> = (
               <div className="flex items-center justify-between text-xs mb-1">
                 <div className="flex items-center gap-2">
                   <span className="text-base">{info.flag}</span>
-                  <span className="font-semibold text-zinc-800">
-                    {info.name} <span className="font-mono text-[11px] text-zinc-400">({item.country})</span>
+                  <span className="font-semibold text-slate-800">
+                    {info.name} <span className="font-mono text-[11px] text-slate-500">({item.country})</span>
                   </span>
                   {isThailand && (
-                    <span className="rounded bg-sky-600 px-1.5 py-0.2 font-mono text-[10px] font-bold text-white">
+                    <span className="rounded bg-sky-600 px-1.5 py-0.5 font-mono text-[11px] font-bold text-white">
                       LOCAL
                     </span>
                   )}
@@ -126,8 +126,8 @@ export const PolicyRateComparisonBar: React.FC<PolicyRateComparisonBarProps> = (
                   {/* Spread vs BOT */}
                   {!isThailand && (
                     <span
-                      className={`font-mono text-[11px] font-bold ${
-                        spreadBps > 0 ? 'text-amber-600' : spreadBps < 0 ? 'text-blue-600' : 'text-zinc-500'
+                      className={`font-mono tabular-nums text-[11px] font-bold ${
+                        spreadBps > 0 ? 'text-amber-600' : spreadBps < 0 ? 'text-blue-600' : 'text-slate-500'
                       }`}
                     >
                       {spreadBps > 0 ? `+${spreadBps.toFixed(0)}` : spreadBps.toFixed(0)} bps vs BOT
@@ -135,7 +135,7 @@ export const PolicyRateComparisonBar: React.FC<PolicyRateComparisonBarProps> = (
                   )}
 
                   {/* Rate Value */}
-                  <span className="font-mono text-sm font-extrabold text-zinc-900 w-14 text-right">
+                  <span className="font-mono tabular-nums text-sm font-extrabold text-slate-900 w-14 text-right">
                     {item.rateValue.toFixed(2)}%
                   </span>
                 </div>
@@ -149,14 +149,14 @@ export const PolicyRateComparisonBar: React.FC<PolicyRateComparisonBarProps> = (
                       ? 'bg-sky-600'
                       : spreadBps > 0
                       ? 'bg-amber-500'
-                      : 'bg-indigo-500'
+                      : 'bg-sky-500'
                   }`}
                   style={{ width: `${widthPct}%` }}
                 />
               </div>
 
               {/* Metadata row: Rate type & Effective date */}
-              <div className="mt-1 flex items-center justify-between text-[10px] text-zinc-400">
+              <div className="mt-1 flex items-center justify-between text-[11px] text-slate-500">
                 <span className="truncate max-w-[280px]">{item.rateType}</span>
                 <span className="font-mono">Effective: {item.effectiveDate}</span>
               </div>

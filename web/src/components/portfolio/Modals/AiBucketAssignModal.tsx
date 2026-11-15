@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useCallback } from 'react'
+import { CloseIcon, SparklesIcon } from '../../ui/AppIcons'
 import Modal from '../../ui/Modal'
 import { api } from '../../../api/client'
 import type {
@@ -129,7 +130,7 @@ export default function AiBucketAssignModal({ portfolioId, targets, onClose, onS
     const target = targetMap.get(bucketId)
     return (
       <span
-        className="inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-xs font-bold text-zinc-800 border"
+        className="inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-xs font-bold text-slate-800 border"
         style={{
           borderColor: target?.color ? `${target.color}40` : '#e2e8f0',
           backgroundColor: target?.color ? `${target.color}15` : '#f8fafc',
@@ -151,15 +152,15 @@ export default function AiBucketAssignModal({ portfolioId, targets, onClose, onS
       panelClassName="max-w-4xl max-h-[90vh] flex flex-col rounded-2xl border border-sky-100 bg-white p-6 shadow-2xl overflow-hidden"
     >
       {/* Header */}
-      <div className="flex items-start justify-between border-b border-zinc-100 pb-3 flex-shrink-0">
+      <div className="flex items-start justify-between border-b border-slate-100 pb-3 flex-shrink-0">
         <div>
           <div className="flex items-center gap-2">
-            <span className="text-xl">✨</span>
-            <h3 id="ai-bucket-assign-modal-title" className="text-lg font-bold text-zinc-900">
+            <SparklesIcon className="h-5 w-5 text-section-accent shrink-0" />
+            <h3 id="ai-bucket-assign-modal-title" className="text-lg font-bold text-slate-900">
               จัดกลุ่มสินทรัพย์อัตโนมัติด้วย AI
             </h3>
           </div>
-          <p className="mt-1 text-xs text-zinc-500">
+          <p className="mt-1 text-xs text-slate-500">
             ระบบ AI วิเคราะห์ความเหมาะสมของสินทรัพย์ตามเป้าหมายของแต่ละ Strategy Bucket
             และนำเสนอแผนจัดกลุ่มพร้อมเหตุผล
           </p>
@@ -167,9 +168,10 @@ export default function AiBucketAssignModal({ portfolioId, targets, onClose, onS
         <button
           type="button"
           onClick={onClose}
-          className="rounded-lg p-1 text-zinc-400 hover:bg-zinc-100 hover:text-zinc-600 transition-colors"
+          aria-label="ปิดหน้าต่าง"
+          className="rounded-lg p-2 sm:p-1.5 text-slate-500 hover:bg-slate-100 hover:text-slate-600 transition-colors"
         >
-          ✕
+          <CloseIcon className="h-4 w-4" />
         </button>
       </div>
 
@@ -198,10 +200,10 @@ export default function AiBucketAssignModal({ portfolioId, targets, onClose, onS
               <div className="absolute inset-0 flex items-center justify-center text-xl">🧠</div>
             </div>
             <div className="space-y-1">
-              <h4 className="text-sm font-bold text-zinc-800">
+              <h4 className="text-sm font-bold text-slate-800">
                 AI กำลังวิเคราะห์สินทรัพย์และโครงสร้าง Strategy Buckets...
               </h4>
-              <p className="text-xs text-zinc-500 max-w-md">
+              <p className="text-xs text-slate-500 max-w-md">
                 เปรียบเทียบประเภทสินทรัพย์, บทบาทของกลุ่มเป้าหมาย และจับคู่สินทรัพย์ที่ยังไม่มีกลุ่มหรืออยู่ผิดกลุ่ม
               </p>
             </div>
@@ -215,8 +217,8 @@ export default function AiBucketAssignModal({ portfolioId, targets, onClose, onS
                   📁
                 </div>
                 <div>
-                  <div className="text-[11px] font-semibold text-zinc-500">สินทรัพย์ทั้งหมด</div>
-                  <div className="text-lg font-black text-zinc-900 tabular-nums">
+                  <div className="text-[11px] font-semibold text-slate-500">สินทรัพย์ทั้งหมด</div>
+                  <div className="text-lg font-black text-slate-900 tabular-nums">
                     {data.recommendations.length} รายการ
                   </div>
                 </div>
@@ -227,20 +229,20 @@ export default function AiBucketAssignModal({ portfolioId, targets, onClose, onS
                   ⚠️
                 </div>
                 <div>
-                  <div className="text-[11px] font-semibold text-zinc-500">สินทรัพย์ไม่มีกลุ่ม</div>
+                  <div className="text-[11px] font-semibold text-slate-500">สินทรัพย์ไม่มีกลุ่ม</div>
                   <div className="text-lg font-black text-amber-700 tabular-nums">
                     {data.total_unassigned} รายการ
                   </div>
                 </div>
               </div>
 
-              <div className="rounded-xl border border-indigo-100 bg-indigo-50/50 p-3 flex items-center gap-3">
-                <div className="w-9 h-9 rounded-lg bg-indigo-100 text-indigo-700 flex items-center justify-center font-bold text-base">
+              <div className="rounded-xl border border-blue-100 bg-blue-50/50 p-3 flex items-center gap-3">
+                <div className="w-9 h-9 rounded-lg bg-blue-100 text-blue-700 flex items-center justify-center font-bold text-base">
                   🔄
                 </div>
                 <div>
-                  <div className="text-[11px] font-semibold text-zinc-500">ปรับเปลี่ยน / ย้ายกลุ่ม</div>
-                  <div className="text-lg font-black text-indigo-700 tabular-nums">
+                  <div className="text-[11px] font-semibold text-slate-500">ปรับเปลี่ยน / ย้ายกลุ่ม</div>
+                  <div className="text-lg font-black text-blue-700 tabular-nums">
                     {changedItemsCount} รายการ
                   </div>
                 </div>
@@ -249,10 +251,10 @@ export default function AiBucketAssignModal({ portfolioId, targets, onClose, onS
 
             {/* AI Summary Banner */}
             {data.summary && (
-              <div className="rounded-xl border border-sky-200/80 bg-gradient-to-r from-sky-50 via-indigo-50/40 to-white p-3.5 text-xs text-zinc-700 flex items-start gap-2.5">
+              <div className="rounded-xl border border-sky-200/80 bg-gradient-to-r from-sky-50 via-blue-50/40 to-white p-3.5 text-xs text-slate-700 flex items-start gap-2.5">
                 <span className="text-base flex-shrink-0 mt-0.5">💡</span>
                 <div className="leading-relaxed">
-                  <span className="font-bold text-zinc-900">สรุปการวิเคราะห์: </span>
+                  <span className="font-bold text-slate-900">สรุปการวิเคราะห์: </span>
                   {data.summary}
                 </div>
               </div>
@@ -260,12 +262,12 @@ export default function AiBucketAssignModal({ portfolioId, targets, onClose, onS
 
             {/* Filter and Search Bar */}
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2.5 pt-1">
-              <label className="inline-flex items-center gap-2 text-xs font-semibold text-zinc-700 cursor-pointer select-none">
+              <label className="inline-flex items-center gap-2 text-xs font-semibold text-slate-700 cursor-pointer select-none">
                 <input
                   type="checkbox"
                   checked={showOnlyChanged}
                   onChange={(e) => setShowOnlyChanged(e.target.checked)}
-                  className="rounded border-zinc-300 text-flow-blue focus:ring-flow-blue w-4 h-4"
+                  className="rounded border-slate-300 text-flow-blue focus:ring-flow-blue w-4 h-4"
                 />
                 <span>แสดงเฉพาะรายการที่มีการปรับเปลี่ยน ({changedItemsCount} รายการ)</span>
               </label>
@@ -276,16 +278,16 @@ export default function AiBucketAssignModal({ portfolioId, targets, onClose, onS
                   placeholder="ค้นหา Symbol หรือ Asset Type..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full rounded-xl border border-zinc-200 bg-zinc-50/60 px-3 py-1.5 text-xs text-zinc-800 placeholder-zinc-400 focus:bg-white focus:border-flow-blue focus:outline-none transition-colors"
+                  className="w-full rounded-xl border border-slate-200 bg-slate-50/60 px-3 py-1.5 text-xs text-slate-800 placeholder-slate-400 focus:bg-white focus:border-flow-blue focus:outline-none transition-colors"
                 />
               </div>
             </div>
 
             {/* Table */}
-            <div className="border border-zinc-200 rounded-xl overflow-hidden shadow-2xs">
+            <div className="border border-slate-200 rounded-xl overflow-hidden shadow-sm">
               <table className="w-full text-left text-xs">
                 <thead>
-                  <tr className="bg-zinc-50 border-b border-zinc-200 text-zinc-600 font-bold uppercase tracking-wider">
+                  <tr className="bg-slate-50 border-b border-slate-200 text-slate-600 font-bold uppercase tracking-wider">
                     <th className="py-2.5 px-3">สินทรัพย์</th>
                     <th className="py-2.5 px-3">กลุ่มเดิม</th>
                     <th className="py-2.5 px-3">กลุ่มแนะนำ / ปรับแต่ง</th>
@@ -293,10 +295,10 @@ export default function AiBucketAssignModal({ portfolioId, targets, onClose, onS
                     <th className="py-2.5 px-3 text-center">สถานะ</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-zinc-100">
+                <tbody className="divide-y divide-slate-100">
                   {filteredRecommendations.length === 0 ? (
                     <tr>
-                      <td colSpan={5} className="py-8 text-center text-zinc-400">
+                      <td colSpan={5} className="py-8 text-center text-slate-500">
                         {showOnlyChanged
                           ? 'ไม่มีรายการที่มีการปรับเปลี่ยนกลุ่ม (ทุกสินทรัพย์จัดสรรถูกต้องแล้ว)'
                           : 'ไม่พบรายการที่ตรงกับคำค้นหา'}
@@ -318,8 +320,8 @@ export default function AiBucketAssignModal({ portfolioId, targets, onClose, onS
                         >
                           {/* Symbol & Type */}
                           <td className="py-2.5 px-3 whitespace-nowrap">
-                            <div className="font-bold text-zinc-900 font-mono">{item.symbol}</div>
-                            <span className="text-[10px] font-semibold text-zinc-500 uppercase">
+                            <div className="font-bold text-slate-900 font-mono">{item.symbol}</div>
+                            <span className="text-[11px] font-semibold text-slate-500 uppercase">
                               {item.asset_type}
                             </span>
                           </td>
@@ -334,10 +336,10 @@ export default function AiBucketAssignModal({ portfolioId, targets, onClose, onS
                             <select
                               value={selectedBucket || ''}
                               onChange={(e) => handleBucketChange(item.symbol, e.target.value)}
-                              className={`rounded-lg border px-2.5 py-1 text-xs font-semibold text-zinc-800 transition-colors focus:outline-none focus:ring-1 focus:ring-flow-blue ${
+                              className={`rounded-lg border px-2.5 py-1 text-xs font-semibold text-slate-800 transition-colors focus:outline-none focus:ring-1 focus:ring-flow-blue ${
                                 isChanged
-                                  ? 'border-indigo-300 bg-indigo-50/60 font-bold text-indigo-900'
-                                  : 'border-zinc-300 bg-white'
+                                  ? 'border-blue-300 bg-blue-50/60 font-bold text-blue-900'
+                                  : 'border-slate-300 bg-white'
                               }`}
                             >
                               <option value="">-- ไม่ระบุกลุ่ม (Unassigned) --</option>
@@ -350,7 +352,7 @@ export default function AiBucketAssignModal({ portfolioId, targets, onClose, onS
                           </td>
 
                           {/* AI Rationale */}
-                          <td className="py-2.5 px-3 text-zinc-600 max-w-xs leading-relaxed">
+                          <td className="py-2.5 px-3 text-slate-600 max-w-xs leading-relaxed">
                             {item.reason}
                           </td>
 
@@ -365,7 +367,7 @@ export default function AiBucketAssignModal({ portfolioId, targets, onClose, onS
                                 🔄 ย้ายกลุ่ม
                               </span>
                             ) : (
-                              <span className="inline-flex items-center rounded-md bg-zinc-50 px-2 py-0.5 text-[11px] font-semibold text-zinc-500 border border-zinc-200">
+                              <span className="inline-flex items-center rounded-md bg-slate-50 px-2 py-0.5 text-[11px] font-semibold text-slate-500 border border-slate-200">
                                 ✓ กลุ่มเดิม
                               </span>
                             )}
@@ -382,10 +384,10 @@ export default function AiBucketAssignModal({ portfolioId, targets, onClose, onS
       </div>
 
       {/* Footer */}
-      <div className="flex items-center justify-between border-t border-zinc-100 pt-3 flex-shrink-0">
-        <div className="text-xs text-zinc-500">
+      <div className="flex items-center justify-between border-t border-slate-100 pt-3 flex-shrink-0">
+        <div className="text-xs text-slate-500">
           {changedItemsCount > 0 ? (
-            <span className="text-indigo-700 font-semibold">
+            <span className="text-blue-700 font-semibold">
               ✏️ มีการปรับเปลี่ยนกลุ่ม {changedItemsCount} รายการ
             </span>
           ) : (
@@ -397,7 +399,7 @@ export default function AiBucketAssignModal({ portfolioId, targets, onClose, onS
             type="button"
             onClick={onClose}
             disabled={submitting}
-            className="rounded-xl border border-zinc-300 bg-white px-4 py-2 text-xs font-semibold text-zinc-700 hover:bg-zinc-50 transition-colors disabled:opacity-50"
+            className="rounded-xl border border-slate-300 bg-white px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition-colors disabled:opacity-50"
           >
             ยกเลิก
           </button>

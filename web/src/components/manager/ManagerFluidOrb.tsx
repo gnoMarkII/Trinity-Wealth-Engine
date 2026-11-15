@@ -14,7 +14,7 @@ export default function ManagerFluidOrb({
       <div className="relative flex h-7 w-7 shrink-0 items-center justify-center">
         <div className="absolute h-7 w-7 rounded-full bg-gradient-to-tr from-flow-sky via-flow-cyan to-flow-blue opacity-40 blur-sm" />
         <div className="relative flex h-7 w-7 items-center justify-center rounded-full bg-gradient-to-tr from-flow-sky via-flow-cyan to-flow-blue p-0.5 shadow-[0_0_14px_rgba(6,182,212,0.35)] animate-manager-orb">
-          <div className="flex h-full w-full items-center justify-center rounded-full bg-white/40 text-[10px] font-bold text-sky-950 backdrop-blur-sm">
+          <div className="flex h-full w-full items-center justify-center rounded-full bg-white/40 text-[11px] font-bold text-sky-950 backdrop-blur-sm">
             ✨
           </div>
         </div>

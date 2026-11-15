@@ -1,5 +1,4 @@
-import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
-import { createPortal } from 'react-dom'
+import { lazy, Suspense, useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { api } from '../api/client'
 import type {
@@ -12,23 +11,39 @@ import type {
   JournalEntryDTO,
 } from '../api/types'
 import SegmentedControl from '../components/ui/SegmentedControl'
+import Modal from '../components/ui/Modal'
+import { Toast } from '../components/common/Toast'
+import {
+  AlertTriangleIcon,
+  BoltStrategyIcon,
+  CalendarIcon,
+  ChartTrendIcon,
+  ChevronDownIcon,
+  ChevronUpIcon,
+  CompassIcon,
+  EditPenIcon,
+  FolderIcon,
+  MoreHorizontalIcon,
+  TrashIcon,
+} from '../components/ui/AppIcons'
 import PortfolioSummaryCards from '../components/portfolio/PortfolioSummaryCards'
 import PortfolioOverviewTab from '../components/portfolio/PortfolioOverviewTab'
-import PortfolioHoldingsTab from '../components/portfolio/PortfolioHoldingsTab'
-import PortfolioWatchlistTab from '../components/portfolio/PortfolioWatchlistTab'
-import PortfolioGoalsTab from '../components/portfolio/PortfolioGoalsTab'
-import TradeModal from '../components/portfolio/Modals/TradeModal'
-import CashFlowModal from '../components/portfolio/Modals/CashFlowModal'
-import IncomeModal from '../components/portfolio/Modals/IncomeModal'
-import ResetConfirmModal from '../components/portfolio/Modals/ResetConfirmModal'
-import PortfolioCalendarTab from '../components/portfolio/PortfolioCalendarTab'
-import PortfolioTransactionsTab from '../components/portfolio/PortfolioTransactionsTab'
 import type { TransactionView } from '../lib/pvdStatementHistory'
 import { getPvdValuationContext } from '../lib/pvdPresentation'
-import PortfolioIncomesTab from '../components/portfolio/PortfolioIncomesTab'
-import PortfolioAnalyticsTab from '../components/portfolio/PortfolioAnalyticsTab'
-import InvestorPrinciplesTab from '../components/portfolio/essence/InvestorPrinciplesTab'
 import { TopLoadingRibbon } from '../components/ui/FlowSkeleton'
+
+const PortfolioHoldingsTab = lazy(() => import('../components/portfolio/PortfolioHoldingsTab'))
+const PortfolioWatchlistTab = lazy(() => import('../components/portfolio/PortfolioWatchlistTab'))
+const PortfolioGoalsTab = lazy(() => import('../components/portfolio/PortfolioGoalsTab'))
+const TradeModal = lazy(() => import('../components/portfolio/Modals/TradeModal'))
+const CashFlowModal = lazy(() => import('../components/portfolio/Modals/CashFlowModal'))
+const IncomeModal = lazy(() => import('../components/portfolio/Modals/IncomeModal'))
+const ResetConfirmModal = lazy(() => import('../components/portfolio/Modals/ResetConfirmModal'))
+const PortfolioCalendarTab = lazy(() => import('../components/portfolio/PortfolioCalendarTab'))
+const PortfolioTransactionsTab = lazy(() => import('../components/portfolio/PortfolioTransactionsTab'))
+const PortfolioIncomesTab = lazy(() => import('../components/portfolio/PortfolioIncomesTab'))
+const PortfolioAnalyticsTab = lazy(() => import('../components/portfolio/PortfolioAnalyticsTab'))
+const InvestorPrinciplesTab = lazy(() => import('../components/portfolio/essence/InvestorPrinciplesTab'))
 import {
   TradeIcon,
   CashFlowIcon,
@@ -55,7 +70,7 @@ const TABS = [
     key: 'principles',
     label: (
       <span className="flex items-center gap-1.5 text-sm font-semibold whitespace-nowrap">
-        <span className="text-sm shrink-0">🧭</span>
+        <CompassIcon className="w-4 h-4 text-section-accent shrink-0" />
         <span>หลักการลงทุน</span>
         <span className="hidden 2xl:inline"> (Principles)</span>
       </span>
@@ -93,7 +108,7 @@ const TABS = [
     key: 'analytics',
     label: (
       <span className="flex items-center gap-1.5 text-sm font-semibold whitespace-nowrap">
-        <span className="text-sm shrink-0">📈</span>
+        <ChartTrendIcon className="w-4 h-4 text-section-accent shrink-0" />
         <span>Analytics</span>
         <span className="hidden 2xl:inline"> & History</span>
       </span>
@@ -112,7 +127,7 @@ const TABS = [
     key: 'calendar',
     label: (
       <span className="flex items-center gap-1.5 text-sm font-semibold whitespace-nowrap">
-        <span className="text-sm shrink-0">📅</span>
+        <CalendarIcon className="w-4 h-4 text-section-accent shrink-0" />
         <span>Calendar</span>
       </span>
     ),
@@ -154,6 +169,29 @@ export default function Portfolio() {
   const [renamePortModalOpen, setRenamePortModalOpen] = useState(false)
   const [editPortName, setEditPortName] = useState('')
   const [renamingPort, setRenamingPort] = useState(false)
+  const [deletePortModalOpen, setDeletePortModalOpen] = useState(false)
+  const [deletingPort, setDeletingPort] = useState(false)
+  const [overflowMenuOpen, setOverflowMenuOpen] = useState(false)
+  const overflowMenuRef = useRef<HTMLDivElement>(null)
+  const [pageToast, setPageToast] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null)
+
+  useEffect(() => {
+    if (!overflowMenuOpen) return
+    const handleOutside = (e: MouseEvent) => {
+      if (overflowMenuRef.current && !overflowMenuRef.current.contains(e.target as Node)) {
+        setOverflowMenuOpen(false)
+      }
+    }
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setOverflowMenuOpen(false)
+    }
+    document.addEventListener('mousedown', handleOutside)
+    document.addEventListener('keydown', handleKey)
+    return () => {
+      document.removeEventListener('mousedown', handleOutside)
+      document.removeEventListener('keydown', handleKey)
+    }
+  }, [overflowMenuOpen])
 
 
   // Portfolio details state
@@ -390,11 +428,12 @@ export default function Portfolio() {
       const meta = await api.createPortfolio(newPortName.trim())
       setCreatePortModalOpen(false)
       setNewPortName('')
+      setPageToast({ message: `สร้างพอร์ต "${meta.name}" เรียบร้อยแล้ว`, type: 'success' })
       const nextParams = new URLSearchParams(searchParams)
       nextParams.set('portfolio_id', meta.id)
       setSearchParams(nextParams)
     } catch (err: any) {
-      alert(err?.message || 'ไม่สามารถสร้างพอร์ตใหม่ได้')
+      setPageToast({ message: err?.message || 'ไม่สามารถสร้างพอร์ตใหม่ได้', type: 'error' })
     } finally {
       setCreatingPort(false)
     }
@@ -416,61 +455,78 @@ export default function Portfolio() {
         prev.map((p) => (p.id === updatedMeta.id ? { ...p, name: updatedMeta.name } : p))
       )
       setRenamePortModalOpen(false)
+      setPageToast({ message: `เปลี่ยนชื่อพอร์ตเป็น "${updatedMeta.name}" เรียบร้อย`, type: 'success' })
     } catch (err: any) {
-      alert(err?.message || 'ไม่สามารถแก้ไขชื่อพอร์ตได้')
+      setPageToast({ message: err?.message || 'ไม่สามารถแก้ไขชื่อพอร์ตได้', type: 'error' })
     } finally {
       setRenamingPort(false)
     }
   }
 
-  const handleDeletePortfolio = async () => {
+  const handleConfirmDeletePortfolio = async () => {
     if (selectedPortfolioId === 'default') return
-    const currentMeta = portfolios.find((p) => p.id === selectedPortfolioId)
-    if (!window.confirm(`คุณต้องการลบพอร์ต "${currentMeta?.name || selectedPortfolioId}" หรือไม่?`)) return
+    setDeletingPort(true)
     try {
       await api.deletePortfolio(selectedPortfolioId)
+      setDeletePortModalOpen(false)
+      setPageToast({ message: 'ลบพอร์ตเรียบร้อยแล้ว', type: 'success' })
       const nextParams = new URLSearchParams(searchParams)
       nextParams.set('portfolio_id', 'default')
       setSearchParams(nextParams)
     } catch (err: any) {
-      alert(err?.message || 'ไม่สามารถลบพอร์ตได้')
+      setPageToast({ message: err?.message || 'ไม่สามารถลบพอร์ตได้', type: 'error' })
+    } finally {
+      setDeletingPort(false)
     }
   }
 
   return (
     <div className="animate-page-in space-y-6 pb-14">
+      {pageToast && (
+        <Toast
+          message={pageToast.message}
+          type={pageToast.type}
+          onClose={() => setPageToast(null)}
+        />
+      )}
+
       {/* Background SWR Loading Indicator — Subtle, non-blocking */}
       {loading && portfolioState && (
-        <div className="rounded-xl overflow-hidden shadow-xs">
+        <div className="rounded-xl overflow-hidden shadow-sm">
           <TopLoadingRibbon label="กำลังอัปเดตข้อมูลพอร์ตล่าสุด..." />
         </div>
       )}
 
       {/* Page Header with Multi-Portfolio Selector — Hero Banner Card */}
-      <div className="flow-panel rounded-2xl border border-sky-100/80 p-5 md:p-6 shadow-sm bg-gradient-to-r from-white/90 via-sky-50/40 to-blue-50/30 backdrop-blur-md flex flex-col justify-between gap-3 xl:flex-row xl:items-center">
+      <div className="flow-panel rounded-2xl border border-emerald-100/80 p-5 md:p-6 shadow-sm bg-gradient-to-r from-white/95 via-emerald-50/35 to-teal-50/25 backdrop-blur-md flex flex-col justify-between gap-3 xl:flex-row xl:items-center">
         {/* Left: Branding & Title */}
         <div className="space-y-1.5 max-w-xl">
           <div className="flex items-center gap-2">
-            <h1 className="text-xl sm:text-2xl lg:text-3xl font-extrabold tracking-tight text-zinc-900">
+            <h1 className="text-xl sm:text-2xl lg:text-3xl font-extrabold tracking-tight text-slate-900">
               Actual Portfolio Hub
             </h1>
             {activeTab === 'principles' && (
-              <span className="rounded-full bg-sky-100 px-2.5 py-0.5 text-[10px] font-bold text-sky-800 whitespace-nowrap">
-                🧭 Principles & Purpose Buckets
+              <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100/80 px-2.5 py-0.5 text-[11px] font-bold text-emerald-900 whitespace-nowrap">
+                <CompassIcon className="w-3 h-3 text-emerald-700" />
+                <span>Principles & Purpose Buckets</span>
               </span>
             )}
           </div>
-          <p className="text-xs md:text-sm text-zinc-500 font-medium leading-relaxed">
+          <p className="text-xs md:text-sm text-slate-500 font-medium leading-relaxed">
             ศูนย์กลางติดตามพอร์ตการลงทุนจริง (Actual Portfolio) พร้อมกลยุทธ์สัดส่วน การจัดกลุ่ม Bucket และระบบบันทึก Trading Journal
           </p>
         </div>
 
-        {/* Right: Portfolio Selector & Action Toolbar */}
+        {/* Right: Portfolio Selector & Streamlined Action Toolbar */}
         <div className="flex flex-col items-stretch xl:items-end gap-2.5 w-full xl:w-auto min-w-0">
-          {/* Portfolio Selector Pill */}
-          <div className="flex flex-wrap sm:flex-nowrap w-full items-center justify-between gap-2 bg-white/95 backdrop-blur border border-sky-200/90 shadow-xs rounded-xl px-3 py-1.5 transition-all hover:border-sky-300">
-            <span className="text-xs sm:text-sm font-bold text-zinc-600 flex items-center gap-1.5 shrink-0">
-              <span>📁</span> พอร์ต:
+          {/* Portfolio Selector Pill + Overflow Management Menu */}
+          <div
+            ref={overflowMenuRef}
+            className="relative flex flex-wrap sm:flex-nowrap w-full items-center justify-between gap-2 bg-white/95 backdrop-blur border border-emerald-200/80 shadow-sm rounded-xl px-3 py-1.5 transition-all hover:border-emerald-300"
+          >
+            <span className="text-xs sm:text-sm font-bold text-slate-600 flex items-center gap-1.5 shrink-0">
+              <FolderIcon className="w-4 h-4 text-section-accent" />
+              <span>พอร์ต:</span>
             </span>
             <select
               value={selectedPortfolioId}
@@ -479,7 +535,7 @@ export default function Portfolio() {
                 nextParams.set('portfolio_id', e.target.value)
                 setSearchParams(nextParams)
               }}
-              className="flex-1 min-w-0 rounded-lg border border-sky-200 bg-sky-50/60 px-2.5 py-1 text-xs sm:text-sm font-bold text-zinc-800 shadow-xs focus:outline-none focus:ring-2 focus:ring-sky-400 cursor-pointer hover:bg-white transition-colors"
+              className="flex-1 min-w-0 rounded-lg border border-emerald-200/80 bg-emerald-50/40 px-2.5 py-1 text-xs sm:text-sm font-bold text-slate-800 shadow-sm focus:outline-none focus:ring-2 focus:ring-section-accent/45 cursor-pointer hover:bg-white transition-colors"
             >
               {portfolios.length > 0 ? (
                 portfolios.map((p) => (
@@ -491,48 +547,92 @@ export default function Portfolio() {
                 <option value="default">พอร์ตลงทุนหลัก (Default)</option>
               )}
             </select>
-            <div className="flex items-center gap-1.5 shrink-0">
-              <button
-                type="button"
-                onClick={handleOpenRenameModal}
-                className="shrink-0 rounded-lg bg-sky-100/80 px-2.5 py-1 text-xs sm:text-sm font-bold text-sky-700 hover:bg-sky-600 hover:text-white active:scale-95 transition-all flex items-center gap-1"
-                title="แก้ไขชื่อพอร์ตนี้"
+
+            <button
+              type="button"
+              aria-label="จัดการพอร์ตเพิ่มเติม"
+              aria-expanded={overflowMenuOpen}
+              onClick={() => setOverflowMenuOpen((prev) => !prev)}
+              title="จัดการพอร์ต: สร้างใหม่ แก้ไขชื่อ ลบ หรือล้างพอร์ต"
+              className="shrink-0 inline-flex items-center justify-center rounded-lg border border-slate-200 bg-white px-2 py-1 text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-section-accent/45"
+            >
+              <MoreHorizontalIcon className="w-4 h-4" />
+            </button>
+
+            {overflowMenuOpen && (
+              <div
+                role="menu"
+                aria-label="เมนูจัดการพอร์ต"
+                className="absolute right-0 top-full mt-1.5 z-40 w-52 rounded-xl border border-slate-200 bg-white/95 backdrop-blur-xl p-1.5 shadow-lg space-y-0.5 animate-fade-in"
               >
-                ✏️
-              </button>
-              <button
-                type="button"
-                onClick={() => setCreatePortModalOpen(true)}
-                className="shrink-0 rounded-lg bg-emerald-600 px-2.5 py-1 text-xs sm:text-sm font-bold text-white shadow-xs hover:bg-emerald-700 active:scale-95 transition-all flex items-center gap-1"
-                title="สร้างพอร์ตใหม่"
-              >
-                <span>+ พอร์ตใหม่</span>
-              </button>
-              {selectedPortfolioId !== 'default' && (
                 <button
                   type="button"
-                  onClick={handleDeletePortfolio}
-                  className="shrink-0 rounded-lg bg-rose-100/80 px-2 py-1 text-xs sm:text-sm font-bold text-rose-700 hover:bg-rose-600 hover:text-white active:scale-95 transition-all"
-                  title="ลบพอร์ตนี้"
+                  role="menuitem"
+                  onClick={() => {
+                    setOverflowMenuOpen(false)
+                    setCreatePortModalOpen(true)
+                  }}
+                  className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-xs font-semibold text-emerald-700 hover:bg-emerald-50 transition-colors"
                 >
-                  🗑️
+                  <FolderIcon className="w-3.5 h-3.5" />
+                  <span>+ สร้างพอร์ตใหม่</span>
                 </button>
-              )}
-            </div>
+                <button
+                  type="button"
+                  role="menuitem"
+                  onClick={() => {
+                    setOverflowMenuOpen(false)
+                    handleOpenRenameModal()
+                  }}
+                  className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-xs font-semibold text-slate-700 hover:bg-slate-50 transition-colors"
+                >
+                  <EditPenIcon className="w-3.5 h-3.5" />
+                  <span>แก้ไขชื่อพอร์ต</span>
+                </button>
+                {selectedPortfolioId !== 'default' && (
+                  <button
+                    type="button"
+                    role="menuitem"
+                    onClick={() => {
+                      setOverflowMenuOpen(false)
+                      setDeletePortModalOpen(true)
+                    }}
+                    className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-xs font-semibold text-rose-600 hover:bg-rose-50 transition-colors"
+                  >
+                    <TrashIcon className="w-3.5 h-3.5" />
+                    <span>ลบพอร์ตนี้</span>
+                  </button>
+                )}
+                <div className="my-1 border-t border-slate-100" />
+                <button
+                  type="button"
+                  role="menuitem"
+                  onClick={() => {
+                    setOverflowMenuOpen(false)
+                    setResetModalOpen(true)
+                  }}
+                  className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-xs font-semibold text-rose-600 hover:bg-rose-50 transition-colors"
+                >
+                  <ResetIcon className="w-3.5 h-3.5" />
+                  <span>ล้างข้อมูลพอร์ต</span>
+                </button>
+              </div>
+            )}
           </div>
 
-          {/* Action Toolbar — Available across all tabs */}
-          <div className="flex flex-wrap items-center justify-start xl:justify-end gap-2 sm:gap-2.5 w-full">
+          {/* Action Toolbar — 1 Primary Solid CTA + Calibrated Secondary Pills */}
+          <div className="flex flex-wrap items-center justify-start xl:justify-end gap-2 w-full">
             <a
               href={`/advisory?portfolio_id=${encodeURIComponent(selectedPortfolioId)}`}
-              className="rounded-xl bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 px-3 sm:px-3.5 py-1.5 sm:py-2 text-xs sm:text-sm font-bold text-white shadow-md shadow-indigo-500/20 hover:from-indigo-500 hover:to-pink-500 active:scale-98 transition-all flex items-center gap-1.5 whitespace-nowrap"
+              className="rounded-xl border border-emerald-200/90 bg-white/90 px-3 sm:px-3.5 py-1.5 sm:py-2 text-xs sm:text-sm font-semibold text-slate-800 shadow-sm hover:bg-emerald-50/80 hover:border-emerald-300 active:scale-98 transition-all flex items-center gap-1.5 whitespace-nowrap focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-section-accent/45"
             >
-              <span>⚡ Advisory Desk</span>
+              <BoltStrategyIcon className="w-4 h-4 text-section-accent shrink-0" />
+              <span>Advisory Desk</span>
             </a>
             <button
               type="button"
               onClick={() => setTradeModalOpen(true)}
-              className="rounded-xl bg-gradient-to-r from-sky-500 to-blue-600 px-3 sm:px-3.5 py-1.5 sm:py-2 text-xs sm:text-sm font-bold text-white shadow-md shadow-sky-500/20 hover:from-sky-600 hover:to-blue-700 hover:shadow-lg hover:shadow-sky-500/30 active:scale-98 transition-all flex items-center gap-1.5 whitespace-nowrap"
+              className="rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 px-3.5 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm font-bold text-white shadow-md shadow-emerald-600/20 hover:from-emerald-700 hover:to-teal-700 hover:shadow-lg hover:shadow-emerald-600/25 active:scale-98 transition-all flex items-center gap-1.5 whitespace-nowrap focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-section-accent/45"
             >
               <TradeIcon className="w-4 h-4 text-white shrink-0" />
               <span>บันทึกเทรด (Trade)</span>
@@ -540,7 +640,7 @@ export default function Portfolio() {
             <button
               type="button"
               onClick={() => setCashFlowModalOpen(true)}
-              className="rounded-xl border border-sky-200/90 bg-white/90 px-3 sm:px-3.5 py-1.5 sm:py-2 text-xs sm:text-sm font-bold text-zinc-700 shadow-xs hover:bg-sky-50/90 hover:border-sky-300 active:scale-98 transition-all flex items-center gap-1.5 whitespace-nowrap"
+              className="rounded-xl border border-slate-200/90 bg-white/90 px-3 sm:px-3.5 py-1.5 sm:py-2 text-xs sm:text-sm font-semibold text-slate-700 shadow-sm hover:bg-emerald-50/60 hover:border-emerald-200 active:scale-98 transition-all flex items-center gap-1.5 whitespace-nowrap focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-section-accent/45"
             >
               <CashFlowIcon className="w-4 h-4 text-emerald-600 shrink-0" />
               <span>ฝาก/ถอน (Cash)</span>
@@ -548,118 +648,152 @@ export default function Portfolio() {
             <button
               type="button"
               onClick={() => setIncomeModalOpen(true)}
-              className="rounded-xl border border-sky-200/90 bg-white/90 px-3 sm:px-3.5 py-1.5 sm:py-2 text-xs sm:text-sm font-bold text-zinc-700 shadow-xs hover:bg-sky-50/90 hover:border-sky-300 active:scale-98 transition-all flex items-center gap-1.5 whitespace-nowrap"
+              className="rounded-xl border border-slate-200/90 bg-white/90 px-3 sm:px-3.5 py-1.5 sm:py-2 text-xs sm:text-sm font-semibold text-slate-700 shadow-sm hover:bg-emerald-50/60 hover:border-emerald-200 active:scale-98 transition-all flex items-center gap-1.5 whitespace-nowrap focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-section-accent/45"
             >
               <IncomeIcon className="w-4 h-4 text-emerald-600 shrink-0" />
               <span>ปันผล/รายรับ (Income)</span>
-            </button>
-            <div className="h-5 w-px bg-sky-200/60 mx-0.5 hidden sm:block" />
-            <button
-              type="button"
-              onClick={() => setResetModalOpen(true)}
-              className="rounded-xl border border-rose-200/70 bg-rose-50/60 px-2.5 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm font-bold text-rose-600 shadow-xs hover:bg-rose-600 hover:text-white active:scale-98 transition-all flex items-center gap-1.5 whitespace-nowrap"
-              title="ล้างข้อมูลพอร์ตทั้งหมดกลับเป็นค่าเริ่มต้น"
-            >
-              <ResetIcon className="w-4 h-4 shrink-0" />
-              <span>ล้างพอร์ต</span>
             </button>
           </div>
         </div>
       </div>
 
       {/* Modal: Create Portfolio */}
-      {createPortModalOpen &&
-        createPortal(
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm animate-fade-in">
-            <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-2xl border border-sky-100 animate-scale-up">
-              <h3 className="text-lg font-bold text-zinc-900 mb-2">📁 สร้างพอร์ตการลงทุนใหม่</h3>
-              <p className="text-xs text-zinc-500 mb-4">
-                เช่น "พอร์ตเงินสำรองฉุกเฉิน", "พอร์ตเกษียณ", "พอร์ตปันผล" เพื่อแยกสินทรัพย์ออกจากกันเด็ดขาด
-              </p>
-              <form onSubmit={handleCreatePortfolio} className="space-y-4">
-                <div>
-                  <label htmlFor="create-port-name" className="block text-xs font-semibold text-zinc-700 mb-1">ชื่อพอร์ต (Portfolio Name)</label>
-                  <input
-                    id="create-port-name"
-                    type="text"
-                    required
-                    value={newPortName}
-                    onChange={(e) => setNewPortName(e.target.value)}
-                    placeholder="e.g. พอร์ตเงินสำรองฉุกเฉิน"
-                    className="w-full rounded-xl border border-sky-200 px-3.5 py-2 text-sm font-bold text-zinc-900 focus:outline-none focus:ring-2 focus:ring-flow-blue"
-                  />
-                </div>
-                <div className="flex justify-end gap-2 pt-2">
-                  <button
-                    type="button"
-                    onClick={() => setCreatePortModalOpen(false)}
-                    className="rounded-xl px-4 py-2 text-xs font-bold text-zinc-600 hover:bg-zinc-100"
-                  >
-                    ยกเลิก
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={creatingPort}
-                    className="rounded-xl bg-emerald-600 px-4 py-2 text-xs font-bold text-white shadow-md hover:bg-emerald-700 disabled:opacity-50"
-                  >
-                    {creatingPort ? 'กำลังสร้าง...' : '+ สร้างพอร์ต'}
-                  </button>
-                </div>
-              </form>
+      {createPortModalOpen && (
+        <Modal
+          titleId="create-portfolio-title"
+          onClose={() => setCreatePortModalOpen(false)}
+          panelClassName="max-w-sm rounded-2xl bg-white p-6 shadow-2xl border border-emerald-100"
+        >
+          <h3 id="create-portfolio-title" className="text-lg font-bold text-slate-900 mb-2 flex items-center gap-2">
+            <FolderIcon className="w-5 h-5 text-section-accent" />
+            <span>สร้างพอร์ตการลงทุนใหม่</span>
+          </h3>
+          <p className="text-xs text-slate-500 mb-4">
+            เช่น "พอร์ตเงินสำรองฉุกเฉิน", "พอร์ตเกษียณ", "พอร์ตปันผล" เพื่อแยกสินทรัพย์ออกจากกันเด็ดขาด
+          </p>
+          <form onSubmit={handleCreatePortfolio} className="space-y-4">
+            <div>
+              <label htmlFor="create-port-name" className="block text-xs font-semibold text-slate-700 mb-1">
+                ชื่อพอร์ต (Portfolio Name)
+              </label>
+              <input
+                id="create-port-name"
+                type="text"
+                required
+                value={newPortName}
+                onChange={(e) => setNewPortName(e.target.value)}
+                placeholder="e.g. พอร์ตเงินสำรองฉุกเฉิน"
+                className="w-full rounded-xl border border-slate-200 bg-surface-2 px-3.5 py-2 text-sm font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-section-accent/45"
+              />
             </div>
-          </div>,
-          document.body
-        )}
+            <div className="flex justify-end gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => setCreatePortModalOpen(false)}
+                className="rounded-xl px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-100"
+              >
+                ยกเลิก
+              </button>
+              <button
+                type="submit"
+                disabled={creatingPort}
+                className="rounded-xl bg-emerald-600 px-4 py-2 text-xs font-bold text-white shadow-md hover:bg-emerald-700 disabled:opacity-50"
+              >
+                {creatingPort ? 'กำลังสร้าง...' : '+ สร้างพอร์ต'}
+              </button>
+            </div>
+          </form>
+        </Modal>
+      )}
 
       {/* Modal: Rename Portfolio */}
-      {renamePortModalOpen &&
-        createPortal(
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm animate-fade-in">
-            <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-2xl border border-sky-100 animate-scale-up">
-              <h3 className="text-lg font-bold text-zinc-900 mb-2">✏️ แก้ไขชื่อพอร์ต</h3>
-              <p className="text-xs text-zinc-500 mb-4">
-                เปลี่ยนชื่อแสดงผลของพอร์ตการลงทุนที่เลือก
-              </p>
-              <form onSubmit={handleRenamePortfolio} className="space-y-4">
-                <div>
-                  <label htmlFor="rename-port-name" className="block text-xs font-semibold text-zinc-700 mb-1">ชื่อพอร์ตใหม่ (Portfolio Name)</label>
-                  <input
-                    id="rename-port-name"
-                    type="text"
-                    required
-                    value={editPortName}
-                    onChange={(e) => setEditPortName(e.target.value)}
-                    placeholder="เช่น พอร์ตเพื่อการเติบโต"
-                    className="w-full rounded-xl border border-sky-200 px-3.5 py-2 text-sm font-bold text-zinc-900 focus:outline-none focus:ring-2 focus:ring-flow-blue"
-                  />
-                </div>
-                <div className="flex justify-end gap-2 pt-2">
-                  <button
-                    type="button"
-                    onClick={() => setRenamePortModalOpen(false)}
-                    className="rounded-xl px-4 py-2 text-xs font-bold text-zinc-600 hover:bg-zinc-100"
-                  >
-                    ยกเลิก
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={renamingPort}
-                    className="rounded-xl bg-sky-600 px-4 py-2 text-xs font-bold text-white shadow-md hover:bg-sky-700 disabled:opacity-50"
-                  >
-                    {renamingPort ? 'กำลังบันทึก...' : 'บันทึก'}
-                  </button>
-                </div>
-              </form>
+      {renamePortModalOpen && (
+        <Modal
+          titleId="rename-portfolio-title"
+          onClose={() => setRenamePortModalOpen(false)}
+          panelClassName="max-w-sm rounded-2xl bg-white p-6 shadow-2xl border border-emerald-100"
+        >
+          <h3 id="rename-portfolio-title" className="text-lg font-bold text-slate-900 mb-2 flex items-center gap-2">
+            <EditPenIcon className="w-5 h-5 text-section-accent" />
+            <span>แก้ไขชื่อพอร์ต</span>
+          </h3>
+          <p className="text-xs text-slate-500 mb-4">
+            เปลี่ยนชื่อแสดงผลของพอร์ตการลงทุนที่เลือก
+          </p>
+          <form onSubmit={handleRenamePortfolio} className="space-y-4">
+            <div>
+              <label htmlFor="rename-port-name" className="block text-xs font-semibold text-slate-700 mb-1">
+                ชื่อพอร์ตใหม่ (Portfolio Name)
+              </label>
+              <input
+                id="rename-port-name"
+                type="text"
+                required
+                value={editPortName}
+                onChange={(e) => setEditPortName(e.target.value)}
+                placeholder="เช่น พอร์ตเพื่อการเติบโต"
+                className="w-full rounded-xl border border-slate-200 bg-surface-2 px-3.5 py-2 text-sm font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-section-accent/45"
+              />
             </div>
-          </div>,
-          document.body
-        )}
+            <div className="flex justify-end gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => setRenamePortModalOpen(false)}
+                className="rounded-xl px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-100"
+              >
+                ยกเลิก
+              </button>
+              <button
+                type="submit"
+                disabled={renamingPort}
+                className="rounded-xl bg-emerald-600 px-4 py-2 text-xs font-bold text-white shadow-md hover:bg-emerald-700 disabled:opacity-50"
+              >
+                {renamingPort ? 'กำลังบันทึก...' : 'บันทึก'}
+              </button>
+            </div>
+          </form>
+        </Modal>
+      )}
+
+      {/* Modal: Delete Portfolio Confirmation */}
+      {deletePortModalOpen && (
+        <Modal
+          titleId="delete-portfolio-title"
+          onClose={() => setDeletePortModalOpen(false)}
+          panelClassName="max-w-sm rounded-2xl bg-white p-6 shadow-2xl border border-rose-200"
+        >
+          <h3 id="delete-portfolio-title" className="text-lg font-bold text-rose-700 mb-2 flex items-center gap-2">
+            <TrashIcon className="w-5 h-5" />
+            <span>ยืนยันการลบพอร์ต</span>
+          </h3>
+          <p className="text-xs text-slate-600 leading-relaxed mb-4">
+            คุณต้องการลบพอร์ต <strong className="text-slate-900">"{currentPortfolioName}"</strong> ใช่หรือไม่? การลบพอร์ตนี้ไม่สามารถย้อนกลับได้
+          </p>
+          <div className="flex justify-end gap-2">
+            <button
+              type="button"
+              onClick={() => setDeletePortModalOpen(false)}
+              className="rounded-xl px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-100"
+            >
+              ยกเลิก
+            </button>
+            <button
+              type="button"
+              disabled={deletingPort}
+              onClick={() => void handleConfirmDeletePortfolio()}
+              className="rounded-xl bg-rose-600 px-4 py-2 text-xs font-bold text-white shadow-md hover:bg-rose-700 disabled:opacity-50"
+            >
+              {deletingPort ? 'กำลังลบ...' : 'ลบพอร์ตถาวร'}
+            </button>
+          </div>
+        </Modal>
+      )}
 
       {/* Error Alert */}
       {error && (
         <div className="flex items-center justify-between rounded-2xl border border-rose-200 bg-rose-50 p-4 text-rose-900 shadow-sm animate-fade-in">
           <div className="flex items-center gap-3">
-            <span className="text-xl">⚠️</span>
+            <AlertTriangleIcon className="w-5 h-5 text-rose-600 shrink-0" />
             <span className="text-sm font-semibold">{error}</span>
           </div>
           <button
@@ -687,52 +821,80 @@ export default function Portfolio() {
       />
 
       {/* Top-Level Executive Goals Section */}
-      <div className="rounded-2xl border border-sky-100 bg-gradient-to-b from-sky-50/40 via-white to-panel p-5 shadow-sm transition-all">
-        <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center border-b border-sky-100 pb-4">
-          <div className="flex items-center gap-3">
-            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-flow-blue/10 text-flow-blue">
+      <div
+        className={`rounded-2xl border border-emerald-100/80 bg-gradient-to-b from-emerald-50/35 via-white to-panel shadow-sm transition-all ${
+          executiveExpanded ? 'p-5' : 'px-4 py-3'
+        }`}
+      >
+        <div
+          className={`flex flex-col justify-between gap-3 sm:flex-row sm:items-center ${
+            executiveExpanded ? 'border-b border-emerald-100 pb-4' : ''
+          }`}
+        >
+          <div className="flex items-center gap-3 min-w-0">
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-emerald-500/10 text-section-accent">
               <GoalIcon className="h-5 w-5" />
             </span>
-            <div>
-              <h2 className="text-base font-extrabold tracking-tight text-zinc-900 flex items-center gap-2">
+            <div className="min-w-0">
+              <h2 className="text-sm sm:text-base font-extrabold tracking-tight text-slate-900 flex items-center gap-2 flex-wrap">
                 <span>Portfolio Goals & Targets</span>
-                <span className="rounded-full bg-flow-cyan/20 px-2.5 py-0.5 text-[10px] font-bold text-flow-blue uppercase tracking-wider">
+                <span className="rounded-full bg-emerald-100/80 px-2.5 py-0.5 font-mono text-[11px] font-bold text-emerald-800 uppercase tracking-wider">
                   {goalsResponse?.goals.length ?? 0} Goals
                 </span>
+                {!executiveExpanded && goalsResponse?.goals[0] && (
+                  <span className="text-xs font-medium text-slate-500 truncate">
+                    · {goalsResponse.goals[0]?.name} ({goalsResponse.goals[0]?.progress_pct?.toFixed(0) ?? 0}%)
+                  </span>
+                )}
               </h2>
-              <p className="text-xs text-zinc-500 mt-0.5">
-                ติดตามความคืบหน้าเป้าหมายทางการเงินและสัดส่วนสินทรัพย์ตามกลยุทธ์
-              </p>
+              {executiveExpanded && (
+                <p className="text-xs text-slate-500 mt-0.5">
+                  ติดตามความคืบหน้าเป้าหมายทางการเงินและสัดส่วนสินทรัพย์ตามกลยุทธ์
+                </p>
+              )}
             </div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 shrink-0">
             <button
               type="button"
               onClick={() => setExecutiveExpanded(!executiveExpanded)}
-              className="rounded-xl border border-sky-200 bg-white px-3.5 py-1.5 text-xs font-bold text-zinc-600 hover:bg-sky-50 hover:text-zinc-900 transition-colors flex items-center gap-1.5 shadow-2xs"
+              aria-expanded={executiveExpanded}
+              className="rounded-xl border border-emerald-200/80 bg-white px-3.5 py-1.5 text-xs font-bold text-slate-600 hover:bg-emerald-50 hover:text-slate-900 transition-colors flex items-center gap-1.5 shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-section-accent/45"
               title={executiveExpanded ? 'ย่อส่วน Goals' : 'ขยายส่วน Goals'}
             >
-              <GoalIcon className="w-3.5 h-3.5" />
+              <GoalIcon className="w-3.5 h-3.5 text-section-accent" />
               <span>Goals ({goalsResponse?.goals.length ?? 0})</span>
-              <span className="ml-0.5">{executiveExpanded ? '🔼' : '🔽'}</span>
+              {executiveExpanded ? (
+                <ChevronUpIcon className="w-3.5 h-3.5 text-slate-500" />
+              ) : (
+                <ChevronDownIcon className="w-3.5 h-3.5 text-slate-500" />
+              )}
             </button>
           </div>
         </div>
 
         {executiveExpanded && (
           <div className="mt-5 animate-fade-in">
-            <PortfolioGoalsTab
-              goals={goalsResponse?.goals ?? []}
-              generatedAt={goalsResponse?.generated_at ?? null}
-              portfolios={portfolios}
-              selectedPortfolioId={selectedPortfolioId}
-              allocationPolicy={portfolioState?.allocation_policy}
-              bucketSummaries={allocationsResponse?.summaries ?? []}
-              onSuccess={(res) => {
-                setGoalsResponse(res)
-                api.getActualGoals().then((gRes) => setGoalsResponse(gRes)).catch(() => {})
-              }}
-            />
+            <Suspense
+              fallback={
+                <div className="rounded-xl border border-edge bg-white/70 p-6 text-center text-xs text-slate-500 animate-pulse">
+                  กำลังโหลดเป้าหมายการเงิน...
+                </div>
+              }
+            >
+              <PortfolioGoalsTab
+                goals={goalsResponse?.goals ?? []}
+                generatedAt={goalsResponse?.generated_at ?? null}
+                portfolios={portfolios}
+                selectedPortfolioId={selectedPortfolioId}
+                allocationPolicy={portfolioState?.allocation_policy}
+                bucketSummaries={allocationsResponse?.summaries ?? []}
+                onSuccess={(res) => {
+                  setGoalsResponse(res)
+                  api.getActualGoals().then((gRes) => setGoalsResponse(gRes)).catch(() => {})
+                }}
+              />
+            </Suspense>
           </div>
         )}
       </div>
@@ -775,139 +937,167 @@ export default function Portfolio() {
           </div>
         )}
 
-        {mountedTabs['principles'] && (
-          <div className={activeTab === 'principles' ? 'block' : 'hidden'}>
-            <InvestorPrinciplesTab
-              portfolioId={selectedPortfolioId}
-              portfolioName={currentPortfolioName}
-              onPortfolioChangeNeeded={() => void fetchAllData(false)}
-              onNavigateToOverview={() => {
-                const nextParams = new URLSearchParams(searchParams)
-                nextParams.set('tab', 'overview')
-                setSearchParams(nextParams)
-              }}
-            />
-          </div>
-        )}
+        <Suspense
+          fallback={
+            <div className="flow-panel rounded-2xl border border-edge p-8 text-center text-xs text-slate-500 animate-pulse">
+              กำลังโหลดข้อมูลแท็บพอร์ตโฟลิโอ...
+            </div>
+          }
+        >
+          {mountedTabs['principles'] && (
+            <div className={activeTab === 'principles' ? 'block space-y-6' : 'hidden'}>
+              <InvestorPrinciplesTab
+                portfolioId={selectedPortfolioId}
+                portfolioName={currentPortfolioName}
+                onPortfolioChangeNeeded={() => void fetchAllData(false)}
+                onNavigateToOverview={() => {
+                  const nextParams = new URLSearchParams(searchParams)
+                  nextParams.set('tab', 'overview')
+                  setSearchParams(nextParams)
+                }}
+              />
 
-        {mountedTabs['holdings'] && (
-          <div className={activeTab === 'holdings' ? 'block' : 'hidden'}>
-            <PortfolioHoldingsTab
-              key={selectedPortfolioId}
-              loading={loading}
-              portfolioId={selectedPortfolioId}
-              holdings={portfolioState?.holdings ?? []}
-              selectedBucket={selectedBucket}
-              onClearBucketFilter={handleClearBucketFilter}
-              targets={portfolioState?.allocation_targets ?? []}
-              allocationPolicy={portfolioState?.allocation_policy}
-              onSuccess={(newState) => {
-                if (selectedPortfolioIdRef.current === selectedPortfolioId) handlePortfolioStateSuccess(newState)
-              }}
-              journalRows={journalRows}
-              journalKeyword={journalKeyword}
-              onChangeJournalKeyword={setJournalKeyword}
-              onSuccessJournal={(entries) => setJournalRows(entries)}
-              onOpenTradeModal={() => setTradeModalOpen(true)}
-              onViewTransactions={handleViewTransactionsForSymbol}
-              watchlistedSymbols={watchlistedSymbols}
-              onWatchlistChanged={refreshWatchlist}
-            />
-          </div>
-        )}
+              <div className="rounded-2xl border border-rose-200/70 bg-rose-50/40 p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div>
+                  <h3 className="text-sm font-bold text-rose-900">Danger Zone — รีเซ็ตข้อมูลพอร์ต</h3>
+                  <p className="text-xs text-rose-700/90 mt-0.5">
+                    ล้างประวัติธุรกรรม การถือครอง และเป้าหมายของพอร์ตนี้กลับสู่ค่าเริ่มต้น
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setResetModalOpen(true)}
+                  className="shrink-0 rounded-xl border border-rose-200 bg-white px-3.5 py-2 text-xs sm:text-sm font-bold text-rose-600 shadow-sm hover:bg-rose-600 hover:text-white active:scale-98 transition-all flex items-center gap-1.5 whitespace-nowrap"
+                  title="ล้างข้อมูลพอร์ตทั้งหมดกลับเป็นค่าเริ่มต้น"
+                >
+                  <ResetIcon className="w-4 h-4 shrink-0" />
+                  <span>ล้างพอร์ต</span>
+                </button>
+              </div>
+            </div>
+          )}
 
-        {mountedTabs['transactions'] && (
-          <div className={activeTab === 'transactions' ? 'block' : 'hidden'}>
-            <PortfolioTransactionsTab
-              key={selectedPortfolioId}
-              portfolioId={selectedPortfolioId}
-              activeView={selectedTransactionView}
-              onViewChange={handleTransactionViewChange}
-              initialSymbol={transactionFilterSymbol}
-              holdings={portfolioState?.holdings}
-              onClearSymbolFilter={handleClearSymbolFilter}
-              onOpenTradeModal={() => setTradeModalOpen(true)}
-              onSuccess={(newState) => {
-                if (selectedPortfolioIdRef.current === selectedPortfolioId) handlePortfolioStateSuccess(newState)
-              }}
-            />
-          </div>
-        )}
+          {mountedTabs['holdings'] && (
+            <div className={activeTab === 'holdings' ? 'block' : 'hidden'}>
+              <PortfolioHoldingsTab
+                key={selectedPortfolioId}
+                loading={loading}
+                portfolioId={selectedPortfolioId}
+                holdings={portfolioState?.holdings ?? []}
+                selectedBucket={selectedBucket}
+                onClearBucketFilter={handleClearBucketFilter}
+                targets={portfolioState?.allocation_targets ?? []}
+                allocationPolicy={portfolioState?.allocation_policy}
+                onSuccess={(newState) => {
+                  if (selectedPortfolioIdRef.current === selectedPortfolioId) handlePortfolioStateSuccess(newState)
+                }}
+                journalRows={journalRows}
+                journalKeyword={journalKeyword}
+                onChangeJournalKeyword={setJournalKeyword}
+                onSuccessJournal={(entries) => setJournalRows(entries)}
+                onOpenTradeModal={() => setTradeModalOpen(true)}
+                onViewTransactions={handleViewTransactionsForSymbol}
+                watchlistedSymbols={watchlistedSymbols}
+                onWatchlistChanged={refreshWatchlist}
+              />
+            </div>
+          )}
 
-        {mountedTabs['incomes'] && (
-          <div className={activeTab === 'incomes' ? 'block' : 'hidden'}>
-            <PortfolioIncomesTab
-              state={portfolioState}
-              selectedPortfolioId={selectedPortfolioId}
-              onSuccess={handlePortfolioStateSuccess}
-              onOpenIncomeModal={() => setIncomeModalOpen(true)}
-            />
-          </div>
-        )}
+          {mountedTabs['transactions'] && (
+            <div className={activeTab === 'transactions' ? 'block' : 'hidden'}>
+              <PortfolioTransactionsTab
+                key={selectedPortfolioId}
+                portfolioId={selectedPortfolioId}
+                activeView={selectedTransactionView}
+                onViewChange={handleTransactionViewChange}
+                initialSymbol={transactionFilterSymbol}
+                holdings={portfolioState?.holdings}
+                onClearSymbolFilter={handleClearSymbolFilter}
+                onOpenTradeModal={() => setTradeModalOpen(true)}
+                onSuccess={(newState) => {
+                  if (selectedPortfolioIdRef.current === selectedPortfolioId) handlePortfolioStateSuccess(newState)
+                }}
+              />
+            </div>
+          )}
 
-        {mountedTabs['analytics'] && (
-          <div className={activeTab === 'analytics' ? 'block' : 'hidden'}>
-            <PortfolioAnalyticsTab
-              performanceRows={performanceRows}
-              daysRange={daysRange}
-              onChangeDaysRange={setDaysRange}
-              holdings={portfolioState?.holdings ?? []}
-            />
-          </div>
-        )}
+          {mountedTabs['incomes'] && (
+            <div className={activeTab === 'incomes' ? 'block' : 'hidden'}>
+              <PortfolioIncomesTab
+                state={portfolioState}
+                selectedPortfolioId={selectedPortfolioId}
+                onSuccess={handlePortfolioStateSuccess}
+                onOpenIncomeModal={() => setIncomeModalOpen(true)}
+              />
+            </div>
+          )}
 
-        {mountedTabs['watchlist'] && (
-          <div className={activeTab === 'watchlist' ? 'block' : 'hidden'}>
-            <PortfolioWatchlistTab
-              portfolioId={selectedPortfolioId}
-              items={watchlistState?.items ?? []}
-              lastUpdated={watchlistState?.last_updated ?? null}
-              onSuccess={(wState) => setWatchlistState(wState)}
-            />
-          </div>
-        )}
+          {mountedTabs['analytics'] && (
+            <div className={activeTab === 'analytics' ? 'block' : 'hidden'}>
+              <PortfolioAnalyticsTab
+                performanceRows={performanceRows}
+                daysRange={daysRange}
+                onChangeDaysRange={setDaysRange}
+                holdings={portfolioState?.holdings ?? []}
+              />
+            </div>
+          )}
 
-        {mountedTabs['calendar'] && (
-          <div className={activeTab === 'calendar' ? 'block' : 'hidden'}>
-            <PortfolioCalendarTab selectedPortfolioId={selectedPortfolioId} />
-          </div>
-        )}
+          {mountedTabs['watchlist'] && (
+            <div className={activeTab === 'watchlist' ? 'block' : 'hidden'}>
+              <PortfolioWatchlistTab
+                portfolioId={selectedPortfolioId}
+                items={watchlistState?.items ?? []}
+                lastUpdated={watchlistState?.last_updated ?? null}
+                onSuccess={(wState) => setWatchlistState(wState)}
+              />
+            </div>
+          )}
+
+          {mountedTabs['calendar'] && (
+            <div className={activeTab === 'calendar' ? 'block' : 'hidden'}>
+              <PortfolioCalendarTab selectedPortfolioId={selectedPortfolioId} />
+            </div>
+          )}
+        </Suspense>
       </div>
 
-      {tradeModalOpen && (
-        <TradeModal
-          targets={portfolioState?.allocation_targets ?? []}
-          holdings={portfolioState?.holdings ?? []}
-          selectedPortfolioId={selectedPortfolioId}
-          onClose={() => setTradeModalOpen(false)}
-          onSuccess={handlePortfolioStateSuccess}
-        />
-      )}
+      <Suspense fallback={null}>
+        {tradeModalOpen && (
+          <TradeModal
+            targets={portfolioState?.allocation_targets ?? []}
+            holdings={portfolioState?.holdings ?? []}
+            selectedPortfolioId={selectedPortfolioId}
+            onClose={() => setTradeModalOpen(false)}
+            onSuccess={handlePortfolioStateSuccess}
+          />
+        )}
 
-      {cashFlowModalOpen && (
-        <CashFlowModal
-          selectedPortfolioId={selectedPortfolioId}
-          onClose={() => setCashFlowModalOpen(false)}
-          onSuccess={handlePortfolioStateSuccess}
-        />
-      )}
+        {cashFlowModalOpen && (
+          <CashFlowModal
+            selectedPortfolioId={selectedPortfolioId}
+            onClose={() => setCashFlowModalOpen(false)}
+            onSuccess={handlePortfolioStateSuccess}
+          />
+        )}
 
-      {incomeModalOpen && (
-        <IncomeModal
-          holdingsSymbols={(portfolioState?.holdings ?? []).map((h) => h.symbol)}
-          selectedPortfolioId={selectedPortfolioId}
-          onClose={() => setIncomeModalOpen(false)}
-          onSuccess={handlePortfolioStateSuccess}
-        />
-      )}
+        {incomeModalOpen && (
+          <IncomeModal
+            holdingsSymbols={(portfolioState?.holdings ?? []).map((h) => h.symbol)}
+            selectedPortfolioId={selectedPortfolioId}
+            onClose={() => setIncomeModalOpen(false)}
+            onSuccess={handlePortfolioStateSuccess}
+          />
+        )}
 
-      {resetModalOpen && (
-        <ResetConfirmModal
-          selectedPortfolioId={selectedPortfolioId}
-          onClose={() => setResetModalOpen(false)}
-          onSuccess={handlePortfolioStateSuccess}
-        />
-      )}
+        {resetModalOpen && (
+          <ResetConfirmModal
+            selectedPortfolioId={selectedPortfolioId}
+            onClose={() => setResetModalOpen(false)}
+            onSuccess={handlePortfolioStateSuccess}
+          />
+        )}
+      </Suspense>
     </div>
   )
 }

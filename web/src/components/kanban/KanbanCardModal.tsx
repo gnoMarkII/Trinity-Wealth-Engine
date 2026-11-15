@@ -47,13 +47,13 @@ export default function KanbanCardModal({
 
   return (
     <Modal titleId="kanban-card-modal-title" onClose={onClose}>
-      <h2 id="kanban-card-modal-title" className="mb-4 text-sm font-semibold text-zinc-900">
+      <h2 id="kanban-card-modal-title" className="mb-4 text-sm font-semibold text-slate-900">
         {mode === 'create' ? 'เพิ่มการ์ดใหม่' : 'แก้ไขการ์ด'}
       </h2>
 
       <div className="space-y-4">
         <div>
-          <label htmlFor="kanban-card-title" className="mb-1 block text-xs font-medium text-zinc-600">
+          <label htmlFor="kanban-card-title" className="mb-1 block text-xs font-medium text-slate-600">
             ชื่อการ์ด
           </label>
           <TextInput
@@ -68,13 +68,13 @@ export default function KanbanCardModal({
 
         <div>
           {/* span + role="group" แทน <label> — SegmentedControl เป็นกลุ่มปุ่ม ไม่ใช่ form control */}
-          <span id="kanban-card-flow-label" className="mb-1 block text-xs font-medium text-zinc-600">ประเภทงาน</span>
+          <span id="kanban-card-flow-label" className="mb-1 block text-xs font-medium text-slate-600">ประเภทงาน</span>
           <SegmentedControl options={FLOW_OPTIONS} value={flow} onChange={setFlow} ariaLabelledby="kanban-card-flow-label" />
         </div>
 
         {flow === 'news_youtube' && (
           <div>
-            <span id="kanban-card-scope-label" className="mb-1 block text-xs font-medium text-zinc-600">ขอบเขต</span>
+            <span id="kanban-card-scope-label" className="mb-1 block text-xs font-medium text-slate-600">ขอบเขต</span>
             <SegmentedControl options={SCOPE_OPTIONS} value={scope} onChange={setScope} ariaLabelledby="kanban-card-scope-label" />
           </div>
         )}
@@ -84,12 +84,12 @@ export default function KanbanCardModal({
         )}
 
         {flow === 'notebooklm' ? (
-          <p className="rounded-lg border border-edge bg-surface px-3 py-2 text-xs text-zinc-500">
+          <p className="rounded-lg border border-edge bg-surface px-3 py-2 text-xs text-slate-500">
             เลือกไฟล์ Briefing Book ให้การ์ดนี้ทีหลังได้ในหน้ารายละเอียด (Drawer) หลังสร้างการ์ดเสร็จ
           </p>
         ) : (
           <div>
-            <label htmlFor="kanban-card-prompt" className="mb-1 block text-xs font-medium text-zinc-600">
+            <label htmlFor="kanban-card-prompt" className="mb-1 block text-xs font-medium text-slate-600">
               Prompt สำหรับ Swarm Supervisor (ไม่บังคับ)
             </label>
             <textarea
@@ -101,9 +101,9 @@ export default function KanbanCardModal({
               }}
               rows={7}
               placeholder="อธิบายรายละเอียดงานให้ agent เข้าใจชัดเจน เช่น ขอบเขตการวิเคราะห์ กรอบเวลา สินทรัพย์ที่สนใจ ข้อมูลอ้างอิงพิเศษ ฯลฯ"
-              className="w-full resize-none rounded-lg border border-edge bg-panel px-3 py-2 text-sm text-zinc-900 outline-none transition-colors placeholder-zinc-400 focus:border-sky-500 focus:ring-1 focus:ring-sky-500/30"
+              className="w-full resize-none rounded-lg border border-edge bg-panel px-3 py-2 text-sm text-slate-900 outline-none transition-colors placeholder-slate-400 focus:border-sky-500 focus:ring-1 focus:ring-sky-500/30"
             />
-            <p className="mt-1 text-xs text-zinc-500">ถ้าเว้นว่างไว้ ระบบจะใช้ชื่อการ์ดเป็นคำสั่งแทน</p>
+            <p className="mt-1 text-xs text-slate-500">ถ้าเว้นว่างไว้ ระบบจะใช้ชื่อการ์ดเป็นคำสั่งแทน</p>
           </div>
         )}
       </div>

@@ -103,11 +103,11 @@ export default function YoutubePitchDateControls({
   const PRESET_DAYS = [3, 7, 14, 30]
 
   return (
-    <div className={`rounded-xl border border-purple-200/80 bg-gradient-to-br from-purple-50/70 to-purple-50/30 p-3.5 shadow-sm ${className}`}>
-      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-purple-100 pb-2.5">
+    <div className={`rounded-xl border border-sky-200/80 bg-gradient-to-br from-sky-50/70 to-sky-50/30 p-3.5 shadow-sm ${className}`}>
+      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-sky-100 pb-2.5">
         <div className="flex items-center gap-1.5">
           <span className="text-base">🕒</span>
-          <span id="youtube-pitch-time-label" className="text-xs font-semibold text-purple-900">
+          <span id="youtube-pitch-time-label" className="text-xs font-semibold text-blue-900">
             ช่วงเวลา / วันที่ค้นหาไอเดีย YouTube
           </span>
         </div>
@@ -125,7 +125,7 @@ export default function YoutubePitchDateControls({
       <div className="mt-3">
         {filters.mode === 'lookback' ? (
           <div className="flex flex-wrap items-center gap-2">
-            <span className="text-xs font-medium text-purple-800">ค้นหาย้อนหลัง:</span>
+            <span className="text-xs font-medium text-blue-800">ค้นหาย้อนหลัง:</span>
             <div className="flex flex-wrap items-center gap-1.5">
               {PRESET_DAYS.map((days) => {
                 const isActive = filters.lookbackDays === days
@@ -137,8 +137,8 @@ export default function YoutubePitchDateControls({
                     onClick={() => handleLookbackChange(days)}
                     className={`rounded-lg px-2.5 py-1 text-xs font-medium transition-all ${
                       isActive
-                        ? 'bg-purple-600 text-white shadow-sm shadow-purple-500/20'
-                        : 'border border-purple-200/80 bg-white text-purple-700 hover:bg-purple-100/60 hover:text-purple-900'
+                        ? 'bg-blue-600 text-white shadow-sm shadow-sky-500/20'
+                        : 'border border-sky-200/80 bg-white text-blue-700 hover:bg-sky-100/60 hover:text-blue-900'
                     }`}
                   >
                     {days} วัน
@@ -147,7 +147,7 @@ export default function YoutubePitchDateControls({
               })}
             </div>
             <div className="flex items-center gap-1 ml-auto sm:ml-2">
-              <span className="text-xs text-purple-600">กำหนดเอง:</span>
+              <span className="text-xs text-blue-600">กำหนดเอง:</span>
               <input
                 type="number"
                 min={1}
@@ -155,16 +155,16 @@ export default function YoutubePitchDateControls({
                 disabled={disabled}
                 value={filters.lookbackDays || ''}
                 onChange={(e) => handleLookbackChange(parseInt(e.target.value, 10))}
-                className="w-16 rounded-lg border border-purple-200 bg-white px-2 py-1 text-center text-xs font-semibold text-purple-900 outline-none transition-colors focus:border-purple-500 focus:ring-1 focus:ring-purple-500/30 disabled:opacity-50"
+                className="w-16 rounded-lg border border-sky-200 bg-white px-2 py-1 text-center text-xs font-semibold text-blue-900 outline-none transition-colors focus:border-sky-500 focus:ring-1 focus:ring-sky-500/30 disabled:opacity-50"
                 placeholder="วัน"
               />
-              <span className="text-xs font-medium text-purple-700">วัน</span>
+              <span className="text-xs font-medium text-blue-700">วัน</span>
             </div>
           </div>
         ) : (
           <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
             <div>
-              <label htmlFor="pitch-from-date" className="mb-1 block text-[11px] font-semibold text-purple-800">
+              <label htmlFor="pitch-from-date" className="mb-1 block text-[11px] font-semibold text-blue-800">
                 ตั้งแต่วันที่ (From Date)
               </label>
               <input
@@ -173,11 +173,11 @@ export default function YoutubePitchDateControls({
                 disabled={disabled}
                 value={filters.fromDate}
                 onChange={(e) => handleRangeChange(e.target.value, filters.toDate)}
-                className="w-full rounded-lg border border-purple-200 bg-white px-2.5 py-1.5 text-xs font-medium text-purple-900 outline-none transition-colors focus:border-purple-500 focus:ring-1 focus:ring-purple-500/30 disabled:opacity-50"
+                className="w-full rounded-lg border border-sky-200 bg-white px-2.5 py-1.5 text-xs font-medium text-blue-900 outline-none transition-colors focus:border-sky-500 focus:ring-1 focus:ring-sky-500/30 disabled:opacity-50"
               />
             </div>
             <div>
-              <label htmlFor="pitch-to-date" className="mb-1 block text-[11px] font-semibold text-purple-800">
+              <label htmlFor="pitch-to-date" className="mb-1 block text-[11px] font-semibold text-blue-800">
                 ถึงวันที่ (To Date)
               </label>
               <input
@@ -186,16 +186,16 @@ export default function YoutubePitchDateControls({
                 disabled={disabled}
                 value={filters.toDate}
                 onChange={(e) => handleRangeChange(filters.fromDate, e.target.value)}
-                className="w-full rounded-lg border border-purple-200 bg-white px-2.5 py-1.5 text-xs font-medium text-purple-900 outline-none transition-colors focus:border-purple-500 focus:ring-1 focus:ring-purple-500/30 disabled:opacity-50"
+                className="w-full rounded-lg border border-sky-200 bg-white px-2.5 py-1.5 text-xs font-medium text-blue-900 outline-none transition-colors focus:border-sky-500 focus:ring-1 focus:ring-sky-500/30 disabled:opacity-50"
               />
             </div>
           </div>
         )}
       </div>
 
-      <div className="mt-2.5 flex items-center justify-between border-t border-purple-100/60 pt-2 text-[11px] text-purple-600/90">
+      <div className="mt-2.5 flex items-center justify-between border-t border-sky-100/60 pt-2 text-[11px] text-blue-600/90">
         <span>💡 ระบบจะแนบการตั้งค่าเวลานี้เข้าไปใน Prompt ให้อัตโนมัติ</span>
-        <span className="font-mono font-medium text-purple-800 bg-purple-100/80 px-1.5 py-0.5 rounded">
+        <span className="font-mono font-medium text-blue-800 bg-sky-100/80 px-1.5 py-0.5 rounded">
           {filters.mode === 'lookback'
             ? `[lookback_days=${filters.lookbackDays}]`
             : `[from_date=${filters.fromDate || '...'}, to_date=${filters.toDate || '...'}]`}

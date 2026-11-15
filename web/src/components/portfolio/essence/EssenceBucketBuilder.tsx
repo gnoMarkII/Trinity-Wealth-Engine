@@ -1,5 +1,21 @@
 import { useState, useEffect, useMemo } from 'react'
 import AutoResizeTextarea from '../../ui/AutoResizeTextarea'
+import {
+  AlertTriangleIcon,
+  BoltStrategyIcon,
+  BriefcasePortfolioIcon,
+  BulbIcon,
+  CheckCircleIcon,
+  CheckSmallIcon,
+  CloseIcon,
+  CpuIcon,
+  FolderIcon,
+  ShieldCheckIcon,
+  SlidersIcon,
+  SparklesIcon,
+  TargetIcon,
+  TrashIcon,
+} from '../../ui/AppIcons'
 import type {
   BucketPlanDraftDTO,
   UpdateBucketPlanRequestDTO,
@@ -276,26 +292,26 @@ export default function EssenceBucketBuilder({
   return (
     <div className="space-y-4 max-w-5xl mx-auto w-full pb-6">
       {/* Top Header Banner & Strategy Summary */}
-      <div className="rounded-2xl border border-sky-100 bg-gradient-to-br from-sky-50/80 via-white to-indigo-50/30 p-4 sm:p-5 shadow-xs space-y-3">
+      <div className="rounded-2xl border border-sky-100 bg-gradient-to-br from-sky-50/80 via-white to-blue-50/30 p-4 sm:p-5 shadow-sm space-y-3">
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-sky-100/80 pb-2.5">
           <div className="flex items-center gap-2.5">
-            <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-tr from-purple-600 to-indigo-600 text-white font-bold text-lg shadow-xs">
-              🗂️
+            <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-tr from-blue-600 to-sky-500 text-white shadow-sm">
+              <FolderIcon className="h-5 w-5" />
             </span>
             <div>
               <div className="flex items-center gap-2">
-                <h1 className="text-base sm:text-lg font-black text-zinc-900 tracking-tight">
+                <h1 className="text-base sm:text-lg font-black text-slate-900 tracking-tight">
                   ออกแบบ Purpose Buckets ตามเป้าหมายชีวิต
                 </h1>
-                <span className="inline-flex items-center gap-1 rounded-full bg-purple-100 px-2.5 py-0.5 text-[11px] font-bold text-purple-800 border border-purple-200">
+                <span className="inline-flex items-center gap-1 rounded-full bg-sky-100 px-2.5 py-0.5 text-[11px] font-bold text-blue-800 border border-sky-200">
                   {buckets.length} Buckets
                 </span>
               </div>
-              <p className="text-[11px] text-zinc-600">
-                พอร์ต: <span className="font-bold text-zinc-800">{displayName}</span>
+              <p className="text-[11px] text-slate-600">
+                พอร์ต: <span className="font-bold text-slate-800">{displayName}</span>
                 {navThb > 0 && (
-                  <span className="ml-2 pl-2 border-l border-zinc-300">
-                    มูลค่าพอร์ต: <strong className="text-indigo-700">{navThb.toLocaleString('th-TH')} บาท</strong>
+                  <span className="ml-2 pl-2 border-l border-slate-300">
+                    มูลค่าพอร์ต: <strong className="text-blue-700">{navThb.toLocaleString('th-TH')} บาท</strong>
                   </span>
                 )}
               </p>
@@ -305,7 +321,7 @@ export default function EssenceBucketBuilder({
           <div className="flex flex-wrap items-center gap-2">
             {/* Live Total Percentage Badge */}
             <span
-              className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-extrabold border shadow-2xs ${
+              className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-extrabold border shadow-sm ${
                 is100Percent
                   ? 'bg-emerald-50 text-emerald-800 border-emerald-300'
                   : 'bg-rose-50 text-rose-800 border-rose-300 animate-pulse'
@@ -322,10 +338,11 @@ export default function EssenceBucketBuilder({
                 type="button"
                 onClick={onRegenerateBuckets}
                 disabled={loading}
-                className="inline-flex items-center gap-1.5 rounded-xl border border-purple-300 bg-purple-600 hover:bg-purple-700 px-3.5 py-1.5 text-xs font-extrabold text-white shadow-sm active:scale-98 transition-all disabled:opacity-50"
+                className="inline-flex items-center gap-1.5 rounded-xl border border-blue-500 bg-blue-600 hover:bg-blue-700 px-3.5 py-1.5 text-xs font-extrabold text-white shadow-sm active:scale-98 transition-all disabled:opacity-50"
                 title="สั่งให้ AI วิเคราะห์แกนหลักและเป้าหมายล่าสุดเพื่อแนะนำ Purpose Buckets ให้โดยอัตโนมัติ"
               >
-                <span>✨ ให้ AI แนะนำ Buckets จากแกนหลัก</span>
+                <SparklesIcon className="h-3.5 w-3.5 shrink-0" />
+                <span>ให้ AI แนะนำ Buckets จากแกนหลัก</span>
               </button>
             )}
           </div>
@@ -334,33 +351,46 @@ export default function EssenceBucketBuilder({
         {/* Quick Suggestion Presets */}
         <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
           <div className="flex flex-wrap items-center gap-1.5">
-            <span className="font-bold text-zinc-600 flex items-center gap-1 text-[11px]">
-              <span>⚡</span> เทมเพลตแนะนำด่วน:
+            <span className="font-bold text-slate-600 flex items-center gap-1 text-[11px]">
+              <BoltStrategyIcon className="h-3.5 w-3.5 text-sky-600" />
+              <span>เทมเพลตแนะนำด่วน:</span>
             </span>
             <button
               type="button"
               onClick={() => applyPreset('3_buckets_standard')}
-              className="rounded-lg bg-white border border-purple-200 hover:bg-purple-50 hover:border-purple-300 px-2 py-0.5 text-[11px] font-bold text-purple-900 shadow-2xs transition-all active:scale-98"
+              className="rounded-lg bg-white border border-sky-200 hover:bg-sky-50 hover:border-sky-300 px-2.5 py-1 text-[11px] font-bold text-blue-900 shadow-sm transition-all active:scale-98"
             >
-              📌 3-Buckets มาตรฐาน (เสบียง 15% + กันชน 25% + เติบโต 60%)
+              3-Buckets มาตรฐาน (เสบียง 15% + กันชน 25% + เติบโต 60%)
             </button>
             <button
               type="button"
               onClick={() => applyPreset('4_buckets_growth')}
-              className="rounded-lg bg-white border border-purple-200 hover:bg-purple-50 hover:border-purple-300 px-2 py-0.5 text-[11px] font-bold text-purple-900 shadow-2xs transition-all active:scale-98"
+              className="rounded-lg bg-white border border-sky-200 hover:bg-sky-50 hover:border-sky-300 px-2.5 py-1 text-[11px] font-bold text-blue-900 shadow-sm transition-all active:scale-98"
             >
-              📌 4-Buckets เติบโตรุก (เสบียง 10% + กันชน 20% + กองหน้า 60% + โอกาสพิเศษ 10%)
+              4-Buckets เติบโตรุก (เสบียง 10% + กันชน 20% + กองหน้า 60% + โอกาสพิเศษ 10%)
             </button>
           </div>
         </div>
 
         {/* Visual Stacked Bar Chart & Cash Inflow Routing summary */}
         <div className="space-y-1">
-          <div className="flex justify-between text-[10px] text-zinc-500 font-semibold">
+          <div className="flex justify-between text-[11px] text-slate-500 font-semibold">
             <span>การกระจายสัดส่วนพอร์ต (Target Allocation):</span>
-            <span>{is100Percent ? '✓ สัดส่วนสมบูรณ์ครบ 100%' : '⚠️ ผลรวมต้องได้ 100%'}</span>
+            <span className="inline-flex items-center gap-1">
+              {is100Percent ? (
+                <>
+                  <CheckCircleIcon className="h-3.5 w-3.5 text-emerald-600" />
+                  <span>สัดส่วนสมบูรณ์ครบ 100%</span>
+                </>
+              ) : (
+                <>
+                  <AlertTriangleIcon className="h-3.5 w-3.5 text-amber-600" />
+                  <span>ผลรวมต้องได้ 100%</span>
+                </>
+              )}
+            </span>
           </div>
-          <div className="h-3 w-full rounded-full bg-zinc-100 overflow-hidden flex shadow-inner">
+          <div className="h-3 w-full rounded-full bg-slate-100 overflow-hidden flex shadow-inner">
             {buckets.map((b) => {
               const pct = Math.max(0, parseFloat(b.target_percent) || 0)
               if (pct <= 0) return null
@@ -377,19 +407,20 @@ export default function EssenceBucketBuilder({
 
           {/* Cash Inflow Routing Pills */}
           <div className="flex flex-wrap items-center gap-1.5 pt-0.5 text-[11px]">
-            <span className="font-semibold text-zinc-500 flex items-center gap-1">
-              <span>💡</span> สัดส่วนเงินเข้าใหม่ (DCA):
+            <span className="font-semibold text-slate-500 flex items-center gap-1">
+              <BulbIcon className="h-3.5 w-3.5 text-sky-600" />
+              <span>สัดส่วนเงินเข้าใหม่ (DCA):</span>
             </span>
             {buckets.map((b) => {
               const routePct = b.cash_inflow_routing_pct || b.target_percent || '0'
               return (
                 <span
                   key={b.bucket_id}
-                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-indigo-50/70 border border-indigo-100 text-zinc-800"
+                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-blue-50/70 border border-blue-100 text-slate-800"
                 >
                   <span className="w-2 h-2 rounded-full" style={{ backgroundColor: b.color || '#3b82f6' }} />
                   <span className="font-medium truncate max-w-[120px]">{b.name}:</span>
-                  <strong className="text-indigo-700">{routePct}%</strong>
+                  <strong className="text-blue-700">{routePct}%</strong>
                 </span>
               )
             })}
@@ -401,13 +432,15 @@ export default function EssenceBucketBuilder({
       <div className="space-y-4">
         {/* Informative Guidance Banner if buckets need suggestion */}
         {hasEmptyLinkedGoals && (
-          <div className="rounded-xl border border-purple-200 bg-gradient-to-r from-purple-50 via-white to-indigo-50/60 p-3 text-xs text-purple-950 shadow-2xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="rounded-xl border border-sky-200 bg-gradient-to-r from-sky-50 via-white to-blue-50/60 p-3 text-xs text-blue-950 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div className="flex items-start gap-2.5">
-              <span className="text-xl">🤖</span>
+              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-sky-100 text-blue-700">
+                <CpuIcon className="h-4 w-4" />
+              </span>
               <div>
-                <span className="font-extrabold block text-purple-900">ไม่ต้องพิมพ์ออกแบบเองจากศูนย์!</span>
-                <span className="text-purple-800/80 leading-relaxed text-[11px]">
-                  คลิกปุ่ม <strong>"✨ ให้ AI แนะนำ Buckets จากแกนหลัก"</strong> ด้านบน หรือเลือกเทมเพลตแนะนำด่วน เพื่อให้ระบบวางโครงสร้างที่ผูกกับเป้าหมาย สินทรัพย์ที่อนุญาต และกฎปฏิบัติให้โดยอัตโนมัติ
+                <span className="font-extrabold block text-blue-900">ไม่ต้องพิมพ์ออกแบบเองจากศูนย์!</span>
+                <span className="text-blue-800/80 leading-relaxed text-[11px]">
+                  คลิกปุ่ม <strong>"ให้ AI แนะนำ Buckets จากแกนหลัก"</strong> ด้านบน หรือเลือกเทมเพลตแนะนำด่วน เพื่อให้ระบบวางโครงสร้างที่ผูกกับเป้าหมาย สินทรัพย์ที่อนุญาต และกฎปฏิบัติให้โดยอัตโนมัติ
                 </span>
               </div>
             </div>
@@ -416,9 +449,10 @@ export default function EssenceBucketBuilder({
                 type="button"
                 onClick={onRegenerateBuckets}
                 disabled={loading}
-                className="rounded-xl bg-purple-700 px-3.5 py-1.5 text-xs font-bold text-white hover:bg-purple-800 shrink-0 shadow-xs active:scale-98"
+                className="inline-flex items-center gap-1.5 rounded-xl bg-blue-700 px-3.5 py-1.5 text-xs font-bold text-white hover:bg-blue-800 shrink-0 shadow-sm active:scale-98"
               >
-                ✨ ให้ AI แนะนำทันที
+                <SparklesIcon className="h-3.5 w-3.5 shrink-0" />
+                <span>ให้ AI แนะนำทันที</span>
               </button>
             )}
           </div>
@@ -426,14 +460,14 @@ export default function EssenceBucketBuilder({
 
         {/* Purpose Buckets List Header */}
         <div className="flex items-center justify-between px-1">
-          <h2 className="text-sm sm:text-base font-extrabold text-zinc-900">
+          <h2 className="text-sm sm:text-base font-extrabold text-slate-900">
             รายละเอียด Purpose Buckets ({buckets.length} รายการ)
           </h2>
           <button
             type="button"
             onClick={handleAddBucket}
             disabled={loading}
-            className="rounded-xl border border-purple-200 bg-purple-50 px-3.5 py-1.5 text-xs font-bold text-purple-700 hover:bg-purple-100 transition-all flex items-center gap-1.5 shadow-2xs"
+            className="rounded-xl border border-sky-200 bg-sky-50 px-3.5 py-1.5 text-xs font-bold text-blue-700 hover:bg-sky-100 transition-all flex items-center gap-1.5 shadow-sm"
           >
             <span>+ เพิ่ม Bucket</span>
           </button>
@@ -447,19 +481,19 @@ export default function EssenceBucketBuilder({
           return (
             <div
               key={bucketId}
-              className="rounded-2xl border border-zinc-200/90 bg-white p-5 sm:p-6 shadow-sm hover:border-purple-200 transition-all space-y-4"
+              className="rounded-2xl border border-slate-200/90 bg-white p-5 sm:p-6 shadow-sm hover:border-sky-200 transition-all space-y-4"
             >
               {/* Card Header: Color, Name, Linked Goal, Target %, THB */}
-              <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 border-b border-zinc-100 pb-4">
+              <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 border-b border-slate-100 pb-4">
                 <div className="flex items-center gap-2.5 flex-1 min-w-0">
                   <button
                     type="button"
                     onClick={() => handleCycleColor(idx)}
-                    className="flex h-9 w-9 items-center justify-center rounded-xl border border-black/10 shadow-xs shrink-0 cursor-pointer hover:scale-105 transition-transform"
+                    className="flex h-9 w-9 items-center justify-center rounded-xl border border-black/10 shadow-sm shrink-0 cursor-pointer hover:scale-105 transition-transform"
                     style={{ backgroundColor: b.color }}
                     title="คลิกเพื่อสลับสี"
                   >
-                    <span className="text-white text-xs drop-shadow">🎨</span>
+                    <SlidersIcon className="h-4 w-4 text-white drop-shadow" />
                   </button>
 
                   <div className="flex-1 min-w-0">
@@ -472,28 +506,28 @@ export default function EssenceBucketBuilder({
                       value={b.name}
                       onChange={(e) => handleUpdateBucket(idx, 'name', e.target.value)}
                       placeholder="ชื่อ Bucket เช่น ขับเคลื่อนพอร์ต 10 ล้าน"
-                      className="w-full rounded-xl border border-zinc-200 px-3.5 py-1.5 text-sm sm:text-base font-extrabold text-zinc-900 focus:outline-none focus:ring-2 focus:ring-purple-400"
+                      className="w-full rounded-xl border border-slate-200 px-3.5 py-1.5 text-sm sm:text-base font-extrabold text-slate-900 focus:outline-none focus:ring-2 focus:ring-sky-400"
                     />
                   </div>
                 </div>
 
                 <div className="flex flex-wrap items-center gap-2 sm:gap-3">
                   {/* Linked Financial Goal */}
-                  <div className="flex items-center gap-1.5 bg-purple-50/70 border border-purple-200/80 px-2.5 py-1 rounded-xl">
-                    <span className="text-xs">🎯</span>
+                  <div className="flex items-center gap-1.5 bg-sky-50/70 border border-sky-200/80 px-2.5 py-1 rounded-xl">
+                    <TargetIcon className="h-3.5 w-3.5 text-sky-700 shrink-0" />
                     <input
                       type="text"
                       value={b.linked_goal_name || ''}
                       onChange={(e) => handleUpdateBucket(idx, 'linked_goal_name', e.target.value)}
                       placeholder="ระบุเป้าหมายที่ผูก..."
-                      className="bg-transparent text-xs font-bold text-purple-900 focus:outline-none w-32 sm:w-40"
+                      className="rounded bg-transparent px-1 text-xs font-bold text-blue-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-section-accent/45 w-32 sm:w-40"
                       title="เป้าหมายทางการเงินที่เงินก้อนนี้รองรับโดยตรง"
                     />
                   </div>
 
                   {/* Target Percent & Calculated THB */}
-                  <div className="flex items-center gap-1.5 bg-zinc-50 border border-zinc-200 px-2.5 sm:px-3 py-1 rounded-xl">
-                    <span className="text-xs font-semibold text-zinc-500">สัดส่วน:</span>
+                  <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-200 px-2.5 sm:px-3 py-1 rounded-xl">
+                    <span className="text-xs font-semibold text-slate-500">สัดส่วน:</span>
                     <input
                       id={`b-target-${bucketId}`}
                       type="number"
@@ -502,11 +536,11 @@ export default function EssenceBucketBuilder({
                       step="1"
                       value={b.target_percent}
                       onChange={(e) => handleUpdateBucket(idx, 'target_percent', e.target.value)}
-                      className="w-14 sm:w-16 rounded border border-zinc-300 px-1 py-0.5 text-xs font-black text-purple-700 text-right focus:outline-none focus:ring-1 focus:ring-purple-400"
+                      className="w-14 sm:w-16 rounded border border-slate-300 px-1 py-0.5 text-xs font-black text-blue-700 text-right focus:outline-none focus:ring-1 focus:ring-sky-400"
                     />
-                    <span className="text-xs font-bold text-zinc-600">%</span>
+                    <span className="text-xs font-bold text-slate-600">%</span>
                     {approxThb > 0 && (
-                      <span className="text-[11px] font-bold text-zinc-600 pl-1 border-l border-zinc-300 whitespace-nowrap">
+                      <span className="text-[11px] font-bold text-slate-600 pl-1 border-l border-slate-300 whitespace-nowrap">
                         ≈ {Math.round(approxThb).toLocaleString('th-TH')} บ.
                       </span>
                     )}
@@ -516,10 +550,11 @@ export default function EssenceBucketBuilder({
                     <button
                       type="button"
                       onClick={() => handleRemoveBucket(idx)}
-                      className="rounded-xl p-2 text-zinc-400 hover:text-rose-600 hover:bg-rose-50 transition-colors ml-auto sm:ml-0"
+                      className="rounded-xl p-2 text-slate-500 hover:text-rose-600 hover:bg-rose-50 transition-colors ml-auto sm:ml-0"
                       title="ลบ Bucket นี้"
+                      aria-label={`ลบ ${b.name}`}
                     >
-                      🗑️
+                      <TrashIcon className="h-4 w-4" />
                     </button>
                   )}
                 </div>
@@ -527,7 +562,7 @@ export default function EssenceBucketBuilder({
 
               {/* Role & Money Purpose */}
               <div>
-                <label htmlFor={`b-role-${bucketId}`} className="block text-xs font-bold text-zinc-700 mb-1">
+                <label htmlFor={`b-role-${bucketId}`} className="block text-xs font-bold text-slate-700 mb-1">
                   บทบาทและเหตุผลของเงินก้อนนี้:
                 </label>
                 <AutoResizeTextarea
@@ -536,7 +571,7 @@ export default function EssenceBucketBuilder({
                   value={b.role}
                   onChange={(e) => handleUpdateBucket(idx, 'role', e.target.value)}
                   placeholder="เช่น สร้างกระแสเงินสดปันผล หรือ เร่งพลังผลตอบแทนทบต้นเพื่อพอร์ต 10 ล้าน..."
-                  className="rounded-xl border border-zinc-200 bg-zinc-50/50 p-2.5 text-xs text-zinc-800 focus:outline-none focus:ring-2 focus:ring-purple-400 leading-relaxed shadow-2xs"
+                  className="rounded-xl border border-slate-200 bg-slate-50/50 p-2.5 text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-sky-400 leading-relaxed shadow-sm"
                 />
               </div>
 
@@ -546,7 +581,8 @@ export default function EssenceBucketBuilder({
                 <div className="rounded-xl border border-emerald-100 bg-emerald-50/30 p-3.5 space-y-2.5">
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-extrabold text-emerald-950 flex items-center gap-1.5">
-                      <span>💼</span> สินทรัพย์ที่อนุญาต (Eligible Assets)
+                      <BriefcasePortfolioIcon className="h-3.5 w-3.5 text-emerald-700" />
+                      <span>สินทรัพย์ที่อนุญาต (Eligible Assets)</span>
                     </span>
                     <span className="text-[11px] font-bold text-emerald-700">
                       {(b.eligible_assets || []).length} รายการ
@@ -557,16 +593,17 @@ export default function EssenceBucketBuilder({
                     {(b.eligible_assets || []).map((asset, aIdx) => (
                       <span
                         key={aIdx}
-                        className="inline-flex items-center gap-1 rounded-lg bg-white border border-emerald-200 px-2 py-1 text-[11px] font-medium text-emerald-950 shadow-2xs"
+                        className="inline-flex items-center gap-1 rounded-lg bg-white border border-emerald-200 px-2 py-1 text-[11px] font-medium text-emerald-950 shadow-sm"
                       >
                         <span>• {asset}</span>
                         <button
                           type="button"
                           onClick={() => handleRemoveAsset(idx, aIdx)}
-                          className="text-zinc-400 hover:text-rose-600 p-0.5"
+                          className="text-slate-500 hover:text-rose-600 p-0.5"
                           title="ลบสินทรัพย์นี้"
+                          aria-label={`ลบ ${asset}`}
                         >
-                          ✕
+                          <CloseIcon className="h-3 w-3" />
                         </button>
                       </span>
                     ))}
@@ -579,7 +616,7 @@ export default function EssenceBucketBuilder({
                       onChange={(e) => setNewAssetInputs({ ...newAssetInputs, [bucketId]: e.target.value })}
                       onKeyDown={(e) => e.key === 'Enter' && handleAddAsset(idx, bucketId)}
                       placeholder="เพิ่มสินทรัพย์ เช่น หุ้นดัชนี S&P500..."
-                      className="w-full rounded-lg border border-zinc-200 bg-white px-2.5 py-1 text-xs text-zinc-800 focus:outline-none focus:ring-1 focus:ring-emerald-400"
+                      className="w-full rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-xs text-slate-800 focus:outline-none focus:ring-1 focus:ring-emerald-400"
                     />
                     <button
                       type="button"
@@ -595,7 +632,8 @@ export default function EssenceBucketBuilder({
                 <div className="rounded-xl border border-sky-100 bg-sky-50/30 p-3.5 space-y-2.5">
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-extrabold text-sky-950 flex items-center gap-1.5">
-                      <span>🛡️</span> กฎปฏิบัติและแนวทาง (Action Rules)
+                      <ShieldCheckIcon className="h-3.5 w-3.5 text-sky-700" />
+                      <span>กฎปฏิบัติและแนวทาง (Action Rules)</span>
                     </span>
                     <span className="text-[11px] font-bold text-sky-700">
                       {(b.action_rules || []).length} ข้อ
@@ -606,16 +644,17 @@ export default function EssenceBucketBuilder({
                     {(b.action_rules || []).map((rule, rIdx) => (
                       <div
                         key={rIdx}
-                        className="flex items-start justify-between gap-1.5 rounded-lg bg-white border border-sky-200/80 p-1.5 text-[11px] text-zinc-800 shadow-2xs"
+                        className="flex items-start justify-between gap-1.5 rounded-lg bg-white border border-sky-200/80 p-1.5 text-[11px] text-slate-800 shadow-sm"
                       >
                         <span className="leading-tight">• {rule}</span>
                         <button
                           type="button"
                           onClick={() => handleRemoveRule(idx, rIdx)}
-                          className="text-zinc-400 hover:text-rose-600 p-0.5 shrink-0"
+                          className="text-slate-500 hover:text-rose-600 p-0.5 shrink-0"
                           title="ลบข้อนี้"
+                          aria-label="ลบกฎข้อนี้"
                         >
-                          ✕
+                          <CloseIcon className="h-3 w-3" />
                         </button>
                       </div>
                     ))}
@@ -633,7 +672,7 @@ export default function EssenceBucketBuilder({
                         }
                       }}
                       placeholder="เพิ่มกฎปฏิบัติ เช่น เป็นท่อหลักรับเงิน DCA..."
-                      className="w-full rounded-lg border border-zinc-200 bg-white px-2.5 py-1 text-xs text-zinc-800 focus:outline-none focus:ring-1 focus:ring-sky-400"
+                      className="w-full rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-xs text-slate-800 focus:outline-none focus:ring-1 focus:ring-sky-400"
                     />
                     <button
                       type="button"
@@ -647,10 +686,10 @@ export default function EssenceBucketBuilder({
               </div>
 
               {/* Funding & Inflow Configuration for this Bucket (WP09) */}
-              <div className="pt-2 border-t border-zinc-100 flex flex-wrap items-center justify-between gap-3 text-xs">
+              <div className="pt-2 border-t border-slate-100 flex flex-wrap items-center justify-between gap-3 text-xs">
                 <div className="flex flex-wrap items-center gap-3">
                   <div className="flex items-center gap-1.5">
-                    <span className="font-bold text-zinc-600">📥 เงินออมใหม่ (Inflow):</span>
+                    <span className="font-bold text-slate-600">เงินออมใหม่ (Inflow):</span>
                     <input
                       type="number"
                       min="0"
@@ -658,13 +697,16 @@ export default function EssenceBucketBuilder({
                       step="1"
                       value={b.cash_inflow_routing_pct || b.target_percent || '0'}
                       onChange={(e) => handleUpdateBucket(idx, 'cash_inflow_routing_pct', e.target.value)}
-                      className="w-16 rounded border border-zinc-300 px-2 py-0.5 text-xs font-bold text-indigo-700 text-right focus:outline-none focus:ring-1 focus:ring-indigo-400"
+                      className="w-16 rounded border border-slate-300 px-2 py-0.5 text-xs font-bold text-blue-700 text-right focus:outline-none focus:ring-1 focus:ring-blue-400"
                     />
-                    <span className="font-bold text-zinc-500">%</span>
+                    <span className="font-bold text-slate-500">%</span>
                   </div>
 
                   <div className="flex items-center gap-1.5">
-                    <span className="font-bold text-zinc-600">🎯 ยอดเป้าหมาย (บาท):</span>
+                    <span className="font-bold text-slate-600 flex items-center gap-1">
+                      <TargetIcon className="h-3.5 w-3.5 text-sky-700" />
+                      <span>ยอดเป้าหมาย (บาท):</span>
+                    </span>
                     <input
                       type="number"
                       min="0"
@@ -672,16 +714,16 @@ export default function EssenceBucketBuilder({
                       value={b.target_amount || ''}
                       onChange={(e) => handleUpdateBucket(idx, 'target_amount', e.target.value || null)}
                       placeholder="ไม่ระบุ"
-                      className="w-28 rounded border border-zinc-300 px-2 py-0.5 text-xs font-bold text-zinc-800 text-right focus:outline-none focus:ring-1 focus:ring-purple-400"
+                      className="w-28 rounded border border-slate-300 px-2 py-0.5 text-xs font-bold text-slate-800 text-right focus:outline-none focus:ring-1 focus:ring-sky-400"
                     />
                   </div>
 
                   <div className="flex items-center gap-1.5">
-                    <span className="font-bold text-zinc-600">โหมด:</span>
+                    <span className="font-bold text-slate-600">โหมด:</span>
                     <select
                       value={b.inflow_route_mode || 'fixed_ratio'}
                       onChange={(e) => handleUpdateBucket(idx, 'inflow_route_mode', e.target.value as any)}
-                      className="rounded border border-zinc-300 px-1.5 py-0.5 text-xs font-medium text-zinc-700 bg-white"
+                      className="rounded border border-slate-300 px-1.5 py-0.5 text-xs font-medium text-slate-700 bg-white"
                     >
                       <option value="fixed_ratio">Fixed Ratio (%)</option>
                       <option value="priority_fill">Priority Fill</option>
@@ -689,7 +731,7 @@ export default function EssenceBucketBuilder({
                   </div>
                 </div>
 
-                <span className="text-[11px] text-zinc-500">
+                <span className="text-[11px] text-slate-500">
                   {b.inflow_route_mode === 'priority_fill' ? 'เติมเงินให้เต็มเป้าหมายตามลำดับก่อน redirect' : 'สัดส่วนเงินที่จะนำไปซื้อสะสม (DCA) รายเดือน'}
                 </span>
               </div>
@@ -702,17 +744,19 @@ export default function EssenceBucketBuilder({
       <div className="rounded-2xl border border-sky-100 bg-white p-4 sm:p-5 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-4">
         <div className="text-xs">
           {statusText ? (
-            <span className="flex items-center gap-2 text-indigo-700 font-bold animate-pulse">
-              <span className="h-2 w-2 rounded-full bg-indigo-500" />
+            <span className="flex items-center gap-2 text-blue-700 font-bold animate-pulse">
+              <span className="h-2 w-2 rounded-full bg-blue-500" />
               {statusText}
             </span>
           ) : !is100Percent ? (
             <span className="text-rose-700 font-extrabold flex items-center gap-1.5">
-              <span>⚠️</span> ผลรวมสัดส่วนต้องเท่ากับ 100% (ปัจจุบัน {totalPercent.toFixed(1)}%)
+              <AlertTriangleIcon className="h-4 w-4 shrink-0" />
+              <span>ผลรวมสัดส่วนต้องเท่ากับ 100% (ปัจจุบัน {totalPercent.toFixed(1)}%)</span>
             </span>
           ) : (
             <span className="text-emerald-700 font-bold flex items-center gap-1.5">
-              <span>✓</span> สัดส่วนรวมครบ 100% พร้อมสำหรับการตรวจสอบและนำไปใช้กับพอร์ต
+              <CheckSmallIcon className="h-4 w-4 shrink-0" />
+              <span>สัดส่วนรวมครบ 100% พร้อมสำหรับการตรวจสอบและนำไปใช้กับพอร์ต</span>
             </span>
           )}
         </div>
@@ -728,9 +772,10 @@ export default function EssenceBucketBuilder({
               }
             }}
             disabled={loading}
-            className="rounded-xl border border-purple-300 bg-purple-50 px-5 py-2.5 text-xs font-bold text-purple-700 hover:bg-purple-100 active:scale-98 transition-all disabled:opacity-50"
+            className="inline-flex items-center gap-1.5 rounded-xl border border-sky-300 bg-sky-50 px-5 py-2.5 text-xs font-bold text-blue-700 hover:bg-sky-100 active:scale-98 transition-all disabled:opacity-50"
           >
-            💾 บันทึกแบบร่าง Buckets
+            <CheckCircleIcon className="h-3.5 w-3.5" />
+            <span>บันทึกแบบร่าง Buckets</span>
           </button>
 
           <button
@@ -739,8 +784,8 @@ export default function EssenceBucketBuilder({
             disabled={!is100Percent || loading}
             className={`px-6 py-2.5 rounded-xl font-bold text-xs text-white shadow-md transition-all flex items-center justify-center gap-2 ${
               is100Percent && !loading
-                ? 'bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 shadow-purple-500/20 active:scale-98 cursor-pointer'
-                : 'bg-zinc-300 text-zinc-500 cursor-not-allowed shadow-none'
+                ? 'bg-gradient-to-r from-blue-600 to-blue-600 hover:from-blue-700 hover:to-blue-700 shadow-sky-500/20 active:scale-98 cursor-pointer'
+                : 'bg-slate-300 text-slate-500 cursor-not-allowed shadow-none'
             }`}
           >
             <span>ตรวจสอบก่อนใช้กับพอร์ต →</span>

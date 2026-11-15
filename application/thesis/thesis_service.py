@@ -276,7 +276,16 @@ class ThesisApplicationService:
 
         """Calculates thesis coverage metrics across given portfolio tickers."""
 
-        clean_tickers = sorted(list({validate_ticker(t) for t in portfolio_tickers if t and str(t).strip()}))
+        clean_tickers_list: List[str] = []
+        for t in portfolio_tickers:
+            if not t or not str(t).strip():
+                continue
+            try:
+                clean_tickers_list.append(validate_ticker(t))
+            except ValueError as err:
+                log.warning("Skipping invalid ticker %r during thesis coverage: %s", t, err)
+        clean_tickers = sorted(list(set(clean_tickers_list)))
+        clean_tickers_set = set(clean_tickers)
 
         active_claims = self.list_active_theses()
 
@@ -308,7 +317,49 @@ class ThesisApplicationService:
 
         cov_pct = round((cov_count / total * 100.0), 1) if total > 0 else 0.0
 
-
+        monitored_theses = [
+            {
+                "claim_id": c.claim_id,
+                "ticker": c.ticker,
+                "version": c.version,
+                "as_of_utc": c.as_of_utc,
+                "status": c.status,
+                "author_role": c.author_role,
+                "evidence_tier": c.evidence_tier.value,
+                "claim_statement": c.claim_statement,
+                "in_portfolio": (
+                    c.ticker.strip().upper() in clean_tickers_set
+                    or (
+                        c.ticker.strip().upper().replace(".BK", "")
+                        if c.ticker.strip().upper().endswith(".BK")
+                        else f"{c.ticker.strip().upper()}.BK"
+                    )
+                    in clean_tickers_set
+                ),
+                "falsifiers": [
+                    {
+                        "falsifier_id": f.falsifier_id,
+                        "metric_name": f.metric_name,
+                        "operator": f.operator,
+                        "threshold_value": str(f.threshold_value),
+                        "unit": f.unit,
+                        "period_basis": f.period_basis,
+                        "invalidation_impact": f.invalidation_impact,
+                    }
+                    for f in c.falsifiers
+                ],
+                "linked_catalysts": [
+                    {
+                        "catalyst_id": cat.catalyst_id,
+                        "event_name": cat.event_name,
+                        "expected_date_str": cat.expected_date_str,
+                        "status": cat.status,
+                    }
+                    for cat in c.linked_catalysts
+                ],
+            }
+            for c in sorted(active_claims, key=lambda x: (x.as_of_utc or "", x.ticker), reverse=True)
+        ]
 
         return {
 
@@ -323,6 +374,8 @@ class ThesisApplicationService:
             "covered_tickers": covered,
 
             "uncovered_tickers": uncovered,
+
+            "monitored_theses": monitored_theses,
 
         }
 

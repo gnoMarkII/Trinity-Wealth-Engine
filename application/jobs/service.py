@@ -73,6 +73,13 @@ class JobApplicationService:
             token_uses=token_uses,
         )
 
+    def cancel_approval(
+        self,
+        job_id: str,
+        reason: str = "ยกเลิกโดยผู้ใช้ก่อนเริ่มรัน",
+    ) -> None:
+        self._repo.cancel_job_approval(job_id=job_id, reason=reason)
+
     def get_status(self, job_id: str) -> Optional[Dict[str, Any]]:
         """Return the complete status view needed by inbound adapters."""
         job = self._repo.get_job(job_id)

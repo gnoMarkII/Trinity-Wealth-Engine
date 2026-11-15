@@ -324,7 +324,7 @@ export function FinancialsTab({ ticker, market = 'US', currency }: FinancialsTab
                 </span>
               ) : data.expanded_coverage_status === 'partial' ? (
                 <span
-                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 text-[11px] font-semibold cursor-help"
+                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-blue-500/10 text-blue-400 border border-blue-500/20 text-[11px] font-semibold cursor-help"
                   title={
                     data.missing_expanded_items && data.missing_expanded_items.length > 0
                       ? `Expanded Partial (${data.missing_expanded_items.length} items omitted in filings): ${data.missing_expanded_items.slice(0, 4).join(', ')}`
@@ -402,7 +402,7 @@ export function FinancialsTab({ ticker, market = 'US', currency }: FinancialsTab
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
               <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
             </span>
-            <span className="font-medium text-zinc-600">
+            <span className="font-medium text-slate-600">
               แหล่งข้อมูล:{' '}
               <span className="text-primary font-semibold">
                 {data.provider === 'edgartools' ? 'SEC EDGAR (10-K / 10-Q / 8-K)' : (data.provider || 'Yahoo Finance')}
@@ -414,11 +414,11 @@ export function FinancialsTab({ ticker, market = 'US', currency }: FinancialsTab
               <span className="text-primary font-semibold font-mono" title={data.synced_at || undefined}>
                 {syncInfo.formatted}
               </span>
-              {syncInfo.relative && <span className="text-zinc-400 ml-1">({syncInfo.relative})</span>}
+              {syncInfo.relative && <span className="text-slate-500 ml-1">({syncInfo.relative})</span>}
             </span>
           </div>
 
-          <div className="flex items-center gap-2 text-[11px] text-zinc-400 font-mono">
+          <div className="flex items-center gap-2 text-[11px] text-slate-500 font-mono">
             <span className="px-2 py-0.5 rounded-md bg-panel border border-edge/60">
               {data.market === 'US' ? 'US Equity' : 'Thai SET'}
             </span>
@@ -609,7 +609,7 @@ export function FinancialsTab({ ticker, market = 'US', currency }: FinancialsTab
                       {activeRatios.map((r) => (
                         <th key={r.period_key} className="p-3.5 text-right font-semibold min-w-[120px]">
                           <div className="font-mono font-bold text-primary">{r.period_key}</div>
-                          <div className="text-[10px] text-muted font-mono">{r.period_end_date}</div>
+                          <div className="text-[11px] text-muted font-mono">{r.period_end_date}</div>
                         </th>
                       ))}
                     </tr>
@@ -650,7 +650,7 @@ export function FinancialsTab({ ticker, market = 'US', currency }: FinancialsTab
                         Free Cash Flow Margin (%)
                       </td>
                       {activeRatios.map((r) => (
-                        <td key={r.period_key} className="p-3.5 text-right font-mono font-bold tabular-nums text-indigo-400">
+                        <td key={r.period_key} className="p-3.5 text-right font-mono font-bold tabular-nums text-blue-400">
                           {r.fcf_margin_pct !== null && r.fcf_margin_pct !== undefined ? `${r.fcf_margin_pct}%` : '-'}
                         </td>
                       ))}
@@ -730,7 +730,7 @@ export function FinancialsTab({ ticker, market = 'US', currency }: FinancialsTab
                     title="Toggle display of extended SEC balance sheet and cash flow items"
                   >
                     <span>{showExpandedItems ? 'Hide Extended Items' : 'Show Extended Items'}</span>
-                    <span className="text-[10px] text-muted">{showExpandedItems ? '▲' : '▼'}</span>
+                    <span className="text-[11px] text-muted">{showExpandedItems ? '▲' : '▼'}</span>
                   </button>
                 </div>
               </div>
@@ -749,7 +749,7 @@ export function FinancialsTab({ ticker, market = 'US', currency }: FinancialsTab
                             <div className="flex items-center justify-end gap-1.5">
                               <span className="font-mono font-bold text-primary text-xs">{period.period_key}</span>
                             </div>
-                            <div className="text-[10px] text-muted font-mono mt-0.5">
+                            <div className="text-[11px] text-muted font-mono mt-0.5">
                               {statementType === 'balance_sheet' ? `As of ${period.period_end_date}` : period.period_end_date}
                             </div>
                             {/* SEC EDGAR Filing Link */}
@@ -758,7 +758,7 @@ export function FinancialsTab({ ticker, market = 'US', currency }: FinancialsTab
                                 href={period.filing_url}
                                 target="_blank"
                                 rel="noreferrer"
-                                className="inline-flex items-center gap-1 text-[10px] text-sky-500 hover:text-sky-400 hover:underline mt-1 font-medium"
+                                className="inline-flex items-center gap-1 text-[11px] text-sky-500 hover:text-sky-400 hover:underline mt-1 font-medium"
                                 title={`View SEC ${period.form_type} filing`}
                               >
                                 <span>↗ {period.form_type}</span>
@@ -808,12 +808,12 @@ export function FinancialsTab({ ticker, market = 'US', currency }: FinancialsTab
                                       : undefined
                                   }>
                                     {itemMeta.display_label}
-                                    {isCalcFCF && <span className="text-indigo-400 ml-1 text-[10px] font-normal">*</span>}
-                                    {isRepFCF && <span className="text-purple-400 ml-1 text-[10px] font-normal">†</span>}
-                                    {isExpandedItem && !isRepFCF && <span className="text-sky-400/70 ml-1 text-[9px] font-normal">◆</span>}
+                                    {isCalcFCF && <span className="text-blue-400 ml-1 text-[11px] font-normal">*</span>}
+                                    {isRepFCF && <span className="text-sky-400 ml-1 text-[11px] font-normal">†</span>}
+                                    {isExpandedItem && !isRepFCF && <span className="text-sky-400/70 ml-1 text-[11px] font-normal">◆</span>}
                                   </span>
                                   {itemMeta.unit_type === 'per_share' && (
-                                    <span className="text-[10px] text-muted font-mono font-normal">/share</span>
+                                    <span className="text-[11px] text-muted font-mono font-normal">/share</span>
                                   )}
                                 </div>
                               </td>
@@ -835,7 +835,7 @@ export function FinancialsTab({ ticker, market = 'US', currency }: FinancialsTab
                                     <div className="flex items-center justify-end gap-1">
                                       {isDerivedCell && (
                                         <span
-                                          className="text-[9px] px-1 py-0.2 rounded bg-purple-500/10 text-purple-400 border border-purple-500/20 font-medium cursor-help"
+                                          className="text-[11px] px-1 py-0.5 rounded bg-sky-500/10 text-sky-400 border border-sky-500/20 font-medium cursor-help"
                                           title={cell?.formula ? `Formula: ${cell.formula}` : cell?.derivation ? `Derivation: ${cell.derivation}` : 'Derived / Calculated'}
                                         >
                                           *
@@ -873,11 +873,11 @@ export function FinancialsTab({ ticker, market = 'US', currency }: FinancialsTab
                                     {!isNotApplicable && !isUnavailable && yoy !== null && yoy !== undefined && (
                                       <div className="mt-1">
                                         <span
-                                          className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-md text-[10px] font-bold ${
+                                          className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-md text-[11px] font-bold ${
                                             yoy > 0
-                                              ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20'
+  ?'bg-emerald-500/10 text-emerald-600 border border-emerald-500/20'
                                               : yoy < 0
-                                              ? 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20'
+  ?'bg-rose-500/10 text-rose-600 border border-rose-500/20'
                                               : 'bg-surface text-muted border border-edge'
                                           }`}
                                         >
@@ -898,16 +898,16 @@ export function FinancialsTab({ ticker, market = 'US', currency }: FinancialsTab
                   {/* Footnotes */}
                   <div className="p-3 border-t border-edge/60 bg-surface/20 text-[11px] text-muted space-y-1">
                     <p>
-                      <span className="font-semibold text-indigo-400">* Calculated Free Cash Flow:</span> Operating Cash Flow − |CapEx| (Standard GAAP definition).
+                      <span className="font-semibold text-blue-400">* Calculated Free Cash Flow:</span> Operating Cash Flow − |CapEx| (Standard GAAP definition).
                     </p>
                     <p>
-                      <span className="font-semibold text-purple-400">† Company-Reported Free Cash Flow:</span> Non-GAAP metric parsed directly from 8-K Press Release reconciliation tables (e.g. IP litigation settlements).
+                      <span className="font-semibold text-sky-400">† Company-Reported Free Cash Flow:</span> Non-GAAP metric parsed directly from 8-K Press Release reconciliation tables (e.g. IP litigation settlements).
                     </p>
                     <p>
                       <span className="font-semibold text-sky-400/80">◆ Extended Line Item:</span> Detailed breakdown items extracted from SEC XBRL taxonomy (e.g. Deferred Contract Costs, NCI, Tax Liabilities).
                     </p>
                     <p>
-                      <span className="font-semibold text-purple-400">* Cell Asterisk:</span> Indicates derived mathematical values (e.g. Q4 = FY − (Q1+Q2+Q3), Total Equity = Stockholders' Equity + NCI).
+                      <span className="font-semibold text-sky-400">* Cell Asterisk:</span> Indicates derived mathematical values (e.g. Q4 = FY − (Q1+Q2+Q3), Total Equity = Stockholders' Equity + NCI).
                     </p>
                   </div>
                 </div>

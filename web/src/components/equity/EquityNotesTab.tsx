@@ -2,7 +2,9 @@ import React, { useEffect, useState } from 'react'
 import ReactMarkdown from 'react-markdown'
 import { api } from '../../api/client'
 import type { EquityNoteContentDTO, EquityNoteItemDTO, EquityNotesDTO } from '../../api/types'
+import { CloseIcon, LinkChainIcon } from '../ui/AppIcons'
 import { NewsCardListSkeleton } from '../ui/FlowSkeleton'
+import { InPlaceDialog } from '../ui/Modal'
 
 interface ParsedNote {
   frontmatter: { key: string; value: string }[] | null
@@ -51,14 +53,14 @@ function ObsidianNoteViewer({ content }: { content: string }) {
     <div className="space-y-4">
       {frontmatter && frontmatter.length > 0 && (
         <div className="rounded-xl border border-edge bg-surface/70 p-3.5 space-y-2 text-xs">
-          <div className="flex items-center gap-1.5 font-semibold text-zinc-700 uppercase tracking-wider text-[11px] border-b border-edge/60 pb-2">
+          <div className="flex items-center gap-1.5 font-semibold text-slate-700 uppercase tracking-wider text-[11px] border-b border-edge/60 pb-2">
             <span>⚙️</span> Obsidian Properties
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2 pt-1">
             {frontmatter.map((item, idx) => (
               <div key={idx} className="flex items-start gap-2 overflow-hidden">
-                <span className="font-mono text-zinc-500 min-w-[80px] shrink-0 font-medium">{item.key}:</span>
-                <span className="text-zinc-800 break-words font-sans">
+                <span className="font-mono text-slate-500 min-w-[80px] shrink-0 font-medium">{item.key}:</span>
+                <span className="text-slate-800 break-words font-sans">
                   {item.key === 'tags' || item.key === 'tickers' || item.value.startsWith('[') ? (
                     <span className="inline-flex flex-wrap gap-1">
                       {item.value
@@ -67,7 +69,7 @@ function ObsidianNoteViewer({ content }: { content: string }) {
                         .map((t) => t.trim())
                         .filter(Boolean)
                         .map((tagText, i) => (
-                          <span key={i} className="px-1.5 py-0.5 rounded bg-sky-50 text-sky-700 border border-sky-200 text-[10px] font-medium">
+                          <span key={i} className="px-1.5 py-0.5 rounded bg-sky-50 text-sky-700 border border-sky-200 text-[11px] font-medium">
                             #{tagText.replace(/^#/, '')}
                           </span>
                         ))}
@@ -86,7 +88,7 @@ function ObsidianNoteViewer({ content }: { content: string }) {
         </div>
       )}
 
-      <div className="prose prose-sm max-w-none text-zinc-800 bg-surface/40 p-5 rounded-xl border border-edge/60 shadow-inner leading-relaxed">
+      <div className="prose prose-sm max-w-none text-slate-800 bg-surface/40 p-5 rounded-xl border border-edge/60 shadow-inner leading-relaxed">
         <ReactMarkdown
           components={{
             a: ({ children, href }) => (
@@ -99,23 +101,23 @@ function ObsidianNoteViewer({ content }: { content: string }) {
               if (str.startsWith('[[') && str.endsWith(']]')) {
                 const cleanTag = str.slice(2, -2).trim()
                 return (
-                  <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-purple-50 text-purple-700 border border-purple-200 font-sans text-xs font-medium">
+                  <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-sky-50 text-blue-700 border border-sky-200 font-sans text-xs font-medium">
                     📌 {cleanTag}
                   </span>
                 )
               }
-              return <code className={className || "rounded bg-surface-strong px-1.5 py-0.5 font-mono text-[0.84em] text-purple-700"}>{children}</code>
+              return <code className={className || "rounded bg-surface-strong px-1.5 py-0.5 font-mono text-[0.84em] text-blue-700"}>{children}</code>
             },
-            h1: ({ children }) => <h1 className="text-xl font-bold text-zinc-900 border-b border-edge pb-2 mt-6 mb-3 first:mt-0">{children}</h1>,
-            h2: ({ children }) => <h2 className="text-lg font-semibold text-zinc-900 border-b border-edge/60 pb-1.5 mt-5 mb-2.5 first:mt-0">{children}</h2>,
-            h3: ({ children }) => <h3 className="text-base font-semibold text-zinc-800 mt-4 mb-2 first:mt-0">{children}</h3>,
-            h4: ({ children }) => <h4 className="text-sm font-semibold text-zinc-800 mt-3 mb-1.5 first:mt-0">{children}</h4>,
-            p: ({ children }) => <p className="my-2.5 leading-relaxed text-zinc-700">{children}</p>,
-            ul: ({ children }) => <ul className="my-2 space-y-1.5 list-disc pl-5 text-zinc-700">{children}</ul>,
-            ol: ({ children }) => <ol className="my-2 space-y-1.5 list-decimal pl-5 text-zinc-700">{children}</ol>,
+            h1: ({ children }) => <h1 className="text-xl font-bold text-slate-900 border-b border-edge pb-2 mt-6 mb-3 first:mt-0">{children}</h1>,
+            h2: ({ children }) => <h2 className="text-lg font-semibold text-slate-900 border-b border-edge/60 pb-1.5 mt-5 mb-2.5 first:mt-0">{children}</h2>,
+            h3: ({ children }) => <h3 className="text-base font-semibold text-slate-800 mt-4 mb-2 first:mt-0">{children}</h3>,
+            h4: ({ children }) => <h4 className="text-sm font-semibold text-slate-800 mt-3 mb-1.5 first:mt-0">{children}</h4>,
+            p: ({ children }) => <p className="my-2.5 leading-relaxed text-slate-700">{children}</p>,
+            ul: ({ children }) => <ul className="my-2 space-y-1.5 list-disc pl-5 text-slate-700">{children}</ul>,
+            ol: ({ children }) => <ol className="my-2 space-y-1.5 list-decimal pl-5 text-slate-700">{children}</ol>,
             li: ({ children }) => <li className="pl-0.5">{children}</li>,
             blockquote: ({ children }) => (
-              <blockquote className="border-l-4 border-sky-400 bg-sky-50/50 italic px-4 py-2 my-3 rounded-r-lg text-zinc-700">
+              <blockquote className="border-l-4 border-sky-400 bg-sky-50/50 italic px-4 py-2 my-3 rounded-r-lg text-slate-700">
                 {children}
               </blockquote>
             ),
@@ -125,8 +127,8 @@ function ObsidianNoteViewer({ content }: { content: string }) {
               </div>
             ),
             thead: ({ children }) => <thead className="bg-surface">{children}</thead>,
-            th: ({ children }) => <th className="px-3 py-2 text-left font-semibold text-zinc-700">{children}</th>,
-            td: ({ children }) => <td className="px-3 py-2 border-t border-edge/50 text-zinc-600">{children}</td>,
+            th: ({ children }) => <th className="px-3 py-2 text-left font-semibold text-slate-700">{children}</th>,
+            td: ({ children }) => <td className="px-3 py-2 border-t border-edge/50 text-slate-600">{children}</td>,
             hr: () => <hr className="my-4 border-edge" />
           }}
         >
@@ -217,13 +219,13 @@ export const EquityNotesTab: React.FC<EquityNotesTabProps> = ({ ticker }) => {
         )
       case 'journal':
         return (
-          <span className="px-2 py-0.5 rounded-md text-[11px] font-medium bg-purple-50 text-purple-700 border border-purple-200">
+          <span className="px-2 py-0.5 rounded-md text-[11px] font-medium bg-sky-50 text-blue-700 border border-sky-200">
             📓 Trading Journal
           </span>
         )
       default:
         return (
-          <span className="px-2 py-0.5 rounded-md text-[11px] font-medium bg-zinc-100 text-zinc-600 border border-zinc-200">
+          <span className="px-2 py-0.5 rounded-md text-[11px] font-medium bg-slate-100 text-slate-600 border border-slate-200">
             📄 {matchedBy}
           </span>
         )
@@ -246,11 +248,11 @@ export const EquityNotesTab: React.FC<EquityNotesTabProps> = ({ ticker }) => {
   if (!notesData || notesData.items.length === 0) {
     return (
       <div className="flex flex-col justify-center items-center h-64 bg-surface rounded-xl border border-dashed border-edge p-8 text-center">
-        <svg className="w-12 h-12 text-zinc-400 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+        <svg className="w-12 h-12 text-slate-500 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
         </svg>
-        <h3 className="text-lg font-medium text-zinc-900 mb-1">ไม่พบ Obsidian Notes สำหรับหุ้น {ticker}</h3>
-        <p className="text-zinc-500 max-w-md text-sm">
+        <h3 className="text-lg font-medium text-slate-900 mb-1">ไม่พบ Obsidian Notes สำหรับหุ้น {ticker}</h3>
+        <p className="text-slate-500 max-w-md text-sm">
           สามารถเพิ่มโน้ตเกี่ยวกับหุ้นตัวนี้ใน Obsidian Vault ได้ที่โฟลเดอร์ <code className="bg-surface-strong px-1.5 py-0.5 rounded text-xs">Stocks/{ticker}</code> หรือใส่ Tag <code className="bg-surface-strong px-1.5 py-0.5 rounded text-xs">#{ticker}</code> ใน Trading Journal
         </p>
       </div>
@@ -274,19 +276,19 @@ export const EquityNotesTab: React.FC<EquityNotesTabProps> = ({ ticker }) => {
             <div className="space-y-2">
               <div className="flex items-start justify-between gap-3">
                 <div>
-                  <h4 className="font-semibold text-zinc-900 text-base leading-snug">
+                  <h4 className="font-semibold text-slate-900 text-base leading-snug">
                     {item.title}
                   </h4>
-                  <p className="text-xs text-zinc-400 mt-0.5">📁 {item.folder}</p>
+                  <p className="text-xs text-slate-500 mt-0.5">📁 {item.folder}</p>
                 </div>
                 {getMatchedBadge(item.matched_by)}
               </div>
 
-              <p className="text-xs leading-relaxed text-zinc-600 bg-surface/50 p-2.5 rounded-lg border border-edge/50 line-clamp-3">
+              <p className="text-xs leading-relaxed text-slate-600 bg-surface/50 p-2.5 rounded-lg border border-edge/50 line-clamp-3">
                 {item.snippet || 'ไม่มีข้อความตัวอย่าง'}
               </p>
 
-              <div className="text-[11px] text-zinc-400">
+              <div className="text-[11px] text-slate-500">
                 แก้ไขเมื่อ {new Date(item.modified_at).toLocaleString('th-TH')}
               </div>
             </div>
@@ -294,7 +296,7 @@ export const EquityNotesTab: React.FC<EquityNotesTabProps> = ({ ticker }) => {
             <div className="mt-3 pt-3 border-t border-edge flex items-center justify-end gap-3">
               <button
                 onClick={() => handleOpenPreview(item)}
-                className="inline-flex items-center gap-1 text-xs font-medium text-zinc-700 bg-surface hover:bg-surface-strong px-3 py-1.5 rounded-lg border border-edge transition-colors"
+                className="inline-flex items-center gap-1 text-xs font-medium text-slate-700 bg-surface hover:bg-surface-strong px-3 py-1.5 rounded-lg border border-edge transition-colors"
               >
                 📄 ดูเนื้อหา
               </button>
@@ -312,22 +314,25 @@ export const EquityNotesTab: React.FC<EquityNotesTabProps> = ({ ticker }) => {
 
       {/* Content Preview Modal */}
       {selectedNote && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-fade-in">
-          <div className="bg-panel border border-edge rounded-2xl shadow-2xl max-w-3xl w-full max-h-[85vh] flex flex-col overflow-hidden">
+        <InPlaceDialog
+          titleId="equity-note-modal-title"
+          onClose={handleCloseModal}
+          backdropClassName="absolute inset-0 bg-slate-900/50 backdrop-blur-sm"
+          panelClassName="bg-panel border border-edge rounded-2xl shadow-2xl max-w-3xl w-full max-h-[85vh] flex flex-col overflow-hidden"
+        >
             {/* Modal Header */}
             <div className="flex items-center justify-between px-6 py-4 border-b border-edge">
               <div>
-                <h3 className="font-semibold text-lg text-zinc-900">{selectedNote.title}</h3>
-                <p className="text-xs text-zinc-500">{selectedNote.relative_path}</p>
+                <h3 id="equity-note-modal-title" className="font-semibold text-lg text-slate-900">{selectedNote.title}</h3>
+                <p className="text-xs text-slate-500">{selectedNote.relative_path}</p>
               </div>
               <button
+                type="button"
                 onClick={handleCloseModal}
-                className="p-1 rounded-lg text-zinc-400 hover:text-zinc-600 hover:bg-surface transition-colors"
+                className="p-2 rounded-lg text-slate-500 hover:text-slate-700 hover:bg-surface transition-colors"
                 aria-label="Close"
               >
-                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
+                <CloseIcon className="w-4 h-4" />
               </button>
             </div>
 
@@ -359,7 +364,7 @@ export const EquityNotesTab: React.FC<EquityNotesTabProps> = ({ ticker }) => {
 
             {/* Modal Footer */}
             <div className="flex items-center justify-between px-6 py-4 border-t border-edge bg-surface/30">
-              <span className="text-xs text-zinc-400">
+              <span className="text-xs text-slate-500">
                 {contentData?.modified_at
                   ? `แก้ไขล่าสุด: ${new Date(contentData.modified_at).toLocaleString('th-TH')}`
                   : ''}
@@ -369,18 +374,18 @@ export const EquityNotesTab: React.FC<EquityNotesTabProps> = ({ ticker }) => {
                   href={selectedNote.obsidian_uri}
                   className="inline-flex items-center gap-1.5 text-xs font-medium text-sky-600 bg-sky-50 hover:bg-sky-100 px-3.5 py-2 rounded-lg border border-sky-200 transition-colors"
                 >
-                  🔗 เปิดใน Obsidian
+                  <LinkChainIcon className="h-3.5 w-3.5 shrink-0" />
+                  <span>เปิดใน Obsidian</span>
                 </a>
                 <button
                   onClick={handleCloseModal}
-                  className="text-xs font-medium text-zinc-700 bg-surface hover:bg-surface-strong px-4 py-2 rounded-lg border border-edge transition-colors"
+                  className="text-xs font-medium text-slate-700 bg-surface hover:bg-surface-strong px-4 py-2 rounded-lg border border-edge transition-colors"
                 >
                   ปิด
                 </button>
               </div>
             </div>
-          </div>
-        </div>
+        </InPlaceDialog>
       )}
     </div>
   )

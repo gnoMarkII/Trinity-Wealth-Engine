@@ -274,7 +274,7 @@ export default function AssetTransactionsTable({
                 setSearchQuery('')
                 onClearSymbolFilter()
               }}
-              className="rounded-lg border border-sky-300 bg-white px-3 py-1 text-xs font-semibold text-sky-700 shadow-2xs hover:bg-sky-50 transition-colors"
+              className="rounded-lg border border-sky-300 bg-white px-3 py-1 text-xs font-semibold text-sky-700 shadow-sm hover:bg-sky-50 transition-colors"
             >
               ล้างตัวกรอง
             </button>
@@ -300,7 +300,7 @@ export default function AssetTransactionsTable({
           <button
             type="button"
             onClick={() => setDimeModalOpen(true)}
-            className="inline-flex items-center gap-1.5 rounded-xl border border-sky-200 bg-sky-50/80 px-3.5 py-2 text-xs sm:text-sm font-bold text-sky-800 shadow-2xs hover:bg-sky-100 hover:border-sky-300 active:scale-95 transition-all cursor-pointer"
+            className="inline-flex items-center gap-1.5 rounded-xl border border-sky-200 bg-sky-50/80 px-3.5 py-2 text-xs sm:text-sm font-bold text-sky-800 shadow-sm hover:bg-sky-100 hover:border-sky-300 active:scale-95 transition-all cursor-pointer"
             title="นำเข้ารายการธุรกรรม (Transaction Ingestion / Sync) จากโบรกเกอร์ เช่น Dime"
           >
             <span>📥 นำเข้ารายการ (Sync)</span>
@@ -312,7 +312,7 @@ export default function AssetTransactionsTable({
               <div className="inline-flex items-center gap-1.5 rounded-xl border border-sky-100 bg-sky-50/70 px-3 py-1.5 text-xs sm:text-sm font-medium text-sky-900">
                 <span className="h-2.5 w-2.5 rounded-full bg-emerald-500"></span>
                 <span>Buy</span>
-                <span className="font-mono font-bold text-zinc-900">{formatTHB(summary.total_buy_thb)}</span>
+                <span className="font-mono font-bold text-slate-900">{formatTHB(summary.total_buy_thb)}</span>
                 <span className="text-xs text-sky-700">({summary.total_buy_count} trades)</span>
               </div>
 
@@ -320,7 +320,7 @@ export default function AssetTransactionsTable({
                 <div className="inline-flex items-center gap-1.5 rounded-xl border border-sky-100 bg-sky-50/70 px-3 py-1.5 text-xs sm:text-sm font-medium text-sky-900">
                   <span className="h-2.5 w-2.5 rounded-full bg-rose-500"></span>
                   <span>Sell</span>
-                  <span className="font-mono font-bold text-zinc-900">{formatTHB(summary.total_sell_thb)}</span>
+                  <span className="font-mono font-bold text-slate-900">{formatTHB(summary.total_sell_thb)}</span>
                   <span className="text-xs text-sky-700">({summary.total_sell_count} trades)</span>
                 </div>
               )}
@@ -353,7 +353,7 @@ export default function AssetTransactionsTable({
                 setCurrentPage(1)
               }}
               className={`rounded-lg px-2.5 py-1 font-bold transition-all ${
-                actionFilter === 'ALL' ? 'bg-white text-zinc-900 shadow-2xs' : 'text-zinc-500 hover:text-zinc-800'
+                actionFilter === 'ALL' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-800'
               }`}
             >
               All
@@ -365,7 +365,7 @@ export default function AssetTransactionsTable({
                 setCurrentPage(1)
               }}
               className={`rounded-lg px-2.5 py-1 font-bold transition-all ${
-                actionFilter === 'BUY' ? 'bg-emerald-500 text-white shadow-2xs' : 'text-zinc-500 hover:text-zinc-800'
+                actionFilter === 'BUY' ? 'bg-emerald-500 text-white shadow-sm' : 'text-slate-500 hover:text-slate-800'
               }`}
             >
               Buy
@@ -377,7 +377,7 @@ export default function AssetTransactionsTable({
                 setCurrentPage(1)
               }}
               className={`rounded-lg px-2.5 py-1 font-bold transition-all ${
-                actionFilter === 'SELL' ? 'bg-rose-500 text-white shadow-2xs' : 'text-zinc-500 hover:text-zinc-800'
+                actionFilter === 'SELL' ? 'bg-rose-500 text-white shadow-sm' : 'text-slate-500 hover:text-slate-800'
               }`}
             >
               Sell
@@ -394,7 +394,7 @@ export default function AssetTransactionsTable({
                 setSearchQuery(e.target.value)
                 setCurrentPage(1)
               }}
-              className="w-44 sm:w-56 rounded-xl border border-sky-200 bg-white px-3 py-1.5 text-xs sm:text-sm text-zinc-800 focus:border-flow-blue focus:outline-none shadow-2xs"
+              className="w-44 sm:w-56 rounded-xl border border-sky-200 bg-white px-3 py-1.5 text-xs sm:text-sm text-slate-800 focus:border-flow-blue focus:outline-none shadow-sm"
             />
             {searchQuery && (
               <button
@@ -403,7 +403,7 @@ export default function AssetTransactionsTable({
                   setSearchQuery('')
                   onClearSymbolFilter?.()
                 }}
-                className="absolute right-2.5 top-2 text-xs text-zinc-400 hover:text-zinc-600"
+                className="absolute right-2.5 top-2 text-xs text-slate-500 hover:text-slate-600"
               >
                 ✕
               </button>
@@ -416,7 +416,7 @@ export default function AssetTransactionsTable({
               type="button"
               onClick={() => setCurrencyView('NATIVE')}
               className={`rounded-lg px-2.5 py-1 font-bold transition-all ${
-                currencyView === 'NATIVE' ? 'bg-white text-zinc-900 shadow-2xs' : 'text-zinc-500 hover:text-zinc-800'
+                currencyView === 'NATIVE' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-800'
               }`}
               title="แสดงตามสกุลเงินดั้งเดิมของสินทรัพย์ (USD/THB)"
             >
@@ -426,7 +426,7 @@ export default function AssetTransactionsTable({
               type="button"
               onClick={() => setCurrencyView('THB')}
               className={`rounded-lg px-2.5 py-1 font-bold transition-all ${
-                currencyView === 'THB' ? 'bg-white text-zinc-900 shadow-2xs' : 'text-zinc-500 hover:text-zinc-800'
+                currencyView === 'THB' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-800'
               }`}
               title="แปลงมูลค่าเป็น THB ทั้งหมด"
             >
@@ -441,7 +441,7 @@ export default function AssetTransactionsTable({
         <div className="overflow-x-auto custom-scrollbar">
           <table className="w-full text-left text-sm border-collapse min-w-[1050px]">
             <thead>
-              <tr className="border-b border-sky-100 bg-sky-50/80 text-zinc-700 font-bold uppercase tracking-wider text-xs select-none whitespace-nowrap">
+              <tr className="border-b border-sky-100 bg-sky-50/80 text-slate-700 font-bold uppercase tracking-wider text-xs select-none whitespace-nowrap">
                 <th className="py-3.5 px-4 w-12 text-center whitespace-nowrap">#</th>
                 <th className="py-3.5 px-4 w-28 whitespace-nowrap">Operation</th>
                 <th
@@ -497,9 +497,9 @@ export default function AssetTransactionsTable({
                 return (
                   <tr
                     key={`${tx.transaction_id || tx.timestamp}-${idx}`}
-                    className={`hover:bg-sky-50/40 transition-colors group ${isVoid ? 'opacity-60 bg-zinc-50/40' : ''}`}
+                    className={`hover:bg-sky-50/40 transition-colors group ${isVoid ? 'opacity-60 bg-slate-50/40' : ''}`}
                   >
-                    <td className="py-3.5 px-4 text-center text-zinc-400 font-mono text-xs">
+                    <td className="py-3.5 px-4 text-center text-slate-500 font-mono text-xs">
                       {rowNum}
                     </td>
 
@@ -508,7 +508,7 @@ export default function AssetTransactionsTable({
                       <span
                         className={`inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-bold ${
                           isVoid
-                            ? 'bg-zinc-100 text-zinc-600 border border-zinc-300 line-through'
+                            ? 'bg-slate-100 text-slate-600 border border-slate-300 line-through'
                             : isBuy
                             ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
                             : 'bg-rose-50 text-rose-700 border border-rose-200'
@@ -516,7 +516,7 @@ export default function AssetTransactionsTable({
                       >
                         <span
                           className={`h-2 w-2 rounded-full ${
-                            isVoid ? 'bg-zinc-400' : isBuy ? 'bg-emerald-500' : 'bg-rose-500'
+                            isVoid ? 'bg-slate-400' : isBuy ? 'bg-emerald-500' : 'bg-rose-500'
                           }`}
                         ></span>
                         {tx.action}
@@ -527,38 +527,38 @@ export default function AssetTransactionsTable({
                     <td className="py-3.5 px-4">
                       <div className="flex flex-col">
                         <div className="flex items-center gap-1.5">
-                          <span className={`font-extrabold font-mono text-base tracking-tight ${isVoid ? 'text-zinc-400 line-through' : 'text-zinc-900'}`}>
+                          <span className={`font-extrabold font-mono text-base tracking-tight ${isVoid ? 'text-slate-500 line-through' : 'text-slate-900'}`}>
                             {tx.symbol}
                           </span>
                           {isDime && (
-                            <span className="rounded bg-sky-100 px-1.5 py-0.5 text-[10px] font-bold text-sky-700 dark:bg-sky-950 dark:text-sky-300">
+  <span className="rounded bg-sky-100 px-1.5 py-0.5 text-[11px] font-bold text-sky-700">
                               Dime
                             </span>
                           )}
                         </div>
-                        <span className="text-xs text-zinc-400 font-medium">
+                        <span className="text-xs text-slate-500 font-medium">
                           {tx.currency} {tx.fx_rate ? `@ ${tx.fx_rate.toFixed(2)}` : ''}
                         </span>
                       </div>
                     </td>
 
                     {/* Date */}
-                    <td className="py-3.5 px-4 text-zinc-600 font-mono tabular-nums text-xs sm:text-sm whitespace-nowrap">
+                    <td className="py-3.5 px-4 text-slate-600 font-mono tabular-nums text-xs sm:text-sm whitespace-nowrap">
                       {tx.timestamp.replace('T', ' ')}
                     </td>
 
                     {/* Shares */}
-                    <td className={`py-3.5 px-4 text-right font-mono tabular-nums font-bold text-sm sm:text-base ${isVoid ? 'text-zinc-400 line-through' : 'text-zinc-900'}`}>
+                    <td className={`py-3.5 px-4 text-right font-mono tabular-nums font-bold text-sm sm:text-base ${isVoid ? 'text-slate-500 line-through' : 'text-slate-900'}`}>
                       {tx.units.toLocaleString(undefined, { maximumFractionDigits: 6 })}
                     </td>
 
                     {/* Price */}
-                    <td className="py-3.5 px-4 text-right font-mono tabular-nums font-semibold text-zinc-800 text-sm sm:text-base">
+                    <td className="py-3.5 px-4 text-right font-mono tabular-nums font-semibold text-slate-800 text-sm sm:text-base">
                       {formatPrice(tx.price, tx.currency)}
                     </td>
 
                     {/* Fee / Tax */}
-                    <td className="py-3.5 px-4 text-right font-mono tabular-nums text-zinc-500 text-xs">
+                    <td className="py-3.5 px-4 text-right font-mono tabular-nums text-slate-500 text-xs">
                       {tx.commission
                         ? `${tx.fee_currency === 'USD' || tx.currency === 'USD' ? '$' : '฿'}${parseFloat(tx.commission).toFixed(2)}`
                         : (tx.currency === 'USD' ? '$0.00' : '฿0.00')}
@@ -566,7 +566,7 @@ export default function AssetTransactionsTable({
 
                     {/* Summ */}
                     <td className="py-3.5 px-4 text-right font-mono tabular-nums font-extrabold text-sm sm:text-base">
-                      <span className={isVoid ? 'text-zinc-400 line-through' : isBuy ? 'text-zinc-900' : 'text-emerald-700'}>
+                      <span className={isVoid ? 'text-slate-500 line-through' : isBuy ? 'text-slate-900' : 'text-emerald-700'}>
                         {formatSumm(tx)}
                       </span>
                     </td>
@@ -580,14 +580,14 @@ export default function AssetTransactionsTable({
                               ? 'text-emerald-600'
                               : tx.realized_pnl_thb < 0
                               ? 'text-rose-600'
-                              : 'text-zinc-400'
+                              : 'text-slate-500'
                           }
                         >
                           {tx.realized_pnl_thb > 0 ? '+' : ''}
                           {formatTHB(tx.realized_pnl_thb)}
                         </span>
                       ) : (
-                        <span className="text-zinc-300">-</span>
+                        <span className="text-slate-300">-</span>
                       )}
                     </td>
 
@@ -605,7 +605,7 @@ export default function AssetTransactionsTable({
                             }}
                             disabled={savingNote}
                             placeholder="ระบุบันทึกช่วยจำ..."
-                            className="flex-1 rounded-lg border border-flow-blue px-2.5 py-1 text-xs sm:text-sm focus:outline-hidden focus:ring-1 focus:ring-flow-blue bg-white shadow-inner"
+                            className="flex-1 rounded-lg border border-flow-blue px-2.5 py-1 text-xs sm:text-sm focus:outline-none focus:ring-1 focus:ring-flow-blue bg-white shadow-inner"
                             autoFocus
                           />
                           <button
@@ -621,7 +621,7 @@ export default function AssetTransactionsTable({
                             type="button"
                             onClick={cancelEditNote}
                             disabled={savingNote}
-                            className="rounded-md bg-zinc-200 p-1 text-zinc-600 hover:bg-zinc-300 transition-colors"
+                            className="rounded-md bg-slate-200 p-1 text-slate-600 hover:bg-slate-300 transition-colors"
                             title="ยกเลิก (Esc)"
                           >
                             ✕
@@ -635,11 +635,11 @@ export default function AssetTransactionsTable({
                           title="คลิกเพื่อแก้ไข Note ด่วน"
                         >
                           {tx.notes ? (
-                            <span className="text-xs sm:text-sm text-zinc-800 font-medium leading-snug break-words">
+                            <span className="text-xs sm:text-sm text-slate-800 font-medium leading-snug break-words">
                               {tx.notes}
                             </span>
                           ) : (
-                            <span className="text-xs text-zinc-400 italic group-hover/note:text-zinc-600">
+                            <span className="text-xs text-slate-500 italic group-hover/note:text-slate-600">
                               + เพิ่มบันทึกช่วยจำ...
                             </span>
                           )}
@@ -654,7 +654,7 @@ export default function AssetTransactionsTable({
                           <button
                             type="button"
                             onClick={() => setEditingTx(tx)}
-                            className="text-zinc-400 hover:text-flow-blue transition-colors p-2 rounded-lg hover:bg-sky-100 shadow-2xs cursor-pointer"
+                            className="text-slate-500 hover:text-flow-blue transition-colors p-2 rounded-lg hover:bg-sky-100 shadow-sm cursor-pointer"
                             title={isDime ? 'แก้ไข Note (ตัวเลขเศรษฐศาสตร์ถูกล็อค)' : 'แก้ไขข้อมูล Transaction (วัน, จำนวนหุ้น, ราคา, Note)'}
                           >
                             <EditIcon className="w-4 h-4" />
@@ -667,10 +667,10 @@ export default function AssetTransactionsTable({
                               setDeletingTx(tx)
                               setDeletingError(null)
                             }}
-                            className={`p-2 rounded-lg transition-colors shadow-2xs ${
+                            className={`p-2 rounded-lg transition-colors shadow-sm ${
                               isVoidedOrReversal
-                                ? 'text-zinc-300 cursor-not-allowed opacity-30'
-                                : 'text-zinc-400 hover:text-rose-600 hover:bg-rose-50 cursor-pointer'
+                                ? 'text-slate-300 cursor-not-allowed opacity-30'
+                                : 'text-slate-500 hover:text-rose-600 hover:bg-rose-50 cursor-pointer'
                             }`}
                             title={
                               isVoidedOrReversal
@@ -696,12 +696,12 @@ export default function AssetTransactionsTable({
                         <TradeIcon className="h-6 w-6" />
                       </div>
                       <div className="space-y-1">
-                        <h4 className="text-sm font-bold text-zinc-900">
+                        <h4 className="text-sm font-bold text-slate-900">
                           {searchQuery || actionFilter !== 'ALL'
                             ? 'ไม่พบรายการ Transactions ตามเงื่อนไข'
                             : 'ยังไม่มีประวัติการซื้อขายในพอร์ตนี้'}
                         </h4>
-                        <p className="text-xs text-zinc-500">
+                        <p className="text-xs text-slate-500">
                           {searchQuery || actionFilter !== 'ALL'
                             ? 'ลองล้างตัวกรองหรือคำค้นหาเพื่อดูรายการทั้งหมด'
                             : 'เริ่มต้นบันทึกการซื้อขายหุ้นหรือสินทรัพย์ตัวแรกเข้าสู่ระบบ'}
@@ -726,8 +726,8 @@ export default function AssetTransactionsTable({
             {/* Table Footer: Total Summary */}
             {filteredItems.length > 0 && (
               <tfoot>
-                <tr className="border-t-2 border-sky-200 bg-sky-50/70 font-bold text-zinc-900">
-                  <td className="py-3 px-4 text-center text-zinc-400">∑</td>
+                <tr className="border-t-2 border-sky-200 bg-sky-50/70 font-bold text-slate-900">
+                  <td className="py-3 px-4 text-center text-slate-500">∑</td>
                   <td className="py-3 px-4" colSpan={3}>
                     Total ({filteredItems.length} รายการ)
                   </td>
@@ -735,7 +735,7 @@ export default function AssetTransactionsTable({
                     {filteredTotals.totalShares.toLocaleString(undefined, { maximumFractionDigits: 6 })}
                   </td>
                   <td className="py-3 px-4 text-right" colSpan={2} aria-hidden="true">&nbsp;</td>
-                  <td className="py-3 px-4 text-right font-mono tabular-nums text-zinc-900">
+                  <td className="py-3 px-4 text-right font-mono tabular-nums text-slate-900">
                     {actionFilter === 'BUY'
                       ? `-${formatTHB(filteredTotals.totalBuyTHB)}`
                       : actionFilter === 'SELL'
@@ -757,7 +757,7 @@ export default function AssetTransactionsTable({
                         {formatTHB(filteredTotals.totalRealizedPnL)}
                       </span>
                     ) : (
-                      <span className="text-zinc-400">-</span>
+                      <span className="text-slate-500">-</span>
                     )}
                   </td>
                   <td className="py-3 px-4" colSpan={2} aria-hidden="true">&nbsp;</td>
@@ -769,7 +769,7 @@ export default function AssetTransactionsTable({
 
         {/* Pagination & Controls Bar */}
         {filteredItems.length > 0 && (
-          <div className="flex flex-wrap items-center justify-between gap-3 border-t border-sky-100 bg-white/60 px-4 py-3 text-xs text-zinc-500">
+          <div className="flex flex-wrap items-center justify-between gap-3 border-t border-sky-100 bg-white/60 px-4 py-3 text-xs text-slate-500">
             {/* Page Size */}
             <div className="flex items-center gap-2">
               <span>แสดงแถวต่อหน้า:</span>
@@ -779,7 +779,7 @@ export default function AssetTransactionsTable({
                   setPageSize(Number(e.target.value))
                   setCurrentPage(1)
                 }}
-                className="rounded-lg border border-sky-200 bg-white px-2 py-1 text-xs text-zinc-800 focus:border-flow-blue focus:outline-none shadow-2xs"
+                className="rounded-lg border border-sky-200 bg-white px-2 py-1 text-xs text-slate-800 focus:border-flow-blue focus:outline-none shadow-sm"
               >
                 <option value={10}>10</option>
                 <option value={25}>25</option>
@@ -799,18 +799,18 @@ export default function AssetTransactionsTable({
                   type="button"
                   disabled={currentPage <= 1}
                   onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                  className="rounded-lg border border-sky-200 bg-white px-2.5 py-1 text-xs font-semibold text-zinc-700 shadow-2xs hover:bg-sky-50 disabled:opacity-40 disabled:cursor-not-allowed"
+                  className="rounded-lg border border-sky-200 bg-white px-2.5 py-1 text-xs font-semibold text-slate-700 shadow-sm hover:bg-sky-50 disabled:opacity-40 disabled:cursor-not-allowed"
                 >
                   ◀
                 </button>
-                <span className="px-2 font-mono font-bold text-zinc-800">
+                <span className="px-2 font-mono font-bold text-slate-800">
                   {currentPage} / {totalPages}
                 </span>
                 <button
                   type="button"
                   disabled={currentPage >= totalPages}
                   onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-                  className="rounded-lg border border-sky-200 bg-white px-2.5 py-1 text-xs font-semibold text-zinc-700 shadow-2xs hover:bg-sky-50 disabled:opacity-40 disabled:cursor-not-allowed"
+                  className="rounded-lg border border-sky-200 bg-white px-2.5 py-1 text-xs font-semibold text-slate-700 shadow-sm hover:bg-sky-50 disabled:opacity-40 disabled:cursor-not-allowed"
                 >
                   ▶
                 </button>
@@ -836,17 +836,17 @@ export default function AssetTransactionsTable({
         <Modal
           titleId="void-tx-title"
           onClose={() => setDeletingTx(null)}
-          panelClassName="max-w-md rounded-2xl border border-rose-100 bg-white p-6 shadow-2xl dark:border-rose-950 dark:bg-zinc-900"
+  panelClassName="max-w-md rounded-2xl border border-rose-100 bg-white p-6 shadow-2xl"
         >
-          <div className="flex items-center justify-between border-b border-zinc-100 pb-3 dark:border-zinc-800">
-            <h3 id="void-tx-title" className="flex items-center gap-2 text-base font-bold text-zinc-900 dark:text-white">
+  <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+  <h3 id="void-tx-title"className="flex items-center gap-2 text-base font-bold text-slate-900">
               <DeleteIcon className="w-5 h-5 text-rose-500" />
               <span>ยืนยันการ Void รายการ (Non-destructive Reversal)</span>
             </h3>
             <button
               type="button"
               onClick={() => setDeletingTx(null)}
-              className="rounded-lg p-1 text-zinc-400 hover:bg-zinc-100 hover:text-zinc-600 transition-colors"
+              className="rounded-lg p-1 text-slate-500 hover:bg-slate-100 hover:text-slate-600 transition-colors"
             >
               ✕
             </button>
@@ -854,44 +854,44 @@ export default function AssetTransactionsTable({
 
           <div className="mt-4 space-y-4 text-xs">
             {deletingError && (
-              <div className="rounded-xl border border-rose-200 bg-rose-50 p-3 font-semibold text-rose-800 dark:border-rose-900 dark:bg-rose-950/50 dark:text-rose-300">
+  <div className="rounded-xl border border-rose-200 bg-rose-50 p-3 font-semibold text-rose-800">
                 ⚠️ {deletingError}
               </div>
             )}
 
-            <div className="rounded-xl border border-zinc-200 bg-zinc-50/70 p-3 space-y-1.5 dark:border-zinc-800 dark:bg-zinc-800/40">
+  <div className="rounded-xl border border-slate-200 bg-slate-50/70 p-3 space-y-1.5">
               <div className="flex justify-between">
-                <span className="text-zinc-500">สินทรัพย์:</span>
-                <span className="font-bold text-zinc-900 dark:text-white">{deletingTx.symbol} ({deletingTx.action})</span>
+                <span className="text-slate-500">สินทรัพย์:</span>
+  <span className="font-bold text-slate-900">{deletingTx.symbol} ({deletingTx.action})</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-zinc-500">จำนวน:</span>
-                <span className="font-mono font-semibold text-zinc-900 dark:text-white">{deletingTx.units} units</span>
+                <span className="text-slate-500">จำนวน:</span>
+  <span className="font-mono font-semibold text-slate-900">{deletingTx.units} units</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-zinc-500">ราคา:</span>
-                <span className="font-mono text-zinc-900 dark:text-white">{formatPrice(deletingTx.price, deletingTx.currency)}</span>
+                <span className="text-slate-500">ราคา:</span>
+  <span className="font-mono text-slate-900">{formatPrice(deletingTx.price, deletingTx.currency)}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-zinc-500">วันที่:</span>
-                <span className="font-mono text-zinc-600 dark:text-zinc-400">{deletingTx.timestamp}</span>
+                <span className="text-slate-500">วันที่:</span>
+  <span className="font-mono text-slate-600">{deletingTx.timestamp}</span>
               </div>
             </div>
 
-            <div className="rounded-xl border border-amber-200 bg-amber-50/80 p-3 text-amber-900 text-[11px] leading-relaxed dark:border-amber-900/60 dark:bg-amber-950/40 dark:text-amber-300">
+  <div className="rounded-xl border border-amber-200 bg-amber-50/80 p-3 text-amber-900 text-[11px] leading-relaxed">
               ⚠️ <strong>ข้อควรระวัง:</strong> การ Void รายการนี้จะทำให้ระบบทำการ Replay ต้นทุนถัวเฉลี่ยและกำไร/ขาดทุนสะสมของ {deletingTx.symbol} ใหม่ทั้งหมด
             </div>
 
-            <div className="rounded-xl border border-sky-200 bg-sky-50/80 p-3 text-sky-950 text-[11px] leading-relaxed dark:border-sky-800 dark:bg-sky-950/40 dark:text-sky-200">
+  <div className="rounded-xl border border-sky-200 bg-sky-50/80 p-3 text-sky-950 text-[11px] leading-relaxed">
               ℹ️ <strong>Audit Trail Policy (Strict Mirror):</strong> การยกเลิกรายการจะเป็นแบบ Non-destructive โดยสร้างแถว Reversal คู่กันในสมุดบัญชีเสมอ {deletingTx.cash_adjusted === 'NO' ? 'โดยไม่กระทบยอดเงินสดตามรายการต้นฉบับ' : 'และจะทำการย้อนคืนเงินสดอัตโนมัติตามยอดสุทธิ (Net Amount)'}
             </div>
 
-            <div className="flex justify-end gap-2 border-t border-zinc-100 pt-4 dark:border-zinc-800">
+  <div className="flex justify-end gap-2 border-t border-slate-100 pt-4">
               <button
                 type="button"
                 onClick={() => setDeletingTx(null)}
                 disabled={deletingLoading}
-                className="rounded-xl border border-zinc-300 bg-white px-4 py-2 font-semibold text-zinc-700 hover:bg-zinc-50 transition-colors dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300"
+  className="rounded-xl border border-slate-300 bg-white px-4 py-2 font-semibold text-slate-700 hover:bg-slate-50 transition-colors"
               >
                 ยกเลิก
               </button>

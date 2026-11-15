@@ -35,9 +35,9 @@ export const Toast: React.FC<ToastProps> = ({
   }, [durationMs, handleClose])
 
   const typeStyles = {
-    info: 'bg-zinc-900/90 text-white border-zinc-700 shadow-xl',
-    success: 'bg-emerald-950/90 text-emerald-100 border-emerald-800 shadow-emerald-950/20',
-    error: 'bg-rose-950/90 text-rose-100 border-rose-800 shadow-rose-950/20',
+    info: 'bg-slate-900/95 text-slate-50 border-slate-700/80 shadow-xl',
+    success: 'bg-emerald-950/95 text-emerald-50 border-emerald-800/80 shadow-emerald-950/20',
+    error: 'bg-rose-950/95 text-rose-50 border-rose-800/80 shadow-rose-950/20',
   }
 
   return (
@@ -62,7 +62,7 @@ export const Toast: React.FC<ToastProps> = ({
       <button
         onClick={handleClose}
         aria-label="Close Toast"
-        className="ml-1 rounded-md p-1 text-zinc-400 hover:text-white transition-colors"
+        className="ml-1 rounded-md p-1.5 text-slate-500 hover:text-white transition-colors"
       >
         <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />

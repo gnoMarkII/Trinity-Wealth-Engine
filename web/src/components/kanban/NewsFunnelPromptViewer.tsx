@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { api } from '../../api/client'
 import type { NewsFunnelPendingItem, NewsFunnelFilteredItem } from '../../api/types'
 import ReactMarkdown from 'react-markdown'
+import { FolderIcon } from '../ui/AppIcons'
 
 interface Props {
   prompt: string
@@ -84,7 +85,7 @@ export default function NewsFunnelPromptViewer({ prompt, onSelectionChange, onDi
   // ถ้าโหลดไม่สำเร็จหรือไม่มีรายการ pending จาก API ให้ fallback เป็น ReactMarkdown เดิม
   if (!loading && (!items || items.length === 0) && error) {
     return (
-      <div className="mt-3.5 rounded-xl border border-edge bg-surface p-3.5 text-xs text-zinc-700 leading-relaxed shadow-sm">
+      <div className="mt-3.5 rounded-xl border border-edge bg-surface p-3.5 text-xs text-slate-700 leading-relaxed shadow-sm">
         <ReactMarkdown
           components={{
             a: ({ children, href }) => (
@@ -92,11 +93,11 @@ export default function NewsFunnelPromptViewer({ prompt, onSelectionChange, onDi
                 {children}
               </a>
             ),
-            code: ({ children }) => <code className="rounded bg-surface-strong px-1 py-0.5 font-mono text-[0.84em] text-zinc-700">{children}</code>,
-            h1: ({ children }) => <h4 className="mt-4 text-sm font-bold text-zinc-900 first:mt-0">{children}</h4>,
-            h2: ({ children }) => <h4 className="mt-4 text-sm font-bold text-zinc-900 first:mt-0">{children}</h4>,
+            code: ({ children }) => <code className="rounded bg-surface-strong px-1 py-0.5 font-mono text-[0.84em] text-slate-700">{children}</code>,
+            h1: ({ children }) => <h4 className="mt-4 text-sm font-bold text-slate-900 first:mt-0">{children}</h4>,
+            h2: ({ children }) => <h4 className="mt-4 text-sm font-bold text-slate-900 first:mt-0">{children}</h4>,
             h3: ({ children }) => <h5 className="mt-3 text-xs font-bold text-sky-900 first:mt-0">{children}</h5>,
-            h4: ({ children }) => <h6 className="mt-3 text-xs font-bold text-zinc-800 first:mt-0">{children}</h6>,
+            h4: ({ children }) => <h6 className="mt-3 text-xs font-bold text-slate-800 first:mt-0">{children}</h6>,
             li: ({ children }) => <li className="ml-4 list-disc pl-1 mt-0.5">{children}</li>,
             p: ({ children }) => <p className="mt-2 first:mt-0 leading-relaxed">{children}</p>,
             ul: ({ children }) => <ul className="mt-1.5 space-y-1">{children}</ul>,
@@ -130,11 +131,11 @@ export default function NewsFunnelPromptViewer({ prompt, onSelectionChange, onDi
       </div>
 
       {loading ? (
-        <div className="flex items-center justify-center py-6 text-xs text-zinc-400">
+        <div className="flex items-center justify-center py-6 text-xs text-slate-500">
           กำลังโหลดรายการข่าว High-Impact...
         </div>
       ) : !items || items.length === 0 ? (
-        <div className="rounded-xl border border-edge bg-surface p-4 text-center text-xs text-zinc-500">
+        <div className="rounded-xl border border-edge bg-surface p-4 text-center text-xs text-slate-500">
           ไม่มีข่าวค้างรอในรอบนี้แล้ว
         </div>
       ) : (
@@ -155,8 +156,8 @@ export default function NewsFunnelPromptViewer({ prompt, onSelectionChange, onDi
               return (
                 <label
                   key={item.event_id}
-                  className={`relative flex cursor-pointer items-start gap-3 rounded-xl border p-4 text-xs text-zinc-700 shadow-sm transition-colors ${
-                    isChecked ? 'border-sky-300 bg-sky-50/20' : 'border-edge bg-surface hover:border-zinc-300'
+                  className={`relative flex cursor-pointer items-start gap-3 rounded-xl border p-4 text-xs text-slate-700 shadow-sm transition-colors ${
+                    isChecked ? 'border-sky-300 bg-sky-50/20' : 'border-edge bg-surface hover:border-slate-300'
                   }`}
                 >
                   <input
@@ -166,7 +167,7 @@ export default function NewsFunnelPromptViewer({ prompt, onSelectionChange, onDi
                     className="mt-1 h-4 w-4 shrink-0 accent-sky-500"
                   />
                   <div className="flex-1 space-y-2 min-w-0">
-                    <div className="flex flex-wrap items-center gap-2 font-semibold text-zinc-900">
+                    <div className="flex flex-wrap items-center gap-2 font-semibold text-slate-900">
                       <span className="rounded bg-sky-100 px-2 py-0.5 text-[11px] font-bold text-sky-800">
                         #{idx + 1}
                       </span>
@@ -176,7 +177,7 @@ export default function NewsFunnelPromptViewer({ prompt, onSelectionChange, onDi
                       {item.triage_source === 'heuristic_fallback' && (
                         <span
                           title={`คะแนนจาก heuristic fallback (${item.triage_fallback_reason ? `สาเหตุ: ${item.triage_fallback_reason}` : 'LLM triage ล้มเหลวรอบ ingest'}) — โปรดตรวจสอบเนื้อหาก่อนอนุมัติ`}
-                          className="rounded border border-red-200 bg-red-50 px-1.5 py-0.5 text-[10px] font-semibold text-red-700"
+                          className="rounded border border-red-200 bg-red-50 px-1.5 py-0.5 text-[11px] font-semibold text-red-700"
                         >
                           ⚠️ Heuristic{item.triage_fallback_reason ? ` (${item.triage_fallback_reason})` : ''}
                         </span>
@@ -184,7 +185,7 @@ export default function NewsFunnelPromptViewer({ prompt, onSelectionChange, onDi
                       <span className="text-sm leading-snug">{item.canonical_title}</span>
                     </div>
 
-                    <div className="flex flex-wrap gap-4 text-zinc-600">
+                    <div className="flex flex-wrap gap-4 text-slate-600">
                       <span>
                         <b>Macro Impact:</b> {item.macro_impact_score}/10
                       </span>
@@ -194,18 +195,18 @@ export default function NewsFunnelPromptViewer({ prompt, onSelectionChange, onDi
                     </div>
 
                     {item.comprehensive_summary && (
-                      <p className="leading-relaxed text-zinc-600">
+                      <p className="leading-relaxed text-slate-600">
                         <b>สรุปเนื้อหา:</b> {item.comprehensive_summary}
                       </p>
                     )}
 
                     {allTags.length > 0 && (
                       <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
-                        <b className="mr-1 text-zinc-700">แท็กที่เกี่ยวข้อง:</b>
+                        <b className="mr-1 text-slate-700">แท็กที่เกี่ยวข้อง:</b>
                         {allTags.map((tag, tIdx) => (
                           <span
                             key={tIdx}
-                            className="rounded border border-zinc-200 bg-zinc-50 px-1.5 py-0.5 font-mono text-[10px] font-medium text-zinc-700"
+                            className="rounded border border-slate-200 bg-slate-50 px-1.5 py-0.5 font-mono text-[11px] font-medium text-slate-700"
                           >
                             {tag}
                           </span>
@@ -247,26 +248,26 @@ export default function NewsFunnelPromptViewer({ prompt, onSelectionChange, onDi
       )}
 
       {filteredItems && filteredItems.length > 0 && (
-        <div className="mt-6 rounded-xl border border-zinc-200 bg-zinc-50/50 overflow-hidden shadow-sm">
+        <div className="mt-6 rounded-xl border border-slate-200 bg-slate-50/50 overflow-hidden shadow-sm">
           <button
             type="button"
             onClick={() => setShowFiltered(!showFiltered)}
-            className="flex w-full items-center justify-between px-4 py-3 text-left transition-colors hover:bg-zinc-100/80 focus:outline-none"
+            className="flex w-full items-center justify-between px-4 py-3 text-left transition-colors hover:bg-slate-100/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-section-accent/60"
           >
             <div className="flex items-center gap-2">
-              <span className="text-base">🗄️</span>
-              <span className="font-semibold text-zinc-800 text-xs">
+              <FolderIcon className="h-4 w-4 text-slate-600 shrink-0" />
+              <span className="font-semibold text-slate-800 text-xs">
                 ข่าวที่ไม่ผ่านเกณฑ์หรือข้ามการบันทึก ({filteredItems.length} รายการ)
               </span>
             </div>
-            <span className="text-xs font-medium text-zinc-500">
+            <span className="text-xs font-medium text-slate-500">
               {showFiltered ? '▲ ซ่อนรายการ' : '▼ แสดงรายการ'}
             </span>
           </button>
 
           {showFiltered && (
-            <div className="border-t border-zinc-200 p-4 space-y-3 bg-surface">
-              <div className="text-[11px] text-zinc-500 mb-2">
+            <div className="border-t border-slate-200 p-4 space-y-3 bg-surface">
+              <div className="text-[11px] text-slate-500 mb-2">
                 รายการเหล่านี้ตกเกณฑ์คะแนน (Score &lt; 7), ถูกปฏิเสธ (Rejected) หรือข้ามเนื่องจากดึงข้อมูลไม่สำเร็จ (Skipped Error)
               </div>
               {filteredItems
@@ -279,7 +280,7 @@ export default function NewsFunnelPromptViewer({ prompt, onSelectionChange, onDi
                     item.status === 'skipped_error'
                       ? { text: 'Skipped: ดึงข้อมูลไม่สำเร็จ', cls: 'bg-red-100 text-red-800 border-red-200' }
                       : item.status === 'rejected'
-                      ? { text: 'Rejected: ไม่ผ่านคัดเลือก', cls: 'bg-zinc-200 text-zinc-700 border-zinc-300' }
+                      ? { text: 'Rejected: ไม่ผ่านคัดเลือก', cls: 'bg-slate-200 text-slate-700 border-slate-300' }
                       : { text: 'Low Impact (Score < 7)', cls: 'bg-amber-100 text-amber-800 border-amber-200' }
 
                   const reasonOrError = item.error_msg || item.triage_reasoning || null
@@ -287,26 +288,26 @@ export default function NewsFunnelPromptViewer({ prompt, onSelectionChange, onDi
                   return (
                     <div
                       key={item.event_id || idx}
-                      className="flex flex-col gap-1.5 rounded-lg border border-edge bg-surface p-3.5 text-xs text-zinc-700 shadow-2xs opacity-90"
+                      className="flex flex-col gap-1.5 rounded-lg border border-edge bg-surface p-3.5 text-xs text-slate-700 shadow-sm opacity-90"
                     >
-                      <div className="flex flex-wrap items-center gap-2 font-medium text-zinc-800">
-                        <span className={`rounded border px-2 py-0.5 text-[10px] font-bold ${badgeInfo.cls}`}>
+                      <div className="flex flex-wrap items-center gap-2 font-medium text-slate-800">
+                        <span className={`rounded border px-2 py-0.5 text-[11px] font-bold ${badgeInfo.cls}`}>
                           {badgeInfo.text}
                         </span>
-                        <span className="rounded bg-zinc-100 px-1.5 py-0.5 text-[10px] font-semibold text-zinc-600">
+                        <span className="rounded bg-slate-100 px-1.5 py-0.5 text-[11px] font-semibold text-slate-600">
                           Score: {maxScore}/10
                         </span>
-                        <span className="font-semibold text-zinc-900 leading-snug">{item.canonical_title}</span>
+                        <span className="font-semibold text-slate-900 leading-snug">{item.canonical_title}</span>
                       </div>
 
                       {reasonOrError && (
-                        <div className="mt-0.5 rounded bg-zinc-50 px-2 py-1 text-[11px] text-zinc-600 border border-zinc-200/60">
+                        <div className="mt-0.5 rounded bg-slate-50 px-2 py-1 text-[11px] text-slate-600 border border-slate-200/60">
                           <b>เหตุผล/รายละเอียด:</b> {reasonOrError}
                         </div>
                       )}
 
                       {item.comprehensive_summary && (
-                        <p className="text-[11px] text-zinc-500 leading-relaxed">
+                        <p className="text-[11px] text-slate-500 leading-relaxed">
                           {item.comprehensive_summary}
                         </p>
                       )}

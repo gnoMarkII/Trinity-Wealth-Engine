@@ -99,6 +99,11 @@ def clear_job_resume_value(conn: sqlite3.Connection, job_id: str) -> None:
     conn.commit()
 
 
+def cancel_job_approval(conn: sqlite3.Connection, job_id: str, reason: str) -> None:
+    _job_repo.cancel_job_approval(conn, job_id, reason)
+    conn.commit()
+
+
 def find_job_by_idempotency_key(conn: sqlite3.Connection, idempotency_key: str) -> sqlite3.Row | None:
     return _job_repo.find_job_by_idempotency_key(conn, idempotency_key)
 

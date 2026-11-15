@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, type KeyboardEvent } from 'react'
+import { SparklesIcon } from '../ui/AppIcons'
 import {
   loadFavoritePrompts,
   togglePinFavoritePrompt,
@@ -176,7 +177,7 @@ export default function ManagerPromptComposer({
               <button
                 type="button"
                 onClick={() => setSelectedPills([])}
-                className="text-xs text-zinc-400 hover:text-zinc-600 underline ml-1"
+                className="text-xs text-slate-500 hover:text-slate-600 underline ml-1"
               >
                 ล้างทั้งหมด
               </button>
@@ -191,7 +192,7 @@ export default function ManagerPromptComposer({
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder="ปรึกษาการลงทุน, วิเคราะห์พอร์ต, หรือพิมพ์ / เพื่อเปิดคลังคำสั่ง..."
-            className="custom-scrollbar max-h-40 min-h-[48px] w-full resize-none bg-transparent px-2.5 py-1.5 text-[15px] sm:text-base text-sky-950 placeholder-zinc-400 focus:outline-none leading-relaxed"
+            className="custom-scrollbar max-h-40 min-h-[48px] w-full resize-none rounded-lg bg-transparent px-2.5 py-1.5 text-[15px] sm:text-base text-sky-950 placeholder-slate-400 focus:outline-none focus-visible:ring-2 focus-visible:ring-section-accent/45 leading-relaxed"
           />
 
           {/* Integrated Bottom Action Bar */}
@@ -205,9 +206,9 @@ export default function ManagerPromptComposer({
                 title="เปิดคลังคำสั่งโปรดครอบคลุมทุกมิติ (Ctrl+K หรือพิมพ์ /)"
                 className="flex shrink-0 items-center gap-1.5 rounded-xl border border-sky-100 bg-sky-50/60 px-3 py-1.5 text-xs sm:text-sm font-medium text-sky-900 hover:border-sky-200 hover:bg-sky-100/70 transition-all active:scale-95"
               >
-                <span className="text-sky-500">✨</span>
+                <SparklesIcon className="h-3.5 w-3.5 text-sky-500 shrink-0" />
                 <span>คลังคำสั่ง</span>
-                <span className="hidden sm:inline font-mono text-[10px] text-sky-700/70 rounded bg-sky-100/80 px-1.5 py-0.5">
+                <span className="hidden sm:inline font-mono text-[11px] text-sky-700/70 rounded bg-sky-100/80 px-1.5 py-0.5">
                   Ctrl+K
                 </span>
               </button>
@@ -227,7 +228,7 @@ export default function ManagerPromptComposer({
                       className={`rounded-xl px-2.5 py-1 text-xs font-medium transition-all ${
                         active
                           ? 'border border-sky-400 bg-sky-100 text-sky-900 font-bold shadow-sm'
-                          : 'border border-sky-100/80 bg-white/80 text-zinc-600 hover:border-sky-200 hover:bg-sky-50/70 hover:text-sky-800'
+                          : 'border border-sky-100/80 bg-white/80 text-slate-600 hover:border-sky-200 hover:bg-sky-50/70 hover:text-sky-800'
                       }`}
                     >
                       {pill.label}
@@ -256,7 +257,7 @@ export default function ManagerPromptComposer({
                   className={`flex h-9 items-center justify-center gap-1.5 rounded-xl px-4 text-xs sm:text-sm font-semibold shadow-sm transition-all ${
                     input.trim()
                       ? 'bg-sky-500 hover:bg-sky-600 text-white shadow-[0_4px_16px_rgba(14,165,233,0.3)] hover:brightness-105 active:scale-95'
-                      : 'cursor-not-allowed bg-zinc-100 text-zinc-400'
+                      : 'cursor-not-allowed bg-slate-100 text-slate-500'
                   }`}
                 >
                   <span>ส่งคำถาม</span>

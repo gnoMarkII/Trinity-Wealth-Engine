@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react'
+import { AlertTriangleIcon } from '../ui/AppIcons'
 
 export interface VolSmileContract {
   strike: number
@@ -131,13 +132,13 @@ export const OptionsVolSmile: React.FC<OptionsVolSmileProps> = ({
   if (!hasSufficientQuotes) {
     return (
       <div className={`flow-panel rounded-2xl border border-edge/80 p-6 text-center ${className}`}>
-        {title && <h4 className="text-sm font-semibold text-zinc-900">{title}</h4>}
+        {title && <h4 className="text-sm font-semibold text-slate-900">{title}</h4>}
         <div className="mt-2 inline-flex items-center gap-2 rounded-full border border-amber-300 bg-amber-50 px-3.5 py-1 text-xs font-semibold text-amber-800">
-          <span>⚠️</span>
+          <AlertTriangleIcon className="h-3.5 w-3.5 text-amber-600 shrink-0" />
           <span>Insufficient implied volatility quotes to render smile (unavailable)</span>
         </div>
-        <p className="mt-2.5 text-xs text-zinc-500 max-w-lg mx-auto">
-          Options chain for <span className="font-semibold text-zinc-700">{symbol}</span> ({expiry}) does not contain at least 3 valid IV strikes. Values are not artificially interpolated.
+        <p className="mt-2.5 text-xs text-slate-500 max-w-lg mx-auto">
+          Options chain for <span className="font-semibold text-slate-700">{symbol}</span> ({expiry}) does not contain at least 3 valid IV strikes. Values are not artificially interpolated.
         </p>
       </div>
     )
@@ -149,11 +150,11 @@ export const OptionsVolSmile: React.FC<OptionsVolSmileProps> = ({
     <div className={`flow-panel rounded-2xl border border-edge/80 p-6 shadow-sm transition-all animate-card-in ${className}`}>
       <div className="mb-4 flex flex-wrap items-baseline justify-between gap-2 border-b border-edge/60 pb-3">
         <div>
-          <h3 className="text-base font-semibold text-zinc-900">
+          <h3 className="text-base font-semibold text-slate-900">
             {title || `${symbol} Implied Volatility Smile`}
           </h3>
-          <p className="text-xs text-zinc-500 mt-0.5">
-            Expiry: <span className="font-semibold text-zinc-700">{expiry}</span> (Single Expiry View)
+          <p className="text-xs text-slate-500 mt-0.5">
+            Expiry: <span className="font-semibold text-slate-700">{expiry}</span> (Single Expiry View)
             {asOfDate && <span> • As of: {asOfDate}</span>}
           </p>
         </div>
@@ -168,16 +169,16 @@ export const OptionsVolSmile: React.FC<OptionsVolSmileProps> = ({
       <div className="mb-3 flex flex-wrap items-center gap-5 text-xs">
         <div className="flex items-center gap-1.5">
           <span className="h-1.5 w-4 rounded-full bg-emerald-600" />
-          <span className="text-zinc-600 font-medium">Call Implied Volatility (IV)</span>
+          <span className="text-slate-600 font-medium">Call Implied Volatility (IV)</span>
         </div>
         <div className="flex items-center gap-1.5">
           <span className="h-1.5 w-4 rounded-full bg-amber-600" />
-          <span className="text-zinc-600 font-medium">Put Implied Volatility (IV)</span>
+          <span className="text-slate-600 font-medium">Put Implied Volatility (IV)</span>
         </div>
         {currentPrice && (
           <div className="flex items-center gap-1.5">
             <span className="h-0.5 w-3 border-t-2 border-dashed border-sky-600" />
-            <span className="text-zinc-600 font-medium">Spot Price (${currentPrice.toFixed(2)})</span>
+            <span className="text-slate-600 font-medium">Spot Price (${currentPrice.toFixed(2)})</span>
           </div>
         )}
       </div>
@@ -291,7 +292,7 @@ export const OptionsVolSmile: React.FC<OptionsVolSmileProps> = ({
               top: padTop + 35,
             }}
           >
-            <div className="border-b border-edge/60 pb-1 font-bold text-zinc-900 font-mono">
+            <div className="border-b border-edge/60 pb-1 font-bold text-slate-900 font-mono">
               Strike: ${hoveredStrike.strike.toFixed(2)}
             </div>
             <div className="mt-1.5 space-y-1 text-[11px]">

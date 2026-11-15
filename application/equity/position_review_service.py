@@ -57,7 +57,7 @@ class PositionReviewApplicationService:
         self,
         ticker: str,
         market: str = "US",
-        portfolio_id: str = "default",
+        portfolio_id: Optional[str] = "default",
     ) -> PositionReviewReport:
         """Executes position review pipeline for the given ticker."""
         clean_ticker = ticker.strip().upper()
@@ -155,7 +155,7 @@ class PositionReviewApplicationService:
             "added_direction": None,
         }
 
-        if self._portfolio_reader:
+        if portfolio_id and self._portfolio_reader:
             try:
                 p_state = None
                 if callable(self._portfolio_reader):

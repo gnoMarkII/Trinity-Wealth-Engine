@@ -29,9 +29,9 @@ const STATUS_CONFIG: Record<TrafficStatus, { bg: string; border: string; text: s
     defaultIcon: '🚨',
   },
   neutral: {
-    bg: 'bg-zinc-50/80',
-    border: 'border-zinc-200/80',
-    text: 'text-zinc-800',
+    bg: 'bg-slate-50/80',
+    border: 'border-slate-200/80',
+    text: 'text-slate-800',
     defaultIcon: '⚪',
   },
   info: {
@@ -55,7 +55,7 @@ export const TrafficLightSubtitle: React.FC<TrafficLightSubtitleProps> = ({
     <div
       className={`inline-flex items-center gap-1.5 rounded-md border px-2 py-0.5 text-[11px] font-medium leading-tight ${cfg.bg} ${cfg.border} ${cfg.text} ${className}`}
     >
-      <span className="shrink-0 text-[10px]">{displayIcon}</span>
+      <span className="shrink-0 text-[11px]">{displayIcon}</span>
       <span>{text}</span>
     </div>
   )

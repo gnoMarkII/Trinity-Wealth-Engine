@@ -9,6 +9,14 @@ import TextInput from '../components/ui/TextInput'
 import ScoreRing from '../components/equity/ScoreRing'
 import RunEquityAnalysisModal from '../components/equity/RunEquityAnalysisModal'
 import Toast from '../components/common/Toast'
+import {
+  BoltStrategyIcon,
+  BriefcasePortfolioIcon,
+  ChartTrendIcon,
+  SidebarCollapseIcon,
+  SidebarExpandIcon,
+  StarIcon,
+} from '../components/ui/AppIcons'
 
 // For explicit mock mode
 const isMockMode = import.meta.env.VITE_EQUITY_MOCK === 'true' && import.meta.env.DEV
@@ -390,11 +398,11 @@ export default function Equity() {
             <div className="flex-1 min-w-0">
               <div className="flex items-center justify-between gap-1 mb-1">
                 <div className="flex items-center gap-1.5 min-w-0">
-                  <span className="font-extrabold text-zinc-900 font-mono text-sm sm:text-base truncate group-hover:text-sky-700 transition-colors">
+                  <span className="font-extrabold text-slate-900 font-mono text-sm sm:text-base truncate group-hover:text-section-accent transition-colors">
                     {item.symbol}
                   </span>
                   <span
-                    className={`rounded px-1.5 py-0.5 text-[10px] font-bold border uppercase ${
+                    className={`rounded px-1.5 py-0.5 text-[11px] font-bold border uppercase ${
                       item.market === 'TH'
                         ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
                         : 'bg-blue-50 text-blue-700 border-blue-200'
@@ -403,13 +411,13 @@ export default function Equity() {
                     {item.market}
                   </span>
                 </div>
-                <span className="text-[11px] text-zinc-500 shrink-0">
+                <span className="text-[11px] text-slate-500 font-mono tabular-nums shrink-0">
                   {new Date(report.evaluated_at).toLocaleDateString('th-TH', { month: 'short', day: 'numeric' })}
                 </span>
               </div>
               <div className="flex items-center gap-2 text-xs">
                 {item.label && item.label !== item.symbol && (
-                  <span className="text-zinc-600 truncate max-w-[120px]" title={item.label}>
+                  <span className="text-slate-600 truncate max-w-[120px]" title={item.label}>
                     {item.label}
                   </span>
                 )}
@@ -435,11 +443,11 @@ export default function Equity() {
         >
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-1.5 mb-1">
-              <span className="font-extrabold text-zinc-900 font-mono text-sm sm:text-base truncate">
+              <span className="font-extrabold text-slate-900 font-mono text-sm sm:text-base truncate">
                 {item.symbol}
               </span>
               <span
-                className={`rounded px-1.5 py-0.5 text-[10px] font-bold border uppercase ${
+                className={`rounded px-1.5 py-0.5 text-[11px] font-bold border uppercase ${
                   item.market === 'TH'
                     ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
                     : 'bg-blue-50 text-blue-700 border-blue-200'
@@ -449,10 +457,10 @@ export default function Equity() {
               </span>
             </div>
             <div className="flex items-center gap-2">
-              <span className="text-xs text-zinc-500 truncate max-w-[140px]" title={item.label || item.symbol}>
+              <span className="text-xs text-slate-500 truncate max-w-[140px]" title={item.label || item.symbol}>
                 {item.label || (item.source === 'portfolio' ? 'พอร์ตลงทุน' : 'Watchlist')}
               </span>
-              <span className="rounded-full bg-amber-100/80 px-2 py-0.5 text-[10px] font-bold text-amber-800 border border-amber-200 shrink-0">
+              <span className="rounded-full bg-amber-100/80 px-2 py-0.5 text-[11px] font-bold text-amber-800 border border-amber-200 shrink-0">
                 ⏳ ยังไม่วิเคราะห์
               </span>
             </div>
@@ -461,10 +469,10 @@ export default function Equity() {
           <button
             type="button"
             onClick={() => openAnalysisModal(item.symbol, item.market)}
-            className="shrink-0 rounded-lg bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-600 hover:to-blue-700 text-white text-xs font-bold px-3 py-1.5 shadow-sm hover:shadow transition-all flex items-center gap-1 active:scale-95"
+            className="shrink-0 rounded-lg bg-section-accent hover:bg-blue-900 text-white text-xs font-bold px-3 py-1.5 shadow-sm hover:shadow transition-all flex items-center gap-1 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-section-accent/45"
             title={`สั่งวิเคราะห์หุ้น ${item.symbol} (${item.market})`}
           >
-            <span>🚀</span>
+            <BoltStrategyIcon className="h-3.5 w-3.5" />
             <span>วิเคราะห์</span>
           </button>
         </div>
@@ -521,14 +529,14 @@ export default function Equity() {
           />
 
           {/* Ticker */}
-          <span className="font-mono text-[11px] font-extrabold text-zinc-900 tracking-tight leading-tight truncate max-w-[42px]">
+          <span className="font-mono text-[11px] font-extrabold text-slate-900 tracking-tight leading-tight truncate max-w-[42px]">
             {item.symbol}
           </span>
 
           {/* Score pill or unanalyzed */}
           {hasReport && report?.composite_score != null ? (
             <span
-              className={`text-[9px] font-bold px-1 rounded ${
+              className={`font-mono tabular-nums text-[11px] font-bold px-1 rounded ${
                 report.composite_score >= 70
                   ? 'bg-emerald-100 text-emerald-800'
                   : report.composite_score >= 50
@@ -539,7 +547,7 @@ export default function Equity() {
               {Math.round(report.composite_score)}
             </span>
           ) : (
-            <span className="text-[10px]">⏳</span>
+            <span className="h-1.5 w-1.5 rounded-full bg-amber-400" title="ยังไม่วิเคราะห์" />
           )}
         </button>
       </li>
@@ -563,19 +571,17 @@ export default function Equity() {
             <button
               type="button"
               onClick={toggleSidebarCollapse}
-              className="w-10 h-10 rounded-xl bg-surface-strong hover:bg-sky-50 hover:text-sky-700 text-zinc-600 border border-edge flex items-center justify-center transition-all shadow-xs mb-2 active:scale-95"
+              className="w-10 h-10 rounded-xl bg-surface-strong hover:bg-sky-50 hover:text-section-accent text-slate-600 border border-edge flex items-center justify-center transition-all shadow-sm mb-2 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-section-accent/45"
               title="ขยายแถบรายการหุ้น (Expand Sidebar)"
               aria-label="Expand Sidebar"
             >
-              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 5l7 7-7 7M5 5l7 7-7 7" />
-              </svg>
+              <SidebarExpandIcon className="w-5 h-5" />
             </button>
 
             <button
               type="button"
               onClick={() => openAnalysisModal()}
-              className="w-10 h-10 rounded-xl bg-sky-500 hover:bg-sky-600 text-white flex items-center justify-center transition-all shadow-sm mb-3 active:scale-95 text-lg font-bold"
+              className="w-10 h-10 rounded-xl bg-section-accent hover:bg-blue-900 text-white flex items-center justify-center transition-all shadow-sm mb-3 active:scale-95 text-lg font-bold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-section-accent/45"
               title="วิเคราะห์หุ้นใหม่"
               aria-label="วิเคราะห์หุ้นใหม่"
             >
@@ -583,14 +589,14 @@ export default function Equity() {
             </button>
 
             {/* Mini Filter Switcher */}
-            <div className="flex flex-col gap-1 w-full bg-surface-strong/80 p-1 rounded-xl border border-edge mb-3 text-[10px] font-bold">
+            <div className="flex flex-col gap-1 w-full bg-surface-strong/80 p-1 rounded-xl border border-edge mb-3 text-[11px] font-bold">
               <button
                 type="button"
                 onClick={() => setActiveFilter('all')}
-                className={`py-1 rounded-lg text-center transition-all ${
+                className={`py-1 rounded-lg text-center transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-section-accent/45 ${
                   activeFilter === 'all'
-                    ? 'bg-panel text-sky-700 shadow-2xs font-bold border border-sky-100'
-                    : 'text-zinc-500 hover:text-zinc-800'
+                    ? 'bg-panel text-section-accent shadow-sm font-bold border border-blue-100'
+                    : 'text-slate-500 hover:text-slate-800'
                 }`}
                 title={`ทั้งหมด (${totalAvailableCount})`}
               >
@@ -599,26 +605,28 @@ export default function Equity() {
               <button
                 type="button"
                 onClick={() => setActiveFilter('portfolio')}
-                className={`py-1 rounded-lg text-center transition-all ${
+                className={`py-1.5 rounded-lg flex items-center justify-center transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-section-accent/45 ${
                   activeFilter === 'portfolio'
-                    ? 'bg-panel text-sky-700 shadow-2xs font-bold border border-sky-100'
-                    : 'text-zinc-500 hover:text-zinc-800'
+                    ? 'bg-panel text-section-accent shadow-sm font-bold border border-blue-100'
+                    : 'text-slate-500 hover:text-slate-800'
                 }`}
                 title={`ในพอร์ต (${portfolioStocks.length})`}
+                aria-label={`ในพอร์ต (${portfolioStocks.length})`}
               >
-                💼
+                <BriefcasePortfolioIcon className="h-3.5 w-3.5" />
               </button>
               <button
                 type="button"
                 onClick={() => setActiveFilter('watchlist')}
-                className={`py-1 rounded-lg text-center transition-all ${
+                className={`py-1.5 rounded-lg flex items-center justify-center transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-section-accent/45 ${
                   activeFilter === 'watchlist'
-                    ? 'bg-panel text-amber-700 shadow-2xs font-bold border border-amber-100'
-                    : 'text-zinc-500 hover:text-zinc-800'
+                    ? 'bg-panel text-amber-700 shadow-sm font-bold border border-amber-100'
+                    : 'text-slate-500 hover:text-slate-800'
                 }`}
                 title={`Watchlist (${watchlistStocks.length})`}
+                aria-label={`Watchlist (${watchlistStocks.length})`}
               >
-                ⭐
+                <StarIcon className="h-3.5 w-3.5" />
               </button>
             </div>
 
@@ -637,21 +645,21 @@ export default function Equity() {
           <>
             <div className="flex items-center justify-between mb-3">
               <div>
-                <h2 className="text-xl font-bold text-zinc-900 flex items-center gap-2">
+                <h2 className="text-xl font-bold text-slate-900 flex items-center gap-2">
                   <span>Equity Analysis</span>
                   {isMockMode && (
-                    <span className="text-xs bg-purple-100 text-purple-800 px-2 py-0.5 rounded-full">
+                    <span className="text-xs bg-sky-100 text-sky-800 px-2 py-0.5 rounded-full font-mono">
                       MOCK
                     </span>
                   )}
                 </h2>
-                <p className="text-xs text-zinc-500 mt-0.5">ผลวิเคราะห์หุ้น ปัจจัยพื้นฐาน และ Valuation</p>
+                <p className="text-xs text-slate-500 mt-0.5">ผลวิเคราะห์หุ้น ปัจจัยพื้นฐาน และ Valuation</p>
               </div>
               <div className="flex items-center gap-1.5 shrink-0">
                 <button
                   type="button"
                   onClick={() => openAnalysisModal()}
-                  className="rounded-xl bg-sky-500 hover:bg-sky-600 text-white px-2.5 py-1.5 text-xs font-bold shadow-sm transition-all flex items-center gap-1 active:scale-95"
+                  className="rounded-xl bg-section-accent hover:bg-blue-900 text-white px-2.5 py-1.5 text-xs font-bold shadow-sm transition-all flex items-center gap-1 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-section-accent/45"
                   title="วิเคราะห์หุ้นใหม่"
                 >
                   <span>+ วิเคราะห์หุ้น</span>
@@ -659,13 +667,11 @@ export default function Equity() {
                 <button
                   type="button"
                   onClick={toggleSidebarCollapse}
-                  className="rounded-xl bg-surface-strong hover:bg-sky-50 hover:text-sky-700 text-zinc-500 border border-edge p-1.5 transition-all shadow-xs active:scale-95"
+                  className="rounded-xl bg-surface-strong hover:bg-sky-50 hover:text-section-accent text-slate-500 border border-edge p-2 sm:p-1.5 transition-all shadow-sm active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-section-accent/45"
                   title="ย่อแถบรายการหุ้น (Minimal Mode เพื่อขยายพื้นที่ดูกราฟ)"
                   aria-label="Collapse Sidebar"
                 >
-                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 19l-7-7 7-7m8 14l-7-7 7-7" />
-                  </svg>
+                  <SidebarCollapseIcon className="w-4 h-4" />
                 </button>
               </div>
             </div>
@@ -675,10 +681,10 @@ export default function Equity() {
               <button
                 type="button"
                 onClick={() => setActiveFilter('all')}
-                className={`flex-1 py-1.5 px-2 rounded-lg text-center transition-all ${
+                className={`flex-1 py-1.5 px-2 rounded-lg text-center transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-section-accent/45 ${
                   activeFilter === 'all'
-                    ? 'bg-panel text-sky-700 shadow-2xs font-bold border border-sky-100'
-                    : 'text-zinc-500 hover:text-zinc-800'
+                    ? 'bg-panel text-section-accent shadow-sm font-bold border border-blue-100'
+                    : 'text-slate-500 hover:text-slate-800'
                 }`}
               >
                 ทั้งหมด ({totalAvailableCount})
@@ -686,10 +692,10 @@ export default function Equity() {
               <button
                 type="button"
                 onClick={() => setActiveFilter('portfolio')}
-                className={`flex-1 py-1.5 px-2 rounded-lg text-center transition-all ${
+                className={`flex-1 py-1.5 px-2 rounded-lg text-center transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-section-accent/45 ${
                   activeFilter === 'portfolio'
-                    ? 'bg-panel text-sky-700 shadow-2xs font-bold border border-sky-100'
-                    : 'text-zinc-500 hover:text-zinc-800'
+                    ? 'bg-panel text-section-accent shadow-sm font-bold border border-blue-100'
+                    : 'text-slate-500 hover:text-slate-800'
                 }`}
               >
                 💼 ในพอร์ต ({portfolioStocks.length})
@@ -697,10 +703,10 @@ export default function Equity() {
               <button
                 type="button"
                 onClick={() => setActiveFilter('watchlist')}
-                className={`flex-1 py-1.5 px-2 rounded-lg text-center transition-all ${
+                className={`flex-1 py-1.5 px-2 rounded-lg text-center transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-section-accent/45 ${
                   activeFilter === 'watchlist'
-                    ? 'bg-panel text-amber-700 shadow-2xs font-bold border border-amber-100'
-                    : 'text-zinc-500 hover:text-zinc-800'
+                    ? 'bg-panel text-amber-700 shadow-sm font-bold border border-amber-100'
+                    : 'text-slate-500 hover:text-slate-800'
                 }`}
               >
                 ⭐ Watch ({watchlistStocks.length})
@@ -716,11 +722,11 @@ export default function Equity() {
                 className="w-full"
               />
               <div className="flex items-center gap-2">
-                <span className="text-xs text-zinc-500 whitespace-nowrap font-medium">เรียงตาม:</span>
+                <span className="text-xs text-slate-500 whitespace-nowrap font-medium">เรียงตาม:</span>
                 <select
                   value={sortBy}
                   onChange={(e) => setSortBy(e.target.value as 'ticker' | 'score_desc')}
-                  className="w-full rounded-lg border border-edge bg-surface px-3 py-1.5 text-xs text-zinc-900 focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500 font-medium"
+                  className="w-full rounded-lg border border-edge bg-surface px-3 py-1.5 text-xs text-slate-900 focus:border-section-accent focus:outline-none focus:ring-1 focus:ring-section-accent font-medium"
                 >
                   <option value="ticker">ชื่อหุ้น (A-Z)</option>
                   <option value="score_desc">คะแนนประเมิน (มากไปน้อย)</option>
@@ -744,7 +750,7 @@ export default function Equity() {
                     <div className="flex items-center justify-between mb-2 px-1">
                       <span className="text-xs font-bold uppercase tracking-wider text-sky-800 flex items-center gap-1.5">
                         <span>💼 หุ้นในพอร์ต</span>
-                        <span className="rounded-full bg-sky-100 text-sky-700 px-1.5 py-0.2 text-[10px] font-extrabold">
+                        <span className="rounded-full bg-sky-100 text-sky-700 px-1.5 py-0.5 text-[11px] font-extrabold">
                           {portfolioItems.length}
                         </span>
                       </span>
@@ -761,7 +767,7 @@ export default function Equity() {
                     <div className="flex items-center justify-between mb-2 px-1">
                       <span className="text-xs font-bold uppercase tracking-wider text-amber-800 flex items-center gap-1.5">
                         <span>⭐ Watchlist</span>
-                        <span className="rounded-full bg-amber-100 text-amber-700 px-1.5 py-0.2 text-[10px] font-extrabold">
+                        <span className="rounded-full bg-amber-100 text-amber-700 px-1.5 py-0.5 text-[11px] font-extrabold">
                           {watchlistItems.length}
                         </span>
                       </span>
@@ -776,9 +782,9 @@ export default function Equity() {
                 {activeFilter === 'all' && otherItems.length > 0 && (
                   <div>
                     <div className="flex items-center justify-between mb-2 px-1">
-                      <span className="text-xs font-bold uppercase tracking-wider text-zinc-500 flex items-center gap-1.5">
+                      <span className="text-xs font-bold uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
                         <span>📊 วิเคราะห์แล้วอื่นๆ</span>
-                        <span className="rounded-full bg-zinc-100 text-zinc-600 px-1.5 py-0.2 text-[10px] font-extrabold">
+                        <span className="rounded-full bg-slate-100 text-slate-600 px-1.5 py-0.5 text-[11px] font-extrabold font-mono">
                           {otherItems.length}
                         </span>
                       </span>
@@ -791,7 +797,7 @@ export default function Equity() {
 
                 {/* Empty State */}
                 {portfolioItems.length === 0 && watchlistItems.length === 0 && otherItems.length === 0 && (
-                  <div className="text-xs text-zinc-500 text-center py-6 bg-surface-strong border border-edge rounded-xl">
+                  <div className="text-xs text-slate-500 text-center py-6 bg-surface-strong border border-edge rounded-xl">
                     {searchQuery ? 'ไม่พบหุ้นที่ตรงกับคำค้นหา' : 'ยังไม่มีข้อมูลหุ้นในส่วนนี้'}
                   </div>
                 )}
@@ -804,10 +810,8 @@ export default function Equity() {
       {/* Main Detail Area */}
       <div className={`flex-1 overflow-y-auto p-3 sm:p-4 md:p-5 lg:p-6 ${!ticker ? 'hidden md:block' : 'block'}`}>
         {!ticker ? (
-          <div className="flex flex-col items-center justify-center h-full text-zinc-400 gap-3">
-            <svg className="w-12 h-12 text-sky-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-            </svg>
+          <div className="flex flex-col items-center justify-center h-full text-slate-500 gap-3">
+            <ChartTrendIcon className="w-12 h-12 text-slate-300" />
             <span className="text-sm font-medium">เลือกหุ้นจากรายการด้านซ้ายเพื่อดูรายละเอียดการวิเคราะห์</span>
           </div>
         ) : (
@@ -848,7 +852,7 @@ export default function Equity() {
           onDispatched={(jobId, _cardId, dispatchedTicker) => {
             setActiveDispatchedJob({ jobId, ticker: dispatchedTicker })
             setToastState({
-              message: `สั่งงานวิเคราะห์หุ้น ${dispatchedTicker} และดึงข่าวเรียบร้อย`,
+              message: `ส่งคำขอวิเคราะห์หุ้น ${dispatchedTicker} เข้า Request Approve แล้ว — กรุณากดยอมรับใน Kanban ก่อนเริ่มรัน`,
               actionLabel: 'ดูสถานะใน Kanban',
               onAction: () => navigate('/kanban'),
             })

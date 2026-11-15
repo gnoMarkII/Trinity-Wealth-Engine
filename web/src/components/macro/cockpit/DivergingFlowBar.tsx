@@ -38,7 +38,7 @@ export const DivergingFlowBar: React.FC<DivergingFlowBarProps> = ({
           <span>⚠️</span>
           <span>SET Investor Fund Flow: ไม่สามารถโหลดข้อมูลได้</span>
         </div>
-        <p className="mt-1 text-zinc-600">{error || 'ไม่มีข้อมูลกระแสเงินทุน 4 กลุ่มนักลงทุนจาก Settrade'}</p>
+        <p className="mt-1 text-slate-600">{error || 'ไม่มีข้อมูลกระแสเงินทุน 4 กลุ่มนักลงทุนจาก Settrade'}</p>
       </div>
     )
   }
@@ -59,7 +59,7 @@ export const DivergingFlowBar: React.FC<DivergingFlowBarProps> = ({
           <span>⏳</span>
           <span>SET Investor Fund Flow: อยู่ระหว่างรอเชื่อมต่อข้อมูลตลาด</span>
         </div>
-        <p className="mt-1 text-zinc-600">
+        <p className="mt-1 text-slate-600">
           ยังไม่มีข้อมูลกระแสเงินทุน 4 กลุ่มนักลงทุนรายวันจากตลาดหลักทรัพย์แห่งประเทศไทย (SET)
         </p>
       </div>
@@ -80,13 +80,13 @@ export const DivergingFlowBar: React.FC<DivergingFlowBarProps> = ({
       {/* Header & Provenance */}
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between border-b border-sky-100/70 pb-3">
         <div>
-          <h3 className="font-bold text-zinc-900 text-sm tracking-tight flex items-center gap-2">
+          <h3 className="font-bold text-slate-900 text-sm tracking-tight flex items-center gap-2">
             <span>SET 4-Investor Flow (Diverging Net Flow)</span>
-            <span className="font-mono text-[10px] bg-slate-100 text-zinc-600 font-semibold px-2 py-0.5 rounded">
+            <span className="font-mono text-[11px] bg-slate-100 text-slate-600 font-semibold px-2 py-0.5 rounded">
               {flow.market || 'SET'}
             </span>
           </h3>
-          <p className="text-xs text-zinc-500 mt-0.5">
+          <p className="text-xs text-slate-500 mt-0.5">
             ยอดซื้อ/ขายสุทธิรายวันจำแนกตามประเภทนักลงทุน (รอบแกนศูนย์ ไม่ใช้ 100% share)
           </p>
         </div>
@@ -100,7 +100,7 @@ export const DivergingFlowBar: React.FC<DivergingFlowBarProps> = ({
       </div>
 
       {/* Axis Scale Indicator */}
-      <div className="mt-4 flex items-center justify-between text-[10px] text-zinc-400 font-semibold uppercase px-1">
+      <div className="mt-4 flex items-center justify-between text-[11px] text-slate-500 font-semibold uppercase px-1">
         <span>ประเภทนักลงทุน</span>
         <div className="flex items-center gap-16 mr-2">
           <span>← ขายสุทธิ (Net Sell)</span>
@@ -121,15 +121,15 @@ export const DivergingFlowBar: React.FC<DivergingFlowBarProps> = ({
               key={item.investor_type}
               className={`rounded-xl p-3 border transition-all ${
                 isForeign
-                  ? 'bg-sky-50/70 border-sky-200/80 shadow-2xs'
+                  ? 'bg-sky-50/70 border-sky-200/80 shadow-sm'
                   : 'bg-slate-50/80 border-slate-100'
               }`}
             >
               <div className="flex items-center justify-between text-xs mb-1.5">
-                <div className="flex items-center gap-2 font-medium text-zinc-800">
+                <div className="flex items-center gap-2 font-medium text-slate-800">
                   <span>{item.investor_type}</span>
                   {isForeign && (
-                    <span className="rounded bg-sky-600 px-1.5 py-0.2 font-mono text-[9px] font-bold text-white">
+                    <span className="rounded bg-sky-600 px-1.5 py-0.5 font-mono text-[11px] font-bold text-white">
                       FOREIGN
                     </span>
                   )}
@@ -155,7 +155,7 @@ export const DivergingFlowBar: React.FC<DivergingFlowBarProps> = ({
                   )}
                 </div>
                 {/* Zero Divider line */}
-                <div className="w-[1.5px] h-full bg-zinc-500 z-10" />
+                <div className="w-[1.5px] h-full bg-slate-500 z-10" />
                 {/* Right side (Buy) */}
                 <div className="relative w-1/2 h-full flex justify-start">
                   {isPos && (
@@ -168,7 +168,7 @@ export const DivergingFlowBar: React.FC<DivergingFlowBarProps> = ({
               </div>
 
               {/* Buy & Sell details */}
-              <div className="mt-1 flex items-center justify-between text-[10px] text-zinc-400 font-mono">
+              <div className="mt-1 flex items-center justify-between text-[11px] text-slate-500 font-mono">
                 <span>ซื้อ: {(item.buy_value ? item.buy_value / 1e6 : 0).toFixed(1)} M</span>
                 <span>ขาย: {(item.sell_value ? item.sell_value / 1e6 : 0).toFixed(1)} M</span>
               </div>
@@ -177,9 +177,9 @@ export const DivergingFlowBar: React.FC<DivergingFlowBarProps> = ({
         })}
       </div>
 
-      <div className="mt-3 flex items-center justify-between text-[11px] text-zinc-400 border-t border-slate-100 pt-2 font-mono">
+      <div className="mt-3 flex items-center justify-between text-[11px] text-slate-500 border-t border-slate-100 pt-2 font-mono">
         <span>มูลค่าการซื้อขายรวม:</span>
-        <span className="font-semibold text-zinc-700">
+        <span className="font-semibold text-slate-700">
           {flow.total_value ? `${(flow.total_value / 1e6).toLocaleString()} ล้านบาท` : '—'}
         </span>
       </div>

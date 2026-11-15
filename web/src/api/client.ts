@@ -90,6 +90,22 @@ import type {
   EstimateRecordDTO,
   TaskRouteRecordDTO,
   RoutineStatusReportDTO,
+  RoundtableSessionSummaryDTO,
+  RoundtableSessionDetailDTO,
+  CreateRoundtableSessionRequestDTO,
+  InterjectRequestDTO,
+  RoundtableInterjectResponseDTO,
+  SaveToVaultResponseDTO,
+  RoundtableDispatchPrerequisiteResponseDTO,
+  RoundtableTurnDTO,
+  DistilledDecisionPlaybookDTO,
+  AudioStatusType,
+  GuruPersonaDTO,
+  CoreGuruIdType,
+  RoundtableGuruConfigCatalogDTO,
+  UpdateGuruPersonaInputDTO,
+  VoicePreviewRequestDTO,
+  VoicePreviewResponseDTO,
 } from './types'
 
 export class ApiError extends Error {
@@ -376,10 +392,22 @@ export const api = {
       body: JSON.stringify({ enabled }),
     }),
 
-  dispatchJob: (instruction: string, cardId?: string, flow: string = 'manager', scope: string = 'both') =>
+  dispatchJob: (
+    instruction: string,
+    cardId?: string,
+    flow: string = 'manager',
+    scope: string = 'both',
+    requireApproval?: boolean
+  ) =>
     request<JobStatusDTO>('/api/agents/dispatch', {
       method: 'POST',
-      body: JSON.stringify({ instruction, card_id: cardId, flow, scope }),
+      body: JSON.stringify({
+        instruction,
+        card_id: cardId,
+        flow,
+        scope,
+        ...(requireApproval !== undefined ? { require_approval: requireApproval } : {}),
+      }),
     }),
 
   getJobStatus: (jobId: string) => request<JobStatusDTO>(`/api/agents/jobs/${jobId}`),
@@ -394,7 +422,7 @@ export const api = {
     approvedYoutubeLinks: string[] = [],
     approvedEventIds?: string[],
     approvedPitchIds?: string[],
-    action: 'approve' | 'refresh_sources' = 'approve',
+    action: 'approve' | 'refresh_sources' | 'reject' = 'approve',
     unverifiedDraftSelections?: import('./types').UnverifiedDraftSelection[],
     pitchPresentationStyles?: Record<string, string>
   ) =>
@@ -1695,6 +1723,117 @@ export const api = {
       body: JSON.stringify(payload),
     }),
 
+  // ---------------------------------------------------------
+  // Trinity Guru Roundtable Studio API
+  // ---------------------------------------------------------
+  getRoundtableGuruProfiles: (options?: { signal?: AbortSignal }) =>
+    request<RoundtableGuruConfigCatalogDTO>(
+      '/api/roundtable/guru-profiles',
+      options?.signal ? { cache: 'no-store', signal: options.signal } : { cache: 'no-store' },
+    ),
+
+  updateRoundtableGuruProfiles: (profiles: UpdateGuruPersonaInputDTO[]) =>
+    request<RoundtableGuruConfigCatalogDTO>('/api/roundtable/guru-profiles', {
+      method: 'PUT',
+      body: JSON.stringify({ profiles }),
+    }),
+
+  resetRoundtableGuruProfiles: (speakerId?: CoreGuruIdType) =>
+    request<RoundtableGuruConfigCatalogDTO>('/api/roundtable/guru-profiles/reset', {
+      method: 'POST',
+      body: JSON.stringify(speakerId ? { speaker_id: speakerId } : {}),
+    }),
+
+  previewRoundtableVoice: (payload: VoicePreviewRequestDTO) =>
+    request<VoicePreviewResponseDTO>('/api/roundtable/voices/preview', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+
+  listRoundtableSessions: (limit: number = 30, options?: { signal?: AbortSignal }) =>
+    request<RoundtableSessionSummaryDTO[]>(
+      `/api/roundtable/sessions?limit=${limit}`,
+      options?.signal ? { cache: 'no-store', signal: options.signal } : { cache: 'no-store' },
+    ),
+
+  createRoundtableSession: (payload: CreateRoundtableSessionRequestDTO) =>
+    request<RoundtableSessionDetailDTO>('/api/roundtable/sessions', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+
+  getRoundtableSession: (
+    sessionId: string,
+    options?: { checkDrift?: boolean; signal?: AbortSignal },
+  ) => {
+    const qs = options?.checkDrift === false ? '?check_drift=false' : ''
+    const init: RequestInit = options?.signal
+      ? { cache: 'no-store', signal: options.signal }
+      : { cache: 'no-store' }
+    return request<RoundtableSessionDetailDTO>(
+      `/api/roundtable/sessions/${encodeURIComponent(sessionId)}${qs}`,
+      init,
+    )
+  },
+
+  interjectRoundtableSession: (sessionId: string, payload: InterjectRequestDTO) =>
+    request<RoundtableInterjectResponseDTO>(`/api/roundtable/sessions/${encodeURIComponent(sessionId)}/interject`, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+
+  getRoundtableAudioUrl: (audioCacheKey: string) =>
+    `/api/roundtable/audio/${encodeURIComponent(audioCacheKey)}`,
+
+  saveRoundtableToVault: (sessionId: string, payload?: { note_title?: string; also_update_thesis?: boolean }) =>
+    request<SaveToVaultResponseDTO>(`/api/roundtable/sessions/${encodeURIComponent(sessionId)}/save-to-vault`, {
+      method: 'POST',
+      body: JSON.stringify(payload ?? {}),
+    }),
+
+  updateThesisFromRoundtable: (sessionId: string, payload?: { ticker?: string; claim_statement?: string }) =>
+    request<Record<string, unknown>>(`/api/roundtable/sessions/${encodeURIComponent(sessionId)}/update-thesis`, {
+      method: 'POST',
+      body: JSON.stringify(payload ?? {}),
+    }),
+
+  dispatchRoundtablePrerequisite: (ticker: string) =>
+    request<RoundtableDispatchPrerequisiteResponseDTO>(
+      `/api/roundtable/prerequisites/${encodeURIComponent(ticker)}/dispatch`,
+      { method: 'POST' },
+    ),
+
+  downloadRoundtableYoutubePack: async (
+    sessionId: string,
+  ): Promise<{ blob: Blob; filename: string }> => {
+    const res = await fetch(
+      `/api/roundtable/sessions/${encodeURIComponent(sessionId)}/youtube-pack`,
+      {
+        method: 'GET',
+        credentials: 'include',
+        cache: 'no-store',
+      },
+    )
+    if (!res.ok) {
+      let detail = res.statusText
+      try {
+        const body = await res.json()
+        detail = body.detail ?? detail
+      } catch {
+        // ignore — ไม่มี JSON body
+      }
+      if (res.status === 401) {
+        unauthorizedHandler?.()
+      }
+      throw new ApiError(res.status, detail)
+    }
+    const cd = res.headers.get('content-disposition') ?? ''
+    const match = cd.match(/filename="?([^"]+)"?/i)
+    const filename = match?.[1] || `roundtable_youtube_${sessionId}.zip`
+    const blob = await res.blob()
+    return { blob, filename }
+  },
+
 }
 
 export async function streamAdvisorChat(
@@ -1775,6 +1914,126 @@ export async function streamAdvisorChat(
   } catch (err: any) {
     if (err.name !== 'AbortError') {
       onError(err.message || 'Network error')
+    }
+  }
+}
+
+export interface RoundtableStreamCallbacks {
+  onSessionMeta?: (meta: {
+    session_id: string
+    primary_ticker?: string | null
+    portfolio_attachment_state: string
+    prioritized_speakers: string[]
+    missing_prerequisite_tickers: string[]
+    packet_fingerprint_sha256: string
+    context_refreshed?: boolean
+    debate_intensity?: import('./types').DebateIntensityType
+    debate_depth?: import('./types').DebateDepthType
+    personas?: GuruPersonaDTO[]
+  }) => void
+  onSpeakerStarted?: (ev: { speaker_id: string; round_stage: string }) => void
+  onTurnCompleted?: (turn: RoundtableTurnDTO) => void
+  onAudioReady?: (ev: {
+    turn_id: string
+    speaker_id: string
+    audio_cache_key?: string | null
+    audio_status: AudioStatusType
+    error_message?: string | null
+  }) => void
+  onPlaybookUpdated?: (playbook: DistilledDecisionPlaybookDTO) => void
+  onPillarCoverage?: (coverage: import('./types').DebatePillarCoverageDTO) => void
+  onPaused?: (ev: { session_id: string; reason: string }) => void
+  onDone?: (ev?: { session_id: string; status: string }) => void
+  onError?: (err: string) => void
+}
+
+export async function streamRoundtableDebate(
+  sessionId: string,
+  options: { voiceEnabled?: boolean; refreshContextOnDrift?: boolean; signal?: AbortSignal },
+  callbacks: RoundtableStreamCallbacks,
+): Promise<void> {
+  let doneCalled = false
+  const notifyDone = (payload?: { session_id: string; status: string }) => {
+    if (!doneCalled) {
+      doneCalled = true
+      callbacks.onDone?.(payload)
+    }
+  }
+
+  try {
+    const res = await fetch(`/api/roundtable/sessions/${encodeURIComponent(sessionId)}/stream`, {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        voice_enabled: options.voiceEnabled ?? true,
+        refresh_context_on_drift: options.refreshContextOnDrift ?? false,
+      }),
+      signal: options.signal,
+    })
+    if (!res.ok) {
+      callbacks.onError?.(`HTTP error: ${res.status}`)
+      return
+    }
+    const reader = res.body?.getReader()
+    if (!reader) {
+      callbacks.onError?.('ReadableStream not supported')
+      return
+    }
+    const decoder = new TextDecoder()
+    let buffer = ''
+
+    const handleBlock = (block: string) => {
+      if (!block.trim()) return
+      const eventMatch = block.match(/^event:\s*([^\r\n]+)/m)
+      const dataLines = [...block.matchAll(/^data:\s*(.*)$/gm)].map((m) => m[1])
+      const eventType = eventMatch?.[1]?.trim() ?? ''
+      const dataStr = dataLines.join('\n').trim()
+      if (!dataStr) return
+      let parsed: any
+      try {
+        parsed = JSON.parse(dataStr)
+      } catch {
+        return
+      }
+      if (eventType === 'session_meta') {
+        callbacks.onSessionMeta?.(parsed)
+      } else if (eventType === 'speaker_started') {
+        callbacks.onSpeakerStarted?.(parsed)
+      } else if (eventType === 'turn_completed') {
+        callbacks.onTurnCompleted?.(parsed)
+      } else if (eventType === 'audio_ready') {
+        callbacks.onAudioReady?.(parsed)
+      } else if (eventType === 'playbook_updated') {
+        callbacks.onPlaybookUpdated?.(parsed)
+      } else if (eventType === 'pillar_coverage') {
+        callbacks.onPillarCoverage?.(parsed)
+      } else if (eventType === 'paused') {
+        doneCalled = true
+        callbacks.onPaused?.(parsed)
+      } else if (eventType === 'done') {
+        notifyDone(parsed)
+      } else if (eventType === 'error') {
+        doneCalled = true
+        callbacks.onError?.(parsed?.error || 'Roundtable stream error')
+      }
+    }
+
+    while (true) {
+      const { done, value } = await reader.read()
+      if (done) break
+      buffer += decoder.decode(value, { stream: true })
+      const blocks = buffer.split(/\r?\n\r?\n/)
+      buffer = blocks.pop() ?? ''
+      for (const block of blocks) {
+        handleBlock(block)
+      }
+    }
+    if (buffer.trim()) handleBlock(buffer)
+    notifyDone()
+  } catch (err: any) {
+    if (err?.name !== 'AbortError') {
+      callbacks.onError?.(err?.message || 'Network error')
     }
   }
 }

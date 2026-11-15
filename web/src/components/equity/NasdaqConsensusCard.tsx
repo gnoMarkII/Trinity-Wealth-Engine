@@ -52,16 +52,16 @@ export const NasdaqConsensusCard: React.FC<NasdaqConsensusCardProps> = ({
       >
         <div className="flex items-center justify-between border-b border-edge/60 pb-3">
           <div className="flex items-center gap-2">
-            <h3 className="font-semibold text-zinc-900">{symbol} Institutional Consensus</h3>
-            <span className="rounded-full bg-surface border border-edge px-2 py-0.5 text-[10px] font-medium text-zinc-500">
+            <h3 className="font-semibold text-slate-900">{symbol} Institutional Consensus</h3>
+            <span className="rounded-full bg-surface border border-edge px-2 py-0.5 text-[11px] font-medium text-slate-500">
               No Coverage
             </span>
           </div>
-          <span className="text-xs text-zinc-400">Nasdaq Intelligence</span>
+          <span className="text-xs text-slate-500">Nasdaq Intelligence</span>
         </div>
-        <div className="py-6 text-center text-xs text-zinc-500">
+        <div className="py-6 text-center text-xs text-slate-500">
           No sell-side analyst ratings or earnings surprise history currently reported by Nasdaq for{' '}
-          <span className="font-semibold font-mono text-zinc-700">{symbol}</span>.
+          <span className="font-semibold font-mono text-slate-700">{symbol}</span>.
         </div>
       </div>
     )
@@ -74,11 +74,11 @@ export const NasdaqConsensusCard: React.FC<NasdaqConsensusCardProps> = ({
       {/* Header */}
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-edge/60 pb-3">
         <div className="flex items-center gap-2">
-          <h3 className="font-semibold text-zinc-900 tracking-tight">
+          <h3 className="font-semibold text-slate-900 tracking-tight">
             {symbol} Sell-Side Consensus & Earnings
           </h3>
           <span
-            className={`rounded-full px-2 py-0.5 font-mono text-[10px] font-bold border ${
+            className={`rounded-full px-2 py-0.5 font-mono text-[11px] font-bold border ${
               coverageStatus === 'full'
                 ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
                 : 'bg-amber-50 text-amber-700 border-amber-200'
@@ -87,7 +87,7 @@ export const NasdaqConsensusCard: React.FC<NasdaqConsensusCardProps> = ({
             {coverageStatus.toUpperCase()}
           </span>
         </div>
-        <span className="font-mono text-xs text-zinc-400">Source: Nasdaq Institutional Feed</span>
+        <span className="font-mono text-xs text-slate-500">Source: Nasdaq Institutional Feed</span>
       </div>
 
       {/* Upcoming Earnings Date Banner */}
@@ -102,7 +102,7 @@ export const NasdaqConsensusCard: React.FC<NasdaqConsensusCardProps> = ({
                 {upcomingEarnings.earnings_date}
               </span>
               <span
-                className={`rounded px-1.5 py-0.2 font-mono text-[10px] font-bold ${
+                className={`rounded px-1.5 py-0.5 font-mono text-[11px] font-bold ${
                   upcomingEarnings.date_status === 'confirmed'
                     ? 'bg-emerald-600 text-white'
                     : 'bg-amber-500 text-white'
@@ -123,12 +123,12 @@ export const NasdaqConsensusCard: React.FC<NasdaqConsensusCardProps> = ({
         <div className="mt-4 rounded-xl bg-slate-50/70 p-3.5 border border-slate-100">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div>
-              <span className="text-[10px] uppercase font-bold text-zinc-400">Analyst Consensus</span>
+              <span className="text-[11px] uppercase font-bold text-slate-500">Analyst Consensus</span>
               <div className="flex items-baseline gap-2 mt-0.5">
                 <span className="font-mono text-lg font-black text-emerald-600">
                   {ratings.consensus}
                 </span>
-                <span className="text-xs text-zinc-500">
+                <span className="text-xs text-slate-500">
                   from <span className="font-mono font-semibold">{ratings.analyst_count}</span> analysts
                 </span>
               </div>
@@ -136,12 +136,12 @@ export const NasdaqConsensusCard: React.FC<NasdaqConsensusCardProps> = ({
 
             {ratings.target_price_mean !== undefined && (
               <div className="text-right">
-                <span className="text-[10px] uppercase font-bold text-zinc-400">Mean Target Price</span>
-                <p className="font-mono text-base font-extrabold text-zinc-900">
+                <span className="text-[11px] uppercase font-bold text-slate-500">Mean Target Price</span>
+                <p className="font-mono text-base font-extrabold text-slate-900">
                   ${ratings.target_price_mean.toFixed(2)}
                 </p>
                 {ratings.target_price_low !== undefined && ratings.target_price_high !== undefined && (
-                  <span className="font-mono text-[10px] text-zinc-400">
+                  <span className="font-mono text-[11px] text-slate-500">
                     Low ${ratings.target_price_low.toFixed(0)} - High ${ratings.target_price_high.toFixed(0)}
                   </span>
                 )}
@@ -151,11 +151,11 @@ export const NasdaqConsensusCard: React.FC<NasdaqConsensusCardProps> = ({
 
           {ratings.broker_names && ratings.broker_names.length > 0 && (
             <div className="mt-2 pt-2 border-t border-slate-200/60 flex flex-wrap gap-1">
-              <span className="text-[10px] text-zinc-400 mr-1">Brokers:</span>
+              <span className="text-[11px] text-slate-500 mr-1">Brokers:</span>
               {ratings.broker_names.slice(0, 4).map((name) => (
                 <span
                   key={name}
-                  className="rounded bg-white px-1.5 py-0.2 text-[10px] font-medium text-zinc-600 border border-slate-200/60"
+                  className="rounded bg-white px-1.5 py-0.5 text-[11px] font-medium text-slate-600 border border-slate-200/60"
                 >
                   {name}
                 </span>
@@ -168,13 +168,13 @@ export const NasdaqConsensusCard: React.FC<NasdaqConsensusCardProps> = ({
       {/* EPS Surprise History Table */}
       {hasEarningsSurprise && surpriseHistory.length > 0 && (
         <div className="mt-4">
-          <h4 className="text-xs font-bold uppercase tracking-wider text-zinc-600 mb-2">
+          <h4 className="text-xs font-bold uppercase tracking-wider text-slate-600 mb-2">
             Quarterly EPS Surprises
           </h4>
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">
               <thead>
-                <tr className="border-b border-slate-100 text-[10px] uppercase font-bold text-zinc-400">
+                <tr className="border-b border-slate-100 text-[11px] uppercase font-bold text-slate-500">
                   <th className="pb-1.5 font-semibold">Quarter</th>
                   <th className="pb-1.5 font-semibold">Reported</th>
                   <th className="pb-1.5 font-semibold text-right">Actual EPS</th>
@@ -188,17 +188,17 @@ export const NasdaqConsensusCard: React.FC<NasdaqConsensusCardProps> = ({
                   const isPositive = surprise > 0
                   return (
                     <tr key={idx} className="hover:bg-slate-50/60 transition-colors">
-                      <td className="py-1.5 text-zinc-700 font-medium">{s.fiscal_quarter_end}</td>
-                      <td className="py-1.5 text-zinc-400 text-[11px]">{s.date_reported}</td>
-                      <td className="py-1.5 text-right font-bold text-zinc-800">
+                      <td className="py-1.5 text-slate-700 font-medium">{s.fiscal_quarter_end}</td>
+                      <td className="py-1.5 text-slate-500 text-[11px]">{s.date_reported}</td>
+                      <td className="py-1.5 text-right font-bold text-slate-800">
                         {s.eps !== undefined ? `$${s.eps.toFixed(2)}` : '—'}
                       </td>
-                      <td className="py-1.5 text-right text-zinc-500">
+                      <td className="py-1.5 text-right text-slate-500">
                         {s.consensus_eps !== undefined ? `$${s.consensus_eps.toFixed(2)}` : '—'}
                       </td>
                       <td
                         className={`py-1.5 text-right font-bold ${
-                          isPositive ? 'text-emerald-600' : surprise < 0 ? 'text-rose-600' : 'text-zinc-500'
+                          isPositive ? 'text-emerald-600' : surprise < 0 ? 'text-rose-600' : 'text-slate-500'
                         }`}
                       >
                         {isPositive ? `+${surprise.toFixed(1)}%` : `${surprise.toFixed(1)}%`}

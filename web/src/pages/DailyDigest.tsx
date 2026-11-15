@@ -7,6 +7,28 @@ import type {
   WeeklyDigestResponseDTO,
   DigestCandidatesResponseDTO,
 } from '../api/types'
+import { InPlaceDialog } from '../components/ui/Modal'
+import {
+  AlertTriangleIcon,
+  BoltStrategyIcon,
+  BulbIcon,
+  CalendarIcon,
+  CheckCircleIcon,
+  CheckSmallIcon,
+  ChevronDownIcon,
+  ChevronUpIcon,
+  CloseIcon,
+  EditPenIcon,
+  LinkChainIcon,
+  NewspaperIcon,
+  RefreshIcon,
+  ShieldCheckIcon,
+  SlidersIcon,
+  StarIcon,
+  SunIcon,
+  TargetIcon,
+  TempleReviewIcon,
+} from '../components/ui/AppIcons'
 
 export default function DailyDigest() {
   const [activeTab, setActiveTab] = useState<'daily' | 'weekly'>('daily')
@@ -60,8 +82,8 @@ export default function DailyDigest() {
 
       if (dailyRes.status === 'fulfilled') {
         setDailyData(dailyRes.value)
-        // Auto open selection gate if no digest or stale
-        if (!dailyRes.value.has_digest || dailyRes.value.is_snapshot_stale) {
+        // Auto open selection gate only when no digest exists yet; stale snapshots surface a compact warning banner
+        if (!dailyRes.value.has_digest) {
           setShowSelectionGate(true)
         }
       }
@@ -483,27 +505,31 @@ export default function DailyDigest() {
     switch (signal) {
       case 'thesis_breaker':
         return (
-          <span className="shrink-0 px-2 py-0.5 rounded text-[11px] font-bold bg-rose-50 text-rose-700 border border-rose-200">
-            🚨 THESIS BREAKER
+          <span className="shrink-0 inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-bold bg-rose-50 text-rose-700 border border-rose-200">
+            <AlertTriangleIcon className="h-3 w-3 text-rose-600" />
+            <span>THESIS BREAKER</span>
           </span>
         )
       case 'buy_on_dip':
         return (
-          <span className="shrink-0 px-2 py-0.5 rounded text-[11px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
-            💎 BUY ON DIP
+          <span className="shrink-0 inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+            <StarIcon className="h-3 w-3 text-emerald-600" />
+            <span>BUY ON DIP</span>
           </span>
         )
       case 'thesis_reinforcer':
         return (
-          <span className="shrink-0 px-2 py-0.5 rounded text-[11px] font-bold bg-sky-50 text-sky-700 border border-sky-200">
-            ✅ THESIS REINFORCER
+          <span className="shrink-0 inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-bold bg-sky-50 text-sky-700 border border-sky-200">
+            <CheckCircleIcon className="h-3 w-3 text-sky-600" />
+            <span>THESIS REINFORCER</span>
           </span>
         )
       case 'noise':
       default:
         return (
-          <span className="shrink-0 px-2 py-0.5 rounded text-[11px] font-medium bg-zinc-100 text-zinc-500 border border-zinc-200">
-            💤 NOISE
+          <span className="shrink-0 inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[11px] font-medium bg-slate-100 text-slate-600 border border-slate-200">
+            <span className="h-1.5 w-1.5 rounded-full bg-slate-400" aria-hidden="true" />
+            <span>NOISE</span>
           </span>
         )
     }
@@ -513,21 +539,24 @@ export default function DailyDigest() {
   const renderFreshnessBadge = (tier: string, label: string) => {
     if (tier === 'ultra_fresh') {
       return (
-        <span className="rounded bg-emerald-50 px-2 py-0.5 text-[10px] font-bold text-emerald-700 border border-emerald-200">
-          🟢 {label || '< 3h'}
+        <span className="inline-flex items-center gap-1.5 rounded bg-emerald-50 px-2 py-0.5 text-[11px] font-bold text-emerald-700 border border-emerald-200">
+          <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" aria-hidden="true" />
+          <span>{label || '< 3h'}</span>
         </span>
       )
     }
     if (tier === 'fresh_today') {
       return (
-        <span className="rounded bg-sky-50 px-2 py-0.5 text-[10px] font-semibold text-sky-700 border border-sky-200">
-          🔵 {label || 'วันนี้'}
+        <span className="inline-flex items-center gap-1.5 rounded bg-sky-50 px-2 py-0.5 text-[11px] font-semibold text-sky-700 border border-sky-200">
+          <span className="h-1.5 w-1.5 rounded-full bg-sky-500" aria-hidden="true" />
+          <span>{label || 'วันนี้'}</span>
         </span>
       )
     }
     return (
-      <span className="rounded bg-zinc-100 px-2 py-0.5 text-[10px] text-zinc-600 border border-zinc-200">
-        🟡 {label || 'ล่าสุด'}
+      <span className="inline-flex items-center gap-1.5 rounded bg-slate-100 px-2 py-0.5 text-[11px] text-slate-600 border border-slate-200">
+        <span className="h-1.5 w-1.5 rounded-full bg-amber-400" aria-hidden="true" />
+        <span>{label || 'ล่าสุด'}</span>
       </span>
     )
   }
@@ -540,53 +569,56 @@ export default function DailyDigest() {
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-b border-edge pb-5">
         <div>
           <div className="flex items-center gap-3">
-            <h1 className="text-2xl font-bold tracking-tight text-zinc-900 flex items-center gap-2">
+            <h1 className="text-2xl font-bold tracking-tight text-slate-900 flex items-center gap-2.5">
+              <NewspaperIcon className="h-6 w-6 text-section-accent shrink-0" />
               <span>Daily Market Intelligence Digest</span>
-              <span className="text-xl">📰</span>
             </h1>
-            <span className="rounded-full bg-sky-100 px-2.5 py-0.5 text-xs font-semibold text-sky-800 border border-sky-200">
+            <span className="rounded-full bg-teal-50/90 px-2.5 py-0.5 text-xs font-semibold text-teal-800 border border-teal-200">
               One-Shot Mega-Batch (ประหยัด AI 90%+)
             </span>
           </div>
-          <p className="mt-1 text-sm text-zinc-500">
+          <p className="mt-1 text-sm text-slate-500">
             กลั่นกรองข่าวรอบโลก วิเคราะห์คลิปสัมมนา/YouTube และเชื่อมโยงส่งตรงถึงหุ้นในพอร์ตโฟลิโอของคุณในรอบเดียว
           </p>
         </div>
 
         <div className="flex flex-wrap items-center gap-2.5">
           {/* Daily / Weekly View Switcher */}
-          <div className="flex rounded-xl bg-surface-strong p-1 border border-edge">
+          <div className="flex rounded-xl bg-surface-2 p-1 border border-edge backdrop-blur-sm">
             <button
               onClick={() => handleTabChange('daily')}
-              className={`rounded-lg px-3.5 py-1.5 text-sm font-semibold transition-colors ${
+              className={`inline-flex items-center gap-1.5 rounded-lg px-3.5 py-1.5 text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-section-accent/45 ${
                 activeTab === 'daily'
-                  ? 'bg-panel text-sky-700 shadow-sm'
-                  : 'text-zinc-600 hover:text-zinc-900'
+                  ? 'bg-panel text-teal-800 shadow-sm'
+                  : 'text-slate-600 hover:text-slate-900'
               }`}
             >
-              ☀️ Daily Digest
+              <SunIcon className="h-3.5 w-3.5 text-section-accent" />
+              <span>Daily Digest</span>
             </button>
             <button
               onClick={() => handleTabChange('weekly')}
-              className={`rounded-lg px-3.5 py-1.5 text-sm font-semibold transition-colors ${
+              className={`inline-flex items-center gap-1.5 rounded-lg px-3.5 py-1.5 text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-section-accent/45 ${
                 activeTab === 'weekly'
-                  ? 'bg-panel text-sky-700 shadow-sm'
-                  : 'text-zinc-600 hover:text-zinc-900'
+                  ? 'bg-panel text-teal-800 shadow-sm'
+                  : 'text-slate-600 hover:text-slate-900'
               }`}
             >
-              📅 Weekly Matrix
+              <CalendarIcon className="h-3.5 w-3.5 text-section-accent" />
+              <span>Weekly Matrix</span>
             </button>
           </div>
 
           {/* History Date Dropdown */}
           {activeTab === 'daily' && dailyData?.available_dates && dailyData.available_dates.length > 0 && (
-            <div className="flex items-center gap-1.5 text-xs text-zinc-600 bg-surface-strong px-3 py-1.5 rounded-xl border border-edge">
-              <span>📅 ประวัติ:</span>
+            <div className="flex items-center gap-1.5 text-xs text-slate-600 bg-surface-2 px-3 py-1.5 rounded-xl border border-edge">
+              <CalendarIcon className="h-3.5 w-3.5 text-slate-500 shrink-0" />
+              <span>ประวัติ:</span>
               <select
                 aria-label="เลือกวันที่สรุปข่าว"
                 value={dailyData.digest?.date || ''}
                 onChange={(e) => handleSelectDailyDate(e.target.value)}
-                className="bg-transparent font-semibold text-zinc-800 focus:outline-none cursor-pointer"
+                className="rounded bg-transparent font-semibold text-slate-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-section-accent/50 cursor-pointer"
               >
                 {dailyData.available_dates.map((d) => (
                   <option key={d} value={d}>
@@ -598,13 +630,14 @@ export default function DailyDigest() {
           )}
 
           {activeTab === 'weekly' && weeklyData?.available_dates && weeklyData.available_dates.length > 0 && (
-            <div className="flex items-center gap-1.5 text-xs text-zinc-600 bg-surface-strong px-3 py-1.5 rounded-xl border border-edge">
-              <span>📅 ประวัติ:</span>
+            <div className="flex items-center gap-1.5 text-xs text-slate-600 bg-surface-2 px-3 py-1.5 rounded-xl border border-edge">
+              <CalendarIcon className="h-3.5 w-3.5 text-slate-500 shrink-0" />
+              <span>ประวัติ:</span>
               <select
                 aria-label="เลือกสัปดาห์สรุปข่าว"
                 value={weeklyData.digest?.to_date || weeklyData.digest?.digest_id || ''}
                 onChange={(e) => handleSelectWeeklyDate(e.target.value)}
-                className="bg-transparent font-semibold text-zinc-800 focus:outline-none cursor-pointer"
+                className="rounded bg-transparent font-semibold text-slate-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-section-accent/50 cursor-pointer"
               >
                 {weeklyData.available_dates.map((d) => (
                   <option key={d} value={d}>
@@ -618,14 +651,27 @@ export default function DailyDigest() {
           {/* Toggle Pre-LLM Selection Gate Button */}
           <button
             onClick={() => setShowSelectionGate((prev) => !prev)}
-            className={`inline-flex items-center gap-1.5 rounded-xl border px-3.5 py-1.5 text-xs font-semibold transition-colors ${
+            className={`inline-flex items-center gap-1.5 rounded-xl border px-3.5 py-1.5 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-section-accent/45 ${
               showSelectionGate
-                ? 'border-sky-300 bg-sky-50 text-sky-700'
-                : 'border-edge bg-panel text-zinc-700 hover:bg-surface-strong'
+                ? 'border-teal-300 bg-teal-50 text-teal-800'
+                : 'border-edge bg-panel text-slate-700 hover:bg-surface-strong'
             }`}
           >
-            <span>🛠️ เลือกข่าว/คลิป ({selectedVideoIds.size} คลิป)</span>
-            <span className="text-[10px]">{showSelectionGate ? '▲ ซ่อน' : '▼ เปิด'}</span>
+            <SlidersIcon className="h-3.5 w-3.5 text-section-accent shrink-0" />
+            <span>เลือกข่าว/คลิป ({selectedVideoIds.size} คลิป)</span>
+            <span className="inline-flex items-center gap-0.5 text-[11px]">
+              {showSelectionGate ? (
+                <>
+                  <ChevronUpIcon className="h-3 w-3" />
+                  <span>ซ่อน</span>
+                </>
+              ) : (
+                <>
+                  <ChevronDownIcon className="h-3 w-3" />
+                  <span>เปิด</span>
+                </>
+              )}
+            </span>
           </button>
         </div>
       </div>
@@ -634,8 +680,12 @@ export default function DailyDigest() {
       {error && (
         <div className="rounded-xl border border-rose-200 bg-rose-50 p-4 text-xs text-rose-700 flex items-center justify-between">
           <span>{error}</span>
-          <button onClick={() => setError(null)} className="font-bold hover:underline">
-            ✕ ปิด
+          <button
+            onClick={() => setError(null)}
+            className="inline-flex items-center gap-1 font-bold hover:underline"
+          >
+            <CloseIcon className="h-3.5 w-3.5" />
+            <span>ปิด</span>
           </button>
         </div>
       )}
@@ -644,7 +694,7 @@ export default function DailyDigest() {
       {activeTab === 'daily' && dailyData?.has_digest && dailyData?.is_snapshot_stale && !synthesizing && (
         <div className="rounded-xl border border-amber-200 bg-amber-50/80 p-4 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div className="flex items-center gap-2.5 text-xs text-amber-800">
-            <span className="text-base">⚠️</span>
+            <AlertTriangleIcon className="h-4 w-4 text-amber-600 shrink-0" />
             <div>
               <span className="font-bold">ข้อมูลสรุปนี้ถูกสร้างเมื่อ {dailyData.snapshot_age_hours} ชั่วโมงที่แล้ว (Snapshot เก่า)</span>
               <p className="text-[11px] text-amber-700 mt-0.5">
@@ -665,21 +715,21 @@ export default function DailyDigest() {
       {/* 2. Interactive Pre-LLM Selection Gate (The Gate Before AI)         */}
       {/* ------------------------------------------------------------------ */}
       {showSelectionGate && (
-        <div className="rounded-2xl border-2 border-sky-200 bg-sky-50/30 p-5 shadow-sm space-y-5 animate-fade-in">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-sky-200/60 pb-3">
+        <div className="rounded-2xl border-2 border-teal-200/80 bg-teal-50/25 p-5 shadow-sm space-y-5 animate-fade-in">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-teal-200/60 pb-3">
             <div>
               <div className="flex items-center gap-2">
-                <span className="text-base">🛡️</span>
-                <h3 className="text-sm font-bold uppercase tracking-wider text-sky-950">
+                <ShieldCheckIcon className="h-4 w-4 text-section-accent shrink-0" />
+                <h3 className="text-sm font-bold uppercase tracking-wider text-slate-900">
                   {activeTab === 'daily'
                     ? 'Interactive Pre-LLM Selection Gate (กล่องคัดกรองข่าวประจำวันก่อนส่ง AI)'
                     : 'Interactive Pre-LLM Selection Gate (กล่องคัดกรองข่าวยุทธศาสตร์รอบสัปดาห์ก่อนส่ง AI)'}
                 </h3>
-                <span className="rounded bg-sky-100 text-sky-800 text-[10px] font-bold px-2 py-0.5 border border-sky-200">
+                <span className="rounded bg-teal-100/80 text-teal-900 text-[11px] font-bold px-2 py-0.5 border border-teal-200">
                   ZERO AI COST PREVIEW
                 </span>
               </div>
-              <p className="mt-1 text-xs text-zinc-600">
+              <p className="mt-1 text-xs text-slate-600">
                 {activeTab === 'daily'
                   ? 'ประหยัดค่าใช้จ่าย LLM: เลือกเฉพาะคลิป YouTube และหัวข้อข่าวสดรอบวัน (24-36 ชม.) AI จะรวบประมวลผลทั้งหมดใน 1 API Call เดียว'
                   : 'ประหยัดค่าใช้จ่าย LLM: คัดเลือกข่าวสารสำคัญรอบ 7 วันและคลิปสัมมนา AI จะสังเคราะห์เป็น Weekly Intelligence Matrix ใน 1 API Call เดียว'}
@@ -690,9 +740,10 @@ export default function DailyDigest() {
               <button
                 onClick={handleRefreshCandidates}
                 disabled={candidatesLoading}
-                className="rounded-lg border border-sky-200 bg-panel px-3 py-1 text-xs font-semibold text-sky-700 hover:bg-sky-50 disabled:opacity-50"
+                className="inline-flex items-center gap-1.5 rounded-lg border border-teal-200 bg-panel px-3 py-1 text-xs font-semibold text-teal-800 hover:bg-teal-50 disabled:opacity-50"
               >
-                {candidatesLoading ? 'กำลังดึงข้อมูล...' : '🔄 ตรวจสอบข้อมูลใหม่'}
+                <RefreshIcon className={`h-3.5 w-3.5 ${candidatesLoading ? 'animate-spin' : ''}`} />
+                <span>{candidatesLoading ? 'กำลังดึงข้อมูล...' : 'ตรวจสอบข้อมูลใหม่'}</span>
               </button>
             </div>
           </div>
@@ -702,7 +753,7 @@ export default function DailyDigest() {
             {/* Left: YouTube Video Selection */}
             <div className="rounded-xl border border-edge bg-panel p-4 space-y-3">
               <div className="flex flex-wrap items-center justify-between border-b border-edge pb-2 gap-2">
-                <span className="text-xs font-bold text-zinc-900 flex items-center gap-1.5">
+                <span className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
                   <span className="text-red-600">▶</span>
                   <span>เลือกคลิป YouTube ({selectedVideoIds.size}/{candidatesData?.youtube_candidates.length || 0})</span>
                 </span>
@@ -714,11 +765,11 @@ export default function DailyDigest() {
                   >
                     เลือกทั้งหมด
                   </button>
-                  <span className="text-zinc-300">|</span>
+                  <span className="text-slate-300">|</span>
                   <button
                     type="button"
                     onClick={handleDeselectAllVideos}
-                    className="text-[11px] text-zinc-500 hover:text-zinc-800 hover:underline font-medium"
+                    className="text-[11px] text-slate-500 hover:text-slate-800 hover:underline font-medium"
                   >
                     ยกเลิกทั้งหมด
                   </button>
@@ -730,9 +781,8 @@ export default function DailyDigest() {
                 {candidatesData?.youtube_candidates.map((yt) => {
                   const isChecked = selectedVideoIds.has(yt.video_id)
                   return (
-                    <div
+                    <label
                       key={yt.video_id}
-                      onClick={() => toggleVideoSelection(yt.video_id)}
                       className={`flex items-start gap-3 rounded-lg border p-2.5 cursor-pointer transition-colors ${
                         isChecked
                           ? 'border-sky-300 bg-sky-50/40'
@@ -742,33 +792,34 @@ export default function DailyDigest() {
                       <input
                         type="checkbox"
                         checked={isChecked}
-                        onChange={() => {}} // Handled by div click
-                        className="mt-1 h-4 w-4 rounded border-zinc-300 text-sky-600 focus:ring-sky-500"
+                        onChange={() => toggleVideoSelection(yt.video_id)}
+                        className="mt-1 h-4 w-4 rounded border-slate-300 text-teal-600 focus:ring-teal-500"
                       />
                       <div className="space-y-1 flex-1 min-w-0">
                         <div className="flex items-center justify-between gap-2">
                           <span className="text-[11px] font-bold text-red-700 truncate">
                             {yt.channel}
                           </span>
-                          <span className="text-[10px] text-zinc-400 shrink-0">
+                          <span className="text-[11px] text-slate-500 shrink-0">
                             {yt.freshness_label || `${yt.age_hours}h ago`}
                           </span>
                         </div>
-                        <p className="text-xs font-medium text-zinc-900 leading-snug line-clamp-2">
+                        <p className="text-xs font-medium text-slate-900 leading-snug line-clamp-2">
                           {yt.title}
                         </p>
                         {yt.cached_summary_snippet && (
-                          <p className="text-[11px] text-zinc-500 line-clamp-1 italic">
-                            💡 {yt.cached_summary_snippet}
+                          <p className="inline-flex items-center gap-1 text-[11px] text-slate-500 line-clamp-1 italic">
+                            <BulbIcon className="h-3 w-3 shrink-0 text-amber-500" />
+                            <span>{yt.cached_summary_snippet}</span>
                           </p>
                         )}
                       </div>
-                    </div>
+                    </label>
                   )
                 })}
 
                 {(!candidatesData?.youtube_candidates || candidatesData.youtube_candidates.length === 0) && (
-                  <p className="text-xs text-zinc-400 text-center py-6">
+                  <p className="text-xs text-slate-500 text-center py-6">
                     {candidatesLoading ? 'กำลังดึงคลิป YouTube...' : 'ไม่พบคลิป YouTube ใหม่ในรอบ 7 วัน'}
                   </p>
                 )}
@@ -776,7 +827,7 @@ export default function DailyDigest() {
 
               {/* Custom YouTube URL Adder */}
               <div className="pt-2 border-t border-edge space-y-2">
-                <span className="text-[11px] font-semibold text-zinc-700">
+                <span className="text-[11px] font-semibold text-slate-700">
                   + เพิ่มคลิป YouTube URL ด้วยตนเอง
                 </span>
                 <div className="flex gap-2">
@@ -785,11 +836,11 @@ export default function DailyDigest() {
                     value={customYoutubeUrl}
                     onChange={(e) => setCustomYoutubeUrl(e.target.value)}
                     placeholder="https://www.youtube.com/watch?v=..."
-                    className="flex-1 rounded-lg border border-edge bg-surface px-2.5 py-1 text-xs text-zinc-800 placeholder-zinc-400 focus:outline-none focus:border-sky-400"
+                    className="flex-1 rounded-lg border border-edge bg-surface px-2.5 py-1 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-teal-400"
                   />
                   <button
                     onClick={handleAddCustomYoutube}
-                    className="rounded-lg bg-zinc-800 hover:bg-zinc-900 text-white px-3 py-1 text-xs font-semibold transition-colors"
+                    className="rounded-lg bg-section-accent hover:bg-section-accent/90 text-white px-3 py-1 text-xs font-semibold transition-colors shadow-sm"
                   >
                     เพิ่ม
                   </button>
@@ -799,7 +850,7 @@ export default function DailyDigest() {
                   <div className="space-y-1">
                     {customYoutubeUrls.map((url, idx) => (
                       <div key={idx} className="flex items-center justify-between rounded bg-surface-strong px-2 py-1 text-[11px]">
-                        <span className="truncate flex-1 text-zinc-700">{url}</span>
+                        <span className="truncate flex-1 text-slate-700">{url}</span>
                         <button onClick={() => handleRemoveCustomYoutube(idx)} className="text-rose-600 hover:underline ml-2">
                           ลบ
                         </button>
@@ -813,8 +864,8 @@ export default function DailyDigest() {
             {/* Right: Fresh News Candidate List */}
             <div className="rounded-xl border border-edge bg-panel p-4 space-y-3">
               <div className="flex flex-wrap items-center justify-between border-b border-edge pb-2 gap-2">
-                <span className="text-xs font-bold text-zinc-900 flex items-center gap-1.5">
-                  <span>📰</span>
+                <span className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
+                  <NewspaperIcon className="h-3.5 w-3.5 text-section-accent" />
                   <span>
                     {activeTab === 'daily'
                       ? `หัวข้อข่าวสดรอบวัน (${(candidatesData?.news_candidates.length || 0) - excludedNewsIds.size}/${candidatesData?.news_candidates.length || 0})`
@@ -825,23 +876,24 @@ export default function DailyDigest() {
                   <button
                     type="button"
                     onClick={handleSelectOnlyPortfolioNews}
-                    className="text-[11px] text-sky-700 bg-sky-100 hover:bg-sky-200 px-2 py-0.5 rounded font-semibold transition-colors"
+                    className="inline-flex items-center gap-1 text-[11px] text-teal-800 bg-teal-100/80 hover:bg-teal-200/80 px-2 py-0.5 rounded font-semibold transition-colors"
                     title="เลือกเฉพาะข่าวที่มีหุ้นหรือกองทุนในพอร์ตเกี่ยวข้อง"
                   >
-                    🎯 เฉพาะกระทบพอร์ต
+                    <TargetIcon className="h-3 w-3" />
+                    <span>เฉพาะกระทบพอร์ต</span>
                   </button>
                   <button
                     type="button"
                     onClick={handleSelectAllNews}
-                    className="text-[11px] text-sky-600 hover:text-sky-800 hover:underline font-medium"
+                    className="text-[11px] text-teal-700 hover:text-teal-900 hover:underline font-medium"
                   >
                     เลือกทั้งหมด
                   </button>
-                  <span className="text-zinc-300">|</span>
+                  <span className="text-slate-300">|</span>
                   <button
                     type="button"
                     onClick={handleDeselectAllNews}
-                    className="text-[11px] text-zinc-500 hover:text-zinc-800 hover:underline font-medium"
+                    className="text-[11px] text-slate-500 hover:text-slate-800 hover:underline font-medium"
                   >
                     ยกเลิกทั้งหมด
                   </button>
@@ -853,29 +905,28 @@ export default function DailyDigest() {
                 {candidatesData?.news_candidates.map((cand) => {
                   const isExcluded = excludedNewsIds.has(cand.candidate_id)
                   return (
-                    <div
+                    <label
                       key={cand.candidate_id}
-                      onClick={() => toggleNewsExclusion(cand.candidate_id)}
                       className={`flex items-start gap-3 rounded-lg border p-2.5 cursor-pointer transition-colors ${
                         isExcluded
-                          ? 'border-zinc-200 bg-zinc-50 opacity-50'
+                          ? 'border-slate-200 bg-slate-50 opacity-50'
                           : 'border-edge bg-panel hover:bg-surface-strong'
                       }`}
                     >
                       <input
                         type="checkbox"
                         checked={!isExcluded}
-                        onChange={() => {}} // Handled by div click
-                        className="mt-1 h-4 w-4 rounded border-zinc-300 text-sky-600 focus:ring-sky-500"
+                        onChange={() => toggleNewsExclusion(cand.candidate_id)}
+                        className="mt-1 h-4 w-4 rounded border-slate-300 text-teal-600 focus:ring-teal-500"
                       />
                       <div className="space-y-1 flex-1 min-w-0">
                         <div className="flex items-center justify-between gap-2">
-                          <span className="text-[11px] font-semibold text-zinc-600">
+                          <span className="text-[11px] font-semibold text-slate-600">
                             {cand.source} {cand.sources_count > 1 && `(${cand.sources_count} แหล่ง)`}
                           </span>
                           {renderFreshnessBadge(cand.freshness_tier, cand.freshness_label)}
                         </div>
-                        <p className={`text-xs font-medium text-zinc-900 leading-snug line-clamp-2 ${isExcluded ? 'line-through text-zinc-400' : ''}`}>
+                        <p className={`text-xs font-medium text-slate-900 leading-snug line-clamp-2 ${isExcluded ? 'line-through text-slate-500' : ''}`}>
                           {cand.title}
                         </p>
                         {cand.portfolio_badges && cand.portfolio_badges.length > 0 && (
@@ -883,7 +934,7 @@ export default function DailyDigest() {
                             {cand.portfolio_badges.map((b) => (
                               <span
                                 key={b.symbol}
-                                className="rounded bg-sky-50 text-sky-700 px-1.5 py-0.2 text-[10px] font-bold border border-sky-100"
+                                className="rounded bg-sky-50 text-sky-700 px-1.5 py-0.5 text-[11px] font-bold border border-sky-100"
                               >
                                 {b.symbol} ({b.impact_type === 'direct_holding' ? 'พอร์ตตรง' : b.impact_type === 'fund_lookthrough' ? `กองทุน (${b.source_fund_codes && b.source_fund_codes.length > 0 ? b.source_fund_codes.join(', ') : 'ไส้ใน'})` : 'Watchlist'})
                               </span>
@@ -891,12 +942,12 @@ export default function DailyDigest() {
                           </div>
                         )}
                       </div>
-                    </div>
+                    </label>
                   )
                 })}
 
                 {(!candidatesData?.news_candidates || candidatesData.news_candidates.length === 0) && (
-                  <p className="text-xs text-zinc-400 text-center py-6">
+                  <p className="text-xs text-slate-500 text-center py-6">
                     {candidatesLoading
                       ? 'กำลังดึงรายการข่าวสาร...'
                       : activeTab === 'daily'
@@ -908,7 +959,7 @@ export default function DailyDigest() {
 
               {/* Custom News Input */}
               <div className="pt-2 border-t border-edge space-y-2">
-                <span className="text-[11px] font-semibold text-zinc-700">
+                <span className="text-[11px] font-semibold text-slate-700">
                   + เพิ่มประเด็นข่าว/หัวข้อด่วนด้วยตนเอง
                 </span>
                 <div className="flex gap-2">
@@ -917,11 +968,11 @@ export default function DailyDigest() {
                     value={customNewsInput}
                     onChange={(e) => setCustomNewsInput(e.target.value)}
                     placeholder="เช่น เฟดประกาศลดดอกเบี้ย 0.25% คืนนี้..."
-                    className="flex-1 rounded-lg border border-edge bg-surface px-2.5 py-1 text-xs text-zinc-800 placeholder-zinc-400 focus:outline-none focus:border-sky-400"
+                    className="flex-1 rounded-lg border border-edge bg-surface px-2.5 py-1 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-sky-400"
                   />
                   <button
                     onClick={handleAddCustomNews}
-                    className="rounded-lg bg-zinc-800 hover:bg-zinc-900 text-white px-3 py-1 text-xs font-semibold transition-colors"
+                    className="rounded-lg bg-section-accent hover:bg-section-accent/90 text-white px-3 py-1 text-xs font-semibold transition-colors shadow-sm"
                   >
                     เพิ่ม
                   </button>
@@ -931,7 +982,7 @@ export default function DailyDigest() {
                   <div className="space-y-1">
                     {customNewsItems.map((item, idx) => (
                       <div key={idx} className="flex items-center justify-between rounded bg-surface-strong px-2 py-1 text-[11px]">
-                        <span className="truncate flex-1 text-zinc-700">{item}</span>
+                        <span className="truncate flex-1 text-slate-700">{item}</span>
                         <button onClick={() => handleRemoveCustomNews(idx)} className="text-rose-600 hover:underline ml-2">
                           ลบ
                         </button>
@@ -969,10 +1020,11 @@ export default function DailyDigest() {
                 </>
               ) : (
                 <>
+                  <BoltStrategyIcon className="h-3.5 w-3.5 shrink-0" />
                   <span>
                     {activeTab === 'daily'
-                      ? '⚡ ให้ AI สังเคราะห์ Daily Digest (One-Shot Mega-Batch)'
-                      : '⚡ ให้ AI สังเคราะห์ Weekly Intelligence Matrix'}
+                      ? 'ให้ AI สังเคราะห์ Daily Digest (One-Shot Mega-Batch)'
+                      : 'ให้ AI สังเคราะห์ Weekly Intelligence Matrix'}
                   </span>
                 </>
               )}
@@ -992,11 +1044,11 @@ export default function DailyDigest() {
               <div className="rounded-2xl border border-edge bg-panel p-5 shadow-sm space-y-4">
                 <div className="flex flex-wrap items-center justify-between gap-2 border-b border-edge pb-3">
                   <div className="flex items-center gap-2.5">
-                    <span className="text-xs font-bold uppercase tracking-wider text-zinc-500">
+                    <span className="text-xs font-bold uppercase tracking-wider text-slate-500">
                       30-Sec Market Pulse
                     </span>
-                    <span className="text-zinc-300">•</span>
-                    <span className="text-xs font-semibold text-zinc-700">
+                    <span className="text-slate-300">•</span>
+                    <span className="text-xs font-semibold text-slate-700 font-mono tabular-nums">
                       รอบประจำวันที่ {dailyData.digest.date} ({dailyData.digest.period})
                     </span>
                   </div>
@@ -1004,18 +1056,21 @@ export default function DailyDigest() {
                   {/* Market Mood Badge */}
                   <div className="flex items-center gap-2">
                     {dailyData.digest.market_mood === 'risk_on' && (
-                      <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-700 border border-emerald-200">
-                        🟢 RISK-ON (เปิดรับความเสี่ยง)
+                      <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-700 border border-emerald-200">
+                        <span className="h-2 w-2 rounded-full bg-emerald-500" aria-hidden="true" />
+                        <span>RISK-ON (เปิดรับความเสี่ยง)</span>
                       </span>
                     )}
                     {dailyData.digest.market_mood === 'risk_off' && (
-                      <span className="rounded-full bg-rose-50 px-3 py-1 text-xs font-bold text-rose-700 border border-rose-200">
-                        🔴 RISK-OFF (ระมัดระวังความเสี่ยง)
+                      <span className="inline-flex items-center gap-1.5 rounded-full bg-rose-50 px-3 py-1 text-xs font-bold text-rose-700 border border-rose-200">
+                        <span className="h-2 w-2 rounded-full bg-rose-500" aria-hidden="true" />
+                        <span>RISK-OFF (ระมัดระวังความเสี่ยง)</span>
                       </span>
                     )}
                     {dailyData.digest.market_mood === 'mixed' && (
-                      <span className="rounded-full bg-amber-50 px-3 py-1 text-xs font-bold text-amber-700 border border-amber-200">
-                        🟡 MIXED / NEUTRAL (ตลาดผสมผสาน)
+                      <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-50 px-3 py-1 text-xs font-bold text-amber-700 border border-amber-200">
+                        <span className="h-2 w-2 rounded-full bg-amber-500" aria-hidden="true" />
+                        <span>MIXED / NEUTRAL (ตลาดผสมผสาน)</span>
                       </span>
                     )}
                   </div>
@@ -1024,20 +1079,24 @@ export default function DailyDigest() {
                 {/* Mood Summary & Transmission Chain */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div className="md:col-span-2 space-y-2">
-                    <p className="text-sm font-medium text-zinc-900 leading-relaxed">
+                    <p className="text-sm font-medium text-slate-900 leading-relaxed">
                       {dailyData.digest.market_mood_summary}
                     </p>
-                    <div className="rounded-lg bg-surface-strong p-3 text-xs text-zinc-700 border border-edge">
-                      <span className="font-bold text-zinc-900">🔗 สายส่งผลกระทบ (Transmission Chain): </span>
+                    <div className="rounded-lg bg-surface-inset p-3 text-xs text-slate-700">
+                      <span className="inline-flex items-center gap-1 font-bold text-slate-900">
+                        <LinkChainIcon className="h-3.5 w-3.5 text-section-accent" />
+                        <span>สายส่งผลกระทบ (Transmission Chain):</span>
+                      </span>{' '}
                       {dailyData.digest.transmission_chain}
                     </div>
                   </div>
 
-                  <div className="rounded-xl border border-sky-100 bg-sky-50/50 p-3.5 space-y-1.5 flex flex-col justify-center">
-                    <span className="text-[11px] font-bold uppercase tracking-wider text-sky-800">
-                      🎯 โฟกัสหลักในพอร์ตวันนี้
+                  <div className="rounded-xl border border-teal-100 bg-teal-50/50 p-3.5 space-y-1.5 flex flex-col justify-center">
+                    <span className="inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-teal-800">
+                      <TargetIcon className="h-3.5 w-3.5 text-teal-700" />
+                      <span>โฟกัสหลักในพอร์ตวันนี้</span>
                     </span>
-                    <p className="text-xs text-sky-950 font-medium leading-relaxed">
+                    <p className="text-xs text-slate-900 font-medium leading-relaxed">
                       {dailyData.digest.top_portfolio_focus}
                     </p>
                   </div>
@@ -1053,40 +1112,46 @@ export default function DailyDigest() {
                       onClick={() => setNewsFilter('all')}
                       className={`rounded-lg px-3 py-1 text-xs font-semibold transition-colors ${
                         newsFilter === 'all'
-                          ? 'bg-zinc-800 text-white'
-                          : 'bg-surface text-zinc-600 hover:bg-surface-strong'
+                          ? 'bg-slate-800 text-white'
+                          : 'bg-surface text-slate-600 hover:bg-surface-strong'
                       }`}
                     >
                       ทั้งหมด ({dailyData.digest.items.length})
                     </button>
                     <button
                       onClick={() => setNewsFilter('portfolio')}
-                      className={`rounded-lg px-3 py-1 text-xs font-semibold transition-colors ${
+                      className={`inline-flex items-center gap-1 rounded-lg px-3 py-1 text-xs font-semibold transition-colors ${
                         newsFilter === 'portfolio'
-                          ? 'bg-sky-600 text-white'
-                          : 'bg-surface text-zinc-600 hover:bg-surface-strong'
+                          ? 'bg-teal-600 text-white'
+                          : 'bg-surface text-slate-600 hover:bg-surface-strong'
                       }`}
                     >
-                      เฉพาะพอร์ตของเรา ⭐ ({portfolioItemsCount})
+                      <StarIcon className="h-3 w-3" />
+                      <span>เฉพาะพอร์ตของเรา ({portfolioItemsCount})</span>
                     </button>
                     <button
                       onClick={() => setNewsFilter('unread')}
-                      className={`rounded-lg px-3 py-1 text-xs font-semibold transition-colors ${
+                      className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1 text-xs font-semibold transition-colors ${
                         newsFilter === 'unread'
-                          ? 'bg-flow-blue text-white'
-                          : 'bg-surface text-zinc-600 hover:bg-surface-strong'
+                          ? 'bg-sky-600 text-white'
+                          : 'bg-surface text-slate-600 hover:bg-surface-strong'
                       }`}
                     >
-                      ยังไม่ได้อ่าน 🔵 ({unreadItemsCount})
+                      <span
+                        className={`h-2 w-2 rounded-full ${newsFilter === 'unread' ? 'bg-white' : 'bg-sky-500'}`}
+                        aria-hidden="true"
+                      />
+                      <span>ยังไม่ได้อ่าน ({unreadItemsCount})</span>
                     </button>
                   </div>
 
                   <div className="flex items-center gap-2">
                     <button
                       onClick={handleMarkAllRead}
-                      className="text-xs font-medium text-sky-600 hover:text-sky-700 hover:underline"
+                      className="inline-flex items-center gap-1 text-xs font-medium text-sky-600 hover:text-sky-700 hover:underline"
                     >
-                      ✓ ทำเครื่องหมายอ่านแล้วทั้งหมด
+                      <CheckSmallIcon className="h-3.5 w-3.5 shrink-0" />
+                      <span>ทำเครื่องหมายอ่านแล้วทั้งหมด</span>
                     </button>
                   </div>
                 </div>
@@ -1110,7 +1175,7 @@ export default function DailyDigest() {
                               {renderThesisBadge(item.thesis_signal)}
                               {renderFreshnessBadge(item.freshness_tier, item.freshness_label)}
                               {item.is_new && (
-                                <span className="rounded bg-sky-500 text-white px-1.5 py-0.2 text-[10px] font-bold">
+                                <span className="rounded bg-sky-500 text-white px-1.5 py-0.5 text-[11px] font-bold">
                                   NEW
                                 </span>
                               )}
@@ -1119,31 +1184,35 @@ export default function DailyDigest() {
                             <button
                               onClick={() => handleToggleRead(item)}
                               title={item.is_read ? 'ทำเครื่องหมายว่ายังไม่ได้อ่าน' : 'ทำเครื่องหมายว่าอ่านแล้ว'}
-                              className="text-xs font-semibold text-zinc-400 hover:text-sky-600 shrink-0 flex items-center gap-1"
+                              className="text-xs font-semibold text-slate-500 hover:text-teal-600 shrink-0 flex items-center gap-1"
                             >
                               {item.is_read ? (
-                                <span className="text-zinc-400">✓ อ่านแล้ว</span>
+                                <span className="inline-flex items-center gap-1 text-slate-500">
+                                  <CheckSmallIcon className="h-3.5 w-3.5" />
+                                  <span>อ่านแล้ว</span>
+                                </span>
                               ) : (
-                                <span className="h-2.5 w-2.5 rounded-full bg-flow-blue" />
+                                <span className="h-2.5 w-2.5 rounded-full bg-section-accent" />
                               )}
                             </button>
                           </div>
 
                           {/* Thai Headline */}
-                          <h3 className="text-base font-bold text-zinc-900 leading-snug">
+                          <h3 className="text-base font-bold text-slate-900 leading-snug">
                             {item.thai_headline}
                           </h3>
 
                           {/* What Happened */}
-                          <div className="text-xs text-zinc-700 leading-relaxed">
-                            <span className="font-semibold text-zinc-900">เกิดอะไรขึ้น: </span>
+                          <div className="text-xs text-slate-700 leading-relaxed">
+                            <span className="font-semibold text-slate-900">เกิดอะไรขึ้น: </span>
                             {item.what_happened}
                           </div>
 
                           {/* Why it Matters (The Crucial Alpha) */}
-                          <div className="rounded-xl bg-sky-50/70 border border-sky-100 p-3 text-xs text-sky-950 leading-relaxed space-y-1">
-                            <span className="font-bold text-sky-900">
-                              💡 ทำไมจึงสำคัญต่อพอร์ต & วิทยานิพนธ์ (Why It Matters):
+                          <div className="rounded-xl bg-teal-50/55 border border-teal-100 p-3 text-xs text-slate-800 leading-relaxed space-y-1">
+                            <span className="inline-flex items-center gap-1 font-bold text-teal-900">
+                              <BulbIcon className="h-3.5 w-3.5 text-amber-500" />
+                              <span>ทำไมจึงสำคัญต่อพอร์ต & วิทยานิพนธ์ (Why It Matters):</span>
                             </span>
                             <p>{item.why_it_matters}</p>
                           </div>
@@ -1163,7 +1232,7 @@ export default function DailyDigest() {
                                 <Link
                                   key={sym}
                                   to={`/equity/${sym}`}
-                                  className="rounded-md bg-surface-strong px-2 py-0.5 text-xs font-bold text-sky-700 hover:bg-sky-100 transition-colors"
+                                  className="rounded-md bg-surface-strong px-2 py-0.5 text-xs font-bold text-teal-800 hover:bg-teal-100 transition-colors"
                                 >
                                   ${sym} ↗
                                 </Link>
@@ -1172,14 +1241,14 @@ export default function DailyDigest() {
                               {item.portfolio_badges?.map((badge) => (
                                 <span
                                   key={badge.symbol}
-                                  className="rounded bg-sky-100/70 text-sky-800 text-[11px] font-semibold px-2 py-0.5 border border-sky-200"
+                                  className="rounded bg-teal-100/70 text-teal-900 text-[11px] font-semibold px-2 py-0.5 border border-teal-200"
                                 >
                                   {badge.impact_type === 'direct_holding' ? 'พอร์ตตรง' : badge.impact_type === 'fund_lookthrough' ? `กองทุน (${badge.source_fund_codes && badge.source_fund_codes.length > 0 ? badge.source_fund_codes.join(', ') : 'ไส้ใน'})` : 'Watchlist'}{' '}
                                   {badge.weight_pct ? `(${badge.weight_pct}%)` : ''}
                                 </span>
                               ))}
 
-                              <span className="text-xs text-zinc-400 ml-1">
+                              <span className="text-xs text-slate-500 ml-1">
                                 ที่มา: {item.source}
                               </span>
                             </div>
@@ -1187,9 +1256,10 @@ export default function DailyDigest() {
                             <div className="flex items-center gap-3">
                               <button
                                 onClick={() => handleOpenJournalModal(item)}
-                                className="inline-flex items-center gap-1 text-xs font-semibold text-zinc-600 hover:text-sky-700 hover:underline"
+                                className="inline-flex items-center gap-1 text-xs font-semibold text-slate-600 hover:text-teal-700 hover:underline"
                               >
-                                ✍️ บันทึกลง Journal
+                                <EditPenIcon className="h-3.5 w-3.5" />
+                                <span>บันทึกลง Journal</span>
                               </button>
 
                               {item.link && (
@@ -1210,7 +1280,7 @@ export default function DailyDigest() {
                   })}
 
                   {filteredDailyItems.length === 0 && (
-                    <div className="rounded-xl border border-edge bg-panel p-8 text-center text-xs text-zinc-400">
+                    <div className="rounded-xl border border-edge bg-panel p-8 text-center text-xs text-slate-500">
                       ไม่พบข่าวสารในหมวดหมู่นี้
                     </div>
                   )}
@@ -1229,32 +1299,32 @@ export default function DailyDigest() {
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {dailyData.digest.youtube_highlights.map((yt, idx) => (
-                      <div key={idx} className="rounded-xl border border-edge bg-panel p-4 space-y-2 shadow-2xs">
+                      <div key={idx} className="rounded-xl border border-edge bg-panel p-4 space-y-2 shadow-sm">
                         <div className="flex items-start justify-between gap-2">
                           <span className="text-[11px] font-bold text-red-700">
                             {yt.channel}
                           </span>
                           {yt.alignment_with_news === 'confirmed' && (
-                            <span className="rounded bg-emerald-50 text-emerald-700 px-2 py-0.5 text-[10px] font-bold border border-emerald-200">
+                            <span className="rounded bg-emerald-50 text-emerald-700 px-2 py-0.5 text-[11px] font-bold border border-emerald-200">
                               สอดคล้องกับข่าว
                             </span>
                           )}
                           {yt.alignment_with_news === 'contrarian' && (
-                            <span className="rounded bg-amber-50 text-amber-700 px-2 py-0.5 text-[10px] font-bold border border-amber-200">
+                            <span className="rounded bg-amber-50 text-amber-700 px-2 py-0.5 text-[11px] font-bold border border-amber-200">
                               มุมมองสวนทาง (Contrarian)
                             </span>
                           )}
                         </div>
-                        <h4 className="text-xs font-bold text-zinc-900 leading-snug">
+                        <h4 className="text-xs font-bold text-slate-900 leading-snug">
                           {yt.thai_title}
                         </h4>
-                        <ul className="list-disc pl-4 space-y-1 text-xs text-zinc-700 leading-relaxed">
+                        <ul className="list-disc pl-4 space-y-1 text-xs text-slate-700 leading-relaxed">
                           {yt.key_takeaways.map((point, pIdx) => (
                             <li key={pIdx}>{point}</li>
                           ))}
                         </ul>
                         {yt.alignment_note && (
-                          <p className="text-[11px] text-zinc-500 italic pt-1">
+                          <p className="text-[11px] text-slate-500 italic pt-1">
                             หมายเหตุ: {yt.alignment_note}
                           </p>
                         )}
@@ -1266,24 +1336,27 @@ export default function DailyDigest() {
             </>
           ) : loading ? (
             <div className="rounded-2xl border border-edge bg-panel p-12 text-center space-y-3">
-              <div className="inline-block animate-spin h-6 w-6 border-2 border-sky-600 border-t-transparent rounded-full" />
-              <p className="text-xs text-zinc-500">กำลังโหลดข้อมูล Daily Digest...</p>
+              <div className="inline-block animate-spin h-6 w-6 border-2 border-teal-600 border-t-transparent rounded-full" />
+              <p className="text-xs text-slate-500">กำลังโหลดข้อมูล Daily Digest...</p>
             </div>
           ) : (
             /* No Daily Digest Yet Placeholder */
             <div className="rounded-2xl border border-dashed border-edge bg-surface p-12 text-center space-y-3">
-              <span className="text-3xl">☕</span>
-              <h3 className="text-base font-semibold text-zinc-800">
+              <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-teal-50 text-teal-600 border border-teal-100">
+                <NewspaperIcon className="h-6 w-6" />
+              </div>
+              <h3 className="text-base font-semibold text-slate-800">
                 ยังไม่มีการสังเคราะห์ Daily Digest ล่าสุด
               </h3>
-              <p className="text-xs text-zinc-500 max-w-md mx-auto">
+              <p className="text-xs text-slate-500 max-w-md mx-auto">
                 เริ่มต้นวันของคุณโดยกดปุ่มด้านล่างเพื่อเลือกคลิป YouTube และให้ AI สังเคราะห์ข่าวสารรอบโลกใน 1 รอบเดียว
               </p>
               <button
                 onClick={() => setShowSelectionGate(true)}
-                className="rounded-xl bg-sky-600 hover:bg-sky-700 text-white px-5 py-2 text-xs font-semibold transition-colors shadow-sm"
+                className="inline-flex items-center gap-1.5 rounded-xl bg-teal-600 hover:bg-teal-700 text-white px-5 py-2 text-xs font-semibold transition-colors shadow-sm"
               >
-                🛠️ เปิดกล่องคัดกรองเพื่อสังเคราะห์รอบแรก
+                <SlidersIcon className="h-3.5 w-3.5" />
+                <span>เปิดกล่องคัดกรองเพื่อสังเคราะห์รอบแรก</span>
               </button>
             </div>
           )}
@@ -1300,14 +1373,14 @@ export default function DailyDigest() {
               {/* Executive Themes */}
               <div className="rounded-2xl border border-edge bg-panel p-5 shadow-sm space-y-3">
                 <div className="flex items-center justify-between border-b border-edge pb-2">
-                  <h3 className="text-xs font-bold uppercase tracking-wider text-sky-800">
-                    🌍 Executive Macro & Sector Themes (ประเด็นมหภาครายสัปดาห์)
+                  <h3 className="text-xs font-bold uppercase tracking-wider text-teal-800">
+                    Executive Macro & Sector Themes (ประเด็นมหภาครายสัปดาห์)
                   </h3>
-                  <span className="text-xs text-zinc-400">
+                  <span className="text-xs text-slate-500 font-mono tabular-nums">
                     {weeklyData.digest.from_date} ถึง {weeklyData.digest.to_date}
                   </span>
                 </div>
-                <ul className="list-disc pl-5 space-y-1.5 text-xs text-zinc-700 leading-relaxed">
+                <ul className="list-disc pl-5 space-y-1.5 text-xs text-slate-700 leading-relaxed">
                   {weeklyData.digest.executive_themes.map((theme, idx) => (
                     <li key={idx} className="font-medium">
                       {theme}
@@ -1319,10 +1392,10 @@ export default function DailyDigest() {
               {/* Portfolio Health Summary & Thesis Matrix */}
               <div className="rounded-2xl border border-edge bg-panel p-5 shadow-sm space-y-4">
                 <div className="border-b border-edge pb-2">
-                  <h3 className="text-xs font-bold uppercase tracking-wider text-sky-800">
-                    📊 Portfolio Health & Thesis Matrix (สถานะหุ้นในพอร์ตรายตัว)
+                  <h3 className="text-xs font-bold uppercase tracking-wider text-teal-800">
+                    Portfolio Health & Thesis Matrix (สถานะหุ้นในพอร์ตรายตัว)
                   </h3>
-                  <p className="text-xs text-zinc-600 mt-1">
+                  <p className="text-xs text-slate-600 mt-1">
                     {weeklyData.digest.portfolio_health_summary}
                   </p>
                 </div>
@@ -1330,7 +1403,7 @@ export default function DailyDigest() {
                 <div className="overflow-x-auto">
                   <table className="w-full text-left text-xs">
                     <thead>
-                      <tr className="border-b border-edge bg-surface text-zinc-500">
+                      <tr className="border-b border-edge bg-surface text-slate-500">
                         <th className="py-2.5 px-3 font-semibold">Ticker</th>
                         <th className="py-2.5 px-3 font-semibold">Thesis Status</th>
                         <th className="py-2.5 px-3 font-semibold">Weekly Summary & Action Signal</th>
@@ -1339,7 +1412,7 @@ export default function DailyDigest() {
                     <tbody className="divide-y divide-edge">
                       {weeklyData.digest.portfolio_matrix.map((row) => (
                         <tr key={row.ticker} className="hover:bg-surface/50 transition-colors">
-                          <td className="py-2.5 px-3 font-bold text-sky-700">
+                          <td className="py-2.5 px-3 font-bold text-teal-700">
                             <Link to={`/equity/${row.ticker}`} className="hover:underline">
                               ${row.ticker}
                             </Link>
@@ -1366,7 +1439,7 @@ export default function DailyDigest() {
                               </span>
                             )}
                           </td>
-                          <td className="py-2.5 px-3 text-zinc-700 leading-relaxed">
+                          <td className="py-2.5 px-3 text-slate-700 leading-relaxed">
                             {row.weekly_summary}
                           </td>
                         </tr>
@@ -1379,10 +1452,11 @@ export default function DailyDigest() {
               {/* Narratives: Consensus vs Contrarian */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                 <div className="rounded-xl border border-edge bg-panel p-4 space-y-2">
-                  <h4 className="text-xs font-bold uppercase tracking-wider text-zinc-900">
-                    🏛️ ตลาดมองอย่างไร (Consensus Narratives)
+                  <h4 className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-slate-900">
+                    <TempleReviewIcon className="h-3.5 w-3.5 text-section-accent" />
+                    <span>ตลาดมองอย่างไร (Consensus Narratives)</span>
                   </h4>
-                  <ul className="list-disc pl-4 space-y-1 text-xs text-zinc-700 leading-relaxed">
+                  <ul className="list-disc pl-4 space-y-1 text-xs text-slate-700 leading-relaxed">
                     {weeklyData.digest.consensus_narratives.map((c, i) => (
                       <li key={i}>{c}</li>
                     ))}
@@ -1390,10 +1464,11 @@ export default function DailyDigest() {
                 </div>
 
                 <div className="rounded-xl border border-edge bg-panel p-4 space-y-2">
-                  <h4 className="text-xs font-bold uppercase tracking-wider text-amber-800">
-                    💡 มุมมองสวนทางและโอกาส (Contrarian & Pitches)
+                  <h4 className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-amber-800">
+                    <BulbIcon className="h-3.5 w-3.5 text-amber-600" />
+                    <span>มุมมองสวนทางและโอกาส (Contrarian & Pitches)</span>
                   </h4>
-                  <ul className="list-disc pl-4 space-y-1 text-xs text-zinc-700 leading-relaxed">
+                  <ul className="list-disc pl-4 space-y-1 text-xs text-slate-700 leading-relaxed">
                     {weeklyData.digest.contrarian_and_pitches.map((c, i) => (
                       <li key={i}>{c}</li>
                     ))}
@@ -1403,11 +1478,12 @@ export default function DailyDigest() {
 
               {/* Week Ahead Checklist */}
               {weeklyData.digest.week_ahead_checklist && (
-                <div className="rounded-xl border border-sky-100 bg-sky-50/40 p-4 space-y-2">
-                  <h4 className="text-xs font-bold uppercase tracking-wider text-sky-900">
-                    🗓️ เช็กลิสต์สัปดาห์หน้า (Week-Ahead Checklist)
+                <div className="rounded-xl border border-teal-100 bg-teal-50/40 p-4 space-y-2">
+                  <h4 className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-teal-900">
+                    <CalendarIcon className="h-3.5 w-3.5 text-section-accent" />
+                    <span>เช็กลิสต์สัปดาห์หน้า (Week-Ahead Checklist)</span>
                   </h4>
-                  <ul className="list-disc pl-5 space-y-1 text-xs text-sky-950 leading-relaxed">
+                  <ul className="list-disc pl-5 space-y-1 text-xs text-slate-800 leading-relaxed">
                     {weeklyData.digest.week_ahead_checklist.map((item, idx) => (
                       <li key={idx}>{item}</li>
                     ))}
@@ -1419,9 +1495,10 @@ export default function DailyDigest() {
               {weeklyData.digest.items && weeklyData.digest.items.length > 0 && (
                 <div className="space-y-4">
                   <div className="flex items-center justify-between border-b border-edge pb-2">
-                    <h3 className="text-xs font-bold uppercase tracking-wider text-sky-800 flex items-center gap-2">
-                      <span>📰 ข่าวสารยุทธศาสตร์สำคัญรอบสัปดาห์ (Weekly Key Developments & News)</span>
-                      <span className="rounded bg-sky-100 text-sky-800 text-[10px] font-bold px-2 py-0.5">
+                    <h3 className="text-xs font-bold uppercase tracking-wider text-teal-800 flex items-center gap-2">
+                      <NewspaperIcon className="h-3.5 w-3.5 text-section-accent" />
+                      <span>ข่าวสารยุทธศาสตร์สำคัญรอบสัปดาห์ (Weekly Key Developments & News)</span>
+                      <span className="rounded bg-teal-100 text-teal-900 text-[11px] font-bold px-2 py-0.5 font-mono">
                         {weeklyData.digest.items.length} ข่าว
                       </span>
                     </h3>
@@ -1444,7 +1521,7 @@ export default function DailyDigest() {
                               {renderThesisBadge(item.thesis_signal)}
                               {renderFreshnessBadge(item.freshness_tier, item.freshness_label)}
                               {item.is_new && (
-                                <span className="rounded bg-sky-500 text-white px-1.5 py-0.2 text-[10px] font-bold">
+                                <span className="rounded bg-sky-500 text-white px-1.5 py-0.5 text-[11px] font-bold">
                                   NEW
                                 </span>
                               )}
@@ -1453,31 +1530,35 @@ export default function DailyDigest() {
                             <button
                               onClick={() => handleToggleRead(item)}
                               title={item.is_read ? 'ทำเครื่องหมายว่ายังไม่ได้อ่าน' : 'ทำเครื่องหมายว่าอ่านแล้ว'}
-                              className="text-xs font-semibold text-zinc-400 hover:text-sky-600 shrink-0 flex items-center gap-1"
+                              className="text-xs font-semibold text-slate-500 hover:text-teal-600 shrink-0 flex items-center gap-1"
                             >
                               {item.is_read ? (
-                                <span className="text-zinc-400">✓ อ่านแล้ว</span>
+                                <span className="inline-flex items-center gap-1 text-slate-500">
+                                  <CheckSmallIcon className="h-3.5 w-3.5" />
+                                  <span>อ่านแล้ว</span>
+                                </span>
                               ) : (
-                                <span className="h-2.5 w-2.5 rounded-full bg-flow-blue" />
+                                <span className="h-2.5 w-2.5 rounded-full bg-section-accent" />
                               )}
                             </button>
                           </div>
 
                           {/* Thai Headline */}
-                          <h3 className="text-base font-bold text-zinc-900 leading-snug">
+                          <h3 className="text-base font-bold text-slate-900 leading-snug">
                             {item.thai_headline}
                           </h3>
 
                           {/* What Happened */}
-                          <div className="text-xs text-zinc-700 leading-relaxed">
-                            <span className="font-semibold text-zinc-900">เกิดอะไรขึ้น: </span>
+                          <div className="text-xs text-slate-700 leading-relaxed">
+                            <span className="font-semibold text-slate-900">เกิดอะไรขึ้น: </span>
                             {item.what_happened}
                           </div>
 
                           {/* Why it Matters (The Crucial Alpha) */}
-                          <div className="rounded-xl bg-sky-50/70 border border-sky-100 p-3 text-xs text-sky-950 leading-relaxed space-y-1">
-                            <span className="font-bold text-sky-900">
-                              💡 ทำไมจึงสำคัญต่อพอร์ต & วิทยานิพนธ์ (Why It Matters):
+                          <div className="rounded-xl bg-teal-50/55 border border-teal-100 p-3 text-xs text-slate-800 leading-relaxed space-y-1">
+                            <span className="inline-flex items-center gap-1 font-bold text-teal-900">
+                              <BulbIcon className="h-3.5 w-3.5 text-amber-500" />
+                              <span>ทำไมจึงสำคัญต่อพอร์ต & วิทยานิพนธ์ (Why It Matters):</span>
                             </span>
                             <p>{item.why_it_matters}</p>
                           </div>
@@ -1497,7 +1578,7 @@ export default function DailyDigest() {
                                 <Link
                                   key={sym}
                                   to={`/equity/${sym}`}
-                                  className="rounded-md bg-surface-strong px-2 py-0.5 text-xs font-bold text-sky-700 hover:bg-sky-100 transition-colors"
+                                  className="rounded-md bg-surface-strong px-2 py-0.5 text-xs font-bold text-teal-800 hover:bg-teal-100 transition-colors"
                                 >
                                   ${sym} ↗
                                 </Link>
@@ -1506,14 +1587,14 @@ export default function DailyDigest() {
                               {item.portfolio_badges?.map((badge) => (
                                 <span
                                   key={badge.symbol}
-                                  className="rounded bg-sky-100/70 text-sky-800 text-[11px] font-semibold px-2 py-0.5 border border-sky-200"
+                                  className="rounded bg-teal-100/70 text-teal-900 text-[11px] font-semibold px-2 py-0.5 border border-teal-200"
                                 >
                                   {badge.impact_type === 'direct_holding' ? 'พอร์ตตรง' : badge.impact_type === 'fund_lookthrough' ? `กองทุน (${badge.source_fund_codes && badge.source_fund_codes.length > 0 ? badge.source_fund_codes.join(', ') : 'ไส้ใน'})` : 'Watchlist'}{' '}
                                   {badge.weight_pct ? `(${badge.weight_pct}%)` : ''}
                                 </span>
                               ))}
 
-                              <span className="text-xs text-zinc-400 ml-1">
+                              <span className="text-xs text-slate-500 ml-1">
                                 ที่มา: {item.source}
                               </span>
                             </div>
@@ -1521,9 +1602,10 @@ export default function DailyDigest() {
                             <div className="flex items-center gap-3">
                               <button
                                 onClick={() => handleOpenJournalModal(item)}
-                                className="inline-flex items-center gap-1 text-xs font-semibold text-zinc-600 hover:text-sky-700 hover:underline"
+                                className="inline-flex items-center gap-1 text-xs font-semibold text-slate-600 hover:text-teal-700 hover:underline"
                               >
-                                ✍️ บันทึกลง Journal
+                                <EditPenIcon className="h-3.5 w-3.5" />
+                                <span>บันทึกลง Journal</span>
                               </button>
 
                               {item.link && (
@@ -1548,19 +1630,22 @@ export default function DailyDigest() {
           ) : (
             /* No Weekly Digest Yet Placeholder */
             <div className="rounded-2xl border border-dashed border-edge bg-surface p-12 text-center space-y-3">
-              <span className="text-3xl">🗓️</span>
-              <h3 className="text-base font-semibold text-zinc-800">
+              <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-teal-50 text-teal-600 border border-teal-100">
+                <CalendarIcon className="h-6 w-6" />
+              </div>
+              <h3 className="text-base font-semibold text-slate-800">
                 ยังไม่มีการสังเคราะห์ Weekly Digest
               </h3>
-              <p className="text-xs text-zinc-500 max-w-md mx-auto">
+              <p className="text-xs text-slate-500 max-w-md mx-auto">
                 ระบบจะรวบรวมข้อมูลตลอด 7 วันที่ผ่านมา และประเมินสถานะวิทยานิพนธ์ของหุ้นทุกตัวในพอร์ตให้โดยอัตโนมัติ
               </p>
               <button
                 onClick={handleSynthesizeWeekly}
                 disabled={synthesizing}
-                className="rounded-xl bg-sky-600 hover:bg-sky-700 text-white px-5 py-2 text-xs font-semibold transition-colors shadow-sm disabled:opacity-50"
+                className="inline-flex items-center gap-1.5 rounded-xl bg-teal-600 hover:bg-teal-700 text-white px-5 py-2 text-xs font-semibold transition-colors shadow-sm disabled:opacity-50"
               >
-                {synthesizing ? 'กำลังสังเคราะห์...' : '⚡ สังเคราะห์ Weekly Intelligence Matrix'}
+                <BoltStrategyIcon className="h-3.5 w-3.5" />
+                <span>{synthesizing ? 'กำลังสังเคราะห์...' : 'สังเคราะห์ Weekly Intelligence Matrix'}</span>
               </button>
             </div>
           )}
@@ -1571,27 +1656,32 @@ export default function DailyDigest() {
       {/* 5. Investment Journal Modal                                        */}
       {/* ------------------------------------------------------------------ */}
       {journalItem && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-xs p-4">
-          <div className="rounded-2xl border border-edge bg-panel w-full max-w-2xl p-6 shadow-2xl space-y-4 animate-scale-up">
+        <InPlaceDialog
+          titleId="digest-journal-modal-title"
+          onClose={() => setJournalItem(null)}
+          panelClassName="rounded-2xl border border-edge bg-panel w-full max-w-2xl p-6 shadow-2xl space-y-4 animate-scale-up"
+        >
             <div className="flex items-center justify-between border-b border-edge pb-3">
-              <h3 className="text-sm font-bold text-zinc-900 flex items-center gap-2">
-                <span>✍️ บันทึกมุมมองลงใน Investment Journal</span>
+              <h3 id="digest-journal-modal-title" className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                <EditPenIcon className="h-4 w-4 text-section-accent" />
+                <span>บันทึกมุมมองลงใน Investment Journal</span>
               </h3>
               <button
                 onClick={() => setJournalItem(null)}
-                className="text-zinc-400 hover:text-zinc-600 text-sm font-bold"
+                aria-label="ปิดหน้าต่างบันทึก Journal"
+                className="text-slate-500 hover:text-slate-600 rounded-lg p-1.5 transition-colors"
               >
-                ✕
+                <CloseIcon className="h-4 w-4" />
               </button>
             </div>
 
             {journalSuccess ? (
               <div className="rounded-xl bg-emerald-50 border border-emerald-200 p-4 text-center text-xs font-bold text-emerald-700">
-                ✓ {journalSuccess}
+                {journalSuccess}
               </div>
             ) : (
               <>
-                <p className="text-xs text-zinc-500">
+                <p className="text-xs text-slate-500">
                   คุณสามารถแก้ไขข้อความ Markdown ด้านล่างก่อนที่จะบันทึกลงสมุดบันทึกการลงทุน (Journal):
                 </p>
 
@@ -1599,28 +1689,27 @@ export default function DailyDigest() {
                   value={journalContent}
                   onChange={(e) => setJournalContent(e.target.value)}
                   rows={10}
-                  className="w-full rounded-xl border border-edge bg-surface p-3 text-xs font-mono text-zinc-800 focus:outline-none focus:border-sky-400"
+                  className="w-full rounded-xl border border-edge bg-surface p-3 text-xs font-mono text-slate-800 focus:outline-none focus:border-teal-400 focus-visible:ring-2 focus-visible:ring-teal-500/35"
                 />
 
                 <div className="flex items-center justify-end gap-2 pt-2">
                   <button
                     onClick={() => setJournalItem(null)}
-                    className="rounded-lg border border-edge bg-surface px-4 py-2 text-xs font-semibold text-zinc-600 hover:bg-surface-strong"
+                    className="rounded-lg border border-edge bg-surface px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-surface-strong"
                   >
                     ยกเลิก
                   </button>
                   <button
                     onClick={handleSaveJournal}
                     disabled={journalSaving}
-                    className="rounded-lg bg-sky-600 hover:bg-sky-700 text-white px-5 py-2 text-xs font-semibold transition-colors disabled:opacity-50"
+                    className="rounded-lg bg-teal-600 hover:bg-teal-700 text-white px-5 py-2 text-xs font-semibold transition-colors disabled:opacity-50"
                   >
                     {journalSaving ? 'กำลังบันทึก...' : 'บันทึกลง Journal'}
                   </button>
                 </div>
               </>
             )}
-          </div>
-        </div>
+        </InPlaceDialog>
       )}
     </div>
   )

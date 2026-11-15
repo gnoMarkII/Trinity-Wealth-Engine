@@ -129,7 +129,7 @@ export default function SmartOpportunityFinder({
       {/* Backdrop */}
       <div
         aria-hidden="true"
-        className="animate-fade-in fixed inset-0 bg-black/50 backdrop-blur-xs transition-opacity"
+        className="animate-fade-in fixed inset-0 bg-black/50 backdrop-blur-sm transition-opacity"
         onClick={onClose}
       />
 
@@ -142,18 +142,18 @@ export default function SmartOpportunityFinder({
           className="w-screen max-w-3xl transform bg-white shadow-2xl transition-all duration-300 ease-out flex flex-col border-l border-sky-100"
         >
           {/* Header */}
-          <div className="p-5 border-b border-zinc-200 bg-gradient-to-r from-sky-50/70 via-white to-indigo-50/40 flex items-center justify-between">
+          <div className="p-5 border-b border-slate-200 bg-gradient-to-r from-sky-50/70 via-white to-blue-50/40 flex items-center justify-between">
             <div className="space-y-1">
               <div className="flex items-center gap-2">
                 <span className="text-xl">🌟</span>
-                <h2 className="text-lg font-bold text-zinc-900 tracking-tight">
+                <h2 className="text-lg font-bold text-slate-900 tracking-tight">
                   3-Dimensional Smart Opportunity Finder
                 </h2>
                 <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-sky-100 text-sky-800 border border-sky-200">
                   {portfolioId}
                 </span>
               </div>
-              <p className="text-xs text-zinc-500">
+              <p className="text-xs text-slate-500">
                 คัดกรองโอกาสลงทุน 3 มิติ: Macro Sector Rotation × Investor Principles × Look-Through Capacity
               </p>
             </div>
@@ -162,7 +162,7 @@ export default function SmartOpportunityFinder({
                 type="button"
                 onClick={() => loadOpportunities(true)}
                 disabled={loading}
-                className="p-2 rounded-xl text-zinc-500 hover:text-zinc-800 hover:bg-zinc-100 transition-colors"
+                className="p-2 rounded-xl text-slate-500 hover:text-slate-800 hover:bg-slate-100 transition-colors"
                 title="Refresh Candidates"
               >
                 🔄
@@ -170,7 +170,7 @@ export default function SmartOpportunityFinder({
               <button
                 type="button"
                 onClick={onClose}
-                className="p-2 rounded-xl text-zinc-400 hover:text-zinc-700 hover:bg-zinc-100 transition-colors font-bold text-lg leading-none"
+                className="p-2 rounded-xl text-slate-500 hover:text-slate-700 hover:bg-slate-100 transition-colors font-bold text-lg leading-none"
                 aria-label="Close"
               >
                 ✕
@@ -182,27 +182,27 @@ export default function SmartOpportunityFinder({
           <div className="flex-1 overflow-y-auto p-5 space-y-5 custom-scrollbar">
             {/* KPI Summary Banner */}
             {data && (
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 p-4 rounded-2xl bg-gradient-to-br from-indigo-50/80 via-white to-sky-50/80 border border-indigo-100/80 shadow-2xs">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 p-4 rounded-2xl bg-gradient-to-br from-blue-50/80 via-white to-sky-50/80 border border-blue-100/80 shadow-sm">
                 <div>
-                  <div className="text-[11px] font-medium text-zinc-500 uppercase tracking-wider">Scanned Candidates</div>
-                  <div className="text-xl font-extrabold text-zinc-900 font-mono mt-0.5">
+                  <div className="text-[11px] font-medium text-slate-500 uppercase tracking-wider">Scanned Candidates</div>
+                  <div className="text-xl font-extrabold text-slate-900 font-mono mt-0.5">
                     {data.total_candidates_scanned}
                   </div>
                 </div>
                 <div>
-                  <div className="text-[11px] font-medium text-zinc-500 uppercase tracking-wider">Passed Principles</div>
+                  <div className="text-[11px] font-medium text-slate-500 uppercase tracking-wider">Passed Principles</div>
                   <div className="text-xl font-extrabold text-emerald-600 font-mono mt-0.5">
                     {data.passed_candidates_count}
                   </div>
                 </div>
                 <div>
-                  <div className="text-[11px] font-medium text-zinc-500 uppercase tracking-wider">P1 Top Priority</div>
+                  <div className="text-[11px] font-medium text-slate-500 uppercase tracking-wider">P1 Top Priority</div>
                   <div className="text-xl font-extrabold text-flow-blue font-mono mt-0.5">
                     {data.candidates.filter((c) => c.research_priority === 1).length}
                   </div>
                 </div>
                 <div>
-                  <div className="text-[11px] font-medium text-zinc-500 uppercase tracking-wider">Readiness</div>
+                  <div className="text-[11px] font-medium text-slate-500 uppercase tracking-wider">Readiness</div>
                   <div className="mt-0.5">
                     <span className={`inline-block px-2 py-0.5 rounded text-xs font-bold ${
                       data.readiness === 'ready'
@@ -231,16 +231,16 @@ export default function SmartOpportunityFinder({
             )}
 
             {/* Filters Bar */}
-            <div className="space-y-3 p-4 rounded-2xl bg-zinc-50/80 border border-zinc-200/80">
+            <div className="space-y-3 p-4 rounded-2xl bg-slate-50/80 border border-slate-200/80">
               <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
                 <div className="flex-1 relative">
-                  <span className="absolute left-3 top-2.5 text-zinc-400 text-xs">🔍</span>
+                  <span className="absolute left-3 top-2.5 text-slate-500 text-xs">🔍</span>
                   <input
                     type="text"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     placeholder="ค้นหา Symbol, ชื่อหุ้น หรือ Sector..."
-                    className="w-full pl-8 pr-3 py-1.5 rounded-xl border border-zinc-200 bg-white text-xs text-zinc-900 focus:outline-none focus:border-flow-blue"
+                    className="w-full pl-8 pr-3 py-1.5 rounded-xl border border-slate-200 bg-white text-xs text-slate-900 focus:outline-none focus:border-flow-blue"
                   />
                 </div>
 
@@ -249,7 +249,7 @@ export default function SmartOpportunityFinder({
                   <select
                     value={priorityFilter}
                     onChange={(e: any) => setPriorityFilter(e.target.value)}
-                    className="px-2.5 py-1.5 rounded-xl border border-zinc-200 bg-white text-xs font-medium text-zinc-700"
+                    className="px-2.5 py-1.5 rounded-xl border border-slate-200 bg-white text-xs font-medium text-slate-700"
                   >
                     <option value="all">Priority: ทั้งหมด</option>
                     <option value="actionable">Actionable เท่านั้น</option>
@@ -260,7 +260,7 @@ export default function SmartOpportunityFinder({
                   <select
                     value={marketFilter}
                     onChange={(e: any) => setMarketFilter(e.target.value)}
-                    className="px-2.5 py-1.5 rounded-xl border border-zinc-200 bg-white text-xs font-medium text-zinc-700"
+                    className="px-2.5 py-1.5 rounded-xl border border-slate-200 bg-white text-xs font-medium text-slate-700"
                   >
                     <option value="all">ตลาด: ทั้งหมด</option>
                     <option value="US">US (สหรัฐฯ)</option>
@@ -271,7 +271,7 @@ export default function SmartOpportunityFinder({
                   <select
                     value={capacityFilter}
                     onChange={(e: any) => setCapacityFilter(e.target.value)}
-                    className="px-2.5 py-1.5 rounded-xl border border-zinc-200 bg-white text-xs font-medium text-zinc-700"
+                    className="px-2.5 py-1.5 rounded-xl border border-slate-200 bg-white text-xs font-medium text-slate-700"
                   >
                     <option value="all">Capacity: ทั้งหมด</option>
                     <option value="available">มีวงเงินว่าง (Room Available)</option>
@@ -283,7 +283,7 @@ export default function SmartOpportunityFinder({
 
             {/* Candidates List or States */}
             {loading ? (
-              <div className="py-20 flex flex-col items-center justify-center gap-3 text-zinc-400">
+              <div className="py-20 flex flex-col items-center justify-center gap-3 text-slate-500">
                 <span className="animate-spin text-3xl">⏳</span>
                 <span className="text-xs font-medium">กำลังสแกนและประเมินโอกาสลงทุน 3 มิติ...</span>
               </div>
@@ -300,14 +300,14 @@ export default function SmartOpportunityFinder({
                 </button>
               </div>
             ) : filteredCandidates.length === 0 ? (
-              <div className="py-16 text-center text-zinc-400 space-y-2">
+              <div className="py-16 text-center text-slate-500 space-y-2">
                 <span className="text-3xl block">🔍</span>
-                <p className="text-sm font-semibold text-zinc-600">ไม่พบรายการโอกาสที่ตรงกับเงื่อนไข</p>
-                <p className="text-xs text-zinc-400">ลองปรับเปลี่ยนตัวกรองค้นหา หรือขยายมิติการค้นหา</p>
+                <p className="text-sm font-semibold text-slate-600">ไม่พบรายการโอกาสที่ตรงกับเงื่อนไข</p>
+                <p className="text-xs text-slate-500">ลองปรับเปลี่ยนตัวกรองค้นหา หรือขยายมิติการค้นหา</p>
               </div>
             ) : (
               <div className="space-y-4">
-                <div className="flex items-center justify-between text-xs text-zinc-500 px-1">
+                <div className="flex items-center justify-between text-xs text-slate-500 px-1">
                   <span>พบ {filteredCandidates.length} รายการ</span>
                   <span>จัดเรียงตาม Deterministic Priority & Score</span>
                 </div>

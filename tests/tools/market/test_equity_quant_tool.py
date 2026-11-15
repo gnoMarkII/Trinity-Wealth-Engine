@@ -667,3 +667,148 @@ def test_signal_audit_consensus_and_pit_wiring(monkeypatch, tmp_vault):
     # PIT bands queried from isolated tmp_vault ledger
     assert signals.metric_basis["pit_multiple_bands"] == "unavailable"
     assert signals.metric_basis["pit_observations_count"] == "0"
+
+
+def test_dupont_and_sloan_scan_past_incomplete_latest_period(monkeypatch):
+    """Option 2: When periods[0] lacks net_income / equity / ocf, scan forward to first complete comparable period."""
+    periods = [
+        FinancialAutopsyPeriod(
+            fiscal_period_end="2026-09-30",
+            period_type="quarterly",
+            total_revenue=1500.0,
+            net_income=None,
+            total_assets=None,
+            stockholders_equity=None,
+            operating_cash_flow=None,
+            source_tier="primary_best_effort",
+        ),
+        FinancialAutopsyPeriod(
+            fiscal_period_end="2025-12-31",
+            period_type="annual",
+            net_income=120.0,
+            total_revenue=1000.0,
+            total_assets=2000.0,
+            stockholders_equity=800.0,
+            operating_cash_flow=200.0,
+            source_tier="primary_best_effort",
+        ),
+        FinancialAutopsyPeriod(
+            fiscal_period_end="2024-12-31",
+            period_type="annual",
+            net_income=100.0,
+            total_revenue=900.0,
+            total_assets=1000.0,
+            stockholders_equity=700.0,
+            operating_cash_flow=180.0,
+            source_tier="primary_best_effort",
+        ),
+    ]
+    helper = TestDuPontAndSloanAutopsyIntegration()
+    signals = helper._run_with_periods(monkeypatch, periods)
+    assert signals.dupont_breakdown is not None
+    assert signals.dupont_breakdown["fiscal_period_end"] == "2025-12-31"
+    assert signals.dupont_breakdown["roe_pct"] == pytest.approx(15.0, abs=0.01)
+    assert signals.sloan_accrual is not None
+    assert signals.sloan_accrual["assets_basis"] == "two_period_average"
+    assert signals.sloan_accrual["prior_fiscal_period_end"] == "2024-12-31"
+
+
+def test_tax_rate_outlier_normalized_to_statutory_and_semi_industry_kpis_wired(monkeypatch):
+    """Outlier tax rates (>35% or <5%) normalize to statutory 21% US and wire industry/ttm to sector KPIs."""
+    _INFO_CACHE.clear()
+    _INFO_ERROR_CACHE.clear()
+    monkeypatch.setattr(
+        "tools.market.equity_quant_tool.resolve_asset",
+        lambda ticker, market_hint="US": _resolved_asset(ticker, market_hint),
+    )
+    periods = [
+        FinancialAutopsyPeriod(
+            fiscal_period_end="2025-12-31",
+            period_type="annual",
+            total_revenue=50_000.0,
+            gross_profit=20_000.0,
+            operating_income=5_000.0,
+            ebit=5_000.0,
+            interest_expense=1_000.0,
+            tax_expense=1_531.0,
+            income_before_tax=1_557.0,  # 98.3% extreme outlier tax
+            capital_expenditure=12_000.0,
+            operating_cash_flow=10_000.0,
+            free_cash_flow=-2_000.0,
+            stockholders_equity=40_000.0,
+            total_debt=20_000.0,
+            source_tier="primary_best_effort",
+        )
+    ]
+    ttm_p = FinancialAutopsyPeriod(
+        fiscal_period_end="2026-09-30 (TTM)",
+        period_type="ttm",
+        total_revenue=55_000.0,
+        gross_profit=27_500.0,         # 50% TTM GM
+        operating_income=9_000.0,
+        capital_expenditure=11_000.0,  # 20% TTM CapEx intensity
+        operating_cash_flow=18_000.0,
+        free_cash_flow=7_000.0,        # 38.9% FCF conversion
+        source_tier="filing_authoritative",
+    )
+    snapshot = FinancialAutopsySnapshot(
+        ticker="INTC",
+        provider_symbol="INTC",
+        market="US",
+        currency="USD",
+        unit="raw",
+        retrieval_timestamp="2026-10-01 12:00:00",
+        periods=periods,
+        ttm_period=ttm_p,
+        current_pe=25.0,
+        source_tier="primary_best_effort",
+        period_type="annual",
+    )
+    monkeypatch.setattr(
+        "tools.market.equity_quant_tool.get_financial_autopsy",
+        lambda resolved: FinancialAutopsyFetchResult(asset=resolved, status="success", snapshot=snapshot),
+    )
+    monkeypatch.setattr(
+        "tools.market.equity_quant_tool._yf_info",
+        lambda sym: {
+            "shortName": "Intel Corp",
+            "sector": "Technology",
+            "industry": "Semiconductors",
+            "currentPrice": 60.0,
+            "totalCash": 10_000.0,
+            "totalDebt": 20_000.0,
+        },
+    )
+    monkeypatch.setattr("tools.market.equity_quant_tool._get_price_history", lambda *args, **kwargs: pd.DataFrame())
+    monkeypatch.setattr("tools.market.equity_quant_tool.compute_beta", lambda *args, **kwargs: (1.2, _VALID_QUALITY))
+    monkeypatch.setattr("tools.market.equity_quant_tool.compute_volatility", lambda *args, **kwargs: (35.0, _VALID_QUALITY))
+    monkeypatch.setattr("tools.market.equity_quant_tool.compute_mdd", lambda *args, **kwargs: (-30.0, _VALID_QUALITY))
+    monkeypatch.setattr("tools.market.equity_quant_tool.compute_technical_indicators", lambda *args, **kwargs: ({"rsi_14": 50.0, "macd_signal": "neutral"}, _VALID_QUALITY))
+    monkeypatch.setattr("tools.market.equity_quant_tool.fetch_peer_metrics", lambda *args, **kwargs: [])
+    monkeypatch.setattr("tools.market.equity_quant_tool.compute_price_percentile", lambda *args, **kwargs: (50.0, 0.0, _VALID_QUALITY))
+    monkeypatch.setattr("tools.market.equity_quant_tool.fetch_earnings_revision_data", lambda *args, **kwargs: (None, None))
+    monkeypatch.setattr("tools.market.equity_quant_tool.load_latest_macro_observables", lambda: {})
+
+    captured_dcf_kwargs = {}
+    def _fake_dcf(**kwargs):
+        captured_dcf_kwargs.update(kwargs)
+        return (None, [])
+
+    monkeypatch.setattr("tools.market.equity_quant_tool.compute_dcf_valuation", _fake_dcf)
+    monkeypatch.setattr("tools.market.equity_quant_tool.compute_smart_money_flags", lambda *args, **kwargs: (SmartMoneyFlags(), []))
+    monkeypatch.setattr("tools.market.equity_quant_tool.compute_canonical_insider_conviction", lambda *args, **kwargs: (None, []))
+    monkeypatch.setattr("tools.market.equity_quant_tool.compute_tactical_setup", lambda *args, **kwargs: (None, []))
+    monkeypatch.setattr("tools.market.guidance_engine.extract_verified_earnings_guidance", lambda *args, **kwargs: (None, []))
+    monkeypatch.setattr("tools.market.equity_quant_tool.load_latest_macro_regime_context", lambda: None)
+
+    raw = compute_equity_quant_signals.invoke({"ticker": "INTC", "market": "US"})
+    signals = QuantSignals.model_validate(json.loads(raw))
+
+    assert "tax_policy:normalized_statutory" in signals.data_quality_flags
+    assert captured_dcf_kwargs["tax_rate"] == pytest.approx(0.21)
+    assert captured_dcf_kwargs["ebit"] == pytest.approx(9_000.0)
+    kpi_names = [k["name"] for k in (signals.sector_kpis or {}).get("kpis", [])]
+    assert "Gross Margin (%)" in kpi_names
+    assert "CapEx Intensity (CapEx / Revenue %)" in kpi_names
+    assert "Rule of 40 (Growth + FCF Margin)" not in kpi_names
+

@@ -30,13 +30,13 @@ export default function EditTemplateModal({ template, onClose, onSave }: Props) 
 
   return (
     <Modal titleId="edit-template-modal-title" onClose={onClose}>
-      <h2 id="edit-template-modal-title" className="mb-4 text-sm font-semibold text-zinc-900">
+      <h2 id="edit-template-modal-title" className="mb-4 text-sm font-semibold text-slate-900">
         แก้ไขปุ่มลัด
       </h2>
 
       <div className="space-y-4">
         <div>
-          <label htmlFor="edit-template-label" className="mb-1 block text-xs font-medium text-zinc-600">
+          <label htmlFor="edit-template-label" className="mb-1 block text-xs font-medium text-slate-600">
             ชื่อปุ่มลัด
           </label>
           <TextInput
@@ -51,13 +51,13 @@ export default function EditTemplateModal({ template, onClose, onSave }: Props) 
 
         <div>
           {/* span + role="group" แทน <label> — SegmentedControl เป็นกลุ่มปุ่ม ไม่ใช่ form control */}
-          <span id="edit-template-flow-label" className="mb-1 block text-xs font-medium text-zinc-600">ประเภทงาน</span>
+          <span id="edit-template-flow-label" className="mb-1 block text-xs font-medium text-slate-600">ประเภทงาน</span>
           <SegmentedControl options={FLOW_OPTIONS} value={flow} onChange={setFlow} ariaLabelledby="edit-template-flow-label" />
         </div>
 
         {flow === 'news_youtube' && (
           <div>
-            <span id="edit-template-scope-label" className="mb-1 block text-xs font-medium text-zinc-600">ขอบเขต</span>
+            <span id="edit-template-scope-label" className="mb-1 block text-xs font-medium text-slate-600">ขอบเขต</span>
             <SegmentedControl options={SCOPE_OPTIONS} value={scope} onChange={setScope} ariaLabelledby="edit-template-scope-label" />
           </div>
         )}
@@ -67,7 +67,7 @@ export default function EditTemplateModal({ template, onClose, onSave }: Props) 
         )}
 
         <div>
-          <label htmlFor="edit-template-instruction" className="mb-1 block text-xs font-medium text-zinc-600">
+          <label htmlFor="edit-template-instruction" className="mb-1 block text-xs font-medium text-slate-600">
             คำสั่งเต็มที่จะส่งให้ Swarm Supervisor
           </label>
           <textarea
@@ -79,7 +79,7 @@ export default function EditTemplateModal({ template, onClose, onSave }: Props) 
             }}
             rows={5}
             placeholder="คำสั่งที่จะถูกส่งให้ agent ทันทีเมื่อกดปุ่มลัดนี้"
-            className="w-full resize-none rounded-lg border border-edge bg-panel px-3 py-2 text-sm text-zinc-900 outline-none transition-colors placeholder-zinc-400 focus:border-sky-500 focus:ring-1 focus:ring-sky-500/30"
+            className="w-full resize-none rounded-lg border border-edge bg-panel px-3 py-2 text-sm text-slate-900 outline-none transition-colors placeholder-slate-400 focus:border-sky-500 focus:ring-1 focus:ring-sky-500/30"
           />
         </div>
       </div>

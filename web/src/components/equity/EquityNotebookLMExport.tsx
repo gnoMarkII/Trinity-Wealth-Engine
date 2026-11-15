@@ -1,6 +1,15 @@
 import React, { useEffect, useState, useCallback, useRef } from 'react'
 import { api, ApiError } from '../../api/client'
 import type { EquityNotebookLMExportStatusDTO } from '../../api/types'
+import {
+  AlertTriangleIcon,
+  BookOpenIcon,
+  CheckSmallIcon,
+  ChevronDownIcon,
+  ExternalLinkIcon,
+  RefreshIcon,
+  SparklesIcon,
+} from '../ui/AppIcons'
 
 export interface EquityNotebookLMExportProps {
   ticker: string
@@ -205,36 +214,36 @@ export const EquityNotebookLMExport: React.FC<EquityNotebookLMExportProps> = ({
             href={primaryNotebook.url}
             target="_blank"
             rel="noopener noreferrer"
-            className="flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-purple-600 via-indigo-600 to-sky-600 px-3.5 py-1.5 text-xs font-semibold text-white shadow-xs transition-all hover:opacity-95 hover:shadow focus:outline-hidden focus:ring-2 focus:ring-indigo-400"
+            className="flex items-center gap-1.5 rounded-lg bg-gradient-to-r from-blue-700 via-blue-600 to-sky-600 px-3 py-1.5 text-xs font-semibold text-white shadow-sm transition-all hover:opacity-95 hover:shadow focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-section-accent/45 whitespace-nowrap"
             title="เปิดสมุดค้นคว้าบน Google NotebookLM ในแท็บใหม่"
           >
-            <span>📓</span>
+            <BookOpenIcon className="h-3.5 w-3.5 shrink-0" />
             <span>เปิด NotebookLM เพื่อค้นคว้า</span>
-            <span className="text-[10px] opacity-80">↗</span>
+            <ExternalLinkIcon className="h-3 w-3 opacity-85 shrink-0" />
           </a>
 
           {/* Details Dropdown trigger */}
           <button
             type="button"
             onClick={() => setShowDetails(!showDetails)}
-            className="flex items-center gap-1 rounded-xl border border-indigo-200 bg-indigo-50/60 px-2.5 py-1.5 text-xs font-medium text-indigo-800 transition-all hover:bg-indigo-100/70"
+            className="flex items-center gap-1.5 rounded-lg border border-sky-200 bg-sky-50/75 px-2.5 py-1.5 text-xs font-medium text-sky-900 shadow-sm transition-all hover:bg-sky-100/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-section-accent/45 whitespace-nowrap"
             title="ดูรายละเอียดชุดข้อมูลที่ส่งออกและตัวเลือกอัปเดต"
             aria-label="ดูรายละเอียดชุดข้อมูลที่ส่งออกและตัวเลือกอัปเดต"
             aria-expanded={showDetails}
           >
-            <span className="inline-block w-1.5 h-1.5 rounded-full bg-emerald-500" />
+            <span className="inline-block w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
             <span className="hidden sm:inline">
               {okSourcesCount}/{totalSourcesCount} แหล่ง
             </span>
-            <span className="text-[10px] text-indigo-500">▼</span>
+            <ChevronDownIcon className={`h-3 w-3 text-sky-700 transition-transform ${showDetails ? 'rotate-180' : ''}`} />
           </button>
         </div>
       )}
 
       {/* 2. If in progress, show spinner and progress */}
       {isInProgress && (
-        <div className="flex items-center gap-2 rounded-xl border border-indigo-200 bg-indigo-50/70 px-3.5 py-1.5 text-xs font-medium text-indigo-800 animate-pulse shadow-xs">
-          <span className="animate-spin text-sm">⏳</span>
+        <div className="flex items-center gap-2 rounded-lg border border-sky-200 bg-sky-50/80 px-3 py-1.5 text-xs font-medium text-sky-900 animate-pulse shadow-sm">
+          <RefreshIcon className="h-3.5 w-3.5 animate-spin text-section-accent shrink-0" />
           <span>
             กำลังส่งออก {ticker} ({okSourcesCount}/{totalSourcesCount})...
           </span>
@@ -247,22 +256,22 @@ export const EquityNotebookLMExport: React.FC<EquityNotebookLMExportProps> = ({
           <button
             type="button"
             onClick={() => setShowDetails(!showDetails)}
-            className="flex items-center gap-1 rounded-xl border border-rose-200 bg-rose-50 px-2.5 py-1.5 text-xs font-medium text-rose-700 cursor-pointer hover:bg-rose-100/80 transition-colors"
+            className="flex items-center gap-1.5 rounded-lg border border-rose-200 bg-rose-50 px-2.5 py-1.5 text-xs font-medium text-rose-700 hover:bg-rose-100/80 transition-colors"
             title={exportData?.error || (isBlocked ? 'ต้องมีบทวิเคราะห์ก่อน' : 'การส่งออกขัดข้อง')}
           >
-            <span>⚠️</span>
+            <AlertTriangleIcon className="h-3.5 w-3.5 text-rose-600 shrink-0" />
             <span>{isBlocked ? 'ข้อมูลไม่เพียงพอ' : 'ส่งออกไม่สำเร็จ'}</span>
-            <span className="text-[10px] text-rose-500">▼</span>
+            <ChevronDownIcon className={`h-3 w-3 text-rose-500 transition-transform ${showDetails ? 'rotate-180' : ''}`} />
           </button>
           {exportData?.can_retry && (
             <button
               type="button"
               onClick={handleRetry}
               disabled={isSubmitting}
-              className="flex items-center gap-1 rounded-xl border border-rose-300 bg-white px-2.5 py-1.5 text-xs font-semibold text-rose-700 shadow-xs hover:bg-rose-50 disabled:opacity-50"
+              className="flex items-center gap-1 rounded-lg border border-rose-300 bg-white px-2.5 py-1.5 text-xs font-semibold text-rose-700 shadow-sm hover:bg-rose-50 disabled:opacity-50"
               title="ลองส่งข้อมูลใหม่อีกครั้ง"
             >
-              <span>🔄</span>
+              <RefreshIcon className={`h-3.5 w-3.5 shrink-0 ${isSubmitting ? 'animate-spin' : ''}`} />
               <span>ลองใหม่</span>
             </button>
           )}
@@ -277,61 +286,61 @@ export const EquityNotebookLMExport: React.FC<EquityNotebookLMExportProps> = ({
             type="button"
             onClick={handleExport}
             disabled={isSubmitting}
-            className="flex items-center gap-1.5 rounded-xl border border-indigo-200 bg-gradient-to-r from-white via-indigo-50/40 to-purple-50/50 px-3.5 py-1.5 text-xs font-semibold text-indigo-800 shadow-xs transition-all hover:border-indigo-300 hover:bg-indigo-50/80 hover:shadow disabled:opacity-50"
+            className="flex items-center gap-1.5 rounded-lg border border-sky-200 bg-gradient-to-r from-white via-sky-50/60 to-blue-50/70 px-3 py-1.5 text-xs font-semibold text-section-accent shadow-sm transition-all hover:border-sky-300 hover:bg-sky-50 hover:shadow disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-section-accent/45"
             title="รวบรวมข้อมูล Equity ทุกมิติส่งไปยัง Google NotebookLM เพื่อค้นคว้า"
           >
-            <span>📓</span>
+            <BookOpenIcon className="h-3.5 w-3.5 shrink-0" />
             <span>ส่งข้อมูล Equity ไป NotebookLM</span>
           </button>
         )}
 
       {/* Popover Disclosure: Source Coverage & Re-export */}
       {showDetails && exportData && (
-        <div className="absolute right-0 top-full mt-2 w-80 sm:w-96 rounded-2xl border border-indigo-100 bg-white/95 p-4 shadow-xl backdrop-blur-md z-50 animate-in fade-in zoom-in-95">
-          <div className="flex items-center justify-between pb-3 border-b border-indigo-50">
+        <div className="absolute right-0 top-full mt-2 w-80 sm:w-96 rounded-2xl border border-sky-200/80 bg-white/95 p-4 shadow-xl backdrop-blur-md z-50 animate-in fade-in zoom-in-95">
+          <div className="flex items-center justify-between pb-3 border-b border-slate-100">
             <div className="flex items-center gap-1.5">
-              <span className="text-base">🔬</span>
-              <span className="font-bold text-xs text-zinc-900">
+              <SparklesIcon className="h-4 w-4 text-section-accent shrink-0" />
+              <span className="font-bold text-xs text-slate-900">
                 NotebookLM Research Bundle: {ticker} ({market})
               </span>
             </div>
             <span
-              className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${
+              className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${
                 isCompleted
                   ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
                   : isFailed
                   ? 'bg-rose-50 text-rose-700 border border-rose-200'
-                  : 'bg-indigo-50 text-indigo-700 border border-indigo-200'
+                  : 'bg-sky-50 text-sky-700 border border-sky-200'
               }`}
             >
               {isCompleted ? 'พร้อมใช้งาน' : isBlocked ? 'ถูกระงับ' : isFailed ? 'ล้มเหลว' : 'กำลังประมวลผล'}
             </span>
           </div>
 
-          <div className="py-2.5 space-y-2 text-[11px] text-zinc-600">
-            <div className="flex justify-between items-center text-[10px] text-zinc-500">
+          <div className="py-2.5 space-y-2 text-[11px] text-slate-600">
+            <div className="flex justify-between items-center text-[11px] text-slate-500">
               <span>รายงานประเมินเมื่อ:</span>
-              <span className="font-mono text-zinc-700">
+              <span className="font-mono text-slate-700">
                 {exportData.snapshot_at
                   ? new Date(exportData.snapshot_at).toLocaleString('th-TH')
                   : 'N/A'}
               </span>
             </div>
-            <div className="flex justify-between items-center text-[10px] text-zinc-500">
+            <div className="flex justify-between items-center text-[11px] text-slate-500">
               <span>Snapshot Hash:</span>
-              <span className="font-mono text-zinc-700" title={exportData.bundle_hash}>
+              <span className="font-mono text-slate-700" title={exportData.bundle_hash}>
                 {exportData.bundle_hash ? `${exportData.bundle_hash.slice(0, 14)}...` : 'N/A'}
               </span>
             </div>
 
             {/* Warnings list if any */}
             {exportData.warnings && exportData.warnings.length > 0 && (
-              <div className="rounded-xl bg-amber-50/80 p-2 border border-amber-200/70 text-[10px] text-amber-900 space-y-1">
-                <div className="font-semibold flex items-center gap-1">
-                  <span>⚠️</span>
+              <div className="rounded-xl bg-amber-50/80 p-2 border border-amber-200/70 text-[11px] text-amber-900 space-y-1">
+                <div className="font-semibold flex items-center gap-1.5">
+                  <AlertTriangleIcon className="h-3.5 w-3.5 text-amber-600 shrink-0" />
                   <span>ข้อสังเกตความสมบูรณ์ของข้อมูล:</span>
                 </div>
-                <ul className="list-disc list-inside space-y-0.5 pl-1 text-[9.5px] text-amber-800">
+                <ul className="list-disc list-inside space-y-0.5 pl-1 text-[11px] text-amber-800">
                   {exportData.warnings.map((w, idx) => (
                     <li key={idx}>{w}</li>
                   ))}
@@ -341,18 +350,18 @@ export const EquityNotebookLMExport: React.FC<EquityNotebookLMExportProps> = ({
 
             {/* Error explanation if failed */}
             {exportData.error && (
-              <div className="rounded-xl bg-rose-50/80 p-2 border border-rose-200 text-[10px] text-rose-800">
+              <div className="rounded-xl bg-rose-50/80 p-2 border border-rose-200 text-[11px] text-rose-800">
                 <span className="font-semibold block mb-0.5">ข้อผิดพลาด:</span>
-                <p className="text-[9.5px]">{exportData.error}</p>
+                <p className="text-[11px]">{exportData.error}</p>
               </div>
             )}
 
             {/* Sources Checklist */}
             <div className="mt-2 space-y-1 rounded-xl bg-slate-50/80 p-2.5 border border-slate-100">
-              <span className="font-semibold text-zinc-700 block mb-1">
+              <span className="font-semibold text-slate-700 block mb-1">
                 เอกสารในชุดข้อมูล ({okSourcesCount}/{totalSourcesCount}):
               </span>
-              <div className="grid grid-cols-1 gap-1 text-[10px] max-h-48 overflow-y-auto pr-1">
+              <div className="grid grid-cols-1 gap-1 text-[11px] max-h-48 overflow-y-auto pr-1">
                 {DOCUMENT_ITEMS.map((doc) => {
                   const matchingResult = exportData.source_results?.find((s) =>
                     s.file_name.startsWith(doc.prefix)
@@ -364,15 +373,17 @@ export const EquityNotebookLMExport: React.FC<EquityNotebookLMExportProps> = ({
                   return (
                     <div key={doc.prefix} className="flex items-center gap-1.5 justify-between">
                       <div className="flex items-center gap-1.5 truncate">
-                        <span className={isOk ? 'text-emerald-500 font-bold' : 'text-zinc-400'}>
-                          {isOk ? '✓' : '•'}
-                        </span>
+                        {isOk ? (
+                          <CheckSmallIcon className="h-3 w-3 text-emerald-600 shrink-0" />
+                        ) : (
+                          <span className="inline-block w-1.5 h-1.5 rounded-full bg-slate-300 mx-0.5 shrink-0" />
+                        )}
                         <span className="truncate" title={doc.label}>
                           {doc.prefix}: {doc.label}
                         </span>
                       </div>
                       {matchingResult && !isOk && (
-                        <span className="text-[9px] text-zinc-400 shrink-0">
+                        <span className="text-[11px] text-slate-500 shrink-0">
                           {matchingResult.status}
                         </span>
                       )}
@@ -382,13 +393,13 @@ export const EquityNotebookLMExport: React.FC<EquityNotebookLMExportProps> = ({
               </div>
             </div>
 
-            <div className="text-[10px] text-zinc-400 italic pt-1">
+            <div className="text-[11px] text-slate-500 italic pt-1">
               * Research Companion สำหรับค้นคว้าเท่านั้น — ไม่มีการสร้าง Podcast, Discord หรือเขียนทับ conviction
             </div>
           </div>
 
           {/* Action Row inside popover */}
-          <div className="pt-2 border-t border-indigo-50 flex items-center justify-between gap-2">
+          <div className="pt-2 border-t border-slate-100 flex items-center justify-between gap-2">
             <button
               type="button"
               onClick={() => {
@@ -396,10 +407,11 @@ export const EquityNotebookLMExport: React.FC<EquityNotebookLMExportProps> = ({
                 handleExport()
               }}
               disabled={isSubmitting}
-              className="rounded-lg border border-indigo-200 bg-white px-2.5 py-1 text-[11px] font-semibold text-indigo-700 hover:bg-indigo-50 transition-colors disabled:opacity-50"
+              className="inline-flex items-center gap-1.5 rounded-lg border border-sky-200 bg-white px-2.5 py-1 text-[11px] font-semibold text-section-accent hover:bg-sky-50 transition-colors disabled:opacity-50"
               title="สร้าง Snapshot ใหม่และส่งออกอีกครั้ง"
             >
-              🔄 ส่งออกชุดข้อมูลใหม่
+              <RefreshIcon className="h-3 w-3 shrink-0" />
+              <span>ส่งออกชุดข้อมูลใหม่</span>
             </button>
 
             {primaryNotebook?.url && (
@@ -407,9 +419,10 @@ export const EquityNotebookLMExport: React.FC<EquityNotebookLMExportProps> = ({
                 href={primaryNotebook.url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="rounded-lg bg-indigo-600 px-3 py-1 text-[11px] font-semibold text-white hover:bg-indigo-700 transition-colors"
+                className="inline-flex items-center gap-1 rounded-lg bg-section-accent px-3 py-1 text-[11px] font-semibold text-white hover:opacity-90 transition-opacity"
               >
-                เปิดในเบราว์เซอร์ ↗
+                <span>เปิดในเบราว์เซอร์</span>
+                <ExternalLinkIcon className="h-3 w-3 shrink-0" />
               </a>
             )}
           </div>

@@ -53,12 +53,12 @@ export const CATEGORY_CONFIG: Record<
   low_impact_fallback: {
     title: 'ข้อสังเกตและข้อมูลสำรองผลกระทบต่ำ (Low Impact / Notes)',
     badgeText: 'Informational',
-    badgeBg: 'bg-zinc-100',
-    badgeTextClass: 'text-zinc-700',
-    borderClass: 'border-zinc-200',
-    iconBgClass: 'bg-zinc-100',
-    iconColorClass: 'text-zinc-600',
-    containerBgClass: 'bg-zinc-50/50',
+    badgeBg: 'bg-slate-100',
+    badgeTextClass: 'text-slate-700',
+    borderClass: 'border-slate-200',
+    iconBgClass: 'bg-slate-100',
+    iconColorClass: 'text-slate-600',
+    containerBgClass: 'bg-slate-50/50',
   },
 }
 

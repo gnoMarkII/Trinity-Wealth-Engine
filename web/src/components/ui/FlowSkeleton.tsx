@@ -89,11 +89,11 @@ export const NewsCardListSkeleton: React.FC<{
 )
 
 export const PortfolioSummaryCardsSkeleton: React.FC = () => (
-  <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2 xl:grid-cols-4 animate-fade-in" aria-live="polite">
+  <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2 xl:grid-cols-4 animate-fade-in animate-pulse" aria-live="polite">
     {Array.from({ length: 4 }).map((_, idx) => (
       <div
         key={idx}
-        className="flow-panel relative overflow-hidden rounded-2xl border border-sky-100 bg-panel/75 p-5 shadow-xs space-y-3.5 animate-pulse"
+        className="flow-panel relative overflow-hidden rounded-2xl border border-sky-100 bg-panel/75 p-5 shadow-sm space-y-3.5"
       >
         <div className="flex items-center justify-between">
           <div className="h-4 w-28 rounded-md animate-shimmer" />
@@ -115,7 +115,7 @@ export const PortfolioSummaryCardsSkeleton: React.FC = () => (
 export const PortfolioOverviewSkeleton: React.FC = () => (
   <div className="space-y-6 animate-fade-in animate-pulse" aria-live="polite">
     {/* Policy Lineage Banner Skeleton */}
-    <div className="rounded-2xl border border-sky-100 bg-sky-50/30 p-5 shadow-xs flex items-center justify-between gap-4">
+    <div className="rounded-2xl border border-sky-100 bg-sky-50/30 p-5 shadow-sm flex items-center justify-between gap-4">
       <div className="flex items-center gap-3">
         <div className="h-10 w-10 rounded-xl animate-shimmer" />
         <div className="space-y-1.5">

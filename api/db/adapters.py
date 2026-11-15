@@ -1,7 +1,10 @@
 import api.db.repositories.advisor_chat_repository as advisor_chat_repo_dao
 from application.manager.ports import AdvisorSessionRepoPort, PMReviewSignoffRepoPort
+from application.roundtable.ports import RoundtableSessionRepoPort
 from application.thesis.ports import ThesisExceptionStorePort
+from core.roundtable.models import RoundtableSession, RoundtableTurn
 from core.sandbox.models import AdvisorChatMessage, AdvisorSessionSummary
+import api.db.repositories.roundtable_repository as roundtable_repo_dao
 import tools.thesis.thesis_sqlite_dao as thesis_sqlite_dao
 import uuid
 """SQLite driven adapters for application repository ports.
@@ -153,6 +156,10 @@ class SqliteJobRepositoryAdapter(_SqliteAdapterBase, JobRepositoryPort):
     def clear_job_resume_value(self, job_id: str) -> None:
         with self._connection(write=True) as conn:
             job_repo_dao.clear_job_resume_value(conn, job_id)
+
+    def cancel_job_approval(self, job_id: str, reason: str) -> None:
+        with self._connection(write=True) as conn:
+            job_repo_dao.cancel_job_approval(conn, job_id, reason)
 
     def append_job_log(
         self,
@@ -1227,3 +1234,161 @@ class SqliteInstitutionalLedgerRepositoryAdapter(_SqliteAdapterBase):
                 )
                 imported += 1
         return {"imported": imported, "skipped": skipped}
+
+
+class SqliteRoundtableRepositoryAdapter(_SqliteAdapterBase, RoundtableSessionRepoPort):
+    """Concrete SQLite adapter for RoundtableSessionRepoPort."""
+
+    def create_session(
+        self,
+        *,
+        session_id: str,
+        title: str,
+        primary_ticker: Optional[str],
+        benchmark_ticker: Optional[str],
+        entry_price_at_session: Optional[str],
+        agenda_prompt: str,
+        context_refs: Sequence[str],
+        frozen_packet_json: str,
+        packet_fingerprint_sha256: str,
+        final_rating: str = "REVIEW",
+        status: str = "active",
+    ) -> RoundtableSession:
+        with self._connection(write=True) as conn:
+            return roundtable_repo_dao.create_roundtable_session(
+                conn,
+                session_id=session_id,
+                title=title,
+                primary_ticker=primary_ticker,
+                benchmark_ticker=benchmark_ticker,
+                entry_price_at_session=entry_price_at_session,
+                agenda_prompt=agenda_prompt,
+                context_refs=context_refs,
+                frozen_packet_json=frozen_packet_json,
+                packet_fingerprint_sha256=packet_fingerprint_sha256,
+                final_rating=final_rating,
+                status=status,
+            )
+
+    def get_session(self, session_id: str) -> Optional[RoundtableSession]:
+        with self._connection() as conn:
+            return roundtable_repo_dao.get_roundtable_session(conn, session_id)
+
+    def list_sessions(self, limit: int = 30) -> List[RoundtableSession]:
+        with self._connection() as conn:
+            return roundtable_repo_dao.list_roundtable_sessions(conn, limit=limit)
+
+    def list_sessions_by_ticker(self, ticker: str, limit: int = 10) -> List[RoundtableSession]:
+        with self._connection() as conn:
+            return roundtable_repo_dao.list_roundtable_sessions_by_ticker(conn, ticker=ticker, limit=limit)
+
+    def update_session_playbook(
+        self,
+        *,
+        session_id: str,
+        decision_playbook_json: str,
+        final_rating: str,
+        status: str = "completed",
+    ) -> Optional[RoundtableSession]:
+        with self._connection(write=True) as conn:
+            return roundtable_repo_dao.update_roundtable_session_playbook(
+                conn,
+                session_id=session_id,
+                decision_playbook_json=decision_playbook_json,
+                final_rating=final_rating,
+                status=status,
+            )
+
+    def update_session_context(
+        self,
+        *,
+        session_id: str,
+        frozen_packet_json: str,
+        packet_fingerprint_sha256: str,
+        entry_price_at_session: Optional[str] = None,
+    ) -> Optional[RoundtableSession]:
+        with self._connection(write=True) as conn:
+            return roundtable_repo_dao.update_roundtable_session_context(
+                conn,
+                session_id=session_id,
+                frozen_packet_json=frozen_packet_json,
+                packet_fingerprint_sha256=packet_fingerprint_sha256,
+                entry_price_at_session=entry_price_at_session,
+            )
+
+    def update_session_settlement(
+        self,
+        *,
+        session_id: str,
+        settlement_status: str,
+        settled_return_pct: Optional[str],
+        settled_alpha_pct: Optional[str],
+        settled_at_date: Optional[str],
+        reflection_lesson: Optional[str],
+    ) -> Optional[RoundtableSession]:
+        with self._connection(write=True) as conn:
+            return roundtable_repo_dao.update_roundtable_session_settlement(
+                conn,
+                session_id=session_id,
+                settlement_status=settlement_status,
+                settled_return_pct=settled_return_pct,
+                settled_alpha_pct=settled_alpha_pct,
+                settled_at_date=settled_at_date,
+                reflection_lesson=reflection_lesson,
+            )
+
+    def append_turn(
+        self,
+        *,
+        turn_id: str,
+        session_id: str,
+        seq: int,
+        speaker_id: str,
+        round_stage: str,
+        replying_to: Optional[str],
+        spoken_dialogue: str,
+        evidence_bullets: Sequence[str],
+        stance_tag: str,
+        audio_cache_key: Optional[str],
+        sizing_posture: Optional[str] = None,
+    ) -> RoundtableTurn:
+        with self._connection(write=True) as conn:
+            return roundtable_repo_dao.append_roundtable_turn(
+                conn,
+                turn_id=turn_id,
+                session_id=session_id,
+                seq=seq,
+                speaker_id=speaker_id,
+                round_stage=round_stage,
+                replying_to=replying_to,
+                spoken_dialogue=spoken_dialogue,
+                evidence_bullets=evidence_bullets,
+                stance_tag=stance_tag,
+                audio_cache_key=audio_cache_key,
+                sizing_posture=sizing_posture,
+            )
+
+    def update_turn_audio_key(self, turn_id: str, audio_cache_key: str) -> None:
+        with self._connection(write=True) as conn:
+            roundtable_repo_dao.update_roundtable_turn_audio_key(conn, turn_id, audio_cache_key)
+
+    def get_turns(self, session_id: str) -> List[RoundtableTurn]:
+        with self._connection() as conn:
+            return roundtable_repo_dao.get_roundtable_turns(conn, session_id)
+
+    def get_next_seq(self, session_id: str) -> int:
+        with self._connection() as conn:
+            return roundtable_repo_dao.get_next_roundtable_turn_seq(conn, session_id)
+
+    def list_guru_profiles(self) -> List[Dict[str, Any]]:
+        with self._connection() as conn:
+            return roundtable_repo_dao.list_roundtable_guru_profiles(conn)
+
+    def upsert_guru_profiles(self, profiles: Sequence[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        with self._connection(write=True) as conn:
+            return roundtable_repo_dao.upsert_roundtable_guru_profiles(conn, profiles)
+
+    def reset_guru_profiles(self, speaker_id: Optional[str] = None) -> None:
+        with self._connection(write=True) as conn:
+            roundtable_repo_dao.reset_roundtable_guru_profiles(conn, speaker_id=speaker_id)
+

@@ -439,7 +439,7 @@ function SectorMap({
         </text>
 
         {/* X-axis Ticks */}
-        <g className="text-slate-400 select-none" fontSize="9.5" fill="#64748b" textAnchor="middle">
+        <g className="text-slate-500 select-none" fontSize="9.5" fill="#64748b" textAnchor="middle">
           <text x={plot.left} y={plot.bottom + 16}>
             {minVal.toFixed(1)}
           </text>
@@ -458,7 +458,7 @@ function SectorMap({
         </g>
 
         {/* Y-axis Ticks */}
-        <g className="text-slate-400 select-none" fontSize="9.5" fill="#64748b" textAnchor="end">
+        <g className="text-slate-500 select-none" fontSize="9.5" fill="#64748b" textAnchor="end">
           <text x={plot.left - 8} y={plot.top + 4}>
             {maxVal.toFixed(1)}
           </text>
@@ -497,7 +497,7 @@ function SectorMap({
             </div>
             {tooltipData.row.quadrant && (
               <span
-                className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${
+                className={`rounded-full px-2 py-0.5 text-[11px] font-bold ${
                   QUADRANT_CONFIG[tooltipData.row.quadrant as QuadrantKey]?.bgLight
                 } ${QUADRANT_CONFIG[tooltipData.row.quadrant as QuadrantKey]?.text}`}
               >
@@ -507,19 +507,19 @@ function SectorMap({
           </div>
           <div className="mt-2 grid grid-cols-2 gap-2 text-xs">
             <div>
-              <span className="text-[10px] text-slate-400">Relative Trend</span>
+              <span className="text-[11px] text-slate-500">Relative Trend</span>
               <div className="font-mono font-bold text-slate-800">
                 {tooltipData.row.relative_trend?.toFixed(2) ?? '—'}
               </div>
             </div>
             <div>
-              <span className="text-[10px] text-slate-400">Relative Momentum</span>
+              <span className="text-[11px] text-slate-500">Relative Momentum</span>
               <div className="font-mono font-bold text-slate-800">
                 {tooltipData.row.relative_momentum?.toFixed(2) ?? '—'}
               </div>
             </div>
             <div>
-              <span className="text-[10px] text-slate-400">1M Excess vs SPY</span>
+              <span className="text-[11px] text-slate-500">1M Excess vs SPY</span>
               <div
                 className={`font-mono font-bold ${
                   (tooltipData.row.returns_pct['1M_excess_pp'] ?? 0) >= 0 ? 'text-emerald-600' : 'text-rose-600'
@@ -529,7 +529,7 @@ function SectorMap({
               </div>
             </div>
             <div>
-              <span className="text-[10px] text-slate-400">1M Absolute</span>
+              <span className="text-[11px] text-slate-500">1M Absolute</span>
               <div
                 className={`font-mono font-semibold ${
                   (tooltipData.row.returns_pct['1M_absolute_pct'] ?? 0) >= 0 ? 'text-emerald-600' : 'text-rose-600'
@@ -559,7 +559,7 @@ function RelativePriceChart({
   const availablePoints = points.map((point, index) => ({ point, index })).filter(({ point }) => point.sector_spy_rebased_100 != null)
   if (!points || availablePoints.length < 2) {
     return (
-      <div className="flex h-32 items-center justify-center rounded-xl bg-slate-50 text-xs text-slate-400">
+      <div className="flex h-32 items-center justify-center rounded-xl bg-slate-50 text-xs text-slate-500">
         ข้อมูลประวัติราคาเปรียบเทียบยังไม่เพียงพอสำหรับกราฟ
       </div>
     )
@@ -623,7 +623,7 @@ function RelativePriceChart({
       <div className="mb-2 flex flex-wrap items-center justify-between gap-2 text-xs">
         <div className="flex items-center gap-2">
           <span className="font-semibold text-slate-900">{ticker} vs SPY Relative Performance</span>
-          <span className="rounded bg-slate-100 px-1.5 py-0.5 text-[10px] text-slate-600">Rebased = 100</span>
+          <span className="rounded bg-slate-100 px-1.5 py-0.5 text-[11px] text-slate-600">Rebased = 100</span>
         </div>
         <div className="flex items-center gap-3 font-mono text-xs">
           <span>
@@ -633,7 +633,7 @@ function RelativePriceChart({
             ({netRelativeChange > 0 ? '+' : ''}
             {netRelativeChange.toFixed(2)}% vs SPY)
           </span>
-          <span className="text-[10px] text-slate-400">({activePoint.as_of})</span>
+          <span className="text-[11px] text-slate-500">({activePoint.as_of})</span>
         </div>
       </div>
 
@@ -712,7 +712,7 @@ function RelativePriceChart({
           </text>
         </svg>
       </div>
-      <p className="mt-1 text-[10px] text-slate-400">
+      <p className="mt-1 text-[11px] text-slate-500">
         เส้นกราฟแสดงมูลค่าเปรียบเทียบ Sector/SPY Rebased เป็น 100 ณ {baseDate || 'จุดเริ่มต้นของช่วงเวลา'} · ค่าสูงกว่า 100 หมายถึง Outperform ตลาด
       </p>
     </div>
@@ -930,7 +930,7 @@ export function SectorRotationDashboard({ aiAnalysis }: { aiAnalysis?: SectorAna
             <h2 id="sector-rotation-title" className="text-lg font-bold tracking-tight text-slate-900">
               US Sector Rotation (RRG)
             </h2>
-            <span className="rounded-full border border-indigo-200 bg-indigo-50/80 px-2.5 py-0.5 text-[10px] font-semibold text-indigo-700 shadow-sm">
+            <span className="rounded-full border border-blue-200 bg-blue-50/80 px-2.5 py-0.5 text-[11px] font-semibold text-blue-700 shadow-sm">
               Python calculation
             </span>
           </div>
@@ -1004,20 +1004,20 @@ export function SectorRotationDashboard({ aiAnalysis }: { aiAnalysis?: SectorAna
 
       {/* AI Macro Interpretation Banner */}
       {aiAnalysis && (
-        <div className="space-y-3 rounded-2xl border border-violet-200/70 bg-gradient-to-br from-violet-50/70 via-white to-purple-50/40 p-4 shadow-sm">
+        <div className="space-y-3 rounded-2xl border border-violet-200/70 bg-gradient-to-br from-violet-50/70 via-white to-sky-50/40 p-4 shadow-sm">
           <div className="flex flex-wrap items-center justify-between gap-2 border-b border-violet-100/70 pb-2.5">
             <div className="flex flex-wrap items-center gap-2">
               <span className="text-base">🧠</span>
               <h3 className="text-xs font-bold uppercase tracking-wider text-violet-950">AI Macro Interpretation</h3>
-              <span className="rounded-full border border-violet-200 bg-white px-2 py-0.5 text-[10px] font-semibold text-violet-800">
+              <span className="rounded-full border border-violet-200 bg-white px-2 py-0.5 text-[11px] font-semibold text-violet-800">
                 สถานะ: {aiAnalysis.analysis_status || 'unavailable'}
               </span>
               {aiAnalysis.unavailable_reason && (
-                <span className="text-[10px] text-amber-800">({aiAnalysis.unavailable_reason})</span>
+                <span className="text-[11px] text-amber-800">({aiAnalysis.unavailable_reason})</span>
               )}
             </div>
             {aiAnalysis.snapshot_id && (
-              <div className="flex items-center gap-2 text-[10px] text-violet-700">
+              <div className="flex items-center gap-2 text-[11px] text-violet-700">
                 <span>
                   Snapshot {aiAnalysis.snapshot_id.slice(0, 14)}… · {aiAnalysis.as_of_date || 'date unavailable'}
                 </span>
@@ -1055,7 +1055,7 @@ export function SectorRotationDashboard({ aiAnalysis }: { aiAnalysis?: SectorAna
                 return (
                   <li
                     key={`${claim.ticker}-${claim.metric_ref}-${index}`}
-                    className="flex flex-col rounded-lg border border-violet-100 bg-white/80 p-2 text-violet-950 shadow-2xs"
+                    className="flex flex-col rounded-lg border border-violet-100 bg-white/80 p-2 text-violet-950 shadow-sm"
                   >
                     <span className="font-bold text-violet-900">
                       {claim.ticker} · {fact}
@@ -1110,7 +1110,7 @@ export function SectorRotationDashboard({ aiAnalysis }: { aiAnalysis?: SectorAna
                   className={`group flex flex-col justify-between rounded-xl border p-3 text-left transition-all duration-200 ${
                     isActive
                       ? `${q.bgLight} ${q.border} shadow-md ring-2 ring-offset-1 ring-slate-400`
-                      : 'border-slate-200 bg-white hover:border-slate-300 hover:shadow-xs'
+                      : 'border-slate-200 bg-white hover:border-slate-300 hover:shadow-sm'
                   }`}
                 >
                   <div className="flex items-center justify-between">
@@ -1128,13 +1128,13 @@ export function SectorRotationDashboard({ aiAnalysis }: { aiAnalysis?: SectorAna
                       tickers.map((t) => (
                         <span
                           key={t}
-                          className="rounded bg-slate-100 px-1.5 py-0.5 font-mono text-[10px] font-semibold text-slate-700"
+                          className="rounded bg-slate-100 px-1.5 py-0.5 font-mono text-[11px] font-semibold text-slate-700"
                         >
                           {t}
                         </span>
                       ))
                     ) : (
-                      <span className="text-[10px] text-slate-400">ไม่มีหุ้นในหมวดนี้</span>
+                      <span className="text-[11px] text-slate-500">ไม่มีหุ้นในหมวดนี้</span>
                     )}
                   </div>
                 </button>
@@ -1145,13 +1145,13 @@ export function SectorRotationDashboard({ aiAnalysis }: { aiAnalysis?: SectorAna
           {/* 3. Main Display Grid: Map on Left, Performance Table on Right */}
           <div className="grid grid-cols-1 gap-5 xl:grid-cols-[1.25fr_0.95fr]">
             {/* Left: Enhanced Relative Rotation Map */}
-            <div className="flex flex-col rounded-2xl border border-slate-200/90 bg-white p-3.5 shadow-2xs sm:p-4">
+            <div className="flex flex-col rounded-2xl border border-slate-200/90 bg-white p-3.5 shadow-sm sm:p-4">
               {/* Map Controls Toolbar */}
               <div className="mb-3 flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-2.5 text-xs">
                 <div className="flex items-center gap-1.5 text-slate-700">
                   <span className="font-bold">Relative Rotation Map</span>
                   <span
-                    className="cursor-help text-slate-400"
+                    className="cursor-help text-slate-500"
                     title="กราฟวิเคราะห์โมเมนตัมและทิศทางเชิงสัมพัทธ์ (Relative Rotation Graph) ศูนย์กลางแกนอยู่ที่ 100 คำนวณด้วย Rolling Z-scores ของ Sector/SPY"
                   >
                     ⓘ
@@ -1165,7 +1165,7 @@ export function SectorRotationDashboard({ aiAnalysis }: { aiAnalysis?: SectorAna
                     onClick={() => setShowTrails(!showTrails)}
                     className={`rounded-md border px-2 py-1 text-[11px] font-medium transition ${
                       showTrails
-                        ? 'border-indigo-200 bg-indigo-50 text-indigo-700'
+                        ? 'border-blue-200 bg-blue-50 text-blue-700'
                         : 'border-slate-200 text-slate-500 hover:bg-slate-50'
                     }`}
                   >
@@ -1174,7 +1174,7 @@ export function SectorRotationDashboard({ aiAnalysis }: { aiAnalysis?: SectorAna
 
                   {/* Zoom Mode Selector */}
                   <div className="flex items-center gap-1 rounded-md border border-slate-200 bg-slate-50 p-0.5 text-[11px]">
-                    <span className="px-1 text-[10px] text-slate-400">Zoom:</span>
+                    <span className="px-1 text-[11px] text-slate-500">Zoom:</span>
                     {(['auto', '3', '6', '10', '20'] as const).map((z) => (
                       <button
                         key={z}
@@ -1182,7 +1182,7 @@ export function SectorRotationDashboard({ aiAnalysis }: { aiAnalysis?: SectorAna
                         onClick={() => setZoomMode(z)}
                         className={`rounded px-1.5 py-0.5 font-medium transition ${
                           zoomMode === z
-                            ? 'bg-white font-bold text-slate-900 shadow-2xs'
+                            ? 'bg-white font-bold text-slate-900 shadow-sm'
                             : 'text-slate-500 hover:text-slate-800'
                         }`}
                       >
@@ -1207,18 +1207,18 @@ export function SectorRotationDashboard({ aiAnalysis }: { aiAnalysis?: SectorAna
             </div>
 
             {/* Right: Sector Performance Table */}
-            <div className="flex flex-col rounded-2xl border border-slate-200/90 bg-white p-3.5 shadow-2xs sm:p-4">
+            <div className="flex flex-col rounded-2xl border border-slate-200/90 bg-white p-3.5 shadow-sm sm:p-4">
               {/* Table Toolbar */}
               <div className="mb-3 flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-2.5">
                 <div className="flex items-center gap-2">
                   <span className="text-xs font-bold text-slate-900">ผลตอบแทนรายหมวด</span>
                   {activeQuadrantFilter && (
-                    <span className="flex items-center gap-1 rounded-full bg-slate-100 px-2 py-0.5 text-[10px] text-slate-700">
+                    <span className="flex items-center gap-1 rounded-full bg-slate-100 px-2 py-0.5 text-[11px] text-slate-700">
                       หมวด: <strong>{activeQuadrantFilter}</strong>
                       <button
                         type="button"
                         onClick={() => setActiveQuadrantFilter(null)}
-                        className="text-slate-400 hover:text-slate-700"
+                        className="text-slate-500 hover:text-slate-700"
                       >
                         ✕
                       </button>
@@ -1232,14 +1232,14 @@ export function SectorRotationDashboard({ aiAnalysis }: { aiAnalysis?: SectorAna
                   placeholder="ค้นหา Sector..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="rounded-lg border border-slate-200 px-2.5 py-1 text-xs text-slate-800 placeholder-slate-400 focus:border-indigo-500 focus:outline-none"
+                  className="rounded-lg border border-slate-200 px-2.5 py-1 text-xs text-slate-800 placeholder-slate-400 focus:border-blue-500 focus:outline-none"
                 />
               </div>
 
               {/* Table Body */}
               <div className="overflow-x-auto">
                 <table className="w-full min-w-[760px] text-left text-xs">
-                  <thead className="bg-slate-50/80 text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                  <thead className="bg-slate-50/80 text-[11px] font-bold uppercase tracking-wider text-slate-500">
                     <tr>
                       <th
                         className="cursor-pointer px-2 py-2 hover:text-slate-800"
@@ -1314,13 +1314,16 @@ export function SectorRotationDashboard({ aiAnalysis }: { aiAnalysis?: SectorAna
                           onMouseEnter={() => setHoveredTicker(row.ticker)}
                           onMouseLeave={() => setHoveredTicker(null)}
                           onKeyDown={(event) => {
-                            if (event.key === 'Enter' || event.key === ' ') setSelectedTicker(row.ticker)
+                            if (event.key === 'Enter' || event.key === ' ') {
+                              event.preventDefault()
+                              setSelectedTicker(row.ticker)
+                            }
                           }}
                           tabIndex={0}
                           aria-selected={isSelected}
                           className={`cursor-pointer transition-colors ${
                             isSelected
-                              ? 'bg-indigo-50/80'
+                              ? 'bg-blue-50/80'
                               : isHovered
                               ? 'bg-slate-50'
                               : 'hover:bg-slate-50/70'
@@ -1331,7 +1334,7 @@ export function SectorRotationDashboard({ aiAnalysis }: { aiAnalysis?: SectorAna
                               <span className="text-sm">{SECTOR_INFO[row.ticker]?.icon || '📊'}</span>
                               <div>
                                 <div className="font-bold text-slate-900">{row.ticker}</div>
-                                <div className="text-[10px] text-slate-500">
+                                <div className="text-[11px] text-slate-500">
                                   {SECTOR_INFO[row.ticker]?.th || row.name}
                                 </div>
                               </div>
@@ -1340,33 +1343,33 @@ export function SectorRotationDashboard({ aiAnalysis }: { aiAnalysis?: SectorAna
                           <td className="px-2 py-2.5">
                             {qConfig ? (
                               <span
-                                className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-semibold ${qConfig.bgLight} ${qConfig.border} ${qConfig.text}`}
+                                className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-semibold ${qConfig.bgLight} ${qConfig.border} ${qConfig.text}`}
                               >
                                 <span className={`h-1.5 w-1.5 rounded-full ${qConfig.dot}`} />
                                 {row.quadrant}
                               </span>
                             ) : (
-                              <span className="text-slate-400">—</span>
+                              <span className="text-slate-500">—</span>
                             )}
                           </td>
                           <td
                             title={metricTitle(row, '1M')}
                             className={`px-2 py-2.5 text-right font-mono font-semibold tabular-nums ${
-                              row.returns_pct['1M_absolute_pct'] == null ? 'text-slate-400' : row.returns_pct['1M_absolute_pct'] >= 0 ? 'text-emerald-600' : 'text-rose-600'
+                              row.returns_pct['1M_absolute_pct'] == null ? 'text-slate-500' : row.returns_pct['1M_absolute_pct'] >= 0 ? 'text-emerald-600' : 'text-rose-600'
                             }`}
                           >
                             {formatMetric(row.returns_pct['1M_absolute_pct'])}
-                            {metricQualityLabel(row, '1M') && <span className="ml-1 text-[9px] text-amber-700">{metricQualityLabel(row, '1M')}</span>}
+                            {metricQualityLabel(row, '1M') && <span className="ml-1 text-[11px] text-amber-700">{metricQualityLabel(row, '1M')}</span>}
                           </td>
                           <td className="px-2 py-2.5 text-right font-mono tabular-nums">
                             <div title={metricTitle(row, '3M')} className="flex flex-col items-end">
                               <span
                                 className={`font-bold ${
-                                  excessVal == null ? 'text-slate-400' : excessVal >= 0 ? 'text-emerald-600' : 'text-rose-600'
+                                  excessVal == null ? 'text-slate-500' : excessVal >= 0 ? 'text-emerald-600' : 'text-rose-600'
                                 }`}
                               >
                                 {formatMetric(excessVal, ' pp')}
-                                {metricQualityLabel(row, '3M') && <span className="ml-1 text-[9px] text-amber-700">{metricQualityLabel(row, '3M')}</span>}
+                                {metricQualityLabel(row, '3M') && <span className="ml-1 text-[11px] text-amber-700">{metricQualityLabel(row, '3M')}</span>}
                               </span>
                               {/* Horizontal Diverging Bar (Center = 0) */}
                               <div className="mt-1 flex h-1.5 w-16 overflow-hidden rounded-full bg-slate-100">
@@ -1393,21 +1396,21 @@ export function SectorRotationDashboard({ aiAnalysis }: { aiAnalysis?: SectorAna
                           <td
                             title={metricTitle(row, '3M')}
                             className={`px-2 py-2.5 text-right font-mono tabular-nums ${
-                              row.returns_pct['3M_absolute_pct'] == null ? 'text-slate-400' : row.returns_pct['3M_absolute_pct'] >= 0 ? 'text-emerald-600' : 'text-rose-600'
+                              row.returns_pct['3M_absolute_pct'] == null ? 'text-slate-500' : row.returns_pct['3M_absolute_pct'] >= 0 ? 'text-emerald-600' : 'text-rose-600'
                             }`}
                           >
                             {formatMetric(row.returns_pct['3M_absolute_pct'])}
-                            {metricQualityLabel(row, '3M') && <span className="ml-1 text-[9px] text-amber-700">{metricQualityLabel(row, '3M')}</span>}
+                            {metricQualityLabel(row, '3M') && <span className="ml-1 text-[11px] text-amber-700">{metricQualityLabel(row, '3M')}</span>}
                           </td>
                           {(['1W', '6M', 'YTD', '1Y'] as const).map((horizon) => {
                             const value = row.returns_pct[`${horizon}_absolute_pct`]
                             return (
                               <td key={horizon} title={metricTitle(row, horizon)}
                                 className={`px-2 py-2.5 text-right font-mono tabular-nums ${
-                                  value == null ? 'text-slate-400' : value >= 0 ? 'text-emerald-600' : 'text-rose-600'
+                                  value == null ? 'text-slate-500' : value >= 0 ? 'text-emerald-600' : 'text-rose-600'
                                 }`}>
                                 {formatMetric(value)}
-                                {metricQualityLabel(row, horizon) && <span className="ml-1 text-[9px] text-amber-700">{metricQualityLabel(row, horizon)}</span>}
+                                {metricQualityLabel(row, horizon) && <span className="ml-1 text-[11px] text-amber-700">{metricQualityLabel(row, horizon)}</span>}
                               </td>
                             )
                           })}
@@ -1425,7 +1428,7 @@ export function SectorRotationDashboard({ aiAnalysis }: { aiAnalysis?: SectorAna
             <div className="space-y-4 rounded-2xl border border-slate-200/80 bg-white p-4 shadow-sm sm:p-5">
               <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-3">
                 <div className="flex items-center gap-3">
-                  <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-100 text-xl shadow-2xs">
+                  <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-100 text-xl shadow-sm">
                     {SECTOR_INFO[selectedRow.ticker]?.icon || '📊'}
                   </span>
                   <div>
@@ -1437,7 +1440,7 @@ export function SectorRotationDashboard({ aiAnalysis }: { aiAnalysis?: SectorAna
                       </span>
                       {selectedRow.quadrant && (
                         <span
-                          className={`rounded-full border px-2.5 py-0.5 text-[10px] font-bold ${
+                          className={`rounded-full border px-2.5 py-0.5 text-[11px] font-bold ${
                             QUADRANT_CONFIG[selectedRow.quadrant as QuadrantKey]?.bgLight
                           } ${QUADRANT_CONFIG[selectedRow.quadrant as QuadrantKey]?.border} ${
                             QUADRANT_CONFIG[selectedRow.quadrant as QuadrantKey]?.text
@@ -1447,7 +1450,7 @@ export function SectorRotationDashboard({ aiAnalysis }: { aiAnalysis?: SectorAna
                         </span>
                       )}
                     </div>
-                    <p className="text-[11px] text-slate-400">
+                    <p className="text-[11px] text-slate-500">
                       {SECTOR_INFO[selectedRow.ticker]?.category || selectedRow.name}
                     </p>
                   </div>
@@ -1456,15 +1459,15 @@ export function SectorRotationDashboard({ aiAnalysis }: { aiAnalysis?: SectorAna
                 {/* Key Metrics Chips */}
                 <div className="flex flex-wrap items-center gap-3 font-mono text-xs">
                   <div className="rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1">
-                    <span className="text-[10px] text-slate-400">Relative Trend: </span>
+                    <span className="text-[11px] text-slate-500">Relative Trend: </span>
                     <strong className="text-slate-800">{selectedRow.relative_trend?.toFixed(2) ?? '—'}</strong>
                   </div>
                   <div className="rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1">
-                    <span className="text-[10px] text-slate-400">Relative Momentum: </span>
+                    <span className="text-[11px] text-slate-500">Relative Momentum: </span>
                     <strong className="text-slate-800">{selectedRow.relative_momentum?.toFixed(2) ?? '—'}</strong>
                   </div>
                   <div className="rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1">
-                    <span className="text-[10px] text-slate-400">1M Excess: </span>
+                    <span className="text-[11px] text-slate-500">1M Excess: </span>
                     <strong
                       className={
                         (selectedRow.returns_pct['1M_excess_pp'] ?? 0) >= 0 ? 'text-emerald-600' : 'text-rose-600'
@@ -1474,17 +1477,17 @@ export function SectorRotationDashboard({ aiAnalysis }: { aiAnalysis?: SectorAna
                     </strong>
                   </div>
                   <div className="rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1">
-                    <span className="text-[10px] text-slate-400">Time in quadrant: </span>
+                    <span className="text-[11px] text-slate-500">Time in quadrant: </span>
                     <strong className="text-slate-800">
                       {summary?.periods_in_quadrant?.[selectedRow.ticker] ?? '—'} bars · {summary?.elapsed_days_in_quadrant?.[selectedRow.ticker] ?? '—'} days
                     </strong>
                   </div>
                   <div className="rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1">
-                    <span className="text-[10px] text-slate-400">Momentum delta: </span>
+                    <span className="text-[11px] text-slate-500">Momentum delta: </span>
                     <strong className="text-slate-800">{summary?.momentum_delta?.[selectedRow.ticker]?.toFixed(3) ?? '—'}</strong>
                   </div>
                   <div className="rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1">
-                    <span className="text-[10px] text-slate-400">3 interval heading: </span>
+                    <span className="text-[11px] text-slate-500">3 interval heading: </span>
                     <strong className="text-slate-800">
                       {summary?.heading_deg?.[selectedRow.ticker] != null
                         ? `${summary.heading_deg[selectedRow.ticker]}°`
@@ -1510,7 +1513,7 @@ export function SectorRotationDashboard({ aiAnalysis }: { aiAnalysis?: SectorAna
                     <option value="2y">2 years</option>
                   </select>
                 </label>
-                <span className="text-[10px] text-slate-400">
+                <span className="text-[11px] text-slate-500">
                   {historyLoading ? 'Loading snapshot history…' : historyData && historyData.snapshot_id === currentSnapshotId
                     ? `${historyData.from_date} to ${historyData.to_date || '—'} · ${historyData.snapshot_id}`
                     : historyError || ''}
@@ -1530,11 +1533,11 @@ export function SectorRotationDashboard({ aiAnalysis }: { aiAnalysis?: SectorAna
                     {(selectedRowHistory?.quadrant_transitions ?? selectedRow.quadrant_transitions).slice(-6).map((event) => (
                       <span
                         key={event.event_id}
-                        className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1 text-[10px] text-slate-700 shadow-2xs"
+                        className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1 text-[11px] text-slate-700 shadow-sm"
                         title={event.event_id}
                       >
                         <span className="font-semibold">{event.from_quadrant}</span>
-                        <span className="text-slate-400">→</span>
+                        <span className="text-slate-500">→</span>
                         <span className="font-bold text-slate-900">{event.to_quadrant}</span>
                         <span className={event.event_type === 'confirmed_transition' ? 'text-emerald-700' : 'text-amber-700'}>
                           · {event.event_type === 'confirmed_transition' ? 'confirmed' : 'started'} · {event.confirmed_at || event.changed_at || event.previous_valid_at}
@@ -1547,7 +1550,7 @@ export function SectorRotationDashboard({ aiAnalysis }: { aiAnalysis?: SectorAna
             </div>
           )}
 
-          <p className="text-[10px] text-slate-400">
+          <p className="text-[11px] text-slate-500">
             * แกนพิกัด RRG อิงค่า Relative Trend (RS-Ratio) และ Relative Momentum (RS-Momentum) โดยมีค่ามาตรฐานกลางที่ 100
             ตัวเลขผลตอบแทนเปรียบเทียบแต่ละ ETF กับดัชนี SPY เพื่อประเมินภาวะตลาดเชิงสัมพัทธ์ (Relative Strength)
           </p>

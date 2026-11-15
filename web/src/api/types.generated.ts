@@ -3987,6 +3987,254 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/roundtable/guru-profiles": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Roundtable Guru Profiles
+         * @description Return effective Guru profiles paired with the 12-voice Gemini TTS catalog and 18 presets.
+         */
+        get: operations["get_roundtable_guru_profiles_api_roundtable_guru_profiles_get"];
+        /**
+         * Update Roundtable Guru Profiles
+         * @description Persist user-customized Guru profiles and voice selections globally.
+         */
+        put: operations["update_roundtable_guru_profiles_api_roundtable_guru_profiles_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/roundtable/guru-profiles/reset": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Reset Roundtable Guru Profiles
+         * @description Reset one or all Guru profiles back to factory defaults.
+         */
+        post: operations["reset_roundtable_guru_profiles_api_roundtable_guru_profiles_reset_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/roundtable/voices/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Preview Roundtable Voice
+         * @description Synthesize or retrieve cached preview audio for a selected Gemini TTS voice.
+         */
+        post: operations["preview_roundtable_voice_api_roundtable_voices_preview_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/roundtable/sessions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Roundtable Sessions
+         * @description List past Guru Roundtable sessions ordered by latest update.
+         */
+        get: operations["list_roundtable_sessions_api_roundtable_sessions_get"];
+        put?: never;
+        /**
+         * Create Roundtable Session
+         * @description Create a new Roundtable session, freeze its context packet, and check past settlements.
+         */
+        post: operations["create_roundtable_session_api_roundtable_sessions_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/roundtable/sessions/{session_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Roundtable Session
+         * @description Retrieve a single Roundtable session with turns, playbook, drift status & scorecard.
+         */
+        get: operations["get_roundtable_session_api_roundtable_sessions__session_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/roundtable/sessions/{session_id}/stream": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Stream Roundtable Debate
+         * @description Stream turn-by-turn Guru Roundtable dialogue, TTS readiness, and Hermes playbook via SSE.
+         */
+        post: operations["stream_roundtable_debate_api_roundtable_sessions__session_id__stream_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/roundtable/sessions/{session_id}/interject": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Interject Roundtable Session
+         * @description Pause running stream, record user raise-hand question, run optional Sandbox Decimal math, and reply.
+         */
+        post: operations["interject_roundtable_session_api_roundtable_sessions__session_id__interject_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/roundtable/audio/{audio_cache_key}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Roundtable Audio
+         * @description Stream cached WAV audio bytes generated by Gemini TTS.
+         */
+        get: operations["get_roundtable_audio_api_roundtable_audio__audio_cache_key__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/roundtable/sessions/{session_id}/youtube-pack": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Download Roundtable Youtube Pack
+         * @description Download stitched WAV audio, SRT subtitles, and YouTube Production Kit as a ZIP archive.
+         */
+        get: operations["download_roundtable_youtube_pack_api_roundtable_sessions__session_id__youtube_pack_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/roundtable/sessions/{session_id}/save-to-vault": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Save Roundtable To Vault
+         * @description Save the distilled Roundtable Playbook & highlights to Obsidian Vault.
+         */
+        post: operations["save_roundtable_to_vault_api_roundtable_sessions__session_id__save_to_vault_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/roundtable/sessions/{session_id}/update-thesis": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Update Thesis From Roundtable
+         * @description Revise or create an Active Stock Thesis claim anchored on this Roundtable's verdict.
+         */
+        post: operations["update_thesis_from_roundtable_api_roundtable_sessions__session_id__update_thesis_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/roundtable/prerequisites/{ticker}/dispatch": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Dispatch Roundtable Prerequisite
+         * @description Dispatch background Deep Equity Analysis pipeline for an unanalyzed ticker.
+         */
+        post: operations["dispatch_roundtable_prerequisite_api_roundtable_prerequisites__ticker__dispatch_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/health": {
         parameters: {
             query?: never;
@@ -4008,6 +4256,32 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** ActionPlaybookOption */
+        ActionPlaybookOption: {
+            /** Option Id */
+            option_id: string;
+            /** Label */
+            label: string;
+            /** Speaker Source */
+            speaker_source: string;
+            /**
+             * Conviction Level
+             * @default 2
+             */
+            conviction_level: number;
+            /** Action Steps */
+            action_steps?: string[];
+            /** Entry Zone */
+            entry_zone?: string | null;
+            /** Sizing Note */
+            sizing_note?: string | null;
+        };
+        /** ActionPlaybookSpec */
+        ActionPlaybookSpec: {
+            primary_action: components["schemas"]["ActionPlaybookOption"];
+            /** Alternatives */
+            alternatives?: components["schemas"]["ActionPlaybookOption"][];
+        };
         /** ActiveAgentStatusDTO */
         ActiveAgentStatusDTO: {
             /** Running */
@@ -5395,6 +5669,19 @@ export interface components {
              */
             message: string;
         };
+        /** ConsensusTensionAxis */
+        ConsensusTensionAxis: {
+            /** Topic */
+            topic: string;
+            /** Bull Side Speaker */
+            bull_side_speaker: string;
+            /** Bull Argument */
+            bull_argument: string;
+            /** Bear Side Speaker */
+            bear_side_speaker: string;
+            /** Bear Argument */
+            bear_argument: string;
+        };
         /** ContentOptionSchema */
         ContentOptionSchema: {
             /** Option Id */
@@ -5557,6 +5844,51 @@ export interface components {
             name: string;
             /** Portfolio Id */
             portfolio_id?: string | null;
+        };
+        /** CreateRoundtableSessionRequest */
+        CreateRoundtableSessionRequest: {
+            /** Title */
+            title?: string | null;
+            /**
+             * Agenda Prompt
+             * @description Agenda or question for the Guru Roundtable
+             */
+            agenda_prompt: string;
+            /**
+             * Context Refs
+             * @description Attached context cards e.g. $NVDA, @Portfolio, @Macro, @Digest, @Essence
+             */
+            context_refs?: string[];
+            /**
+             * Portfolio Id
+             * @default default
+             */
+            portfolio_id: string;
+            /**
+             * Proceed Without Missing Tickers
+             * @description If true, bypass missing ticker prerequisite block and run with available context only.
+             * @default false
+             */
+            proceed_without_missing_tickers: boolean;
+            /**
+             * Persona Overrides
+             * @description Optional per-session guru persona & voice overrides
+             */
+            persona_overrides?: components["schemas"]["UpdateGuruPersonaInput"][] | null;
+            /**
+             * Debate Intensity
+             * @description Adversarial intensity: balanced (2 rounds) | heated (no soft agreement + 1 crossfire duel) | crossfire (2 duels full clash)
+             * @default crossfire
+             * @enum {string}
+             */
+            debate_intensity: "balanced" | "heated" | "crossfire";
+            /**
+             * Debate Depth
+             * @description Dialogue thoroughness: concise (2-4 sentences) | deep_youtube (Hermes opening hook + 4-7 sentences/turn YouTube deep dive)
+             * @default deep_youtube
+             * @enum {string}
+             */
+            debate_depth: "concise" | "deep_youtube";
         };
         /** CreateSessionRequest */
         CreateSessionRequest: {
@@ -5917,6 +6249,37 @@ export interface components {
              */
             remedy_hint: string;
         };
+        /** DebatePillarCoverageDTO */
+        DebatePillarCoverageDTO: {
+            /** Pillars */
+            pillars?: components["schemas"]["DebatePillarStatusDTO"][];
+            /**
+             * Raised Count
+             * @default 0
+             */
+            raised_count: number;
+            /**
+             * Challenged Count
+             * @default 0
+             */
+            challenged_count: number;
+            /** Unchallenged Pillars */
+            unchallenged_pillars?: string[];
+        };
+        /** DebatePillarStatusDTO */
+        DebatePillarStatusDTO: {
+            /** Pillar */
+            pillar: string;
+            /** Raised By */
+            raised_by?: string[];
+            /** Challenged By */
+            challenged_by?: string[];
+            /**
+             * Is Challenged
+             * @default false
+             */
+            is_challenged: boolean;
+        };
         /** DigestCandidatesResponseDTO */
         DigestCandidatesResponseDTO: {
             /** Last Fetched At */
@@ -6267,6 +6630,55 @@ export interface components {
              * @default both
              */
             scope: string;
+            /**
+             * Require Approval
+             * @default false
+             */
+            require_approval: boolean;
+        };
+        /**
+         * DistilledDecisionPlaybook
+         * @description Right-hand Decision Distillation card synthesized by Hermes Moderator.
+         */
+        DistilledDecisionPlaybook: {
+            /**
+             * Final Rating
+             * @default REVIEW
+             * @enum {string}
+             */
+            final_rating: "BUY" | "OVERWEIGHT" | "HOLD" | "UNDERWEIGHT" | "SELL" | "REVIEW";
+            /**
+             * Action Stance
+             * @default REVIEW
+             */
+            action_stance: string;
+            /**
+             * Core Conviction Score
+             * @default 1
+             */
+            core_conviction_score: number;
+            /** Executive Verdict */
+            executive_verdict: string;
+            /** Guru Stance Breakdown */
+            guru_stance_breakdown?: {
+                [key: string]: "BUY" | "OVERWEIGHT" | "HOLD" | "UNDERWEIGHT" | "SELL" | "REVIEW";
+            };
+            /** Consensus Points */
+            consensus_points?: string[];
+            /** Tension Axes */
+            tension_axes?: components["schemas"]["ConsensusTensionAxis"][];
+            /** Personal Axis Alignment */
+            personal_axis_alignment?: components["schemas"]["PersonalAxisCheckItem"][];
+            /**
+             * Portfolio Context Summary
+             * @default
+             */
+            portfolio_context_summary: string;
+            action_playbook: components["schemas"]["ActionPlaybookSpec"];
+            /** Kill Switches */
+            kill_switches?: string[];
+            /** Reflection Summary */
+            reflection_summary?: string | null;
         };
         /** DividendRoundDTO */
         DividendRoundDTO: {
@@ -7808,6 +8220,131 @@ export interface components {
              */
             min_n: number;
         };
+        /** GuruPersonaDTO */
+        GuruPersonaDTO: {
+            /** Speaker Id */
+            speaker_id: string;
+            /** Display Name */
+            display_name: string;
+            /** Short Name */
+            short_name: string;
+            /** Archetype */
+            archetype: string;
+            /** Voice Name */
+            voice_name: string;
+            /** Accent Color */
+            accent_color: string;
+            /**
+             * Is Prioritized Role Model
+             * @default false
+             */
+            is_prioritized_role_model: boolean;
+            /**
+             * Emoji
+             * @default 🎙️
+             */
+            emoji: string;
+            /**
+             * Pitch
+             * @default 1
+             */
+            pitch: number;
+            /**
+             * Rate
+             * @default 1
+             */
+            rate: number;
+            /**
+             * Enabled
+             * @default true
+             */
+            enabled: boolean;
+            /**
+             * Debate Order
+             * @default 1
+             */
+            debate_order: number;
+            /**
+             * Preset Id
+             * @default default
+             */
+            preset_id: string;
+            /**
+             * Preset Label
+             * @default
+             */
+            preset_label: string;
+            /**
+             * Speaking Style
+             * @default
+             */
+            speaking_style: string;
+            /**
+             * Custom Directive
+             * @default
+             */
+            custom_directive: string;
+            /**
+             * Role Lens Label
+             * @default
+             */
+            role_lens_label: string;
+            /**
+             * Focus Summary
+             * @default
+             */
+            focus_summary: string;
+            /** Primary Evidence Labels */
+            primary_evidence_labels?: string[];
+            /**
+             * Analytical Rubric
+             * @default
+             */
+            analytical_rubric: string;
+        };
+        /** GuruPresetItemDTO */
+        GuruPresetItemDTO: {
+            /** Preset Id */
+            preset_id: string;
+            /** Speaker Id */
+            speaker_id: string;
+            /** Label Th */
+            label_th: string;
+            /** Display Name */
+            display_name: string;
+            /** Short Name */
+            short_name: string;
+            /** Archetype */
+            archetype: string;
+            /** Speaking Style */
+            speaking_style: string;
+            /**
+             * Custom Directive
+             * @default
+             */
+            custom_directive: string;
+            /** Recommended Voice */
+            recommended_voice: string;
+            /** Emoji */
+            emoji: string;
+            /**
+             * Role Lens Label
+             * @default
+             */
+            role_lens_label: string;
+            /**
+             * Focus Summary
+             * @default
+             */
+            focus_summary: string;
+            /** Primary Evidence Labels */
+            primary_evidence_labels?: string[];
+            /**
+             * Analytical Rubric
+             * @default
+             */
+            analytical_rubric: string;
+        };
         /** HTTPValidationError */
         HTTPValidationError: {
             /** Detail */
@@ -8257,6 +8794,36 @@ export interface components {
             accession_number: string;
             /** Is Amendment */
             is_amendment: boolean;
+        };
+        /** InterjectRequest */
+        InterjectRequest: {
+            /**
+             * Message
+             * @description User interjection message (may mention @Guru)
+             */
+            message: string;
+            /**
+             * Target Speaker Id
+             * @description Optional targeted guru to respond first
+             */
+            target_speaker_id?: ("hermes_moderator" | "value_guru" | "quality_guru" | "growth_guru" | "macro_tactical_guru" | "skeptic_guru" | "user") | null;
+            /**
+             * Voice Enabled
+             * @default true
+             */
+            voice_enabled: boolean;
+            /**
+             * Run Sandbox Math
+             * @description Force Python Sandbox Decimal calculation if numerical scenario is requested.
+             * @default false
+             */
+            run_sandbox_math: boolean;
+            /**
+             * Refresh Context
+             * @description Refresh frozen context packet before answering if drift detected.
+             * @default false
+             */
+            refresh_context: boolean;
         };
         /** InterviewConfigResponse */
         InterviewConfigResponse: {
@@ -9958,6 +10525,45 @@ export interface components {
              */
             warnings: components["schemas"]["WarningDTO"][];
         };
+        /** PastScorecardDTO */
+        PastScorecardDTO: {
+            /** Previous Session Id */
+            previous_session_id: string;
+            /** Previous Date */
+            previous_date: string;
+            /** Primary Ticker */
+            primary_ticker: string;
+            /** Benchmark Ticker */
+            benchmark_ticker: string;
+            /** Entry Price */
+            entry_price?: string | null;
+            /** Settlement Price */
+            settlement_price?: string | null;
+            /** Raw Return Pct */
+            raw_return_pct?: string | null;
+            /** Benchmark Return Pct */
+            benchmark_return_pct?: string | null;
+            /** Alpha Pct */
+            alpha_pct?: string | null;
+            /**
+             * Previous Final Rating
+             * @default REVIEW
+             * @enum {string}
+             */
+            previous_final_rating: "BUY" | "OVERWEIGHT" | "HOLD" | "UNDERWEIGHT" | "SELL" | "REVIEW";
+            /**
+             * Outcome Label
+             * @default pending
+             */
+            outcome_label: string;
+            /** Reflection Lesson */
+            reflection_lesson?: string | null;
+            /**
+             * Settlement Status
+             * @default pending
+             */
+            settlement_status: string;
+        };
         /** PerformanceSnapshotDTO */
         PerformanceSnapshotDTO: {
             /** Date */
@@ -9986,6 +10592,18 @@ export interface components {
             } | null;
             /** Coverage Warning */
             coverage_warning?: string | null;
+        };
+        /** PersonalAxisCheckItem */
+        PersonalAxisCheckItem: {
+            /** Dimension */
+            dimension: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "aligned" | "caution" | "conflict" | "not_set";
+            /** Detail */
+            detail: string;
         };
         /** PivotLevelsDTO */
         PivotLevelsDTO: {
@@ -11204,6 +11822,11 @@ export interface components {
             /** Name */
             name: string;
         };
+        /** ResetGuruProfilesRequest */
+        ResetGuruProfilesRequest: {
+            /** Speaker Id */
+            speaker_id?: ("hermes_moderator" | "value_guru" | "quality_guru" | "growth_guru" | "macro_tactical_guru" | "skeptic_guru") | null;
+        };
         /** ResumeRequest */
         ResumeRequest: {
             /**
@@ -11234,7 +11857,7 @@ export interface components {
              * @default approve
              * @enum {string}
              */
-            action: "approve" | "refresh_sources";
+            action: "approve" | "refresh_sources" | "reject";
         };
         /** ReturnMetric */
         ReturnMetric: {
@@ -11369,6 +11992,148 @@ export interface components {
             status: "available" | "unavailable";
             /** Reason */
             reason?: string | null;
+        };
+        /** RoundtableGuruConfigCatalogDTO */
+        RoundtableGuruConfigCatalogDTO: {
+            /** Personas */
+            personas: components["schemas"]["GuruPersonaDTO"][];
+            /** Voices */
+            voices: components["schemas"]["VoiceCatalogItemDTO"][];
+            /** Presets */
+            presets: components["schemas"]["GuruPresetItemDTO"][];
+        };
+        /** RoundtableSessionDetailDTO */
+        RoundtableSessionDetailDTO: {
+            session: components["schemas"]["RoundtableSessionSummaryDTO"];
+            /** Turns */
+            turns?: components["schemas"]["RoundtableTurnDTO"][];
+            decision_playbook?: components["schemas"]["DistilledDecisionPlaybook"] | null;
+            past_scorecard?: components["schemas"]["PastScorecardDTO"] | null;
+            /** Missing Prerequisite Tickers */
+            missing_prerequisite_tickers?: string[];
+            /** Prioritized Speakers */
+            prioritized_speakers?: string[];
+            /** User Role Models */
+            user_role_models?: string[];
+            /**
+             * Portfolio Attachment State
+             * @default NOT_ATTACHED_DO_NOT_ASSUME
+             */
+            portfolio_attachment_state: string;
+            /**
+             * Context Drift Detected
+             * @default false
+             */
+            context_drift_detected: boolean;
+            /**
+             * Packet Fingerprint Sha256
+             * @default
+             */
+            packet_fingerprint_sha256: string;
+            /**
+             * Debate Intensity
+             * @default crossfire
+             * @enum {string}
+             */
+            debate_intensity: "balanced" | "heated" | "crossfire";
+            /**
+             * Debate Depth
+             * @default deep_youtube
+             * @enum {string}
+             */
+            debate_depth: "concise" | "deep_youtube";
+            /** Personas */
+            personas?: components["schemas"]["GuruPersonaDTO"][];
+            pillar_coverage?: components["schemas"]["DebatePillarCoverageDTO"] | null;
+        };
+        /** RoundtableSessionSummaryDTO */
+        RoundtableSessionSummaryDTO: {
+            /** Session Id */
+            session_id: string;
+            /** Title */
+            title: string;
+            /** Primary Ticker */
+            primary_ticker?: string | null;
+            /** Benchmark Ticker */
+            benchmark_ticker?: string | null;
+            /** Agenda Prompt */
+            agenda_prompt: string;
+            /** Context Refs */
+            context_refs?: string[];
+            /**
+             * Final Rating
+             * @default REVIEW
+             * @enum {string}
+             */
+            final_rating: "BUY" | "OVERWEIGHT" | "HOLD" | "UNDERWEIGHT" | "SELL" | "REVIEW";
+            /**
+             * Settlement Status
+             * @default pending
+             */
+            settlement_status: string;
+            /** Settled Return Pct */
+            settled_return_pct?: string | null;
+            /** Settled Alpha Pct */
+            settled_alpha_pct?: string | null;
+            /**
+             * Status
+             * @default active
+             */
+            status: string;
+            /** Created At */
+            created_at: number;
+            /** Updated At */
+            updated_at: number;
+        };
+        /** RoundtableStreamRequest */
+        RoundtableStreamRequest: {
+            /**
+             * Voice Enabled
+             * @default true
+             */
+            voice_enabled: boolean;
+            /**
+             * Refresh Context On Drift
+             * @default false
+             */
+            refresh_context_on_drift: boolean;
+        };
+        /** RoundtableTurnDTO */
+        RoundtableTurnDTO: {
+            /** Turn Id */
+            turn_id: string;
+            /** Session Id */
+            session_id: string;
+            /** Seq */
+            seq: number;
+            /** Speaker Id */
+            speaker_id: string;
+            /** Round Stage */
+            round_stage: string;
+            /** Replying To */
+            replying_to?: string | null;
+            /** Spoken Dialogue */
+            spoken_dialogue: string;
+            /** Evidence Bullets */
+            evidence_bullets?: string[];
+            /**
+             * Stance Tag
+             * @default REVIEW
+             * @enum {string}
+             */
+            stance_tag: "BUY" | "OVERWEIGHT" | "HOLD" | "UNDERWEIGHT" | "SELL" | "REVIEW";
+            /** Sizing Posture */
+            sizing_posture?: string | null;
+            /** Audio Cache Key */
+            audio_cache_key?: string | null;
+            /**
+             * Audio Status
+             * @default disabled
+             * @enum {string}
+             */
+            audio_status: "ready" | "cached" | "fallback_web_speech" | "disabled";
+            /** Created At */
+            created_at: number;
         };
         /**
          * RoutineExecutionRecordDTO
@@ -11635,6 +12400,27 @@ export interface components {
             scratch_files_count: number;
             /** Last Audit Entry */
             last_audit_entry?: string | null;
+        };
+        /** SaveToVaultRequest */
+        SaveToVaultRequest: {
+            /** Note Title */
+            note_title?: string | null;
+            /**
+             * Also Update Thesis
+             * @default false
+             */
+            also_update_thesis: boolean;
+        };
+        /** SaveToVaultResponseDTO */
+        SaveToVaultResponseDTO: {
+            /** Ok */
+            ok: boolean;
+            /** Vault Path */
+            vault_path?: string | null;
+            /** Thesis Claim Id */
+            thesis_claim_id?: string | null;
+            /** Message */
+            message: string;
         };
         /** SecCompanyFactsSnapshotSchema */
         SecCompanyFactsSnapshotSchema: {
@@ -13061,6 +13847,52 @@ export interface components {
             /** Unknown Fields */
             unknown_fields?: string[] | null;
         };
+        /** UpdateGuruPersonaInput */
+        UpdateGuruPersonaInput: {
+            /**
+             * Speaker Id
+             * @enum {string}
+             */
+            speaker_id: "hermes_moderator" | "value_guru" | "quality_guru" | "growth_guru" | "macro_tactical_guru" | "skeptic_guru";
+            /** Display Name */
+            display_name?: string | null;
+            /** Short Name */
+            short_name?: string | null;
+            /** Archetype */
+            archetype?: string | null;
+            /** Speaking Style */
+            speaking_style?: string | null;
+            /** Custom Directive */
+            custom_directive?: string | null;
+            /** Preset Id */
+            preset_id?: string | null;
+            /** Voice Name */
+            voice_name?: string | null;
+            /** Pitch */
+            pitch?: number | null;
+            /** Rate */
+            rate?: number | null;
+            /** Accent Color */
+            accent_color?: string | null;
+            /** Emoji */
+            emoji?: string | null;
+            /** Enabled */
+            enabled?: boolean | null;
+            /** Debate Order */
+            debate_order?: number | null;
+        };
+        /** UpdateGuruProfilesRequest */
+        UpdateGuruProfilesRequest: {
+            /** Profiles */
+            profiles: components["schemas"]["UpdateGuruPersonaInput"][];
+        };
+        /** UpdateThesisFromPlaybookRequest */
+        UpdateThesisFromPlaybookRequest: {
+            /** Ticker */
+            ticker?: string | null;
+            /** Claim Statement */
+            claim_statement?: string | null;
+        };
         /** UpdateTransactionNoteRequestDTO */
         UpdateTransactionNoteRequestDTO: {
             /**
@@ -13310,6 +14142,71 @@ export interface components {
              * @default USD_M
              */
             unit: string;
+        };
+        /** VoiceCatalogItemDTO */
+        VoiceCatalogItemDTO: {
+            /** Voice Name */
+            voice_name: string;
+            /** Gender Tone */
+            gender_tone: string;
+            /** Label Th */
+            label_th: string;
+            /** Recommended For */
+            recommended_for: string;
+            /** Default Pitch */
+            default_pitch: number;
+            /** Default Rate */
+            default_rate: number;
+            /** Default Sample Text */
+            default_sample_text: string;
+        };
+        /** VoicePreviewRequest */
+        VoicePreviewRequest: {
+            /**
+             * Speaker Id
+             * @enum {string}
+             */
+            speaker_id: "hermes_moderator" | "value_guru" | "quality_guru" | "growth_guru" | "macro_tactical_guru" | "skeptic_guru";
+            /** Voice Name */
+            voice_name: string;
+            /** Sample Text */
+            sample_text?: string | null;
+            /**
+             * Pitch
+             * @default 1
+             */
+            pitch: number;
+            /**
+             * Rate
+             * @default 1
+             */
+            rate: number;
+        };
+        /** VoicePreviewResponseDTO */
+        VoicePreviewResponseDTO: {
+            /**
+             * Audio Status
+             * @enum {string}
+             */
+            audio_status: "ready" | "cached" | "fallback_web_speech" | "disabled";
+            /** Audio Cache Key */
+            audio_cache_key?: string | null;
+            /** Sample Text */
+            sample_text: string;
+            /** Voice Name */
+            voice_name: string;
+            /**
+             * Pitch
+             * @default 1
+             */
+            pitch: number;
+            /**
+             * Rate
+             * @default 1
+             */
+            rate: number;
+            /** Error Message */
+            error_message?: string | null;
         };
         /**
          * WarningDTO
@@ -20727,6 +21624,461 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["RoutineExecutionRecordDTO"][];
+                };
+            };
+        };
+    };
+    get_roundtable_guru_profiles_api_roundtable_guru_profiles_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RoundtableGuruConfigCatalogDTO"];
+                };
+            };
+        };
+    };
+    update_roundtable_guru_profiles_api_roundtable_guru_profiles_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateGuruProfilesRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RoundtableGuruConfigCatalogDTO"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    reset_roundtable_guru_profiles_api_roundtable_guru_profiles_reset_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["ResetGuruProfilesRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RoundtableGuruConfigCatalogDTO"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    preview_roundtable_voice_api_roundtable_voices_preview_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["VoicePreviewRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VoicePreviewResponseDTO"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_roundtable_sessions_api_roundtable_sessions_get: {
+        parameters: {
+            query?: {
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RoundtableSessionSummaryDTO"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_roundtable_session_api_roundtable_sessions_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateRoundtableSessionRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RoundtableSessionDetailDTO"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_roundtable_session_api_roundtable_sessions__session_id__get: {
+        parameters: {
+            query?: {
+                check_drift?: boolean;
+            };
+            header?: never;
+            path: {
+                session_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RoundtableSessionDetailDTO"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    stream_roundtable_debate_api_roundtable_sessions__session_id__stream_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                session_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["RoundtableStreamRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    interject_roundtable_session_api_roundtable_sessions__session_id__interject_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                session_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["InterjectRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_roundtable_audio_api_roundtable_audio__audio_cache_key__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                audio_cache_key: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    download_roundtable_youtube_pack_api_roundtable_sessions__session_id__youtube_pack_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                session_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    save_roundtable_to_vault_api_roundtable_sessions__session_id__save_to_vault_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                session_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["SaveToVaultRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SaveToVaultResponseDTO"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_thesis_from_roundtable_api_roundtable_sessions__session_id__update_thesis_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                session_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["UpdateThesisFromPlaybookRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    dispatch_roundtable_prerequisite_api_roundtable_prerequisites__ticker__dispatch_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                ticker: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

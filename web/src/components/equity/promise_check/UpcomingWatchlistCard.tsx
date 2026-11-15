@@ -44,15 +44,15 @@ export const UpcomingWatchlistCard: React.FC<UpcomingWatchlistCardProps> = ({
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-edge/60 pb-3">
         <div>
-          <h4 className="font-bold text-zinc-900 dark:text-zinc-100 text-sm flex items-center gap-2">
+  <h4 className="font-bold text-slate-900 text-sm flex items-center gap-2">
             <span>🎯</span>
             <span>สิ่งที่ต้องฟังในการประชุมครั้งถัดไป (Upcoming Commitments Watchlist)</span>
           </h4>
-          <p className="text-xs text-zinc-500 mt-0.5">
+          <p className="text-xs text-slate-500 mt-0.5">
             คำสัญญาที่ยังไม่ถึงกำหนดส่งมอบ ({pendingPromises.length} ข้อ) — สิ่งที่นักลงทุนควรเตรียมติดตามตรวจการบ้านในไตรมาสถัดไป
           </p>
         </div>
-        <span className="px-2.5 py-1 rounded-xl text-xs font-semibold bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300 border border-blue-500/20 w-fit">
+  <span className="px-2.5 py-1 rounded-xl text-xs font-semibold bg-blue-100 text-blue-800 border border-blue-500/20 w-fit">
           รอถึงกำหนด {pendingPromises.length} รายการ
         </span>
       </div>
@@ -62,39 +62,47 @@ export const UpcomingWatchlistCard: React.FC<UpcomingWatchlistCardProps> = ({
         {pendingPromises.slice(0, 6).map((p) => (
           <div
             key={p.id}
+            role="button"
+            tabIndex={0}
             onClick={() => onSelectPromise?.(p)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault()
+                onSelectPromise?.(p)
+              }
+            }}
             className="rounded-xl border border-edge/60 bg-surface-muted/30 p-4 space-y-2.5 hover:bg-surface-muted/60 hover:border-sky-500/50 transition-all cursor-pointer group"
           >
             {/* Top info line */}
             <div className="flex items-center justify-between gap-2">
               <div className="flex items-center gap-2">
-                <span className="px-2 py-0.5 rounded text-[11px] font-bold bg-sky-100 text-sky-800 dark:bg-sky-950 dark:text-sky-300 font-mono">
+  <span className="px-2 py-0.5 rounded text-[11px] font-bold bg-sky-100 text-sky-800 font-mono">
                   กำหนด: {p.due}
                 </span>
-                <span className="text-[10px] text-zinc-400">
+                <span className="text-[11px] text-slate-500">
                   {p.due_precision === 'explicit' ? 'ระบุตรงชัดเจน' : 'อนุมาน'}
                 </span>
               </div>
-              <span className="text-[10px] font-mono text-zinc-400">{p.id}</span>
+              <span className="text-[11px] font-mono text-slate-500">{p.id}</span>
             </div>
 
             {/* Metric Headline */}
             <div>
-              <h5 className="font-bold text-xs text-zinc-900 dark:text-zinc-100 group-hover:text-sky-600 dark:group-hover:text-sky-400 transition-colors">
+  <h5 className="font-bold text-xs text-slate-900 group-hover:text-sky-600 transition-colors">
                 {p.metric_th || p.metric}
               </h5>
-              <span className="text-[11px] text-sky-700 dark:text-sky-400 font-medium">
+  <span className="text-[11px] text-sky-700 font-medium">
                 เป้าหมาย: {targetDescription(p)}
               </span>
             </div>
 
             {/* Verbatim Quote Excerpt */}
-            <blockquote className="text-xs text-zinc-600 dark:text-zinc-300 italic font-serif bg-surface/80 p-2.5 rounded-lg border border-edge/40 line-clamp-3">
+  <blockquote className="text-xs text-slate-600 italic font-serif bg-surface/80 p-2.5 rounded-lg border border-edge/40 line-clamp-3">
               "{p.quote}"
             </blockquote>
 
             {/* Speaker & Quarter made */}
-            <div className="flex items-center justify-between text-[10px] text-zinc-400 border-t border-edge/30 pt-1.5">
+            <div className="flex items-center justify-between text-[11px] text-slate-500 border-t border-edge/30 pt-1.5">
               <span>{p.speaker.split(',')[0]}</span>
               <span>แถลงใน {p.made_in} {p.section === 'qa' ? '(Q&A)' : '(Remarks)'}</span>
             </div>
@@ -103,7 +111,7 @@ export const UpcomingWatchlistCard: React.FC<UpcomingWatchlistCardProps> = ({
       </div>
 
       {pendingPromises.length > 6 && (
-        <div className="text-center pt-1 text-xs text-zinc-500">
+        <div className="text-center pt-1 text-xs text-slate-500">
           ยังมีคำสัญญาที่รอถึงกำหนดอีก {pendingPromises.length - 6} รายการในตารางด้านล่าง
         </div>
       )}

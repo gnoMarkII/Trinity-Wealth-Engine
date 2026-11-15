@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react'
 import { useFocusTrap } from '../../../hooks/useFocusTrap'
+import { BookOpenIcon, CloseIcon, SearchIcon } from '../../ui/AppIcons'
 
 export interface GlossaryTerm {
   term: string
@@ -272,7 +273,7 @@ export const MacroGlossaryDrawer: React.FC<MacroGlossaryDrawerProps> = ({ isOpen
     <div className="fixed inset-0 z-50 overflow-hidden" role="dialog" aria-modal="true" aria-label="พจนานุกรม Macro ภาษาคน">
       {/* Backdrop */}
       <div
-        className="fixed inset-0 bg-zinc-900/40 backdrop-blur-xs transition-opacity animate-in fade-in duration-200"
+        className="fixed inset-0 bg-slate-900/35 backdrop-blur-sm transition-opacity animate-in fade-in duration-200"
         onClick={onClose}
         aria-hidden="true"
       />
@@ -280,15 +281,17 @@ export const MacroGlossaryDrawer: React.FC<MacroGlossaryDrawerProps> = ({ isOpen
       <div className="fixed inset-y-0 right-0 max-w-full flex pl-10">
         <div
           ref={panelRef}
-          className="w-screen max-w-md md:max-w-xl bg-white shadow-2xl flex flex-col border-l border-zinc-200 animate-in slide-in-from-right duration-250"
+          className="w-screen max-w-md md:max-w-xl bg-white shadow-2xl flex flex-col border-l border-slate-200 animate-in slide-in-from-right duration-250"
         >
           {/* Header */}
-          <div className="p-4 sm:p-5 border-b border-zinc-200 bg-linear-to-r from-sky-50 to-indigo-50/50 flex items-center justify-between">
+          <div className="p-4 sm:p-5 border-b border-slate-200 bg-gradient-to-r from-sky-50 to-blue-50/50 flex items-center justify-between">
             <div className="flex items-center gap-2.5">
-              <span className="text-2xl">📖</span>
+              <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-50 border border-blue-200/70 text-section-accent">
+                <BookOpenIcon className="h-5 w-5" />
+              </span>
               <div>
-                <h2 className="text-base font-bold text-zinc-900">คู่มือคำศัพท์ Macro ภาษาคน</h2>
-                <p className="text-xs text-zinc-600 mt-0.5">
+                <h2 className="text-base font-bold text-slate-900">คู่มือคำศัพท์ Macro ภาษาคน</h2>
+                <p className="text-xs text-slate-600 mt-0.5">
                   รวม 25 ศัพท์เศรษฐกิจและการลงทุนสำคัญ เข้าใจได้ทันทีโดยไม่ต้องมีพื้นฐาน
                 </p>
               </div>
@@ -296,33 +299,34 @@ export const MacroGlossaryDrawer: React.FC<MacroGlossaryDrawerProps> = ({ isOpen
             <button
               type="button"
               onClick={onClose}
-              className="rounded-lg p-2 text-zinc-500 hover:text-zinc-800 hover:bg-white/80 transition-colors focus:outline-hidden"
+              className="rounded-lg p-2 text-slate-500 hover:text-slate-800 hover:bg-white/80 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-section-accent/45"
               aria-label="ปิดคู่มือศัพท์"
             >
-              ✕
+              <CloseIcon className="h-4 w-4" />
             </button>
           </div>
 
           {/* Search & Filter */}
-          <div className="p-4 border-b border-zinc-100 bg-zinc-50/60 space-y-3">
+          <div className="p-4 border-b border-slate-100 bg-slate-50/60 space-y-3">
             <div className="relative">
-              <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-zinc-400 text-sm">
-                🔍
+              <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-500">
+                <SearchIcon className="h-3.5 w-3.5" />
               </span>
               <input
                 type="text"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="ค้นหาคำศัพท์ เช่น Yield, ERP, TAA, บาทอ่อน..."
-                className="w-full pl-9 pr-8 py-2 text-xs rounded-xl border border-zinc-300 bg-white placeholder-zinc-400 focus:outline-hidden focus:border-sky-500 focus:ring-2 focus:ring-sky-100 transition-all"
+                className="w-full pl-9 pr-8 py-2 text-xs rounded-xl border border-slate-300 bg-white placeholder-slate-400 focus:outline-none focus:border-sky-500 focus:ring-2 focus:ring-sky-100 transition-all"
               />
               {search && (
                 <button
                   type="button"
                   onClick={() => setSearch('')}
-                  className="absolute inset-y-0 right-0 pr-3 flex items-center text-zinc-400 hover:text-zinc-600 text-xs"
+                  className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-500 hover:text-slate-600"
+                  aria-label="ล้างคำค้นหา"
                 >
-                  ✕
+                  <CloseIcon className="h-3.5 w-3.5" />
                 </button>
               )}
             </div>
@@ -336,8 +340,8 @@ export const MacroGlossaryDrawer: React.FC<MacroGlossaryDrawerProps> = ({ isOpen
                   onClick={() => setSelectedCategory(cat)}
                   className={`px-2.5 py-1 rounded-lg font-medium whitespace-nowrap text-[11px] transition-colors ${
                     selectedCategory === cat
-                      ? 'bg-zinc-900 text-white shadow-xs'
-                      : 'bg-white text-zinc-600 border border-zinc-200 hover:bg-zinc-100'
+                      ? 'bg-section-accent text-white shadow-sm'
+                      : 'bg-white text-slate-700 border border-slate-200 hover:bg-sky-50 hover:text-sky-900'
                   }`}
                 >
                   {CATEGORY_NAMES[cat]}
@@ -349,22 +353,22 @@ export const MacroGlossaryDrawer: React.FC<MacroGlossaryDrawerProps> = ({ isOpen
           {/* Terms List */}
           <div className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-3.5">
             {filteredTerms.length === 0 ? (
-              <div className="text-center py-12 text-zinc-500">
-                <p className="text-2xl mb-1">🔍</p>
+              <div className="text-center py-12 text-slate-600">
+                <SearchIcon className="h-7 w-7 mx-auto mb-2 text-slate-500" />
                 <p className="text-xs font-semibold">ไม่พบคำศัพท์ที่ตรงกับการค้นหา</p>
-                <p className="text-[11px] text-zinc-400 mt-1">ลองเปลี่ยนคำค้นหา หรือเลือกหมวดหมู่อื่น</p>
+                <p className="text-[11px] text-slate-500 mt-1">ลองเปลี่ยนคำค้นหา หรือเลือกหมวดหมู่อื่น</p>
               </div>
             ) : (
               filteredTerms.map((item) => (
                 <div
                   key={item.term}
-                  className="rounded-xl border border-zinc-200 bg-white p-3.5 shadow-xs hover:border-sky-200 hover:shadow-sm transition-all"
+                  className="rounded-xl border border-slate-200 bg-white p-3.5 shadow-sm hover:border-sky-200 hover:shadow-sm transition-all"
                 >
                   <div className="flex items-start justify-between gap-2">
                     <div className="flex items-center gap-2">
                       <span className="text-lg shrink-0">{item.icon}</span>
                       <div>
-                        <h3 className="text-xs font-bold text-zinc-900 leading-snug">
+                        <h3 className="text-xs font-bold text-slate-900 leading-snug">
                           {item.term}
                         </h3>
                         <span className="text-[11px] font-medium text-sky-800 block">
@@ -372,7 +376,7 @@ export const MacroGlossaryDrawer: React.FC<MacroGlossaryDrawerProps> = ({ isOpen
                         </span>
                       </div>
                     </div>
-                    <span className="text-[10px] font-semibold text-zinc-600 bg-zinc-100 px-2 py-0.5 rounded-full shrink-0">
+                    <span className="text-[11px] font-semibold text-slate-700 bg-slate-100 px-2 py-0.5 rounded-full shrink-0">
                       {CATEGORY_NAMES[item.category]}
                     </span>
                   </div>
@@ -380,16 +384,16 @@ export const MacroGlossaryDrawer: React.FC<MacroGlossaryDrawerProps> = ({ isOpen
                   <div className="mt-2.5 space-y-2 text-xs leading-relaxed">
                     <div className="bg-sky-50/60 rounded-lg p-2.5 border border-sky-100">
                       <span className="font-bold text-sky-950 text-[11px] block mb-0.5">
-                        📌 มันคืออะไร:
+                        มันคืออะไร:
                       </span>
-                      <p className="text-zinc-700 text-[11px] leading-relaxed">{item.definition}</p>
+                      <p className="text-slate-700 text-[11px] leading-relaxed">{item.definition}</p>
                     </div>
 
                     <div className="bg-emerald-50/60 rounded-lg p-2.5 border border-emerald-100">
                       <span className="font-bold text-emerald-950 text-[11px] block mb-0.5">
-                        💰 วิธีนำไปใช้กับเงินเรา:
+                        วิธีนำไปใช้กับเงินเรา:
                       </span>
-                      <p className="text-zinc-700 text-[11px] leading-relaxed">{item.howToUse}</p>
+                      <p className="text-slate-700 text-[11px] leading-relaxed">{item.howToUse}</p>
                     </div>
                   </div>
                 </div>
@@ -398,12 +402,12 @@ export const MacroGlossaryDrawer: React.FC<MacroGlossaryDrawerProps> = ({ isOpen
           </div>
 
           {/* Footer */}
-          <div className="p-3.5 border-t border-zinc-200 bg-zinc-50 flex items-center justify-between text-xs text-zinc-500">
+          <div className="p-3.5 border-t border-slate-200 bg-slate-50 flex items-center justify-between text-xs text-slate-600">
             <span>แสดง {filteredTerms.length} จาก {GLOSSARY_TERMS.length} คำศัพท์</span>
             <button
               type="button"
               onClick={onClose}
-              className="px-3 py-1.5 rounded-lg bg-zinc-900 text-white text-xs font-semibold hover:bg-zinc-800 transition-colors"
+              className="px-3.5 py-1.5 rounded-lg bg-section-accent text-white text-xs font-semibold hover:bg-blue-900 transition-colors"
             >
               เข้าใจแล้ว ปิดหน้าต่าง
             </button>

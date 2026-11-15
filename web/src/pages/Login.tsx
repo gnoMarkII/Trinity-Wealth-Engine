@@ -33,8 +33,8 @@ export default function Login() {
         className="flow-panel animate-page-in w-full max-w-sm space-y-4 rounded-3xl p-8"
       >
         <p className="text-xs font-semibold uppercase tracking-[0.2em] text-sky-600">Investment intelligence</p>
-        <h1 className="text-xl font-semibold text-sky-950">Money ReRoute</h1>
-        <p className="text-sm text-zinc-500">กรอกรหัสผ่านเพื่อเข้าใช้งาน</p>
+        <h1 className="text-xl font-bold tracking-tight text-slate-900">Money ReRoute</h1>
+        <p className="text-sm text-slate-500">กรอกรหัสผ่านเพื่อเข้าใช้งาน</p>
         <label htmlFor="login-password" className="sr-only">
           รหัสผ่าน
         </label>
@@ -47,7 +47,7 @@ export default function Login() {
           autoFocus
           className="w-full"
         />
-        {error && <p className="text-sm text-red-600">{error}</p>}
+        {error && <p className="text-sm text-rose-600">{error}</p>}
         <Button type="submit" disabled={submitting || !password} className="w-full">
           {submitting ? 'กำลังเข้าสู่ระบบ...' : 'เข้าสู่ระบบ'}
         </Button>

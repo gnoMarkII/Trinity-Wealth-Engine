@@ -12,9 +12,9 @@ const SHIELD_CONFIG: Record<SafetyShieldType, { title: string; defaultMessage: s
   taa: {
     title: 'คำแนะนำการปรับทัพตามรอบ (Tactical Asset Allocation)',
     defaultMessage: 'สัดส่วนและมุมมองในหน้านี้เป็นการปรับเอียงน้ำหนักพอร์ตตามรอบเศรษฐกิจ 3–6 เดือน สำหรับเงินก้อนใหม่หรือเงินส่วนที่มีความยืดหยุ่น ไม่ใช่การเทขายล้างพอร์ตหลักระยะยาว (Core Portfolio) ทิ้ง',
-    bg: 'bg-indigo-50/70',
-    border: 'border-indigo-200/80',
-    text: 'text-indigo-950',
+    bg: 'bg-blue-50/70',
+    border: 'border-blue-200/80',
+    text: 'text-blue-950',
     icon: '🛡️',
   },
   fx_hedge: {

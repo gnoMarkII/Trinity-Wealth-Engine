@@ -89,6 +89,25 @@ def clear_job_resume_value(conn: sqlite3.Connection, job_id: str) -> None:
     )
 
 
+def cancel_job_approval(conn: sqlite3.Connection, job_id: str, reason: str) -> None:
+    """Atomically cancel a job waiting in pre-run or HITL approval."""
+    now = time.time()
+    job = conn.execute(
+        "SELECT job_id, status FROM jobs WHERE job_id = ?", (job_id,)
+    ).fetchone()
+    if job is None:
+        raise ValueError("job_not_found")
+    if job["status"] != "awaiting_approval":
+        raise ValueError("approval_already_claimed")
+    cur = conn.execute(
+        "UPDATE jobs SET status = 'error', error_message = ?, interrupt_payload = NULL, "
+        "resume_value = NULL, updated_at = ? WHERE job_id = ? AND status = 'awaiting_approval'",
+        (reason, now, job_id),
+    )
+    if cur.rowcount == 0:
+        raise ValueError("approval_already_claimed")
+
+
 def find_job_by_idempotency_key(conn: sqlite3.Connection, idempotency_key: str) -> sqlite3.Row | None:
     cur = conn.execute(
         "SELECT * FROM jobs WHERE idempotency_key = ?",

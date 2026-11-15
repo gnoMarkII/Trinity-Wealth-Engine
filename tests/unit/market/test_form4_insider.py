@@ -111,3 +111,53 @@ def test_form4_neutral_no_signal():
     assert res.status == "neutral_no_signal"
     assert res.data_status == "available"
     assert res.open_market_p_count_90d == 0
+
+
+def test_yf_insider_zero_dollar_awards_and_exercises_not_mislabeled_as_buys():
+    """Option 2: $0 grants/RSUs/awards and option exercises must NEVER classify as open-market buy 'P'."""
+    from unittest.mock import MagicMock, patch
+    import pandas as pd
+    from tools.market.adapters.insider_provider import YFinanceInsiderHistoryAdapter, _classify_yf_insider_transaction
+    from tools.market.ownership import compute_smart_money_flags
+    from tools.market.terminal_v2.adapters.sec_edgar_adapter import SecEdgarAdapter
+
+    # Direct classifier checks
+    assert _classify_yf_insider_transaction("Purchase", "Stock Award (Grant) RSU vesting", 0.0) == ("A", "A")
+    assert _classify_yf_insider_transaction("Purchase", "Option Exercise", 0.0) == ("M", "A")
+    assert _classify_yf_insider_transaction("Purchase", "", 0.0) == ("A", "A")
+    assert _classify_yf_insider_transaction("Tax Withholding", "Surrender shares for tax", 50.0) == ("F", "D")
+    assert _classify_yf_insider_transaction("Purchase", "Open market purchase", 65.0) == ("P", "A")
+
+    # Adapter & ownership integration with mock yfinance table
+    df = pd.DataFrame(
+        [
+            {"Insider": "Ken Xie", "Position": "CEO", "Transaction": "Purchase", "Text": "Stock Award(Grant) at $0", "Start Date": "2026-08-10", "Shares": 5000, "Value": 0.0},
+            {"Insider": "John Whittle", "Position": "Officer", "Transaction": "Option Exercise", "Text": "Conversion or exercise", "Start Date": "2026-08-11", "Shares": 3000, "Value": 0.0},
+            {"Insider": "Jane Doe", "Position": "Director", "Transaction": "Sale", "Text": "Automatic Sale under 10b5-1", "Start Date": "2026-08-12", "Shares": 1000, "Value": 80000.0},
+        ]
+    )
+    fake_tk = MagicMock()
+    fake_tk.insider_transactions = df
+    fake_tk.info = {"heldPercentInsiders": 0.175}
+    records = YFinanceInsiderHistoryAdapter(ticker_factory=lambda _: fake_tk).fetch("FTNT")
+    assert [r["transactions"][0]["transaction_code"] for r in records] == ["A", "M", "S"]
+
+    with patch("tools.market.ownership.yf.Ticker", return_value=fake_tk):
+        sm_flags, _ = compute_smart_money_flags("FTNT", info_dict=fake_tk.info, as_of=_PINNED_AS_OF)
+        assert sm_flags.insider_buy_count_90d == 0
+        assert sm_flags.insider_sell_count_90d == 1
+        assert sm_flags.insider_ownership_pct == 17.5
+
+        with patch("tools.market.terminal_v2.bootstrap.get_terminal_data_service", side_effect=RuntimeError("offline")):
+            conv, _ = compute_canonical_insider_conviction("FTNT", market="US", as_of=_PINNED_AS_OF)
+        assert conv.open_market_p_count_90d == 0
+        assert conv.open_market_s_count_90d == 1
+
+    # SEC EDGAR CIK resolution for FTNT and dynamic fallback
+    adapter = SecEdgarAdapter()
+    assert adapter._resolve_cik("FTNT") == "0001262039"
+    fake_resp = MagicMock()
+    fake_resp.json.return_value = {"0": {"ticker": "DYNCO", "cik_str": 123456}}
+    with patch.object(adapter, "_request_get", return_value=fake_resp):
+        assert adapter._resolve_cik("DYNCO") == "0000123456"
+

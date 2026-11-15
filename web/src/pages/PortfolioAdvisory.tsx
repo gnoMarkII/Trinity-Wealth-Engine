@@ -11,6 +11,22 @@ import {
   AiPlaybookSynthesisLoader,
   TopLoadingRibbon,
 } from '../components/ui/FlowSkeleton'
+import {
+  AlertTriangleIcon,
+  BoltStrategyIcon,
+  BulbIcon,
+  ChartTrendIcon,
+  CheckSmallIcon,
+  CompassIcon,
+  CpuIcon,
+  FolderIcon,
+  RadarIcon,
+  RefreshIcon,
+  SearchIcon,
+  ShieldCheckIcon,
+  SparklesIcon,
+  TargetIcon,
+} from '../components/ui/AppIcons'
 
 export default function PortfolioAdvisory() {
   const [selectedPortfolioId, setSelectedPortfolioId] = useState<string>(() => {
@@ -147,7 +163,8 @@ export default function PortfolioAdvisory() {
         <div>
           <div className="flex items-center gap-3 flex-wrap">
             <h1 className="text-2xl font-bold tracking-tight text-slate-900 flex items-center gap-2">
-              <span>⚡ Portfolio Advisory Desk</span>
+              <BoltStrategyIcon className="h-6 w-6 text-section-accent shrink-0" />
+              <span>Portfolio Advisory Desk</span>
             </h1>
             <span
               className={`px-2.5 py-0.5 rounded-full text-xs font-semibold uppercase tracking-wider ${
@@ -168,14 +185,15 @@ export default function PortfolioAdvisory() {
           <p className="text-xs text-slate-500 mt-1">
             คำนวณด้วย Python Deterministic Math Engine (&lt;50ms) • ประเมินเมื่อ:{' '}
             <span className="font-mono">{new Date(data.evaluated_at).toLocaleString('th-TH')}</span>
-            {' • '}State Hash: <span className="font-mono text-slate-400">{data.portfolio_state_hash}</span>
+            {' • '}State Hash: <span className="font-mono text-slate-500">{data.portfolio_state_hash}</span>
           </p>
         </div>
 
         <div className="flex items-center gap-2.5 flex-wrap">
           {portfolios.length > 0 && (
-            <div className="flex items-center gap-1.5 rounded-xl border border-edge bg-panel px-3 py-1.5 shadow-xs">
-              <span className="text-xs font-semibold text-slate-600">📁 พอร์ต:</span>
+            <div className="flex items-center gap-1.5 rounded-xl border border-edge bg-panel px-3 py-1.5 shadow-sm">
+              <FolderIcon className="h-3.5 w-3.5 text-section-accent shrink-0" />
+              <span className="text-xs font-semibold text-slate-600">พอร์ต:</span>
               <select
                 value={selectedPortfolioId}
                 onChange={(e) => {
@@ -187,7 +205,7 @@ export default function PortfolioAdvisory() {
                     window.history.replaceState({}, '', url.toString())
                   }
                 }}
-                className="text-xs font-bold text-slate-800 bg-transparent focus:outline-none cursor-pointer"
+                className="rounded text-xs font-bold text-slate-800 bg-transparent focus:outline-none focus-visible:ring-2 focus-visible:ring-section-accent/50 cursor-pointer"
               >
                 {portfolios.map((p) => (
                   <option key={p.id} value={p.id}>
@@ -201,22 +219,59 @@ export default function PortfolioAdvisory() {
           <button
             onClick={() => fetchAdvisory(true)}
             disabled={refreshing}
-            className="px-3.5 py-2 rounded-xl text-xs font-medium border border-edge bg-panel hover:bg-slate-50 text-slate-700 transition flex items-center gap-1.5 shadow-xs disabled:opacity-50"
+            className="px-3.5 py-2 rounded-xl text-xs font-medium border border-edge bg-panel hover:bg-slate-50 text-slate-700 transition flex items-center gap-1.5 shadow-sm disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-section-accent/45"
           >
-            <span>{refreshing ? '⏳' : '🔄'}</span>
+            <RefreshIcon className={`h-3.5 w-3.5 text-slate-500 ${refreshing ? 'animate-spin' : ''}`} />
             <span>รีเฟรชราคาตลาด</span>
           </button>
 
           <button
             onClick={handleSynthesize}
             disabled={synthesizing}
-            className="px-4 py-2 rounded-xl text-xs font-semibold bg-gradient-to-r from-sky-600 via-indigo-600 to-purple-600 hover:from-sky-500 hover:to-purple-500 text-white shadow-md shadow-indigo-500/20 transition flex items-center gap-2 disabled:opacity-50"
+            className="px-4 py-2 rounded-xl text-xs font-semibold bg-gradient-to-r from-sky-600 to-cyan-600 hover:from-sky-700 hover:to-cyan-700 text-white shadow-md shadow-sky-600/20 transition flex items-center gap-2 disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-section-accent/45"
           >
-            <span>{synthesizing ? '✨' : '🧠'}</span>
+            {synthesizing ? (
+              <SparklesIcon className="h-3.5 w-3.5 animate-pulse" />
+            ) : (
+              <CpuIcon className="h-3.5 w-3.5" />
+            )}
             <span>{data.cached_narrative ? 'วิเคราะห์กลยุทธ์ใหม่ (AI Playbook)' : 'ประมวลผล AI Playbook'}</span>
           </button>
         </div>
       </div>
+
+      {/* Sticky Section Waypoint Bar */}
+      <nav
+        aria-label="Advisory Desk Sections"
+        className="sticky top-2 z-20 flex items-center gap-1.5 overflow-x-auto rounded-xl border border-edge bg-white/85 px-2.5 py-1.5 shadow-sm backdrop-blur-md"
+      >
+        <a
+          href="#advisory-overview"
+          className="rounded-lg px-2.5 py-1 text-xs font-semibold text-slate-700 hover:bg-sky-50 hover:text-sky-900 whitespace-nowrap transition-colors"
+        >
+          เงินสด &amp; Radar
+        </a>
+        {data.look_through_summary && (
+          <a
+            href="#advisory-lookthrough"
+            className="rounded-lg px-2.5 py-1 text-xs font-semibold text-slate-700 hover:bg-sky-50 hover:text-sky-900 whitespace-nowrap transition-colors"
+          >
+            Overlap Exposure
+          </a>
+        )}
+        <a
+          href="#advisory-playbook"
+          className="rounded-lg px-2.5 py-1 text-xs font-semibold text-slate-700 hover:bg-sky-50 hover:text-sky-900 whitespace-nowrap transition-colors"
+        >
+          กลยุทธ์ Playbook
+        </a>
+        <a
+          href="#advisory-holdings"
+          className="rounded-lg px-2.5 py-1 text-xs font-semibold text-slate-700 hover:bg-sky-50 hover:text-sky-900 whitespace-nowrap transition-colors"
+        >
+          คำแนะนำรายตัว ({data.holdings_advisory.length})
+        </a>
+      </nav>
 
       {/* 2. Anomaly Warnings Banner (Guardrails) */}
       {data.anomaly_warnings.length > 0 && (
@@ -230,7 +285,11 @@ export default function PortfolioAdvisory() {
                   : 'bg-amber-50 border-amber-200 text-amber-900'
               }`}
             >
-              <span className="text-lg shrink-0">{w.severity === 'critical' ? '🚨' : '⚠️'}</span>
+              <AlertTriangleIcon
+                className={`h-5 w-5 shrink-0 mt-0.5 ${
+                  w.severity === 'critical' ? 'text-rose-600' : 'text-amber-600'
+                }`}
+              />
               <div className="space-y-0.5 flex-1">
                 <div className="flex items-center gap-2">
                   <span className="font-bold text-xs uppercase tracking-wide px-2 py-0.5 rounded bg-white/70 border border-current">
@@ -239,7 +298,12 @@ export default function PortfolioAdvisory() {
                   {w.ticker && <span className="font-semibold">{w.ticker}</span>}
                 </div>
                 <p className="text-xs sm:text-sm">{w.message}</p>
-                {w.remedy_hint && <p className="text-xs opacity-80 pt-0.5">💡 แนวทางแก้ไข: {w.remedy_hint}</p>}
+                {w.remedy_hint && (
+                  <p className="inline-flex items-center gap-1 text-xs opacity-85 pt-0.5">
+                    <BulbIcon className="h-3.5 w-3.5 shrink-0" />
+                    <span>แนวทางแก้ไข: {w.remedy_hint}</span>
+                  </p>
+                )}
               </div>
             </div>
           ))}
@@ -247,68 +311,70 @@ export default function PortfolioAdvisory() {
       )}
 
       {/* 3. Dual-Currency Cash Plan & Risk Radar */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div id="advisory-overview" className="scroll-mt-16 grid grid-cols-1 md:grid-cols-3 gap-4">
         {/* NAV & Total Cash Card */}
-        <div className="flow-panel rounded-2xl border border-edge bg-panel p-5 shadow-xs space-y-3">
+        <div className="flow-panel rounded-2xl border border-edge bg-panel p-5 shadow-sm space-y-3">
           <div className="flex items-center justify-between text-xs text-slate-500">
             <span className="font-medium">Total NAV &amp; FX Rate</span>
-            <span className="font-mono">USD/THB: {data.cash_plan.usd_thb_fx_rate.toFixed(2)}</span>
+            <span className="font-mono tabular-nums">USD/THB: {data.cash_plan.usd_thb_fx_rate.toFixed(2)}</span>
           </div>
           <div>
-            <div className="text-2xl font-bold tracking-tight text-slate-900">
+            <div className="text-2xl font-bold font-mono tabular-nums tracking-tight text-slate-900">
               ฿{data.total_nav_thb.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </div>
             <div className="text-xs text-slate-500 mt-0.5">มูลค่าสินทรัพย์สุทธิรวมเงินสด</div>
           </div>
           <div className="pt-2 border-t border-edge/60 flex items-center justify-between text-xs">
             <span className="text-slate-600">เงินสดคงเหลือ:</span>
-            <span className="font-semibold text-slate-800">
+            <span className="font-semibold font-mono tabular-nums text-slate-800">
               ฿{data.cash_plan.cash_thb_available.toLocaleString('th-TH')} | ${data.cash_plan.cash_usd_available.toLocaleString('en-US')}
             </span>
           </div>
         </div>
 
         {/* Action Budget: Immediate Execution */}
-        <div className="flow-panel rounded-2xl border border-sky-100 bg-sky-50/30 p-5 shadow-xs space-y-3">
+        <div className="flow-panel rounded-2xl border border-sky-100 bg-sky-50/30 p-5 shadow-sm space-y-3">
           <div className="flex items-center justify-between text-xs text-sky-800">
-            <span className="font-semibold flex items-center gap-1">
-              <span>⚡</span> Immediate Deploy Budget
+            <span className="font-semibold flex items-center gap-1.5">
+              <BoltStrategyIcon className="h-3.5 w-3.5 text-section-accent" />
+              <span>Immediate Deploy Budget</span>
             </span>
-            <span className="text-xs font-mono bg-sky-100 px-2 py-0.5 rounded text-sky-700">
+            <span className="text-xs font-mono tabular-nums bg-sky-100 px-2 py-0.5 rounded text-sky-800">
               {immediateHoldings.length} คำสั่งวันนี้
             </span>
           </div>
           <div className="grid grid-cols-2 gap-2">
             <div>
               <div className="text-xs text-slate-500">งบเคาะซื้อ THB</div>
-              <div className="text-lg font-bold text-sky-900">
+              <div className="text-lg font-bold font-mono tabular-nums text-sky-900">
                 ฿{data.cash_plan.immediate_deploy_thb.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </div>
             </div>
             <div>
               <div className="text-xs text-slate-500">งบเคาะซื้อ USD</div>
-              <div className="text-lg font-bold text-indigo-900">
+              <div className="text-lg font-bold font-mono tabular-nums text-amber-800">
                 ${data.cash_plan.immediate_deploy_usd.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </div>
             </div>
           </div>
           {data.cash_plan.fx_conversion_needed_thb > 0 && (
-            <div className="pt-2 border-t border-sky-200/60 text-xs text-amber-700 font-medium flex items-center gap-1">
-              <span>⚠️</span>
+            <div className="pt-2 border-t border-sky-200/60 text-xs text-amber-700 font-medium flex items-center gap-1.5">
+              <AlertTriangleIcon className="h-3.5 w-3.5 text-amber-600 shrink-0" />
               <span>ต้องแลกเงินเพิ่ม ฿{data.cash_plan.fx_conversion_needed_thb.toLocaleString('th-TH')} เข้า USD</span>
             </div>
           )}
         </div>
 
         {/* Risk Radar & Concentration */}
-        <div className="flow-panel rounded-2xl border border-edge bg-panel p-5 shadow-xs space-y-3">
+        <div className="flow-panel rounded-2xl border border-edge bg-panel p-5 shadow-sm space-y-3">
           <div className="flex items-center justify-between text-xs">
-            <span className="font-bold text-slate-800 flex items-center gap-1">
-              <span>🛡️</span> Risk &amp; Concentration Radar
+            <span className="font-bold text-slate-800 flex items-center gap-1.5">
+              <ShieldCheckIcon className="h-4 w-4 text-section-accent" />
+              <span>Risk &amp; Concentration Radar</span>
             </span>
             {data.risk_radar.concentration_risk_level && (
               <span
-                className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
+                className={`text-[11px] font-bold px-2 py-0.5 rounded-full border ${
                   data.risk_radar.concentration_risk_level === 'HIGH'
                     ? 'bg-rose-100 text-rose-800 border-rose-300'
                     : data.risk_radar.concentration_risk_level === 'MODERATE'
@@ -333,7 +399,7 @@ export default function PortfolioAdvisory() {
                 {data.risk_radar.effective_holdings_count !== null && data.risk_radar.effective_holdings_count !== undefined
                   ? `${data.risk_radar.effective_holdings_count.toFixed(1)}`
                   : 'N/A'}{' '}
-                <span className="text-[10px] text-slate-400 font-normal">
+                <span className="text-[11px] text-slate-500 font-normal">
                   / {data.holdings_advisory.filter((h) => !h.asset_type.toLowerCase().startsWith('cash')).length} ตัว
                 </span>
               </div>
@@ -342,7 +408,7 @@ export default function PortfolioAdvisory() {
               <div className="text-[11px] text-slate-500">HHI / Top 3 Weight</div>
               <div className="text-base font-bold text-slate-900 font-mono">
                 {data.risk_radar.top_3_weight_pct !== undefined ? `${data.risk_radar.top_3_weight_pct.toFixed(1)}%` : '-'}
-                <span className="text-[10px] text-slate-400 font-normal font-sans ml-1">
+                <span className="text-[11px] text-slate-500 font-normal font-sans ml-1">
                   (HHI {data.risk_radar.hhi ? data.risk_radar.hhi.toFixed(3) : '-'})
                 </span>
               </div>
@@ -378,10 +444,10 @@ export default function PortfolioAdvisory() {
           <div className="flex items-center gap-2 text-xs">
             <span className="text-slate-500">FX Exposure:</span>
             <div className="flex items-center gap-1.5 flex-1 justify-end font-mono">
-              <span className="px-1.5 py-0.2 rounded bg-slate-100 text-slate-700 text-[11px]">
+              <span className="px-1.5 py-0.5 rounded bg-slate-100 text-slate-700 text-[11px]">
                 THB {data.risk_radar.fx_exposure_pct['THB'] ? data.risk_radar.fx_exposure_pct['THB'].toFixed(1) : '0'}%
               </span>
-              <span className="px-1.5 py-0.2 rounded bg-slate-100 text-slate-700 text-[11px]">
+              <span className="px-1.5 py-0.5 rounded bg-slate-100 text-slate-700 text-[11px]">
                 USD {data.risk_radar.fx_exposure_pct['USD'] ? data.risk_radar.fx_exposure_pct['USD'].toFixed(1) : '0'}%
               </span>
             </div>
@@ -391,14 +457,14 @@ export default function PortfolioAdvisory() {
 
       {/* 3.5 Look-Through Radar & True Sector Exposure */}
       {data.look_through_summary && (
-        <div className="space-y-4">
+        <div id="advisory-lookthrough" className="scroll-mt-16 space-y-4">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
             <div className="flex items-center gap-2">
-              <span className="text-xl">🔍</span>
+              <SearchIcon className="h-5 w-5 text-section-accent shrink-0" />
               <div>
                 <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">
                   <span>Glass-Box Portfolio: Look-Through Radar &amp; True Exposure</span>
-                  <span className="text-xs px-2 py-0.5 rounded-full bg-purple-100 text-purple-800 border border-purple-200 font-semibold">
+                  <span className="text-xs px-2 py-0.5 rounded-full bg-sky-100/80 text-sky-900 border border-sky-200 font-semibold">
                     100% Transparency
                   </span>
                 </h2>
@@ -420,10 +486,11 @@ export default function PortfolioAdvisory() {
 
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
             {/* Left 7 cols: Cross-Portfolio Stock Overlap Radar */}
-            <div className="lg:col-span-7 flow-panel rounded-2xl border border-edge bg-panel p-5 shadow-xs space-y-3">
+            <div className="lg:col-span-7 flow-panel rounded-2xl border border-edge bg-panel p-5 shadow-sm space-y-3">
               <div className="flex items-center justify-between pb-2 border-b border-edge/60">
                 <div className="flex items-center gap-2">
-                  <span className="font-bold text-sm text-slate-900">📡 หุ้นที่มีการถือซ้ำข้ามพอร์ตและกองทุน (Overlap Radar)</span>
+                  <RadarIcon className="h-4 w-4 text-section-accent" />
+                  <span className="font-bold text-sm text-slate-900">หุ้นที่มีการถือซ้ำข้ามพอร์ตและกองทุน (Overlap Radar)</span>
                 </div>
                 <span className="text-xs text-slate-500 font-mono">
                   {(data.look_through_summary.top_overlapped_stocks || []).length > 0
@@ -470,11 +537,11 @@ export default function PortfolioAdvisory() {
                           <td className="py-2.5 px-2">
                             <div className="flex items-center gap-1.5">
                               <span className="font-mono font-extrabold text-slate-900">{stk.ticker}</span>
-                              <span className="text-[10px] px-1 py-0.2 rounded bg-slate-100 text-slate-600 font-semibold">
+                              <span className="text-[11px] px-1 py-0.5 rounded bg-slate-100 text-slate-600 font-semibold">
                                 {stk.market}
                               </span>
                               {isBreached && (
-                                <span className="text-[10px] px-1.5 py-0.2 rounded bg-amber-100 text-amber-800 font-bold border border-amber-300">
+                                <span className="text-[11px] px-1.5 py-0.5 rounded bg-amber-100 text-amber-800 font-bold border border-amber-300">
                                   &gt;15% Cap
                                 </span>
                               )}
@@ -488,23 +555,23 @@ export default function PortfolioAdvisory() {
                                 <span className="font-semibold text-slate-800">
                                   ฿{stk.direct_value_thb.toLocaleString('th-TH', { maximumFractionDigits: 0 })}
                                 </span>
-                                <div className="text-[10px] text-slate-500">{stk.direct_weight_pct.toFixed(1)}%</div>
+                                <div className="text-[11px] text-slate-500">{stk.direct_weight_pct.toFixed(1)}%</div>
                               </div>
                             ) : (
-                              <span className="text-slate-400">-</span>
+                              <span className="text-slate-500">-</span>
                             )}
                           </td>
 
                           <td className="py-2.5 px-2 text-right font-mono tabular-nums">
                             {stk.indirect_value_thb > 0 ? (
                               <div>
-                                <span className="font-semibold text-purple-700">
+                                <span className="font-semibold text-amber-800">
                                   ฿{stk.indirect_value_thb.toLocaleString('th-TH', { maximumFractionDigits: 0 })}
                                 </span>
-                                <div className="text-[10px] text-purple-600">{stk.indirect_weight_pct.toFixed(1)}%</div>
+                                <div className="text-[11px] text-amber-700">{stk.indirect_weight_pct.toFixed(1)}%</div>
                               </div>
                             ) : (
-                              <span className="text-slate-400">-</span>
+                              <span className="text-slate-500">-</span>
                             )}
                           </td>
 
@@ -512,7 +579,7 @@ export default function PortfolioAdvisory() {
                             <div className={`font-extrabold ${isBreached ? 'text-amber-700 font-bold' : 'text-slate-900'}`}>
                               ฿{stk.total_value_thb.toLocaleString('th-TH', { maximumFractionDigits: 0 })}
                             </div>
-                            <div className={`text-[10px] font-bold ${isBreached ? 'text-amber-700' : 'text-slate-600'}`}>
+                            <div className={`text-[11px] font-bold ${isBreached ? 'text-amber-700' : 'text-slate-600'}`}>
                               {stk.total_weight_pct.toFixed(1)}%
                             </div>
                           </td>
@@ -523,7 +590,7 @@ export default function PortfolioAdvisory() {
                                 {stk.source_funds.map(([fundSym], fIdx) => (
                                   <span
                                     key={fIdx}
-                                    className="px-1.5 py-0.5 rounded text-[10px] font-mono bg-purple-50 text-purple-800 border border-purple-200"
+                                    className="px-1.5 py-0.5 rounded text-[11px] font-mono bg-amber-50 text-amber-900 border border-amber-200"
                                     title={fundSym}
                                   >
                                     {fundSym}
@@ -531,7 +598,7 @@ export default function PortfolioAdvisory() {
                                 ))}
                               </div>
                             ) : (
-                              <span className="text-[11px] text-slate-400">ถือตรงเท่านั้น</span>
+                              <span className="text-[11px] text-slate-500">ถือตรงเท่านั้น</span>
                             )}
                           </td>
                         </tr>
@@ -543,9 +610,12 @@ export default function PortfolioAdvisory() {
             </div>
 
             {/* Right 5 cols: True Sector Exposure vs Macro Direction */}
-            <div className="lg:col-span-5 flow-panel rounded-2xl border border-edge bg-panel p-5 shadow-xs space-y-3">
+            <div className="lg:col-span-5 flow-panel rounded-2xl border border-edge bg-panel p-5 shadow-sm space-y-3">
               <div className="flex items-center justify-between pb-2 border-b border-edge/60">
-                <span className="font-bold text-sm text-slate-900">🧭 True Sector Exposure vs Macro</span>
+                <span className="inline-flex items-center gap-1.5 font-bold text-sm text-slate-900">
+                  <CompassIcon className="h-4 w-4 text-section-accent" />
+                  <span>True Sector Exposure vs Macro</span>
+                </span>
                 <span className="text-xs text-slate-500">สัดส่วนรวมจริง</span>
               </div>
 
@@ -563,25 +633,27 @@ export default function PortfolioAdvisory() {
                         <div className="flex items-center gap-1.5 flex-wrap">
                           <span className="font-bold text-slate-800">{sec.sector_name}</span>
                           {sec.is_crowded && (
-                            <span className="text-[10px] px-1.5 py-0.2 rounded bg-rose-100 text-rose-800 font-bold border border-rose-300">
+                            <span className="text-[11px] px-1.5 py-0.5 rounded bg-rose-100 text-rose-800 font-bold border border-rose-300">
                               Crowded &gt;30%
                             </span>
                           )}
                           {isLeading && (
-                            <span className="text-[10px] px-1.5 py-0.2 rounded bg-emerald-100 text-emerald-800 font-bold border border-emerald-300">
-                              🟢 Leading
+                            <span className="inline-flex items-center gap-1 text-[11px] px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800 font-bold border border-emerald-300">
+                              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" aria-hidden="true" />
+                              <span>Leading</span>
                             </span>
                           )}
                           {isLagging && (
-                            <span className="text-[10px] px-1.5 py-0.2 rounded bg-rose-100 text-rose-800 font-bold border border-rose-300">
-                              🔴 Lagging
+                            <span className="inline-flex items-center gap-1 text-[11px] px-1.5 py-0.5 rounded bg-rose-100 text-rose-800 font-bold border border-rose-300">
+                              <span className="h-1.5 w-1.5 rounded-full bg-rose-500" aria-hidden="true" />
+                              <span>Lagging</span>
                             </span>
                           )}
                         </div>
-                        <span className="font-mono font-bold text-slate-900">{sec.weight_pct.toFixed(1)}%</span>
+                        <span className="font-mono tabular-nums font-bold text-slate-900">{sec.weight_pct.toFixed(1)}%</span>
                       </div>
 
-                      {/* Stacked bar: Direct (sky) vs Fund (purple) */}
+                      {/* Stacked bar: Direct (sky) vs Fund (amber) */}
                       <div className="w-full bg-slate-100 rounded-full h-2 overflow-hidden flex">
                         {sec.direct_stocks_pct > 0 && (
                           <div
@@ -592,14 +664,14 @@ export default function PortfolioAdvisory() {
                         )}
                         {sec.funds_pct > 0 && (
                           <div
-                            className="bg-purple-500 h-2 transition-all"
+                            className="bg-amber-500 h-2 transition-all"
                             style={{ width: `${Math.min(sec.funds_pct * 2.5, 100)}%` }}
                             title={`ในกองทุน: ${sec.funds_pct.toFixed(1)}%`}
                           />
                         )}
                       </div>
 
-                      <div className="flex items-center justify-between text-[10px] text-slate-400">
+                      <div className="flex items-center justify-between text-[11px] text-slate-500">
                         <span>ตรง: {sec.direct_stocks_pct.toFixed(1)}% · กองทุน: {sec.funds_pct.toFixed(1)}%</span>
                         <span>฿{sec.total_value_thb.toLocaleString('th-TH', { maximumFractionDigits: 0 })}</span>
                       </div>
@@ -613,19 +685,21 @@ export default function PortfolioAdvisory() {
       )}
 
       {/* 4. Tier 2 AI Strategic Playbook Hero Card */}
+      <div id="advisory-playbook" className="scroll-mt-16">
       {synthesizing ? (
         <AiPlaybookSynthesisLoader />
       ) : data.cached_narrative ? (
-        <div className="flow-panel rounded-2xl border border-indigo-200/80 bg-gradient-to-br from-indigo-50/40 via-white to-purple-50/30 p-6 shadow-sm space-y-4">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-indigo-100">
+        <div className="flow-panel rounded-2xl border border-sky-200/80 bg-gradient-to-br from-sky-50/45 via-white to-amber-50/30 p-6 shadow-sm space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-sky-100">
             <div className="flex items-center gap-2.5">
-              <span className="text-xl">🧠</span>
+              <CpuIcon className="h-5 w-5 text-section-accent shrink-0" />
               <h2 className="text-base font-bold text-slate-900">
                 AI Strategic Playbook
               </h2>
               {data.cached_narrative.consistency_verified && (
                 <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800 border border-emerald-200">
-                  <span>✓</span> ตัวเลขสอดคล้อง 100%
+                  <CheckSmallIcon className="h-3.5 w-3.5 text-emerald-700" />
+                  <span>ตัวเลขสอดคล้อง 100%</span>
                 </span>
               )}
             </div>
@@ -634,8 +708,8 @@ export default function PortfolioAdvisory() {
             </span>
           </div>
 
-          <div className="text-sm text-slate-800 leading-relaxed bg-white/80 p-4 rounded-xl border border-indigo-100/60 shadow-xs">
-            <p className="font-medium text-indigo-950 mb-1">ภาพรวมกลยุทธ์มหภาค (Executive Macro Summary):</p>
+          <div className="text-sm text-slate-800 leading-relaxed bg-white/85 p-4 rounded-xl border border-sky-100/70 shadow-sm">
+            <p className="font-medium text-sky-950 mb-1">ภาพรวมกลยุทธ์มหภาค (Executive Macro Summary):</p>
             <p className="text-slate-700">{data.cached_narrative.macro_executive_summary}</p>
           </div>
 
@@ -646,12 +720,13 @@ export default function PortfolioAdvisory() {
               {data.cached_narrative.whats_working && data.cached_narrative.whats_working.length > 0 && (
                 <div className="bg-emerald-50/50 p-4 rounded-xl border border-emerald-200/70 space-y-2">
                   <h4 className="text-xs font-bold uppercase tracking-wider text-emerald-900 flex items-center gap-1.5">
-                    <span>📈</span> สิ่งที่กำลังได้เปรียบในภาวะตลาด (What's Working)
+                    <ChartTrendIcon className="h-3.5 w-3.5 text-emerald-700" />
+                    <span>สิ่งที่กำลังได้เปรียบในภาวะตลาด (What's Working)</span>
                   </h4>
                   <ul className="text-xs text-slate-700 space-y-1.5">
                     {data.cached_narrative.whats_working.map((item, idx) => (
                       <li key={idx} className="flex items-start gap-1.5">
-                        <span className="text-emerald-600 shrink-0 font-bold">✓</span>
+                        <CheckSmallIcon className="h-3.5 w-3.5 text-emerald-600 shrink-0 mt-0.5" />
                         <span>{item}</span>
                       </li>
                     ))}
@@ -662,7 +737,8 @@ export default function PortfolioAdvisory() {
               {data.cached_narrative.what_concerns_me && data.cached_narrative.what_concerns_me.length > 0 && (
                 <div className="bg-rose-50/50 p-4 rounded-xl border border-rose-200/70 space-y-2">
                   <h4 className="text-xs font-bold uppercase tracking-wider text-rose-900 flex items-center gap-1.5">
-                    <span>⚠️</span> สิ่งที่น่ากังวล &amp; ความเสี่ยงแฝง (What Concerns Me)
+                    <AlertTriangleIcon className="h-3.5 w-3.5 text-rose-600" />
+                    <span>สิ่งที่น่ากังวล &amp; ความเสี่ยงแฝง (What Concerns Me)</span>
                   </h4>
                   <ul className="text-xs text-slate-700 space-y-1.5">
                     {data.cached_narrative.what_concerns_me.map((item, idx) => (
@@ -679,9 +755,10 @@ export default function PortfolioAdvisory() {
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 pt-1">
             {/* Playbook Column 1: Immediate */}
-            <div className="bg-white/80 p-4 rounded-xl border border-sky-100 space-y-2">
+            <div className="surface-inset p-4 rounded-xl space-y-2">
               <h4 className="text-xs font-bold uppercase tracking-wider text-sky-800 flex items-center gap-1.5">
-                <span>⚡</span> คำสั่งปฏิบัติการวันนี้ (Immediate)
+                <BoltStrategyIcon className="h-3.5 w-3.5 text-section-accent" />
+                <span>คำสั่งปฏิบัติการวันนี้ (Immediate)</span>
               </h4>
               <ul className="text-xs text-slate-700 space-y-2">
                 {data.cached_narrative.immediate_action_playbook.map((item, idx) => (
@@ -694,9 +771,10 @@ export default function PortfolioAdvisory() {
             </div>
 
             {/* Playbook Column 2: Dip Plan */}
-            <div className="bg-white/80 p-4 rounded-xl border border-emerald-100 space-y-2">
+            <div className="surface-inset p-4 rounded-xl space-y-2">
               <h4 className="text-xs font-bold uppercase tracking-wider text-emerald-800 flex items-center gap-1.5">
-                <span>🎯</span> แผนตั้งรับ Buy on Dip
+                <TargetIcon className="h-3.5 w-3.5 text-emerald-600" />
+                <span>แผนตั้งรับ Buy on Dip</span>
               </h4>
               <ul className="text-xs text-slate-700 space-y-2">
                 {data.cached_narrative.conditional_dip_plan.map((item, idx) => (
@@ -709,14 +787,15 @@ export default function PortfolioAdvisory() {
             </div>
 
             {/* Playbook Column 3: Risk & Hedging */}
-            <div className="bg-white/80 p-4 rounded-xl border border-purple-100 space-y-2">
-              <h4 className="text-xs font-bold uppercase tracking-wider text-purple-800 flex items-center gap-1.5">
-                <span>🛡️</span> การบริหารความเสี่ยง &amp; พักเงิน
+            <div className="surface-inset p-4 rounded-xl space-y-2">
+              <h4 className="text-xs font-bold uppercase tracking-wider text-amber-800 flex items-center gap-1.5">
+                <ShieldCheckIcon className="h-3.5 w-3.5 text-amber-600" />
+                <span>การบริหารความเสี่ยง &amp; พักเงิน</span>
               </h4>
               <ul className="text-xs text-slate-700 space-y-2">
                 {data.cached_narrative.risk_mitigation_and_hedging.map((item, idx) => (
                   <li key={idx} className="flex items-start gap-1.5">
-                    <span className="text-purple-500 shrink-0 font-bold">•</span>
+                    <span className="text-amber-600 shrink-0 font-bold">•</span>
                     <span>{item}</span>
                   </li>
                 ))}
@@ -727,9 +806,10 @@ export default function PortfolioAdvisory() {
           {/* Strategic Discussion Points */}
           {data.cached_narrative.strategic_discussion_points &&
             data.cached_narrative.strategic_discussion_points.length > 0 && (
-              <div className="bg-slate-50/90 p-4 rounded-xl border border-slate-200/80 space-y-2">
+              <div className="surface-inset p-4 rounded-xl space-y-2">
                 <h4 className="text-xs font-bold uppercase tracking-wider text-slate-800 flex items-center gap-1.5">
-                  <span>💡</span> ประเด็นชวนคุยเชิงกลยุทธ์ (Strategic Discussion Points)
+                  <BulbIcon className="h-3.5 w-3.5 text-amber-500" />
+                  <span>ประเด็นชวนคุยเชิงกลยุทธ์ (Strategic Discussion Points)</span>
                 </h4>
                 <ol className="text-xs text-slate-700 space-y-1.5 pl-4 list-decimal">
                   {data.cached_narrative.strategic_discussion_points.map((item, idx) => (
@@ -742,23 +822,26 @@ export default function PortfolioAdvisory() {
             )}
         </div>
       ) : (
-        <div className="p-6 rounded-2xl border border-dashed border-indigo-200 bg-indigo-50/20 text-center space-y-3">
-          <div className="text-2xl">✨</div>
+        <div className="p-6 rounded-2xl border border-dashed border-sky-200 bg-sky-50/25 text-center space-y-3">
+          <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-xl bg-sky-100/80 text-section-accent">
+            <SparklesIcon className="h-5 w-5" />
+          </div>
           <h3 className="text-sm font-semibold text-slate-800">ยังไม่มีบทวิเคราะห์ AI Strategic Playbook สำหรับพอร์ตโฟลิโอสถานะปัจจุบัน</h3>
           <p className="text-xs text-slate-500 max-w-md mx-auto">
             กดปุ่มประมวลผลเพื่อสังเคราะห์แผนกลยุทธ์เชิงลึก เชื่อมโยง Macro Regime และปัจจัยทางเทคนิค โดยตรวจสอบความสอดคล้องกับตัวเลขจริง
           </p>
           <button
             onClick={handleSynthesize}
-            className="px-4 py-2 rounded-xl text-xs font-semibold bg-indigo-600 text-white hover:bg-indigo-700 transition"
+            className="px-4 py-2 rounded-xl text-xs font-semibold bg-gradient-to-r from-sky-600 to-cyan-600 text-white hover:from-sky-700 hover:to-cyan-700 shadow-sm transition"
           >
             ประมวลผล AI Playbook เดี๋ยวนี้
           </button>
         </div>
       )}
+      </div>
 
       {/* 5. Holdings Advisory Table with Action Badges & Lot Sizing */}
-      <div className="flow-panel rounded-2xl border border-edge bg-panel shadow-xs overflow-hidden">
+      <div id="advisory-holdings" className="scroll-mt-16 flow-panel rounded-2xl border border-edge bg-panel shadow-sm overflow-hidden">
         {/* Table Filter Toolbar */}
         <div className="p-4 border-b border-edge flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div className="flex items-center gap-2">
@@ -780,7 +863,7 @@ export default function PortfolioAdvisory() {
                 onClick={() => setFilterAction(tab.id)}
                 className={`px-3 py-1.5 rounded-lg text-xs sm:text-[13px] font-semibold whitespace-nowrap transition ${
                   filterAction === tab.id
-                    ? 'bg-sky-600 text-white shadow-xs'
+                    ? 'bg-sky-600 text-white shadow-sm'
                     : 'text-slate-600 hover:bg-slate-100'
                 }`}
               >
@@ -809,7 +892,7 @@ export default function PortfolioAdvisory() {
               ))}
               {filteredHoldings.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="text-center py-8 text-slate-400">
+                  <td colSpan={6} className="text-center py-8 text-slate-500">
                     ไม่พบรายการสินทรัพย์ในหมวดหมู่นี้
                   </td>
                 </tr>
@@ -837,7 +920,7 @@ export default function PortfolioAdvisory() {
                   <span className="text-rose-600 font-mono text-[11px]">{q.guardrail_code}</span>
                 </div>
                 <p className="text-slate-600">{q.reason}</p>
-                {q.details && <p className="text-slate-400 font-mono text-[10px]">{q.details}</p>}
+                {q.details && <p className="text-slate-500 font-mono text-[11px]">{q.details}</p>}
               </div>
             ))}
           </div>
@@ -855,7 +938,7 @@ function HoldingRow({ holding: h }: { holding: HoldingAdvisoryDTO }) {
       case 'TRIM_OVERWEIGHT':
         return 'bg-amber-100 text-amber-800 border-amber-300'
       case 'LET_WINNER_RUN':
-        return 'bg-indigo-100 text-indigo-800 border-indigo-300'
+        return 'bg-sky-100 text-sky-800 border-sky-300'
       case 'ACCUMULATE_NOW':
         return 'bg-emerald-100 text-emerald-800 border-emerald-300 font-bold'
       case 'BREAKOUT_BUY':
@@ -913,7 +996,9 @@ function HoldingRow({ holding: h }: { holding: HoldingAdvisoryDTO }) {
       {/* Symbol & Market */}
       <td className="py-3 px-4">
         <div className="flex items-center gap-2">
-          <span className="text-base">{h.market === 'TH' ? '🇹🇭' : '🇺🇸'}</span>
+          <span className="rounded bg-slate-100 px-1.5 py-0.5 font-mono text-[11px] font-bold text-slate-700 shrink-0">
+            {h.market === 'TH' ? 'TH' : 'US'}
+          </span>
           <div>
             <div className="font-bold text-slate-900 flex items-center gap-1.5">
               <span>{h.symbol}</span>
@@ -931,7 +1016,7 @@ function HoldingRow({ holding: h }: { holding: HoldingAdvisoryDTO }) {
         <div className="space-y-0.5">
           <div className="font-semibold text-slate-800">
             {h.current_weight_pct.toFixed(1)}%{' '}
-            <span className="text-slate-400 font-normal">/ เป้า {h.target_weight_pct.toFixed(1)}%</span>
+            <span className="text-slate-500 font-normal">/ เป้า {h.target_weight_pct.toFixed(1)}%</span>
           </div>
           <div
             className={`text-[11px] font-mono ${
@@ -939,13 +1024,13 @@ function HoldingRow({ holding: h }: { holding: HoldingAdvisoryDTO }) {
                 ? 'text-amber-600 font-semibold'
                 : h.weight_drift_pct < -2.5
                 ? 'text-sky-600 font-semibold'
-                : 'text-slate-400'
+                : 'text-slate-500'
             }`}
           >
             Drift: {h.weight_drift_pct > 0 ? `+${h.weight_drift_pct.toFixed(1)}` : h.weight_drift_pct.toFixed(1)}%
           </div>
           {h.risk_contribution_pct !== undefined && h.risk_contribution_pct !== null && (
-            <div className="text-[10px] text-slate-500 font-mono">
+            <div className="text-[11px] text-slate-500 font-mono">
               Risk: {h.risk_contribution_pct.toFixed(1)}%
               {h.is_volatility_estimated && (
                 <span className="ml-1 text-amber-600" title="Estimated 20% default volatility">
@@ -972,7 +1057,7 @@ function HoldingRow({ holding: h }: { holding: HoldingAdvisoryDTO }) {
       <td className="py-3 px-3">
         {formatLotSizing(h.lot_sizing)}
         {h.estimated_friction_bps !== undefined && h.estimated_friction_bps !== null && (
-          <div className="text-[10px] text-slate-400 font-mono mt-0.5">
+          <div className="text-[11px] text-slate-500 font-mono mt-0.5">
             Est. friction: {h.estimated_friction_bps.toFixed(1)} bps
           </div>
         )}
@@ -984,17 +1069,17 @@ function HoldingRow({ holding: h }: { holding: HoldingAdvisoryDTO }) {
           {h.core_conviction_score !== null && h.core_conviction_score !== undefined ? (
             <div className="font-medium text-slate-700">
               Conviction:{' '}
-              <span className="font-bold text-indigo-600">{h.core_conviction_score.toFixed(1)}/10</span>
+              <span className="font-bold font-mono tabular-nums text-sky-700">{h.core_conviction_score.toFixed(1)}/10</span>
             </div>
           ) : (
-            <div className="text-slate-400">-</div>
+            <div className="text-slate-500">-</div>
           )}
           {h.price_stage && (
-            <div className="font-mono text-slate-500 text-[10px] truncate max-w-[130px]">{h.price_stage}</div>
+            <div className="font-mono text-slate-500 text-[11px] truncate max-w-[130px]">{h.price_stage}</div>
           )}
           {h.macro_alignment !== 'unavailable' && (
             <div
-              className={`font-semibold text-[10px] ${
+              className={`font-semibold text-[11px] ${
                 h.macro_alignment === 'tailwind'
                   ? 'text-emerald-600'
                   : h.macro_alignment === 'headwind'

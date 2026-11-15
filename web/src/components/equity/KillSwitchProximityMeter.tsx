@@ -71,7 +71,7 @@ export const KillSwitchProximityMeter: React.FC<KillSwitchProximityMeterProps> =
     : null
 
   return (
-    <section className="flow-panel rounded-2xl border border-rose-200/90 bg-rose-50/20 p-6 shadow-xs space-y-6 animate-card-in">
+    <section className="flow-panel rounded-2xl border border-rose-200/90 bg-rose-50/20 p-6 shadow-sm space-y-6 animate-card-in">
       {/* Header */}
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-rose-200/60 pb-4">
         <div className="flex items-center gap-2.5">
@@ -85,7 +85,7 @@ export const KillSwitchProximityMeter: React.FC<KillSwitchProximityMeterProps> =
                 howToRead="กองทุนมืออาชีพจะกำหนดจุดยอมแพ้ก่อนเข้าซื้อเสมอ หากแตะเกณฑ์ Kill Switch ต้องตัดขาดทุนทันที ห้ามหวังลมๆ แล้งๆ หรือเปลี่ยนใจถือยาว"
                 impactOnMoney="กฎเหล็กที่ปกป้องพอร์ตไม่ให้เสียหายหนัก และป้องกันการติดดอยยาวข้ามปี"
               />
-              <span className="text-[10px] px-2 py-0.5 rounded-full bg-rose-100 text-rose-800 font-extrabold">
+              <span className="text-[11px] px-2 py-0.5 rounded-full bg-rose-100 text-rose-800 font-extrabold">
                 {falsifiers.length} Kill-Switches Active
               </span>
             </h3>
@@ -95,7 +95,7 @@ export const KillSwitchProximityMeter: React.FC<KillSwitchProximityMeterProps> =
           </div>
         </div>
 
-        <span className="text-xs px-2.5 py-1 rounded-xl bg-white/80 border border-rose-200 text-rose-700 font-semibold shadow-2xs">
+        <span className="text-xs px-2.5 py-1 rounded-xl bg-white/80 border border-rose-200 text-rose-700 font-semibold shadow-sm">
           🛡️ Institutional Risk Governance
         </span>
       </div>
@@ -116,9 +116,9 @@ export const KillSwitchProximityMeter: React.FC<KillSwitchProximityMeterProps> =
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {/* Buffer 1: EBIT Margin Safety Buffer */}
           {marginBuffer != null && marginThreshold != null && currentOperatingMargin != null && (
-            <div className="p-4 rounded-xl bg-white/70 border border-rose-200/80 shadow-2xs space-y-3">
+            <div className="p-4 rounded-xl bg-white/70 border border-rose-200/80 shadow-sm space-y-3">
               <div className="flex items-center justify-between text-xs">
-                <span className="font-semibold text-zinc-700">1. EBIT Margin Floor Safety Buffer</span>
+                <span className="font-semibold text-slate-700">1. EBIT Margin Floor Safety Buffer</span>
                 <span
                   className={`px-2 py-0.5 rounded-full font-bold text-xs ${
                     marginBuffer > 1.5
@@ -135,11 +135,11 @@ export const KillSwitchProximityMeter: React.FC<KillSwitchProximityMeterProps> =
               {/* Big Number Tier 2 Display */}
               <div className="flex items-baseline justify-between pt-1">
                 <div>
-                  <span className="text-[10px] font-bold uppercase text-zinc-400 block">Current EBIT Margin</span>
-                  <span className="font-mono text-2xl font-bold text-zinc-900">{currentOperatingMargin.toFixed(2)}%</span>
+                  <span className="text-[11px] font-bold uppercase text-slate-500 block">Current EBIT Margin</span>
+                  <span className="font-mono text-2xl font-bold text-slate-900">{currentOperatingMargin.toFixed(2)}%</span>
                 </div>
                 <div className="text-right">
-                  <span className="text-[10px] font-bold uppercase text-rose-600 block">Kill-Switch Threshold</span>
+                  <span className="text-[11px] font-bold uppercase text-rose-600 block">Kill-Switch Threshold</span>
                   <span className="font-mono text-xl font-bold text-rose-600">&lt; {marginThreshold.toFixed(1)}%</span>
                 </div>
               </div>
@@ -153,7 +153,7 @@ export const KillSwitchProximityMeter: React.FC<KillSwitchProximityMeterProps> =
                     title={`Current safety buffer: +${marginBuffer.toFixed(2)}% above threshold`}
                   />
                 </div>
-                <div className="flex justify-between text-[10px] text-zinc-400">
+                <div className="flex justify-between text-[11px] text-slate-500">
                   <span>Threshold Floor ({marginThreshold.toFixed(1)}%)</span>
                   <span>Safe Operating Zone</span>
                 </div>
@@ -163,9 +163,9 @@ export const KillSwitchProximityMeter: React.FC<KillSwitchProximityMeterProps> =
 
           {/* Buffer 2: Structural Support Distance */}
           {stopBuffer != null && stopLossThreshold != null && currentPrice != null && (
-            <div className="p-4 rounded-xl bg-white/70 border border-rose-200/80 shadow-2xs space-y-3">
+            <div className="p-4 rounded-xl bg-white/70 border border-rose-200/80 shadow-sm space-y-3">
               <div className="flex items-center justify-between text-xs">
-                <span className="font-semibold text-zinc-700">2. Structural Stop Distance</span>
+                <span className="font-semibold text-slate-700">2. Structural Stop Distance</span>
                 <span
                   className={`px-2 py-0.5 rounded-full font-bold text-xs ${
                     stopBuffer > 0
@@ -180,11 +180,11 @@ export const KillSwitchProximityMeter: React.FC<KillSwitchProximityMeterProps> =
               {/* Big Number Tier 2 Display */}
               <div className="flex items-baseline justify-between pt-1">
                 <div>
-                  <span className="text-[10px] font-bold uppercase text-zinc-400 block">Current Close</span>
-                  <span className="font-mono text-2xl font-bold text-zinc-900">{currency}{currentPrice.toFixed(2)}</span>
+                  <span className="text-[11px] font-bold uppercase text-slate-500 block">Current Close</span>
+                  <span className="font-mono text-2xl font-bold text-slate-900">{currency}{currentPrice.toFixed(2)}</span>
                 </div>
                 <div className="text-right">
-                  <span className="text-[10px] font-bold uppercase text-rose-600 block">Invalidation Stop</span>
+                  <span className="text-[11px] font-bold uppercase text-rose-600 block">Invalidation Stop</span>
                   <span className="font-mono text-xl font-bold text-rose-600">&lt; {currency}{stopLossThreshold.toFixed(2)}</span>
                 </div>
               </div>
@@ -198,7 +198,7 @@ export const KillSwitchProximityMeter: React.FC<KillSwitchProximityMeterProps> =
                     title={`Buffer to stop: +${currency}${stopBuffer.toFixed(2)}`}
                   />
                 </div>
-                <div className="flex justify-between text-[10px] text-zinc-400">
+                <div className="flex justify-between text-[11px] text-slate-500">
                   <span>Weekly Close Breakdown ({currency}{stopLossThreshold.toFixed(2)})</span>
                   <span>Current Price Level</span>
                 </div>
@@ -220,7 +220,7 @@ export const KillSwitchProximityMeter: React.FC<KillSwitchProximityMeterProps> =
               <th className="py-2.5 pr-3">Investment Risk Rationale</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-rose-100 text-zinc-800">
+          <tbody className="divide-y divide-rose-100 text-slate-800">
             {falsifiers.map((f) => {
               const audit = humanizeSourceRef(f.source_ref)
               return (
@@ -232,18 +232,18 @@ export const KillSwitchProximityMeter: React.FC<KillSwitchProximityMeterProps> =
                     <div>{f.metric_name}</div>
                     <div className="text-rose-600 font-normal text-[11px] mt-0.5">{f.condition}</div>
                   </td>
-                  <td className="py-3 px-3 font-bold font-mono text-zinc-900 whitespace-nowrap">
+                  <td className="py-3 px-3 font-bold font-mono text-slate-900 whitespace-nowrap">
                     {f.threshold_value != null ? `${f.threshold_value}` : 'N/A'}
                   </td>
                   <td className="py-3 px-3 whitespace-nowrap">
                     <span
-                      className="px-2 py-0.5 rounded-md bg-zinc-100 border border-zinc-200 text-zinc-700 font-medium text-[11px] cursor-help inline-block"
+                      className="px-2 py-0.5 rounded-md bg-slate-100 border border-slate-200 text-slate-700 font-medium text-[11px] cursor-help inline-block"
                       title={audit.tooltip}
                     >
                       {audit.label}
                     </span>
                   </td>
-                  <td className="py-3 pr-3 text-zinc-600 leading-relaxed max-w-md">
+                  <td className="py-3 pr-3 text-slate-600 leading-relaxed max-w-md">
                     {f.narrative_explanation}
                   </td>
                 </tr>

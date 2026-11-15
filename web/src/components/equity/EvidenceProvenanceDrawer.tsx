@@ -63,41 +63,41 @@ export const EvidenceProvenanceDrawer: React.FC<EvidenceProvenanceDrawerProps> =
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-2">
           <span className="inline-flex h-2 w-2 rounded-full bg-emerald-500 shadow-[0_0_6px_rgba(16,185,129,0.6)] animate-pulse" />
-          <span className="text-xs font-mono text-zinc-500">
-            CAS Snapshot: <strong className="text-zinc-900 font-semibold">{metadata.analysis_run_id}</strong> (v{metadata.schema_version})
+          <span className="text-xs font-mono text-slate-500">
+            CAS Snapshot: <strong className="text-slate-900 font-semibold">{metadata.analysis_run_id}</strong> (v{metadata.schema_version})
           </span>
         </div>
         <button
           onClick={() => setIsOpen(!isOpen)}
-          className="px-2.5 py-1 text-xs font-semibold bg-surface hover:bg-surface-strong text-sky-700 rounded-lg border border-edge transition-colors flex items-center gap-1.5 shadow-2xs"
+          className="px-2.5 py-1 text-xs font-semibold bg-surface hover:bg-surface-strong text-sky-700 rounded-lg border border-edge transition-colors flex items-center gap-1.5 shadow-sm"
           data-testid="toggle-evidence-drawer"
         >
           <span>{isOpen ? 'Hide Evidence Provenance' : 'View Evidence Provenance'}</span>
-          <span className="font-mono text-[10px] text-zinc-400">[{metadata.snapshot_sha256.slice(0, 8)}]</span>
+          <span className="font-mono text-[11px] text-slate-500">[{metadata.snapshot_sha256.slice(0, 8)}]</span>
         </button>
       </div>
 
       {isOpen && (
-        <div className="mt-3 p-4 bg-surface/90 border border-edge rounded-xl space-y-4 text-xs font-mono shadow-xs">
+        <div className="mt-3 p-4 bg-surface/90 border border-edge rounded-xl space-y-4 text-xs font-mono shadow-sm">
           {/* Header Summary */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pb-3 border-b border-edge/60 text-[11px]">
             <div>
-              <span className="text-zinc-400">As-Of Date:</span>
-              <div className="text-zinc-800 font-semibold">{metadata.as_of_date}</div>
+              <span className="text-slate-500">As-Of Date:</span>
+              <div className="text-slate-800 font-semibold">{metadata.as_of_date}</div>
             </div>
             <div>
-              <span className="text-zinc-400">Generated UTC:</span>
-              <div className="text-zinc-800">{new Date(metadata.generated_at).toLocaleString()}</div>
+              <span className="text-slate-500">Generated UTC:</span>
+              <div className="text-slate-800">{new Date(metadata.generated_at).toLocaleString()}</div>
             </div>
             <div>
-              <span className="text-zinc-400">Manifest SHA256:</span>
+              <span className="text-slate-500">Manifest SHA256:</span>
               <div className="text-sky-700 font-bold truncate" title={metadata.snapshot_sha256}>
                 {metadata.snapshot_sha256.slice(0, 16)}...
               </div>
             </div>
             <div>
-              <span className="text-zinc-400">Price Basis:</span>
-              <div className="text-zinc-700">
+              <span className="text-slate-500">Price Basis:</span>
+              <div className="text-slate-700">
                 Chart: {corporate_actions?.chart_price_basis || 'adj_close'} | Val: {corporate_actions?.valuation_price_basis || 'unadj_close'}
               </div>
             </div>
@@ -105,13 +105,13 @@ export const EvidenceProvenanceDrawer: React.FC<EvidenceProvenanceDrawerProps> =
 
           {/* Manifest Items Table */}
           <div>
-            <div className="text-[11px] font-bold text-zinc-700 mb-2 uppercase tracking-wider">
+            <div className="text-[11px] font-bold text-slate-700 mb-2 uppercase tracking-wider">
               Item-Level Manifest Provenance (CAS Verified)
             </div>
             <div className="overflow-x-auto">
               <table className="w-full text-left border-collapse">
                 <thead>
-                  <tr className="border-b border-edge text-zinc-500 text-[10px]">
+                  <tr className="border-b border-edge text-slate-500 text-[11px]">
                     <th className="pb-1.5 font-semibold">Item ID</th>
                     <th className="pb-1.5 font-semibold">Source URI</th>
                     <th className="pb-1.5 font-semibold">Retrieved At</th>
@@ -123,13 +123,13 @@ export const EvidenceProvenanceDrawer: React.FC<EvidenceProvenanceDrawerProps> =
                   {Object.entries(manifest_items || {}).map(([key, item]) => (
                     <tr key={key} className="hover:bg-surface-strong/60 transition-colors">
                       <td className="py-1.5 text-sky-800 font-semibold">{item.item_id}</td>
-                      <td className="py-1.5 text-zinc-600 truncate max-w-[200px]" title={item.metadata.source_uri}>
+                      <td className="py-1.5 text-slate-600 truncate max-w-[200px]" title={item.metadata.source_uri}>
                         {item.metadata.source_uri}
                       </td>
-                      <td className="py-1.5 text-zinc-500">{item.metadata.retrieved_at?.slice(0, 19)}</td>
+                      <td className="py-1.5 text-slate-500">{item.metadata.retrieved_at?.slice(0, 19)}</td>
                       <td className="py-1.5">
                         <span
-                          className={`px-1.5 py-0.5 rounded text-[10px] font-bold border ${
+                          className={`px-1.5 py-0.5 rounded text-[11px] font-bold border ${
                             item.metadata.status === 'available'
                               ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
                               : 'bg-amber-50 text-amber-700 border-amber-200'
@@ -138,7 +138,7 @@ export const EvidenceProvenanceDrawer: React.FC<EvidenceProvenanceDrawerProps> =
                           {item.metadata.status}
                         </span>
                       </td>
-                      <td className="py-1.5 text-zinc-400 font-mono text-[10px]" title={item.metadata.payload_hash}>
+                      <td className="py-1.5 text-slate-500 font-mono text-[11px]" title={item.metadata.payload_hash}>
                         {item.metadata.payload_hash?.slice(0, 12)}...
                       </td>
                     </tr>

@@ -66,7 +66,7 @@ class PromiseApplicationService:
         
         errors, warnings = validate_ledger(raw)
         if errors:
-            log.warning("Ledger validation errors for %s: %s", clean_ticker, errors)
+            log.debug("Ledger validation errors for %s: %s", clean_ticker, errors)
             
         scores = compute_promise_scores(raw)
         return PromiseScoresDTO.model_validate(scores)
@@ -80,7 +80,7 @@ class PromiseApplicationService:
         
         errors, warnings = validate_ledger(raw)
         if errors:
-            log.warning("Ledger validation errors for %s: %s", clean_ticker, errors)
+            log.debug("Ledger validation errors for %s: %s", clean_ticker, errors)
             
         scores = compute_promise_scores(raw)
         scores_dto = PromiseScoresDTO.model_validate(scores)

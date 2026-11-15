@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react'
 import { api } from '../../api/client'
 import type { HermesSyncStatusDTO, SandboxStateSnapshotDTO } from '../../api/types'
+import { BookOpenIcon, CloseIcon, RefreshIcon, ShieldCheckIcon, SparklesIcon } from '../ui/AppIcons'
+import { InPlaceDialog } from '../ui/Modal'
 
 interface ManagerMemoryDrawerProps {
   isOpen: boolean
@@ -55,27 +57,31 @@ export default function ManagerMemoryDrawer({ isOpen, onClose }: ManagerMemoryDr
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex justify-end bg-sky-950/20 backdrop-blur-sm animate-fade-in">
-      <div
-        className="h-full w-full max-w-md border-l border-sky-200 bg-panel p-6 shadow-2xl backdrop-blur-2xl animate-drawer-in flex flex-col custom-scrollbar overflow-y-auto"
-      >
+    <InPlaceDialog
+      titleId="manager-memory-drawer-title"
+      onClose={onClose}
+      wrapperClassName="animate-fade-in fixed inset-0 z-50 flex justify-end"
+      backdropClassName="absolute inset-0 bg-sky-950/20 backdrop-blur-sm"
+      panelClassName="h-full w-full max-w-md border-l border-sky-200 bg-panel p-6 shadow-2xl backdrop-blur-2xl animate-drawer-in flex flex-col custom-scrollbar overflow-y-auto"
+    >
         {/* Header */}
         <div className="flex items-center justify-between border-b border-sky-100 pb-4">
           <div className="flex items-center gap-2">
             <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-sky-100 text-sky-800 font-bold">
-              🛡️
+              <ShieldCheckIcon className="h-4 w-4" />
             </span>
             <div>
-              <h3 className="text-sm font-bold text-sky-950">Hermes Sandbox & Memory</h3>
-              <p className="text-[11px] text-zinc-500">พื้นที่ความจำและวิวัฒนาการเฉพาะของ Manager</p>
+              <h3 id="manager-memory-drawer-title" className="text-sm font-bold text-sky-950">Hermes Sandbox & Memory</h3>
+              <p className="text-[11px] text-slate-500">พื้นที่ความจำและวิวัฒนาการเฉพาะของ Manager</p>
             </div>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="rounded-xl p-2 text-zinc-400 hover:bg-sky-50 hover:text-sky-900"
+            aria-label="ปิดหน้าต่าง"
+            className="rounded-xl p-2 text-slate-500 hover:bg-sky-50 hover:text-sky-900"
           >
-            ✕
+            <CloseIcon className="h-4 w-4" />
           </button>
         </div>
 
@@ -83,13 +89,16 @@ export default function ManagerMemoryDrawer({ isOpen, onClose }: ManagerMemoryDr
           {/* Hermes Agent Upstream Status */}
           <div className="rounded-2xl border border-sky-100 bg-surface p-4 shadow-sm">
             <div className="flex items-center justify-between mb-3">
-              <span className="text-xs font-bold text-sky-900">🔄 NousResearch/hermes-agent</span>
-              <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-semibold text-emerald-800">
+              <span className="inline-flex items-center gap-1.5 text-xs font-bold text-sky-900">
+                <RefreshIcon className="h-3.5 w-3.5 text-section-accent" />
+                <span>NousResearch/hermes-agent</span>
+              </span>
+              <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[11px] font-semibold text-emerald-800">
                 Isolated Clone
               </span>
             </div>
 
-            <div className="space-y-1.5 text-xs text-zinc-600">
+            <div className="space-y-1.5 text-xs text-slate-600">
               <div className="flex justify-between">
                 <span>Commit ล่าสุด:</span>
                 <code className="font-mono font-medium text-sky-800">
@@ -98,7 +107,7 @@ export default function ManagerMemoryDrawer({ isOpen, onClose }: ManagerMemoryDr
               </div>
               <div className="flex justify-between">
                 <span>โฟลเดอร์รัน:</span>
-                <code className="font-mono text-zinc-500">services/hermes_agent/</code>
+                <code className="font-mono text-slate-500">services/hermes_agent/</code>
               </div>
             </div>
 
@@ -126,11 +135,11 @@ export default function ManagerMemoryDrawer({ isOpen, onClose }: ManagerMemoryDr
                     className="flex items-center justify-between rounded-xl border border-sky-100 bg-white p-2.5 text-xs"
                   >
                     <span className="font-medium text-sky-950">📄 {file}</span>
-                    <span className="text-[10px] text-zinc-400">Sanitized</span>
+                    <span className="text-[11px] text-slate-500">Sanitized</span>
                   </div>
                 ))
               ) : (
-                <p className="text-xs text-zinc-400 italic">ยังไม่มีไฟล์ความจำที่บันทึก</p>
+                <p className="text-xs text-slate-500 italic">ยังไม่มีไฟล์ความจำที่บันทึก</p>
               )}
             </div>
           </div>
@@ -140,7 +149,7 @@ export default function ManagerMemoryDrawer({ isOpen, onClose }: ManagerMemoryDr
             <div className="rounded-2xl border border-amber-200/80 bg-amber-50/50 p-4 shadow-sm">
               <div className="flex items-center justify-between mb-2">
                 <h4 className="text-xs font-bold text-amber-900">🛡️ สกิลรอตรวจสอบความปลอดภัย (_quarantine)</h4>
-                <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-800">
+                <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-semibold text-amber-800">
                   {snapshot.quarantined_skills.length} รายการ
                 </span>
               </div>
@@ -152,7 +161,7 @@ export default function ManagerMemoryDrawer({ isOpen, onClose }: ManagerMemoryDr
                   >
                     <div className="flex-1 min-w-0 pr-2">
                       <div className="font-semibold text-sky-950">📦 {skill.name}</div>
-                      <div className="text-[10px] text-zinc-500 truncate">{skill.description}</div>
+                      <div className="text-[11px] text-slate-500 truncate">{skill.description}</div>
                     </div>
                     <button
                       type="button"
@@ -171,7 +180,10 @@ export default function ManagerMemoryDrawer({ isOpen, onClose }: ManagerMemoryDr
 
           {/* Active Skills */}
           <div className="rounded-2xl border border-sky-100 bg-surface p-4 shadow-sm">
-            <h4 className="text-xs font-bold text-sky-900 mb-2">📚 สกิลที่เปิดใช้งาน (manager_sandbox/skills/)</h4>
+            <h4 className="flex items-center gap-1.5 text-xs font-bold text-sky-900 mb-2">
+              <BookOpenIcon className="h-3.5 w-3.5 text-section-accent" />
+              <span>สกิลที่เปิดใช้งาน (manager_sandbox/skills/)</span>
+            </h4>
             <div className="space-y-2">
               {snapshot?.active_skills && snapshot.active_skills.length > 0 ? (
                 snapshot.active_skills.map((skill) => (
@@ -179,23 +191,25 @@ export default function ManagerMemoryDrawer({ isOpen, onClose }: ManagerMemoryDr
                     key={skill.name}
                     className="rounded-xl border border-sky-100 bg-white p-2.5 text-xs"
                   >
-                    <div className="font-medium text-sky-950">✨ {skill.name}</div>
-                    <div className="text-[11px] text-zinc-500 line-clamp-1">{skill.description}</div>
+                    <div className="flex items-center gap-1.5 font-medium text-sky-950">
+                      <SparklesIcon className="h-3.5 w-3.5 text-sky-500 shrink-0" />
+                      <span>{skill.name}</span>
+                    </div>
+                    <div className="text-[11px] text-slate-500 line-clamp-1">{skill.description}</div>
                   </div>
                 ))
               ) : (
-                <p className="text-xs text-zinc-400 italic">ไม่มีสกิลเพิ่มเติมในขณะนี้</p>
+                <p className="text-xs text-slate-500 italic">ไม่มีสกิลเพิ่มเติมในขณะนี้</p>
               )}
             </div>
           </div>
         </div>
 
         <div className="pt-4 border-t border-sky-100 text-center">
-          <p className="text-[11px] text-zinc-400">
+          <p className="text-[11px] text-slate-500">
             ระบบทำงานภายใต้การคุ้มกันของ AST Whitelist Guard และ Atomic File Locks
           </p>
         </div>
-      </div>
-    </div>
+    </InPlaceDialog>
   )
 }

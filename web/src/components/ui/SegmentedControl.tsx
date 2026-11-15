@@ -1,4 +1,5 @@
-import type { ReactNode } from 'react'
+import { useId, type ReactNode } from 'react'
+import { motion } from 'motion/react'
 
 interface Option {
   key: string
@@ -21,29 +22,42 @@ export default function SegmentedControl({
   ariaLabelledby,
   wrap = true,
 }: Props) {
+  const layoutId = useId()
+
   return (
     <div
       role="group"
       aria-labelledby={ariaLabelledby}
       className={`flex ${
         wrap ? 'flex-wrap' : 'overflow-x-auto custom-scrollbar flex-nowrap'
-      } gap-1 sm:gap-1.5 rounded-2xl border border-sky-200/80 bg-panel p-1 sm:p-1.5 shadow-sm shadow-sky-100/60 max-w-full overflow-x-auto custom-scrollbar`}
+      } gap-1 sm:gap-1.5 rounded-2xl border border-sky-200/75 bg-surface-1 p-1 sm:p-1.5 shadow-sm backdrop-blur-md max-w-full`}
     >
-      {options.map((opt) => (
-        <button
-          key={opt.key}
-          type="button"
-          onClick={() => onChange(opt.key)}
-          aria-pressed={value === opt.key}
-          className={`rounded-xl px-3 sm:px-4 py-1.5 sm:py-2 text-sm font-semibold transition-all duration-150 flex items-center gap-1.5 shrink-0 whitespace-nowrap ${
-            value === opt.key
-              ? 'bg-gradient-to-r from-sky-600 to-blue-600 text-white shadow-md shadow-sky-500/25 font-bold'
-              : 'text-zinc-600 hover:bg-sky-50 hover:text-zinc-900'
-          }`}
-        >
-          {opt.label}
-        </button>
-      ))}
+      {options.map((opt) => {
+        const isActive = value === opt.key
+        return (
+          <button
+            key={opt.key}
+            type="button"
+            onClick={() => onChange(opt.key)}
+            aria-pressed={isActive}
+            className={`relative rounded-xl px-3 sm:px-4 py-1.5 sm:py-2 text-sm font-semibold transition-colors duration-150 flex items-center gap-1.5 shrink-0 whitespace-nowrap focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-section-accent/45 ${
+              isActive
+                ? 'text-white font-bold'
+                : 'text-slate-600 hover:bg-sky-50/75 hover:text-slate-900'
+            }`}
+          >
+            {isActive && (
+              <motion.span
+                layoutId={`seg-pill-${layoutId}`}
+                transition={{ type: 'spring', stiffness: 420, damping: 32 }}
+                aria-hidden="true"
+                className="absolute inset-0 rounded-xl bg-gradient-to-r from-section-accent to-section-accent-2 shadow-sm"
+              />
+            )}
+            <span className="relative z-10 flex items-center gap-1.5">{opt.label}</span>
+          </button>
+        )
+      })}
     </div>
   )
 }

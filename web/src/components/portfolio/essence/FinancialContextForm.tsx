@@ -184,14 +184,14 @@ export default function FinancialContextForm({
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h2 className="text-lg sm:text-xl font-extrabold text-zinc-900 tracking-tight">
+                <h2 className="text-lg sm:text-xl font-extrabold text-slate-900 tracking-tight">
                   บริบททางการเงินเฉพาะพอร์ตนี้ (Financial Context)
                 </h2>
                 <span className="rounded-full bg-sky-50 border border-sky-200/80 px-2.5 py-0.5 text-[11px] font-bold text-sky-700">
                   พอร์ต: {displayName}
                 </span>
               </div>
-              <p className="text-xs text-zinc-500 mt-1">
+              <p className="text-xs text-slate-500 mt-1">
                 สังเคราะห์จากเป้าหมายพอร์ต (Goals) และเงินสดคงเหลือเพื่อคำนวณ MDD
                 และสัดส่วนที่ปลอดภัยต่อชีวิตจริง
               </p>
@@ -204,7 +204,7 @@ export default function FinancialContextForm({
               type="button"
               onClick={handleSyncGoals}
               disabled={loading || syncing}
-              className="inline-flex items-center gap-1.5 rounded-xl border border-sky-200 bg-sky-50/70 px-3.5 py-2 text-xs font-bold text-sky-700 hover:bg-sky-100 hover:text-sky-800 active:scale-95 transition-all cursor-pointer disabled:opacity-50 self-start sm:self-auto shrink-0 shadow-2xs"
+              className="inline-flex items-center gap-1.5 rounded-xl border border-sky-200 bg-sky-50/70 px-3.5 py-2 text-xs font-bold text-sky-700 hover:bg-sky-100 hover:text-sky-800 active:scale-95 transition-all cursor-pointer disabled:opacity-50 self-start sm:self-auto shrink-0 shadow-sm"
               title={`ดึงเป้าหมายล่าสุดจากระบบ Portfolio Goals เฉพาะพอร์ต ${displayName}`}
             >
               <span className={syncing ? 'animate-spin' : ''}>🔄</span>
@@ -215,7 +215,7 @@ export default function FinancialContextForm({
 
         {/* Status / Insight Banner */}
         {isReady ? (
-          <div className="rounded-xl border border-emerald-200/80 bg-emerald-50/70 p-4 flex items-center justify-between gap-3 shadow-2xs">
+          <div className="rounded-xl border border-emerald-200/80 bg-emerald-50/70 p-4 flex items-center justify-between gap-3 shadow-sm">
             <div className="flex items-center gap-3">
               <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-emerald-100 text-emerald-700 text-sm">
                 ✓
@@ -230,7 +230,7 @@ export default function FinancialContextForm({
                 </p>
               </div>
             </div>
-            <span className="hidden sm:inline-block rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-extrabold px-2.5 py-0.5">
+            <span className="hidden sm:inline-block rounded-full bg-emerald-100 text-emerald-800 text-[11px] font-extrabold px-2.5 py-0.5">
               พร้อม 100%
             </span>
           </div>
@@ -256,21 +256,21 @@ export default function FinancialContextForm({
           {/* Card 1: Target Wealth */}
           <div className="rounded-2xl border border-sky-100 bg-sky-50/30 p-4 space-y-2 hover:border-sky-200 transition-all">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-bold text-zinc-600 flex items-center gap-1.5">
+              <span className="text-xs font-bold text-slate-600 flex items-center gap-1.5">
                 <span>🎯</span> เป้าหมายพอร์ต
               </span>
-              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-sky-100 text-sky-800">
+              <span className="text-[11px] font-bold px-1.5 py-0.5 rounded-md bg-sky-100 text-sky-800">
                 Goals
               </span>
             </div>
-            <div className="text-lg font-black text-zinc-900 tracking-tight">
+            <div className="text-lg font-black text-slate-900 tracking-tight">
               {targetUseAmount
                 ? formatAmountDisplay(targetUseAmount)
                 : matchedGoal?.target_amount_thb
                 ? formatTHB(matchedGoal.target_amount_thb)
                 : 'ยังไม่ระบุเป้าหมาย'}
             </div>
-            <p className="text-[11px] text-zinc-500 truncate" title={displayGoalName}>
+            <p className="text-[11px] text-slate-500 truncate" title={displayGoalName}>
               {displayGoalName}
             </p>
           </div>
@@ -278,17 +278,17 @@ export default function FinancialContextForm({
           {/* Card 2: Investment Horizon */}
           <div className="rounded-2xl border border-sky-100 bg-sky-50/30 p-4 space-y-2 hover:border-sky-200 transition-all">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-bold text-zinc-600 flex items-center gap-1.5">
+              <span className="text-xs font-bold text-slate-600 flex items-center gap-1.5">
                 <span>⏳</span> กรอบเวลาลงทุน
               </span>
-              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-indigo-100 text-indigo-800">
+              <span className="text-[11px] font-bold px-1.5 py-0.5 rounded-md bg-blue-100 text-blue-800">
                 Horizon
               </span>
             </div>
-            <div className="text-lg font-black text-zinc-900 tracking-tight">
+            <div className="text-lg font-black text-slate-900 tracking-tight">
               {horizonYears ? `${horizonYears} ปี` : 'ยังไม่ระบุ'}
             </div>
-            <p className="text-[11px] text-zinc-500">
+            <p className="text-[11px] text-slate-500">
               {horizonYears && parseInt(horizonYears) > 5
                 ? 'เน้นพลังทบต้นระยะยาว'
                 : horizonYears && parseInt(horizonYears) > 0
@@ -300,21 +300,21 @@ export default function FinancialContextForm({
           {/* Card 3: Emergency Reserves */}
           <div className="rounded-2xl border border-sky-100 bg-sky-50/30 p-4 space-y-2 hover:border-sky-200 transition-all">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-bold text-zinc-600 flex items-center gap-1.5">
+              <span className="text-xs font-bold text-slate-600 flex items-center gap-1.5">
                 <span>🛡️</span> เงินสำรองฉุกเฉิน
               </span>
-              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-emerald-100 text-emerald-800">
+              <span className="text-[11px] font-bold px-1.5 py-0.5 rounded-md bg-emerald-100 text-emerald-800">
                 Safety
               </span>
             </div>
-            <div className="text-lg font-black text-zinc-900 tracking-tight">
+            <div className="text-lg font-black text-slate-900 tracking-tight">
               {emergencyReservesAmount && emergencyReservesAmount !== '0'
                 ? formatAmountDisplay(emergencyReservesAmount)
                 : reservesOutsidePortfolio
                 ? 'สำรองนอกพอร์ต'
                 : '0.00 ฿'}
             </div>
-            <p className="text-[11px] text-zinc-500 truncate" title={reservesOutsidePortfolio || (emergencyReservesMonths && emergencyReservesMonths !== '0' ? `ครอบคลุม ~${emergencyReservesMonths} เดือนของค่าใช้จ่าย` : 'ไม่มีเงินสำรองในพอร์ตนี้')}>
+            <p className="text-[11px] text-slate-500 truncate" title={reservesOutsidePortfolio || (emergencyReservesMonths && emergencyReservesMonths !== '0' ? `ครอบคลุม ~${emergencyReservesMonths} เดือนของค่าใช้จ่าย` : 'ไม่มีเงินสำรองในพอร์ตนี้')}>
               {reservesOutsidePortfolio || (emergencyReservesMonths && emergencyReservesMonths !== '0'
                 ? `ครอบคลุม ~${emergencyReservesMonths} เดือนของค่าใช้จ่าย`
                 : 'ไม่มีเงินสำรองในพอร์ตนี้')}
@@ -324,17 +324,17 @@ export default function FinancialContextForm({
           {/* Card 4: Cash Flow Strategy */}
           <div className="rounded-2xl border border-sky-100 bg-sky-50/30 p-4 space-y-2 hover:border-sky-200 transition-all">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-bold text-zinc-600 flex items-center gap-1.5">
+              <span className="text-xs font-bold text-slate-600 flex items-center gap-1.5">
                 <span>💧</span> แผนสภาพคล่อง
               </span>
-              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-purple-100 text-purple-800">
+              <span className="text-[11px] font-bold px-1.5 py-0.5 rounded-md bg-sky-100 text-blue-800">
                 Cash Flow
               </span>
             </div>
-            <div className="text-sm font-bold text-zinc-900 truncate">
+            <div className="text-sm font-bold text-slate-900 truncate">
               {withdrawalFrequency || 'ไม่มีการถอน'}
             </div>
-            <p className="text-[11px] text-zinc-500">
+            <p className="text-[11px] text-slate-500">
               {monthlyInvestableContribution
                 ? `DCA ${formatAmountDisplay(monthlyInvestableContribution)}/ด.`
                 : 'สะสมความมั่งคั่งต่อเนื่อง'}
@@ -348,7 +348,7 @@ export default function FinancialContextForm({
             type="button"
             onClick={handleProceed}
             disabled={loading}
-            className="w-full sm:w-auto min-w-[320px] rounded-2xl bg-gradient-to-r from-sky-600 via-blue-600 to-indigo-600 px-8 py-4 text-sm font-extrabold text-white shadow-md shadow-sky-500/25 hover:from-sky-700 hover:to-indigo-700 active:scale-98 transition-all cursor-pointer text-center inline-flex items-center justify-center gap-2"
+            className="w-full sm:w-auto min-w-[320px] rounded-2xl bg-gradient-to-r from-sky-600 via-blue-600 to-blue-600 px-8 py-4 text-sm font-extrabold text-white shadow-md shadow-sky-500/25 hover:from-sky-700 hover:to-blue-700 active:scale-98 transition-all cursor-pointer text-center inline-flex items-center justify-center gap-2"
           >
             {loading ? (
               <span>{statusText || 'กำลังประมวลผล...'}</span>
@@ -361,7 +361,7 @@ export default function FinancialContextForm({
           <button
             type="button"
             onClick={() => setIsEditing((prev) => !prev)}
-            className="text-xs font-semibold text-zinc-500 hover:text-sky-600 transition-colors cursor-pointer py-1 flex items-center gap-1"
+            className="text-xs font-semibold text-slate-500 hover:text-sky-600 transition-colors cursor-pointer py-1 flex items-center gap-1"
           >
             <span>{isEditing ? '▲ ปิดแผงปรับแต่งตัวเลข' : '✏️ ปรับแต่งตัวเลขเฉพาะจุด (หากต้องการแก้ไขเพิ่มเติม) ▼'}</span>
           </button>
@@ -378,21 +378,21 @@ export default function FinancialContextForm({
         {isEditing && (
           <div className="rounded-2xl border border-sky-200 bg-sky-50/20 p-6 space-y-6 animate-fadeIn mt-4">
             <div className="flex items-center justify-between border-b border-sky-100 pb-3">
-              <h3 className="text-xs font-bold text-zinc-800">
+              <h3 className="text-xs font-bold text-slate-800">
                 ⚙️ ปรับแต่งตัวเลขบริบททางการเงินเฉพาะพอร์ตนี้
               </h3>
-              <span className="text-[11px] text-zinc-500">
+              <span className="text-[11px] text-slate-500">
                 แก้ไขเฉพาะฟิลด์ที่ต้องการ แล้วกดบันทึก
               </span>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
               {/* Group 1: Horizon & Target */}
-              <div className="space-y-3.5 bg-white p-4 rounded-xl border border-sky-100 shadow-2xs">
-                <h4 className="text-xs font-bold text-zinc-800">⏳ 1. กรอบเวลาและยอดเงิน</h4>
+              <div className="space-y-3.5 bg-white p-4 rounded-xl border border-sky-100 shadow-sm">
+                <h4 className="text-xs font-bold text-slate-800">⏳ 1. กรอบเวลาและยอดเงิน</h4>
 
                 <div>
-                  <label htmlFor="fc-horizon-years" className="block text-[11px] font-semibold text-zinc-700 mb-1">
+                  <label htmlFor="fc-horizon-years" className="block text-[11px] font-semibold text-slate-700 mb-1">
                     กรอบเวลาลงทุนของพอร์ตนี้ (ปี):
                   </label>
                   <AutoResizeTextarea
@@ -401,12 +401,12 @@ export default function FinancialContextForm({
                     value={horizonYears}
                     onChange={(e) => setHorizonYears(e.target.value)}
                     placeholder="เช่น 10 ปี"
-                    className="rounded-lg border border-zinc-200 bg-white p-2 text-xs text-zinc-800 focus:outline-none focus:ring-2 focus:ring-sky-400"
+                    className="rounded-lg border border-slate-200 bg-white p-2 text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-sky-400"
                   />
                 </div>
 
                 <div>
-                  <label htmlFor="fc-target-amount" className="block text-[11px] font-semibold text-zinc-700 mb-1">
+                  <label htmlFor="fc-target-amount" className="block text-[11px] font-semibold text-slate-700 mb-1">
                     ยอดเงินเป้าหมาย (บาท):
                   </label>
                   <input
@@ -415,12 +415,12 @@ export default function FinancialContextForm({
                     value={targetUseAmount}
                     onChange={(e) => setTargetUseAmount(e.target.value)}
                     placeholder="เช่น 10,000,000"
-                    className="w-full rounded-lg border border-zinc-200 bg-white p-2 text-xs text-zinc-800 focus:outline-none focus:ring-2 focus:ring-sky-400"
+                    className="w-full rounded-lg border border-slate-200 bg-white p-2 text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-sky-400"
                   />
                 </div>
 
                 <div>
-                  <label htmlFor="fc-target-timeline" className="block text-[11px] font-semibold text-zinc-700 mb-1">
+                  <label htmlFor="fc-target-timeline" className="block text-[11px] font-semibold text-slate-700 mb-1">
                     เป้าหมาย / วัตถุประสงค์การใช้เงิน:
                   </label>
                   <AutoResizeTextarea
@@ -429,17 +429,17 @@ export default function FinancialContextForm({
                     value={targetUseTimeline}
                     onChange={(e) => setTargetUseTimeline(e.target.value)}
                     placeholder="เช่น พอร์ต 10 ล้านบาท / เพื่อการเกษียณ"
-                    className="rounded-lg border border-zinc-200 bg-white p-2 text-xs text-zinc-800 focus:outline-none focus:ring-2 focus:ring-sky-400"
+                    className="rounded-lg border border-slate-200 bg-white p-2 text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-sky-400"
                   />
                 </div>
               </div>
 
               {/* Group 2: Reserves & Cashflow */}
-              <div className="space-y-3.5 bg-white p-4 rounded-xl border border-sky-100 shadow-2xs">
-                <h4 className="text-xs font-bold text-zinc-800">🛡️ 2. เงินสำรองและสภาพคล่อง</h4>
+              <div className="space-y-3.5 bg-white p-4 rounded-xl border border-sky-100 shadow-sm">
+                <h4 className="text-xs font-bold text-slate-800">🛡️ 2. เงินสำรองและสภาพคล่อง</h4>
 
                 <div>
-                  <label htmlFor="fc-reserves-amount" className="block text-[11px] font-semibold text-zinc-700 mb-1">
+                  <label htmlFor="fc-reserves-amount" className="block text-[11px] font-semibold text-slate-700 mb-1">
                     จำนวนเงินสำรองฉุกเฉิน (บาท):
                   </label>
                   <input
@@ -448,12 +448,12 @@ export default function FinancialContextForm({
                     value={emergencyReservesAmount}
                     onChange={(e) => setEmergencyReservesAmount(e.target.value)}
                     placeholder="เช่น 200,000"
-                    className="w-full rounded-lg border border-zinc-200 bg-white p-2 text-xs text-zinc-800 focus:outline-none focus:ring-2 focus:ring-sky-400"
+                    className="w-full rounded-lg border border-slate-200 bg-white p-2 text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-sky-400"
                   />
                 </div>
 
                 <div>
-                  <label htmlFor="fc-reserves-months" className="block text-[11px] font-semibold text-zinc-700 mb-1">
+                  <label htmlFor="fc-reserves-months" className="block text-[11px] font-semibold text-slate-700 mb-1">
                     เงินสำรองฉุกเฉิน (จำนวนเดือน):
                   </label>
                   <input
@@ -462,12 +462,12 @@ export default function FinancialContextForm({
                     value={emergencyReservesMonths}
                     onChange={(e) => setEmergencyReservesMonths(e.target.value)}
                     placeholder="เช่น 6"
-                    className="w-full rounded-lg border border-zinc-200 bg-white p-2 text-xs text-zinc-800 focus:outline-none focus:ring-2 focus:ring-sky-400"
+                    className="w-full rounded-lg border border-slate-200 bg-white p-2 text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-sky-400"
                   />
                 </div>
 
                 <div>
-                  <label htmlFor="fc-monthly-contrib" className="block text-[11px] font-semibold text-zinc-700 mb-1">
+                  <label htmlFor="fc-monthly-contrib" className="block text-[11px] font-semibold text-slate-700 mb-1">
                     เงินออม/สมทบลงทุนต่อเดือน (DCA/บาท):
                   </label>
                   <input
@@ -476,7 +476,7 @@ export default function FinancialContextForm({
                     value={monthlyInvestableContribution}
                     onChange={(e) => setMonthlyInvestableContribution(e.target.value)}
                     placeholder="เช่น 10,000 หรือ เว้นว่างถ้าไม่แน่นอน"
-                    className="w-full rounded-lg border border-zinc-200 bg-white p-2 text-xs text-zinc-800 focus:outline-none focus:ring-2 focus:ring-sky-400"
+                    className="w-full rounded-lg border border-slate-200 bg-white p-2 text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-sky-400"
                   />
                 </div>
               </div>
@@ -487,7 +487,7 @@ export default function FinancialContextForm({
               <button
                 type="button"
                 onClick={() => setIsEditing(false)}
-                className="rounded-xl border border-zinc-200 bg-white px-4 py-2 text-xs font-semibold text-zinc-600 hover:bg-zinc-50 cursor-pointer"
+                className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-50 cursor-pointer"
               >
                 ปิดแผงแก้ไข
               </button>
@@ -495,7 +495,7 @@ export default function FinancialContextForm({
                 type="button"
                 onClick={handleSave}
                 disabled={loading}
-                className="rounded-xl bg-sky-600 px-5 py-2 text-xs font-bold text-white hover:bg-sky-700 cursor-pointer shadow-2xs"
+                className="rounded-xl bg-sky-600 px-5 py-2 text-xs font-bold text-white hover:bg-sky-700 cursor-pointer shadow-sm"
               >
                 💾 บันทึกการแก้ไขตัวเลข
               </button>

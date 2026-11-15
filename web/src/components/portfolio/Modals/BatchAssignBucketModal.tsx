@@ -43,11 +43,11 @@ export default function BatchAssignBucketModal({ portfolioId, symbols, targets, 
 
   return (
     <Modal titleId="batch-bucket-modal-title" onClose={onClose} panelClassName="max-w-md rounded-2xl border border-sky-100 bg-white p-6 shadow-2xl">
-      <div className="flex items-center justify-between border-b border-zinc-100 pb-3">
-        <h3 id="batch-bucket-modal-title" className="text-base font-bold text-zinc-900">
+      <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+        <h3 id="batch-bucket-modal-title" className="text-base font-bold text-slate-900">
           📁 กำหนดกลุ่มกลยุทธ์ (Bucket Assign)
         </h3>
-        <button type="button" onClick={onClose} className="text-zinc-400 hover:text-zinc-600">
+        <button type="button" onClick={onClose} className="text-slate-500 hover:text-slate-600">
           ✕
         </button>
       </div>
@@ -59,18 +59,18 @@ export default function BatchAssignBucketModal({ portfolioId, symbols, targets, 
           </div>
         )}
 
-        <div className="rounded-xl bg-zinc-50 p-3 text-xs text-zinc-600">
-          <span className="font-bold text-zinc-800">รายการที่เลือก ({symbols.length} ตัว): </span>
+        <div className="rounded-xl bg-slate-50 p-3 text-xs text-slate-600">
+          <span className="font-bold text-slate-800">รายการที่เลือก ({symbols.length} ตัว): </span>
           <span className="font-mono text-flow-blue font-semibold">{symbols.slice(0, 10).join(', ')}{symbols.length > 10 ? ` ... และอีก ${symbols.length - 10} ตัว` : ''}</span>
         </div>
 
         <div>
-          <label htmlFor="bucket-select" className="block text-xs font-bold text-zinc-700 mb-1.5">เลือก Bucket เป้าหมาย</label>
+          <label htmlFor="bucket-select" className="block text-xs font-bold text-slate-700 mb-1.5">เลือก Bucket เป้าหมาย</label>
           <select
             id="bucket-select"
             value={selectedBucketId}
             onChange={(e) => setSelectedBucketId(e.target.value)}
-            className="w-full rounded-xl border border-zinc-300 bg-white px-3 py-2 text-sm font-medium text-zinc-800 focus:border-flow-blue focus:outline-none"
+            className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-800 focus:border-flow-blue focus:outline-none"
           >
             <option value="">-- ไม่ระบุกลุ่ม (Unassigned) --</option>
             {targets.map((t) => (
@@ -81,11 +81,11 @@ export default function BatchAssignBucketModal({ portfolioId, symbols, targets, 
           </select>
         </div>
 
-        <div className="flex justify-end gap-2 border-t border-zinc-100 pt-4">
+        <div className="flex justify-end gap-2 border-t border-slate-100 pt-4">
           <button
             type="button"
             onClick={onClose}
-            className="rounded-xl border border-zinc-300 bg-white px-4 py-2 text-xs font-semibold text-zinc-700 hover:bg-zinc-50"
+            className="rounded-xl border border-slate-300 bg-white px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50"
           >
             ยกเลิก
           </button>

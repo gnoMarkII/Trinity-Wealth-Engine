@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react'
 import { useFocusTrap } from '../../../hooks/useFocusTrap'
+import { BookOpenIcon, CloseIcon, SearchIcon } from '../../ui/AppIcons'
 
 export interface EquityGlossaryTerm {
   term: string
@@ -302,30 +303,33 @@ export const EquityGlossaryDrawer: React.FC<EquityGlossaryDrawerProps> = ({ isOp
 
   return (
     <div
-      className="fixed inset-0 z-50 overflow-hidden bg-black/40 backdrop-blur-2xs transition-opacity animate-in fade-in duration-200"
-      onClick={onClose}
+      className="fixed inset-0 z-50 overflow-hidden transition-opacity animate-in fade-in duration-200"
       aria-modal="true"
       role="dialog"
       aria-label="คู่มือคำศัพท์วิเคราะห์หุ้นภาษาคน"
     >
+      <div
+        aria-hidden="true"
+        onClick={onClose}
+        className="fixed inset-0 bg-slate-900/35 backdrop-blur-sm"
+      />
       <div className="fixed inset-y-0 right-0 flex max-w-full pl-10">
         <div
           ref={containerRef}
-          onClick={(e) => e.stopPropagation()}
           className="w-screen max-w-xl bg-white shadow-2xl flex flex-col border-l border-sky-100"
         >
           {/* Header */}
           <div className="p-5 border-b border-slate-100 bg-sky-50/40">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2.5">
-                <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-sky-100 text-lg">
-                  📖
+                <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-sky-100 text-section-accent">
+                  <BookOpenIcon className="h-5 w-5" />
                 </span>
                 <div>
-                  <h2 className="text-base font-bold text-zinc-900 tracking-tight">
+                  <h2 className="text-base font-bold text-slate-900 tracking-tight">
                     คู่มือศัพท์วิเคราะห์หุ้นฉบับภาษาคน
                   </h2>
-                  <p className="text-xs text-zinc-500">
+                  <p className="text-xs text-slate-500">
                     คำศัพท์การเงินและตัวชี้วัดระดับสถาบัน 30 คำ แปลให้เข้าใจง่ายใน 3 บรรทัด
                   </p>
                 </div>
@@ -333,10 +337,10 @@ export const EquityGlossaryDrawer: React.FC<EquityGlossaryDrawerProps> = ({ isOp
               <button
                 type="button"
                 onClick={onClose}
-                className="rounded-lg p-2 text-zinc-400 hover:bg-slate-100 hover:text-zinc-600 transition-colors"
+                className="rounded-lg p-2 text-slate-500 hover:bg-slate-100 hover:text-slate-700 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-section-accent/45"
                 aria-label="ปิดพจนานุกรม"
               >
-                ✕
+                <CloseIcon className="h-4 w-4" />
               </button>
             </div>
 
@@ -347,16 +351,17 @@ export const EquityGlossaryDrawer: React.FC<EquityGlossaryDrawerProps> = ({ isOp
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="ค้นหาคำศัพท์ เช่น P/E, DCF, ROIC, Moat, Smart Money..."
-                className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2 pl-9 text-xs text-zinc-900 placeholder:text-zinc-400 focus:border-sky-500 focus:outline-hidden focus:ring-1 focus:ring-sky-500"
+                className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2 pl-9 text-xs text-slate-900 placeholder:text-slate-400 focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
               />
-              <span className="absolute left-3 top-2.5 text-xs text-zinc-400">🔍</span>
+              <SearchIcon className="h-3.5 w-3.5 absolute left-3 top-2.5 text-slate-500 pointer-events-none" />
               {searchQuery && (
                 <button
                   type="button"
                   onClick={() => setSearchQuery('')}
-                  className="absolute right-3 top-2.5 text-xs text-zinc-400 hover:text-zinc-600"
+                  className="absolute right-3 top-2.5 text-slate-500 hover:text-slate-600"
+                  aria-label="ล้างคำค้นหา"
                 >
-                  ✕
+                  <CloseIcon className="h-3.5 w-3.5" />
                 </button>
               )}
             </div>
@@ -370,8 +375,8 @@ export const EquityGlossaryDrawer: React.FC<EquityGlossaryDrawerProps> = ({ isOp
                   onClick={() => setSelectedCategory(cat.key)}
                   className={`whitespace-nowrap px-2.5 py-1 rounded-lg text-[11px] font-medium transition-all ${
                     selectedCategory === cat.key
-                      ? 'bg-sky-600 text-white shadow-2xs font-semibold'
-                      : 'bg-white text-zinc-600 border border-slate-200 hover:bg-slate-50'
+                      ? 'bg-sky-600 text-white shadow-sm font-semibold'
+                      : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
                   }`}
                 >
                   {cat.label}
@@ -383,7 +388,7 @@ export const EquityGlossaryDrawer: React.FC<EquityGlossaryDrawerProps> = ({ isOp
           {/* Terms List Body */}
           <div className="flex-1 overflow-y-auto p-5 space-y-3.5 divide-y divide-slate-100">
             {filteredTerms.length === 0 ? (
-              <div className="py-12 text-center text-xs text-zinc-400">
+              <div className="py-12 text-center text-xs text-slate-500">
                 <span className="text-3xl block mb-2">🔍</span>
                 ไม่พบคำศัพท์ที่ตรงกับ &ldquo;{searchQuery}&rdquo;
               </div>
@@ -394,30 +399,30 @@ export const EquityGlossaryDrawer: React.FC<EquityGlossaryDrawerProps> = ({ isOp
                     <div>
                       <div className="flex items-center gap-2">
                         <span className="text-base">{item.icon}</span>
-                        <h3 className="font-bold text-zinc-900 text-sm">{item.term}</h3>
+                        <h3 className="font-bold text-slate-900 text-sm">{item.term}</h3>
                       </div>
                       <span className="text-xs font-semibold text-sky-700 block mt-0.5">
                         {item.thaiTerm}
                       </span>
                     </div>
-                    <span className="rounded-md bg-slate-100 px-2 py-0.5 text-[10px] font-mono font-medium text-zinc-600 shrink-0">
+                    <span className="rounded-md bg-slate-100 px-2 py-0.5 text-[11px] font-mono font-medium text-slate-600 shrink-0">
                       {item.category}
                     </span>
                   </div>
 
-                  <div className="mt-2 text-xs text-zinc-700 leading-relaxed bg-slate-50/70 rounded-xl p-3 border border-slate-100 space-y-2">
+                  <div className="mt-2 text-xs text-slate-700 leading-relaxed bg-slate-50/70 rounded-xl p-3 border border-slate-100 space-y-2">
                     <div>
-                      <span className="font-bold text-zinc-900 text-[11px] block text-sky-900">
+                      <span className="font-bold text-slate-900 text-[11px] block text-sky-900">
                         📌 มันคืออะไร:
                       </span>
-                      <p className="mt-0.5 text-zinc-700 text-[11px] leading-relaxed">{item.definition}</p>
+                      <p className="mt-0.5 text-slate-700 text-[11px] leading-relaxed">{item.definition}</p>
                     </div>
 
                     <div className="border-t border-slate-200/60 pt-2">
                       <span className="font-bold text-emerald-900 text-[11px] block">
                         💡 วิธีดูและผลต่อการลงทุน:
                       </span>
-                      <p className="mt-0.5 text-zinc-700 text-[11px] leading-relaxed">{item.howToUse}</p>
+                      <p className="mt-0.5 text-slate-700 text-[11px] leading-relaxed">{item.howToUse}</p>
                     </div>
                   </div>
                 </div>
@@ -426,7 +431,7 @@ export const EquityGlossaryDrawer: React.FC<EquityGlossaryDrawerProps> = ({ isOp
           </div>
 
           {/* Footer note */}
-          <div className="p-3.5 border-t border-slate-100 bg-slate-50/60 text-[11px] text-zinc-500 text-center flex items-center justify-center gap-2">
+          <div className="p-3.5 border-t border-slate-100 bg-slate-50/60 text-[11px] text-slate-500 text-center flex items-center justify-center gap-2">
             <span>💡</span>
             <span>ศัพท์การเงินทั้งหมดคำนวณผ่านโมดูลคณิตศาสตร์ทางการ Python Deterministic ไร้การคาดเดา</span>
           </div>

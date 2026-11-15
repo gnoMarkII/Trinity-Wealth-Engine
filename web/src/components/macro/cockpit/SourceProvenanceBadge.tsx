@@ -26,7 +26,7 @@ const ORIGIN_CONFIG: Record<
 
   deterministic: {
     label: 'ระบบคำนวณ',
-    badgeClass: 'bg-indigo-50 text-indigo-800 border-indigo-200/80',
+    badgeClass: 'bg-blue-50 text-blue-800 border-blue-200/80',
     icon: '📐',
     desc: 'ผลการคำนวณเชิงตัวเลขแน่นอนทางสถิติ (Deterministic Math) โดยระบบ Python',
   },
@@ -38,7 +38,7 @@ const ORIGIN_CONFIG: Record<
   },
   external: {
     label: 'กราฟภายนอก',
-    badgeClass: 'bg-zinc-100 text-zinc-800 border-zinc-200',
+    badgeClass: 'bg-slate-100 text-slate-800 border-slate-200',
     icon: '🌐',
     desc: 'วิดเจ็ตแสดงผลจากภายนอก เวลาการแสดงผลอาจเหลื่อมจาก Snapshot ทางการ',
   },
@@ -60,7 +60,7 @@ export const SourceProvenanceBadge: React.FC<SourceProvenanceBadgeProps> = ({
     <div className={`inline-flex flex-wrap items-center gap-2 text-xs ${className}`}>
       <span
         title={config.desc}
-        className={`inline-flex items-center gap-1 rounded-md border px-2 py-0.5 font-semibold text-[11px] shadow-2xs ${config.badgeClass}`}
+        className={`inline-flex items-center gap-1 rounded-md border px-2 py-0.5 font-semibold text-[11px] shadow-sm ${config.badgeClass}`}
       >
         <span>{config.icon}</span>
         <span>{config.label}</span>
@@ -68,20 +68,20 @@ export const SourceProvenanceBadge: React.FC<SourceProvenanceBadgeProps> = ({
       </span>
 
       {!compact && (
-        <div className="flex flex-wrap items-center gap-2 font-mono text-[11px] text-zinc-500">
+        <div className="flex flex-wrap items-center gap-2 font-mono text-[11px] text-slate-500">
           {observedAt && (
             <span title="วันของข้อมูลที่สังเกตการณ์จริงในตลาด">
-              ข้อมูล ณ: <strong className="text-zinc-700">{observedAt}</strong>
+              ข้อมูล ณ: <strong className="text-slate-700">{observedAt}</strong>
             </span>
           )}
           {publishedAt && (
             <span title="วันที่ผู้ให้บริการเผยแพร่รายงานจริง (เช่น ข้อมูลมี Lag)">
-              เผยแพร่: <span className="text-zinc-600">{publishedAt}</span>
+              เผยแพร่: <span className="text-slate-600">{publishedAt}</span>
             </span>
           )}
           {fetchedAt && (
             <span title="เวลาที่ระบบดึงข้อมูลล่าสุดจาก API">
-              ดึงล่าสุด: <span className="text-zinc-600">{fetchedAt}</span>
+              ดึงล่าสุด: <span className="text-slate-600">{fetchedAt}</span>
             </span>
           )}
           {evaluatedAt && (

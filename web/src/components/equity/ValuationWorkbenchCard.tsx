@@ -1,4 +1,6 @@
 import { useState } from 'react'
+import { BriefcasePortfolioIcon, CloseIcon } from '../ui/AppIcons'
+import { InPlaceDialog } from '../ui/Modal'
 import CapitalAllocationYieldMeter from './CapitalAllocationYieldMeter'
 import ScenarioTargetSpreadBar from './ScenarioTargetSpreadBar'
 import { DCFScenariosChart } from './DCFScenariosChart'
@@ -243,7 +245,7 @@ export default function ValuationWorkbenchCard({
           <div className="text-[11px] font-bold uppercase tracking-wider text-sky-700/80">
             Valuation & Quality Workbench
           </div>
-          <h3 className="text-lg font-bold text-zinc-900 flex items-center gap-2 mt-0.5">
+          <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2 mt-0.5">
             <span>🎯 5Y Reverse DCF & Expectations</span>
           </h3>
         </div>
@@ -252,11 +254,11 @@ export default function ValuationWorkbenchCard({
           {/* Wall Street Consensus Target */}
           {reverseDcf?.consensus_target_price != null && (
             <div className="text-right border-r border-edge/60 pr-3 hidden sm:block">
-              <div className="text-[10px] font-bold uppercase tracking-wider text-zinc-400">Wall Street Consensus</div>
+              <div className="text-[11px] font-bold uppercase tracking-wider text-slate-500">Wall Street Consensus</div>
               <div className="flex items-center gap-1 font-bold text-sky-700 text-base sm:text-lg font-mono justify-end">
                 <span>{currency}{reverseDcf.consensus_target_price.toFixed(2)}</span>
                 {reverseDcf.analyst_count != null && (
-                  <span className="text-[10px] text-zinc-400 font-normal font-sans">({reverseDcf.analyst_count} analysts)</span>
+                  <span className="text-[11px] text-slate-500 font-normal font-sans">({reverseDcf.analyst_count} analysts)</span>
                 )}
               </div>
             </div>
@@ -265,11 +267,11 @@ export default function ValuationWorkbenchCard({
           {/* Margin of Safety (MoS) Buy Target */}
           {reverseDcf?.mos_entry_price_today != null && (
             <div className="text-right border-r border-edge/60 pr-3 hidden sm:block">
-              <div className="text-[10px] font-bold uppercase tracking-wider text-zinc-400">Buy Below (15% MoS)</div>
+              <div className="text-[11px] font-bold uppercase tracking-wider text-slate-500">Buy Below (15% MoS)</div>
               <div className="flex items-center gap-1.5 justify-end">
-                <span className="font-mono text-zinc-900 text-base sm:text-lg font-bold">{currency}{reverseDcf.mos_entry_price_today.toFixed(2)}</span>
+                <span className="font-mono text-slate-900 text-base sm:text-lg font-bold">{currency}{reverseDcf.mos_entry_price_today.toFixed(2)}</span>
                 <span
-                  className={`text-[10px] px-1.5 py-0.5 rounded font-bold border ${
+                  className={`text-[11px] px-1.5 py-0.5 rounded font-bold border ${
                     reverseDcf.is_in_buy_zone
                       ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
                       : 'bg-amber-50 text-amber-700 border-amber-200'
@@ -283,14 +285,14 @@ export default function ValuationWorkbenchCard({
 
           {/* DCF Fair Value (Base Case, Selected Scenario, or Exit Multiple) */}
           <div className="text-right">
-            <div className="text-[10px] font-bold uppercase tracking-wider text-zinc-400">
+            <div className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
               {selectedScenarioKey === 'base'
                 ? (dcf?.scenarios?.base?.target_price != null ? 'DCF Fair Value (Base)' : 'DCF 12M Outlook')
                 : `DCF Fair Value (${selectedScenarioKey.toUpperCase()})`}
             </div>
             {targetPrice != null ? (
               <div className="flex items-center gap-2 justify-end">
-                <span className="font-mono font-black text-xl sm:text-2xl text-zinc-900 tracking-tight">
+                <span className="font-mono font-black text-xl sm:text-2xl text-slate-900 tracking-tight">
                   {currency}{targetPrice.toFixed(2)}
                 </span>
                 {upside != null && (
@@ -306,24 +308,24 @@ export default function ValuationWorkbenchCard({
                 )}
               </div>
             ) : (
-              <div className="font-bold text-zinc-400 text-base justify-end">
+              <div className="font-bold text-slate-500 text-base justify-end">
                 <span>Unavailable</span>
               </div>
             )}
           </div>
 
           <div className="flex flex-col items-end">
-            <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider mb-0.5">Reverse DCF Verdict (12M)</span>
+            <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-0.5">Reverse DCF Verdict (12M)</span>
             <span
               title="Reverse DCF 12M Valuation Verdict"
               className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider border ${
                 verdict === 'undervalued'
-                  ? 'bg-emerald-50 text-emerald-700 border-emerald-200 shadow-xs'
+                  ? 'bg-emerald-50 text-emerald-700 border-emerald-200 shadow-sm'
                   : verdict === 'overvalued'
-                  ? 'bg-rose-50 text-rose-700 border-rose-200 shadow-xs'
+                  ? 'bg-rose-50 text-rose-700 border-rose-200 shadow-sm'
                   : verdict === 'fairly_valued'
-                  ? 'bg-sky-50 text-sky-700 border-sky-200 shadow-xs'
-                  : 'bg-zinc-100 text-zinc-600 border-zinc-200 shadow-xs'
+                  ? 'bg-sky-50 text-sky-700 border-sky-200 shadow-sm'
+                  : 'bg-slate-100 text-slate-600 border-slate-200 shadow-sm'
               }`}
             >
               {verdict.replace('_', ' ')}
@@ -342,9 +344,9 @@ export default function ValuationWorkbenchCard({
                           : ''
                       }`
                     }
-                    className={`px-2 py-0.5 rounded text-[10px] font-bold border flex items-center gap-1 ${
+                    className={`px-2 py-0.5 rounded text-[11px] font-bold border flex items-center gap-1 ${
                       reverseDcf.company_archetype === 'high_growth_tech'
-                        ? 'bg-indigo-50 text-indigo-700 border-indigo-200'
+                        ? 'bg-blue-50 text-blue-700 border-blue-200'
                         : reverseDcf.company_archetype === 'cyclical'
                         ? reverseDcf.is_mid_cycle_normalized
                           ? 'bg-amber-100 text-amber-900 border-amber-300 font-extrabold'
@@ -353,7 +355,7 @@ export default function ValuationWorkbenchCard({
                         ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
                         : reverseDcf.company_archetype === 'turnaround'
                         ? 'bg-rose-50 text-rose-800 border-rose-200'
-                        : 'bg-zinc-100 text-zinc-700 border-zinc-200'
+                        : 'bg-slate-100 text-slate-700 border-slate-200'
                     }`}
                   >
                     <span>
@@ -372,7 +374,7 @@ export default function ValuationWorkbenchCard({
                 {isMidYear && (
                   <span
                     title="Mid-Year Discounting Convention (t - 0.5): Reflects cash inflows occurring evenly throughout the year, removing ~3-5% downward bias."
-                    className="px-2 py-0.5 rounded text-[10px] font-bold bg-sky-50 text-sky-700 border border-sky-200"
+                    className="px-2 py-0.5 rounded text-[11px] font-bold bg-sky-50 text-sky-700 border border-sky-200"
                   >
                     ⏱️ Mid-Year Convention
                   </span>
@@ -380,7 +382,7 @@ export default function ValuationWorkbenchCard({
                 {sanityAudit?.model_reliability_tier && sanityAudit.model_reliability_tier !== 'unavailable' && (
                   <span
                     title={`Reliability Score: ${sanityAudit.reliability_score ?? 'N/A'}/100. Terminal Value accounts for ${sanityAudit.terminal_value_pct_of_ev ?? 'N/A'}% of EV.`}
-                    className={`px-2 py-0.5 rounded text-[10px] font-bold border flex items-center gap-1 ${
+                    className={`px-2 py-0.5 rounded text-[11px] font-bold border flex items-center gap-1 ${
                       sanityAudit.model_reliability_tier === 'high'
                         ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
                         : sanityAudit.model_reliability_tier === 'moderate'
@@ -403,7 +405,7 @@ export default function ValuationWorkbenchCard({
                 {sanityAudit?.implied_exit_ebitda_multiple != null && (
                   <span
                     title={`Implied Exit EV/EBITDA Multiple: ${sanityAudit.implied_exit_ebitda_multiple}x Year 5 EBITDA. Standard range: 8x-18x.`}
-                    className={`px-2 py-0.5 rounded text-[10px] font-bold border flex items-center gap-1 ${
+                    className={`px-2 py-0.5 rounded text-[11px] font-bold border flex items-center gap-1 ${
                       sanityAudit.implied_exit_ebitda_multiple > 25
                         ? 'bg-rose-50 text-rose-700 border-rose-200'
                         : sanityAudit.implied_exit_ebitda_multiple > 18
@@ -417,7 +419,7 @@ export default function ValuationWorkbenchCard({
                 {latestCapexRatio != null && (
                   <span
                     title={`CapEx / D&A Ratio: ${latestCapexRatio.toFixed(2)}x. Reinvestment Phase: ${latestLifecyclePhase || 'N/A'}`}
-                    className={`px-2 py-0.5 rounded text-[10px] font-bold border flex items-center gap-1 ${
+                    className={`px-2 py-0.5 rounded text-[11px] font-bold border flex items-center gap-1 ${
                       latestCapexRatio >= 1.5
                         ? 'bg-sky-50 text-sky-700 border-sky-200'
                         : latestCapexRatio >= 0.85
@@ -460,13 +462,13 @@ export default function ValuationWorkbenchCard({
 
       {/* 1. ⚖️ Dual Valuation Method Comparison Bar */}
       {(targetPrice != null || reverseDcf?.target_price_exit_multiple_12m != null || reverseDcf?.intrinsic_value_exit_multiple != null) && (
-        <div className="rounded-xl border border-sky-200/80 bg-gradient-to-br from-sky-50/50 via-white to-sky-50/20 p-4 space-y-2.5 shadow-2xs">
+        <div className="rounded-xl border border-sky-200/80 bg-gradient-to-br from-sky-50/50 via-white to-sky-50/20 p-4 space-y-2.5 shadow-sm">
           <div className="flex items-center justify-between text-xs font-bold uppercase tracking-wider text-sky-900 border-b border-sky-100 pb-2">
             <span className="flex items-center gap-1.5">
               <span>⚖️</span>
               <span>Dual Valuation Method Comparison</span>
             </span>
-            <span className="text-[10px] text-zinc-400 font-normal normal-case hidden sm:inline">
+            <span className="text-[11px] text-slate-500 font-normal normal-case hidden sm:inline">
               เปรียบเทียบราคาเป้าหมาย 12M ระหว่างวิธี Perpetuity Growth กับ Exit Multiple
             </span>
           </div>
@@ -475,15 +477,15 @@ export default function ValuationWorkbenchCard({
             {/* Gordon Perpetuity Growth Model */}
             <div className="rounded-lg border border-sky-100 bg-white/95 p-3 space-y-1">
               <div className="flex items-center justify-between text-xs">
-                <span className="font-semibold text-zinc-800">1. Perpetuity Growth DCF (Gordon Model)</span>
+                <span className="font-semibold text-slate-800">1. Perpetuity Growth DCF (Gordon Model)</span>
                 <div className="flex items-center gap-1.5 font-mono">
-                  <span className="text-[10px] text-zinc-500">
+                  <span className="text-[11px] text-slate-500">
                     g = {reverseDcf?.terminal_growth_pct != null ? `${reverseDcf.terminal_growth_pct.toFixed(1)}%` : '2.5%'}
                   </span>
                   {reverseDcf?.implied_exit_ebitda_multiple != null && (
                     <span
                       title={`Gordon Growth Terminal Value implies an exit multiple of ${reverseDcf.implied_exit_ebitda_multiple}x Year 5 EBITDA`}
-                      className={`px-1.5 py-0.5 rounded text-[10px] font-bold border ${
+                      className={`px-1.5 py-0.5 rounded text-[11px] font-bold border ${
                         reverseDcf.implied_exit_ebitda_multiple > 25
                           ? 'bg-rose-50 text-rose-700 border-rose-200'
                           : reverseDcf.implied_exit_ebitda_multiple > 18
@@ -498,11 +500,11 @@ export default function ValuationWorkbenchCard({
               </div>
               <div className="flex items-baseline justify-between mt-1">
                 <div className="flex items-baseline gap-1.5">
-                  <span className="text-xl font-extrabold text-zinc-900 font-mono">
+                  <span className="text-xl font-extrabold text-slate-900 font-mono">
                     {reverseDcf?.target_price_12m != null ? `${currency}${reverseDcf.target_price_12m.toFixed(2)}` : (targetPrice != null ? `${currency}${targetPrice.toFixed(2)}` : 'N/A')}
                   </span>
                   {reverseDcf?.intrinsic_value_today != null && (
-                    <span className="text-[11px] text-zinc-400 font-normal">
+                    <span className="text-[11px] text-slate-500 font-normal">
                       (Today: {currency}{reverseDcf.intrinsic_value_today.toFixed(2)})
                     </span>
                   )}
@@ -525,15 +527,15 @@ export default function ValuationWorkbenchCard({
               {/* MoS Entry Price Target */}
               {reverseDcf?.mos_entry_price_today != null && (
                 <div className="flex items-center justify-between pt-1.5 border-t border-sky-100/60 text-[11px]">
-                  <span className="text-zinc-500 font-medium">🎯 Buy Below (15% MoS):</span>
-                  <span className="font-mono font-bold text-zinc-800 flex items-center gap-1.5">
+                  <span className="text-slate-500 font-medium">🎯 Buy Below (15% MoS):</span>
+                  <span className="font-mono font-bold text-slate-800 flex items-center gap-1.5">
                     {currency}{reverseDcf.mos_entry_price_today.toFixed(2)}
                     {reverseDcf.is_in_buy_zone ? (
-                      <span className="px-1.5 py-0.5 rounded text-[9px] bg-emerald-100 text-emerald-800 font-bold border border-emerald-200">
+                      <span className="px-1.5 py-0.5 rounded text-[11px] bg-emerald-100 text-emerald-800 font-bold border border-emerald-200">
                         In Buy Zone
                       </span>
                     ) : (
-                      <span className="px-1.5 py-0.5 rounded text-[9px] bg-amber-100 text-amber-800 font-bold border border-amber-200">
+                      <span className="px-1.5 py-0.5 rounded text-[11px] bg-amber-100 text-amber-800 font-bold border border-amber-200">
                         Pullback -{reverseDcf.required_pullback_pct?.toFixed(0)}%
                       </span>
                     )}
@@ -545,19 +547,19 @@ export default function ValuationWorkbenchCard({
             {/* Exit Multiple Method */}
             <div className="rounded-lg border border-sky-100 bg-white/95 p-3 space-y-1">
               <div className="flex items-center justify-between text-xs">
-                <span className="font-semibold text-zinc-800">
+                <span className="font-semibold text-slate-800">
                   2. Exit Multiple Method ({reverseDcf?.exit_multiple_used ?? 16.0}x EV/EBITDA)
                 </span>
                 <div className="flex items-center gap-1.5 font-mono">
                   {reverseDcf?.implied_perpetual_growth_from_exit_pct != null && (
                     <span
                       title={`Exit Multiple of ${reverseDcf.exit_multiple_used}x EBITDA implies an equivalent perpetual growth rate of ${reverseDcf.implied_perpetual_growth_from_exit_pct}%`}
-                      className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-sky-50 text-sky-700 border border-sky-200"
+                      className="px-1.5 py-0.5 rounded text-[11px] font-bold bg-sky-50 text-sky-700 border border-sky-200"
                     >
                       Implied g: {reverseDcf.implied_perpetual_growth_from_exit_pct.toFixed(1)}%
                     </span>
                   )}
-                  <span className="text-[10px] text-zinc-500">
+                  <span className="text-[11px] text-slate-500">
                     {reverseDcf?.exit_multiple_used ?? 16.0}x EBITDA
                   </span>
                 </div>
@@ -572,7 +574,7 @@ export default function ValuationWorkbenchCard({
                         : 'N/A')}
                   </span>
                   {reverseDcf?.intrinsic_value_exit_multiple != null && (
-                    <span className="text-[11px] text-zinc-400 font-normal">
+                    <span className="text-[11px] text-slate-500 font-normal">
                       (Today: {currency}{reverseDcf.intrinsic_value_exit_multiple.toFixed(2)})
                     </span>
                   )}
@@ -606,15 +608,15 @@ export default function ValuationWorkbenchCard({
 
       {/* 2. 📊 Enterprise to Equity Value Bridge (Visual Waterfall) */}
       {reverseDcf?.enterprise_value != null && (
-        <div className="rounded-xl border border-edge/70 bg-surface/70 p-4 space-y-3 shadow-2xs">
+        <div className="rounded-xl border border-edge/70 bg-surface/70 p-4 space-y-3 shadow-sm">
           <div className="flex flex-wrap items-center justify-between gap-2 border-b border-edge/40 pb-2">
             <div className="flex items-center gap-2">
               <span className="text-base">📊</span>
               <div>
-                <span className="text-xs font-bold uppercase tracking-wider text-zinc-800 block">
+                <span className="text-xs font-bold uppercase tracking-wider text-slate-800 block">
                   Enterprise to Equity Value Bridge (Visual Waterfall)
                 </span>
-                <span className="text-[10px] text-zinc-500">
+                <span className="text-[11px] text-slate-500">
                   ขั้นตอนการเชื่อมโยงมูลค่าจาก PV of Explicit Cash Flows สู่ Enterprise Value และ Equity Value ต่อหุ้น
                 </span>
               </div>
@@ -624,54 +626,54 @@ export default function ValuationWorkbenchCard({
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2.5 items-stretch text-xs">
             {/* Step 1: PV 5Y FCF */}
             <div className="rounded-lg border border-sky-100 bg-sky-50/40 p-2.5 flex flex-col justify-between">
-              <span className="text-[10px] uppercase font-bold text-sky-800">1. PV 5Y FCF</span>
+              <span className="text-[11px] uppercase font-bold text-sky-800">1. PV 5Y FCF</span>
               <div className="my-1">
-                <div className="text-sm font-extrabold text-zinc-900 font-mono">
+                <div className="text-sm font-extrabold text-slate-900 font-mono">
                   {formatLargeNum(reverseDcf.sum_pv_5y_fcf, currency)}
                 </div>
                 {reverseDcf.enterprise_value > 0 && reverseDcf.sum_pv_5y_fcf != null && (
-                  <div className="text-[10px] text-sky-700 font-semibold font-mono">
+                  <div className="text-[11px] text-sky-700 font-semibold font-mono">
                     ({((reverseDcf.sum_pv_5y_fcf / reverseDcf.enterprise_value) * 100).toFixed(1)}% of EV)
                   </div>
                 )}
               </div>
-              <span className="text-[9px] text-zinc-400">Explicit Forecast</span>
+              <span className="text-[11px] text-slate-500">Explicit Forecast</span>
             </div>
 
             {/* Step 2: PV Terminal Value */}
-            <div className="rounded-lg border border-indigo-100 bg-indigo-50/40 p-2.5 flex flex-col justify-between">
-              <span className="text-[10px] uppercase font-bold text-indigo-800">(+) 2. PV Terminal Value</span>
+            <div className="rounded-lg border border-blue-100 bg-blue-50/40 p-2.5 flex flex-col justify-between">
+              <span className="text-[11px] uppercase font-bold text-blue-800">(+) 2. PV Terminal Value</span>
               <div className="my-1">
-                <div className="text-sm font-extrabold text-zinc-900 font-mono">
+                <div className="text-sm font-extrabold text-slate-900 font-mono">
                   {formatLargeNum(reverseDcf.terminal_value_pv, currency)}
                 </div>
                 {reverseDcf.enterprise_value > 0 && reverseDcf.terminal_value_pv != null && (
-                  <div className="text-[10px] text-indigo-700 font-semibold font-mono">
+                  <div className="text-[11px] text-blue-700 font-semibold font-mono">
                     ({((reverseDcf.terminal_value_pv / reverseDcf.enterprise_value) * 100).toFixed(1)}% of EV
                     {reverseDcf.implied_exit_ebitda_multiple != null ? ` | ${reverseDcf.implied_exit_ebitda_multiple.toFixed(1)}x EBITDA` : ''})
                   </div>
                 )}
               </div>
-              <span className="text-[9px] text-zinc-400">Perpetuity Horizon</span>
+              <span className="text-[11px] text-slate-500">Perpetuity Horizon</span>
             </div>
 
             {/* Step 3: Enterprise Value */}
-            <div className="rounded-lg border border-edge/70 bg-zinc-100/70 p-2.5 flex flex-col justify-between">
-              <span className="text-[10px] uppercase font-bold text-zinc-700">(=) 3. Enterprise Value</span>
+            <div className="rounded-lg border border-edge/70 bg-slate-100/70 p-2.5 flex flex-col justify-between">
+              <span className="text-[11px] uppercase font-bold text-slate-700">(=) 3. Enterprise Value</span>
               <div className="my-1">
-                <div className="text-sm font-extrabold text-zinc-900 font-mono">
+                <div className="text-sm font-extrabold text-slate-900 font-mono">
                   {formatLargeNum(reverseDcf.enterprise_value, currency)}
                 </div>
-                <div className="text-[10px] text-zinc-500 font-semibold font-mono">
+                <div className="text-[11px] text-slate-500 font-semibold font-mono">
                   (100.0% Firm EV)
                 </div>
               </div>
-              <span className="text-[9px] text-zinc-400">Operating Assets</span>
+              <span className="text-[11px] text-slate-500">Operating Assets</span>
             </div>
 
             {/* Step 4: Net Cash / Debt */}
             <div className="rounded-lg border border-edge/70 bg-surface p-2.5 flex flex-col justify-between">
-              <span className="text-[10px] uppercase font-bold text-zinc-700">
+              <span className="text-[11px] uppercase font-bold text-slate-700">
                 {(reverseDcf.net_cash_debt ?? 0) >= 0 ? '(+) 4. Net Cash' : '(-) 4. Net Debt'}
               </span>
               <div className="my-1">
@@ -679,27 +681,27 @@ export default function ValuationWorkbenchCard({
                   {(reverseDcf.net_cash_debt ?? 0) >= 0 ? '+' : ''}
                   {formatLargeNum(reverseDcf.net_cash_debt, currency)}
                 </div>
-                <div className="text-[10px] text-zinc-500 font-semibold">
+                <div className="text-[11px] text-slate-500 font-semibold">
                   {(reverseDcf.net_cash_debt ?? 0) >= 0 ? 'Net Cash Position' : 'Net Debt Burden'}
                 </div>
               </div>
-              <span className="text-[9px] text-zinc-400">Balance Sheet Net</span>
+              <span className="text-[11px] text-slate-500">Balance Sheet Net</span>
             </div>
 
             {/* Step 5: Equity Value & Implied Target */}
             <div className="rounded-lg border border-emerald-200 bg-emerald-50/50 p-2.5 flex flex-col justify-between col-span-2 sm:col-span-1">
-              <span className="text-[10px] uppercase font-bold text-emerald-800">(=) 5. Equity Value</span>
+              <span className="text-[11px] uppercase font-bold text-emerald-800">(=) 5. Equity Value</span>
               <div className="my-1">
                 <div className="text-sm font-extrabold text-emerald-900 font-mono">
                   {formatLargeNum(reverseDcf.equity_value, currency)}
                 </div>
                 {reverseDcf.shares_outstanding != null && reverseDcf.shares_outstanding > 0 && (
-                  <div className="text-[10px] text-emerald-700 font-semibold font-mono">
+                  <div className="text-[11px] text-emerald-700 font-semibold font-mono">
                     ÷ {formatLargeNum(reverseDcf.shares_outstanding, '').trim()} Shares
                   </div>
                 )}
               </div>
-              <span className="text-[9px] font-bold text-emerald-800">
+              <span className="text-[11px] font-bold text-emerald-800">
                 = {currency}{reverseDcf.target_price_12m != null ? reverseDcf.target_price_12m.toFixed(2) : (reverseDcf.intrinsic_value_today != null ? reverseDcf.intrinsic_value_today.toFixed(2) : '-')} / sh
               </span>
             </div>
@@ -710,18 +712,18 @@ export default function ValuationWorkbenchCard({
       {/* Valuation Sanity Audit & Exit Multiple Strip */}
       {sanityAudit && (sanityAudit.implied_exit_fcf_multiple != null || (sanityAudit.sanity_warnings && sanityAudit.sanity_warnings.length > 0)) && (
         <div className="rounded-xl border border-edge/60 bg-surface/50 p-3.5 space-y-2 text-xs">
-          <div className="flex flex-wrap items-center justify-between gap-2 text-zinc-600 font-semibold">
+          <div className="flex flex-wrap items-center justify-between gap-2 text-slate-600 font-semibold">
             <span className="flex items-center gap-1.5">
               <span>🛡️ Valuation Health & Multiple Cross-Check</span>
               {sanityAudit.reliability_score != null && (
-                <span className="text-[10px] px-1.5 py-0.2 rounded bg-zinc-200 text-zinc-700 font-bold">
+                <span className="text-[11px] px-1.5 py-0.5 rounded bg-slate-200 text-slate-700 font-bold">
                   Score: {sanityAudit.reliability_score}/100
                 </span>
               )}
             </span>
             {sanityAudit.implied_exit_fcf_multiple != null && (
-              <span className="text-zinc-500 font-normal text-[11px]">
-                Implied Exit Multiple: <strong className="text-zinc-900">{sanityAudit.implied_exit_fcf_multiple}x FCF</strong>
+              <span className="text-slate-500 font-normal text-[11px]">
+                Implied Exit Multiple: <strong className="text-slate-900">{sanityAudit.implied_exit_fcf_multiple}x FCF</strong>
                 {sanityAudit.benchmark_sector_multiple != null && (
                   <span> (Sector Median: <strong>{sanityAudit.benchmark_sector_multiple}x</strong>)</span>
                 )}
@@ -729,7 +731,7 @@ export default function ValuationWorkbenchCard({
             )}
           </div>
           {sanityAudit.sanity_warnings && sanityAudit.sanity_warnings.length > 0 && (
-            <ul className="list-disc list-inside space-y-0.5 text-zinc-600 text-[11px]">
+            <ul className="list-disc list-inside space-y-0.5 text-slate-600 text-[11px]">
               {sanityAudit.sanity_warnings.map((w, idx) => (
                 <li key={idx} className={w.includes('Terminal Value') && sanityAudit.is_terminal_dependent ? 'text-amber-800 font-medium' : ''}>
                   {w}
@@ -742,7 +744,7 @@ export default function ValuationWorkbenchCard({
 
       {/* Discrepancy Warning Banner */}
       {dcfDiscrepancyWarning && (
-        <div className="rounded-xl border border-amber-300 bg-amber-50/90 p-3.5 text-xs text-amber-900 flex items-start gap-2.5 shadow-xs">
+        <div className="rounded-xl border border-amber-300 bg-amber-50/90 p-3.5 text-xs text-amber-900 flex items-start gap-2.5 shadow-sm">
           <span className="text-base">⚠️</span>
           <div>
             <div className="font-bold">Valuation Model Discrepancy Alert</div>
@@ -753,7 +755,7 @@ export default function ValuationWorkbenchCard({
 
       {/* Non-Actionable Valuation Model Banner with Dynamic Reason List */}
       {(reverseDcf?.is_actionable === false || dcf?.is_actionable === false) && (
-        <div className="rounded-xl border border-amber-300 bg-amber-50/90 p-3.5 text-xs text-amber-900 flex items-start gap-2.5 shadow-xs">
+        <div className="rounded-xl border border-amber-300 bg-amber-50/90 p-3.5 text-xs text-amber-900 flex items-start gap-2.5 shadow-sm">
           <span className="text-base">ℹ️</span>
           <div className="space-y-1">
             <div className="font-bold">Informational-Only Valuation Model (Non-Actionable)</div>
@@ -774,7 +776,7 @@ export default function ValuationWorkbenchCard({
       {/* 3-Tier Margin Provenance Strip */}
       {(gaapOperatingMargin || nonGaapOperatingMargin || providerEbitMargin) && (
         <div className="rounded-xl border border-edge/60 bg-surface/50 p-3.5 space-y-2">
-          <div className="flex items-center justify-between text-xs text-zinc-500 font-semibold">
+          <div className="flex items-center justify-between text-xs text-slate-500 font-semibold">
             <span>🏷️ 3-Tier Operating Margin Provenance</span>
             {valuationMarginSourceUsed && (
               <span className="text-sky-700 text-[11px] font-bold">Used in DCF: {valuationMarginSourceUsed}</span>
@@ -783,23 +785,23 @@ export default function ValuationWorkbenchCard({
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 text-xs">
             {gaapOperatingMargin && (
               <div className="rounded-lg border border-edge/50 bg-white/70 p-2 space-y-0.5">
-                <span className="text-[10px] text-zinc-400 font-bold uppercase block">1. GAAP Operating Margin</span>
-                <span className="text-sm font-extrabold text-zinc-900">{gaapOperatingMargin.value_pct != null ? `${gaapOperatingMargin.value_pct.toFixed(1)}%` : 'N/A'}</span>
-                <p className="text-[10px] text-zinc-500">{gaapOperatingMargin.period_end} ({gaapOperatingMargin.source_provenance})</p>
+                <span className="text-[11px] text-slate-500 font-bold uppercase block">1. GAAP Operating Margin</span>
+                <span className="text-sm font-extrabold text-slate-900">{gaapOperatingMargin.value_pct != null ? `${gaapOperatingMargin.value_pct.toFixed(1)}%` : 'N/A'}</span>
+                <p className="text-[11px] text-slate-500">{gaapOperatingMargin.period_end} ({gaapOperatingMargin.source_provenance})</p>
               </div>
             )}
             {nonGaapOperatingMargin && (
               <div className="rounded-lg border border-edge/50 bg-white/70 p-2 space-y-0.5">
-                <span className="text-[10px] text-zinc-400 font-bold uppercase block">2. Non-GAAP Margin (Guidance)</span>
-                <span className="text-sm font-extrabold text-indigo-700">{nonGaapOperatingMargin.value_pct != null ? `${nonGaapOperatingMargin.value_pct.toFixed(1)}%` : 'N/A'}</span>
-                <p className="text-[10px] text-zinc-500">{nonGaapOperatingMargin.period_end} ({nonGaapOperatingMargin.source_provenance})</p>
+                <span className="text-[11px] text-slate-500 font-bold uppercase block">2. Non-GAAP Margin (Guidance)</span>
+                <span className="text-sm font-extrabold text-blue-700">{nonGaapOperatingMargin.value_pct != null ? `${nonGaapOperatingMargin.value_pct.toFixed(1)}%` : 'N/A'}</span>
+                <p className="text-[11px] text-slate-500">{nonGaapOperatingMargin.period_end} ({nonGaapOperatingMargin.source_provenance})</p>
               </div>
             )}
             {providerEbitMargin && (
               <div className="rounded-lg border border-edge/50 bg-white/70 p-2 space-y-0.5">
-                <span className="text-[10px] text-zinc-400 font-bold uppercase block">3. Provider EBIT Proxy</span>
-                <span className="text-sm font-extrabold text-zinc-700">{providerEbitMargin.value_pct != null ? `${providerEbitMargin.value_pct.toFixed(1)}%` : 'N/A'}</span>
-                <p className="text-[10px] text-zinc-500">{providerEbitMargin.source_provenance}</p>
+                <span className="text-[11px] text-slate-500 font-bold uppercase block">3. Provider EBIT Proxy</span>
+                <span className="text-sm font-extrabold text-slate-700">{providerEbitMargin.value_pct != null ? `${providerEbitMargin.value_pct.toFixed(1)}%` : 'N/A'}</span>
+                <p className="text-[11px] text-slate-500">{providerEbitMargin.source_provenance}</p>
               </div>
             )}
           </div>
@@ -810,7 +812,7 @@ export default function ValuationWorkbenchCard({
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
         {/* Left Pane: Expectation Gap & Reverse DCF Forensics (7 Cols) */}
         <div className="lg:col-span-7 space-y-4">
-          <div className="text-xs font-semibold text-zinc-500 uppercase tracking-wider flex items-center gap-1.5">
+          <div className="text-xs font-semibold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
             <span>📉 Market Expectation Gap Analysis</span>
           </div>
 
@@ -818,10 +820,10 @@ export default function ValuationWorkbenchCard({
             {/* Market Implied Growth */}
             <div className="rounded-xl border border-edge/60 bg-surface/70 p-4 transition-all hover:bg-surface hover:border-sky-300/80">
               <div className="flex items-center justify-between">
-                <span className="text-xs text-zinc-500 font-medium block">Market Implied 5Y Growth</span>
+                <span className="text-xs text-slate-500 font-medium block">Market Implied 5Y Growth</span>
                 {reverseDcf?.base_revenue != null && (
                   <span
-                    className="text-[10px] px-1.5 py-0.5 rounded bg-sky-50 font-semibold text-sky-700 border border-sky-200"
+                    className="text-[11px] px-1.5 py-0.5 rounded bg-sky-50 font-semibold text-sky-700 border border-sky-200"
                     title={`Base Revenue: ${formatLargeNum(reverseDcf.base_revenue, currency)} (${reverseDcf.base_revenue_period_type ? reverseDcf.base_revenue_period_type.toUpperCase() : 'TTM'})`}
                   >
                     Base: {formatLargeNum(reverseDcf.base_revenue, currency)} ({reverseDcf.base_revenue_period_type ? reverseDcf.base_revenue_period_type.toUpperCase() : 'TTM'})
@@ -829,14 +831,14 @@ export default function ValuationWorkbenchCard({
                 )}
               </div>
               <div className="flex items-baseline gap-1 mt-1">
-                <span className="text-2xl font-bold text-zinc-900">
+                <span className="text-2xl font-bold text-slate-900">
                   {reverseDcf?.market_implied_growth_pct != null
                     ? `${reverseDcf.market_implied_growth_pct.toFixed(1)}%`
                     : 'N/A'}
                 </span>
-                <span className="text-xs text-zinc-400">CAGR</span>
+                <span className="text-xs text-slate-500">CAGR</span>
               </div>
-              <p className="text-[11px] text-zinc-500 mt-1.5 leading-tight">
+              <p className="text-[11px] text-slate-500 mt-1.5 leading-tight">
                 อัตราเติบโตกระแสเงินสดแฝงที่ราคาตลาดปัจจุบัน Price-in ไว้
               </p>
             </div>
@@ -844,10 +846,10 @@ export default function ValuationWorkbenchCard({
             {/* Market Implied Operating Margin with Reported Baseline */}
             <div className="rounded-xl border border-edge/60 bg-surface/70 p-4 transition-all hover:bg-surface hover:border-sky-300/80">
               <div className="flex items-center justify-between">
-                <span className="text-xs text-zinc-500 font-medium block">Market Implied EBIT Margin</span>
+                <span className="text-xs text-slate-500 font-medium block">Market Implied EBIT Margin</span>
                 {reverseDcf?.reported_ebit_margin_pct != null && (
                   <span
-                    className="text-[10px] px-1.5 py-0.5 rounded bg-zinc-100 font-semibold text-zinc-600 border border-zinc-200"
+                    className="text-[11px] px-1.5 py-0.5 rounded bg-slate-100 font-semibold text-slate-600 border border-slate-200"
                     title={`${ebitLabel}: ${reverseDcf.reported_ebit_margin_pct}% (${ebitMeta})`}
                   >
                     Base: {reverseDcf.reported_ebit_margin_pct.toFixed(1)}%
@@ -855,16 +857,16 @@ export default function ValuationWorkbenchCard({
                 )}
               </div>
               <div className="flex items-baseline gap-1 mt-1">
-                <span className="text-2xl font-bold text-zinc-900">
+                <span className="text-2xl font-bold text-slate-900">
                   {reverseDcf?.market_implied_margin_pct != null
                     ? `${reverseDcf.market_implied_margin_pct.toFixed(1)}%`
                     : (reverseDcf?.reported_ebit_margin_pct != null ? `${reverseDcf.reported_ebit_margin_pct.toFixed(1)}%` : 'N/A')}
                 </span>
-                <span className="text-xs text-zinc-400">
+                <span className="text-xs text-slate-500">
                   {reverseDcf?.market_implied_margin_pct != null ? 'Margin' : 'Base Margin'}
                 </span>
               </div>
-              <p className="text-[11px] text-zinc-500 mt-1.5 leading-tight">
+              <p className="text-[11px] text-slate-500 mt-1.5 leading-tight">
                 {ebitMeta ? `${ebitLabel} ${reverseDcf?.reported_ebit_margin_pct?.toFixed(1)}% (${ebitMeta})` : 'อัตรากำไรจากการดำเนินงานที่ตลาดคาดหวัง'}
               </p>
             </div>
@@ -873,24 +875,24 @@ export default function ValuationWorkbenchCard({
           {/* Intrinsic & Enterprise Value Breakdown */}
           {reverseDcf && (
             <div className="rounded-xl border border-edge/50 bg-surface-strong/40 p-3.5 space-y-2 text-xs">
-              <div className="flex justify-between text-zinc-600 border-b border-edge/30 pb-1.5">
+              <div className="flex justify-between text-slate-600 border-b border-edge/30 pb-1.5">
                 <span>มูลค่าพื้นฐาน ณ วันนี้ (Gordon Growth):</span>
-                <span className="font-semibold text-zinc-900">
+                <span className="font-semibold text-slate-900">
                   {reverseDcf.intrinsic_value_today != null ? `${currency}${reverseDcf.intrinsic_value_today.toFixed(2)}` : 'N/A'}
                   {reverseDcf.target_price_12m != null && (
-                    <span className="text-zinc-500 font-normal ml-1">
+                    <span className="text-slate-500 font-normal ml-1">
                       (12M: {currency}{reverseDcf.target_price_12m.toFixed(2)})
                     </span>
                   )}
                 </span>
               </div>
               {reverseDcf.intrinsic_value_exit_multiple != null && (
-                <div className="flex justify-between text-zinc-600 border-b border-edge/30 pb-1.5">
+                <div className="flex justify-between text-slate-600 border-b border-edge/30 pb-1.5">
                   <span>มูลค่าพื้นฐาน ณ วันนี้ ({reverseDcf.exit_multiple_used || 25}x Exit Multiple):</span>
                   <span className="font-semibold text-sky-800">
                     {currency}{reverseDcf.intrinsic_value_exit_multiple.toFixed(2)}
                     {reverseDcf.target_price_exit_multiple_12m != null && (
-                      <span className="text-zinc-500 font-normal ml-1">
+                      <span className="text-slate-500 font-normal ml-1">
                         (12M: {currency}{reverseDcf.target_price_exit_multiple_12m.toFixed(2)})
                       </span>
                     )}
@@ -910,7 +912,7 @@ export default function ValuationWorkbenchCard({
                   : (altModel || 'Alternative Sector Valuation')
 
                 return (
-                  <div className="flex justify-between text-zinc-600 border-b border-edge/30 pb-1.5">
+                  <div className="flex justify-between text-slate-600 border-b border-edge/30 pb-1.5">
                     <span>{modelLabel}:</span>
                     <span className="font-semibold text-emerald-800">
                       {currency}{altVal != null ? altVal.toFixed(2) : 'N/A'}
@@ -923,22 +925,22 @@ export default function ValuationWorkbenchCard({
                   </div>
                 )
               })()}
-              <div className="flex justify-between text-zinc-600 border-b border-edge/30 pb-1.5">
+              <div className="flex justify-between text-slate-600 border-b border-edge/30 pb-1.5">
                 <span>Enterprise Value / Equity Value:</span>
-                <span className="font-semibold text-zinc-900">
+                <span className="font-semibold text-slate-900">
                   {formatLargeNum(reverseDcf.enterprise_value, currency)} / {formatLargeNum(reverseDcf.equity_value, currency)}
                 </span>
               </div>
-              <div className="flex justify-between text-zinc-600 border-b border-edge/30 pb-1.5">
+              <div className="flex justify-between text-slate-600 border-b border-edge/30 pb-1.5">
                 <span>Net Cash (เงินสดหักหนี้สินสุทธิ):</span>
-                <span className={`font-semibold ${reverseDcf.net_cash_debt != null && reverseDcf.net_cash_debt >= 0 ? 'text-emerald-700' : 'text-zinc-900'}`}>
+                <span className={`font-semibold ${reverseDcf.net_cash_debt != null && reverseDcf.net_cash_debt >= 0 ? 'text-emerald-700' : 'text-slate-900'}`}>
                   {reverseDcf.net_cash_debt != null && reverseDcf.net_cash_debt >= 0 ? '+' : ''}
                   {formatLargeNum(reverseDcf.net_cash_debt, currency)}
                 </span>
               </div>
-              <div className="flex justify-between text-zinc-600">
+              <div className="flex justify-between text-slate-600">
                 <span>PV of 5Y FCF / Terminal Value PV:</span>
-                <span className="font-semibold text-zinc-900">
+                <span className="font-semibold text-slate-900">
                   {formatLargeNum(reverseDcf.sum_pv_5y_fcf, currency)} / {formatLargeNum(reverseDcf.terminal_value_pv, currency)}
                 </span>
               </div>
@@ -948,7 +950,7 @@ export default function ValuationWorkbenchCard({
 
         {/* Right Pane: DCF Scenarios Visualizer (5 Cols) & Interactive Toggle */}
         <div className="lg:col-span-5 space-y-4">
-          <div className="flex items-center justify-between text-xs font-semibold text-zinc-500 uppercase tracking-wider">
+          <div className="flex items-center justify-between text-xs font-semibold text-slate-500 uppercase tracking-wider">
             <span title="Generic 5Y FCF Growth Baseline Model">📊 DCF Scenarios Visualizer</span>
             <div className="flex items-center gap-1.5">
               {dcf?.wacc_pct != null && (
@@ -959,7 +961,7 @@ export default function ValuationWorkbenchCard({
                   title="คลิกเพื่อดูการแจกแจงส่วนประกอบ WACC (CAPM Decomposition)"
                 >
                   <span>wacc {dcf.wacc_pct}%</span>
-                  <span className="text-[10px]">ℹ️</span>
+                  <span className="text-[11px]">ℹ️</span>
                 </button>
               )}
             </div>
@@ -967,14 +969,14 @@ export default function ValuationWorkbenchCard({
 
           {/* Interactive Case Selector (Bear / Base / Bull Toggle) */}
           {scenarios.length > 0 && (
-            <div className="flex items-center rounded-lg bg-zinc-100 p-1 border border-edge/60 text-xs">
+            <div className="flex items-center rounded-lg bg-slate-100 p-1 border border-edge/60 text-xs">
               <button
                 type="button"
                 onClick={() => setSelectedScenarioKey('bear')}
                 className={`flex-1 py-1 px-2 rounded-md font-semibold transition-all ${
                   selectedScenarioKey === 'bear'
-                    ? 'bg-white text-rose-700 shadow-xs border border-rose-200'
-                    : 'text-zinc-600 hover:text-zinc-900'
+                    ? 'bg-white text-rose-700 shadow-sm border border-rose-200'
+                    : 'text-slate-600 hover:text-slate-900'
                 }`}
               >
                 Bear
@@ -984,8 +986,8 @@ export default function ValuationWorkbenchCard({
                 onClick={() => setSelectedScenarioKey('base')}
                 className={`flex-1 py-1 px-2 rounded-md font-semibold transition-all ${
                   selectedScenarioKey === 'base'
-                    ? 'bg-white text-sky-700 shadow-xs border border-sky-200'
-                    : 'text-zinc-600 hover:text-zinc-900'
+                    ? 'bg-white text-sky-700 shadow-sm border border-sky-200'
+                    : 'text-slate-600 hover:text-slate-900'
                 }`}
               >
                 Base
@@ -995,8 +997,8 @@ export default function ValuationWorkbenchCard({
                 onClick={() => setSelectedScenarioKey('bull')}
                 className={`flex-1 py-1 px-2 rounded-md font-semibold transition-all ${
                   selectedScenarioKey === 'bull'
-                    ? 'bg-white text-emerald-700 shadow-xs border border-emerald-200'
-                    : 'text-zinc-600 hover:text-zinc-900'
+                    ? 'bg-white text-emerald-700 shadow-sm border border-emerald-200'
+                    : 'text-slate-600 hover:text-slate-900'
                 }`}
               >
                 Bull
@@ -1012,24 +1014,33 @@ export default function ValuationWorkbenchCard({
                 return (
                   <div
                     key={sc.key}
+                    role="button"
+                    tabIndex={0}
+                    aria-pressed={isSelected}
                     onClick={() => setSelectedScenarioKey(sc.key as 'bear' | 'base' | 'bull')}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault()
+                        setSelectedScenarioKey(sc.key as 'bear' | 'base' | 'bull')
+                      }
+                    }}
                     className={`space-y-1 p-2 rounded-lg cursor-pointer transition-all ${
-                      isSelected ? 'bg-sky-50/60 ring-1 ring-sky-300' : 'hover:bg-zinc-50/60'
+                      isSelected ? 'bg-sky-50/60 ring-1 ring-sky-300' : 'hover:bg-slate-50/60'
                     }`}
                   >
                     <div className="flex items-center justify-between text-xs">
-                      <span className={`font-medium ${isSelected ? 'text-zinc-900 font-bold' : 'text-zinc-700'}`}>
+                      <span className={`font-medium ${isSelected ? 'text-slate-900 font-bold' : 'text-slate-700'}`}>
                         {sc.label}
-                        {isSelected && <span className="ml-1 text-[10px] text-sky-700">(Active)</span>}
+                        {isSelected && <span className="ml-1 text-[11px] text-sky-700">(Active)</span>}
                       </span>
                       <div className="flex items-center gap-1.5">
-                        <span className="font-bold text-zinc-900">{currency}{typeof sc.data.target_price === 'number' ? sc.data.target_price.toFixed(2) : sc.data.target_price}</span>
-                        <span className={`px-1.5 py-0.2 rounded text-[10px] font-bold border ${sc.bgCol} ${sc.textCol}`}>
+                        <span className="font-bold text-slate-900">{currency}{typeof sc.data.target_price === 'number' ? sc.data.target_price.toFixed(2) : sc.data.target_price}</span>
+                        <span className={`px-1.5 py-0.5 rounded text-[11px] font-bold border ${sc.bgCol} ${sc.textCol}`}>
                           {sc.data.upside_pct >= 0 ? '+' : ''}{typeof sc.data.upside_pct === 'number' ? sc.data.upside_pct.toFixed(1) : sc.data.upside_pct}%
                         </span>
                       </div>
                     </div>
-                    <div className="w-full bg-zinc-200/80 rounded-full h-2 overflow-hidden">
+                    <div className="w-full bg-slate-200/80 rounded-full h-2 overflow-hidden">
                       <div
                         className={`h-2 rounded-full ${sc.color} transition-all duration-500`}
                         style={{ width: `${pct}%` }}
@@ -1040,7 +1051,7 @@ export default function ValuationWorkbenchCard({
               })}
             </div>
           ) : (
-            <div className="rounded-xl border border-dashed border-edge p-5 text-center text-xs text-zinc-400">
+            <div className="rounded-xl border border-dashed border-edge p-5 text-center text-xs text-slate-500">
               ไม่มีข้อมูล Scenario Model
             </div>
           )}
@@ -1061,11 +1072,11 @@ export default function ValuationWorkbenchCard({
               <span className="text-base">📅</span>
               <div>
                 <div className="flex items-center gap-2">
-                  <span className="text-xs font-bold uppercase tracking-wider text-zinc-800 block">
+                  <span className="text-xs font-bold uppercase tracking-wider text-slate-800 block">
                     3Y History Actuals | 5Y Staged Forecast FCF Schedule Table
                   </span>
                   <span
-                    className={`px-2 py-0.5 rounded text-[10px] font-bold border ${
+                    className={`px-2 py-0.5 rounded text-[11px] font-bold border ${
                       selectedScenarioKey === 'bull'
                         ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
                         : selectedScenarioKey === 'bear'
@@ -1076,7 +1087,7 @@ export default function ValuationWorkbenchCard({
                     Scenario: {selectedScenarioKey.toUpperCase()}
                   </span>
                 </div>
-                <span className="text-[10px] text-zinc-500">
+                <span className="text-[11px] text-slate-500">
                   ตาราง 8 คอลัมน์แจกแจงงบจริง 3 ปี ย้อนหลัง และประมาณการกระแสเงินสด 5 ปี พร้อม Net CapEx และ ΔNWC
                 </span>
               </div>
@@ -1084,10 +1095,10 @@ export default function ValuationWorkbenchCard({
             <button
               type="button"
               onClick={() => setIsScheduleOpen(!isScheduleOpen)}
-              className="text-xs font-semibold px-2.5 py-1 rounded-lg border border-edge/80 bg-white hover:bg-zinc-50 text-sky-700 transition-all flex items-center gap-1 shadow-2xs"
+              className="text-xs font-semibold px-2.5 py-1 rounded-lg border border-edge/80 bg-white hover:bg-slate-50 text-sky-700 transition-all flex items-center gap-1 shadow-sm"
             >
               <span>{isScheduleOpen ? 'ย่อตารางงบ' : 'แสดงตารางงบกระแสเงินสด (8 คอลัมน์)'}</span>
-              <span className="text-[10px]">{isScheduleOpen ? '▲' : '▼'}</span>
+              <span className="text-[11px]">{isScheduleOpen ? '▲' : '▼'}</span>
             </button>
           </div>
 
@@ -1095,47 +1106,47 @@ export default function ValuationWorkbenchCard({
             <div className="space-y-3 pt-1 animate-fade-in overflow-x-auto">
               <table className="w-full text-right border-collapse text-xs">
                 <thead>
-                  <tr className="border-b border-edge/60 bg-zinc-50/70">
-                    <th className="p-2 text-left text-[11px] font-bold text-zinc-700 font-sans">
+                  <tr className="border-b border-edge/60 bg-slate-50/70">
+                    <th className="p-2 text-left text-[11px] font-bold text-slate-700 font-sans">
                       Financial Line Item
                     </th>
                     {/* 3 Historical Columns */}
                     {historical3Y.map((item, idx) => (
-                      <th key={`hist-${idx}`} className="p-2 text-[11px] font-bold text-zinc-600 bg-zinc-100/70 font-mono">
+                      <th key={`hist-${idx}`} className="p-2 text-[11px] font-bold text-slate-600 bg-slate-100/70 font-mono">
                         {item.fiscal_year || `Year -${3 - idx}`}A
-                        <span className="block text-[9px] font-normal text-zinc-400">Actual</span>
+                        <span className="block text-[11px] font-normal text-slate-500">Actual</span>
                       </th>
                     ))}
                     {/* 5 Forecast Columns */}
                     {forecast5Y.map((f, idx) => (
                       <th key={`fore-${idx}`} className="p-2 text-[11px] font-bold text-sky-800 bg-sky-50/40 font-mono">
                         Year {f.year_index}E
-                        <span className="block text-[9px] font-normal text-sky-600">Forecast</span>
+                        <span className="block text-[11px] font-normal text-sky-600">Forecast</span>
                       </th>
                     ))}
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-edge/30">
                   {/* Revenue */}
-                  <tr className="hover:bg-zinc-50/40">
-                    <td className="p-2 text-left font-semibold text-zinc-800">Revenue ({currency}M)</td>
+                  <tr className="hover:bg-slate-50/40">
+                    <td className="p-2 text-left font-semibold text-slate-800">Revenue ({currency}M)</td>
                     {historical3Y.map((h, i) => (
-                      <td key={i} className="p-2 font-mono text-zinc-700 bg-zinc-50/30">
+                      <td key={i} className="p-2 font-mono text-slate-700 bg-slate-50/30">
                         {formatLargeNum(h.revenue, currency)}
                       </td>
                     ))}
                     {forecast5Y.map((f, i) => (
-                      <td key={i} className="p-2 font-mono text-zinc-900 font-medium">
+                      <td key={i} className="p-2 font-mono text-slate-900 font-medium">
                         {formatLargeNum(f.projected_revenue, currency)}
                       </td>
                     ))}
                   </tr>
 
                   {/* Revenue Growth % */}
-                  <tr className="hover:bg-zinc-50/40 text-[11px]">
-                    <td className="p-2 text-left text-zinc-500 pl-4">└ YoY Revenue Growth (%)</td>
+                  <tr className="hover:bg-slate-50/40 text-[11px]">
+                    <td className="p-2 text-left text-slate-500 pl-4">└ YoY Revenue Growth (%)</td>
                     {historical3Y.map((h, i) => (
-                      <td key={i} className="p-2 font-mono text-zinc-500 bg-zinc-50/30">
+                      <td key={i} className="p-2 font-mono text-slate-500 bg-slate-50/30">
                         {h.revenue_growth_pct != null ? `${h.revenue_growth_pct.toFixed(1)}%` : '-'}
                       </td>
                     ))}
@@ -1150,55 +1161,55 @@ export default function ValuationWorkbenchCard({
                   {hasOpexBreakdown && (
                     <>
                       {/* Gross Profit */}
-                      <tr className="hover:bg-zinc-50/40 bg-zinc-50/20 text-zinc-800">
+                      <tr className="hover:bg-slate-50/40 bg-slate-50/20 text-slate-800">
                         <td className="p-2 text-left font-semibold">Gross Profit</td>
                         {historical3Y.map((h, i) => (
-                          <td key={i} className="p-2 font-mono text-zinc-700 bg-zinc-50/30">
+                          <td key={i} className="p-2 font-mono text-slate-700 bg-slate-50/30">
                             {h.gross_profit != null ? formatLargeNum(h.gross_profit, currency) : '-'}
                           </td>
                         ))}
                         {forecast5Y.map((f, i) => (
-                          <td key={i} className="p-2 font-mono text-zinc-900 font-medium">
+                          <td key={i} className="p-2 font-mono text-slate-900 font-medium">
                             {f.projected_gross_profit != null ? formatLargeNum(f.projected_gross_profit, currency) : '-'}
                           </td>
                         ))}
                       </tr>
 
                       {/* Gross Margin % */}
-                      <tr className="hover:bg-zinc-50/40 text-[11px] text-zinc-500">
+                      <tr className="hover:bg-slate-50/40 text-[11px] text-slate-500">
                         <td className="p-2 text-left pl-4">└ Gross Margin (%)</td>
                         {historical3Y.map((h, i) => (
-                          <td key={i} className="p-2 font-mono text-zinc-500 bg-zinc-50/30">
+                          <td key={i} className="p-2 font-mono text-slate-500 bg-slate-50/30">
                             {h.gross_margin_pct != null ? `${h.gross_margin_pct.toFixed(1)}%` : '-'}
                           </td>
                         ))}
                         {forecast5Y.map((f, i) => (
-                          <td key={i} className="p-2 font-mono text-zinc-600">
+                          <td key={i} className="p-2 font-mono text-slate-600">
                             {f.projected_gross_margin_pct != null ? `${f.projected_gross_margin_pct.toFixed(1)}%` : '-'}
                           </td>
                         ))}
                       </tr>
 
                       {/* R&D Expense */}
-                      <tr className="hover:bg-zinc-50/40 text-zinc-700">
+                      <tr className="hover:bg-slate-50/40 text-slate-700">
                         <td className="p-2 text-left pl-4">(-) Research & Development (R&D)</td>
                         {historical3Y.map((h, i) => (
-                          <td key={i} className="p-2 font-mono text-zinc-600 bg-zinc-50/30">
+                          <td key={i} className="p-2 font-mono text-slate-600 bg-slate-50/30">
                             {h.research_and_development != null ? formatLargeNum(h.research_and_development, currency) : '-'}
                           </td>
                         ))}
                         {forecast5Y.map((f, i) => (
-                          <td key={i} className="p-2 font-mono text-zinc-700">
+                          <td key={i} className="p-2 font-mono text-slate-700">
                             {f.projected_rd != null ? formatLargeNum(f.projected_rd, currency) : '-'}
                           </td>
                         ))}
                       </tr>
 
                       {/* R&D % of Revenue */}
-                      <tr className="hover:bg-zinc-50/40 text-[11px] text-zinc-400">
+                      <tr className="hover:bg-slate-50/40 text-[11px] text-slate-500">
                         <td className="p-2 text-left pl-6">└ R&D % of Revenue</td>
                         {historical3Y.map((h, i) => (
-                          <td key={i} className="p-2 font-mono bg-zinc-50/30">
+                          <td key={i} className="p-2 font-mono bg-slate-50/30">
                             {h.rd_pct_of_rev != null ? `${h.rd_pct_of_rev.toFixed(1)}%` : '-'}
                           </td>
                         ))}
@@ -1210,25 +1221,25 @@ export default function ValuationWorkbenchCard({
                       </tr>
 
                       {/* SG&A Expense */}
-                      <tr className="hover:bg-zinc-50/40 text-zinc-700">
+                      <tr className="hover:bg-slate-50/40 text-slate-700">
                         <td className="p-2 text-left pl-4">(-) SG&A Expenses</td>
                         {historical3Y.map((h, i) => (
-                          <td key={i} className="p-2 font-mono text-zinc-600 bg-zinc-50/30">
+                          <td key={i} className="p-2 font-mono text-slate-600 bg-slate-50/30">
                             {h.selling_general_admin != null ? formatLargeNum(h.selling_general_admin, currency) : '-'}
                           </td>
                         ))}
                         {forecast5Y.map((f, i) => (
-                          <td key={i} className="p-2 font-mono text-zinc-700">
+                          <td key={i} className="p-2 font-mono text-slate-700">
                             {f.projected_sga != null ? formatLargeNum(f.projected_sga, currency) : '-'}
                           </td>
                         ))}
                       </tr>
 
                       {/* SG&A % of Revenue */}
-                      <tr className="hover:bg-zinc-50/40 text-[11px] text-zinc-400">
+                      <tr className="hover:bg-slate-50/40 text-[11px] text-slate-500">
                         <td className="p-2 text-left pl-6">└ SG&A % of Revenue</td>
                         {historical3Y.map((h, i) => (
-                          <td key={i} className="p-2 font-mono bg-zinc-50/30">
+                          <td key={i} className="p-2 font-mono bg-slate-50/30">
                             {h.sga_pct_of_rev != null ? `${h.sga_pct_of_rev.toFixed(1)}%` : '-'}
                           </td>
                         ))}
@@ -1242,27 +1253,27 @@ export default function ValuationWorkbenchCard({
                   )}
 
                   {/* EBIT */}
-                  <tr className="hover:bg-zinc-50/40">
-                    <td className="p-2 text-left font-semibold text-zinc-800">EBIT (Operating Profit)</td>
+                  <tr className="hover:bg-slate-50/40">
+                    <td className="p-2 text-left font-semibold text-slate-800">EBIT (Operating Profit)</td>
                     {historical3Y.map((h, i) => (
-                      <td key={i} className="p-2 font-mono text-zinc-700 bg-zinc-50/30">
+                      <td key={i} className="p-2 font-mono text-slate-700 bg-slate-50/30">
                         {formatLargeNum(h.ebit, currency)}
                       </td>
                     ))}
                     {forecast5Y.map((f, i) => (
-                      <td key={i} className="p-2 font-mono text-zinc-900 font-medium">
+                      <td key={i} className="p-2 font-mono text-slate-900 font-medium">
                         {formatLargeNum(f.projected_ebit, currency)}
                       </td>
                     ))}
                   </tr>
 
                   {/* EBIT Margin % */}
-                  <tr className="hover:bg-zinc-50/40 text-[11px]">
-                    <td className="p-2 text-left text-zinc-500 pl-4">
+                  <tr className="hover:bg-slate-50/40 text-[11px]">
+                    <td className="p-2 text-left text-slate-500 pl-4">
                       └ EBIT Margin (%)
                       {reverseDcf?.is_mid_cycle_normalized && reverseDcf.normalized_mid_cycle_ebit_margin_pct != null && (
                         <span
-                          className="ml-1 text-[9px] px-1 py-0.5 rounded bg-amber-100 text-amber-900 font-semibold border border-amber-200"
+                          className="ml-1 text-[11px] px-1 py-0.5 rounded bg-amber-100 text-amber-900 font-semibold border border-amber-200"
                           title="โมเดลปรับสมมติฐาน Operating Margin ทยอยลู่เข้าสู่ค่ากึ่งกลางวัฏจักร Mid-Cycle เพื่อป้องกันการประเมินมูลค่าสูงหรือต่ำเกินจริง"
                         >
                           Mid-Cycle ({reverseDcf.normalized_mid_cycle_ebit_margin_pct.toFixed(1)}%)
@@ -1270,7 +1281,7 @@ export default function ValuationWorkbenchCard({
                       )}
                     </td>
                     {historical3Y.map((h, i) => (
-                      <td key={i} className="p-2 font-mono text-zinc-500 bg-zinc-50/30">
+                      <td key={i} className="p-2 font-mono text-slate-500 bg-slate-50/30">
                         {h.ebit_margin_pct != null ? `${h.ebit_margin_pct.toFixed(1)}%` : '-'}
                       </td>
                     ))}
@@ -1282,14 +1293,14 @@ export default function ValuationWorkbenchCard({
                   </tr>
 
                   {/* EBITDA Row */}
-                  <tr className="hover:bg-zinc-50/40 bg-zinc-50/20 font-medium">
-                    <td className="p-2 text-left text-zinc-800">
+                  <tr className="hover:bg-slate-50/40 bg-slate-50/20 font-medium">
+                    <td className="p-2 text-left text-slate-800">
                       EBITDA (EBIT + D&A)
                     </td>
                     {historical3Y.map((h, i) => {
                       const histEbitda = h.ebit + (h.depreciation || 0)
                       return (
-                        <td key={i} className="p-2 font-mono text-zinc-800 bg-zinc-50/30">
+                        <td key={i} className="p-2 font-mono text-slate-800 bg-slate-50/30">
                           {formatLargeNum(histEbitda, currency)}
                         </td>
                       )
@@ -1297,7 +1308,7 @@ export default function ValuationWorkbenchCard({
                     {forecast5Y.map((f, i) => {
                       const projEbitda = f.projected_ebit + f.projected_depreciation
                       return (
-                        <td key={i} className="p-2 font-mono text-zinc-900 font-semibold">
+                        <td key={i} className="p-2 font-mono text-slate-900 font-semibold">
                           {formatLargeNum(projEbitda, currency)}
                         </td>
                       )
@@ -1305,13 +1316,13 @@ export default function ValuationWorkbenchCard({
                   </tr>
 
                   {/* EBITDA Margin % */}
-                  <tr className="hover:bg-zinc-50/40 text-[11px] text-zinc-500">
+                  <tr className="hover:bg-slate-50/40 text-[11px] text-slate-500">
                     <td className="p-2 text-left pl-4">└ EBITDA Margin (%)</td>
                     {historical3Y.map((h, i) => {
                       const histEbitda = h.ebit + (h.depreciation || 0)
                       const margin = h.revenue > 0 ? (histEbitda / h.revenue) * 100 : null
                       return (
-                        <td key={i} className="p-2 font-mono text-zinc-500 bg-zinc-50/30">
+                        <td key={i} className="p-2 font-mono text-slate-500 bg-slate-50/30">
                           {margin != null ? `${margin.toFixed(1)}%` : '-'}
                         </td>
                       )
@@ -1328,62 +1339,62 @@ export default function ValuationWorkbenchCard({
                   </tr>
 
                   {/* Taxes */}
-                  <tr className="hover:bg-zinc-50/40 text-zinc-600">
+                  <tr className="hover:bg-slate-50/40 text-slate-600">
                     <td className="p-2 text-left pl-4">(-) Taxes</td>
                     {historical3Y.map((_, i) => (
-                      <td key={i} className="p-2 font-mono text-zinc-400 bg-zinc-50/30">-</td>
+                      <td key={i} className="p-2 font-mono text-slate-500 bg-slate-50/30">-</td>
                     ))}
                     {forecast5Y.map((f, i) => (
-                      <td key={i} className="p-2 font-mono text-zinc-600">
+                      <td key={i} className="p-2 font-mono text-slate-600">
                         {formatLargeNum(f.projected_ebit - f.projected_nopat, currency)}
                       </td>
                     ))}
                   </tr>
 
                   {/* NOPAT */}
-                  <tr className="hover:bg-zinc-50/40 font-semibold text-zinc-800 bg-zinc-50/20">
+                  <tr className="hover:bg-slate-50/40 font-semibold text-slate-800 bg-slate-50/20">
                     <td className="p-2 text-left">(=) NOPAT (EBIT × (1 - t))</td>
                     {historical3Y.map((_, i) => (
-                      <td key={i} className="p-2 font-mono text-zinc-400 bg-zinc-50/30">-</td>
+                      <td key={i} className="p-2 font-mono text-slate-500 bg-slate-50/30">-</td>
                     ))}
                     {forecast5Y.map((f, i) => (
-                      <td key={i} className="p-2 font-mono text-zinc-900">
+                      <td key={i} className="p-2 font-mono text-slate-900">
                         {formatLargeNum(f.projected_nopat, currency)}
                       </td>
                     ))}
                   </tr>
 
                   {/* Net CapEx */}
-                  <tr className="hover:bg-zinc-50/40 text-zinc-600">
+                  <tr className="hover:bg-slate-50/40 text-slate-600">
                     <td className="p-2 text-left pl-4">(-) Net CapEx (CapEx - D&A)</td>
                     {historical3Y.map((h, i) => (
-                      <td key={i} className="p-2 font-mono text-zinc-500 bg-zinc-50/30">
+                      <td key={i} className="p-2 font-mono text-slate-500 bg-slate-50/30">
                         {h.capex != null && h.depreciation != null
                           ? formatLargeNum(Math.max(0, h.capex - h.depreciation), currency)
                           : (h.capex != null ? formatLargeNum(h.capex, currency) : '-')}
                       </td>
                     ))}
                     {forecast5Y.map((f, i) => (
-                      <td key={i} className="p-2 font-mono text-zinc-600">
+                      <td key={i} className="p-2 font-mono text-slate-600">
                         {formatLargeNum(f.projected_net_capex, currency)}
                       </td>
                     ))}
                   </tr>
 
                   {/* CapEx / D&A Coverage Ratio & Lifecycle Phase */}
-                  <tr className="hover:bg-zinc-50/40 text-[11px] text-zinc-500">
+                  <tr className="hover:bg-slate-50/40 text-[11px] text-slate-500">
                     <td className="p-2 text-left pl-6" title="อัตราส่วนการลงทุนเทียบกับค่าเสื่อม: >1.5x ขยายกำลังผลิต, 0.85-1.3x รักษากำลังผลิต, <0.85x ชะลอลงทุน">
                       └ CapEx / D&A Coverage
                     </td>
                     {historical3Y.map((h, i) => {
                       const ratio = h.capex_to_depreciation_ratio ?? (h.capex != null && h.depreciation != null && h.depreciation > 0 ? Number((Math.abs(h.capex) / Math.abs(h.depreciation)).toFixed(2)) : null)
                       return (
-                        <td key={i} className="p-2 font-mono text-zinc-500 bg-zinc-50/30">
+                        <td key={i} className="p-2 font-mono text-slate-500 bg-slate-50/30">
                           {ratio != null ? (
                             <span className="flex items-center justify-end gap-1">
                               <span>{ratio.toFixed(2)}x</span>
                               <span
-                                className={`text-[9px] px-1 rounded ${
+                                className={`text-[11px] px-1 rounded ${
                                   ratio >= 1.5
                                     ? 'bg-sky-50 text-sky-700'
                                     : ratio >= 0.85
@@ -1401,12 +1412,12 @@ export default function ValuationWorkbenchCard({
                     {forecast5Y.map((f, i) => {
                       const ratio = f.capex_to_depreciation_ratio ?? (f.projected_capex > 0 && f.projected_depreciation > 0 ? Number((f.projected_capex / f.projected_depreciation).toFixed(2)) : null)
                       return (
-                        <td key={i} className="p-2 font-mono text-zinc-600">
+                        <td key={i} className="p-2 font-mono text-slate-600">
                           {ratio != null ? (
                             <span className="flex items-center justify-end gap-1">
                               <span>{ratio.toFixed(2)}x</span>
                               <span
-                                className={`text-[9px] px-1 rounded ${
+                                className={`text-[11px] px-1 rounded ${
                                   ratio >= 1.5
                                     ? 'bg-sky-50 text-sky-700'
                                     : ratio >= 0.85
@@ -1424,36 +1435,36 @@ export default function ValuationWorkbenchCard({
                   </tr>
 
                   {/* Delta NWC */}
-                  <tr className="hover:bg-zinc-50/40 text-zinc-600">
+                  <tr className="hover:bg-slate-50/40 text-slate-600">
                     <td className="p-2 text-left pl-4">(-) ΔNWC (Change in Working Capital)</td>
                     {historical3Y.map((_, i) => (
-                      <td key={i} className="p-2 font-mono text-zinc-400 bg-zinc-50/30">-</td>
+                      <td key={i} className="p-2 font-mono text-slate-500 bg-slate-50/30">-</td>
                     ))}
                     {forecast5Y.map((f, i) => (
-                      <td key={i} className="p-2 font-mono text-zinc-600">
+                      <td key={i} className="p-2 font-mono text-slate-600">
                         {formatLargeNum(f.projected_delta_nwc, currency)}
                       </td>
                     ))}
                   </tr>
 
                   {/* Reinvestment */}
-                  <tr className="hover:bg-zinc-50/40 text-zinc-700">
+                  <tr className="hover:bg-slate-50/40 text-slate-700">
                     <td className="p-2 text-left pl-4">(=) Total Reinvestment (Net CapEx + ΔNWC)</td>
                     {historical3Y.map((_, i) => (
-                      <td key={i} className="p-2 font-mono text-zinc-400 bg-zinc-50/30">-</td>
+                      <td key={i} className="p-2 font-mono text-slate-500 bg-slate-50/30">-</td>
                     ))}
                     {forecast5Y.map((f, i) => (
-                      <td key={i} className="p-2 font-mono text-zinc-700 font-semibold">
+                      <td key={i} className="p-2 font-mono text-slate-700 font-semibold">
                         {formatLargeNum(f.projected_reinvestment_currency, currency)}
                       </td>
                     ))}
                   </tr>
 
                   {/* UFCF */}
-                  <tr className="hover:bg-zinc-50/40 font-bold text-emerald-800 bg-emerald-50/20">
+                  <tr className="hover:bg-slate-50/40 font-bold text-emerald-800 bg-emerald-50/20">
                     <td className="p-2 text-left">(=) Unlevered Free Cash Flow (UFCF)</td>
                     {historical3Y.map((h, i) => (
-                      <td key={i} className="p-2 font-mono text-zinc-700 bg-zinc-50/30">
+                      <td key={i} className="p-2 font-mono text-slate-700 bg-slate-50/30">
                         {h.fcf != null ? formatLargeNum(h.fcf, currency) : '-'}
                       </td>
                     ))}
@@ -1465,10 +1476,10 @@ export default function ValuationWorkbenchCard({
                   </tr>
 
                   {/* Mid-Year Discount Factor */}
-                  <tr className="hover:bg-zinc-50/40 text-[11px] text-zinc-500">
+                  <tr className="hover:bg-slate-50/40 text-[11px] text-slate-500">
                     <td className="p-2 text-left pl-4">(×) Mid-Year Discount Factor (t - 0.5)</td>
                     {historical3Y.map((_, i) => (
-                      <td key={i} className="p-2 font-mono text-zinc-400 bg-zinc-50/30">-</td>
+                      <td key={i} className="p-2 font-mono text-slate-500 bg-slate-50/30">-</td>
                     ))}
                     {forecast5Y.map((f, i) => (
                       <td key={i} className="p-2 font-mono text-sky-800 font-semibold">
@@ -1478,10 +1489,10 @@ export default function ValuationWorkbenchCard({
                   </tr>
 
                   {/* PV of FCF */}
-                  <tr className="hover:bg-zinc-50/40 font-bold text-sky-900 bg-sky-50/30 border-t border-edge/60">
+                  <tr className="hover:bg-slate-50/40 font-bold text-sky-900 bg-sky-50/30 border-t border-edge/60">
                     <td className="p-2 text-left">(=) PV of Cash Flow ({currency}M)</td>
                     {historical3Y.map((_, i) => (
-                      <td key={i} className="p-2 font-mono text-zinc-400 bg-zinc-50/30">-</td>
+                      <td key={i} className="p-2 font-mono text-slate-500 bg-slate-50/30">-</td>
                     ))}
                     {forecast5Y.map((f, i) => (
                       <td key={i} className="p-2 font-mono text-sky-950 font-extrabold">
@@ -1503,10 +1514,10 @@ export default function ValuationWorkbenchCard({
             <div className="flex items-center gap-2">
               <span className="text-base">📐</span>
               <div>
-                <span className="text-xs font-bold uppercase tracking-wider text-zinc-800 block">
+                <span className="text-xs font-bold uppercase tracking-wider text-slate-800 block">
                   5×5 Valuation Sensitivity Matrix (3D Suite)
                 </span>
-                <span className="text-[10px] text-zinc-500">
+                <span className="text-[11px] text-slate-500">
                   ทดสอบความทนทานต่อ Valuation (WACC vs g), Operating (Growth vs Margin), และ Macro Shock (Beta vs 10Y Yield) — 💡 ตัวช่วยดูว่าถ้าเศรษฐกิจเปลี่ยน มูลค่าหุ้นจะไปอยู่ตรงไหน
                 </span>
               </div>
@@ -1514,10 +1525,10 @@ export default function ValuationWorkbenchCard({
             <button
               type="button"
               onClick={() => setIsSensitivityOpen(!isSensitivityOpen)}
-              className="text-xs font-semibold px-2.5 py-1 rounded-lg border border-edge/80 bg-white hover:bg-zinc-50 text-sky-700 transition-all flex items-center gap-1 shadow-2xs"
+              className="text-xs font-semibold px-2.5 py-1 rounded-lg border border-edge/80 bg-white hover:bg-slate-50 text-sky-700 transition-all flex items-center gap-1 shadow-sm"
             >
               <span>{isSensitivityOpen ? 'ย่อตาราง' : 'แสดงตาราง Sensitivity (5×5)'}</span>
-              <span className="text-[10px]">{isSensitivityOpen ? '▲' : '▼'}</span>
+              <span className="text-[11px]">{isSensitivityOpen ? '▲' : '▼'}</span>
             </button>
           </div>
 
@@ -1533,8 +1544,8 @@ export default function ValuationWorkbenchCard({
                   }}
                   className={`px-3 py-1.5 rounded-lg font-bold transition-all ${
                     sensitivityTab === 'valuation'
-                      ? 'bg-sky-600 text-white shadow-xs'
-                      : 'bg-zinc-100 text-zinc-600 hover:bg-zinc-200'
+                      ? 'bg-sky-600 text-white shadow-sm'
+                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                   }`}
                 >
                   1. Valuation (WACC vs g)
@@ -1548,8 +1559,8 @@ export default function ValuationWorkbenchCard({
                     }}
                     className={`px-3 py-1.5 rounded-lg font-bold transition-all ${
                       sensitivityTab === 'operating'
-                        ? 'bg-sky-600 text-white shadow-xs'
-                        : 'bg-zinc-100 text-zinc-600 hover:bg-zinc-200'
+                        ? 'bg-sky-600 text-white shadow-sm'
+                        : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                     }`}
                   >
                     2. Operating (Growth vs Margin)
@@ -1564,8 +1575,8 @@ export default function ValuationWorkbenchCard({
                     }}
                     className={`px-3 py-1.5 rounded-lg font-bold transition-all ${
                       sensitivityTab === 'macro'
-                        ? 'bg-sky-600 text-white shadow-xs'
-                        : 'bg-zinc-100 text-zinc-600 hover:bg-zinc-200'
+                        ? 'bg-sky-600 text-white shadow-sm'
+                        : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                     }`}
                   >
                     3. Macro Shock (Beta vs 10Y Yield)
@@ -1579,13 +1590,13 @@ export default function ValuationWorkbenchCard({
                   <table className="w-full text-center border-collapse text-xs">
                     <thead>
                       <tr>
-                        <th className="p-1.5 text-[10px] text-zinc-400 font-sans border-b border-edge/60 bg-zinc-50/50">
+                        <th className="p-1.5 text-[11px] text-slate-500 font-sans border-b border-edge/60 bg-slate-50/50">
                           WACC \ g
                         </th>
                         {valuationMatrix.terminal_growth_values.map((g, idx) => (
                           <th
                             key={idx}
-                            className="p-1.5 text-[11px] font-bold text-zinc-700 border-b border-edge/60 bg-zinc-50/50 font-mono"
+                            className="p-1.5 text-[11px] font-bold text-slate-700 border-b border-edge/60 bg-slate-50/50 font-mono"
                           >
                             {g.toFixed(1)}%
                           </th>
@@ -1597,7 +1608,7 @@ export default function ValuationWorkbenchCard({
                         const rowWacc = valuationMatrix.wacc_values[rIdx]
                         return (
                           <tr key={rIdx} className="border-b border-edge/30">
-                            <td className="p-1.5 text-[11px] font-bold text-zinc-700 bg-zinc-50/50 text-right pr-2 font-mono">
+                            <td className="p-1.5 text-[11px] font-bold text-slate-700 bg-slate-50/50 text-right pr-2 font-mono">
                               {rowWacc != null ? `${rowWacc.toFixed(1)}%` : `Row ${rIdx}`}
                             </td>
                             {row.map((cell, cIdx) => {
@@ -1608,7 +1619,7 @@ export default function ValuationWorkbenchCard({
                                   : cell.verdict === 'overvalued'
                                   ? 'bg-rose-50 text-rose-800 border-rose-200'
                                   : cell.verdict === 'unavailable'
-                                  ? 'bg-zinc-100 text-zinc-400 border-zinc-200'
+                                  ? 'bg-slate-100 text-slate-500 border-slate-200'
                                   : 'bg-sky-50 text-sky-800 border-sky-200'
 
                               return (
@@ -1616,18 +1627,18 @@ export default function ValuationWorkbenchCard({
                                   key={cIdx}
                                   onClick={() => setSelectedCell({ type: 'valuation', data: cell })}
                                   className={`p-1.5 cursor-pointer transition-all border ${bgClass} ${
-                                    cell.is_base ? 'ring-2 ring-indigo-500 bg-[#BDD7EE]/40 font-extrabold z-10' : ''
+                                    cell.is_base ? 'ring-2 ring-blue-500 bg-[#BDD7EE]/40 font-extrabold z-10' : ''
                                   } ${isSelected ? 'ring-2 ring-sky-500 scale-105' : 'hover:opacity-80'}`}
                                   title={`WACC: ${cell.wacc_pct}%, g: ${cell.terminal_growth_pct}% -> Target: ${currency}${cell.target_price} (${cell.upside_pct >= 0 ? '+' : ''}${cell.upside_pct}%)${cell.is_base ? ' [Base Case Anchor]' : ''}`}
                                 >
                                   <div className="text-[11px] font-bold leading-tight font-mono">
                                     {cell.target_price > 0 ? `${currency}${cell.target_price.toFixed(1)}` : 'N/A'}
                                   </div>
-                                  <div className="text-[9px] opacity-75 leading-none mt-0.5 font-mono">
+                                  <div className="text-[11px] opacity-75 leading-none mt-0.5 font-mono">
                                     {cell.target_price > 0 ? `${cell.upside_pct >= 0 ? '+' : ''}${cell.upside_pct.toFixed(0)}%` : '-'}
                                   </div>
                                   {cell.is_base && (
-                                    <div className="text-[8px] uppercase tracking-wider text-indigo-700 font-sans font-bold mt-0.5">
+                                    <div className="text-[11px] uppercase tracking-wider text-blue-700 font-sans font-bold mt-0.5">
                                       Base
                                     </div>
                                   )}
@@ -1648,13 +1659,13 @@ export default function ValuationWorkbenchCard({
                   <table className="w-full text-center border-collapse text-xs">
                     <thead>
                       <tr>
-                        <th className="p-1.5 text-[10px] text-zinc-400 font-sans border-b border-edge/60 bg-zinc-50/50">
+                        <th className="p-1.5 text-[11px] text-slate-500 font-sans border-b border-edge/60 bg-slate-50/50">
                           Growth \ Margin
                         </th>
                         {operatingMatrix.margin_values.map((m, idx) => (
                           <th
                             key={idx}
-                            className="p-1.5 text-[11px] font-bold text-zinc-700 border-b border-edge/60 bg-zinc-50/50 font-mono"
+                            className="p-1.5 text-[11px] font-bold text-slate-700 border-b border-edge/60 bg-slate-50/50 font-mono"
                           >
                             {m.toFixed(1)}%
                           </th>
@@ -1666,7 +1677,7 @@ export default function ValuationWorkbenchCard({
                         const rowGrowth = operatingMatrix.growth_values[rIdx]
                         return (
                           <tr key={rIdx} className="border-b border-edge/30">
-                            <td className="p-1.5 text-[11px] font-bold text-zinc-700 bg-zinc-50/50 text-right pr-2 font-mono">
+                            <td className="p-1.5 text-[11px] font-bold text-slate-700 bg-slate-50/50 text-right pr-2 font-mono">
                               {rowGrowth != null ? `${rowGrowth.toFixed(1)}%` : `Row ${rIdx}`}
                             </td>
                             {row.map((cell, cIdx) => {
@@ -1677,7 +1688,7 @@ export default function ValuationWorkbenchCard({
                                   : cell.verdict === 'overvalued'
                                   ? 'bg-rose-50 text-rose-800 border-rose-200'
                                   : cell.verdict === 'unavailable'
-                                  ? 'bg-zinc-100 text-zinc-400 border-zinc-200'
+                                  ? 'bg-slate-100 text-slate-500 border-slate-200'
                                   : 'bg-sky-50 text-sky-800 border-sky-200'
 
                               return (
@@ -1685,18 +1696,18 @@ export default function ValuationWorkbenchCard({
                                   key={cIdx}
                                   onClick={() => setSelectedCell({ type: 'operating', data: cell })}
                                   className={`p-1.5 cursor-pointer transition-all border ${bgClass} ${
-                                    cell.is_base ? 'ring-2 ring-indigo-500 bg-[#BDD7EE]/40 font-extrabold z-10' : ''
+                                    cell.is_base ? 'ring-2 ring-blue-500 bg-[#BDD7EE]/40 font-extrabold z-10' : ''
                                   } ${isSelected ? 'ring-2 ring-sky-500 scale-105' : 'hover:opacity-80'}`}
                                   title={`Growth: ${cell.revenue_growth_pct}%, Margin: ${cell.ebit_margin_pct}% -> Target: ${currency}${cell.target_price} (${cell.upside_pct >= 0 ? '+' : ''}${cell.upside_pct}%)${cell.is_base ? ' [Base Case Anchor]' : ''}`}
                                 >
                                   <div className="text-[11px] font-bold leading-tight font-mono">
                                     {cell.target_price > 0 ? `${currency}${cell.target_price.toFixed(1)}` : 'N/A'}
                                   </div>
-                                  <div className="text-[9px] opacity-75 leading-none mt-0.5 font-mono">
+                                  <div className="text-[11px] opacity-75 leading-none mt-0.5 font-mono">
                                     {cell.target_price > 0 ? `${cell.upside_pct >= 0 ? '+' : ''}${cell.upside_pct.toFixed(0)}%` : '-'}
                                   </div>
                                   {cell.is_base && (
-                                    <div className="text-[8px] uppercase tracking-wider text-indigo-700 font-sans font-bold mt-0.5">
+                                    <div className="text-[11px] uppercase tracking-wider text-blue-700 font-sans font-bold mt-0.5">
                                       Base
                                     </div>
                                   )}
@@ -1717,13 +1728,13 @@ export default function ValuationWorkbenchCard({
                   <table className="w-full text-center border-collapse text-xs">
                     <thead>
                       <tr>
-                        <th className="p-1.5 text-[10px] text-zinc-400 font-sans border-b border-edge/60 bg-zinc-50/50">
+                        <th className="p-1.5 text-[11px] text-slate-500 font-sans border-b border-edge/60 bg-slate-50/50">
                           Beta \ 10Y Yield
                         </th>
                         {macroMatrix.yield_values.map((y, idx) => (
                           <th
                             key={idx}
-                            className="p-1.5 text-[11px] font-bold text-zinc-700 border-b border-edge/60 bg-zinc-50/50 font-mono"
+                            className="p-1.5 text-[11px] font-bold text-slate-700 border-b border-edge/60 bg-slate-50/50 font-mono"
                           >
                             {y.toFixed(2)}%
                           </th>
@@ -1735,7 +1746,7 @@ export default function ValuationWorkbenchCard({
                         const rowBeta = macroMatrix.beta_values[rIdx]
                         return (
                           <tr key={rIdx} className="border-b border-edge/30">
-                            <td className="p-1.5 text-[11px] font-bold text-zinc-700 bg-zinc-50/50 text-right pr-2 font-mono">
+                            <td className="p-1.5 text-[11px] font-bold text-slate-700 bg-slate-50/50 text-right pr-2 font-mono">
                               {rowBeta != null ? `${rowBeta.toFixed(2)}β` : `Row ${rIdx}`}
                             </td>
                             {row.map((cell, cIdx) => {
@@ -1746,7 +1757,7 @@ export default function ValuationWorkbenchCard({
                                   : cell.verdict === 'overvalued'
                                   ? 'bg-rose-50 text-rose-800 border-rose-200'
                                   : cell.verdict === 'unavailable'
-                                  ? 'bg-zinc-100 text-zinc-400 border-zinc-200'
+                                  ? 'bg-slate-100 text-slate-500 border-slate-200'
                                   : 'bg-sky-50 text-sky-800 border-sky-200'
 
                               return (
@@ -1754,18 +1765,18 @@ export default function ValuationWorkbenchCard({
                                   key={cIdx}
                                   onClick={() => setSelectedCell({ type: 'macro', data: cell })}
                                   className={`p-1.5 cursor-pointer transition-all border ${bgClass} ${
-                                    cell.is_base ? 'ring-2 ring-indigo-500 bg-[#BDD7EE]/40 font-extrabold z-10' : ''
+                                    cell.is_base ? 'ring-2 ring-blue-500 bg-[#BDD7EE]/40 font-extrabold z-10' : ''
                                   } ${isSelected ? 'ring-2 ring-sky-500 scale-105' : 'hover:opacity-80'}`}
                                   title={`Beta: ${cell.beta}, 10Y Yield: ${cell.risk_free_rate_pct}% (Eff. WACC: ${cell.effective_wacc_pct}%) -> Target: ${currency}${cell.target_price} (${cell.upside_pct >= 0 ? '+' : ''}${cell.upside_pct}%)${cell.is_base ? ' [Base Case Anchor]' : ''}`}
                                 >
                                   <div className="text-[11px] font-bold leading-tight font-mono">
                                     {cell.target_price > 0 ? `${currency}${cell.target_price.toFixed(1)}` : 'N/A'}
                                   </div>
-                                  <div className="text-[9px] opacity-75 leading-none mt-0.5 font-mono">
+                                  <div className="text-[11px] opacity-75 leading-none mt-0.5 font-mono">
                                     {cell.target_price > 0 ? `${cell.upside_pct >= 0 ? '+' : ''}${cell.upside_pct.toFixed(0)}%` : '-'}
                                   </div>
                                   {cell.is_base && (
-                                    <div className="text-[8px] uppercase tracking-wider text-indigo-700 font-sans font-bold mt-0.5">
+                                    <div className="text-[11px] uppercase tracking-wider text-blue-700 font-sans font-bold mt-0.5">
                                       Base
                                     </div>
                                   )}
@@ -1786,19 +1797,19 @@ export default function ValuationWorkbenchCard({
                   <div className="flex items-center gap-2">
                     <span className="font-bold text-sky-950">🔍 Selected Scenario:</span>
                     {selectedCell.type === 'valuation' && (
-                      <span className="text-zinc-700">
+                      <span className="text-slate-700">
                         WACC: <strong>{(selectedCell.data as SensitivityCellDTO).wacc_pct.toFixed(1)}%</strong> |
                         Terminal g: <strong>{(selectedCell.data as SensitivityCellDTO).terminal_growth_pct.toFixed(1)}%</strong>
                       </span>
                     )}
                     {selectedCell.type === 'operating' && (
-                      <span className="text-zinc-700">
+                      <span className="text-slate-700">
                         Revenue Growth: <strong>{(selectedCell.data as OperatingSensitivityCellDTO).revenue_growth_pct.toFixed(1)}%</strong> |
                         EBIT Margin: <strong>{(selectedCell.data as OperatingSensitivityCellDTO).ebit_margin_pct.toFixed(1)}%</strong>
                       </span>
                     )}
                     {selectedCell.type === 'macro' && (
-                      <span className="text-zinc-700">
+                      <span className="text-slate-700">
                         Beta: <strong>{(selectedCell.data as MacroSensitivityCellDTO).beta.toFixed(2)}</strong> |
                         10Y Yield: <strong>{(selectedCell.data as MacroSensitivityCellDTO).risk_free_rate_pct.toFixed(2)}%</strong>
                         (Effective WACC: <strong>{(selectedCell.data as MacroSensitivityCellDTO).effective_wacc_pct.toFixed(2)}%</strong>)
@@ -1806,7 +1817,7 @@ export default function ValuationWorkbenchCard({
                     )}
                   </div>
                   <div className="flex items-center gap-2 font-mono">
-                    <span className="font-bold text-zinc-900">
+                    <span className="font-bold text-slate-900">
                       Target Price: {currency}{selectedCell.data.target_price.toFixed(2)}
                     </span>
                     <span className={`px-2 py-0.5 rounded-full font-bold text-[11px] ${
@@ -1820,18 +1831,18 @@ export default function ValuationWorkbenchCard({
 
               {/* Sensitivity Summary Footer */}
               {sensitivitySummary && (
-                <div className="flex flex-wrap items-center justify-between gap-2 p-2 rounded-lg bg-zinc-100/70 text-[11px] text-zinc-600 font-sans">
+                <div className="flex flex-wrap items-center justify-between gap-2 p-2 rounded-lg bg-slate-100/70 text-[11px] text-slate-600 font-sans">
                   <div className="flex items-center gap-3">
                     <span>
                       ช่วงราคาประเมิน: <strong>{currency}{sensitivitySummary.min_target_price.toFixed(1)}</strong> ถึง <strong>{currency}{sensitivitySummary.max_target_price.toFixed(1)}</strong>
                     </span>
-                    <span className="text-zinc-400">|</span>
+                    <span className="text-slate-500">|</span>
                     <span>
                       Upside Spread: <strong>{sensitivitySummary.min_upside_pct.toFixed(0)}%</strong> ถึง <strong>{sensitivitySummary.max_upside_pct.toFixed(0)}%</strong>
                     </span>
                   </div>
                   {sensitivitySummary.wacc_spread_pct.length === 2 && (
-                    <div className="text-zinc-500 text-[10px]">
+                    <div className="text-slate-500 text-[11px]">
                       WACC: {sensitivitySummary.wacc_spread_pct[0]}% - {sensitivitySummary.wacc_spread_pct[1]}% | g: {sensitivitySummary.growth_spread_pct[0]}% - {sensitivitySummary.growth_spread_pct[1]}%
                     </div>
                   )}
@@ -1861,11 +1872,11 @@ export default function ValuationWorkbenchCard({
 
             {piotroski?.f_score != null && (
               <div className="flex items-center gap-1.5">
-                <span className="text-xs text-zinc-600 font-medium">Piotroski F-Score:</span>
+                <span className="text-xs text-slate-600 font-medium">Piotroski F-Score:</span>
                 <span className="px-2.5 py-0.5 rounded-full bg-sky-100 text-sky-800 text-xs font-bold border border-sky-200">
                   {piotroski.f_score} / 9
                 </span>
-                <span className="text-[11px] text-zinc-500 font-semibold uppercase">
+                <span className="text-[11px] text-slate-500 font-semibold uppercase">
                   ({piotroski.status || 'AVAILABLE'})
                 </span>
               </div>
@@ -1875,32 +1886,32 @@ export default function ValuationWorkbenchCard({
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 text-xs">
             {/* ROIC */}
             <div className="bg-surface/80 rounded-lg p-2.5 border border-edge/40">
-              <span className="text-zinc-400 block text-[10px] uppercase">ROIC (ผลตอบแทนลงทุน)</span>
-              <span className="font-bold text-zinc-900 text-sm">
+              <span className="text-slate-500 block text-[11px] uppercase">ROIC (ผลตอบแทนลงทุน)</span>
+              <span className="font-bold text-slate-900 text-sm">
                 {qualityMetrics?.roic_pct != null ? `${qualityMetrics.roic_pct}%` : 'N/A'}
               </span>
             </div>
 
             {/* FCF Margin */}
             <div className="bg-surface/80 rounded-lg p-2.5 border border-edge/40">
-              <span className="text-zinc-400 block text-[10px] uppercase">FCF Margin (กระแสเงินสด)</span>
-              <span className="font-bold text-zinc-900 text-sm">
+              <span className="text-slate-500 block text-[11px] uppercase">FCF Margin (กระแสเงินสด)</span>
+              <span className="font-bold text-slate-900 text-sm">
                 {qualityMetrics?.fcf_margin_pct != null ? `${qualityMetrics.fcf_margin_pct}%` : 'N/A'}
               </span>
             </div>
 
             {/* FCF Yield */}
             <div className="bg-surface/80 rounded-lg p-2.5 border border-edge/40">
-              <span className="text-zinc-400 block text-[10px] uppercase">FCF Yield / Mcap</span>
-              <span className="font-bold text-zinc-900 text-sm">
+              <span className="text-slate-500 block text-[11px] uppercase">FCF Yield / Mcap</span>
+              <span className="font-bold text-slate-900 text-sm">
                 {qualityMetrics?.fcf_yield_pct != null ? `${qualityMetrics.fcf_yield_pct}%` : 'N/A'}
               </span>
             </div>
 
             {/* OCF to Net Income */}
             <div className="bg-surface/80 rounded-lg p-2.5 border border-edge/40">
-              <span className="text-zinc-400 block text-[10px] uppercase">OCF / Net Income Quality</span>
-              <span className="font-bold text-zinc-900 text-sm">
+              <span className="text-slate-500 block text-[11px] uppercase">OCF / Net Income Quality</span>
+              <span className="font-bold text-slate-900 text-sm">
                 {qualityMetrics?.ocf_to_net_income != null ? `${qualityMetrics.ocf_to_net_income}x` : 'N/A'}
               </span>
             </div>
@@ -1937,15 +1948,15 @@ export default function ValuationWorkbenchCard({
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-xs">
             {sectorKpis.kpis.map((k, idx) => (
               <div key={idx} className="bg-surface/80 rounded-lg p-2.5 border border-edge/40">
-                <span className="text-zinc-400 block text-[10px] uppercase truncate" title={k.definition || k.name}>
+                <span className="text-slate-500 block text-[11px] uppercase truncate" title={k.definition || k.name}>
                   {k.name}
                 </span>
                 <div className="flex items-baseline justify-between mt-1">
-                  <span className="font-bold text-zinc-900 text-sm">
+                  <span className="font-bold text-slate-900 text-sm">
                     {k.value != null ? `${k.value}${k.unit ? (k.unit === 'percent' || k.unit === '%' ? '%' : ` ${k.unit}`) : ''}` : 'N/A'}
                   </span>
                   {k.benchmark && (
-                    <span className="text-[10px] text-zinc-500 font-medium">
+                    <span className="text-[11px] text-slate-500 font-medium">
                       {k.benchmark}
                     </span>
                   )}
@@ -1956,51 +1967,56 @@ export default function ValuationWorkbenchCard({
         </div>
       )}
 
-      {/* 5. 💼 WACC & Capital Structure Inspector Modal */}
+      {/* 5. WACC & Capital Structure Inspector Modal */}
       {isWaccModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-4 animate-fade-in">
-          <div className="bg-white rounded-2xl border border-edge/80 shadow-2xl max-w-lg w-full p-6 space-y-4">
+        <InPlaceDialog
+          titleId="wacc-inspector-modal-title"
+          onClose={() => setIsWaccModalOpen(false)}
+          backdropClassName="absolute inset-0 bg-slate-900/50 backdrop-blur-sm"
+          panelClassName="bg-white rounded-2xl border border-edge/80 shadow-2xl max-w-lg w-full p-6 space-y-4"
+        >
             <div className="flex items-center justify-between border-b border-edge/60 pb-3">
               <div className="flex items-center gap-2">
-                <span className="text-lg">💼</span>
-                <h4 className="font-bold text-zinc-900 text-sm uppercase tracking-wider">
+                <BriefcasePortfolioIcon className="h-4 w-4 text-section-accent shrink-0" />
+                <h4 id="wacc-inspector-modal-title" className="font-bold text-slate-900 text-sm uppercase tracking-wider">
                   WACC & Capital Structure Decomposition
                 </h4>
               </div>
               <button
                 type="button"
                 onClick={() => setIsWaccModalOpen(false)}
-                className="text-zinc-400 hover:text-zinc-700 font-bold p-1 rounded-md text-sm"
+                aria-label="Close WACC Inspector"
+                className="text-slate-500 hover:text-slate-700 p-1.5 rounded-lg hover:bg-slate-100 transition-colors"
               >
-                ✕
+                <CloseIcon className="h-4 w-4" />
               </button>
             </div>
 
-            <div className="space-y-3 text-xs text-zinc-600">
+            <div className="space-y-3 text-xs text-slate-600">
               <div className="rounded-lg bg-sky-50/70 p-3 border border-sky-100">
                 <div className="text-[11px] font-bold text-sky-900 uppercase">WACC Formula & Components</div>
-                <div className="font-mono text-zinc-800 text-xs mt-1">
+                <div className="font-mono text-slate-800 text-xs mt-1">
                   WACC = (E / V × K_e) + (D / V × K_d × (1 - t))
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div className="p-3 rounded-lg border border-edge/50 bg-surface/50">
-                  <span className="text-[10px] text-zinc-400 uppercase font-bold block">Cost of Equity (K_e)</span>
-                  <div className="text-base font-extrabold text-zinc-900 font-mono mt-0.5">
+                  <span className="text-[11px] text-slate-500 uppercase font-bold block">Cost of Equity (K_e)</span>
+                  <div className="text-base font-extrabold text-slate-900 font-mono mt-0.5">
                     {dcf?.cost_of_equity_pct != null ? `${dcf.cost_of_equity_pct.toFixed(2)}%` : 'N/A'}
                   </div>
-                  <div className="text-[10px] text-zinc-500 mt-1">
+                  <div className="text-[11px] text-slate-500 mt-1">
                     CAPM: R_f ({dcf?.risk_free_rate_pct ?? 4.25}%) + β × ERP ({dcf?.erp_pct ?? 5.5}%)
                   </div>
                 </div>
 
                 <div className="p-3 rounded-lg border border-edge/50 bg-surface/50">
-                  <span className="text-[10px] text-zinc-400 uppercase font-bold block">Cost of Debt (K_d)</span>
-                  <div className="text-base font-extrabold text-zinc-900 font-mono mt-0.5">
+                  <span className="text-[11px] text-slate-500 uppercase font-bold block">Cost of Debt (K_d)</span>
+                  <div className="text-base font-extrabold text-slate-900 font-mono mt-0.5">
                     {dcf?.cost_of_debt_pct != null ? `${dcf.cost_of_debt_pct.toFixed(2)}%` : '5.00%'}
                   </div>
-                  <div className="text-[10px] text-zinc-500 mt-1">
+                  <div className="text-[11px] text-slate-500 mt-1">
                     Effective after-tax borrowing cost
                   </div>
                 </div>
@@ -2008,40 +2024,40 @@ export default function ValuationWorkbenchCard({
 
               {/* Credit Rating & Damodaran Spread Benchmark Card */}
               {(reverseDcf?.synthetic_credit_rating || dcf?.synthetic_credit_rating) && (
-                <div className="rounded-xl border border-emerald-200/80 bg-gradient-to-br from-emerald-50/60 via-white to-emerald-50/30 p-3.5 space-y-2 shadow-2xs">
+                <div className="rounded-xl border border-emerald-200/80 bg-gradient-to-br from-emerald-50/60 via-white to-emerald-50/30 p-3.5 space-y-2 shadow-sm">
                   <div className="flex items-center justify-between text-xs border-b border-emerald-100 pb-2">
                     <span className="font-bold text-emerald-950 flex items-center gap-1.5">
                       <span>💳</span>
                       <span>Damodaran Credit Rating Benchmark</span>
                     </span>
-                    <span className="px-2 py-0.5 rounded font-mono font-bold text-xs bg-emerald-600 text-white shadow-2xs">
+                    <span className="px-2 py-0.5 rounded font-mono font-bold text-xs bg-emerald-600 text-white shadow-sm">
                       {reverseDcf?.synthetic_credit_rating || dcf?.synthetic_credit_rating}
                     </span>
                   </div>
                   <div className="grid grid-cols-2 gap-2 text-xs pt-1">
                     <div>
-                      <span className="text-[10px] text-zinc-400 uppercase font-bold block">Interest Coverage (ICR)</span>
-                      <span className="font-mono font-bold text-zinc-800">
+                      <span className="text-[11px] text-slate-500 uppercase font-bold block">Interest Coverage (ICR)</span>
+                      <span className="font-mono font-bold text-slate-800">
                         {(reverseDcf?.interest_coverage_ratio ?? dcf?.interest_coverage_ratio) != null
                           ? `${(reverseDcf?.interest_coverage_ratio ?? dcf?.interest_coverage_ratio)?.toFixed(1)}x`
                           : 'N/A (Net Cash)'}
                       </span>
                     </div>
                     <div>
-                      <span className="text-[10px] text-zinc-400 uppercase font-bold block">Spread over 10Y Yield</span>
+                      <span className="text-[11px] text-slate-500 uppercase font-bold block">Spread over 10Y Yield</span>
                       <span className="font-mono font-bold text-emerald-700">
                         +{(reverseDcf?.credit_spread_bps ?? dcf?.credit_spread_bps ?? 60).toFixed(0)} bps
                       </span>
                     </div>
                   </div>
-                  <p className="text-[10px] text-zinc-500 leading-tight">
+                  <p className="text-[11px] text-slate-500 leading-tight">
                     อันดับความน่าเชื่อถือจำลองสะท้อนความสามารถในการชำระดอกเบี้ยจาก EBIT ตามเกณฑ์ Damodaran Coverage Table
                   </p>
                 </div>
               )}
 
               <div className="rounded-lg border border-edge/50 bg-surface/70 p-3 flex items-center justify-between">
-                <span className="font-semibold text-zinc-700">Effective Blended WACC:</span>
+                <span className="font-semibold text-slate-700">Effective Blended WACC:</span>
                 <span className="text-base font-extrabold text-sky-700 font-mono">
                   {dcf?.wacc_pct != null ? `${dcf.wacc_pct.toFixed(2)}%` : 'N/A'}
                 </span>
@@ -2057,8 +2073,7 @@ export default function ValuationWorkbenchCard({
                 ปิดหน้าต่าง
               </button>
             </div>
-          </div>
-        </div>
+        </InPlaceDialog>
       )}
     </div>
   )

@@ -35,6 +35,7 @@ from tools.macro.ingest import fetch_and_save_macro_snapshots
 from tools.market.equity_report_formatter import format_equity_analysis_report
 from tools.market.quant_history import save_equity_quant_snapshot
 from tools.market.equity_sidecar import write_equity_sidecar
+from tools.market.ticker_resolver import find_company_alias_matches, resolve_equity_ticker
 from core.agent_log import log_turn_start, log_manager_plan, log_worker_result, log_system_action, log_routing
 from core.llm_factory import detect_provider, get_llm
 from core.logger import get_logger
@@ -245,6 +246,7 @@ _NON_TICKER_UPPER_TOKENS = frozenset({
     "DEEP", "DIVE", "STOCK", "STOCKS", "TICKER", "ANALYZE", "ANALYSIS", "VS", "AND", "OR",
     "THE", "FOR", "TO", "IN", "ON", "AT", "BY", "WITH", "FROM", "OF",
     "NEW", "LATEST", "REPORT", "SUMMARY", "DIGEST", "VIEW", "CHECK", "PLEASE", "DETAIL",
+    "EXPLAIN", "READ",
 })
 _NO_SAVE_KEYWORDS = ("ไม่ต้องเซฟ", "ดูเฉยๆ", "แค่อยากรู้", "เช็คเฉยๆ", "no save", "ไม่ต้องบันทึก")
 _ARCHIVIST_KEYWORDS = (
@@ -271,13 +273,13 @@ def _extract_ticker_candidates(text: str) -> list[str]:
     for m in _TICKER_TOKEN_RE.finditer(clean_text):
         cand = m.group(1).strip()
         if cand and cand not in _NON_TICKER_UPPER_TOKENS:
-            found.append(cand)
+            found.append(resolve_equity_ticker(cand))
 
     # 2. Check explicit single-letter tickers (e.g. "หุ้น V" or "ticker T")
     for m in _EXPLICIT_SINGLE_TICKER_RE.finditer(clean_text):
         cand = m.group(1).strip().upper()
         if cand and cand not in _NON_TICKER_UPPER_TOKENS:
-            found.append(cand)
+            found.append(resolve_equity_ticker(cand))
 
     # 3. Check explicit equity phrase if none or case-insensitive (e.g. "วิเคราะห์หุ้น aapl และ nvda")
     phrase_match = _EXPLICIT_EQUITY_PHRASE_RE.search(clean_text)
@@ -288,9 +290,13 @@ def _extract_ticker_candidates(text: str) -> list[str]:
             w_clean = re.sub(r"^[^\w]+|[^\w]+$", "", w).upper()
             if not w_clean or w_clean in _NON_TICKER_UPPER_TOKENS:
                 continue
-            if re.match(r"^[A-Z0-9]{2,6}(?:[.-][A-Z0-9]{1,3})?$", w_clean) or re.match(r"^[0-9]{4,5}\.[A-Z]{1,3}$", w_clean):
+            if re.match(r"^[A-Z0-9]{2,12}(?:[.-][A-Z0-9]{1,3})?$", w_clean) or re.match(r"^[0-9]{4,5}\.[A-Z]{1,3}$", w_clean):
                 if not w_clean.isdigit():  # reject pure numeric without dot
-                    found.append(w_clean)
+                    found.append(resolve_equity_ticker(w_clean))
+
+    # 4. Also detect curated company names / aliases anywhere in text (e.g. INTEL -> INTC)
+    for alias_ticker in find_company_alias_matches(clean_text):
+        found.append(alias_ticker)
 
     # Deduplicate preserving order
     seen: set[str] = set()

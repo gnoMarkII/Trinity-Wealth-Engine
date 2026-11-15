@@ -42,7 +42,7 @@ export default function ResetConfirmModal({ selectedPortfolioId, onClose, onSucc
         <h3 id="reset-modal-title" className="text-base font-extrabold text-rose-700 flex items-center gap-2">
           🚨 ยืนยันการล้างข้อมูลพอร์ต (Clean Slate Reset)
         </h3>
-        <button type="button" onClick={onClose} className="text-zinc-400 hover:text-zinc-600">
+        <button type="button" onClick={onClose} className="text-slate-500 hover:text-slate-600">
           ✕
         </button>
       </div>
@@ -54,22 +54,22 @@ export default function ResetConfirmModal({ selectedPortfolioId, onClose, onSucc
           </div>
         )}
 
-        <div className="rounded-xl bg-rose-50/70 p-3.5 text-zinc-700 leading-relaxed space-y-2 border border-rose-100">
+        <div className="rounded-xl bg-rose-50/70 p-3.5 text-slate-700 leading-relaxed space-y-2 border border-rose-100">
           <p className="font-bold text-rose-900">
             ⚠️ คำเตือน: คุณกำลังจะล้างข้อมูลพอร์ตการลงทุนจริง (Actual Portfolio) ทั้งหมดกลับเป็นค่าเริ่มต้น!
           </p>
-          <ul className="list-disc pl-4 space-y-1 text-zinc-600">
+          <ul className="list-disc pl-4 space-y-1 text-slate-600">
             <li>ลบรายการ Holding ในพอร์ตทั้งหมดให้เหลือเพียง CASH_THB (0 บาท) และ CASH_USD ($0)</li>
             <li>รีเซ็ตสัดส่วนเป้าหมาย (Allocation Targets) กลับเป็น {defaultBucketsCount} กลยุทธ์มาตรฐาน ({defaultRatioStr})</li>
             <li>ลบไฟล์ Obsidian Sidecars ของสินทรัพย์ที่เคยมีออกจากสารบบเพื่อความสะอาด</li>
           </ul>
-          <p className="font-semibold text-zinc-800 pt-1">
+          <p className="font-semibold text-slate-800 pt-1">
             * ประวัติ Trading Journal, Watchlist/Goals และ Performance History จะไม่ถูกลบไปด้วย
           </p>
         </div>
 
         <div>
-          <label htmlFor="reset-input" className="block font-bold text-zinc-700 mb-1">
+          <label htmlFor="reset-input" className="block font-bold text-slate-700 mb-1">
             พิมพ์คำว่า <span className="font-mono text-rose-600 font-extrabold">RESET</span> เพื่อยืนยัน:
           </label>
           <input
@@ -78,16 +78,16 @@ export default function ResetConfirmModal({ selectedPortfolioId, onClose, onSucc
             value={confirmText}
             onChange={(e) => setConfirmText(e.target.value)}
             placeholder="RESET"
-            className="w-full rounded-xl border border-zinc-300 px-3 py-2 font-mono font-bold text-zinc-900 uppercase focus:border-rose-500 focus:outline-none"
+            className="w-full rounded-xl border border-slate-300 px-3 py-2 font-mono font-bold text-slate-900 uppercase focus:border-rose-500 focus:outline-none"
             required
           />
         </div>
 
-        <div className="flex justify-end gap-2 border-t border-zinc-100 pt-4">
+        <div className="flex justify-end gap-2 border-t border-slate-100 pt-4">
           <button
             type="button"
             onClick={onClose}
-            className="rounded-xl border border-zinc-300 bg-white px-4 py-2 font-semibold text-zinc-700 hover:bg-zinc-50"
+            className="rounded-xl border border-slate-300 bg-white px-4 py-2 font-semibold text-slate-700 hover:bg-slate-50"
           >
             ยกเลิก
           </button>

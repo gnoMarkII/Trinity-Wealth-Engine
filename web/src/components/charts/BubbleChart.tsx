@@ -110,26 +110,26 @@ export const BubbleChart: React.FC<BubbleChartProps> = ({
 
   if (validData.length === 0) {
     return (
-      <div className={`rounded-xl border border-slate-800 bg-slate-900/80 p-6 text-center ${className}`}>
-        {title && <h4 className="text-sm font-semibold text-slate-300">{title}</h4>}
+      <div className={`flow-panel rounded-2xl border border-edge bg-panel p-6 text-center shadow-sm ${className}`}>
+        {title && <h4 className="text-sm font-semibold text-slate-800">{title}</h4>}
         <p className="mt-4 text-xs text-slate-500">No cross-sectional multi-dimensional data available.</p>
       </div>
     )
   }
 
   return (
-    <div className={`relative rounded-xl border border-slate-800 bg-slate-900/90 p-5 shadow-lg backdrop-blur-sm ${className}`}>
-      <div className="mb-4 flex flex-wrap items-baseline justify-between gap-2 border-b border-slate-800/80 pb-3">
+    <div className={`relative flow-panel rounded-2xl border border-edge bg-panel p-5 shadow-sm backdrop-blur-md ${className}`}>
+      <div className="mb-4 flex flex-wrap items-baseline justify-between gap-2 border-b border-edge pb-3">
         <div>
-          {title && <h3 className="text-base font-semibold text-slate-100">{title}</h3>}
-          {subtitle && <p className="text-xs text-slate-400">{subtitle}</p>}
+          {title && <h3 className="text-base font-semibold text-slate-900">{title}</h3>}
+          {subtitle && <p className="text-xs text-slate-600">{subtitle}</p>}
         </div>
-        <div className="text-xs text-slate-400">
-          Axes: <span className="text-slate-200">{xLabel}</span> (X) vs <span className="text-slate-200">{yLabel}</span> (Y) • Size: <span className="text-slate-200">{sizeLabel}</span>
+        <div className="text-xs text-slate-600">
+          Axes: <span className="font-medium text-slate-900">{xLabel}</span> (X) vs <span className="font-medium text-slate-900">{yLabel}</span> (Y) • Size: <span className="font-medium text-slate-900">{sizeLabel}</span>
         </div>
       </div>
 
-      <div className="relative w-full overflow-hidden rounded-lg border border-slate-800 bg-slate-950">
+      <div className="relative w-full overflow-hidden rounded-xl border border-sky-100 bg-gradient-to-b from-slate-50/75 via-white to-sky-50/20 p-2 shadow-sm">
         <svg
           viewBox={`0 0 ${width} ${height}`}
           className="h-full w-full select-none"
@@ -143,8 +143,8 @@ export const BubbleChart: React.FC<BubbleChartProps> = ({
             const val = yMin + frac * (yMax - yMin)
             return (
               <g key={`h-${idx}`}>
-                <line x1={padLeft} y1={y} x2={width - padRight} y2={y} stroke="#1e293b" strokeDasharray="3 3" />
-                <text x={padLeft - 8} y={y + 4} textAnchor="end" fontSize="10" fill="#64748b">
+                <line x1={padLeft} y1={y} x2={width - padRight} y2={y} stroke="#e2e8f0" strokeDasharray="3 3" />
+                <text x={padLeft - 8} y={y + 4} textAnchor="end" fontSize="10" fill="#475569">
                   {val.toFixed(1)} {yUnit}
                 </text>
               </g>
@@ -157,8 +157,8 @@ export const BubbleChart: React.FC<BubbleChartProps> = ({
             const val = xMin + frac * (xMax - xMin)
             return (
               <g key={`v-${idx}`}>
-                <line x1={x} y1={padTop} x2={x} y2={padTop + plotHeight} stroke="#1e293b" strokeDasharray="3 3" />
-                <text x={x} y={height - padBottom + 16} textAnchor="middle" fontSize="10" fill="#64748b">
+                <line x1={x} y1={padTop} x2={x} y2={padTop + plotHeight} stroke="#e2e8f0" strokeDasharray="3 3" />
+                <text x={x} y={height - padBottom + 16} textAnchor="middle" fontSize="10" fill="#475569">
                   {val.toFixed(1)} {xUnit}
                 </text>
               </g>
@@ -184,7 +184,7 @@ export const BubbleChart: React.FC<BubbleChartProps> = ({
                 cy={b.cy}
                 r={b.r}
                 fill={b.color}
-                fillOpacity={0.65}
+                fillOpacity={0.78}
                 stroke={b.color}
                 strokeWidth={2}
               />
@@ -192,10 +192,13 @@ export const BubbleChart: React.FC<BubbleChartProps> = ({
                 x={b.cx}
                 y={b.cy + 4}
                 textAnchor="middle"
-                fontSize={b.r > 16 ? '11' : '9'}
-                fill="#ffffff"
-                fontWeight="600"
-                className="pointer-events-none drop-shadow"
+                fontSize={b.r > 16 ? '11' : '9.5'}
+                fill="#0f172a"
+                fontWeight="700"
+                stroke="#ffffff"
+                strokeWidth="2.5"
+                paintOrder="stroke"
+                className="pointer-events-none"
               >
                 {b.item.label}
               </text>
@@ -205,25 +208,25 @@ export const BubbleChart: React.FC<BubbleChartProps> = ({
 
         {hoveredBubble && (
           <div
-            className="pointer-events-none absolute z-20 -translate-x-1/2 -translate-y-full transform rounded-lg border border-slate-700 bg-slate-900/95 p-3 text-xs shadow-xl backdrop-blur-md"
+            className="pointer-events-none absolute z-20 -translate-x-1/2 -translate-y-full transform rounded-xl border border-sky-200 bg-white/95 p-3 text-xs shadow-lg backdrop-blur-md"
             style={{
               left: Math.min(width - 120, Math.max(padLeft + 60, hoveredBubble.cx)),
               top: Math.max(padTop + 40, hoveredBubble.cy - 12),
             }}
           >
-            <div className="font-semibold text-slate-100">{hoveredBubble.item.label}</div>
+            <div className="font-semibold text-slate-900">{hoveredBubble.item.label}</div>
             {hoveredBubble.item.group && (
-              <div className="text-[11px] text-slate-400">{hoveredBubble.item.group}</div>
+              <div className="text-[11px] text-slate-500">{hoveredBubble.item.group}</div>
             )}
             <div className="mt-1.5 space-y-0.5 text-[11px]">
-              <div className="text-slate-300">
-                {xLabel}: <span className="font-mono text-slate-100">{hoveredBubble.item.x} {xUnit}</span>
+              <div className="text-slate-600">
+                {xLabel}: <span className="font-mono font-semibold text-slate-900">{hoveredBubble.item.x} {xUnit}</span>
               </div>
-              <div className="text-slate-300">
-                {yLabel}: <span className="font-mono text-slate-100">{hoveredBubble.item.y} {yUnit}</span>
+              <div className="text-slate-600">
+                {yLabel}: <span className="font-mono font-semibold text-slate-900">{hoveredBubble.item.y} {yUnit}</span>
               </div>
-              <div className="text-slate-300">
-                {sizeLabel}: <span className="font-mono text-emerald-400">{hoveredBubble.item.size.toLocaleString()} {sizeUnit}</span>
+              <div className="text-slate-600">
+                {sizeLabel}: <span className="font-mono font-semibold text-emerald-700">{hoveredBubble.item.size.toLocaleString()} {sizeUnit}</span>
               </div>
             </div>
           </div>

@@ -8,6 +8,7 @@ import ManagerChatStream from '../components/manager/ManagerChatStream'
 import ManagerPromptComposer from '../components/manager/ManagerPromptComposer'
 import ManagerMemoryDrawer from '../components/manager/ManagerMemoryDrawer'
 import ManagerRightPanel, { type ManagerRightPanelTab } from '../components/manager/ManagerRightPanel'
+import { ShieldCheckIcon, TempleReviewIcon } from '../components/ui/AppIcons'
 
 export default function ManagerAdvisor() {
   const [sessions, setSessions] = useState<AdvisorSessionDTO[]>([])
@@ -319,9 +320,9 @@ export default function ManagerAdvisor() {
             type="button"
             onClick={() => setDrawerOpen(true)}
             title="ตั้งค่า Hermes Sandbox & Memory"
-            className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium text-zinc-600 hover:bg-sky-50/80 hover:text-sky-900 transition-colors"
+            className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-sky-50/80 hover:text-slate-900 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-section-accent/45"
           >
-            <span>🛡️</span>
+            <ShieldCheckIcon className="h-4 w-4 text-slate-500" />
             <span className="hidden lg:inline">Sandbox & Memory</span>
           </button>
 
@@ -332,13 +333,13 @@ export default function ManagerAdvisor() {
               setRightPanelOpen(true)
             }}
             title="เปิด Morning Review & Delta Watchdog"
-            className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${
+            className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-section-accent/45 ${
               rightPanelOpen && activeRightTab === 'review'
-                ? 'bg-sky-100/80 text-sky-950 font-semibold'
-                : 'text-zinc-600 hover:bg-sky-50/80 hover:text-sky-900'
+                ? 'bg-sky-100/80 text-slate-900 font-semibold'
+                : 'text-slate-600 hover:bg-sky-50/80 hover:text-slate-900'
             }`}
           >
-            <span>🏛️</span>
+            <TempleReviewIcon className="h-4 w-4 text-slate-500" />
             <span className="hidden md:inline">Morning Review</span>
           </button>
 
@@ -347,12 +348,12 @@ export default function ManagerAdvisor() {
             type="button"
             onClick={() => setRightPanelOpen((v) => !v)}
             title={rightPanelOpen ? 'ย่อแถบ Swarm & งานวิจัย' : 'เปิดแถบ Swarm & งานวิจัย'}
-            className={`flex items-center gap-2 rounded-xl border px-3.5 py-1.5 text-sm font-semibold transition-all ${
+            className={`flex items-center gap-2 rounded-xl border px-3.5 py-1.5 text-sm font-semibold transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-section-accent/45 ${
               rightPanelOpen
-                ? 'border-sky-200 bg-sky-50/90 text-sky-950'
+                ? 'border-sky-200 bg-sky-50/90 text-slate-900'
                 : activeAgentStatus?.running
                   ? 'border-emerald-300 bg-emerald-50 text-emerald-800 animate-pulse'
-                  : 'border-sky-100 bg-white text-sky-800 hover:bg-sky-50'
+                  : 'border-sky-100 bg-white text-slate-800 hover:bg-sky-50'
             }`}
           >
             <span className="relative flex h-2 w-2">

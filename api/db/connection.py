@@ -438,6 +438,65 @@ CREATE TABLE IF NOT EXISTS pm_review_signoffs (
     packet_sha256 TEXT NOT NULL,
     verified_sample_ids_json TEXT
 );
+
+CREATE TABLE IF NOT EXISTS roundtable_sessions (
+    session_id TEXT PRIMARY KEY,
+    title TEXT NOT NULL,
+    primary_ticker TEXT,
+    benchmark_ticker TEXT,
+    entry_price_at_session TEXT,
+    agenda_prompt TEXT NOT NULL,
+    context_refs_json TEXT NOT NULL DEFAULT '[]',
+    frozen_packet_json TEXT NOT NULL DEFAULT '{}',
+    packet_fingerprint_sha256 TEXT NOT NULL DEFAULT '',
+    decision_playbook_json TEXT,
+    final_rating TEXT NOT NULL DEFAULT 'REVIEW',
+    settlement_status TEXT NOT NULL DEFAULT 'pending',
+    settled_return_pct TEXT,
+    settled_alpha_pct TEXT,
+    settled_at_date TEXT,
+    reflection_lesson TEXT,
+    status TEXT NOT NULL DEFAULT 'active',
+    created_at REAL NOT NULL,
+    updated_at REAL NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_roundtable_sessions_updated ON roundtable_sessions(updated_at DESC);
+
+CREATE TABLE IF NOT EXISTS roundtable_turns (
+    turn_id TEXT PRIMARY KEY,
+    session_id TEXT NOT NULL,
+    seq INTEGER NOT NULL,
+    speaker_id TEXT NOT NULL,
+    round_stage TEXT NOT NULL,
+    replying_to TEXT,
+    spoken_dialogue TEXT NOT NULL,
+    evidence_bullets_json TEXT NOT NULL DEFAULT '[]',
+    stance_tag TEXT NOT NULL DEFAULT 'REVIEW',
+    sizing_posture TEXT,
+    audio_cache_key TEXT,
+    created_at REAL NOT NULL,
+    UNIQUE(session_id, seq),
+    FOREIGN KEY (session_id) REFERENCES roundtable_sessions(session_id)
+);
+CREATE INDEX IF NOT EXISTS idx_roundtable_turns_session_seq ON roundtable_turns(session_id, seq ASC);
+
+CREATE TABLE IF NOT EXISTS roundtable_guru_profiles (
+    speaker_id TEXT PRIMARY KEY,
+    display_name TEXT NOT NULL,
+    short_name TEXT NOT NULL,
+    archetype TEXT NOT NULL,
+    speaking_style TEXT NOT NULL DEFAULT '',
+    custom_directive TEXT NOT NULL DEFAULT '',
+    preset_id TEXT NOT NULL DEFAULT 'default',
+    voice_name TEXT NOT NULL,
+    pitch REAL NOT NULL DEFAULT 1.0,
+    rate REAL NOT NULL DEFAULT 1.0,
+    accent_color TEXT NOT NULL,
+    emoji TEXT NOT NULL DEFAULT '🎙️',
+    enabled INTEGER NOT NULL DEFAULT 1,
+    debate_order INTEGER NOT NULL DEFAULT 1,
+    updated_at REAL NOT NULL
+);
 """
 
 _INITIALIZED_DB_PATHS: set[str] = set()
@@ -490,6 +549,39 @@ _COLUMN_MIGRATIONS: dict[str, dict[str, str]] = {
         "available_at": "available_at REAL NOT NULL DEFAULT 0",
         "lease_token": "lease_token TEXT",
         "lease_expires_at": "lease_expires_at REAL",
+    },
+    "roundtable_sessions": {
+        "primary_ticker": "primary_ticker TEXT",
+        "benchmark_ticker": "benchmark_ticker TEXT",
+        "entry_price_at_session": "entry_price_at_session TEXT",
+        "context_refs_json": "context_refs_json TEXT NOT NULL DEFAULT '[]'",
+        "frozen_packet_json": "frozen_packet_json TEXT NOT NULL DEFAULT '{}'",
+        "packet_fingerprint_sha256": "packet_fingerprint_sha256 TEXT NOT NULL DEFAULT ''",
+        "decision_playbook_json": "decision_playbook_json TEXT",
+        "final_rating": "final_rating TEXT NOT NULL DEFAULT 'REVIEW'",
+        "settlement_status": "settlement_status TEXT NOT NULL DEFAULT 'pending'",
+        "settled_return_pct": "settled_return_pct TEXT",
+        "settled_alpha_pct": "settled_alpha_pct TEXT",
+        "settled_at_date": "settled_at_date TEXT",
+        "reflection_lesson": "reflection_lesson TEXT",
+        "status": "status TEXT NOT NULL DEFAULT 'active'",
+    },
+    "roundtable_turns": {
+        "replying_to": "replying_to TEXT",
+        "evidence_bullets_json": "evidence_bullets_json TEXT NOT NULL DEFAULT '[]'",
+        "stance_tag": "stance_tag TEXT NOT NULL DEFAULT 'REVIEW'",
+        "sizing_posture": "sizing_posture TEXT",
+        "audio_cache_key": "audio_cache_key TEXT",
+    },
+    "roundtable_guru_profiles": {
+        "speaking_style": "speaking_style TEXT NOT NULL DEFAULT ''",
+        "custom_directive": "custom_directive TEXT NOT NULL DEFAULT ''",
+        "preset_id": "preset_id TEXT NOT NULL DEFAULT 'default'",
+        "pitch": "pitch REAL NOT NULL DEFAULT 1.0",
+        "rate": "rate REAL NOT NULL DEFAULT 1.0",
+        "emoji": "emoji TEXT NOT NULL DEFAULT '🎙️'",
+        "enabled": "enabled INTEGER NOT NULL DEFAULT 1",
+        "debate_order": "debate_order INTEGER NOT NULL DEFAULT 1",
     },
 }
 
@@ -827,6 +919,10 @@ def init_schema(conn: sqlite3.Connection) -> None:
     conn.execute(
         "CREATE UNIQUE INDEX IF NOT EXISTS idx_kanban_cards_source_key "
         "ON kanban_cards(source_key) WHERE source_key IS NOT NULL"
+    )
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_roundtable_sessions_ticker "
+        "ON roundtable_sessions(primary_ticker, created_at DESC)"
     )
     conn.commit()
     _apply_round5_storage_migration(conn)

@@ -32,30 +32,30 @@ export default function BucketApplyReview({
     return (
       <div className="max-w-3xl mx-auto space-y-6">
         <div className="rounded-2xl border border-emerald-200 bg-gradient-to-br from-emerald-50/80 via-white to-teal-50/40 p-8 text-center shadow-sm space-y-5 animate-scale-up">
-          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-emerald-100 text-3xl text-emerald-600 shadow-xs">
+          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-emerald-100 text-3xl text-emerald-600 shadow-sm">
             🎉
           </div>
           <div>
-            <h2 className="text-xl sm:text-2xl font-extrabold text-zinc-900 tracking-tight">
+            <h2 className="text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight">
               นำ Purpose Buckets ไปใช้กับพอร์ตสำเร็จ!
             </h2>
-            <p className="text-xs sm:text-sm text-zinc-600 mt-1 max-w-lg mx-auto">
+            <p className="text-xs sm:text-sm text-slate-600 mt-1 max-w-lg mx-auto">
               ระบบได้ปรับเปลี่ยน Allocation Targets และจับคู่จัดหมวดหมู่สินทรัพย์ (Holdings) ในพอร์ตการลงทุนเรียบร้อยแล้ว
             </p>
           </div>
 
-          <div className="rounded-xl bg-white p-4 border border-emerald-200/80 max-w-md mx-auto text-left text-xs space-y-2 text-zinc-700">
+          <div className="rounded-xl bg-white p-4 border border-emerald-200/80 max-w-md mx-auto text-left text-xs space-y-2 text-slate-700">
             <div className="flex justify-between border-b border-emerald-50 pb-1.5">
-              <span className="font-semibold text-zinc-500">สถานะการบันทึก:</span>
+              <span className="font-semibold text-slate-500">สถานะการบันทึก:</span>
               <span className="font-bold text-emerald-700">Committed (Transaction สมบูรณ์)</span>
             </div>
             <div className="flex justify-between border-b border-emerald-50 pb-1.5">
-              <span className="font-semibold text-zinc-500">ลำดับ Checkpoint (Sequence):</span>
-              <span className="font-mono font-bold text-zinc-800">#{applyReceipt.applied_sequence}</span>
+              <span className="font-semibold text-slate-500">ลำดับ Checkpoint (Sequence):</span>
+              <span className="font-mono font-bold text-slate-800">#{applyReceipt.applied_sequence}</span>
             </div>
             <div className="flex justify-between">
-              <span className="font-semibold text-zinc-500">Command ID:</span>
-              <span className="font-mono text-[10px] text-zinc-500 truncate max-w-[200px]">
+              <span className="font-semibold text-slate-500">Command ID:</span>
+              <span className="font-mono text-[11px] text-slate-500 truncate max-w-[200px]">
                 {applyReceipt.command_id}
               </span>
             </div>
@@ -92,11 +92,11 @@ export default function BucketApplyReview({
               🔍
             </span>
             <div>
-              <h2 className="text-lg sm:text-xl font-bold text-zinc-900">
+              <h2 className="text-lg sm:text-xl font-bold text-slate-900">
                 ตรวจสอบก่อนใช้กับพอร์ต (Preview & Safety Check)
               </h2>
-              <p className="text-xs text-zinc-500 mt-0.5">
-                พอร์ต: <span className="font-semibold text-zinc-700">{draft.portfolio_id}</span> | ทบทวนการเปลี่ยนแปลงสัดส่วนเป้าหมายและผลกระทบต่อรายการสินทรัพย์เดิมก่อนยืนยัน
+              <p className="text-xs text-slate-500 mt-0.5">
+                พอร์ต: <span className="font-semibold text-slate-700">{draft.portfolio_id}</span> | ทบทวนการเปลี่ยนแปลงสัดส่วนเป้าหมายและผลกระทบต่อรายการสินทรัพย์เดิมก่อนยืนยัน
               </p>
             </div>
           </div>
@@ -104,7 +104,7 @@ export default function BucketApplyReview({
           <button
             type="button"
             onClick={onBack}
-            className="text-xs font-semibold text-zinc-500 hover:text-zinc-800"
+            className="text-xs font-semibold text-slate-500 hover:text-slate-800"
           >
             ← กลับไปแก้ไข
           </button>
@@ -140,7 +140,7 @@ export default function BucketApplyReview({
 
         {/* Targets comparison */}
         <div className="mt-6 space-y-3">
-          <h3 className="text-sm font-bold text-zinc-900">
+          <h3 className="text-sm font-bold text-slate-900">
             🎯 สัดส่วนเป้าหมายชุดใหม่ (Validated Purpose Targets)
           </h3>
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
@@ -157,9 +157,9 @@ export default function BucketApplyReview({
                       style={{ backgroundColor: t.color || '#3b82f6' }}
                     />
                     <div className="min-w-0">
-                      <span className="text-xs font-bold text-zinc-800 truncate block">{t.name}</span>
+                      <span className="text-xs font-bold text-slate-800 truncate block">{t.name}</span>
                       {pb?.linked_goal_name && (
-                        <span className="text-[10px] text-purple-700 font-semibold block truncate">
+                        <span className="text-[11px] text-blue-700 font-semibold block truncate">
                           🎯 {pb.linked_goal_name}
                         </span>
                       )}
@@ -177,7 +177,7 @@ export default function BucketApplyReview({
         {/* Affected Holdings */}
         <div className="mt-6 pt-4 border-t border-sky-50 space-y-3">
           <div className="flex items-center justify-between">
-            <h3 className="text-sm font-bold text-zinc-900">
+            <h3 className="text-sm font-bold text-slate-900">
               📦 สินทรัพย์ที่ได้รับผลกระทบจากการจัดหมวดหมู่ ({affectedHoldings.length} รายการ)
             </h3>
           </div>
@@ -187,11 +187,11 @@ export default function BucketApplyReview({
               {affectedHoldings.map((h, idx) => (
                 <div
                   key={idx}
-                  className="flex items-center justify-between p-2.5 rounded-lg bg-zinc-50 border border-zinc-200/80 text-xs"
+                  className="flex items-center justify-between p-2.5 rounded-lg bg-slate-50 border border-slate-200/80 text-xs"
                 >
-                  <span className="font-bold text-zinc-800">{h.symbol}</span>
-                  <div className="flex items-center gap-2 text-zinc-600">
-                    <span className="text-zinc-400">{h.old_bucket_id || 'ไม่มีหมวด'}</span>
+                  <span className="font-bold text-slate-800">{h.symbol}</span>
+                  <div className="flex items-center gap-2 text-slate-600">
+                    <span className="text-slate-500">{h.old_bucket_id || 'ไม่มีหมวด'}</span>
                     <span>→</span>
                     <span className="font-bold text-emerald-700">{h.new_bucket_id}</span>
                   </div>
@@ -199,7 +199,7 @@ export default function BucketApplyReview({
               ))}
             </div>
           ) : (
-            <p className="text-xs text-zinc-500 italic p-3 rounded-lg bg-zinc-50">
+            <p className="text-xs text-slate-500 italic p-3 rounded-lg bg-slate-50">
               ไม่มีสินทรัพย์เดิมที่ต้องสลับหมวด หรือพอร์ตยังไม่มีสินทรัพย์
             </p>
           )}
@@ -220,9 +220,9 @@ export default function BucketApplyReview({
               type="checkbox"
               checked={confirmedSafe}
               onChange={(e) => setConfirmedSafe(e.target.checked)}
-              className="h-4 w-4 rounded border-zinc-300 text-sky-600 focus:ring-sky-500 cursor-pointer"
+              className="h-4 w-4 rounded border-slate-300 text-sky-600 focus:ring-sky-500 cursor-pointer"
             />
-            <span className="text-xs font-semibold text-zinc-800">
+            <span className="text-xs font-semibold text-slate-800">
               ฉันได้ตรวจสอบสัดส่วนเป้าหมายและรายการสินทรัพย์แล้ว และต้องการนำชุด Buckets นี้ไปใช้กับพอร์ต
             </span>
           </label>
@@ -234,7 +234,7 @@ export default function BucketApplyReview({
             type="button"
             onClick={onBack}
             disabled={loading}
-            className="rounded-xl border border-zinc-200 px-4 py-2.5 text-xs font-semibold text-zinc-600 hover:bg-zinc-50"
+            className="rounded-xl border border-slate-200 px-4 py-2.5 text-xs font-semibold text-slate-600 hover:bg-slate-50"
           >
             ← กลับไปแก้ไข
           </button>
@@ -253,7 +253,7 @@ export default function BucketApplyReview({
             className={`w-full sm:w-auto px-7 py-3 rounded-xl font-bold text-sm text-white shadow-md transition-all flex items-center justify-center gap-2 ${
               canApply
                 ? 'bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 shadow-emerald-500/25 active:scale-98 cursor-pointer'
-                : 'bg-zinc-300 text-zinc-500 cursor-not-allowed shadow-none'
+                : 'bg-slate-300 text-slate-500 cursor-not-allowed shadow-none'
             }`}
           >
             {loading ? (

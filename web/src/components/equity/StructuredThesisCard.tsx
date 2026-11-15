@@ -31,7 +31,7 @@ const getEvidenceTierConfig = (tier: string) => {
         label: 'INFERRED',
         thLabel: 'จากการอนุมาน',
         icon: '💡',
-        style: 'border-purple-200 bg-purple-50 text-purple-800',
+        style: 'border-sky-200 bg-sky-50 text-blue-800',
         title: 'สมมติฐานการวิเคราะห์หรือการคาดการณ์ไปข้างหน้า',
       }
     case 'UNVERIFIED':
@@ -115,11 +115,11 @@ export const StructuredThesisCard: React.FC<StructuredThesisCardProps> = ({
         data-testid="structured-thesis-card-loading"
         className={`rounded-2xl border border-edge/80 bg-surface p-6 shadow-sm animate-pulse space-y-4 ${className}`}
       >
-        <div className="h-6 w-48 bg-zinc-200 rounded" />
-        <div className="h-16 bg-zinc-100 rounded-xl" />
+        <div className="h-6 w-48 bg-slate-200 rounded" />
+        <div className="h-16 bg-slate-100 rounded-xl" />
         <div className="grid grid-cols-2 gap-3">
-          <div className="h-24 bg-zinc-100 rounded-xl" />
-          <div className="h-24 bg-zinc-100 rounded-xl" />
+          <div className="h-24 bg-slate-100 rounded-xl" />
+          <div className="h-24 bg-slate-100 rounded-xl" />
         </div>
       </div>
     )
@@ -137,7 +137,7 @@ export const StructuredThesisCard: React.FC<StructuredThesisCardProps> = ({
       {/* 1. Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-sky-100/80 pb-4">
         <div className="flex items-start sm:items-center gap-3">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-sky-500 text-white shadow-2xs font-bold text-base">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-sky-500 text-white shadow-sm font-bold text-base">
             🎯
           </div>
           <div>
@@ -155,7 +155,7 @@ export const StructuredThesisCard: React.FC<StructuredThesisCardProps> = ({
                   >
                     <span>{badge.icon}</span>
                     <span>{claim.evidence_tier}</span>
-                    <span className="font-sans font-normal text-[10px] opacity-80 hidden sm:inline">({badge.thLabel})</span>
+                    <span className="font-sans font-normal text-[11px] opacity-80 hidden sm:inline">({badge.thLabel})</span>
                   </span>
                 )
               })()}
@@ -163,10 +163,10 @@ export const StructuredThesisCard: React.FC<StructuredThesisCardProps> = ({
             <p className="text-xs text-sky-800/80 mt-0.5">
               กรอบสมมติฐานการลงทุนและเกณฑ์เตือนภัย (เหตุผลการเข้าซื้อ &amp; จุดตัดขาดทุนเมื่อผิดแผน)
             </p>
-            <div className="flex items-center gap-2 text-[11px] text-zinc-500 mt-1">
-              <span>ข้อมูล ณ วันที่: <strong className="font-mono text-zinc-700">{claim.as_of_utc.split('T')[0]}</strong></span>
+            <div className="flex items-center gap-2 text-[11px] text-slate-500 mt-1">
+              <span>ข้อมูล ณ วันที่: <strong className="font-mono text-slate-700">{claim.as_of_utc.split('T')[0]}</strong></span>
               <span>•</span>
-              <span className="font-mono text-[10px] text-zinc-400">
+              <span className="font-mono text-[11px] text-slate-500">
                 SHA: {claim.checksum_sha256.substring(0, 10)}...
               </span>
             </div>
@@ -186,15 +186,15 @@ export const StructuredThesisCard: React.FC<StructuredThesisCardProps> = ({
       {/* 2. Core Statement */}
       <div className="rounded-xl border border-sky-100 bg-sky-50/40 p-4 space-y-1">
         <div className="flex items-center justify-between">
-          <span className="text-[10px] font-bold uppercase tracking-wider text-sky-900 block">
+          <span className="text-[11px] font-bold uppercase tracking-wider text-sky-900 block">
             Core Thesis Claim
           </span>
-          <span className="text-[10px] text-sky-700 font-medium">🎯 เหตุผลหลักในการลงทุน</span>
+          <span className="text-[11px] text-sky-700 font-medium">🎯 เหตุผลหลักในการลงทุน</span>
         </div>
         <p className="text-sm font-medium leading-relaxed text-sky-950">
           {claim.claim_statement}
         </p>
-        <p className="text-[11px] text-zinc-500 italic pt-1">
+        <p className="text-[11px] text-slate-500 italic pt-1">
           💡 สรุปง่ายๆ: สิ่งที่ผู้จัดการกองทุนเชื่อมั่นว่าบริษัทจะทำได้สำเร็จ หากเป็นจริงราคาหุ้นจะเติบโตได้ต่อเนื่อง
         </p>
       </div>
@@ -203,20 +203,20 @@ export const StructuredThesisCard: React.FC<StructuredThesisCardProps> = ({
       <div className="space-y-3">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
           <div>
-            <h4 className="text-xs font-bold uppercase tracking-wider text-zinc-700 flex items-center gap-1.5">
+            <h4 className="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
               <span>🛑 Falsifier Floor Bounds ({claim.falsifiers.length} rules)</span>
             </h4>
-            <p className="text-[11px] text-zinc-500">
+            <p className="text-[11px] text-slate-500">
               เกณฑ์เฝ้าระวังความเสี่ยง (จุดยอมแพ้): หากตัวเลขจริงหลุดต่ำกว่าเกณฑ์นี้ แสดงว่าสมมติฐานผิด ต้องหยุดซื้อหรือตัดขาดทุนทันที
             </p>
           </div>
-          <span className="text-[10px] font-medium text-rose-700 bg-rose-50 border border-rose-200 px-2 py-0.5 rounded self-start sm:self-auto">
+          <span className="text-[11px] font-medium text-rose-700 bg-rose-50 border border-rose-200 px-2 py-0.5 rounded self-start sm:self-auto">
             Breach triggers immediate review
           </span>
         </div>
 
         {claim.falsifiers.length === 0 ? (
-          <p className="text-xs text-zinc-400 italic">No quantitative falsifiers defined.</p>
+          <p className="text-xs text-slate-500 italic">No quantitative falsifiers defined.</p>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             {claim.falsifiers.map((f) => (
@@ -226,11 +226,11 @@ export const StructuredThesisCard: React.FC<StructuredThesisCardProps> = ({
               >
                 <div className="flex items-center justify-between text-xs">
                   <div className="flex items-center gap-1.5">
-                    <span className="font-bold text-zinc-900">{f.metric_name}</span>
-                    <span className="text-[10px] text-zinc-500 font-normal">({getMetricFriendlyName(f.metric_name)})</span>
+                    <span className="font-bold text-slate-900">{f.metric_name}</span>
+                    <span className="text-[11px] text-slate-500 font-normal">({getMetricFriendlyName(f.metric_name)})</span>
                   </div>
                   <span
-                    className="rounded bg-rose-50 border border-rose-200 px-1.5 py-0.5 font-mono text-[10px] font-bold text-rose-700"
+                    className="rounded bg-rose-50 border border-rose-200 px-1.5 py-0.5 font-mono text-[11px] font-bold text-rose-700"
                     title={getInvalidationFriendlyNote(f.invalidation_impact)}
                   >
                     {f.invalidation_impact.replace(/_/g, ' ')}
@@ -239,11 +239,11 @@ export const StructuredThesisCard: React.FC<StructuredThesisCardProps> = ({
                 <div className="font-mono text-xs font-semibold text-rose-600">
                   Floor: {f.operator} {f.threshold_value} {f.unit} ({f.period_basis})
                 </div>
-                <div className="text-[10px] text-rose-700 font-medium bg-rose-50/50 rounded px-2 py-0.5 border border-rose-100">
+                <div className="text-[11px] text-rose-700 font-medium bg-rose-50/50 rounded px-2 py-0.5 border border-rose-100">
                   ⚠️ จุดผิดแผน: {getInvalidationFriendlyNote(f.invalidation_impact)}
                 </div>
                 {f.narrative_explanation && (
-                  <p className="text-[11px] text-zinc-600 leading-normal pt-1 border-t border-edge/40">
+                  <p className="text-[11px] text-slate-600 leading-normal pt-1 border-t border-edge/40">
                     {f.narrative_explanation}
                   </p>
                 )}
@@ -258,14 +258,14 @@ export const StructuredThesisCard: React.FC<StructuredThesisCardProps> = ({
         <div className="space-y-3 pt-2 border-t border-sky-100/70">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
             <div>
-              <h4 className="text-xs font-bold uppercase tracking-wider text-zinc-700 flex items-center gap-1.5">
+              <h4 className="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
                 <span>🗓️ Catalyst Milestones</span>
               </h4>
-              <p className="text-[11px] text-zinc-500">
+              <p className="text-[11px] text-slate-500">
                 เหตุการณ์สำคัญที่รอการพิสูจน์ (เช่น วันประกาศงบการเงิน หรือเปิดตัวผลิตภัณฑ์ใหม่)
               </p>
             </div>
-            <span className="text-[10px] text-zinc-400">Verifiable forward events</span>
+            <span className="text-[11px] text-slate-500">Verifiable forward events</span>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -276,16 +276,16 @@ export const StructuredThesisCard: React.FC<StructuredThesisCardProps> = ({
               >
                 <div className="flex items-center justify-between">
                   <span className="font-bold text-sky-950">{c.event_name}</span>
-                  <span className="font-mono text-[10px] font-bold rounded bg-zinc-100 px-1.5 py-0.5 text-zinc-600">
+                  <span className="font-mono text-[11px] font-bold rounded bg-slate-100 px-1.5 py-0.5 text-slate-600">
                     {c.status}
                   </span>
                 </div>
-                <div className="flex items-center gap-2 text-[11px] text-zinc-500">
-                  <span>Target: <strong className="font-mono text-zinc-800">{c.expected_date_str}</strong></span>
+                <div className="flex items-center gap-2 text-[11px] text-slate-500">
+                  <span>Target: <strong className="font-mono text-slate-800">{c.expected_date_str}</strong></span>
                   <span>(±{c.confidence_window_days}d)</span>
                 </div>
                 {c.source_locator && (
-                  <div className="text-[10px] text-sky-700 truncate font-mono">
+                  <div className="text-[11px] text-sky-700 truncate font-mono">
                     Source: {c.source_locator}
                   </div>
                 )}

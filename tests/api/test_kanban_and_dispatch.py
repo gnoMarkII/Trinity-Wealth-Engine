@@ -175,3 +175,68 @@ def test_stream_endpoint_completes_for_already_done_job(authed_client):
         assert resp.status_code == 200
         body = b"".join(resp.iter_bytes())
     assert b"event: done" in body or b"event: error" in body
+
+
+def test_dispatch_with_require_approval_waits_in_approval_and_supports_approve_and_reject(authed_client):
+    """เมื่อ require_approval=True การ์ดต้องหยุดรอในคอลัมน์ approval จนกว่าผู้ใช้จะกดยอมรับหรือยกเลิก"""
+    # 1. Approve flow
+    r1 = authed_client.post("/api/kanban/cards", json={"title": "วิเคราะห์หุ้น INTC (US)"})
+    card_id_1 = r1.json()["card"]["card_id"]
+
+    d1 = authed_client.post(
+        "/api/agents/dispatch",
+        json={
+            "instruction": "วิเคราะห์หุ้น INTC แบบละเอียด",
+            "card_id": card_id_1,
+            "require_approval": True,
+        },
+    )
+    assert d1.status_code == 200
+    job1 = d1.json()
+    assert job1["status"] == "awaiting_approval"
+    assert job1["interrupt_payload"]["type"] == "pre_run_approval"
+
+    cards = authed_client.get("/api/kanban/cards").json()
+    card1 = next(c for c in cards if c["card_id"] == card_id_1)
+    assert card1["column_name"] == "approval"
+    assert card1["job_id"] == job1["job_id"]
+
+    # Approve via /resume
+    res1 = authed_client.post(
+        f"/api/agents/jobs/{job1['job_id']}/resume",
+        json={"action": "approve"},
+    )
+    assert res1.status_code == 200
+    assert res1.json()["status"] in ("queued", "running", "done")
+
+    cards_after_approve = authed_client.get("/api/kanban/cards").json()
+    card1_after = next(c for c in cards_after_approve if c["card_id"] == card_id_1)
+    assert card1_after["column_name"] in ("executing", "done")
+
+    # 2. Reject flow
+    r2 = authed_client.post("/api/kanban/cards", json={"title": "การ์ดที่จะยกเลิกก่อนรัน"})
+    card_id_2 = r2.json()["card"]["card_id"]
+
+    d2 = authed_client.post(
+        "/api/agents/dispatch",
+        json={
+            "instruction": "วิเคราะห์หุ้น AAPL แบบละเอียด",
+            "card_id": card_id_2,
+            "require_approval": True,
+        },
+    )
+    assert d2.status_code == 200
+    job2 = d2.json()
+    assert job2["status"] == "awaiting_approval"
+
+    res2 = authed_client.post(
+        f"/api/agents/jobs/{job2['job_id']}/resume",
+        json={"action": "reject"},
+    )
+    assert res2.status_code == 200
+    assert res2.json()["status"] == "error"
+    assert "ยกเลิก" in (res2.json().get("error_message") or "")
+
+    cards_after_reject = authed_client.get("/api/kanban/cards").json()
+    card2_after = next(c for c in cards_after_reject if c["card_id"] == card_id_2)
+    assert card2_after["column_name"] == "backlog"

@@ -491,6 +491,14 @@
       "reason": "thesis ledger json and markdown projection in data and vault",
       "target_pattern": "data/theses/**",
       "test_id": "test_thesis_file_store"
+    },
+    {
+      "source": "tools/roundtable/tts_adapter.py",
+      "profile": "external_runtime",
+      "owner": "roundtable-tts",
+      "reason": "LRU-bounded WAV audio cache outside canonical markdown",
+      "target_pattern": ".cache/roundtable_audio/**",
+      "test_id": "test_gemini_tts_adapter_cache_lru_and_fallback"
     }
   ],
   "source_prefix_rules": [
@@ -554,6 +562,13 @@
       "prefix": "tools/thesis/",
       "profile": "thesis_adapter",
       "owner": "thesis-adapter",
+      "reason": "classification only; approval is file/sink based",
+      "classification_only": true
+    },
+    {
+      "prefix": "tools/roundtable/",
+      "profile": "roundtable_adapter",
+      "owner": "roundtable-adapter",
       "reason": "classification only; approval is file/sink based",
       "classification_only": true
     }

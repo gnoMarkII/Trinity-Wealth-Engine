@@ -131,13 +131,13 @@ export default function PortfolioSummaryCards({
     <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2 xl:grid-cols-4">
       {/* Card 1: Total NAV */}
       <div className="flex flex-col justify-between rounded-2xl border border-sky-100 bg-gradient-to-br from-panel via-panel to-sky-50/40 p-4 sm:p-5 shadow-sm transition-all hover:shadow-md relative overflow-hidden">
-        <div className="flex items-center justify-between text-xs sm:text-sm font-bold uppercase tracking-wider text-zinc-500">
+        <div className="flex items-center justify-between text-xs sm:text-sm font-bold uppercase tracking-wider text-slate-500">
           <span className="truncate">Total Portfolio NAV</span>
           <span className="rounded-full bg-flow-cyan/10 px-2 py-0.5 text-xs font-bold text-flow-blue shrink-0">THB</span>
         </div>
         <div className="mt-2 flex items-baseline justify-between gap-2 overflow-hidden">
           <div
-            className="text-xl sm:text-2xl 2xl:text-3xl font-extrabold font-sans tabular-nums tracking-tight text-zinc-900 truncate"
+            className="text-xl sm:text-2xl 2xl:text-3xl font-extrabold font-mono tabular-nums tracking-tight text-slate-900 truncate"
             title={formatTHB(nav)}
           >
             {formatTHB(nav)}
@@ -165,7 +165,7 @@ export default function PortfolioSummaryCards({
             </div>
           )}
         </div>
-        <div className="mt-2 flex items-center justify-between text-xs text-zinc-500 font-medium">
+        <div className="mt-2 flex items-center justify-between text-xs text-slate-500 font-medium">
           <span className="truncate">{hasPvd ? 'มูลค่าล่าสุดที่บันทึก (รวมเงินสด)' : 'มูลค่าสุทธิปัจจุบัน (รวมเงินสด)'}</span>
           {sortedSpark.length >= 2 && (
             <span className={`font-sans tabular-nums text-xs font-bold shrink-0 ${isSparkPositive ? 'text-emerald-600' : 'text-rose-600'}`}>
@@ -178,12 +178,12 @@ export default function PortfolioSummaryCards({
 
       {/* Card 2: Total Unrealized Profit */}
       <div className="flex flex-col justify-between rounded-2xl border border-sky-100 bg-gradient-to-br from-panel via-panel to-sky-50/40 p-4 sm:p-5 shadow-sm transition-all hover:shadow-md overflow-hidden">
-        <div className="flex items-center justify-between text-xs sm:text-sm font-bold uppercase tracking-wider text-zinc-500">
+        <div className="flex items-center justify-between text-xs sm:text-sm font-bold uppercase tracking-wider text-slate-500">
           <span className="truncate">{hasUnknownPvdValuation ? 'ผลต่างมูลค่ารวม' : pvdOnly ? 'ผลประโยชน์สะสมตาม Statement' : hasPvd ? 'ผลประโยชน์สะสมรวม' : 'Unrealized Profit/Loss'}</span>
           <span
             className={`rounded-full px-2 py-0.5 text-xs font-extrabold font-sans tabular-nums shrink-0 ${
               pnlPct === null || hasUnknownPvdValuation
-                ? 'bg-zinc-100 text-zinc-500'
+                ? 'bg-slate-100 text-slate-500'
                 : isPositive
                   ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
                   : 'bg-rose-50 text-rose-700 border border-rose-200'
@@ -194,13 +194,13 @@ export default function PortfolioSummaryCards({
         </div>
         <div
             className={`mt-2 text-xl sm:text-2xl 2xl:text-3xl font-extrabold font-sans tabular-nums tracking-tight truncate ${
-            hasUnknownPvdValuation ? 'text-zinc-700' : isPositive ? 'text-emerald-600' : 'text-rose-600'
+            hasUnknownPvdValuation ? 'text-slate-700' : isPositive ? 'text-emerald-600' : 'text-rose-600'
           }`}
           title={`${isPositive ? '+' : ''}${formatTHB(unrealizedPnL)}`}
         >
           {isPositive ? '+' : ''}{formatTHB(unrealizedPnL)}
         </div>
-        <div className="mt-2 flex items-center text-xs text-zinc-500 font-medium truncate">
+        <div className="mt-2 flex items-center text-xs text-slate-500 font-medium truncate">
           <span>
             {hasUnknownPvdValuation
               ? 'ข้อมูล PVD ไม่ครบ จึงยังยืนยันผลประโยชน์ตาม Statement ไม่ได้'
@@ -215,22 +215,22 @@ export default function PortfolioSummaryCards({
 
       {/* Card 3: Passive Income YTD */}
       <div className="flex flex-col justify-between rounded-2xl border border-sky-100 bg-gradient-to-br from-panel via-panel to-sky-50/40 p-4 sm:p-5 shadow-sm transition-all hover:shadow-md overflow-hidden">
-        <div className="flex items-center justify-between text-xs sm:text-sm font-bold uppercase tracking-wider text-zinc-500">
+        <div className="flex items-center justify-between text-xs sm:text-sm font-bold uppercase tracking-wider text-slate-500">
           <span className="truncate">Passive Income YTD</span>
           <span className="rounded-full bg-amber-50 border border-amber-200 px-2 py-0.5 text-xs font-bold text-amber-700 shrink-0">
             เงินปันผลสะสม
           </span>
         </div>
         <div
-          className="mt-2 text-xl sm:text-2xl 2xl:text-3xl font-extrabold font-sans tabular-nums tracking-tight text-zinc-900 truncate"
+          className="mt-2 text-xl sm:text-2xl 2xl:text-3xl font-extrabold font-mono tabular-nums tracking-tight text-slate-900 truncate"
           title={formatTHB(summary.total_accumulated_dividend || summary.passive_income_ytd || 0)}
         >
           {formatTHB(summary.total_accumulated_dividend || summary.passive_income_ytd || 0)}
         </div>
-        <div className="mt-2 flex items-center justify-between text-xs text-zinc-500 font-medium">
+        <div className="mt-2 flex items-center justify-between text-xs text-slate-500 font-medium">
           <span className="truncate">เงินปันผลสะสมทั้งหมด</span>
           {summary.passive_income_ytd > 0 && summary.total_accumulated_dividend !== summary.passive_income_ytd && (
-            <span className="text-[11px] text-zinc-400 font-mono shrink-0">
+            <span className="text-[11px] text-slate-500 font-mono shrink-0">
               (YTD: {formatTHB(summary.passive_income_ytd)})
             </span>
           )}
@@ -239,7 +239,7 @@ export default function PortfolioSummaryCards({
 
       {/* Card 4: Last Updated & Refresh */}
       <div className="flex flex-col justify-between rounded-2xl border border-sky-100 bg-gradient-to-br from-panel via-panel to-sky-50/40 p-4 sm:p-5 shadow-sm transition-all hover:shadow-md overflow-hidden">
-        <div className="flex items-center justify-between text-xs sm:text-sm font-bold uppercase tracking-wider text-zinc-500">
+        <div className="flex items-center justify-between text-xs sm:text-sm font-bold uppercase tracking-wider text-slate-500">
           <span className="truncate">{hasPvd ? 'Portfolio Data Status' : 'Market Prices Status'}</span>
           {refreshingPrices && (!hasPvd || hasMarketHoldings) && (
             <span className="inline-flex items-center gap-1 rounded-full bg-sky-100 px-2 py-0.5 text-[11px] font-bold text-sky-800 animate-pulse shrink-0">
@@ -249,12 +249,12 @@ export default function PortfolioSummaryCards({
         </div>
         <div className="mt-2 flex flex-col justify-center overflow-hidden">
           <span
-            className="text-xs sm:text-sm font-bold font-sans tabular-nums text-zinc-800 truncate"
+            className="text-xs sm:text-sm font-bold font-mono tabular-nums text-slate-800 truncate"
             title={lastUpdated ? new Date(lastUpdated).toLocaleString('th-TH') : 'ไม่ทราบ'}
           >
             {lastUpdated ? new Date(lastUpdated).toLocaleString('th-TH') : 'ไม่ทราบ'}
           </span>
-          <span className="mt-0.5 text-[11px] sm:text-xs text-zinc-500 font-medium">บันทึกพอร์ตล่าสุด · ไม่ใช่เวลาที่ผู้ให้บริการส่งราคา</span>
+          <span className="mt-0.5 text-[11px] sm:text-xs text-slate-500 font-medium">บันทึกพอร์ตล่าสุด · ไม่ใช่เวลาที่ผู้ให้บริการส่งราคา</span>
           {hasPvd && pvdDateLabel && <span className="mt-1 text-[11px] leading-snug text-teal-800">{pvdDateLabel}</span>}
         </div>
         <div className="mt-2 pt-1">
@@ -274,7 +274,7 @@ export default function PortfolioSummaryCards({
                 onClick={onRefreshPrices}
                 disabled={refreshingPrices}
                 title="ดึงราคาตลาดล่าสุดของหุ้น/กองทุน พร้อมบันทึก Performance Snapshot ประจำวันนี้"
-                className="flex w-full items-center justify-center gap-1.5 rounded-xl border border-sky-200 bg-flow-cyan/10 px-3 py-1.5 text-xs font-bold text-flow-blue transition-all hover:bg-flow-cyan/20 disabled:cursor-not-allowed disabled:opacity-50 shadow-xs"
+                className="flex w-full items-center justify-center gap-1.5 rounded-xl border border-sky-200 bg-flow-cyan/10 px-3 py-1.5 text-xs font-bold text-flow-blue transition-all hover:bg-flow-cyan/20 disabled:cursor-not-allowed disabled:opacity-50 shadow-sm"
               >
                 <svg
                   className={`h-3.5 w-3.5 shrink-0 ${refreshingPrices ? 'animate-spin' : ''}`}
@@ -296,14 +296,14 @@ export default function PortfolioSummaryCards({
                   <button type="button" onClick={onViewPvdStatements} className="text-[11px] font-semibold text-teal-800 underline disabled:opacity-50" disabled={!onViewPvdStatements}>
                     ดู/อัปเดต Statement PVD
                   </button>
-                  <p className="mt-0.5 text-[10px] text-zinc-500">การ refresh ราคาตลาดไม่เปลี่ยนยอด PVD</p>
+                  <p className="mt-0.5 text-[11px] text-slate-500">การ refresh ราคาตลาดไม่เปลี่ยนยอด PVD</p>
                 </div>
               )}
             </>
           )}
         </div>
         {hasUnavailablePvdStatus && (
-          <p role="status" className="mt-2 rounded-lg border border-amber-200 bg-amber-50 px-2 py-1.5 text-[10px] font-medium text-amber-800">
+          <p role="status" className="mt-2 rounded-lg border border-amber-200 bg-amber-50 px-2 py-1.5 text-[11px] font-medium text-amber-800">
             ไม่พบมูลค่า Statement PVD สำหรับบางรายการ
           </p>
         )}
@@ -318,7 +318,7 @@ export default function PortfolioSummaryCards({
           const isAllRefreshOk = failedRefreshEntries.length === 0
 
           return (
-            <div className="mt-2.5 rounded-xl border border-zinc-200/80 bg-zinc-50/80 p-2 text-xs transition-all">
+            <div className="mt-2.5 rounded-xl bg-surface-inset p-2 text-xs transition-all">
               <div className="flex items-center justify-between">
                 {isAllRefreshOk ? (
                   <span className="inline-flex items-center gap-1.5 font-medium text-emerald-700">
@@ -334,14 +334,14 @@ export default function PortfolioSummaryCards({
                 <button
                   type="button"
                   onClick={() => setShowDetails(!showDetails)}
-                  className="text-[11px] font-semibold text-zinc-500 hover:text-zinc-800 transition-colors"
+                  className="text-[11px] font-semibold text-slate-500 hover:text-slate-800 transition-colors"
                 >
                   {showDetails ? 'ซ่อน' : 'รายละเอียด'}
                 </button>
               </div>
 
               {!isAllRefreshOk && !showDetails && (
-                <div className="mt-1.5 space-y-0.5 border-t border-zinc-200/60 pt-1 text-[10px] font-mono text-amber-700">
+                <div className="mt-1.5 space-y-0.5 border-t border-slate-200/60 pt-1 text-[11px] font-mono text-amber-700">
                   {failedRefreshEntries.map(([sym, status]) => (
                     <div key={sym} className="flex justify-between items-center">
                       <span className="font-bold">{sym}:</span>
@@ -352,12 +352,12 @@ export default function PortfolioSummaryCards({
               )}
 
               {showDetails && (
-                <div className="mt-1.5 max-h-28 overflow-y-auto space-y-0.5 border-t border-zinc-200/60 pt-1.5 text-[10px] font-mono tabular-nums">
+                <div className="mt-1.5 max-h-28 overflow-y-auto space-y-0.5 border-t border-slate-200/60 pt-1.5 text-[11px] font-mono tabular-nums">
                   {refreshEntries.map(([sym, status]) => {
                     const isOk = isPriceRefreshSuccess(status)
                     return (
                       <div key={sym} className="flex justify-between items-center">
-                        <span className="font-bold text-zinc-700">{sym}:</span>
+                        <span className="font-bold text-slate-700">{sym}:</span>
                         <span className={isOk ? 'text-emerald-600 font-medium' : 'text-amber-600 font-semibold'}>
                           {status}
                         </span>

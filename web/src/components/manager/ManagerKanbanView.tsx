@@ -334,16 +334,71 @@ export default function ManagerKanbanView({
     if (dispatchingRef.current) return
     dispatchingRef.current = true
     setDispatching(true)
+    setError(null)
     try {
       const instruction = card.prompt?.trim() || card.title
-      const job = await api.dispatchJob(instruction, card.card_id, flow, card.scope ?? 'both')
-      setActiveDispatches((prev) => ({
-        ...prev,
-        [card.card_id]: { jobId: job.job_id, dispatchedAt: Date.now() },
-      }))
+      const job = await api.dispatchJob(instruction, card.card_id, flow, card.scope ?? 'both', true)
+      if (job.status === 'awaiting_approval') {
+        if (layoutMode === 'compact') {
+          setCompactActiveTab('approval')
+        }
+        flashNotice('ส่งการ์ดเข้า Request Approve แล้ว — กรุณากดยอมรับก่อนเริ่มรัน')
+      } else {
+        setActiveDispatches((prev) => ({
+          ...prev,
+          [card.card_id]: { jobId: job.job_id, dispatchedAt: Date.now() },
+        }))
+      }
       await refresh()
     } catch (e) {
       setError(e instanceof ApiError ? e.message : 'สั่งงานไม่สำเร็จ')
+    } finally {
+      dispatchingRef.current = false
+      setDispatching(false)
+    }
+  }
+
+  async function handleApproveCard(card: KanbanCardDTO) {
+    if (!card.job_id) {
+      setSelectedCardId(card.card_id)
+      return
+    }
+    if (dispatchingRef.current) return
+    dispatchingRef.current = true
+    setDispatching(true)
+    setError(null)
+    try {
+      const job = await api.getJobStatus(card.job_id)
+      if (job.interrupt_payload && job.interrupt_payload.type !== 'pre_run_approval') {
+        setSelectedCardId(card.card_id)
+        return
+      }
+      await api.resumeJob(card.job_id, [], [], undefined, undefined, 'approve')
+      setActiveDispatches((prev) => ({
+        ...prev,
+        [card.card_id]: { jobId: card.job_id!, dispatchedAt: Date.now() },
+      }))
+      await refresh()
+    } catch (e) {
+      setError(e instanceof ApiError ? e.message : 'อนุมัติเริ่มรันไม่สำเร็จ')
+    } finally {
+      dispatchingRef.current = false
+      setDispatching(false)
+    }
+  }
+
+  async function handleRejectCard(card: KanbanCardDTO) {
+    if (!card.job_id) return
+    if (dispatchingRef.current) return
+    dispatchingRef.current = true
+    setDispatching(true)
+    setError(null)
+    try {
+      await api.resumeJob(card.job_id, [], [], undefined, undefined, 'reject')
+      removeActiveDispatch(card.card_id)
+      await refresh()
+    } catch (e) {
+      setError(e instanceof ApiError ? e.message : 'ยกเลิกงานไม่สำเร็จ')
     } finally {
       dispatchingRef.current = false
       setDispatching(false)
@@ -360,20 +415,7 @@ export default function ManagerKanbanView({
           .then(refresh)
           .catch((e) => setError(e instanceof ApiError ? e.message : 'อัปเดตสถานะการ์ดไม่สำเร็จ'))
       }
-      const activeDispatch = activeDispatches[cardId]
       removeActiveDispatch(cardId)
-
-      // Auto-resume-all เฉพาะเมื่อกด Play จากบอร์ดโดยตรง (ไม่ได้เปิด Drawer สำหรับ cardId นี้)
-      // และเป็น flow news_funnel ที่ได้ interrupt_payload เป็น news_funnel_approval
-      if (status === 'awaiting_approval' && cardId !== selectedCardId && card?.flow === 'news_funnel' && activeDispatch?.jobId) {
-        api.getJobStatus(activeDispatch.jobId).then(async (job) => {
-          if (job.interrupt_payload?.type === 'news_funnel_approval' && Array.isArray(job.interrupt_payload.candidates)) {
-            const allEventIds = job.interrupt_payload.candidates.map((c: any) => c.event_id).filter(Boolean)
-            await api.resumeJob(job.job_id, [], [], allEventIds)
-            await refresh()
-          }
-        }).catch((e) => console.error('Failed to auto-resume news_funnel job from board:', e))
-      }
     }
   }
 
@@ -444,8 +486,8 @@ export default function ManagerKanbanView({
                 onClick={() => setStatusFilter(t.key)}
                 className={`rounded-md px-2.5 py-1 text-xs font-semibold transition-all ${
                   statusFilter === t.key
-                    ? 'bg-white text-sky-950 shadow-xs'
-                    : 'text-zinc-500 hover:text-sky-900'
+                    ? 'bg-white text-sky-950 shadow-sm'
+                    : 'text-slate-500 hover:text-sky-900'
                 }`}
               >
                 {t.label}
@@ -458,7 +500,7 @@ export default function ManagerKanbanView({
             <select
               value={flowFilter}
               onChange={(e) => setFlowFilter(e.target.value as FlowFilter)}
-              className="rounded-lg border border-sky-100 bg-white/90 px-2.5 py-1 text-xs font-medium text-sky-950 shadow-xs focus:outline-none focus:ring-1 focus:ring-sky-300"
+              className="rounded-lg border border-sky-100 bg-white/90 px-2.5 py-1 text-xs font-medium text-sky-950 shadow-sm focus:outline-none focus:ring-1 focus:ring-sky-300"
             >
               <option value="all">ทุกกระบวนงาน (Flows)</option>
               {FLOW_OPTIONS.map((f) => (
@@ -471,7 +513,7 @@ export default function ManagerKanbanView({
               type="button"
               onClick={() => refresh().catch(() => {})}
               title="รีเฟรชข้อมูลบอร์ดงาน"
-              className="flex h-7 w-7 items-center justify-center rounded-lg border border-sky-100 bg-white text-xs text-sky-700 shadow-xs hover:bg-sky-50 transition-colors"
+              className="flex h-7 w-7 items-center justify-center rounded-lg border border-sky-100 bg-white text-xs text-sky-700 shadow-sm hover:bg-sky-50 transition-colors"
             >
               🔄
             </button>
@@ -509,7 +551,7 @@ export default function ManagerKanbanView({
                   <span>←</span>
                   <span>กลับไปที่บอร์ด</span>
                 </button>
-                <span className="font-mono text-[11px] text-zinc-400">#AG-{selectedCard.display_seq}</span>
+                <span className="font-mono text-[11px] text-slate-500">#AG-{selectedCard.display_seq}</span>
               </div>
               <div className="flex-1 min-h-0 h-full flex flex-col overflow-hidden">
                 <KanbanDetailDrawer
@@ -538,7 +580,7 @@ export default function ManagerKanbanView({
                       className={`flex flex-1 min-w-[70px] items-center justify-center gap-1.5 rounded-lg px-2 py-1.5 text-xs sm:text-[13px] font-semibold transition-all ${
                         isActive
                           ? 'bg-white text-sky-950 shadow-sm'
-                          : 'text-zinc-600 hover:text-sky-900'
+                          : 'text-slate-600 hover:text-sky-900'
                       }`}
                     >
                       <span>{col.icon}</span>
@@ -561,11 +603,13 @@ export default function ManagerKanbanView({
                       column={col}
                       cards={cardsForColumn(col.key)}
                       isBacklogColumn={col.key === 'backlog'}
+                      isApprovalColumn={col.key === 'approval'}
                       removingIds={removingIds}
                       selectedCardId={selectedCardId}
                       workspacePreviewFor={workspacePreviewFor}
                       staggerCards={!hasLoadedOnceRef.current}
                       dispatchDisabled={dispatching}
+                      approvalActionDisabled={dispatching}
                       onDeleteCard={deleteCard}
                       onCardClick={(c) => setSelectedCardId(c.card_id)}
                       onEditCard={openEditModal}
@@ -573,6 +617,8 @@ export default function ManagerKanbanView({
                         setError(null)
                         dispatchCard(c, c.flow ?? 'manager')
                       }}
+                      onApproveCard={col.key === 'approval' ? handleApproveCard : undefined}
+                      onRejectCard={col.key === 'approval' ? handleRejectCard : undefined}
                       onAskAiCard={handleAskAi}
                     />
                   ))}
@@ -596,11 +642,13 @@ export default function ManagerKanbanView({
                     column={col}
                     cards={cardsForColumn(col.key)}
                     isBacklogColumn={col.key === 'backlog'}
+                    isApprovalColumn={col.key === 'approval'}
                     removingIds={removingIds}
                     selectedCardId={selectedCardId}
                     workspacePreviewFor={workspacePreviewFor}
                     staggerCards={!hasLoadedOnceRef.current}
                     dispatchDisabled={dispatching}
+                    approvalActionDisabled={dispatching}
                     onDeleteCard={deleteCard}
                     onCardClick={(c) => setSelectedCardId(c.card_id)}
                     onEditCard={openEditModal}
@@ -608,6 +656,8 @@ export default function ManagerKanbanView({
                       setError(null)
                       dispatchCard(c, c.flow ?? 'manager')
                     }}
+                    onApproveCard={col.key === 'approval' ? handleApproveCard : undefined}
+                    onRejectCard={col.key === 'approval' ? handleRejectCard : undefined}
                     onAskAiCard={handleAskAi}
                   />
                 ))}

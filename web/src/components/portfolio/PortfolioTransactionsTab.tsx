@@ -119,7 +119,7 @@ export default function PortfolioTransactionsTab({
             tabIndex={activeView === id ? 0 : -1}
             onClick={() => selectView(id)}
             onKeyDown={handleTabKeyDown}
-            className={`rounded-lg px-4 py-2 text-sm font-bold transition-colors ${activeView === id ? 'bg-white text-flow-blue shadow-sm' : 'text-zinc-500 hover:text-zinc-800'}`}
+            className={`rounded-lg px-4 py-2 text-sm font-bold transition-colors ${activeView === id ? 'bg-white text-flow-blue shadow-sm' : 'text-slate-500 hover:text-slate-800'}`}
           >
             {label}
           </button>

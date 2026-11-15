@@ -327,10 +327,12 @@ describe('Equity Page & normalizeTicker', () => {
     const tickerInput = screen.getByPlaceholderText('เช่น AAPL, NVDA, PTT.BK')
     await userEvent.clear(tickerInput)
     await userEvent.type(tickerInput, 'nvda')
-    await userEvent.click(screen.getByRole('button', { name: '🚀 สร้างการ์ดและเริ่มวิเคราะห์' }))
+    await userEvent.click(screen.getByRole('button', { name: '📋 สร้างการ์ด (รอกดยอมรับก่อนรัน)' }))
 
     await waitFor(() => {
-      expect(screen.getByText('สั่งงานวิเคราะห์หุ้น NVDA และดึงข่าวเรียบร้อย')).toBeInTheDocument()
+      expect(
+        screen.getByText('ส่งคำขอวิเคราะห์หุ้น NVDA เข้า Request Approve แล้ว — กรุณากดยอมรับใน Kanban ก่อนเริ่มรัน')
+      ).toBeInTheDocument()
       expect(screen.getByText('ดูสถานะใน Kanban')).toBeInTheDocument()
     })
     expect(screen.queryByText('📊 วิเคราะห์หุ้นและดึงข่าวล่าสุด')).not.toBeInTheDocument()
@@ -383,7 +385,7 @@ describe('Equity Page & normalizeTicker', () => {
     await waitFor(() => expect(screen.getByText('Base Case Summary')).toBeInTheDocument())
 
     await userEvent.click(screen.getByTitle('วิเคราะห์ใหม่และดึงข่าวล่าสุด'))
-    await userEvent.click(screen.getByRole('button', { name: '🚀 สร้างการ์ดและเริ่มวิเคราะห์' }))
+    await userEvent.click(screen.getByRole('button', { name: '📋 สร้างการ์ด (รอกดยอมรับก่อนรัน)' }))
 
     await waitFor(() => {
       expect(screen.getByText('อัปเดตบทวิเคราะห์หุ้น AAPL เรียบร้อยแล้ว')).toBeInTheDocument()

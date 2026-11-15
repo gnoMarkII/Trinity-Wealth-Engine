@@ -576,7 +576,7 @@ class PMReviewApplicationService:
                     for h in raw_holdings
                     if getattr(h, "symbol", None) and "CASH" not in str(getattr(h, "symbol", "")).upper()
                 ]
-                if portfolio_tickers and hasattr(self._thesis_service, "get_thesis_coverage"):
+                if hasattr(self._thesis_service, "get_thesis_coverage"):
                     thesis_coverage = self._thesis_service.get_thesis_coverage(portfolio_tickers)
             except Exception as err:
                 log.error("Could not compute thesis coverage for morning delta: %s", err)

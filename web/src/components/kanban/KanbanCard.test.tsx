@@ -91,4 +91,24 @@ describe('KanbanCard', () => {
     renderCard({ workspacePreview: { node: null, logCount: 0, elapsedSeconds: 42 } })
     expect(screen.getByText(/42s/)).toBeInTheDocument()
   })
+
+  it('การ์ดในคอลัมน์ approval แสดงปุ่มยอมรับและยกเลิกก่อนเริ่มรันโดยไม่ bubble onClick', async () => {
+    const onApprove = vi.fn()
+    const onReject = vi.fn()
+    const { onClick } = renderCard({
+      card: makeCard({ column_name: 'approval', job_id: 'job-ap-1' }),
+      editable: false,
+      awaitingApproval: true,
+      onApprove,
+      onReject,
+    })
+
+    expect(screen.getByText(/รอยอมรับก่อนเริ่มรัน/)).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: '✅ ยอมรับและรัน' }))
+    await userEvent.click(screen.getByRole('button', { name: '❌ ยกเลิก' }))
+
+    expect(onApprove).toHaveBeenCalledOnce()
+    expect(onReject).toHaveBeenCalledOnce()
+    expect(onClick).not.toHaveBeenCalled()
+  })
 })

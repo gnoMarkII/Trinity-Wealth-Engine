@@ -1,6 +1,7 @@
 """FastAPI Application Dependencies & Composition Provider."""
 from functools import lru_cache
 import os
+import threading
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 from fastapi import Request
@@ -892,6 +893,30 @@ def set_global_app_job_queue(queue: Any) -> None:
     _GLOBAL_APP_JOB_QUEUE = queue
 
 
+def _get_global_app_job_queue() -> Optional[Any]:
+    """Return the active application queue without retaining a request object."""
+    return _GLOBAL_APP_JOB_QUEUE
+
+
+
+def _dispatch_roundtable_research(ticker: str) -> Optional[str]:
+    """Delegate prerequisite research to its application use case and atomic queue port."""
+    from application.roundtable.research_dispatch_service import RoundtableResearchDispatchService
+    from tools.market.ticker_resolver import resolve_equity_ticker
+
+    active_queue = _get_global_app_job_queue()
+    if active_queue is None or not callable(getattr(active_queue, "dispatch_approval_with_card", None)):
+        raise RuntimeError("Roundtable research dispatch requires the running application job queue")
+
+    known = None
+    try:
+        known = get_equity_query_service().list_latest()
+    except Exception:
+        known = None
+    clean = resolve_equity_ticker(ticker, known_records=known) or ticker.strip().upper()
+    return RoundtableResearchDispatchService(active_queue).dispatch_prerequisite_research(clean)
+
+
 def get_manager_chat_service(request: Request = None):
     """Dependency provider for ManagerChatService with all 8-domain real data providers wired."""
     import json
@@ -920,8 +945,21 @@ def get_manager_chat_service(request: Request = None):
         set_batch_thesis_synthesizer_provider,
     )
 
+    from tools.market.ticker_resolver import resolve_equity_ticker
+
+    def _resolve_known_ticker(raw: str) -> str:
+        clean = (raw or "").strip()
+        if not clean:
+            return ""
+        known = None
+        try:
+            known = get_equity_query_service().list_latest()
+        except Exception:
+            known = None
+        return resolve_equity_ticker(clean, known_records=known)
+
     def _dispatch_research(ticker: str, research_type: str) -> str:
-        clean_ticker = ticker.strip().upper()
+        clean_ticker = _resolve_known_ticker(ticker)
         r_type = (research_type or "").strip().lower()
         flow_map = {
             "news_youtube": "news_youtube",
@@ -965,12 +1003,20 @@ def get_manager_chat_service(request: Request = None):
         elif _GLOBAL_APP_JOB_QUEUE is not None:
             active_queue = _GLOBAL_APP_JOB_QUEUE
 
+        approval_meta = {
+            "title": instruction,
+            "ticker": clean_ticker or None,
+            "research_type": r_type or flow,
+        }
+
         if active_queue is not None:
             job_id = active_queue.dispatch(
                 instruction=instruction,
                 card_id=card_id,
                 flow=flow,
                 scope="both",
+                require_approval=True,
+                approval_metadata=approval_meta,
             )
         else:
             from api.jobs import JobQueue, default_run_fn
@@ -980,14 +1026,16 @@ def get_manager_chat_service(request: Request = None):
                 card_id=card_id,
                 flow=flow,
                 scope="both",
+                require_approval=True,
+                approval_metadata=approval_meta,
             )
 
         if card_id and kanban_svc:
             try:
-                kanban_svc.move_card(card_id, "executing", job_id=job_id)
+                kanban_svc.move_card(card_id, "approval", job_id=job_id)
             except Exception as exc:
                 import logging
-                logging.getLogger(__name__).warning("Failed to move card %s to executing: %s", card_id, exc)
+                logging.getLogger(__name__).warning("Failed to move card %s to approval: %s", card_id, exc)
 
         return job_id
 
@@ -1103,37 +1151,101 @@ def get_manager_chat_service(request: Request = None):
         return "ยังไม่มีสรุป Daily Digest สำหรับวันนี้"
 
     def _get_equity_report_data(ticker: str) -> str:
+        resolved = _resolve_known_ticker(ticker)
+        candidates = [resolved] if resolved else []
+        raw_upper = (ticker or "").strip().upper()
+        if raw_upper and raw_upper not in candidates:
+            candidates.append(raw_upper)
+
         try:
             eq_svc = get_equity_query_service()
-            detail = eq_svc.get_detail(ticker)
-            if detail and isinstance(detail, dict):
-                return json.dumps({
-                    "ticker": detail.get("ticker", ticker),
-                    "company_name": detail.get("company_name", ticker),
-                    "composite_score": detail.get("composite_score"),
-                    "market_sentiment": detail.get("market_sentiment"),
-                    "quant_signals": detail.get("quant_signals"),
-                    "narrative_analysis": detail.get("narrative_analysis"),
-                    "base_case_summary": detail.get("base_case_summary"),
-                    "thesis_delta": detail.get("thesis_delta"),
-                }, ensure_ascii=False, indent=2, default=str)
+            for cand in candidates:
+                detail = eq_svc.get_detail(cand)
+                if detail and isinstance(detail, dict):
+                    quant = detail.get("quant_signals")
+                    quant_summary = None
+                    if isinstance(quant, dict):
+                        ams = quant.get("atomic_market_snapshot") if isinstance(quant.get("atomic_market_snapshot"), dict) else {}
+                        dcf = quant.get("dcf_result") if isinstance(quant.get("dcf_result"), dict) else {}
+                        dcf_base = ((dcf.get("scenarios") or {}).get("base") or {}) if isinstance(dcf.get("scenarios"), dict) else {}
+                        rdcf = quant.get("reverse_dcf_result") if isinstance(quant.get("reverse_dcf_result"), dict) else {}
+                        scorecard = quant.get("deterministic_scorecard") if isinstance(quant.get("deterministic_scorecard"), dict) else {}
+                        piotroski = quant.get("piotroski_breakdown") if isinstance(quant.get("piotroski_breakdown"), dict) else {}
+                        dupont = quant.get("dupont_breakdown") if isinstance(quant.get("dupont_breakdown"), dict) else {}
+                        gaap_om = quant.get("gaap_operating_margin")
+                        gaap_om_val = gaap_om.get("value_pct") if isinstance(gaap_om, dict) else gaap_om
+                        candidate_summary = {
+                            "current_price": quant.get("current_price") if quant.get("current_price") is not None else (ams.get("current_price") if ams.get("current_price") is not None else quant.get("raw_analysis_price")),
+                            "market_cap": quant.get("market_cap") if quant.get("market_cap") is not None else ams.get("market_cap"),
+                            "pe_ratio": quant.get("pe_ratio"),
+                            "forward_pe": quant.get("forward_pe"),
+                            "pb_ratio": quant.get("pb_ratio"),
+                            "ev_ebitda": quant.get("ev_ebitda") if quant.get("ev_ebitda") is not None else (rdcf.get("implied_exit_ebitda_multiple") if rdcf.get("implied_exit_ebitda_multiple") is not None else dcf.get("implied_exit_ebitda_multiple")),
+                            "roe_pct": quant.get("roe_pct") if quant.get("roe_pct") is not None else dupont.get("roe_pct"),
+                            "roic_pct": quant.get("roic_pct"),
+                            "revenue_growth_yoy_pct": quant.get("revenue_growth_yoy_pct") if quant.get("revenue_growth_yoy_pct") is not None else quant.get("revenue_growth_yoy"),
+                            "net_income_growth_yoy_pct": quant.get("net_income_growth_yoy_pct"),
+                            "gaap_operating_margin_pct": gaap_om_val if gaap_om_val is not None else quant.get("operating_margin"),
+                            "fcf_yield_pct": quant.get("fcf_yield_pct"),
+                            "fcf_margin_pct": quant.get("fcf_margin_pct"),
+                            "fcf_cagr_3y": quant.get("fcf_cagr_3y"),
+                            "ocf_to_net_income": quant.get("ocf_to_net_income"),
+                            "net_debt_ebitda": quant.get("net_debt_ebitda"),
+                            "de_ratio_pct": quant.get("de_ratio_pct"),
+                            "current_ratio": quant.get("current_ratio"),
+                            "dividend_yield_pct": quant.get("dividend_yield_pct"),
+                            "net_shareholder_yield_pct": quant.get("net_shareholder_yield_pct"),
+                            "piotroski_f_score": piotroski.get("f_score"),
+                            "dcf_fair_value": quant.get("dcf_fair_value") if quant.get("dcf_fair_value") is not None else dcf_base.get("target_price"),
+                            "rdcf_intrinsic_value_today": rdcf.get("intrinsic_value_today"),
+                            "rdcf_target_price_12m": rdcf.get("target_price_12m"),
+                            "rdcf_upside_12m_pct": rdcf.get("upside_12m_pct"),
+                            "rdcf_mos_entry_price_today": rdcf.get("mos_entry_price_today"),
+                            "margin_of_safety_pct": quant.get("margin_of_safety_pct") if quant.get("margin_of_safety_pct") is not None else (rdcf.get("current_margin_of_safety_pct") if rdcf.get("current_margin_of_safety_pct") is not None else dcf_base.get("margin_of_safety_pct")),
+                            "market_implied_growth_pct": rdcf.get("market_implied_growth_pct"),
+                            "action_stance": scorecard.get("action_stance") or quant.get("recommendation"),
+                            "core_conviction_score": scorecard.get("core_conviction_score"),
+                            "verdict": quant.get("verdict") or rdcf.get("valuation_verdict") or dcf.get("valuation_verdict"),
+                        }
+                        for legacy_k in ("revenue_growth_yoy", "operating_margin", "free_cash_flow", "recommendation"):
+                            if legacy_k in quant and quant[legacy_k] is not None:
+                                candidate_summary[legacy_k] = quant[legacy_k]
+                        quant_summary = {k: v for k, v in candidate_summary.items() if v is not None}
+                    payload: dict[str, Any] = {
+                        "ticker": detail.get("ticker", cand),
+                        "company_name": detail.get("company_name", cand),
+                        "analysis_date": detail.get("analysis_date"),
+                        "evaluated_at": detail.get("evaluated_at"),
+                        "composite_score": detail.get("composite_score"),
+                        "market_sentiment": detail.get("market_sentiment"),
+                        "base_case_summary": detail.get("base_case_summary"),
+                        "narrative_analysis": detail.get("narrative_analysis"),
+                        "thesis_delta": detail.get("thesis_delta"),
+                    }
+                    if quant_summary:
+                        payload["quant_signals_summary"] = quant_summary
+                    payload["quant_signals"] = quant
+                    return json.dumps(payload, ensure_ascii=False, indent=2, default=str)
         except Exception:
             pass
-        sidecar = Path(f"data/equity_{ticker}_sidecar.json")
-        if sidecar.is_file():
-            try:
-                return sidecar.read_text(encoding="utf-8")
-            except Exception:
-                pass
-        return f"ไม่พบบทวิเคราะห์ของหุ้น {ticker} ในฐานข้อมูล คุณสามารถสั่งวิเคราะห์เชิงลึกได้ด้วยคำสั่ง trigger_deep_research_job('{ticker}', 'equity_intel')"
+        for cand in candidates:
+            sidecar = Path(f"data/equity_{cand}_sidecar.json")
+            if sidecar.is_file():
+                try:
+                    return sidecar.read_text(encoding="utf-8")
+                except Exception:
+                    pass
+        target_label = resolved or raw_upper or ticker
+        return f"ไม่พบบทวิเคราะห์ของหุ้น {target_label} ในฐานข้อมูล"
 
     def _get_equity_promises_data(ticker: str) -> str:
+        resolved = _resolve_known_ticker(ticker) or ticker.strip().upper()
         try:
             import dataclasses
-            res: dict[str, Any] = {"ticker": ticker}
+            res: dict[str, Any] = {"ticker": resolved}
             try:
                 p_svc = get_promise_service()
-                ledger_dto = p_svc.get_ledger(ticker)
+                ledger_dto = p_svc.get_ledger(resolved)
                 if ledger_dto:
                     res["promise_scores"] = ledger_dto.model_dump()
             except Exception:
@@ -1141,7 +1253,7 @@ def get_manager_chat_service(request: Request = None):
 
             try:
                 rev_svc = get_position_review_service()
-                review_report = rev_svc.run_position_review(ticker)
+                review_report = rev_svc.run_position_review(resolved)
                 if review_report:
                     res["position_review"] = dataclasses.asdict(review_report)
             except Exception:
@@ -1151,7 +1263,7 @@ def get_manager_chat_service(request: Request = None):
                 return json.dumps(res, ensure_ascii=False, indent=2, default=str)
         except Exception:
             pass
-        return f"รายงานความซื่อสัตย์ของผู้บริหารและสถานะ Thesis หุ้น {ticker}: ไม่มีสัญญาณผิดสัญญาที่มีนัยสำคัญ"
+        return f"รายงานความซื่อสัตย์ของผู้บริหารและสถานะ Thesis หุ้น {resolved}: ไม่มีสัญญาณผิดสัญญาที่มีนัยสำคัญ"
 
     def _get_look_through_data() -> str:
         try:
@@ -1195,10 +1307,11 @@ def get_manager_chat_service(request: Request = None):
         }, ensure_ascii=False, indent=2)
 
     def _get_screener_data(tickers: list[str]) -> str:
+        resolved_tickers = [_resolve_known_ticker(t) or t for t in tickers[:8]]
         try:
             eq_svc = get_equity_query_service()
             results = []
-            for t in tickers[:8]:
+            for t in resolved_tickers:
                 det = eq_svc.get_detail(t)
                 if det and isinstance(det, dict):
                     results.append({
@@ -1212,7 +1325,7 @@ def get_manager_chat_service(request: Request = None):
                 return json.dumps(results, ensure_ascii=False, indent=2, default=str)
         except Exception:
             pass
-        return f"ผลการเปรียบเทียบปัจจัยพื้นฐานสำหรับ {', '.join(tickers)}: พร้อมเปรียบเทียบในหน้าจอ Terminal V2"
+        return f"ผลการเปรียบเทียบปัจจัยพื้นฐานสำหรับ {', '.join(resolved_tickers)}: พร้อมเปรียบเทียบในหน้าจอ Terminal V2"
 
     def _search_vault_data(query: str) -> str:
         try:
@@ -1261,7 +1374,7 @@ def get_manager_chat_service(request: Request = None):
     def _get_stock_theses_data(ticker: str = "") -> str:
         try:
             svc = get_thesis_service()
-            clean = ticker.strip().upper()
+            clean = _resolve_known_ticker(ticker) if ticker.strip() else ""
             if clean:
                 t = svc.get_active_thesis(clean)
                 if t:
@@ -1344,3 +1457,808 @@ def get_readiness_audit_service(repo_root: Optional[Path] = None):
     """Dependency provider for InstitutionalReadinessAuditService (Appendix J)."""
     from application.resilience.readiness_audit_service import InstitutionalReadinessAuditService
     return InstitutionalReadinessAuditService(repo_root=repo_root)
+
+
+_ROUNDTABLE_CACHE_KEY: Optional[tuple[str, str]] = None
+_ROUNDTABLE_SERVICE = None
+_ROUNDTABLE_INITIALIZATION_LOCK = threading.RLock()
+
+
+def _create_roundtable_service(current_key: tuple[str, str]):
+    """Construct and publish one Roundtable service while the provider lock is held."""
+    global _ROUNDTABLE_SERVICE, _ROUNDTABLE_CACHE_KEY
+    import dataclasses
+    import json
+    from api.db.adapters import SqliteRoundtableRepositoryAdapter
+    from api.db.investor_essence_adapters import SqliteInvestorRuntimeUowFactory
+    from application.roundtable.context_assembler import RoundtableContextAssembler
+    from application.roundtable.service import RoundtableApplicationService
+    from tools.roundtable.adapters import (
+        CallableContextDataProvidersAdapter,
+        ObsidianRoundtableVaultWriterAdapter,
+        OhlcvSettlementPriceAdapter,
+        RoundtableSandboxCalcAdapter,
+        RoundtableThesisUpdaterAdapter,
+    )
+    from tools.roundtable.debate_engine import GeminiRoundtableEngine
+    from tools.roundtable.tts_adapter import GeminiTTSAdapter
+    from validators.roundtable_verifier import RoundtableConsistencyVerifier
+
+    def _resolve_instrument(ticker: str) -> Dict[str, Any]:
+        try:
+            res = get_asset_resolver().resolve(ticker)
+            return {
+                "raw_symbol": res.raw_symbol,
+                "provider_symbol": res.provider_symbol,
+                "asset_class": res.asset_class.value if hasattr(res.asset_class, "value") else str(res.asset_class),
+                "market": res.market or ("TH" if ticker.strip().upper().endswith(".BK") else "US"),
+                "confidence": res.confidence,
+            }
+        except Exception:
+            return {}
+
+    def _equity_detail_reader(ticker: str) -> Optional[Dict[str, Any]]:
+        try:
+            return get_equity_query_service().get_detail(ticker)
+        except Exception:
+            return None
+
+    def _equity_review_reader(ticker: str, portfolio_id: str = "default") -> Optional[Dict[str, Any]]:
+        try:
+            rev = get_position_review_service().run_position_review(ticker, portfolio_id=portfolio_id)
+            return dataclasses.asdict(rev) if rev is not None else None
+        except Exception:
+            return None
+
+    def _equity_news_reader(ticker: str) -> Optional[Dict[str, Any]]:
+        try:
+            return get_equity_query_service().get_news(ticker)
+        except Exception:
+            return None
+
+    def _equity_notes_lister(ticker: str, days: int = 30) -> Optional[Dict[str, Any]]:
+        try:
+            return get_equity_query_service().list_notes(ticker, days=days)
+        except Exception:
+            return None
+
+    def _equity_note_reader(relative_path: str) -> Optional[Dict[str, Any]]:
+        try:
+            return get_equity_query_service().read_note(relative_path)
+        except Exception:
+            return None
+
+    def _macro_reader() -> Optional[Dict[str, Any]]:
+        try:
+            return get_macro_service().dashboard()
+        except Exception:
+            return None
+
+    def _digest_reader() -> Optional[Dict[str, Any]]:
+        try:
+            res = get_digest_service().get_daily_digest()
+            if isinstance(res, dict) and res.get("has_digest") and res.get("digest"):
+                return res["digest"]
+            return res
+        except Exception:
+            return None
+
+    def _compute_offline_look_through_summary(state: Any, portfolio_id: str, total_val: float) -> Optional[Dict[str, Any]]:
+        """Read-only offline look-through from cached fund constituents + static master catalog (zero HTTP calls)."""
+        if total_val <= 0:
+            return None
+        try:
+            from decimal import Decimal
+            from pathlib import Path
+            from core.portfolio.look_through_calculator import LookThroughCalculator
+            from core.portfolio.look_through_models import (
+                FundConstituentHolding,
+                FundConstituentsDomain,
+                FundConstituentSector,
+            )
+            from tools.portfolio.adapters.thai_fund.master_fund_catalog import find_master_fund
+            from tools.portfolio.adapters.thai_fund.pvd_symbol_mapper import resolve_pvd_symbol
+
+            cache_dir_env = os.environ.get("FINNOMENA_CACHE_DIR")
+            cache_file = (Path(cache_dir_env) if cache_dir_env else Path("data/cache")) / "finnomena_constituents_cache.json"
+            raw_cache: Dict[str, Any] = {}
+            if cache_file.exists():
+                try:
+                    loaded = json.loads(cache_file.read_text(encoding="utf-8"))
+                    if isinstance(loaded, dict):
+                        raw_cache = loaded
+                except Exception:
+                    raw_cache = {}
+            normalized_cache = {" ".join(str(k).strip().upper().split()): v for k, v in raw_cache.items()}
+
+            fund_map: Dict[str, Any] = {}
+            holdings_list = getattr(state, "holdings", ()) or ()
+            for h in holdings_list:
+                sym = str(getattr(h, "symbol", "") or "").strip().upper()
+                asset_type = str(getattr(h, "asset_type", "") or "").strip().upper()
+                is_fund = any(k in asset_type for k in ("FUND", "MUTUAL_FUND", "PVD", "RMF", "SSF", "THAIESG", "ETF")) or sym.startswith("PVD_")
+                if not is_fund or not sym or sym in fund_map:
+                    continue
+
+                norm_sym = " ".join(sym.split())
+                cached_entry = normalized_cache.get(norm_sym)
+                if isinstance(cached_entry, dict) and isinstance(cached_entry.get("data"), dict):
+                    cd = cached_entry["data"]
+                    fund_map[sym] = FundConstituentsDomain(
+                        fund_id=str(cd.get("fund_id") or sym),
+                        symbol=sym,
+                        as_of_date=str(cd.get("as_of_date") or ""),
+                        master_fund_name=cd.get("master_fund_name"),
+                        master_fund_ticker=cd.get("master_fund_ticker"),
+                        top_holdings=[
+                            FundConstituentHolding(
+                                name=str(item.get("name") or ""),
+                                percent=Decimal(str(item.get("percent") or 0)),
+                                ticker=item.get("ticker"),
+                                asset_type=str(item.get("asset_type") or "EQUITY"),
+                            )
+                            for item in (cd.get("top_holdings") or [])
+                            if isinstance(item, dict)
+                        ],
+                        sector_breakdown=[
+                            FundConstituentSector(
+                                sector_name_th=str(sec.get("sector_name_th") or ""),
+                                sector_name_en=str(sec.get("sector_name_en") or sec.get("sector") or ""),
+                                percent=Decimal(str(sec.get("percent") or 0)),
+                            )
+                            for sec in (cd.get("sector_breakdown") or [])
+                            if isinstance(sec, dict)
+                        ],
+                        asset_allocation={
+                            str(ak): Decimal(str(av))
+                            for ak, av in (cd.get("asset_allocation") or {}).items()
+                        },
+                        is_curated=bool(cd.get("is_curated", False)),
+                        source_date=cd.get("as_of_date"),
+                    )
+                    continue
+
+                resolved_sym, _ = resolve_pvd_symbol(sym)
+                master = find_master_fund(resolved_sym) or find_master_fund(sym)
+                if master is not None:
+                    fund_map[sym] = FundConstituentsDomain(
+                        fund_id=sym,
+                        symbol=sym,
+                        as_of_date="",
+                        master_fund_name=getattr(master, "master_name", None),
+                        master_fund_ticker=getattr(master, "master_ticker", None),
+                        top_holdings=[
+                            FundConstituentHolding(
+                                name=str(cn),
+                                percent=Decimal(str(wt)),
+                                ticker=str(tk),
+                                asset_type="EQUITY",
+                            )
+                            for tk, cn, wt in (getattr(master, "top_holdings", ()) or ())
+                        ],
+                        sector_breakdown=[
+                            FundConstituentSector(
+                                sector_name_th=str(sn),
+                                sector_name_en=str(sn),
+                                percent=Decimal(str(wt)),
+                            )
+                            for sn, wt in (getattr(master, "sector_weights", {}) or {}).items()
+                        ],
+                        asset_allocation={"Equities": Decimal("100")},
+                        is_curated=True,
+                    )
+
+            if not fund_map:
+                return None
+            lt = LookThroughCalculator.calculate(
+                holdings=list(holdings_list),
+                fund_constituents_map=fund_map,
+                total_nav_thb=Decimal(str(total_val)),
+                portfolio_id=portfolio_id,
+            )
+            return {
+                "top_overlapped_stocks": [
+                    {
+                        "ticker": getattr(s, "ticker", ""),
+                        "company_name": getattr(s, "company_name", ""),
+                        "direct_weight_pct": float(getattr(s, "direct_weight_pct", 0) or 0),
+                        "indirect_weight_pct": float(getattr(s, "indirect_weight_pct", 0) or 0),
+                        "total_weight_pct": float(getattr(s, "total_weight_pct", 0) or 0),
+                        "is_cap_breached": bool(getattr(s, "is_cap_breached", False)),
+                        "is_hidden_concentration": bool(getattr(s, "is_hidden_concentration", False)),
+                    }
+                    for s in (getattr(lt, "top_overlapped_stocks", None) or [])[:8]
+                ],
+                "hidden_concentration_warnings": list(getattr(lt, "hidden_concentration_warnings", None) or []),
+                "crowded_sectors": [
+                    {
+                        "sector_name": getattr(sec, "sector_name", ""),
+                        "weight_pct": float(getattr(sec, "weight_pct", 0) or 0),
+                    }
+                    for sec in (getattr(lt, "sector_exposure", None) or [])
+                    if getattr(sec, "is_crowded", False)
+                ],
+            }
+        except Exception:
+            return None
+
+    def _watchlist_reader(portfolio_id: str = "default") -> List[Dict[str, Any]]:
+        try:
+            wl_state = get_portfolio_service().get_structured_watchlist(portfolio_id=portfolio_id)
+            raw_items = getattr(wl_state, "items", None) or ()
+            out_wl: List[Dict[str, Any]] = []
+            for item in raw_items:
+                sym = str(getattr(item, "symbol", "") or "").strip()
+                if not sym:
+                    continue
+                out_wl.append({
+                    "symbol": sym,
+                    "asset_type": getattr(item, "asset_type", None) or "Stock",
+                    "target_price": getattr(item, "target_price", None),
+                    "target_currency": getattr(item, "target_currency", None),
+                    "target_price_basis": getattr(item, "target_price_basis", None),
+                    "suggested_bucket_id": getattr(item, "suggested_bucket_id", None),
+                    "applied_bucket_name": getattr(item, "applied_bucket_name", None),
+                    "notes": getattr(item, "notes", None),
+                })
+            return out_wl
+        except Exception:
+            return []
+
+    def _goals_reader(portfolio_id: str = "default") -> List[Dict[str, Any]]:
+        try:
+            raw_goals = get_portfolio_service().get_structured_goals(portfolio_id=portfolio_id) or ()
+            out_goals: List[Dict[str, Any]] = []
+            for g in raw_goals:
+                if not isinstance(g, dict):
+                    continue
+                out_goals.append({
+                    "name": g.get("name"),
+                    "goal_type": g.get("goal_type"),
+                    "target_amount_thb": g.get("target_amount_thb"),
+                    "current_amount_thb": g.get("current_amount_thb"),
+                    "progress_pct": g.get("progress_pct"),
+                    "deadline": g.get("deadline"),
+                    "deadline_days_left": g.get("deadline_days_left"),
+                    "priority_tier": g.get("priority_tier") or "wants",
+                    "flexibility": g.get("flexibility") or "none",
+                    "monthly_savings_thb": g.get("monthly_savings_thb"),
+                    "required_return_pct": g.get("required_return_pct"),
+                    "tension_level": g.get("tension_level"),
+                    "adjustment_levers": g.get("adjustment_levers"),
+                })
+            return out_goals
+        except Exception:
+            return []
+
+    def _portfolio_state_reader(portfolio_id: str = "default") -> Optional[Dict[str, Any]]:
+        try:
+            state = get_portfolio_service().get_structured_portfolio_state(
+                portfolio_id=portfolio_id, refresh_prices=False
+            )
+            if not state:
+                return None
+            summary = getattr(state, "summary", None)
+            total_val = float(getattr(summary, "total_value_thb", 0.0) or 0.0) if summary else 0.0
+            total_cost = float(getattr(summary, "total_cost_basis_thb", 0.0) or 0.0) if summary else 0.0
+            total_unrealized = float(getattr(summary, "total_unrealized_profit", 0.0) or 0.0) if summary else 0.0
+            fx_rates = getattr(state, "fx_rates", {}) or {}
+            fx_usd_thb = float(fx_rates.get("USDTHB") or 0.0)
+
+            cash_thb = float(getattr(summary, "cash_thb", 0.0) or 0.0) if summary else 0.0
+            cash_thb_only = 0.0
+            cash_usd_val_thb = 0.0
+            computed_cash_from_holdings = 0.0
+            raw_holdings = getattr(state, "holdings", ()) or ()
+            holdings = []
+            for h in raw_holdings:
+                sym = str(getattr(h, "symbol", "") or "").strip()
+                asset_type = str(getattr(h, "asset_type", "") or "").strip()
+                h_val = float(getattr(h, "market_value_thb", 0.0) or 0.0)
+                is_cash_holding = asset_type.lower() == "cash" or sym.upper() in {"CASH_THB", "CASH_USD", "CASH"}
+                if is_cash_holding:
+                    computed_cash_from_holdings += h_val
+                    if sym.upper() == "CASH_USD":
+                        cash_usd_val_thb += h_val
+                    else:
+                        cash_thb_only += h_val
+                weight_pct = round((h_val / total_val * 100.0), 2) if total_val > 0 else None
+                if sym.upper() == "CASH_USD":
+                    currency = "USD"
+                elif sym.upper() == "CASH_THB":
+                    currency = "THB"
+                elif getattr(h, "avg_cost_usd", None) is not None:
+                    currency = "USD"
+                elif getattr(h, "avg_cost_thb", None) is not None:
+                    currency = "THB"
+                elif getattr(h, "current_price_usd", None) is not None:
+                    currency = "USD"
+                else:
+                    currency = "THB"
+                holdings.append({
+                    "symbol": sym,
+                    "company_name": getattr(h, "company_name", None),
+                    "asset_type": asset_type or None,
+                    "currency": currency,
+                    "units": getattr(h, "units", 0),
+                    "avg_cost": getattr(h, "avg_cost_usd", None) or getattr(h, "avg_cost_thb", None) or getattr(h, "avg_cost", None),
+                    "market_value_thb": h_val,
+                    "current_weight_pct": weight_pct,
+                    "unrealized_pnl_percent": getattr(h, "unrealized_pnl_percent", None),
+                    "bucket_id": getattr(h, "bucket_id", None),
+                })
+
+            if cash_thb <= 0.0 and computed_cash_from_holdings > 0.0:
+                cash_thb = computed_cash_from_holdings
+            holdings.sort(key=lambda item: float(item.get("market_value_thb") or 0.0), reverse=True)
+            cash_pct = round((cash_thb / total_val * 100.0), 2) if total_val > 0 else None
+
+            alloc_targets = [
+                {
+                    "bucket_id": getattr(t, "bucket_id", ""),
+                    "name": getattr(t, "name", ""),
+                    "target_percent": float(getattr(t, "target_percent", 0.0) or 0.0),
+                }
+                for t in (getattr(state, "allocation_targets", ()) or ())
+            ]
+            lt_summary = _compute_offline_look_through_summary(state, portfolio_id, total_val)
+
+            out: Dict[str, Any] = {
+                "total_value_thb": total_val,
+                "total_cost_basis_thb": total_cost,
+                "total_unrealized_profit_thb": total_unrealized,
+                "cash_thb": round(cash_thb, 2),
+                "cash_thb_only": round(cash_thb_only, 2),
+                "cash_usd_val_thb": round(cash_usd_val_thb, 2),
+                "cash_pct": cash_pct,
+                "fx_usd_thb": fx_usd_thb if fx_usd_thb > 0 else None,
+                "holdings": holdings,
+                "allocation_targets": alloc_targets,
+                "watchlist_items": _watchlist_reader(portfolio_id),
+                "goals_progress": _goals_reader(portfolio_id),
+            }
+            if lt_summary:
+                out["look_through_summary"] = lt_summary
+            return out
+        except Exception:
+            return None
+
+    def _confirmed_axis_reader(portfolio_id: str = "default") -> Optional[Dict[str, Any]]:
+        try:
+            return ConfirmedPolicyAdapter(uow_factory=SqliteInvestorRuntimeUowFactory()).get_confirmed_investment_axis(
+                portfolio_id
+            )
+        except Exception:
+            return None
+
+    def _financial_context_reader(portfolio_id: str = "default") -> Optional[Dict[str, Any]]:
+        try:
+            fc = get_financial_context_service().get_financial_context(portfolio_id)
+            return dataclasses.asdict(fc) if fc is not None else None
+        except Exception:
+            return None
+
+    def _bucket_policy_reader(portfolio_id: str = "default") -> Optional[List[Dict[str, Any]]]:
+        try:
+            uow_factory = SqliteInvestorRuntimeUowFactory()
+            scope = f"portfolio:{portfolio_id}"
+            with uow_factory.open() as uow:
+                snap = uow.planning.get_confirmed_snapshot(scope, "bucket_policy")
+                if snap:
+                    b = snap.get("buckets") or snap.get("purpose_buckets")
+                    if b:
+                        return b
+        except Exception:
+            pass
+        try:
+            p_state = get_portfolio_service().get_structured_portfolio_state(
+                portfolio_id=portfolio_id, refresh_prices=False
+            )
+            if p_state:
+                snap = getattr(p_state, "accepted_policy_snapshot", None)
+                if isinstance(snap, dict):
+                    b = snap.get("purpose_buckets") or snap.get("buckets")
+                    if b:
+                        return b
+                pol = getattr(p_state, "allocation_policy", None)
+                if isinstance(pol, dict):
+                    b = pol.get("purpose_buckets") or pol.get("buckets")
+                    if b:
+                        return b
+                targets = getattr(p_state, "allocation_targets", None)
+                if targets:
+                    return [
+                        {
+                            "id": getattr(t, "bucket_id", ""),
+                            "name": getattr(t, "name", ""),
+                            "target_pct": float(getattr(t, "target_percent", 0.0) or 0.0),
+                        }
+                        for t in targets
+                    ]
+        except Exception:
+            pass
+        return None
+
+    def _active_thesis_reader(ticker: str) -> Optional[Dict[str, Any]]:
+        try:
+            t = get_thesis_service().get_active_thesis(ticker)
+            return t.to_dict() if t is not None else None
+        except Exception:
+            return None
+
+    def _thesis_exceptions_reader(ticker: str) -> Optional[List[Dict[str, Any]]]:
+        try:
+            from api.db.adapters import SqliteThesisExceptionRepositoryAdapter
+
+            clean = ticker.strip().upper()
+            rows = SqliteThesisExceptionRepositoryAdapter().list_pending_exceptions(ticker=clean, limit=25) or []
+            out: List[Dict[str, Any]] = []
+            for r in rows:
+                if dataclasses.is_dataclass(r):
+                    out.append(dataclasses.asdict(r))
+                elif isinstance(r, dict):
+                    out.append(dict(r))
+            return out
+        except Exception:
+            return None
+
+    def _promise_scores_reader(ticker: str) -> Optional[Dict[str, Any]]:
+        try:
+            clean = ticker.strip().upper()
+            dto = get_promise_service().get_ledger(clean)
+            return dto.model_dump() if dto is not None else None
+        except Exception:
+            return None
+
+    def _analyst_context_reader(ticker: str) -> Optional[Dict[str, Any]]:
+        try:
+            from contextlib import closing
+            from api.db.connection import get_connection
+            from api.db.repositories import cache_repository as cache_repo_dao
+
+            clean = ticker.strip().upper()
+            with closing(get_connection()) as conn:
+                data = cache_repo_dao.get_analyst_context_cache(conn, clean)
+            if not isinstance(data, dict):
+                return None
+            source_as_of = str(data.get("source_as_of") or "")
+            if "synthetic" in source_as_of.lower():
+                return None
+            raw_hist = data.get("earnings_history")
+            if isinstance(raw_hist, list):
+                clean_hist = [
+                    item for item in raw_hist
+                    if isinstance(item, dict) and "synthetic" not in json.dumps(item, ensure_ascii=False).lower()
+                ]
+                data["earnings_history"] = clean_hist
+            return data
+        except Exception:
+            return None
+
+    def _insider_db_summary_reader(ticker: str) -> Optional[Dict[str, Any]]:
+        try:
+            from contextlib import closing
+            from datetime import datetime, timedelta, timezone
+            from api.db.connection import get_connection
+
+            clean = ticker.strip().upper()
+            cutoff = (datetime.now(timezone.utc) - timedelta(days=180)).strftime("%Y-%m-%d")
+            with closing(get_connection()) as conn:
+                rows = conn.execute(
+                    """
+                    SELECT
+                        t.transaction_id, t.accession_number, t.transaction_date,
+                        t.transaction_code, t.shares, t.price_per_share, t.acquired_or_disposed,
+                        f.reporting_owner_name, f.officer_title, f.filed_at,
+                        (f.raw_xml_payload IS NOT NULL AND TRIM(f.raw_xml_payload) != '') AS has_raw_xml
+                    FROM sec_insider_transactions t
+                    JOIN sec_form4_raw_ledger f ON t.accession_number = f.accession_number
+                    WHERE t.ticker = ? AND t.transaction_date >= ?
+                    ORDER BY t.transaction_date DESC, f.filed_at DESC
+                    """,
+                    (clean, cutoff),
+                ).fetchall()
+            if not rows:
+                return None
+
+            normalized_rows: List[Dict[str, Any]] = []
+            group_codes: Dict[tuple[str, str], set[str]] = {}
+            has_form4_xml = False
+            has_yf_heuristic = False
+            reclassified_zero_buys = 0
+
+            for r in rows:
+                acc = str(r["accession_number"] or "")
+                raw_code = str(r["transaction_code"] or "").strip().upper()
+                px = float(r["price_per_share"] or 0.0)
+                sh = float(r["shares"] or 0.0)
+                has_xml = bool(r["has_raw_xml"])
+                is_yf = acc.startswith("yf_") and not has_xml
+                if is_yf:
+                    has_yf_heuristic = True
+                else:
+                    has_form4_xml = True
+
+                eff_code = raw_code
+                if is_yf and raw_code == "P" and px <= 0.0:
+                    eff_code = "A"
+                    reclassified_zero_buys += 1
+
+                owner = str(r["reporting_owner_name"] or "Unknown").strip()
+                tx_date = str(r["transaction_date"] or "")[:10]
+                group_codes.setdefault((owner, tx_date), set()).add(eff_code)
+                normalized_rows.append({
+                    "transaction_date": tx_date,
+                    "owner": owner,
+                    "officer_title": str(r["officer_title"] or "").strip(),
+                    "effective_code": eff_code,
+                    "shares": sh,
+                    "price_per_share": px,
+                    "usd_value": round(sh * px, 2) if (sh > 0 and px > 0) else 0.0,
+                    "is_yf": is_yf,
+                })
+
+            buy_cnt = 0
+            buy_shares = 0.0
+            buy_usd = 0.0
+            open_sale_cnt = 0
+            paired_sale_cnt = 0
+            sale_shares = 0.0
+            sale_usd = 0.0
+            exercise_cnt = 0
+            award_cnt = 0
+            tax_cnt = 0
+            notable: List[Dict[str, Any]] = []
+
+            for item in normalized_rows:
+                c = item["effective_code"]
+                sh = item["shares"]
+                usd = item["usd_value"]
+                codes_same_day = group_codes.get((item["owner"], item["transaction_date"]), set())
+                if c == "P" and item["price_per_share"] > 0.0:
+                    buy_cnt += 1
+                    buy_shares += sh
+                    buy_usd += usd
+                    if len(notable) < 6:
+                        notable.append({**item, "paired_exercise": False})
+                elif c == "S":
+                    is_paired = bool("M" in codes_same_day or "A" in codes_same_day)
+                    if is_paired:
+                        paired_sale_cnt += 1
+                    else:
+                        open_sale_cnt += 1
+                    sale_shares += sh
+                    sale_usd += usd
+                    if len(notable) < 6:
+                        notable.append({**item, "paired_exercise": is_paired})
+                elif c == "M":
+                    exercise_cnt += 1
+                elif c == "A":
+                    award_cnt += 1
+                elif c == "F":
+                    tax_cnt += 1
+
+            if has_form4_xml and has_yf_heuristic:
+                provenance = "MIXED_FORM4_AND_YFINANCE"
+            elif has_form4_xml:
+                provenance = "SEC_FORM4_XML"
+            else:
+                provenance = "YFINANCE_HEURISTIC"
+
+            return {
+                "ticker": clean,
+                "window_days": 180,
+                "source_provenance": provenance,
+                "total_rows": len(normalized_rows),
+                "reclassified_zero_dollar_buys": reclassified_zero_buys,
+                "open_market_buy_count": buy_cnt,
+                "open_market_buy_shares": round(buy_shares, 2),
+                "open_market_buy_usd": round(buy_usd, 2),
+                "open_market_sale_count": open_sale_cnt,
+                "paired_exercise_sale_count": paired_sale_cnt,
+                "total_sale_count": open_sale_cnt + paired_sale_cnt,
+                "total_sale_shares": round(sale_shares, 2),
+                "total_sale_usd": round(sale_usd, 2),
+                "exercise_count": exercise_cnt,
+                "award_grant_count": award_cnt,
+                "tax_withhold_count": tax_cnt,
+                "recent_notable": notable,
+            }
+        except Exception:
+            return None
+
+    def _portfolio_advisory_reader(portfolio_id: str = "default") -> Optional[Dict[str, Any]]:
+        try:
+            from application.portfolio.advisory_service import PortfolioAdvisoryService
+            from tools.macro.adapters.sector_snapshot_adapter import SectorSnapshotStore
+            from tools.portfolio.adapters.advisory_vault_adapter import (
+                AdvisoryVaultAdapter,
+                EquitySidecarAdapter,
+                MacroContextAdapter,
+            )
+
+            vault_root = _get_vault_path()
+
+            class _DepsPortfolioReader:
+                def get_current_portfolio_state(
+                    self, refresh_prices: bool = False, portfolio_id: str = "default"
+                ) -> Any:
+                    return get_portfolio_service().get_structured_portfolio_state(
+                        portfolio_id=portfolio_id,
+                        refresh_prices=False,
+                    )
+
+            class _OfflineMacroContextAdapter(MacroContextAdapter):
+                def get_latest_sector_rotation(self) -> Optional[Any]:
+                    try:
+                        res = SectorSnapshotStore().latest()
+                        if res and res[0] is not None:
+                            return res[0]
+                    except Exception:
+                        pass
+                    sr_latest = self.vault_path / "30_Knowledge_Base" / "Macroeconomics" / "Sector_Rotation" / "latest.json"
+                    if sr_latest.exists():
+                        try:
+                            return json.loads(sr_latest.read_text(encoding="utf-8"))
+                        except Exception:
+                            pass
+                    return None
+
+            adv_svc = PortfolioAdvisoryService(
+                portfolio_reader=_DepsPortfolioReader(),
+                macro_reader=_OfflineMacroContextAdapter(vault_path=vault_root),
+                sidecar_reader=EquitySidecarAdapter(vault_path=vault_root),
+                vault_port=AdvisoryVaultAdapter(vault_path=vault_root),
+                synthesizer_port=None,  # type: ignore[arg-type]
+                look_through_service=None,
+            )
+            rep = adv_svc.get_advisory_quant_report(refresh_prices=False, portfolio_id=portfolio_id)
+            rr = rep.risk_radar
+            cp = rep.cash_plan
+            return {
+                "evaluated_at": rep.evaluated_at,
+                "data_mode": rep.data_mode.value if hasattr(rep.data_mode, "value") else str(rep.data_mode),
+                "total_nav_thb": float(rep.total_nav_thb),
+                "risk_radar": {
+                    "weighted_beta": float(rr.weighted_beta) if rr.weighted_beta is not None else None,
+                    "total_portfolio_volatility_pct": float(rr.total_portfolio_volatility_pct) if getattr(rr, "total_portfolio_volatility_pct", None) is not None else None,
+                    "hhi": float(rr.hhi) if rr.hhi is not None else None,
+                    "effective_holdings_count": float(rr.effective_holdings_count) if rr.effective_holdings_count is not None else None,
+                    "top_1_weight_pct": float(getattr(rr, "top_1_weight_pct", 0.0) or 0.0),
+                    "top_3_weight_pct": float(getattr(rr, "top_3_weight_pct", 0.0) or 0.0),
+                    "concentration_risk_level": getattr(rr, "concentration_risk_level", "LOW"),
+                    "bucket_active_share_pct": float(rr.bucket_active_share_pct) if getattr(rr, "bucket_active_share_pct", None) is not None else None,
+                    "drawdown_pct": float(rr.drawdown_pct) if getattr(rr, "drawdown_pct", None) is not None else None,
+                    "drawdown_posture_tier": getattr(rr, "drawdown_posture_tier", "NORMAL"),
+                    "unassigned_holdings_nav_pct": float(rr.unassigned_holdings_nav_pct),
+                },
+                "cash_plan": {
+                    "cash_thb_available": float(cp.cash_thb_available),
+                    "cash_usd_available": float(cp.cash_usd_available),
+                    "usd_thb_fx_rate": float(cp.usd_thb_fx_rate),
+                    "immediate_deploy_thb": float(cp.immediate_deploy_thb),
+                    "immediate_deploy_usd": float(cp.immediate_deploy_usd),
+                    "conditional_limit_order_thb": float(cp.conditional_limit_order_thb),
+                    "conditional_limit_order_usd": float(cp.conditional_limit_order_usd),
+                    "fx_conversion_needed_thb": float(cp.fx_conversion_needed_thb),
+                },
+                "holdings_advisory": [
+                    {
+                        "symbol": h.symbol,
+                        "evaluation_track": h.evaluation_track.value if hasattr(h.evaluation_track, "value") else str(h.evaluation_track),
+                        "bucket_id": h.bucket_id,
+                        "bucket_name": h.bucket_name,
+                        "current_weight_pct": float(h.current_weight_pct),
+                        "target_weight_pct": float(h.target_weight_pct),
+                        "weight_drift_pct": float(h.weight_drift_pct),
+                        "action_code": h.action_code.value if hasattr(h.action_code, "value") else str(h.action_code),
+                        "is_immediate_execution": bool(h.is_immediate_execution),
+                        "live_upside_12m_pct": float(h.live_upside_12m_pct) if h.live_upside_12m_pct is not None else None,
+                        "macro_alignment": h.macro_alignment,
+                        "sector_quadrant": h.sector_quadrant,
+                        "risk_contribution_pct": float(h.risk_contribution_pct) if getattr(h, "risk_contribution_pct", None) is not None else None,
+                    }
+                    for h in rep.holdings_advisory
+                ],
+                "anomaly_warnings": [
+                    {
+                        "guardrail_code": w.guardrail_code,
+                        "ticker": w.ticker,
+                        "message": w.message,
+                        "severity": w.severity,
+                    }
+                    for w in rep.anomaly_warnings[:10]
+                ],
+            }
+        except Exception:
+            return None
+
+    def _investor_essence_reader(portfolio_id: str = "default") -> Optional[Dict[str, Any]]:
+        try:
+            uow_factory = SqliteInvestorRuntimeUowFactory()
+            with uow_factory.open() as uow:
+                snap = uow.planning.get_confirmed_snapshot("workspace", "investor_essence")
+            if not isinstance(snap, dict):
+                return None
+            claims = []
+            for c in (snap.get("accepted_claims") or []):
+                if isinstance(c, dict):
+                    txt = str(c.get("effective_text") or c.get("final_text") or c.get("text") or "").strip()
+                    if txt:
+                        claims.append({
+                            "text": txt,
+                            "source_kind": c.get("source_kind"),
+                            "fit_rating": c.get("fit_rating"),
+                        })
+            return {
+                "statement": snap.get("statement") or "",
+                "accepted_claims": claims,
+                "unresolved_topics": list(snap.get("unresolved_topics") or []),
+                "confirmed_at_iso": snap.get("confirmed_at_iso"),
+                "content_hash": snap.get("content_hash") or "",
+            }
+        except Exception:
+            return None
+
+
+    repo = SqliteRoundtableRepositoryAdapter()
+    providers = CallableContextDataProvidersAdapter(
+        instrument_resolver=_resolve_instrument,
+        equity_detail_reader=_equity_detail_reader,
+        equity_review_reader=_equity_review_reader,
+        macro_dashboard_reader=_macro_reader,
+        daily_digest_reader=_digest_reader,
+        portfolio_state_reader=_portfolio_state_reader,
+        confirmed_axis_reader=_confirmed_axis_reader,
+        active_thesis_reader=_active_thesis_reader,
+        research_dispatcher=_dispatch_roundtable_research,
+        equity_news_reader=_equity_news_reader,
+        equity_notes_lister=_equity_notes_lister,
+        equity_note_reader=_equity_note_reader,
+        financial_context_reader=_financial_context_reader,
+        bucket_policy_reader=_bucket_policy_reader,
+        watchlist_reader=_watchlist_reader,
+        thesis_exceptions_reader=_thesis_exceptions_reader,
+        promise_scores_reader=_promise_scores_reader,
+        analyst_context_reader=_analyst_context_reader,
+        insider_db_summary_reader=_insider_db_summary_reader,
+        portfolio_advisory_reader=_portfolio_advisory_reader,
+        investor_essence_reader=_investor_essence_reader,
+    )
+    settlement_prices = OhlcvSettlementPriceAdapter(
+        ohlcv_fetcher=lambda t, r, i: _OHLCV_SERVICE.get_ohlcv(t, range_str=r, interval_str=i)
+    )
+    assembler = RoundtableContextAssembler(
+        providers=providers,
+        repo=repo,
+        settlement_prices=settlement_prices,
+    )
+    service = RoundtableApplicationService(
+        repo=repo,
+        assembler=assembler,
+        engine=GeminiRoundtableEngine(),
+        tts=GeminiTTSAdapter(),
+        verifier=RoundtableConsistencyVerifier(),
+        sandbox_calc=RoundtableSandboxCalcAdapter(),
+        vault_writer=ObsidianRoundtableVaultWriterAdapter(),
+        thesis_updater=RoundtableThesisUpdaterAdapter(thesis_service_getter=get_thesis_service),
+        providers=providers,
+    )
+    _ROUNDTABLE_SERVICE = service
+    _ROUNDTABLE_CACHE_KEY = current_key
+    return service
+
+
+def get_roundtable_service(request: Request = None):
+    """Dependency provider for RoundtableApplicationService (Trinity Guru Roundtable Studio)."""
+    if request is not None:
+        app_state = getattr(getattr(request, "app", None), "state", None)
+        request_queue = getattr(app_state, "job_queue", None)
+        if request_queue is not None:
+            set_global_app_job_queue(request_queue)
+
+    current_key = (os.environ.get("WEBUI_STATE_DB_PATH", ""), str(_get_vault_path()))
+    with _ROUNDTABLE_INITIALIZATION_LOCK:
+        if _ROUNDTABLE_SERVICE is not None and _ROUNDTABLE_CACHE_KEY == current_key:
+            return _ROUNDTABLE_SERVICE
+        return _create_roundtable_service(current_key)

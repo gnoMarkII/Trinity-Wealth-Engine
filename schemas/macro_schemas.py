@@ -1277,6 +1277,7 @@ class MacroStrategyDirection(BaseModel):
                     if is_fx and claims_spread:
                         cleaned_rat = a.rationale or ""
                         cleaned_rat = re.sub(r'(\+?\d+([.,]\d+)?\s*(?:bps|%|จุด)|(?:กว้าง|แคบ|อยู่ที่|ประมาณ)\s*\+?\d+([.,]\d+)?\s*(?:bps|%|จุด)?)', '', cleaned_rat, flags=re.IGNORECASE)
+                        cleaned_rat = re.sub(r'\(\s*\)', '', cleaned_rat)
                         cleaned_rat = re.sub(r'\s{2,}', ' ', cleaned_rat).strip()
                         if "ยังไม่มีข้อมูล" not in cleaned_rat:
                             cleaned_rat = cleaned_rat.rstrip(". ") + " (ปัจจุบันยังไม่มีข้อมูลส่วนต่างอัตราดอกเบี้ยนโยบายที่ยืนยันได้ จึงยังประเมินส่วนต่างไม่ได้)"

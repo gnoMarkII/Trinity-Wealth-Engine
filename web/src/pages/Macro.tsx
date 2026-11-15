@@ -27,6 +27,13 @@ import { ThaiMarketRadarCard } from '../components/macro/ThaiMarketRadarCard'
 import { CrossBorderSection } from '../components/macro/cockpit/CrossBorderSection'
 import { SourceProvenanceBadge } from '../components/macro/cockpit/SourceProvenanceBadge'
 import { MacroNotebookLMExport } from '../components/macro/cockpit/MacroNotebookLMExport'
+import {
+  BookOpenIcon,
+  CompassIcon,
+  MicStageIcon,
+  RefreshIcon,
+  ScrollHistoryIcon,
+} from '../components/ui/AppIcons'
 
 export default function Macro() {
   const navigate = useNavigate()
@@ -343,9 +350,9 @@ export default function Macro() {
     }
 
     try {
-      await api.dispatchJob(instruction, cardId, 'manager', 'both')
+      await api.dispatchJob(instruction, cardId, 'manager', 'both', true)
       setToastState({
-        message: 'สั่งงานวิเคราะห์ภาวะเศรษฐกิจมหภาคเรียบร้อย',
+        message: 'ส่งคำขอวิเคราะห์ภาวะเศรษฐกิจมหภาคเข้า Request Approve แล้ว — กรุณากดยอมรับใน Kanban ก่อนเริ่มรัน',
         actionLabel: 'ดูสถานะใน Kanban',
         onAction: () => navigate('/kanban'),
         type: 'success',
@@ -375,11 +382,13 @@ export default function Macro() {
         onNavigateToAiTab={() => handleTabChange('ai')}
       />
 
-      {/* 2. Cockpit Slim Toolbar & Controls (แถบควบคุมกะทัดรัด แนวนอนบรรทัดเดียว ไม่กินพื้นที่หน้าจอ) */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2.5 rounded-xl border border-sky-100/80 bg-white/95 px-3.5 py-2 shadow-2xs">
-        <div className="flex items-center gap-2">
-          <span className="text-base">🧭</span>
-          <h1 className="text-xs sm:text-sm font-bold tracking-tight text-zinc-900">
+      {/* 2. Cockpit Slim Toolbar & Controls (แถบควบคุมกะทัดรัด จัดเรียงอัตโนมัติไม่ล้นขอบ) */}
+      <div className="flex flex-wrap items-center justify-between gap-2.5 rounded-xl border border-edge bg-surface-1 backdrop-blur-md px-3.5 py-2 shadow-sm">
+        <div className="flex items-center gap-2.5 min-w-0">
+          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-blue-50/90 border border-blue-200/70 text-section-accent">
+            <CompassIcon className="h-4 w-4 shrink-0" />
+          </span>
+          <h1 className="text-xs sm:text-sm font-bold tracking-tight text-slate-900 leading-snug">
             Macro Cockpit (ห้องควบคุมภาวะเศรษฐกิจมหภาค)
           </h1>
         </div>
@@ -393,7 +402,7 @@ export default function Macro() {
         </div>
 
         {/* Action Buttons Toolbar */}
-        <div className="flex flex-wrap items-center gap-1.5 shrink-0">
+        <div className="flex flex-wrap items-center gap-1.5 min-w-0">
           <MacroNotebookLMExport
             onNotify={(msg, type) =>
               setToastState({
@@ -407,36 +416,46 @@ export default function Macro() {
             type="button"
             onClick={fetchMarketObservables}
             disabled={isRefreshingMarket}
-            className="flex items-center gap-1.5 rounded-lg border border-sky-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-sky-700 shadow-2xs transition-all hover:bg-sky-50 disabled:opacity-50"
+            className="flex items-center gap-1.5 rounded-lg border border-sky-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-section-accent shadow-sm transition-all hover:bg-sky-50 disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-section-accent/45"
             title="ดึงข้อมูลตลาดสดล่าสุด (ไม่รัน AI)"
           >
-            <span>{isRefreshingMarket ? '⏳' : '🔄'}</span>
+            <RefreshIcon className={isRefreshingMarket ? 'h-3.5 w-3.5 animate-spin' : 'h-3.5 w-3.5'} />
             <span>{isRefreshingMarket ? 'กำลังดึง...' : 'รีเฟรชข้อมูลตลาด'}</span>
           </button>
 
           <button
             type="button"
             onClick={() => setIsRefDrawerOpen(true)}
-            className="flex items-center gap-1.5 rounded-lg border border-edge bg-panel px-2.5 py-1.5 text-xs font-semibold text-zinc-800 shadow-2xs transition-all hover:bg-surface-strong hover:shadow"
+            className="flex items-center gap-1.5 rounded-lg border border-edge bg-panel px-2.5 py-1.5 text-xs font-semibold text-slate-800 shadow-sm transition-all hover:bg-surface-strong hover:shadow focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-section-accent/45"
             title="เปิดเอกสารอ้างอิงและตัวชี้วัด"
           >
-            <span>📚</span>
+            <ScrollHistoryIcon className="h-3.5 w-3.5 text-slate-600" />
             <span>References</span>
           </button>
 
           <button
             type="button"
             onClick={() => setIsGlossaryOpen(true)}
-            className="flex items-center gap-1.5 rounded-lg border border-indigo-200 bg-indigo-50/70 px-2.5 py-1.5 text-xs font-semibold text-indigo-900 shadow-2xs transition-all hover:bg-indigo-100 hover:shadow"
+            className="flex items-center gap-1.5 rounded-lg border border-sky-200 bg-sky-50/75 px-2.5 py-1.5 text-xs font-semibold text-sky-900 shadow-sm transition-all hover:bg-sky-100 hover:shadow focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-section-accent/45"
             title="เปิดคู่มือคำศัพท์เศรษฐกิจและการลงทุนฉบับเข้าใจง่าย"
           >
-            <span>📖</span>
+            <BookOpenIcon className="h-3.5 w-3.5 text-section-accent" />
             <span>คู่มือศัพท์ Macro</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => navigate('/roundtable?agenda=macro&refs=@Macro')}
+            className="flex items-center gap-1.5 rounded-lg border border-blue-200 bg-blue-50/80 px-2.5 py-1.5 text-xs font-semibold text-blue-950 shadow-sm transition-all hover:bg-blue-100/80 hover:shadow focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-section-accent/45"
+            title="เปิดสภากูรูถกประเด็นเศรษฐกิจมหภาค"
+          >
+            <MicStageIcon className="h-3.5 w-3.5 text-section-accent" />
+            <span>ประชุมกูรูประเด็นมหภาค</span>
           </button>
 
           {lastMarketFetched && (
             <span
-              className="text-[10px] text-zinc-400 font-mono hidden md:inline ml-1"
+              className="hidden md:inline-flex items-center rounded-md border border-slate-200/80 bg-slate-50/90 px-2 py-1 text-[11px] text-slate-500 font-mono tabular-nums whitespace-nowrap"
               title={`ดึงตลาดล่าสุด: ${lastMarketFetched}`}
             >
               {lastMarketFetched}
@@ -514,10 +533,10 @@ export default function Macro() {
         <button
           type="button"
           onClick={() => setIsRefDrawerOpen(true)}
-          className="fixed right-0 top-1/3 z-40 flex items-center gap-2 rounded-l-xl border-y border-l border-edge bg-zinc-900 px-3 py-3.5 text-xs font-semibold text-white shadow-xl transition-all hover:bg-zinc-800 hover:pl-4"
+          className="fixed right-0 top-1/3 z-40 flex items-center gap-2 rounded-l-xl border-y border-l border-sky-200 bg-white/95 backdrop-blur-md px-3 py-3.5 text-xs font-semibold text-slate-800 shadow-[0_8px_24px_rgba(14,165,233,0.16)] transition-all hover:bg-sky-50 hover:pl-4 hover:text-section-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-section-accent/45"
           title="เปิดแท็บแหล่งอ้างอิงและตัวชี้วัด (Reference Drawer)"
         >
-          <span className="text-sm">📚</span>
+          <ScrollHistoryIcon className="h-3.5 w-3.5 text-section-accent" />
           <span className="writing-vertical tracking-wide">References</span>
         </button>
       )}

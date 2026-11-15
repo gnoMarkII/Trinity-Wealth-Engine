@@ -41,13 +41,13 @@ export default function PortfolioGoalsTab({
   const getGoalTypeBadge = (type: string, bucketId?: string | null) => {
     switch (type) {
       case 'nav_target':
-        return <span className="rounded-full bg-indigo-50 px-2.5 py-0.5 text-xs font-semibold text-indigo-700">เป้าหมาย NAV รวม</span>
+        return <span className="rounded-full bg-blue-50 px-2.5 py-0.5 text-xs font-semibold text-blue-700">เป้าหมาย NAV รวม</span>
       case 'cash_target':
         return <span className="rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-semibold text-emerald-700">เป้าหมายเงินสด/สำรอง</span>
       case 'passive_income_ytd':
         return <span className="rounded-full bg-amber-50 px-2.5 py-0.5 text-xs font-semibold text-amber-700">เป้าหมายเงินปันผล/ปี</span>
       case 'bucket_target':
-        return <span className="rounded-full bg-purple-50 px-2.5 py-0.5 text-xs font-semibold text-purple-700">Bucket: {bucketId || 'N/A'}</span>
+        return <span className="rounded-full bg-sky-50 px-2.5 py-0.5 text-xs font-semibold text-blue-700">Bucket: {bucketId || 'N/A'}</span>
       default:
         return <span className="rounded-full bg-sky-50 px-2.5 py-0.5 text-xs font-semibold text-sky-700">{type}</span>
     }
@@ -63,7 +63,7 @@ export default function PortfolioGoalsTab({
         )
       case 'wishes':
         return (
-          <span className="rounded-full bg-purple-50 border border-purple-200 px-2.5 py-0.5 text-[11px] font-bold text-purple-800 inline-flex items-center gap-1">
+          <span className="rounded-full bg-sky-50 border border-sky-200 px-2.5 py-0.5 text-[11px] font-bold text-blue-800 inline-flex items-center gap-1">
             🚀 Wishes (เสี่ยงสูงได้)
           </span>
         )
@@ -81,7 +81,7 @@ export default function PortfolioGoalsTab({
     switch (flexibility) {
       case 'none':
         return (
-          <span className="rounded-full bg-zinc-100 border border-zinc-200 px-2 py-0.5 text-[11px] font-medium text-zinc-700 inline-flex items-center gap-1">
+          <span className="rounded-full bg-slate-100 border border-slate-200 px-2 py-0.5 text-[11px] font-medium text-slate-700 inline-flex items-center gap-1">
             🔒 ไม่ยืดหยุ่น
           </span>
         )
@@ -113,14 +113,14 @@ export default function PortfolioGoalsTab({
     <div className="space-y-6">
       <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
         <div>
-          <h3 className="text-base font-bold text-zinc-900">Portfolio Goals ({goals.length} เป้าหมาย)</h3>
-          <p className="text-xs text-zinc-500">
+          <h3 className="text-base font-bold text-slate-900">Portfolio Goals ({goals.length} เป้าหมาย)</h3>
+          <p className="text-xs text-slate-500">
             ติดตามความคืบหน้าของเป้าหมายการลงทุน (Financial Goals) เทียบกับสถานะจริงในแต่ละพอร์ต
           </p>
         </div>
         <div className="flex items-center gap-3">
           {generatedAt && (
-            <span className="text-xs text-zinc-400">
+            <span className="text-xs text-slate-500">
               อัปเดต: {new Date(generatedAt).toLocaleString('th-TH')}
             </span>
           )}
@@ -158,7 +158,7 @@ export default function PortfolioGoalsTab({
                     {getGoalTypeBadge(goal.goal_type, goal.bucket_id)}
                     {getPriorityTierBadge(goal.priority_tier)}
                     {getFlexibilityBadge(goal.flexibility)}
-                    <span className="inline-flex items-center gap-1 rounded-full bg-zinc-100/80 px-2 py-0.5 text-[11px] font-medium text-zinc-600 truncate max-w-[180px]">
+                    <span className="inline-flex items-center gap-1 rounded-full bg-slate-100/80 px-2 py-0.5 text-[11px] font-medium text-slate-600 truncate max-w-[180px]">
                       📁 {linkedPortName}
                     </span>
                   </div>
@@ -167,7 +167,7 @@ export default function PortfolioGoalsTab({
                       <button
                         type="button"
                         onClick={() => setEditingGoal(goal)}
-                        className="rounded-lg p-1.5 text-zinc-400 hover:bg-sky-50 hover:text-flow-blue transition-colors"
+                        className="rounded-lg p-1.5 text-slate-500 hover:bg-sky-50 hover:text-flow-blue transition-colors"
                         title="แก้ไขเป้าหมาย"
                       >
                         ✏️
@@ -175,7 +175,7 @@ export default function PortfolioGoalsTab({
                       <button
                         type="button"
                         onClick={() => handleDelete(goal.name, goal.portfolio_id)}
-                        className="rounded-lg p-1.5 text-zinc-400 hover:bg-rose-50 hover:text-rose-600 transition-colors"
+                        className="rounded-lg p-1.5 text-slate-500 hover:bg-rose-50 hover:text-rose-600 transition-colors"
                         title="ลบเป้าหมาย"
                       >
                         🗑️
@@ -186,7 +186,7 @@ export default function PortfolioGoalsTab({
 
                 {/* Header Title: Full Width */}
                 <div className="mt-3">
-                  <h4 className="font-extrabold text-zinc-900 text-base sm:text-lg leading-snug tracking-tight">
+                  <h4 className="font-extrabold text-slate-900 text-base sm:text-lg leading-snug tracking-tight">
                     {goal.name}
                   </h4>
                 </div>
@@ -194,8 +194,8 @@ export default function PortfolioGoalsTab({
                 {/* Progress Bar & Percentage */}
                 <div className="mt-4 space-y-1.5">
                   <div className="flex items-baseline justify-between text-xs sm:text-sm">
-                    <span className="text-zinc-500 font-medium">ความคืบหน้า</span>
-                    <span className="font-extrabold text-zinc-900 font-mono text-sm sm:text-base">{progress.toFixed(1)}%</span>
+                    <span className="text-slate-500 font-medium">ความคืบหน้า</span>
+                    <span className="font-extrabold text-slate-900 font-mono text-sm sm:text-base">{progress.toFixed(1)}%</span>
                   </div>
                   {/* Progress Bar */}
                   <div className="h-2.5 w-full overflow-hidden rounded-full bg-sky-100/60 p-0.5">
@@ -217,13 +217,13 @@ export default function PortfolioGoalsTab({
                 {/* Current & Target Amount Box */}
                 <div className="mt-4 grid grid-cols-2 gap-3 rounded-xl bg-sky-50/60 p-3.5 border border-sky-100/60">
                   <div className="min-w-0">
-                    <span className="text-zinc-500 font-medium block text-[11px] mb-0.5">Current Amount</span>
-                    <span className="font-bold font-sans tabular-nums text-sm sm:text-base text-zinc-900 block truncate" title={formatTHB(goal.current_amount_thb)}>
+                    <span className="text-slate-500 font-medium block text-[11px] mb-0.5">Current Amount</span>
+                    <span className="font-bold font-sans tabular-nums text-sm sm:text-base text-slate-900 block truncate" title={formatTHB(goal.current_amount_thb)}>
                       {formatTHB(goal.current_amount_thb)}
                     </span>
                   </div>
                   <div className="min-w-0 text-right">
-                    <span className="text-zinc-500 font-medium block text-[11px] mb-0.5">Target Amount</span>
+                    <span className="text-slate-500 font-medium block text-[11px] mb-0.5">Target Amount</span>
                     <span className="font-extrabold font-sans tabular-nums text-sm sm:text-base text-flow-blue block truncate" title={formatTHB(goal.target_amount_thb)}>
                       {formatTHB(goal.target_amount_thb)}
                     </span>
@@ -234,7 +234,7 @@ export default function PortfolioGoalsTab({
                 <div className="mt-3.5 space-y-2">
                   <div className="flex flex-wrap items-center justify-between gap-1.5 text-[11px]">
                     <div className="flex items-center gap-1.5">
-                      <span className="font-semibold text-zinc-500">ผลตอบแทนที่ต้องการ:</span>
+                      <span className="font-semibold text-slate-500">ผลตอบแทนที่ต้องการ:</span>
                       {goal.required_return_pct !== null && goal.required_return_pct !== undefined ? (
                         <span
                           className={`rounded-md px-2 py-0.5 font-mono font-bold ${
@@ -252,13 +252,13 @@ export default function PortfolioGoalsTab({
                             : `${goal.required_return_pct.toFixed(1)}% ต่อปี`}
                         </span>
                       ) : (
-                        <span className="text-zinc-400 italic">ไม่ได้ระบุกำหนดเวลา</span>
+                        <span className="text-slate-500 italic">ไม่ได้ระบุกำหนดเวลา</span>
                       )}
                     </div>
 
                     {goal.monthly_savings_thb ? (
-                      <span className="text-zinc-500 font-mono text-[11px]">
-                        ออมสะสม: <strong className="text-zinc-700 font-bold">{formatTHB(goal.monthly_savings_thb)}</strong>/ด.
+                      <span className="text-slate-500 font-mono text-[11px]">
+                        ออมสะสม: <strong className="text-slate-700 font-bold">{formatTHB(goal.monthly_savings_thb)}</strong>/ด.
                       </span>
                     ) : null}
                   </div>
@@ -280,7 +280,7 @@ export default function PortfolioGoalsTab({
 
                 {/* Linked Purpose Bucket & Funding Attribution (WP13 Task 9) */}
                 {goal.bucket_id && (
-                  <div className="mt-3.5 rounded-xl border border-purple-100 bg-purple-50/50 p-3 text-xs">
+                  <div className="mt-3.5 rounded-xl border border-sky-100 bg-sky-50/50 p-3 text-xs">
                     {(() => {
                       const linkedBucket = allocationPolicy?.purpose_buckets?.find(
                         (pb) => pb.bucket_id === goal.bucket_id
@@ -294,23 +294,23 @@ export default function PortfolioGoalsTab({
                           <div className="flex items-center justify-between gap-2">
                             <div className="flex items-center gap-1.5 min-w-0">
                               <span className="text-sm">🎯</span>
-                              <span className="font-bold text-purple-950 truncate">
+                              <span className="font-bold text-blue-950 truncate">
                                 {linkedBucket?.name || goal.bucket_id}
                               </span>
                               {linkedBucket?.role && (
-                                <span className="rounded bg-purple-100 px-1.5 py-0.5 text-[10px] text-purple-800">
+                                <span className="rounded bg-sky-100 px-1.5 py-0.5 text-[11px] text-blue-800">
                                   {linkedBucket.role}
                                 </span>
                               )}
                             </div>
                             {bucketSummary && (
-                              <span className="font-mono font-bold text-purple-900 tabular-nums shrink-0">
+                              <span className="font-mono font-bold text-blue-900 tabular-nums shrink-0">
                                 {formatTHB(bucketSummary.actual_value_thb)}
                               </span>
                             )}
                           </div>
                           {bucketSummary && (
-                            <div className="mt-1 flex items-center justify-between text-[11px] text-purple-700/90 font-medium">
+                            <div className="mt-1 flex items-center justify-between text-[11px] text-blue-700/90 font-medium">
                               <span>สัดส่วนในพอร์ต: {bucketSummary.actual_percent.toFixed(1)}%</span>
                               {goal.target_amount_thb > 0 && (
                                 <span>
@@ -327,7 +327,7 @@ export default function PortfolioGoalsTab({
                 )}
 
                 {goal.notes && (
-                  <p className="mt-3 text-xs text-zinc-500 italic line-clamp-2">“{goal.notes}”</p>
+                  <p className="mt-3 text-xs text-slate-500 italic line-clamp-2">“{goal.notes}”</p>
                 )}
               </div>
 
@@ -335,11 +335,11 @@ export default function PortfolioGoalsTab({
               <div className="mt-5 border-t border-sky-100 pt-3 flex items-center justify-between text-xs">
                 <div>
                   {goal.deadline ? (
-                    <span className="text-zinc-600 font-medium">
-                      📅 เป้าหมาย: <strong className="text-zinc-800 font-semibold">{goal.deadline}</strong>
+                    <span className="text-slate-600 font-medium">
+                      📅 เป้าหมาย: <strong className="text-slate-800 font-semibold">{goal.deadline}</strong>
                     </span>
                   ) : (
-                    <span className="text-zinc-400">ไม่มีกำหนดระยะเวลา</span>
+                    <span className="text-slate-500">ไม่มีกำหนดระยะเวลา</span>
                   )}
                 </div>
                 <div>
@@ -363,7 +363,7 @@ export default function PortfolioGoalsTab({
         })}
 
         {goals.length === 0 && (
-          <div className="col-span-full rounded-2xl border border-dashed border-sky-200 p-12 text-center text-zinc-400">
+          <div className="col-span-full rounded-2xl border border-dashed border-sky-200 p-12 text-center text-slate-500">
             ยังไม่มีเป้าหมายการลงทุน (Goals) ในขณะนี้
           </div>
         )}

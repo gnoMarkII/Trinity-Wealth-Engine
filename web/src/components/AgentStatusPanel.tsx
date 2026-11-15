@@ -90,11 +90,11 @@ export default function AgentStatusPanel() {
     <div className="space-y-2 border-t border-sky-100/80 pt-3">
       {/* Header with Title and Live State Pill */}
       <div className="flex items-center justify-between px-1">
-        <h3 className="text-[10px] font-bold uppercase tracking-[0.16em] text-sky-800 flex items-center gap-1.5">
+        <h3 className="text-[11px] font-bold uppercase tracking-[0.16em] text-sky-800 flex items-center gap-1.5">
           <span>Trinity Swarm</span>
         </h3>
         <span
-          className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold transition-all ${
+          className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold transition-all ${
             running
               ? 'border border-emerald-200 bg-emerald-50 text-emerald-700 shadow-[0_0_8px_rgba(16,185,129,0.2)]'
               : 'border border-sky-100 bg-sky-50/60 text-sky-700'
@@ -127,7 +127,7 @@ export default function AgentStatusPanel() {
                 className={`group flex items-center justify-between rounded-xl px-2 py-1.5 transition-all text-xs ${
                   active
                     ? 'border border-emerald-200/80 bg-emerald-50/90 text-emerald-950 shadow-[0_2px_8px_rgba(16,185,129,0.12)]'
-                    : 'text-zinc-600 hover:bg-sky-50/60 hover:text-zinc-900'
+                    : 'text-slate-600 hover:bg-sky-50/60 hover:text-slate-900'
                 }`}
               >
                 <div className="flex items-center gap-2 min-w-0">
@@ -135,10 +135,10 @@ export default function AgentStatusPanel() {
                     {agent.icon}
                   </span>
                   <div className="min-w-0 flex flex-col">
-                    <span className={`truncate text-xs font-medium leading-tight ${active ? 'text-emerald-950 font-semibold' : 'text-zinc-800'}`}>
+                    <span className={`truncate text-xs font-medium leading-tight ${active ? 'text-emerald-950 font-semibold' : 'text-slate-800'}`}>
                       {agent.label}
                     </span>
-                    <span className="truncate text-[9px] text-zinc-400 group-hover:text-sky-700/70 transition-colors">
+                    <span className="truncate text-[11px] text-slate-500 group-hover:text-sky-700/70 transition-colors">
                       {agent.sublabel}
                     </span>
                   </div>
@@ -151,7 +151,7 @@ export default function AgentStatusPanel() {
                       <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.7)]" />
                     </span>
                   ) : (
-                    <span className="inline-block h-1.5 w-1.5 rounded-full bg-zinc-300 group-hover:bg-sky-400 transition-colors" />
+                    <span className="inline-block h-1.5 w-1.5 rounded-full bg-slate-300 group-hover:bg-sky-400 transition-colors" />
                   )}
                 </div>
               </li>

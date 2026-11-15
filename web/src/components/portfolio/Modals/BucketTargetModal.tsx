@@ -87,20 +87,20 @@ export default function BucketTargetModal({ portfolioId, initialTargets, onClose
 
   return (
     <Modal titleId="bucket-target-modal-title" onClose={onClose} panelClassName="max-w-xl rounded-2xl border border-sky-100 bg-white p-6 shadow-2xl">
-      <div className="flex items-center justify-between border-b border-zinc-100 pb-4">
-        <h3 id="bucket-target-modal-title" className="text-lg font-bold text-zinc-900">
+      <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+        <h3 id="bucket-target-modal-title" className="text-lg font-bold text-slate-900">
           ⚙️ ตั้งค่าสัดส่วนกลยุทธ์ (Allocation Targets)
         </h3>
         <div className="flex items-center gap-2">
           <button
             type="button"
             onClick={handleRandomizeAll}
-            className="flex items-center gap-1 rounded-xl border border-purple-200 bg-purple-50 px-2.5 py-1 text-xs font-semibold text-purple-700 transition-colors hover:bg-purple-100 hover:border-purple-300"
+            className="flex items-center gap-1 rounded-xl border border-sky-200 bg-sky-50 px-2.5 py-1 text-xs font-semibold text-blue-700 transition-colors hover:bg-sky-100 hover:border-sky-300"
             title="สุ่มสีใหม่ทุก Bucket ให้ไม่ซ้ำกัน"
           >
             🎨 สุ่มสีทั้งหมด
           </button>
-          <button type="button" onClick={onClose} className="text-zinc-400 hover:text-zinc-600">
+          <button type="button" onClick={onClose} className="text-slate-500 hover:text-slate-600">
             ✕
           </button>
         </div>
@@ -115,7 +115,7 @@ export default function BucketTargetModal({ portfolioId, initialTargets, onClose
 
         <div className="space-y-3 max-h-80 overflow-y-auto pr-1">
           {targets.map((t, idx) => (
-            <div key={t.bucket_id || idx} className="flex items-center gap-2 rounded-xl border border-zinc-200 bg-zinc-50/50 p-2.5 text-xs">
+            <div key={t.bucket_id || idx} className="flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50/50 p-2.5 text-xs">
               <div className="flex items-center gap-1">
                 <input
                   type="color"
@@ -127,7 +127,7 @@ export default function BucketTargetModal({ portfolioId, initialTargets, onClose
                 <button
                   type="button"
                   onClick={() => handleRandomizeRow(idx)}
-                  className="rounded-lg p-1 text-zinc-400 transition-colors hover:bg-purple-50 hover:text-purple-600"
+                  className="rounded-lg p-1 text-slate-500 transition-colors hover:bg-sky-50 hover:text-blue-600"
                   title="สุ่มสีใหม่สำหรับ Bucket นี้"
                 >
                   🎲
@@ -139,16 +139,16 @@ export default function BucketTargetModal({ portfolioId, initialTargets, onClose
                   value={t.name}
                   onChange={(e) => handleChange(idx, 'name', e.target.value)}
                   placeholder="ชื่อ Bucket"
-                  className="w-full rounded-lg border border-zinc-300 px-2.5 py-1.5 font-medium text-zinc-800 focus:border-flow-blue focus:outline-none"
+                  className="w-full rounded-lg border border-slate-300 px-2.5 py-1.5 font-medium text-slate-800 focus:border-flow-blue focus:outline-none"
                   required
                 />
-                <div className="flex items-center gap-2 text-[11px] text-zinc-500">
+                <div className="flex items-center gap-2 text-[11px] text-slate-500">
                   <span>ID:</span>
                   <input
                     type="text"
                     value={t.bucket_id}
                     onChange={(e) => handleChange(idx, 'bucket_id', e.target.value)}
-                    className="w-28 rounded border border-zinc-200 px-1.5 py-0.5 font-mono text-zinc-600 focus:border-flow-blue focus:outline-none"
+                    className="w-28 rounded border border-slate-200 px-1.5 py-0.5 font-mono text-slate-600 focus:border-flow-blue focus:outline-none"
                     required
                   />
                 </div>
@@ -161,15 +161,15 @@ export default function BucketTargetModal({ portfolioId, initialTargets, onClose
                   max="100"
                   value={t.target_percent}
                   onChange={(e) => handleChange(idx, 'target_percent', parseFloat(e.target.value) || 0)}
-                  className="w-16 rounded-lg border border-zinc-300 px-2 py-1.5 text-right font-bold text-zinc-900 focus:border-flow-blue focus:outline-none"
+                  className="w-16 rounded-lg border border-slate-300 px-2 py-1.5 text-right font-bold text-slate-900 focus:border-flow-blue focus:outline-none"
                   required
                 />
-                <span className="font-semibold text-zinc-600">%</span>
+                <span className="font-semibold text-slate-600">%</span>
               </div>
               <button
                 type="button"
                 onClick={() => handleRemove(idx)}
-                className="rounded-lg p-1.5 text-zinc-400 hover:bg-rose-50 hover:text-rose-600"
+                className="rounded-lg p-1.5 text-slate-500 hover:bg-rose-50 hover:text-rose-600"
                 title="ลบ Bucket"
               >
                 ✕
@@ -186,18 +186,18 @@ export default function BucketTargetModal({ portfolioId, initialTargets, onClose
           + เพิ่ม Bucket ใหม่
         </button>
 
-        <div className="flex items-center justify-between rounded-xl bg-zinc-100 p-3 text-xs font-bold">
-          <span className="text-zinc-600">ผลรวมเป้าหมายทั้งหมด:</span>
+        <div className="flex items-center justify-between rounded-xl bg-slate-100 p-3 text-xs font-bold">
+          <span className="text-slate-600">ผลรวมเป้าหมายทั้งหมด:</span>
           <span className={`text-sm ${Math.abs(totalPercent - 100) > 0.1 ? 'text-amber-600 font-extrabold' : 'text-emerald-600'}`}>
             {totalPercent.toFixed(1)}% {Math.abs(totalPercent - 100) > 0.1 && '(ไม่ครบ 100%)'}
           </span>
         </div>
 
-        <div className="flex justify-end gap-2 border-t border-zinc-100 pt-4">
+        <div className="flex justify-end gap-2 border-t border-slate-100 pt-4">
           <button
             type="button"
             onClick={onClose}
-            className="rounded-xl border border-zinc-300 bg-white px-4 py-2 text-xs font-semibold text-zinc-700 hover:bg-zinc-50"
+            className="rounded-xl border border-slate-300 bg-white px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50"
           >
             ยกเลิก
           </button>

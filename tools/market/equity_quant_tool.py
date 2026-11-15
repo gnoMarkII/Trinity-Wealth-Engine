@@ -301,11 +301,18 @@ def compute_equity_quant_signals(ticker: str, market: Literal["TH", "US"] = "US"
 
         interest_coverage = round(op_income_val / interest_exp, 2) if (op_income_val is not None and interest_exp is not None and interest_exp > 0) else None
 
-        # Effective Tax Rate Formula
+        # Effective Tax Rate Formula (Outlier Guard: normalize one-off distortions outside 5%-35%)
+        tax_policy_flag: Optional[str] = None
+        statutory_tax = 0.21 if market == "US" else 0.20
         if tax_exp is not None and pretax_inc is not None and pretax_inc > 0:
-            tax_rate = max(0.0, min(0.40, tax_exp / pretax_inc))
+            raw_eff_tax = tax_exp / pretax_inc
+            if 0.05 <= raw_eff_tax <= 0.35:
+                tax_rate = raw_eff_tax
+            else:
+                tax_rate = statutory_tax
+                tax_policy_flag = "tax_policy:normalized_statutory"
         else:
-            tax_rate = 0.21 if market == "US" else 0.20
+            tax_rate = statutory_tax
 
         # ROIC Formula: NOPAT / Invested Capital using GAAP Operating Income
         roic_pct = None
@@ -369,6 +376,15 @@ def compute_equity_quant_signals(ticker: str, market: Literal["TH", "US"] = "US"
                 except Exception as tnx_err:
                     log.warning("Could not fetch live ^TNX for fresh DCF: %s", tnx_err)
 
+        dcf_ebit = (
+            float(ttm_p.operating_income)
+            if (ttm_p and ttm_p.operating_income is not None)
+            else (
+                float(ttm_p.ebit)
+                if (ttm_p and ttm_p.ebit is not None)
+                else op_income_val
+            )
+        )
         dcf_result, dcf_flags = compute_dcf_valuation(
             ticker=resolved.raw_symbol.strip().upper(),
             market=market,
@@ -384,6 +400,7 @@ def compute_equity_quant_signals(ticker: str, market: Literal["TH", "US"] = "US"
             forward_eps=info.get("forwardEps"),
             trailing_eps=info.get("trailingEps"),
             cash_and_equivalents=cash_raw or 0.0,
+            ebit=dcf_ebit,
         )
 
         # Canonical SEC Form 4 Insider Conviction & Smart Money Integration
@@ -412,7 +429,12 @@ def compute_equity_quant_signals(ticker: str, market: Literal["TH", "US"] = "US"
         )
 
         # Declarative Sector KPIs
-        sector_kpis_summary = compute_sector_kpis(peer_sector or "", autopsy.periods if autopsy else [])
+        sector_kpis_summary = compute_sector_kpis(
+            peer_sector or "",
+            autopsy.periods if autopsy else [],
+            industry=info.get("industry"),
+            ttm_period=ttm_p,
+        )
         sector_kpis_dict = sector_kpis_summary.model_dump() if sector_kpis_summary else None
 
         # DuPont 3-Factor & Sloan Accrual Analysis (period-consistent & non-silent error reporting)
@@ -422,26 +444,23 @@ def compute_equity_quant_signals(ticker: str, market: Literal["TH", "US"] = "US"
         dupont_basis = "unavailable_missing_inputs"
         sloan_basis = "unavailable_missing_inputs"
         if autopsy and autopsy.periods:
-            p0 = autopsy.periods[0]
-            p0_type = getattr(p0, "period_type", None)
-            p0_end = str(getattr(p0, "fiscal_period_end", "") or "")
-            p1 = None
-            for cand in autopsy.periods[1:]:
-                c_type = getattr(cand, "period_type", None)
-                c_end = str(getattr(cand, "fiscal_period_end", "") or "")
-                if (p0_type or c_type) and c_type != p0_type:
-                    continue
-                if p0_end and c_end and c_end >= p0_end:
-                    continue
-                p1 = cand
-                break
-
-            ni = getattr(p0, "net_income", None)
-            rev = getattr(p0, "total_revenue", None)
-            ta0 = getattr(p0, "total_assets", None)
-            eq0 = getattr(p0, "stockholders_equity", None)
-            ocf = getattr(p0, "operating_cash_flow", None)
-            ta1 = getattr(p1, "total_assets", None) if p1 else None
+            dp_p0 = next(
+                (
+                    cand
+                    for cand in autopsy.periods
+                    if getattr(cand, "net_income", None) is not None
+                    and getattr(cand, "total_revenue", None) is not None
+                    and getattr(cand, "total_assets", None) is not None
+                    and getattr(cand, "stockholders_equity", None) is not None
+                ),
+                autopsy.periods[0],
+            )
+            dp_p0_type = getattr(dp_p0, "period_type", None)
+            dp_p0_end = str(getattr(dp_p0, "fiscal_period_end", "") or "")
+            ni = getattr(dp_p0, "net_income", None)
+            rev = getattr(dp_p0, "total_revenue", None)
+            ta0 = getattr(dp_p0, "total_assets", None)
+            eq0 = getattr(dp_p0, "stockholders_equity", None)
 
             if ni is not None and rev is not None and ta0 is not None and eq0 is not None:
                 try:
@@ -464,10 +483,10 @@ def compute_equity_quant_signals(ticker: str, market: Literal["TH", "US"] = "US"
                             "internal_closure_error": float(dp.internal_closure_error),
                             "published_roe_reconstructed_pct": float(dp.published_roe_reconstructed_pct),
                             "is_published_reconciled": dp.is_published_reconciled,
-                            "fiscal_period_end": p0_end or None,
-                            "period_type": p0_type or None,
+                            "fiscal_period_end": dp_p0_end or None,
+                            "period_type": dp_p0_type or None,
                         }
-                        dupont_basis = f"{p0_type or 'unknown'}:{p0_end or 'unknown'}"
+                        dupont_basis = f"{dp_p0_type or 'unknown'}:{dp_p0_end or 'unknown'}"
                         if not dp.is_published_reconciled:
                             dupont_sloan_flags.append("dupont_display_reconciliation_gap:quality")
                 except (InvalidOperation, ValueError, TypeError) as exc:
@@ -475,12 +494,43 @@ def compute_equity_quant_signals(ticker: str, market: Literal["TH", "US"] = "US"
                     dupont_sloan_flags.append("dupont_calculation_failed:quality")
                     dupont_basis = "calculation_failed"
 
-            if ni is not None and ocf is not None and ta0 is not None:
+            sl_idx = next(
+                (
+                    idx
+                    for idx, cand in enumerate(autopsy.periods)
+                    if getattr(cand, "net_income", None) is not None
+                    and getattr(cand, "operating_cash_flow", None) is not None
+                    and getattr(cand, "total_assets", None) is not None
+                ),
+                0,
+            )
+            sl_p0 = autopsy.periods[sl_idx]
+            sl_p0_type = getattr(sl_p0, "period_type", None)
+            sl_p0_end = str(getattr(sl_p0, "fiscal_period_end", "") or "")
+            sl_p1 = None
+            for cand in autopsy.periods[sl_idx + 1 :]:
+                c_type = getattr(cand, "period_type", None)
+                c_end = str(getattr(cand, "fiscal_period_end", "") or "")
+                if (sl_p0_type or c_type) and c_type != sl_p0_type:
+                    continue
+                if sl_p0_end and c_end and c_end >= sl_p0_end:
+                    continue
+                if getattr(cand, "total_assets", None) is None:
+                    continue
+                sl_p1 = cand
+                break
+
+            sl_ni = getattr(sl_p0, "net_income", None)
+            ocf = getattr(sl_p0, "operating_cash_flow", None)
+            sl_ta0 = getattr(sl_p0, "total_assets", None)
+            ta1 = getattr(sl_p1, "total_assets", None) if sl_p1 else None
+
+            if sl_ni is not None and ocf is not None and sl_ta0 is not None:
                 try:
                     sl = compute_sloan_accrual_ratio(
-                        net_income=Decimal(str(ni)),
+                        net_income=Decimal(str(sl_ni)),
                         operating_cash_flow=Decimal(str(ocf)),
-                        total_assets_current=Decimal(str(ta0)),
+                        total_assets_current=Decimal(str(sl_ta0)),
                         total_assets_prior=Decimal(str(ta1)) if ta1 is not None else None,
                     )
                     if sl is None:
@@ -497,11 +547,11 @@ def compute_equity_quant_signals(ticker: str, market: Literal["TH", "US"] = "US"
                             "earnings_quality_rating": sl.earnings_quality_rating,
                             "assets_basis": sl.assets_basis,
                             "interpretation": sl.interpretation,
-                            "fiscal_period_end": p0_end or None,
-                            "period_type": p0_type or None,
-                            "prior_fiscal_period_end": str(getattr(p1, "fiscal_period_end", "") or "") or None if p1 else None,
+                            "fiscal_period_end": sl_p0_end or None,
+                            "period_type": sl_p0_type or None,
+                            "prior_fiscal_period_end": str(getattr(sl_p1, "fiscal_period_end", "") or "") or None if sl_p1 else None,
                         }
-                        sloan_basis = f"{sl.assets_basis}:{p0_type or 'unknown'}:{p0_end or 'unknown'}"
+                        sloan_basis = f"{sl.assets_basis}:{sl_p0_type or 'unknown'}:{sl_p0_end or 'unknown'}"
                 except (InvalidOperation, ValueError, TypeError) as exc:
                     log.warning("Sloan accrual calculation failed for %s: %s", provider_symbol, exc)
                     dupont_sloan_flags.append("sloan_calculation_failed:quality")
@@ -759,7 +809,7 @@ def compute_equity_quant_signals(ticker: str, market: Literal["TH", "US"] = "US"
                 dividend_flag, solvency_flag, liquidity_flag, composite_flag, peer_flag,
                 revision_fetch_flag or revision_score_flag, fcf_q_flag, debt_q_flag,
                 *dcf_flags, *ownership_flags, *rdcf_flags, *tac_flags, *ins_flags, *margin_flags,
-                dilution_flag, *dupont_sloan_flags, *signal_audit_flags,
+                tax_policy_flag, dilution_flag, *dupont_sloan_flags, *signal_audit_flags,
             ] if f
         ]
         for name, q in [
@@ -888,7 +938,7 @@ def compute_equity_quant_signals(ticker: str, market: Literal["TH", "US"] = "US"
         non_gaap_margin_item = None
         if guidance_context and guidance_context.verified_claims:
             for claim in guidance_context.verified_claims:
-                if claim.metric_name == "non_gaap_operating_margin_midpoint_pct":
+                if claim.metric_name in ("non_gaap_operating_margin_midpoint_pct", "non_gaap_operating_margin_pct"):
                     non_gaap_margin_item = MarginMetricItem(
                         value_pct=claim.numeric_value,
                         period_end=guidance_context.fiscal_quarter,

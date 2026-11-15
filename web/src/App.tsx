@@ -12,9 +12,15 @@ const Macro = lazy(() => import('./pages/Macro'))
 const Equity = lazy(() => import('./pages/Equity'))
 const DailyDigest = lazy(() => import('./pages/DailyDigest'))
 const ManagerAdvisor = lazy(() => import('./pages/ManagerAdvisor'))
+const RoundtableStudio = lazy(() => import('./pages/RoundtableStudio'))
 
 function RouteFallback() {
-  return <div className="flex min-h-full items-center justify-center text-sm text-zinc-400">กำลังโหลด...</div>
+  return (
+    <div className="flex min-h-full items-center justify-center gap-2 text-sm font-medium text-slate-500">
+      <span className="h-2 w-2 rounded-full bg-sky-500 animate-pulse" aria-hidden="true" />
+      <span>กำลังโหลด...</span>
+    </div>
+  )
 }
 
 function App() {
@@ -28,6 +34,7 @@ function App() {
               <Route path="/" element={<Navigate to="/manager" replace />} />
               <Route element={<Layout />}>
                 <Route path="/manager" element={<ManagerAdvisor />} />
+                <Route path="/roundtable" element={<RoundtableStudio />} />
                 <Route path="/advisor" element={<Navigate to="/manager" replace />} />
                 <Route path="/kanban" element={<Navigate to="/manager?view=kanban" replace />} />
                 <Route path="/digest" element={<DailyDigest />} />

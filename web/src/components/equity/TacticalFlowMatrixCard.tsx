@@ -50,7 +50,7 @@ export default function TacticalFlowMatrixCard({
           <div className="text-[11px] font-bold uppercase tracking-wider text-sky-700/80">
             Execution & Capital Flow Matrix
           </div>
-          <h3 className="text-lg font-bold text-zinc-900 flex items-center gap-2 mt-0.5">
+          <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2 mt-0.5">
             <span>📊 Tactical Blueprint & Flow</span>
             <ContextTooltip
               title="แผนภูมิกลยุทธ์และกระแสเงินทุน (Tactical Blueprint & Flow)"
@@ -66,10 +66,10 @@ export default function TacticalFlowMatrixCard({
           <span
             className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider border ${
               isStage2
-                ? 'bg-emerald-50 text-emerald-700 border-emerald-200 shadow-xs'
+                ? 'bg-emerald-50 text-emerald-700 border-emerald-200 shadow-sm'
                 : isStage4
-                ? 'bg-rose-50 text-rose-700 border-rose-200 shadow-xs'
-                : 'bg-sky-50 text-sky-700 border-sky-200 shadow-xs'
+                ? 'bg-rose-50 text-rose-700 border-rose-200 shadow-sm'
+                : 'bg-sky-50 text-sky-700 border-sky-200 shadow-sm'
             }`}
           >
             {stage.replace(/_/g, ' ')}
@@ -94,10 +94,10 @@ export default function TacticalFlowMatrixCard({
             </div>
           </div>
 
-          <div className="flex items-center justify-between text-xs font-semibold text-zinc-500 uppercase tracking-wider pt-1">
+          <div className="flex items-center justify-between text-xs font-semibold text-slate-500 uppercase tracking-wider pt-1">
             <span>🎯 Tactical Setup ({tactical.horizon_timeframe || '1-3M'})</span>
             {tactical.atr_14 != null && (
-              <span className="text-zinc-500 font-normal">ATR(14): {currency}{tactical.atr_14.toFixed(2)}</span>
+              <span className="text-slate-500 font-normal">ATR(14): {currency}{tactical.atr_14.toFixed(2)}</span>
             )}
           </div>
 
@@ -106,7 +106,7 @@ export default function TacticalFlowMatrixCard({
             <div className="rounded-xl border border-emerald-200/80 bg-emerald-50/50 p-3">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-1">
-                  <span className="text-emerald-800 font-semibold block text-[10px] uppercase">
+                  <span className="text-emerald-800 font-semibold block text-[11px] uppercase">
                     Optimal Buy Zone
                   </span>
                   <ContextTooltip
@@ -117,7 +117,7 @@ export default function TacticalFlowMatrixCard({
                   />
                 </div>
                 {tactical.is_in_buy_zone && (
-                  <span className="text-[9px] px-1 py-0.2 rounded bg-emerald-200/80 text-emerald-900 font-bold">
+                  <span className="text-[11px] px-1 py-0.5 rounded bg-emerald-200/80 text-emerald-900 font-bold">
                     IN ZONE
                   </span>
                 )}
@@ -132,7 +132,7 @@ export default function TacticalFlowMatrixCard({
             {/* Invalidation Stop Loss */}
             <div className="rounded-xl border border-rose-200/80 bg-rose-50/50 p-3">
               <div className="flex items-center gap-1">
-                <span className="text-rose-800 font-semibold block text-[10px] uppercase">
+                <span className="text-rose-800 font-semibold block text-[11px] uppercase">
                   Stop Loss (จุดยอมแพ้)
                 </span>
                 <ContextTooltip
@@ -152,7 +152,7 @@ export default function TacticalFlowMatrixCard({
             {/* Tactical Target */}
             <div className="rounded-xl border border-sky-200/80 bg-sky-50/50 p-3">
               <div className="flex items-center gap-1">
-                <span className="text-sky-800 font-semibold block text-[10px] uppercase">
+                <span className="text-sky-800 font-semibold block text-[11px] uppercase">
                   Tactical Target
                 </span>
                 <ContextTooltip
@@ -172,7 +172,7 @@ export default function TacticalFlowMatrixCard({
             {/* Risk / Reward Ratio */}
             <div className="rounded-xl border border-edge/80 bg-surface p-3">
               <div className="flex items-center gap-1">
-                <span className="text-zinc-500 font-semibold block text-[10px] uppercase">
+                <span className="text-slate-500 font-semibold block text-[11px] uppercase">
                   R:R ณ Analysis Price
                 </span>
                 <ContextTooltip
@@ -182,7 +182,7 @@ export default function TacticalFlowMatrixCard({
                   impactOnMoney="ช่วยให้พอร์ตเติบโตได้ในระยะยาว แม้จะทายถูกเพียง 50% ของจำนวนครั้งก็ตาม"
                 />
               </div>
-              <span className="font-mono font-bold text-zinc-900 text-base sm:text-lg block mt-0.5">
+              <span className="font-mono font-bold text-slate-900 text-base sm:text-lg block mt-0.5">
                 {tactical.current_rr_ratio != null
                   ? `${tactical.current_rr_ratio.toFixed(2)} : 1`
                   : (tactical.pullback_entry_status === 'at_or_above_target'
@@ -190,7 +190,7 @@ export default function TacticalFlowMatrixCard({
                       : (tactical.tactical_risk_reward_ratio != null ? `${tactical.tactical_risk_reward_ratio.toFixed(2)} : 1` : 'N/A'))}
               </span>
               {tactical.buy_zone_rr_min != null && tactical.buy_zone_rr_max != null && (
-                <span className="text-[10px] text-zinc-400 block mt-0.5 truncate">
+                <span className="text-[11px] text-slate-500 block mt-0.5 truncate">
                   ในโซน: {tactical.buy_zone_rr_min.toFixed(1)}-{tactical.buy_zone_rr_max.toFixed(1)}:1
                 </span>
               )}
@@ -211,24 +211,24 @@ export default function TacticalFlowMatrixCard({
 
           {/* Breakout Blueprint Strip */}
           {tactical.breakout_trigger_price != null && (
-            <div className="rounded-xl border border-indigo-200/80 bg-indigo-50/40 p-3.5 text-xs space-y-2">
+            <div className="rounded-xl border border-blue-200/80 bg-blue-50/40 p-3.5 text-xs space-y-2">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div className="flex items-center gap-2">
-                  <span className="font-bold text-indigo-900 uppercase text-[10px]">🚀 Breakout Setup:</span>
-                  <span className="text-indigo-800">
+                  <span className="font-bold text-blue-900 uppercase text-[11px]">🚀 Breakout Setup:</span>
+                  <span className="text-blue-800">
                     Trigger <strong>{currency}{tactical.breakout_trigger_price.toFixed(2)}</strong> | Target <strong>{currency}{tactical.breakout_target_price?.toFixed(2)}</strong> | Stop <strong>{currency}{tactical.breakout_stop_loss?.toFixed(2)}</strong>
                   </span>
                 </div>
                 {tactical.breakout_entry_status && (
                   <span
-                    className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider border ${
+                    className={`px-2 py-0.5 rounded text-[11px] font-bold uppercase tracking-wider border ${
                       tactical.breakout_entry_status === 'eligible'
                         ? 'bg-emerald-100 text-emerald-800 border-emerald-300'
                         : tactical.breakout_entry_status === 'chased'
                         ? 'bg-amber-100 text-amber-800 border-amber-300'
                         : tactical.breakout_entry_status === 'pre_trigger'
                         ? 'bg-sky-100 text-sky-800 border-sky-300'
-                        : 'bg-zinc-100 text-zinc-700 border-zinc-300'
+                        : 'bg-slate-100 text-slate-700 border-slate-300'
                     }`}
                   >
                     {tactical.breakout_entry_status === 'pre_trigger'
@@ -241,7 +241,7 @@ export default function TacticalFlowMatrixCard({
                   </span>
                 )}
               </div>
-              <div className="flex flex-wrap items-center justify-between gap-2 pt-1 border-t border-indigo-100 text-[11px] text-indigo-900">
+              <div className="flex flex-wrap items-center justify-between gap-2 pt-1 border-t border-blue-100 text-[11px] text-blue-900">
                 <span>
                   Planned R:R (ณ Trigger): <strong>{tactical.breakout_planned_rr != null ? `${tactical.breakout_planned_rr.toFixed(2)} : 1` : 'N/A'}</strong>
                 </span>
@@ -249,7 +249,7 @@ export default function TacticalFlowMatrixCard({
                   Current R:R (ราคาปัจจุบัน): <strong>{tactical.breakout_current_rr != null ? `${tactical.breakout_current_rr.toFixed(2)} : 1` : '— (Pre-trigger)'}</strong>
                 </span>
                 {tactical.breakout_volume_ratio != null && (
-                  <span className="text-zinc-600">
+                  <span className="text-slate-600">
                     Volume: <strong>{tactical.breakout_volume_ratio.toFixed(1)}x 20D</strong> {tactical.breakout_volume_confirmed ? '✅' : '⚠️'}
                   </span>
                 )}
@@ -273,12 +273,12 @@ export default function TacticalFlowMatrixCard({
         <div className="space-y-3 pt-1 border-t border-edge/60 text-xs">
           {sentiment.key_themes && sentiment.key_themes.length > 0 && (
             <div>
-              <span className="text-[11px] font-bold text-zinc-500 uppercase tracking-wider block mb-1.5">
+              <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block mb-1.5">
                 Key Themes
               </span>
               <div className="flex flex-wrap gap-1.5">
                 {sentiment.key_themes.map((t, i) => (
-                  <span key={i} className="rounded-full border border-sky-100 bg-surface-strong px-2.5 py-0.5 text-xs font-medium text-zinc-700">
+                  <span key={i} className="rounded-full border border-sky-100 bg-surface-strong px-2.5 py-0.5 text-xs font-medium text-slate-700">
                     {t}
                   </span>
                 ))}

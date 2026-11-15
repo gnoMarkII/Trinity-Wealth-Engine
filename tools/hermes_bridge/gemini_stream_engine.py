@@ -15,8 +15,76 @@ from core.model_registry import get_model_name
 from core.sandbox.models import AdvisorChatMessage
 from tools.hermes_bridge.sandbox_adapter import parse_skill_frontmatter
 from tools.hermes_bridge.trinity_mcp_server import get_wrapped_trinity_tools
+from tools.market.ticker_resolver import find_company_alias_matches, resolve_equity_ticker
 
 log = logging.getLogger(__name__)
+
+_READ_INTENT_CUES: tuple[str, ...] = (
+    "อธิบาย",
+    "เล่า",
+    "แปล",
+    "ตีความ",
+    "หมายความว่า",
+    "อ่าน",
+    "ขออ่าน",
+    "ตรวจ",
+    "ขอดู",
+    "ดู",
+    "สรุป",
+    "สถานะ",
+    "thesis",
+    "สัญญา",
+    "เดิม",
+    "ล่าสุด",
+    "เป็นยังไง",
+    "เปลี่ยนไปรึยัง",
+    "เปลี่ยนไหม",
+    "มีไหม",
+    "มีบทวิเคราะห์",
+    "ข้อมูลของ",
+)
+
+_EXPLICIT_RUN_CUES: tuple[str, ...] = (
+    "สั่งรัน",
+    "รันงานวิจัย",
+    "รันรายงาน",
+    "รัน macro",
+    "รัน equity",
+    "ดึงข้อมูลใหม่",
+    "สดใหม่",
+    "ข้อมูลสด",
+    "ตั้งแต่ต้น",
+    "macro_intel",
+    "equity_intel",
+    "news_youtube",
+    "news_funnel",
+    "youtube_pitch",
+    "สร้างการ์ด",
+    "ตั้งการ์ด",
+    "อัพเดท macro",
+    "อัปเดต macro",
+    "อัพเดตหุ้น",
+    "อัปเดตหุ้น",
+)
+
+
+def classify_hermes_intent(user_message: str, context_refs: Sequence[str] = ()) -> dict[str, bool]:
+    """Deterministically classify whether user input asks to read/explain vs run a new research job."""
+    lowered = (user_message or "").strip().lower()
+    refs_lower = " ".join(context_refs).lower()
+    is_read_intent = any(cue in lowered for cue in _READ_INTENT_CUES)
+    is_explicit_run = (
+        any(cue in lowered for cue in _EXPLICIT_RUN_CUES)
+        or ("รัน" in lowered and ("ใหม่" in lowered or "วิจัย" in lowered or "วิเคราะห์" in lowered))
+        or ("วิเคราะห์" in lowered and ("ใหม่" in lowered or "สด" in lowered))
+        or ("@macro" in refs_lower and any(k in lowered for k in ("รัน", "อัปเดต", "อัพเดท", "ประมวลผล")))
+    )
+    is_run_order = bool(is_explicit_run and not is_read_intent)
+    return {
+        "is_read_intent": is_read_intent,
+        "is_explicit_run": is_explicit_run,
+        "is_run_order": is_run_order,
+    }
 
 SYSTEM_PROMPT_TEMPLATE = """คุณคือ Trinity AI Advisor ผู้จัดการกองทุนส่วนตัวและที่ปรึกษาการลงทุนอัจฉริยะ (ขับเคลื่อนด้วย Gemini และสถาปัตยกรรม Hermes Self-Evolution)
 
@@ -31,8 +99,8 @@ SYSTEM_PROMPT_TEMPLATE = """คุณคือ Trinity AI Advisor ผู้จ�
        ให้เรียก `get_morning_delta_briefing()`
      * หากถามเรื่อง Thesis หุ้น, ตรวจสุขภาพหุ้น, ดูว่าสถานะหุ้นเปลี่ยนไปรึยัง, ติดตามสัญญาผู้บริหาร, หรือดู Falsification Breaches:
        คุณ "ต้อง" เรียกเครื่องมือ `get_active_stock_theses(ticker="[TICKER]")`, `get_equity_promises_and_reviews(ticker="[TICKER]")` และ/หรือ `get_equity_report_summary(ticker="[TICKER]")` เพื่อนำข้อมูล Thesis Delta, Breached Falsifiers, และ Promise Tracker ที่มีอยู่ในระบบมาวิเคราะห์และสรุปตอบผู้ใช้ทันที ห้ามสั่งรันงานวิจัยใหม่เด็ดขาด!
-     * หากถามเรื่องบทวิเคราะห์หุ้น 5-Tier, Fair Value, Valuation หรือ Moat:
-       ให้เรียก `get_equity_report_summary(ticker="[TICKER]")`
+     * หากถามเรื่องบทวิเคราะห์หุ้น 5-Tier, Fair Value, Valuation, Moat หรือสั่งให้ "อธิบายบทวิเคราะห์" / "เล่า" / "สรุป" / "อ่าน" รายงานหุ้น:
+       ให้เรียก `get_equity_report_summary(ticker="[TICKER]")` เสมอ (หากผู้ใช้พิมพ์ชื่อบริษัท เช่น "INTEL", "Google", "Alphabet", "Apple", "Nvidia", "Palantir", "Fortinet", "Oracle", "Netflix" ระบบจะแปลงเป็น Ticker ให้โดยอัตโนมัติ หรือคุณส่งชื่อ/Ticker เช่น `INTC` ได้ทันที) และห้ามเรียก `trigger_deep_research_job` เด็ดขาด!
      * หากถามภาวะเศรษฐกิจหรือภาพรวม Macro ปัจจุบัน:
        ให้เรียก `get_latest_macro_summary()`
      * หากถามสรุปข่าวประจำวันหรือผลกระทบจากข่าว:
@@ -61,15 +129,14 @@ SYSTEM_PROMPT_TEMPLATE = """คุณคือ Trinity AI Advisor ผู้จ�
    - ⚠️ ห้ามแต่งหรือยกเมฆแหล่งอ้างอิงเด็ดขาด
 
 6. การสั่งรันงานวิจัยเชิงลึกใหม่ (Action & Deep Research Dispatch Mode - เฉพาะเมื่อมีคำสั่งรันชัดเจนเท่านั้น):
-   - ⚠️ ข้อควรระวังอย่างยิ่ง: ห้ามสับสนระหว่าง "การถามข้อมูล/ตรวจ Thesis" กับ "การสั่งรันงานวิจัยใหม่"!
-     * หากผู้ใช้ถาม "ตรวจ Thesis", "ตรวจสุขภาพหุ้น", "สรุปบทวิเคราะห์", "ขอดูรายงาน", หรือ "เปลี่ยนไปรึยัง" -> ให้ทำตามข้อ 2 (Read Mode) โดยใช้ `get_equity_promises_and_reviews` หรือ `get_equity_report_summary` เสมอ ห้ามเรียก `trigger_deep_research_job`
-   - คุณจะเรียกใช้เครื่องมือ `trigger_deep_research_job` ได้ก็ต่อเมื่อ:
-     1. ผู้ใช้มีคำสั่งชัดเจนให้รันงานวิจัยใหม่หรือวิเคราะห์สดใหม่ตั้งแต่ต้น (เช่น "สั่งรันงานวิจัย...", "สั่งรันวิเคราะห์ใหม่", "วิเคราะห์หุ้น [TICKER] ใหม่ตั้งแต่ต้น", "รันรายงานเศรษฐกิจใหม่", "รัน macro ใหม่", "ช่วยสั่งรันงานวิจัยอัปเดตภาวะเศรษฐกิจมหภาค...")
-     2. หรือเมื่อเรียกเครื่องมืออ่านรายงานในข้อ 2 แล้ว เครื่องมือตอบกลับว่า "ไม่พบบทวิเคราะห์ของหุ้นนี้ในฐานข้อมูล"
-   - เมื่อมีคำสั่งรันใหม่ชัดเจน:
+   - ⚠️ ข้อควรระวังอย่างยิ่ง: ห้ามสับสนระหว่าง "การถามข้อมูล/อธิบายบทวิเคราะห์/ตรวจ Thesis" กับ "การสั่งรันงานวิจัยใหม่"!
+     * หากผู้ใช้ถาม "อธิบายบทวิเคราะห์...", "สรุปหุ้น...", "ขออ่านรายงาน...", "ตรวจ Thesis", "ตรวจสุขภาพหุ้น", "ขอดูรายงาน", หรือ "เปลี่ยนไปรึยัง" -> ให้ทำตามข้อ 2 (Read Mode) โดยใช้ `get_equity_report_summary` หรือ `get_equity_promises_and_reviews` เสมอ ห้ามเรียก `trigger_deep_research_job`
+     * หากเรียกเครื่องมืออ่านรายงานแล้วไม่พบข้อมูลในคำถามโหมดอธิบาย/อ่าน ให้แจ้งผู้ใช้ตามตรงว่ายังไม่มีบทวิเคราะห์นี้ และถามหรือเสนอให้ผู้ใช้สั่งสร้างการ์ดแทน ห้ามสั่งสร้างการ์ดเองโดยผู้ใช้ไม่ได้สั่ง!
+   - คุณจะเรียกใช้เครื่องมือ `trigger_deep_research_job` ได้ก็ต่อเมื่อผู้ใช้มีคำสั่งชัดเจนให้สร้างการ์ดหรือรันงานวิจัยใหม่ (เช่น "สั่งรันงานวิจัย...", "สั่งรันวิเคราะห์ใหม่", "วิเคราะห์หุ้น [TICKER] ใหม่ตั้งแต่ต้น", "รันรายงานเศรษฐกิจใหม่", "รัน macro ใหม่")
+   - เมื่อมีคำสั่งรันใหม่ชัดเจน (การ์ดจะถูกส่งเข้าช่อง Request Approve รอผู้ใช้กดยอมรับก่อนเริ่มทำงาน):
      * หากเป็นภาพรวมเศรษฐกิจ: เรียก `trigger_deep_research_job(research_type="macro_intel", ticker="")`
      * หากเป็นหุ้นรายตัว: เรียก `trigger_deep_research_job(research_type="equity_intel", ticker="[TICKER]")`
-     * ยืนยันการส่งคำสั่งให้ทีม AI Swarm ดำเนินการวิจัยอย่างกระชับและสุภาพ และระบุว่ากำลังเริ่มประมวลผล ห้ามคัดลอกหรือสรุปข้อมูลรายงานเก่าในอดีตมาแปะตอบล่วงหน้า เพราะระบบหน้าบ้านจะแสดงสถานะการประมวลผลสด
+     * ยืนยันการสร้างการ์ดคำขอวิจัยอย่างกระชับและแจ้งว่าได้ส่งเข้าช่อง Request Approve เพื่อรอให้ผู้ใช้กดยอมรับก่อนเริ่มประมวลผลจริง ห้ามคัดลอกหรือสรุปข้อมูลรายงานเก่าในอดีตมาแปะตอบล่วงหน้า
    - ⚠️ ข้อห้ามเด็ดขาดเรื่อง Job ID:
      1. ห้ามนำ Job ID เก่าจากประวัติการสนทนา (Conversation History) หรือข้อความก่อนหน้ามาตอบซ้ำเป็นอันขาด! (ห้ามเขียนเช่น "(อ้างอิงตามคำสั่งล่าสุด)" เด็ดขาด)
      2. ห้ามคิดหรือแต่ง Job ID ขึ้นเอง
@@ -160,7 +227,7 @@ class GeminiStreamEngine:
                     except Exception as e:
                         log.debug("Enrich @Essence error: %s", e)
             elif clean_ref.startswith("$"):
-                ticker = clean_ref[1:].strip().upper()
+                ticker = resolve_equity_ticker(clean_ref[1:])
                 if ticker:
                     tool_fn = self._tool_map.get("get_equity_report_summary")
                     if tool_fn:
@@ -239,53 +306,21 @@ class GeminiStreamEngine:
             elif msg.role == "assistant":
                 messages.append(AIMessage(content=msg.content))
 
+        intent = classify_hermes_intent(user_message, context_refs)
+        is_read_intent = intent["is_read_intent"]
+        is_explicit_run = intent["is_explicit_run"]
+        is_run_order = intent["is_run_order"]
+
         # Append current user prompt with context references and empirical enrichment if selected
         if context_refs:
             cues = ", ".join(context_refs)
-            user_msg_lower = user_message.lower()
-            is_read_intent = any(
-                w in user_msg_lower
-                for w in [
-                    "ตรวจ",
-                    "ขอดู",
-                    "ดู",
-                    "สรุป",
-                    "สถานะ",
-                    "thesis",
-                    "สัญญา",
-                    "เดิม",
-                    "ล่าสุด",
-                    "เป็นยังไง",
-                    "เปลี่ยนไปรึยัง",
-                    "เปลี่ยนไหม",
-                ]
-            )
-            is_explicit_run = (
-                any(
-                    w in user_msg_lower
-                    for w in [
-                        "สั่งรัน",
-                        "รันงานวิจัย",
-                        "รันรายงาน",
-                        "ดึงข้อมูลใหม่",
-                        "สดใหม่",
-                        "ข้อมูลสด",
-                        "ตั้งแต่ต้น",
-                        "macro_intel",
-                        "equity_intel",
-                    ]
-                )
-                or ("รัน" in user_msg_lower and "ใหม่" in user_msg_lower)
-                or ("วิเคราะห์" in user_msg_lower and "ใหม่" in user_msg_lower)
-            )
-            is_run_order = is_explicit_run and not is_read_intent
             enriched_facts = await asyncio.to_thread(self._enrich_from_context_refs, context_refs)
             if enriched_facts:
                 if is_run_order:
                     effective_content = (
                         f"[บริบทที่ผู้ใช้ระบุ: {cues}]\n\n{enriched_facts}\n\n"
                         f"[คำสั่งของผู้ใช้ (สำคัญ: เป็นคำสั่งสั่งรันงานวิจัยใหม่)]: {user_message}\n"
-                        f"[คำแนะนำ: เรียก trigger_deep_research_job ทันที และยืนยันการส่งคำสั่งอย่างกระชับ ห้ามนำข้อมูลรายงานเก่าในอดีตมาสรุปตอบล่วงหน้า]"
+                        f"[คำแนะนำ: เรียก trigger_deep_research_job ทันที และยืนยันการสร้างการ์ดรอผู้ใช้กดยอมรับก่อนเริ่มรัน ห้ามนำข้อมูลรายงานเก่าในอดีตมาสรุปตอบล่วงหน้า]"
                     )
                 else:
                     effective_content = f"[บริบทที่ผู้ใช้ระบุ: {cues}]\n\n{enriched_facts}\n\n[คำถามของผู้ใช้]: {user_message}"
@@ -317,7 +352,13 @@ class GeminiStreamEngine:
                     tool_id = tool_call.get("id", "call_1")
 
                     tool_fn = self._tool_map.get(name)
-                    if tool_fn is not None:
+                    if name == "trigger_deep_research_job" and is_read_intent and not is_explicit_run:
+                        result_str = (
+                            "ไม่อนุญาตให้เรียก trigger_deep_research_job ในคำถามโหมดอ่าน/อธิบายบทวิเคราะห์ "
+                            "กรุณาเรียก get_equity_report_summary(ticker=...) หรือ get_latest_macro_summary() "
+                            "เพื่ออ่านบทวิเคราะห์ที่มีอยู่แล้วมาอธิบายให้ผู้ใช้แทน"
+                        )
+                    elif tool_fn is not None:
                         try:
                             # Offload synchronous tool execution from event loop
                             result = await asyncio.to_thread(tool_fn.invoke, args)
@@ -325,7 +366,8 @@ class GeminiStreamEngine:
                             if name == "trigger_deep_research_job":
                                 m = re.search(r"Job ID:\s*([a-zA-Z0-9_\-]+)", result_str, re.IGNORECASE)
                                 j_id = m.group(1) if m else result_str.strip()
-                                ticker_arg = str(args.get("ticker", "")).strip().upper()
+                                raw_ticker_arg = str(args.get("ticker", "")).strip()
+                                ticker_arg = resolve_equity_ticker(raw_ticker_arg) if raw_ticker_arg else ""
                                 r_type = str(args.get("research_type", "equity_intel" if ticker_arg else "macro_intel")).strip()
                                 dispatched_jobs.append((j_id, ticker_arg))
                                 if session_id not in self._dispatched_jobs:
@@ -355,13 +397,14 @@ class GeminiStreamEngine:
             messages.append(final_res)
             final_text = _extract_text_from_content(final_res.content).strip()
 
-        # Fallback safety net: If user explicitly instructed to run research but LLM failed to invoke tool
-        if not dispatched_jobs:
+        # Fallback safety net: ONLY when user explicitly ordered a new research run and LLM failed to invoke tool
+        if not dispatched_jobs and is_run_order:
             user_msg_lower = user_message.lower()
             macro_cues = ["macro_intel", "อัพเดท macro", "อัปเดต macro", "รันรายงานเศรษฐกิจ", "สั่งรันงานวิจัย", "วิเคราะห์ภาพรวมเศรษฐกิจ"]
             has_macro_run_intent = any(c in user_msg_lower for c in macro_cues) or ("@macro" in " ".join(context_refs).lower() and any(k in user_message for k in ["รัน", "อัปเดต", "อัพเดท", "ประมวลผล"]))
-            equity_match = re.search(r"(?:วิเคราะห์หุ้น|อัปเดตหุ้น|หุ้น)\s*([A-Za-z]{1,6})\b", user_message)
-            has_equity_run_intent = bool(equity_match) or "equity_intel" in user_msg_lower
+            equity_match = re.search(r"(?:วิเคราะห์หุ้น|อัปเดตหุ้น|อัพเดตหุ้น|หุ้น)\s*([A-Za-z0-9.\-]{1,12})\b", user_message)
+            alias_matches = find_company_alias_matches(user_message)
+            has_equity_run_intent = bool(equity_match or alias_matches or "equity_intel" in user_msg_lower)
 
             trigger_tool = self._tool_map.get("trigger_deep_research_job")
             if trigger_tool:
@@ -381,11 +424,12 @@ class GeminiStreamEngine:
                     except Exception as e:
                         log.warning("Fallback macro research dispatch failed: %s", e)
                 elif has_equity_run_intent:
-                    target_sym = equity_match.group(1).upper() if equity_match else ""
+                    raw_sym = equity_match.group(1) if equity_match else (alias_matches[0] if alias_matches else "")
+                    target_sym = resolve_equity_ticker(raw_sym) if raw_sym else ""
                     if not target_sym:
                         for ref in context_refs:
                             if ref.startswith("$"):
-                                target_sym = ref[1:].strip().upper()
+                                target_sym = resolve_equity_ticker(ref[1:])
                                 break
                     try:
                         res = await asyncio.to_thread(trigger_tool.invoke, {"research_type": "equity_intel", "ticker": target_sym})

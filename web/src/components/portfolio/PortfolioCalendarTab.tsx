@@ -128,12 +128,12 @@ export default function PortfolioCalendarTab({ selectedPortfolioId = 'default' }
     return (
       <div className="space-y-6">
         <div className="flex items-center justify-between">
-          <div className="h-8 w-48 bg-zinc-200 rounded animate-pulse" />
-          <div className="h-8 w-32 bg-zinc-200 rounded animate-pulse" />
+          <div className="h-8 w-48 bg-slate-200 rounded animate-pulse" />
+          <div className="h-8 w-32 bg-slate-200 rounded animate-pulse" />
         </div>
         <div className="grid grid-cols-7 gap-2">
           {Array.from({ length: 35 }).map((_, i) => (
-            <div key={i} className="h-28 bg-zinc-100 border border-edge rounded-lg p-2 animate-pulse" />
+            <div key={i} className="h-28 bg-slate-100 border border-edge rounded-lg p-2 animate-pulse" />
           ))}
         </div>
       </div>
@@ -154,10 +154,10 @@ export default function PortfolioCalendarTab({ selectedPortfolioId = 'default' }
       {/* Header & Controls */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-lg font-bold text-zinc-900 flex items-center gap-2">
+          <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2">
             <span>📅 Corporate Events Calendar</span>
           </h2>
-          <p className="text-xs text-zinc-500 mt-0.5">
+          <p className="text-xs text-slate-500 mt-0.5">
             วันประกาศงบ (Earnings Date) และวันขึ้น XD ของหุ้นใน Holdings และ Watchlist
           </p>
         </div>
@@ -165,18 +165,18 @@ export default function PortfolioCalendarTab({ selectedPortfolioId = 'default' }
         <div className="flex items-center gap-2">
           <button
             onClick={prevMonth}
-            className="rounded-lg border border-edge bg-panel px-3 py-1.5 text-xs font-medium text-zinc-700 hover:bg-surface"
+            className="rounded-lg border border-edge bg-panel px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-surface"
           >
             ◀ เดือนก่อนหน้า
           </button>
 
-          <span className="min-w-[140px] text-center font-semibold text-sm text-zinc-800">
+          <span className="min-w-[140px] text-center font-semibold text-sm text-slate-800">
             {monthLabel}
           </span>
 
           <button
             onClick={nextMonth}
-            className="rounded-lg border border-edge bg-panel px-3 py-1.5 text-xs font-medium text-zinc-700 hover:bg-surface"
+            className="rounded-lg border border-edge bg-panel px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-surface"
           >
             เดือนถัดไป ▶
           </button>
@@ -201,23 +201,23 @@ export default function PortfolioCalendarTab({ selectedPortfolioId = 'default' }
       <div className="flex flex-wrap items-center gap-4 text-xs">
         <div className="flex items-center gap-1.5">
           <span className="w-3 h-3 rounded bg-violet-100 border border-violet-400" />
-          <span className="text-zinc-600">Holdings (หุ้นในพอร์ต)</span>
+          <span className="text-slate-600">Holdings (หุ้นในพอร์ต)</span>
         </div>
         <div className="flex items-center gap-1.5">
           <span className="w-3 h-3 rounded bg-sky-100 border border-sky-400" />
-          <span className="text-zinc-600">Watchlist</span>
+          <span className="text-slate-600">Watchlist</span>
         </div>
         <div className="flex items-center gap-1.5">
           <span>📈</span>
-          <span className="text-zinc-600">ประกาศงบการเงิน (Earnings)</span>
+          <span className="text-slate-600">ประกาศงบการเงิน (Earnings)</span>
         </div>
         <div className="flex items-center gap-1.5">
           <span>🪙</span>
-          <span className="text-zinc-600">ขึ้นเครื่องหมาย XD (Ex-Dividend)</span>
+          <span className="text-slate-600">ขึ้นเครื่องหมาย XD (Ex-Dividend)</span>
         </div>
         <div className="flex items-center gap-1.5">
           <span className="text-red-500 font-bold">🔔</span>
-          <span className="text-zinc-600">เตือนเหตุการณ์ภายใน 7 วัน</span>
+          <span className="text-slate-600">เตือนเหตุการณ์ภายใน 7 วัน</span>
         </div>
       </div>
 
@@ -240,10 +240,10 @@ export default function PortfolioCalendarTab({ selectedPortfolioId = 'default' }
           >
             {/* Sidebar header */}
             <div className="flex items-center justify-between px-3 py-2.5 border-b border-edge bg-surface rounded-t-xl">
-              <span className="text-xs font-bold text-zinc-700 tracking-wide uppercase">📋 Upcoming Events</span>
+              <span className="text-xs font-bold text-slate-700 tracking-wide uppercase">📋 Upcoming Events</span>
               <button
                 onClick={() => setSidebarOpen(false)}
-                className="text-zinc-400 hover:text-zinc-700 text-sm leading-none transition-colors"
+                className="text-slate-500 hover:text-slate-700 text-sm leading-none transition-colors"
                 title="ปิด Panel"
               >
                 ✕
@@ -253,7 +253,7 @@ export default function PortfolioCalendarTab({ selectedPortfolioId = 'default' }
             {/* Event list */}
             <div className="overflow-y-auto flex-1" style={{ maxHeight: 620 }}>
               {upcomingEvents.length === 0 ? (
-                <div className="py-10 text-center text-xs text-zinc-400">
+                <div className="py-10 text-center text-xs text-slate-500">
                   ไม่มีกิจกรรมที่กำลังจะเกิดขึ้น
                 </div>
               ) : (
@@ -277,9 +277,9 @@ export default function PortfolioCalendarTab({ selectedPortfolioId = 'default' }
                           <div className="flex-1 min-w-0">
                             {/* Ticker + type badge */}
                             <div className="flex items-center gap-1.5 flex-wrap">
-                              <span className="text-xs font-bold text-zinc-900">{evt.ticker}</span>
+                              <span className="text-xs font-bold text-slate-900">{evt.ticker}</span>
                               <span
-                                className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${
+                                className={`text-[11px] px-1.5 py-0.5 rounded-full font-medium ${
                                   isHolding
                                     ? 'bg-violet-100 text-violet-700'
                                     : 'bg-sky-100 text-sky-700'
@@ -287,26 +287,26 @@ export default function PortfolioCalendarTab({ selectedPortfolioId = 'default' }
                               >
                                 {isHolding ? 'ถือ' : 'Watch'}
                               </span>
-                              <span className="text-[10px] px-1 py-0.5 rounded bg-zinc-100 text-zinc-600">
+                              <span className="text-[11px] px-1 py-0.5 rounded bg-slate-100 text-slate-600">
                                 {evt.event_type === 'earnings' ? 'ประกาศงบ' : 'ขึ้น XD'}
                               </span>
                             </div>
 
                             {/* Company name (if available) */}
                             {evt.company_name && (
-                              <p className="text-[10px] text-zinc-500 truncate mt-0.5">{evt.company_name}</p>
+                              <p className="text-[11px] text-slate-500 truncate mt-0.5">{evt.company_name}</p>
                             )}
 
                             {/* Date + days_until */}
                             <div className="flex items-center gap-1.5 mt-1">
-                              <span className="text-[10px] text-zinc-500">{evt.event_date}</span>
+                              <span className="text-[11px] text-slate-500">{evt.event_date}</span>
                               <span
-                                className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${
+                                className={`text-[11px] font-bold px-1.5 py-0.5 rounded-full ${
                                   isToday
                                     ? 'bg-red-600 text-white'
                                     : isUrgent
                                     ? 'bg-red-100 text-red-700'
-                                    : 'bg-zinc-100 text-zinc-600'
+                                    : 'bg-slate-100 text-slate-600'
                                 }`}
                               >
                                 {isToday ? 'วันนี้!' : `อีก ${evt.days_until} วัน`}
@@ -323,7 +323,7 @@ export default function PortfolioCalendarTab({ selectedPortfolioId = 'default' }
 
             {/* Footer count */}
             <div className="px-3 py-2 border-t border-edge bg-surface rounded-b-xl">
-              <p className="text-[10px] text-zinc-400 text-center">
+              <p className="text-[11px] text-slate-500 text-center">
                 {upcomingEvents.length} กิจกรรม upcoming
               </p>
             </div>
@@ -341,13 +341,13 @@ export default function PortfolioCalendarTab({ selectedPortfolioId = 'default' }
               className={`flex items-center gap-1.5 rounded-lg px-2 py-1 text-xs font-medium transition-colors ${
                 sidebarOpen
                   ? 'bg-sky-100 text-sky-700'
-                  : 'text-zinc-500 hover:bg-zinc-100 hover:text-zinc-700'
+                  : 'text-slate-500 hover:bg-slate-100 hover:text-slate-700'
               }`}
             >
               <span>{sidebarOpen ? '◀' : '☰'}</span>
               <span>{sidebarOpen ? 'ซ่อน Upcoming' : 'Upcoming Events'}</span>
               {!sidebarOpen && upcomingEvents.length > 0 && (
-                <span className="bg-red-500 text-white text-[9px] font-bold rounded-full px-1.5 py-0.5">
+                <span className="bg-red-500 text-white text-[11px] font-bold rounded-full px-1.5 py-0.5">
                   {upcomingEvents.length}
                 </span>
               )}
@@ -355,7 +355,7 @@ export default function PortfolioCalendarTab({ selectedPortfolioId = 'default' }
           </div>
 
           {/* Days Header */}
-          <div className="grid grid-cols-7 border-b border-edge bg-surface text-center text-xs font-semibold text-zinc-500 py-2.5">
+          <div className="grid grid-cols-7 border-b border-edge bg-surface text-center text-xs font-semibold text-slate-500 py-2.5">
             {['อา.', 'จ.', 'อ.', 'พ.', 'พฤ.', 'ศ.', 'ส.'].map((d) => (
               <div key={d}>{d}</div>
             ))}
@@ -372,8 +372,8 @@ export default function PortfolioCalendarTab({ selectedPortfolioId = 'default' }
                   key={`${dateStr}-${cellIdx}`}
                   className={`min-h-[110px] p-1.5 flex flex-col justify-start transition-colors ${
                     !isCurrentMonth
-                      ? 'bg-zinc-50/50 text-zinc-400'
-                      : 'bg-panel text-zinc-800'
+                      ? 'bg-slate-50/50 text-slate-500'
+                      : 'bg-panel text-slate-800'
                   } ${isToday ? 'ring-2 ring-sky-500 ring-inset z-10' : ''}`}
                 >
                   <div className="flex items-center justify-between mb-1">
@@ -385,7 +385,7 @@ export default function PortfolioCalendarTab({ selectedPortfolioId = 'default' }
                       {dayDate.getDate()}
                     </span>
                     {cellEvents.length > 0 && (
-                      <span className="text-[10px] text-zinc-400 font-medium">
+                      <span className="text-[11px] text-slate-500 font-medium">
                         {cellEvents.length} กิจกรรม
                       </span>
                     )}
@@ -421,13 +421,13 @@ export default function PortfolioCalendarTab({ selectedPortfolioId = 'default' }
                         >
                           <span className="truncate">
                             {evt.event_type === 'earnings' ? '📈' : '🪙'} <strong>{evt.ticker}</strong>{' '}
-                            <span className="text-[10px] font-normal opacity-80">
+                            <span className="text-[11px] font-normal opacity-80">
                               ({evt.event_type === 'earnings' ? 'ประกาศงบ' : 'ขึ้น XD'})
                             </span>
                           </span>
 
                           {isUpcoming && (
-                            <span className="text-[9px] font-bold text-red-600 bg-red-100 px-1 rounded flex-shrink-0">
+                            <span className="text-[11px] font-bold text-red-600 bg-red-100 px-1 rounded flex-shrink-0">
                               {evt.days_until === 0 ? 'วันนี้' : `อีก ${evt.days_until}d`}
                             </span>
                           )}

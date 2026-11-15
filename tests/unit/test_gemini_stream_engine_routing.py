@@ -1,49 +1,24 @@
-"""Unit tests for GeminiStreamEngine prompt guidelines and intent classification."""
+"""Unit tests for GeminiStreamEngine prompt guidelines, intent classification, and ticker resolution."""
 from __future__ import annotations
 
+import asyncio
+from pathlib import Path
+from unittest.mock import AsyncMock, MagicMock
+
+from langchain_core.messages import AIMessage
 import pytest
-from tools.hermes_bridge.gemini_stream_engine import SYSTEM_PROMPT_TEMPLATE
+
+from tools.hermes_bridge.gemini_stream_engine import (
+    GeminiStreamEngine,
+    SYSTEM_PROMPT_TEMPLATE,
+    classify_hermes_intent,
+)
+from tools.market.ticker_resolver import find_company_alias_matches, resolve_equity_ticker
 
 
 def _classify_is_run_order(user_message: str) -> bool:
-    """Mirrors the intent classification rule in GeminiStreamEngine."""
-    user_msg_lower = user_message.lower()
-    is_read_intent = any(
-        w in user_msg_lower
-        for w in [
-            "ตรวจ",
-            "ขอดู",
-            "ดู",
-            "สรุป",
-            "สถานะ",
-            "thesis",
-            "สัญญา",
-            "เดิม",
-            "ล่าสุด",
-            "เป็นยังไง",
-            "เปลี่ยนไปรึยัง",
-            "เปลี่ยนไหม",
-        ]
-    )
-    is_explicit_run = (
-        any(
-            w in user_msg_lower
-            for w in [
-                "สั่งรัน",
-                "รันงานวิจัย",
-                "รันรายงาน",
-                "ดึงข้อมูลใหม่",
-                "สดใหม่",
-                "ข้อมูลสด",
-                "ตั้งแต่ต้น",
-                "macro_intel",
-                "equity_intel",
-            ]
-        )
-        or ("รัน" in user_msg_lower and "ใหม่" in user_msg_lower)
-        or ("วิเคราะห์" in user_msg_lower and "ใหม่" in user_msg_lower)
-    )
-    return is_explicit_run and not is_read_intent
+    """Delegate directly to production classify_hermes_intent()."""
+    return classify_hermes_intent(user_message)["is_run_order"]
 
 
 def test_system_prompt_emphasizes_read_mode_for_thesis():
@@ -82,11 +57,120 @@ def test_system_prompt_proactive_self_evolving_guidelines():
         "NFLX มีการผิดสัญญาของผู้บริหารไหม",
         "สถานะของ NFLX ตอนนี้เป็นยังไงบ้าง",
         "ดูรายงานเดิมของ NFLX หน่อย",
+        "อธิบายบทวิเคราะห์หุ้น INTEL",
+        "ช่วยอธิบายบทวิเคราะห์ INTEL ให้หน่อย",
+        "อธิบายรายงานหุ้น Google หน่อย",
+        "ช่วยอ่านบทวิเคราะห์ Nvidia ที่วิเคราะห์ไว้แล้วให้ที",
     ],
 )
 def test_thesis_and_review_queries_are_not_run_orders(query: str):
-    """User queries asking to check thesis or read existing reports must NOT trigger background research runs."""
-    assert _classify_is_run_order(query) is False
+    """User queries asking to explain/read/check thesis or existing reports must NOT trigger background research runs."""
+    intent = classify_hermes_intent(query)
+    assert intent["is_run_order"] is False
+    assert intent["is_read_intent"] is True
+
+
+@pytest.mark.parametrize(
+    "raw_query,expected_ticker",
+    [
+        ("INTEL", "INTC"),
+        ("Intel", "INTC"),
+        ("Intel Corporation", "INTC"),
+        ("Google", "GOOGL"),
+        ("Alphabet", "GOOGL"),
+        ("nvidia", "NVDA"),
+        ("AAPL", "AAPL"),
+        ("ptt", "PTT.BK"),
+    ],
+)
+def test_resolve_equity_ticker_maps_company_aliases(raw_query: str, expected_ticker: str):
+    assert resolve_equity_ticker(raw_query) == expected_ticker
+
+
+def test_resolve_equity_ticker_uses_dynamic_known_records():
+    records = [{"ticker": "INTC", "company_name": "Intel Corporation"}]
+    assert resolve_equity_ticker("Intel Corp", known_records=records) == "INTC"
+    assert find_company_alias_matches("อธิบายบทวิเคราะห์หุ้น INTEL") == ["INTC"]
+
+
+def test_stream_reply_blocks_trigger_deep_research_on_explain_query(tmp_path: Path, monkeypatch):
+    """Even if the LLM erroneously invokes trigger_deep_research_job on 'อธิบายบทวิเคราะห์หุ้น INTEL',
+    GeminiStreamEngine must deny it and read existing report instead without dispatching any job.
+    """
+    monkeypatch.setattr("tools.hermes_bridge.gemini_stream_engine.get_model_name", lambda *a, **kw: "gemini-2.5-flash")
+    monkeypatch.setattr("tools.hermes_bridge.gemini_stream_engine.detect_provider", lambda *a, **kw: "google")
+
+    engine = GeminiStreamEngine(sandbox_root=tmp_path)
+
+    dispatched_calls = []
+    report_calls = []
+
+    class _FakeDispatchTool:
+        name = "trigger_deep_research_job"
+
+        def invoke(self, args):
+            dispatched_calls.append(args)
+            return "Job ID: should-never-run"
+
+    class _FakeReportTool:
+        name = "get_equity_report_summary"
+
+        def invoke(self, args):
+            report_calls.append(args)
+            return '{"ticker": "INTC", "company_name": "Intel Corporation", "composite_score": 71.5}'
+
+    engine._tool_map["trigger_deep_research_job"] = _FakeDispatchTool()
+    engine._tool_map["get_equity_report_summary"] = _FakeReportTool()
+
+    responses = [
+        AIMessage(
+            content="",
+            tool_calls=[
+                {
+                    "name": "trigger_deep_research_job",
+                    "args": {"ticker": "INTEL", "research_type": "equity_intel"},
+                    "id": "call_bad_1",
+                }
+            ],
+        ),
+        AIMessage(
+            content="",
+            tool_calls=[
+                {
+                    "name": "get_equity_report_summary",
+                    "args": {"ticker": "INTEL"},
+                    "id": "call_read_2",
+                }
+            ],
+        ),
+        AIMessage(content="นี่คือคำอธิบายบทวิเคราะห์หุ้น INTC (Intel Corporation) จากรายงานล่าสุดครับ"),
+    ]
+    call_idx = 0
+
+    class _FakeBoundLlm:
+        async def ainvoke(self, msgs):
+            nonlocal call_idx
+            resp = responses[call_idx]
+            call_idx += 1
+            return resp
+
+    class _FakeLlm:
+        def bind_tools(self, tools):
+            return _FakeBoundLlm()
+
+    monkeypatch.setattr("tools.hermes_bridge.gemini_stream_engine.get_llm", lambda **kw: _FakeLlm())
+
+    async def _collect():
+        chunks = []
+        async for ch in engine.stream_reply("sess-1", "อธิบายบทวิเคราะห์หุ้น INTEL"):
+            chunks.append(ch)
+        return "".join(chunks)
+
+    reply_text = asyncio.run(_collect())
+    assert "INTC" in reply_text
+    assert dispatched_calls == []
+    assert report_calls == [{"ticker": "INTEL"}]
+    assert engine.pop_dispatched_jobs("sess-1") == []
 
 
 @pytest.mark.parametrize(

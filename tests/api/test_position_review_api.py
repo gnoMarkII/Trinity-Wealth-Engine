@@ -78,3 +78,31 @@ def test_get_position_review_success():
 def test_get_position_review_invalid_ticker():
     response = client.get("/api/equity/%20%20%20/position-review")
     assert response.status_code == 400
+
+
+def test_yfinance_position_review_adapter_ignores_elapsed_earnings_dates(monkeypatch):
+    from datetime import date, timedelta
+    from tools.market.adapters.position_review_adapter import YFinancePositionReviewAdapter
+
+    past_dt = (date.today() - timedelta(days=14)).isoformat()
+    future_early = (date.today() + timedelta(days=30)).isoformat()
+    future_late = (date.today() + timedelta(days=90)).isoformat()
+
+    class _FakeTicker:
+        info = {"shortName": "Alphabet Inc.", "trailingEps": 7.5}
+        calendar = {"Earnings Date": [past_dt, future_late, future_early]}
+        income_stmt = None
+
+    monkeypatch.setattr("tools.market.adapters.position_review_adapter.yf.Ticker", lambda _sym: _FakeTicker())
+    profile = YFinancePositionReviewAdapter().get_stock_profile("GOOGL")
+    assert profile["upcoming_earnings_date"] == future_early
+
+    # When only past dates exist, upcoming_earnings_date stays None instead of leaking elapsed dates
+    class _PastOnlyTicker:
+        info = {"shortName": "Alphabet Inc."}
+        calendar = {"Earnings Date": [past_dt]}
+        income_stmt = None
+
+    monkeypatch.setattr("tools.market.adapters.position_review_adapter.yf.Ticker", lambda _sym: _PastOnlyTicker())
+    past_only_profile = YFinancePositionReviewAdapter().get_stock_profile("GOOGL")
+    assert past_only_profile["upcoming_earnings_date"] is None

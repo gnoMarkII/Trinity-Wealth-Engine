@@ -88,16 +88,16 @@ function getRingColors(score: number | null, isExcluded: boolean) {
     return {
       stroke: '#a1a1aa', // zinc-400
       glow: 'rgba(161, 161, 170, 0.2)',
-      text: 'text-zinc-600',
-      badgeBg: 'bg-zinc-100 text-zinc-700 border-zinc-200',
+      text: 'text-slate-600',
+      badgeBg: 'bg-slate-100 text-slate-700 border-slate-200',
     }
   }
   if (score == null) {
     return {
       stroke: '#94a3b8', // slate-400
       glow: 'rgba(148, 163, 184, 0.2)',
-      text: 'text-zinc-500',
-      badgeBg: 'bg-zinc-100 text-zinc-600 border-zinc-200',
+      text: 'text-slate-500',
+      badgeBg: 'bg-slate-100 text-slate-600 border-slate-200',
     }
   }
   if (score >= 70) {
@@ -228,7 +228,7 @@ export const FourPillarBalanceRings: React.FC<FourPillarBalanceRingsProps> = ({
             {/* Top row: Title & Weight Badge with ContextTooltip */}
             <div className="flex items-start justify-between gap-2 mb-1.5">
               <div className="flex items-center gap-1.5 min-w-0">
-                <span className="text-xs font-semibold text-zinc-800 tracking-tight leading-snug truncate">
+                <span className="text-xs font-semibold text-slate-800 tracking-tight leading-snug truncate">
                   {pillar.title}
                 </span>
                 {PILLAR_EXPLAINERS[pillar.id] ? (
@@ -241,14 +241,14 @@ export const FourPillarBalanceRings: React.FC<FourPillarBalanceRingsProps> = ({
                 ) : null}
               </div>
               <span
-                className={`shrink-0 inline-flex items-center text-[10px] font-bold px-2 py-0.5 rounded-full border ${
+                className={`shrink-0 inline-flex items-center text-[11px] font-bold px-2 py-0.5 rounded-full border ${
                   pillar.weightBadgeType === 'reweighted'
                     ? 'bg-sky-50 text-sky-800 border-sky-300'
                     : pillar.weightBadgeType === 'excluded'
                     ? 'bg-amber-50 text-amber-800 border-amber-300'
                     : pillar.weightBadgeType === 'timing'
-                    ? 'bg-purple-50 text-purple-800 border-purple-200'
-                    : 'bg-zinc-100 text-zinc-700 border-zinc-200'
+                    ? 'bg-sky-50 text-blue-800 border-sky-200'
+                    : 'bg-slate-100 text-slate-700 border-slate-200'
                 }`}
               >
                 {pillar.weightText}
@@ -274,7 +274,7 @@ export const FourPillarBalanceRings: React.FC<FourPillarBalanceRingsProps> = ({
                     stroke="currentColor"
                     strokeWidth={strokeWidth}
                     fill="transparent"
-                    className="text-zinc-100"
+                    className="text-slate-100"
                   />
                   {/* Animated Progress Ring */}
                   {!pillar.isExcluded && (
@@ -313,7 +313,7 @@ export const FourPillarBalanceRings: React.FC<FourPillarBalanceRingsProps> = ({
                     {pillar.displayScore}
                   </span>
                   {!pillar.isExcluded && pillar.score != null && (
-                    <span className="text-[9px] font-semibold text-zinc-400 -mt-0.5">/ 100</span>
+                    <span className="text-[11px] font-semibold text-slate-500 -mt-0.5">/ 100</span>
                   )}
                 </div>
               </div>
@@ -325,7 +325,7 @@ export const FourPillarBalanceRings: React.FC<FourPillarBalanceRingsProps> = ({
                     className="w-2 h-2 rounded-full shrink-0"
                     style={{ backgroundColor: ringColor.stroke }}
                   />
-                  <span className="text-xs font-bold text-zinc-900 truncate">
+                  <span className="text-xs font-bold text-slate-900 truncate">
                     {pillar.isExcluded
                       ? 'Macro Excluded'
                       : pillar.score == null
@@ -339,16 +339,16 @@ export const FourPillarBalanceRings: React.FC<FourPillarBalanceRingsProps> = ({
                       : 'High Risk'}
                   </span>
                 </div>
-                <div className="text-[11px] text-zinc-500 line-clamp-2 leading-relaxed">
+                <div className="text-[11px] text-slate-500 line-clamp-2 leading-relaxed">
                   {pillar.drivers}
                 </div>
               </div>
             </div>
 
             {/* Bottom: Subtle Status Indicator Bar */}
-            <div className="mt-2.5 pt-2 border-t border-edge/40 flex items-center justify-between text-[10px] text-zinc-400">
+            <div className="mt-2.5 pt-2 border-t border-edge/40 flex items-center justify-between text-[11px] text-slate-500">
               <span>{pillar.isExcluded ? 'Status: Fenced' : 'Pillar Contribution'}</span>
-              <span className="font-semibold text-zinc-600">
+              <span className="font-semibold text-slate-600">
                 {pillar.isExcluded
                   ? 'Non-binding'
                   : pillar.score != null

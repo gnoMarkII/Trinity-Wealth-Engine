@@ -3,6 +3,16 @@ import type { MacroDashboardDTO } from '../../../api/types'
 import { getReportAgeInfo } from '../../../lib/reportAge'
 import { ContextTooltip } from '../explainer/ContextTooltip'
 import { SafetyShieldBanner } from '../explainer/SafetyShieldBanner'
+import {
+  AlertTriangleIcon,
+  BoltStrategyIcon,
+  BulbIcon,
+  CompassIcon,
+  CpuIcon,
+  RefreshIcon,
+  SunIcon,
+  TargetIcon,
+} from '../../ui/AppIcons'
 
 interface AiBriefingCardProps {
   aiData: MacroDashboardDTO | null
@@ -14,7 +24,7 @@ interface AiBriefingCardProps {
 }
 
 interface RegimeWeatherInfo {
-  weatherIcon: string
+  weatherKind: 'goldilocks' | 'reflation' | 'stagflation' | 'recession' | 'transition'
   weatherName: string
   ruleOfThumb: string
   bgClass: string
@@ -26,7 +36,7 @@ function getRegimeWeather(regimeStr: string): RegimeWeatherInfo {
   const lower = (regimeStr || '').toLowerCase()
   if (lower.includes('goldilocks') || lower.includes('expansion')) {
     return {
-      weatherIcon: '☀️',
+      weatherKind: 'goldilocks',
       weatherName: 'แดดออกแจ่มใส (Goldilocks)',
       ruleOfThumb: 'ยุคทองของหุ้น: เศรษฐกิจโต เงินเฟ้อต่ำ เป็นมิตรต่อตลาดหุ้น ทยอยสะสมหุ้นเติบโตและสินทรัพย์เสี่ยงได้เต็มที่',
       bgClass: 'bg-emerald-50/70',
@@ -36,7 +46,7 @@ function getRegimeWeather(regimeStr: string): RegimeWeatherInfo {
   }
   if (lower.includes('reflation')) {
     return {
-      weatherIcon: '🌤️',
+      weatherKind: 'reflation',
       weatherName: 'แดดออกมีลมหนาว (Reflation)',
       ruleOfThumb: 'เศรษฐกิจฟื้นแต่ของเริ่มแพง: หุ้นยังไปได้แต่ห้ามไล่ราคาของแพง ทยอยเก็บหุ้นถูก (เช่น หุ้นไทย) ถือเงินสดสำรอง 20% รับมือความผันผวน',
       bgClass: 'bg-amber-50/70',
@@ -46,7 +56,7 @@ function getRegimeWeather(regimeStr: string): RegimeWeatherInfo {
   }
   if (lower.includes('stagflation')) {
     return {
-      weatherIcon: '⛈️',
+      weatherKind: 'stagflation',
       weatherName: 'พายุเศรษฐกิจ (Stagflation)',
       ruleOfThumb: 'ของแพงแต่เศรษฐกิจแย่: ห้ามทุ่มหุ้นเด็ดขาด โยกเงินไปพักที่ทองคำ พันธบัตรระยะสั้น และถือเงินสดเป็นเกราะกำบัง',
       bgClass: 'bg-rose-50/70',
@@ -56,7 +66,7 @@ function getRegimeWeather(regimeStr: string): RegimeWeatherInfo {
   }
   if (lower.includes('recession') || lower.includes('slowdown')) {
     return {
-      weatherIcon: '🌧️',
+      weatherKind: 'recession',
       weatherName: 'ฝนตกหนัก (Recession)',
       ruleOfThumb: 'เศรษฐกิจหดตัว: ดอกเบี้ยกำลังจะลง ตลาดหุ้นเสี่ยงสูง พันธบัตรรัฐบาลระยะยาวและเงินสดคือที่หลบภัยที่ดีที่สุด',
       bgClass: 'bg-blue-50/70',
@@ -65,7 +75,7 @@ function getRegimeWeather(regimeStr: string): RegimeWeatherInfo {
     }
   }
   return {
-    weatherIcon: '⛅',
+    weatherKind: 'transition',
     weatherName: 'สภาวะผสมผสาน (Transition)',
     ruleOfThumb: 'จัดสรรตามรอบ กระจายความเสี่ยงในสินทรัพย์คุณภาพ และถือเงินสดสำรองเพื่อความยืดหยุ่น',
     bgClass: 'bg-sky-50/70',
@@ -74,24 +84,41 @@ function getRegimeWeather(regimeStr: string): RegimeWeatherInfo {
   }
 }
 
-function getConvictionExplanation(level: string): { label: string; note: string; detail: string } {
+function renderRegimeWeatherIcon(kind: RegimeWeatherInfo['weatherKind']): React.ReactNode {
+  switch (kind) {
+    case 'goldilocks':
+      return <SunIcon className="h-5 w-5 text-emerald-700" />
+    case 'reflation':
+      return <SunIcon className="h-5 w-5 text-amber-600" />
+    case 'stagflation':
+    case 'recession':
+      return <AlertTriangleIcon className="h-5 w-5 text-rose-600" />
+    default:
+      return <CompassIcon className="h-5 w-5 text-sky-700" />
+  }
+}
+
+function getConvictionExplanation(level: string): { label: string; dotClass: string; note: string; detail: string } {
   const lower = (level || '').toLowerCase()
   if (lower.includes('high')) {
     return {
-      label: 'สูง (ข้อมูลสอดคล้องกันมั่นใจ 🟢)',
+      label: 'สูง (ข้อมูลสอดคล้องกันมั่นใจ)',
+      dotClass: 'bg-emerald-500',
       note: 'ข้อมูลเชิงปริมาณและมุมมองสอดคล้องกันสูงมาก ทยอยเข้าลงทุนตามแผนได้',
       detail: 'ตัวเลขเศรษฐกิจ ข้อมูลเชิงปริมาณ และทิศทางนโยบายชี้ไปในทางเดียวกันอย่างชัดเจน',
     }
   }
   if (lower.includes('low')) {
     return {
-      label: 'ระมัดระวัง (ข้อมูลขัดแย้ง 🔴)',
+      label: 'ระมัดระวัง (ข้อมูลขัดแย้ง)',
+      dotClass: 'bg-rose-500',
       note: 'ข้อมูลมีความขัดแย้งสูง ควรถือเงินสดรอความชัดเจน',
       detail: 'ตัวชี้วัดเศรษฐกิจมีความผันผวนสูงและทิศทางยังไม่นิ่ง ไม่ควรเร่งรีบเข้าซื้อ',
     }
   }
   return {
-    label: 'ปานกลาง (กระจายความเสี่ยง 🟡)',
+    label: 'ปานกลาง (กระจายความเสี่ยง)',
+    dotClass: 'bg-amber-500',
     note: 'ตลาดก้ำกึ่ง ห้ามทุ่มเงินก้อนเดียว ให้กระจายความเสี่ยงและทยอยสะสม',
     detail: 'มีทั้งปัจจัยบวกและปัจจัยกดดันคละกัน ควรแบ่งเงินเป็นไม้ๆ ทยอยลงทุนตามรอบ',
   }
@@ -110,7 +137,7 @@ export const AiBriefingCard: React.FC<AiBriefingCardProps> = ({
   // 1. Loading State
   if (aiLoading) {
     return (
-      <div className="rounded-2xl border border-sky-200/80 bg-linear-to-r from-sky-50/60 via-white to-slate-50/60 p-5 shadow-xs animate-pulse">
+      <div className="rounded-2xl border border-sky-200/80 bg-gradient-to-r from-sky-50/60 via-white to-slate-50/60 p-5 shadow-sm animate-pulse">
         <div className="flex items-center justify-between pb-3 border-b border-sky-100">
           <div className="h-6 w-48 bg-sky-200/60 rounded-md" />
           <div className="h-5 w-28 bg-slate-200/60 rounded-full" />
@@ -126,16 +153,18 @@ export const AiBriefingCard: React.FC<AiBriefingCardProps> = ({
   // 2. Empty / No Data / Error State
   if (!aiData) {
     return (
-      <div className="rounded-2xl border border-dashed border-amber-300/80 bg-amber-50/40 p-5 sm:p-6 shadow-xs">
+      <div className="rounded-2xl border border-dashed border-amber-300/80 bg-amber-50/40 p-5 sm:p-6 shadow-sm">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div className="space-y-1">
             <div className="flex items-center gap-2">
-              <span className="text-xl">🧠</span>
-              <h2 className="text-base font-bold text-zinc-900 tracking-tight">
+              <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-blue-50 text-section-accent border border-blue-200/80">
+                <CpuIcon className="h-4 w-4" />
+              </span>
+              <h2 className="text-base font-bold text-slate-900 tracking-tight">
                 AI Executive Briefing (สรุปสภาวะเศรษฐกิจมหภาค)
               </h2>
             </div>
-            <p className="text-xs text-zinc-600 max-w-xl">
+            <p className="text-xs text-slate-600 max-w-xl">
               {aiError ||
                 'ยังไม่มีรายงานบทวิเคราะห์สภาวะเศรษฐกิจและการจัดสรรสินทรัพย์ในคลัง คุณสามารถสั่งการให้ Agent วิเคราะห์ข้อมูลล่าสุดได้ทันที'}
             </p>
@@ -146,9 +175,9 @@ export const AiBriefingCard: React.FC<AiBriefingCardProps> = ({
               type="button"
               onClick={onUpdateMacro}
               disabled={updating}
-              className="inline-flex items-center justify-center gap-2 rounded-xl bg-sky-600 px-4 py-2.5 text-xs font-semibold text-white shadow-sm hover:bg-sky-500 disabled:opacity-50 transition-all shrink-0"
+              className="inline-flex items-center justify-center gap-2 rounded-xl bg-section-accent px-4 py-2.5 text-xs font-semibold text-white shadow-sm hover:bg-blue-900 disabled:opacity-50 transition-all shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-section-accent/45"
             >
-              <span>{updating ? '⏳' : '🚀'}</span>
+              {updating ? <RefreshIcon className="h-3.5 w-3.5 animate-spin" /> : <BoltStrategyIcon className="h-3.5 w-3.5" />}
               <span>{updating ? 'กำลังสั่งงาน...' : 'เริ่มวิเคราะห์ภาวะเศรษฐกิจ (AI Run)'}</span>
             </button>
           )}
@@ -164,24 +193,24 @@ export const AiBriefingCard: React.FC<AiBriefingCardProps> = ({
   const conviction = getConvictionExplanation(aiData.conviction_level || 'MEDIUM')
 
   return (
-    <div className="rounded-2xl border border-sky-200/90 bg-linear-to-br from-white via-sky-50/30 to-amber-50/20 p-5 sm:p-6 shadow-sm space-y-4">
+    <div className="flow-panel rounded-2xl border border-edge bg-surface-1 backdrop-blur-md p-5 sm:p-6 shadow-sm space-y-4">
       {/* Top Header Row: Title, Scope, Age & Actions */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-3.5 border-b border-sky-100/80">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-3.5 border-b border-edge/70">
         {/* Left: Card Title & Subtitle */}
         <div className="flex items-center gap-2.5">
-          <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-sky-100/80 text-xl shadow-2xs shrink-0">
-            🧠
+          <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-50 text-section-accent border border-blue-200/80 shadow-sm shrink-0">
+            <CpuIcon className="h-5 w-5" />
           </span>
           <div>
             <div className="flex items-center gap-2">
-              <h2 className="text-sm font-bold text-zinc-900 tracking-tight">
+              <h2 className="text-sm font-bold text-slate-900 tracking-tight">
                 AI Executive Briefing
               </h2>
-              <span className="hidden sm:inline-block text-[11px] font-medium text-zinc-400">
+              <span className="hidden sm:inline-block text-[11px] font-medium text-slate-500">
                 (สรุปสภาวะเศรษฐกิจมหภาค)
               </span>
             </div>
-            <p className="text-[11px] text-zinc-500">
+            <p className="text-[11px] text-slate-500">
               วิเคราะห์ทิศทางนโยบาย วัฏจักรการเงิน และกรอบการจัดสรรสินทรัพย์
             </p>
           </div>
@@ -190,7 +219,7 @@ export const AiBriefingCard: React.FC<AiBriefingCardProps> = ({
         {/* Right: Freshness Status & Update Button */}
         <div className="flex items-center gap-2 self-start sm:self-center shrink-0">
           <div
-            className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-semibold shadow-2xs ${ageInfo.badgeClass}`}
+            className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-semibold shadow-sm ${ageInfo.badgeClass}`}
             title={ageInfo.detail}
           >
             <span className={`h-2 w-2 rounded-full ${ageInfo.dotClass}`} />
@@ -202,10 +231,10 @@ export const AiBriefingCard: React.FC<AiBriefingCardProps> = ({
               type="button"
               onClick={onUpdateMacro}
               disabled={updating}
-              className="inline-flex items-center gap-1.5 rounded-xl border border-sky-200 bg-white px-3 py-1.5 text-xs font-semibold text-sky-800 shadow-2xs hover:bg-sky-50 hover:border-sky-300 transition-all disabled:opacity-50"
+              className="inline-flex items-center gap-1.5 rounded-xl border border-sky-200 bg-white px-3 py-1.5 text-xs font-semibold text-section-accent shadow-sm hover:bg-sky-50 hover:border-sky-300 transition-all disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-section-accent/45"
               title="สั่ง AI เริ่มวิเคราะห์ภาพรวมเศรษฐกิจรอบใหม่"
             >
-              <span>{updating ? '⏳' : '🔄'}</span>
+              <RefreshIcon className={updating ? 'h-3.5 w-3.5 animate-spin' : 'h-3.5 w-3.5'} />
               <span>{updating ? 'กำลังสั่ง...' : 'อัปเดตบทวิเคราะห์'}</span>
             </button>
           )}
@@ -215,7 +244,7 @@ export const AiBriefingCard: React.FC<AiBriefingCardProps> = ({
       {/* Key Diagnostic Badges: Regime, Conviction & Horizon */}
       <div className="flex flex-wrap items-center gap-2.5">
         {/* Regime Badge with ContextTooltip */}
-        <div className="inline-flex items-center gap-2 rounded-xl border border-sky-200 bg-sky-50/80 px-3 py-1.5 text-xs font-semibold text-sky-950 shadow-2xs">
+        <div className="inline-flex items-center gap-2 rounded-xl border border-sky-200 bg-sky-50/80 px-3 py-1.5 text-xs font-semibold text-sky-950 shadow-sm">
           <span>สภาวะเศรษฐกิจหลัก: {aiData.overall_regime}</span>
           <ContextTooltip
             title="สภาวะเศรษฐกิจมหภาค (Macro Regime)"
@@ -227,7 +256,7 @@ export const AiBriefingCard: React.FC<AiBriefingCardProps> = ({
 
         {/* Conviction Level with ContextTooltip */}
         {aiData.conviction_level && (
-          <div className="inline-flex items-center gap-2 rounded-xl border border-amber-200 bg-amber-50/80 px-3 py-1.5 text-xs font-semibold text-amber-950 shadow-2xs">
+          <div className="inline-flex items-center gap-2 rounded-xl border border-amber-200 bg-amber-50/80 px-3 py-1.5 text-xs font-semibold text-amber-950 shadow-sm">
             <span>Conviction: {aiData.conviction_level}</span>
             <ContextTooltip
               title="ระดับความมั่นใจของบทวิเคราะห์ (Conviction Level)"
@@ -240,8 +269,8 @@ export const AiBriefingCard: React.FC<AiBriefingCardProps> = ({
 
         {/* Horizon */}
         {aiData.time_horizon && (
-          <div className="inline-flex items-center gap-1.5 rounded-xl border border-zinc-200 bg-white/90 px-3 py-1.5 text-xs font-medium text-zinc-700 shadow-2xs">
-            <span className="text-zinc-400">⏱️</span>
+          <div className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white/90 px-3 py-1.5 text-xs font-medium text-slate-700 shadow-sm">
+            <CompassIcon className="h-3.5 w-3.5 text-slate-500" />
             <span>กรอบเวลา: {aiData.time_horizon}</span>
           </div>
         )}
@@ -251,38 +280,45 @@ export const AiBriefingCard: React.FC<AiBriefingCardProps> = ({
       <div
         className={`rounded-xl border p-3.5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 ${weather.bgClass} ${weather.borderClass} ${weather.textClass}`}
       >
-        <div className="flex items-center gap-2.5">
-          <span className="text-2xl sm:text-3xl shrink-0">{weather.weatherIcon}</span>
+        <div className="flex items-center gap-3">
+          <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/85 border border-white shadow-sm shrink-0">
+            {renderRegimeWeatherIcon(weather.weatherKind)}
+          </span>
           <div>
             <div className="flex items-center gap-2">
               <span className="font-bold text-xs uppercase tracking-wider">
                 สภาพอากาศเศรษฐกิจ: {weather.weatherName}
               </span>
             </div>
-            <p className="text-xs font-medium mt-0.5 opacity-95">
-              💡 <span className="font-bold">สูตรจำสำหรับเงินของคุณ:</span> "{weather.ruleOfThumb}"
+            <p className="text-xs font-medium mt-0.5 opacity-95 flex items-start gap-1.5">
+              <BulbIcon className="h-3.5 w-3.5 shrink-0 mt-0.5" />
+              <span>
+                <span className="font-bold">สูตรจำสำหรับเงินของคุณ:</span> "{weather.ruleOfThumb}"
+              </span>
             </p>
           </div>
         </div>
-        <div className="shrink-0 text-[11px] font-semibold bg-white/80 border border-zinc-200/80 rounded-lg px-2.5 py-1 text-zinc-700">
-          ความมั่นใจ: <span className="text-amber-800 font-bold">{conviction.label}</span>
+        <div className="shrink-0 inline-flex items-center gap-1.5 text-[11px] font-semibold bg-white/85 border border-slate-200/80 rounded-lg px-2.5 py-1 text-slate-700">
+          <span>ความมั่นใจ:</span>
+          <span className={`h-2 w-2 rounded-full ${conviction.dotClass}`} />
+          <span className="text-amber-800 font-bold">{conviction.label}</span>
         </div>
       </div>
 
       {/* Pure Executive Summary: Core Thesis (Full Width, No Stance/Warning Duplication) */}
-      <div className="rounded-xl border border-slate-200/80 bg-white/85 p-4 shadow-2xs space-y-3">
+      <div className="surface-inset rounded-xl p-4 space-y-3">
         {aiData.conviction_rationale && (
           <div>
-            <div className="text-xs font-bold text-zinc-900 mb-1.5 flex items-center justify-between">
+            <div className="text-xs font-bold text-slate-900 mb-1.5 flex items-center justify-between gap-2 flex-wrap">
               <span className="flex items-center gap-1.5">
-                <span>📌</span>
+                <TargetIcon className="h-3.5 w-3.5 text-section-accent shrink-0" />
                 <span>สรุปข้อวินิจฉัยและเหตุผลหลัก (Core Thesis):</span>
               </span>
               {onNavigateToAiTab && (
                 <button
                   type="button"
                   onClick={onNavigateToAiTab}
-                  className="text-[11px] font-semibold text-sky-700 hover:text-sky-900 hover:underline flex items-center gap-1 transition-colors"
+                  className="text-[11px] font-semibold text-section-accent hover:text-blue-900 hover:underline flex items-center gap-1 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-section-accent/45 rounded"
                 >
                   <span>ดูสัดส่วนพอร์ตและหลักฐาน 5 มิติในแท็บด้านล่าง</span>
                   <span>↓</span>
@@ -290,7 +326,7 @@ export const AiBriefingCard: React.FC<AiBriefingCardProps> = ({
               )}
             </div>
             <p
-              className={`text-xs sm:text-[13px] leading-relaxed text-zinc-700 ${
+              className={`text-xs sm:text-[13px] leading-relaxed text-slate-700 ${
                 !isExpanded ? 'line-clamp-3' : ''
               }`}
             >
@@ -300,7 +336,7 @@ export const AiBriefingCard: React.FC<AiBriefingCardProps> = ({
               <button
                 type="button"
                 onClick={() => setIsExpanded(!isExpanded)}
-                className="mt-1 text-xs font-semibold text-sky-700 hover:text-sky-900 transition-colors"
+                className="mt-1 text-xs font-semibold text-section-accent hover:text-blue-900 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-section-accent/45 rounded"
               >
                 {isExpanded ? 'ย่อข้อความ ▲' : 'อ่านต่อ ▼'}
               </button>
@@ -308,15 +344,15 @@ export const AiBriefingCard: React.FC<AiBriefingCardProps> = ({
           </div>
         )}
 
-        <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-slate-100">
+        <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-slate-200/70">
           {/* Focus Themes */}
           {themes.length > 0 && (
             <div className="flex flex-wrap items-center gap-1.5">
-              <span className="text-xs font-semibold text-zinc-500 mr-1">ธีมหลัก (Themes):</span>
+              <span className="text-xs font-semibold text-slate-500 mr-1">ธีมหลัก (Themes):</span>
               {themes.map((theme) => (
                 <span
                   key={theme}
-                  className="rounded-md border border-sky-200/80 bg-white px-2.5 py-0.5 text-xs font-medium text-sky-900 shadow-2xs"
+                  className="rounded-md border border-sky-200/80 bg-white px-2.5 py-0.5 text-xs font-medium text-sky-900 shadow-sm"
                 >
                   #{theme}
                 </span>
@@ -326,9 +362,9 @@ export const AiBriefingCard: React.FC<AiBriefingCardProps> = ({
 
           {/* Alignment */}
           {aiData.quant_narrative_alignment && (
-            <p className="text-[11px] text-zinc-500">
+            <p className="text-[11px] text-slate-500">
               ความสอดคล้องเชิงปริมาณและมุมมอง:{' '}
-              <span className="font-semibold text-zinc-700">{aiData.quant_narrative_alignment}</span>
+              <span className="font-semibold text-slate-700">{aiData.quant_narrative_alignment}</span>
             </p>
           )}
         </div>

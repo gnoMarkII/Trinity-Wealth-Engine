@@ -75,6 +75,24 @@ describe('api client', () => {
     })
   })
 
+  it('dispatchJob ส่ง require_approval เมื่อระบุและ resumeJob รองรับ action=reject', async () => {
+    const fetchMock = mockFetchOnce({ jsonBody: { job_id: 'j2', status: 'awaiting_approval' } })
+    await api.dispatchJob('วิเคราะห์หุ้น INTC', 'card-2', 'manager', 'both', true)
+    const [, init1] = fetchMock.mock.calls[0] as [string, RequestInit]
+    expect(JSON.parse(init1.body as string)).toEqual({
+      instruction: 'วิเคราะห์หุ้น INTC',
+      card_id: 'card-2',
+      flow: 'manager',
+      scope: 'both',
+      require_approval: true,
+    })
+
+    const fetchMock2 = mockFetchOnce({ jsonBody: { job_id: 'j2', status: 'error' } })
+    await api.resumeJob('j2', [], [], undefined, undefined, 'reject')
+    const [, init2] = fetchMock2.mock.calls[0] as [string, RequestInit]
+    expect(JSON.parse(init2.body as string)).toMatchObject({ action: 'reject' })
+  })
+
   it('indicator id ถูก encode ใน URL (กัน id ที่มีอักขระพิเศษพัง path)', async () => {
     const fetchMock = mockFetchOnce({ jsonBody: { points: [] } })
     await api.getMacroIndicatorSeries('obs/weird id', '3m')
@@ -211,5 +229,15 @@ describe('api client', () => {
     // Wait for async dispatch
     await Promise.resolve()
     expect(fetchMock).toHaveBeenCalled()
+  })
+
+  it('getRoundtableSession ส่ง check_drift=false เฉพาะเมื่อระบุ checkDrift: false', async () => {
+    const fetchMock = mockFetchOnce({ jsonBody: { session: { session_id: 'rt_1' }, turns: [] } })
+    await api.getRoundtableSession('rt_1', { checkDrift: false })
+    expect((fetchMock.mock.calls[0] as [string])[0]).toBe('/api/roundtable/sessions/rt_1?check_drift=false')
+
+    const fetchMock2 = mockFetchOnce({ jsonBody: { session: { session_id: 'rt_1' }, turns: [] } })
+    await api.getRoundtableSession('rt_1')
+    expect((fetchMock2.mock.calls[0] as [string])[0]).toBe('/api/roundtable/sessions/rt_1')
   })
 })

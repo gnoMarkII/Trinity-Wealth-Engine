@@ -156,14 +156,14 @@ export default function PortfolioOverviewTab({
 
       {/* Applied Policy & Lineage Banner (WP13 Task 8) */}
       {allocationPolicy || allocationPlanOrigin ? (
-        <div className="rounded-2xl border border-sky-200 bg-gradient-to-r from-sky-50/90 via-white to-blue-50/60 p-5 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="rounded-2xl border border-sky-200 bg-gradient-to-r from-sky-50/90 via-white to-blue-50/60 p-5 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div className="flex items-start gap-3.5">
-            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-sky-100 text-sky-700 font-bold text-xl shadow-2xs">
+            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-sky-100 text-sky-700 font-bold text-xl shadow-sm">
               📜
             </span>
             <div>
               <div className="flex flex-wrap items-center gap-2">
-                <h3 className="text-base font-extrabold text-zinc-900">
+                <h3 className="text-base font-extrabold text-slate-900">
                   นโยบายกลยุทธ์ที่ใช้งานอยู่ (Active Allocation Policy)
                 </h3>
                 <span className="rounded-full bg-emerald-100 px-2.5 py-0.5 text-[11px] font-bold text-emerald-800">
@@ -177,7 +177,7 @@ export default function PortfolioOverviewTab({
                 )}
               </div>
 
-              <p className="text-xs text-zinc-600 mt-1">
+              <p className="text-xs text-slate-600 mt-1">
                 พอร์ตนี้ควบคุมด้วยแผนการจัดสรร Purpose Buckets
                 {allocationPolicy?.applied_at_iso
                   ? ` (มีผลเมื่อ ${new Date(allocationPolicy.applied_at_iso).toLocaleString('th-TH')})`
@@ -185,19 +185,19 @@ export default function PortfolioOverviewTab({
               </p>
 
               {/* Provenance source badges */}
-              <div className="mt-2 flex flex-wrap items-center gap-2 text-[11px] font-mono text-zinc-500">
+              <div className="mt-2 flex flex-wrap items-center gap-2 text-[11px] font-mono text-slate-500">
                 {allocationPlanOrigin?.essence_ref && (
                   <span className="rounded bg-sky-100/70 px-2 py-0.5 text-sky-800">
                     Essence: {allocationPlanOrigin.essence_ref.slice(0, 14)}...
                   </span>
                 )}
                 {allocationPlanOrigin?.axis_ref && (
-                  <span className="rounded bg-indigo-100/70 px-2 py-0.5 text-indigo-800">
+                  <span className="rounded bg-emerald-100/70 px-2 py-0.5 text-emerald-800">
                     Axis: {allocationPlanOrigin.axis_ref.slice(0, 14)}...
                   </span>
                 )}
                 {allocationPlanOrigin?.applied_draft_id && (
-                  <span className="rounded bg-zinc-100 px-2 py-0.5 text-zinc-700">
+                  <span className="rounded bg-slate-100 px-2 py-0.5 text-slate-700">
                     Draft: {allocationPlanOrigin.applied_draft_id}
                   </span>
                 )}
@@ -210,7 +210,7 @@ export default function PortfolioOverviewTab({
               <button
                 type="button"
                 onClick={onNavigateToPrinciples}
-                className="rounded-xl border border-amber-300 bg-amber-50 px-3.5 py-2 text-xs font-bold text-amber-900 shadow-2xs hover:bg-amber-100 transition-colors"
+                className="rounded-xl border border-amber-300 bg-amber-50 px-3.5 py-2 text-xs font-bold text-amber-900 shadow-sm hover:bg-amber-100 transition-colors"
               >
                 ทบทวนแผนใหม่ →
               </button>
@@ -219,7 +219,7 @@ export default function PortfolioOverviewTab({
               <button
                 type="button"
                 onClick={onNavigateToPrinciples}
-                className="rounded-xl bg-sky-600 px-4 py-2 text-xs font-bold text-white shadow-2xs hover:bg-sky-700 transition-colors"
+                className="rounded-xl bg-sky-600 px-4 py-2 text-xs font-bold text-white shadow-sm hover:bg-sky-700 transition-colors"
               >
                 ดูหลักการลงทุน (Principles) →
               </button>
@@ -228,19 +228,19 @@ export default function PortfolioOverviewTab({
         </div>
       ) : (
         /* Guidance Card if no policy applied yet */
-        <div className="rounded-2xl border border-sky-100 bg-gradient-to-r from-sky-50/80 via-white to-blue-50/50 p-4 sm:p-5 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="rounded-2xl border border-sky-100 bg-gradient-to-r from-sky-50/80 via-white to-blue-50/50 p-4 sm:p-5 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="flex items-center gap-3">
-            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-sky-100 text-sky-700 font-bold text-lg shadow-xs">
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-sky-100 text-sky-700 font-bold text-lg shadow-sm">
               🧭
             </span>
             <div>
-              <h3 className="text-sm sm:text-base font-bold text-zinc-900 flex items-center gap-2">
+              <h3 className="text-sm sm:text-base font-bold text-slate-900 flex items-center gap-2">
                 <span>หลักการลงทุน (Investor Principles)</span>
-                <span className="rounded-full bg-sky-100 px-2 py-0.5 text-[10px] font-bold text-sky-700">
+                <span className="rounded-full bg-sky-100 px-2 py-0.5 text-[11px] font-bold text-sky-700">
                   ยังไม่ได้ Apply แผน
                 </span>
               </h3>
-              <p className="text-xs text-zinc-500 mt-0.5">
+              <p className="text-xs text-slate-500 mt-0.5">
                 ค้นหาแก่นแท้ในการลงทุน กำหนดแกนหลัก 8 หัวข้อ และสร้าง Purpose Buckets สำหรับพอร์ตนี้
               </p>
             </div>
@@ -250,7 +250,7 @@ export default function PortfolioOverviewTab({
             <button
               type="button"
               onClick={onNavigateToPrinciples}
-              className="shrink-0 rounded-xl bg-gradient-to-r from-sky-600 to-blue-600 px-4 py-2 text-xs sm:text-sm font-bold text-white shadow-xs hover:from-sky-700 hover:to-blue-700 active:scale-98 transition-all flex items-center gap-1.5 justify-center"
+              className="shrink-0 rounded-xl bg-gradient-to-r from-sky-600 to-blue-600 px-4 py-2 text-xs sm:text-sm font-bold text-white shadow-sm hover:from-sky-700 hover:to-blue-700 active:scale-98 transition-all flex items-center gap-1.5 justify-center"
             >
               <span>ดูหลักการลงทุน / ค้นหาแก่นแท้ →</span>
             </button>
@@ -260,7 +260,7 @@ export default function PortfolioOverviewTab({
 
       {/* Rebalance Review Indicator (WP13 Task 8) */}
       {rebalanceCandidates.length > 0 ? (
-        <div className="rounded-2xl border border-amber-300 bg-gradient-to-r from-amber-50/80 via-white to-orange-50/60 p-4 sm:p-5 shadow-xs">
+        <div className="rounded-2xl border border-amber-300 bg-gradient-to-r from-amber-50/80 via-white to-orange-50/60 p-4 sm:p-5 shadow-sm">
           <div className="flex items-start gap-3">
             <span className="text-2xl shrink-0 mt-0.5">⚖️</span>
             <div className="space-y-1 flex-1">
@@ -291,7 +291,7 @@ export default function PortfolioOverviewTab({
                       {c.variance > 0 ? '+' : ''}
                       {c.variance.toFixed(1)}%
                     </span>
-                    <span className="text-[10px] font-normal opacity-75">
+                    <span className="text-[11px] font-normal opacity-75">
                       ({c.direction === 'over' ? 'Overweight' : 'Underweight'})
                     </span>
                   </span>
@@ -301,7 +301,7 @@ export default function PortfolioOverviewTab({
           </div>
         </div>
       ) : summaries.length > 0 ? (
-        <div className="rounded-xl border border-emerald-200 bg-emerald-50/70 px-4 py-2.5 shadow-2xs flex items-center justify-between">
+        <div className="rounded-xl border border-emerald-200 bg-emerald-50/70 px-4 py-2.5 shadow-sm flex items-center justify-between">
           <div className="flex items-center gap-2 text-xs font-semibold text-emerald-900">
             <span>✅</span>
             <span>พอร์ตอยู่ในเกณฑ์สมดุลตามเป้าหมาย (ทุก Bucket อยู่ในกรอบเบี่ยงเบน ±5.0%)</span>
@@ -318,12 +318,12 @@ export default function PortfolioOverviewTab({
         <div className="rounded-2xl border border-sky-100 bg-panel p-5 sm:p-6 shadow-sm 2xl:col-span-5 flex flex-col justify-between">
           <div>
             <div className="flex items-center justify-between gap-2">
-              <h3 className="text-base font-bold text-zinc-900 truncate">Allocation Rings (Target vs Actual)</h3>
+              <h3 className="text-base font-bold text-slate-900 truncate">Allocation Rings (Target vs Actual)</h3>
               <span className="rounded-full bg-sky-50 px-2.5 py-1 text-[11px] sm:text-xs font-medium text-sky-700 whitespace-nowrap shrink-0">
                 วงใน: Target | วงนอก: Actual
               </span>
             </div>
-            <p className="mt-1 text-xs text-zinc-500">
+            <p className="mt-1 text-xs text-slate-500">
               เปรียบเทียบสัดส่วนเป้าหมาย (วงใน) กับมูลค่าจริงของพอร์ต (วงนอก)
             </p>
 
@@ -393,13 +393,13 @@ export default function PortfolioOverviewTab({
                 <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none text-center px-4">
                   {activeSummary ? (
                     <div className="space-y-1 animate-fade-in flex flex-col items-center justify-center">
-                      <span className="text-xs font-bold text-zinc-500 uppercase tracking-wider line-clamp-1 max-w-[150px]">
+                      <span className="text-xs font-bold text-slate-500 uppercase tracking-wider line-clamp-1 max-w-[150px]">
                         {activeSummary.name}
                       </span>
-                      <div className="text-2xl font-black font-sans tabular-nums text-zinc-900 tracking-tight leading-none my-0.5">
+                      <div className="text-2xl font-black font-mono tabular-nums text-slate-900 tracking-tight leading-none my-0.5">
                         {activeSummary.actual_percent.toFixed(1)}%
                       </div>
-                      <div className="text-xs font-semibold text-zinc-500">
+                      <div className="text-xs font-semibold text-slate-500">
                         Target: {activeTarget ? `${activeTarget.target_percent.toFixed(1)}%` : 'N/A'}
                       </div>
                       <div className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-xs font-sans tabular-nums font-bold ${activeSummary.variance > 0 ? 'bg-amber-50 text-amber-700 border border-amber-200' : activeSummary.variance < 0 ? 'bg-rose-50 text-rose-700 border border-rose-200' : 'bg-emerald-50 text-emerald-700 border border-emerald-200'}`}>
@@ -408,11 +408,11 @@ export default function PortfolioOverviewTab({
                     </div>
                   ) : (
                     <div className="space-y-1 animate-fade-in flex flex-col items-center justify-center">
-                      <span className="text-xs font-extrabold text-zinc-400 uppercase tracking-wider">Total Variance</span>
+                      <span className="text-xs font-extrabold text-slate-500 uppercase tracking-wider">Total Variance</span>
                       <div className={`text-2xl sm:text-3xl font-black font-sans tabular-nums tracking-tight leading-none my-1 ${totalVariance <= 10 ? 'text-emerald-600' : 'text-amber-600'}`}>
                         {totalVariance.toFixed(1)}%
                       </div>
-                      <div className="text-xs font-semibold text-zinc-400 max-w-[140px] leading-tight text-center">
+                      <div className="text-xs font-semibold text-slate-500 max-w-[140px] leading-tight text-center">
                         {summaries.length} Buckets <br /> (ชี้เพื่อดูรายละเอียด)
                       </div>
                     </div>
@@ -433,13 +433,13 @@ export default function PortfolioOverviewTab({
         <div className="rounded-2xl border border-sky-100 bg-panel shadow-sm 2xl:col-span-7 flex flex-col overflow-hidden">
           <div className="border-b border-sky-100 bg-sky-50/40 px-4 sm:px-6 py-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
-              <h3 className="text-base sm:text-lg font-bold text-zinc-900">Strategy Buckets Breakdown</h3>
-              <p className="text-xs text-zinc-500 font-medium">
+              <h3 className="text-base sm:text-lg font-bold text-slate-900">Strategy Buckets Breakdown</h3>
+              <p className="text-xs text-slate-500 font-medium">
                 เปรียบเทียบมูลค่าจริงกับเป้าหมายแต่ละกลุ่ม พร้อมค่าความเบี่ยงเบน (Variance)
               </p>
             </div>
             <div className="flex flex-wrap items-center gap-2 shrink-0">
-              <span className="rounded-xl border border-sky-200 bg-white px-2.5 py-1 text-xs font-bold text-zinc-700 shadow-xs whitespace-nowrap">
+              <span className="rounded-xl border border-sky-200 bg-white px-2.5 py-1 text-xs font-bold text-slate-700 shadow-sm whitespace-nowrap">
                 {summaries.length} Buckets
               </span>
               {onSuccess && (
@@ -448,11 +448,11 @@ export default function PortfolioOverviewTab({
                     type="button"
                     aria-label="จัดสินทรัพย์เข้า Bucket ด้วย AI"
                     onClick={() => setAiAssignModalOpen(true)}
-                    className="inline-flex items-center gap-1.5 rounded-xl border border-indigo-200 bg-gradient-to-r from-indigo-50 to-sky-50 px-3 py-1.5 text-xs font-bold text-indigo-900 shadow-xs hover:from-indigo-100 hover:to-sky-100 transition-all whitespace-nowrap"
+                    className="inline-flex items-center gap-1.5 rounded-xl border border-emerald-200 bg-gradient-to-r from-emerald-50 to-teal-50 px-3 py-1.5 text-xs font-bold text-emerald-900 shadow-sm hover:from-emerald-100 hover:to-teal-100 transition-all whitespace-nowrap"
                   >
                     <span>✨ จัดเข้า Bucket ด้วย AI</span>
                     {unassignedCount > 0 && (
-                      <span className="rounded-full bg-amber-500 px-1.5 py-0.5 text-[10px] font-black text-white leading-none">
+                      <span className="rounded-full bg-amber-500 px-1.5 py-0.5 text-[11px] font-black text-white leading-none">
                         {unassignedCount}
                       </span>
                     )}
@@ -460,7 +460,7 @@ export default function PortfolioOverviewTab({
                   <button
                     type="button"
                     onClick={() => setTargetModalOpen(true)}
-                    className="rounded-xl bg-flow-blue px-3 py-1.5 text-xs font-bold text-white shadow-xs hover:bg-sky-600 transition-colors whitespace-nowrap"
+                    className="rounded-xl bg-flow-blue px-3 py-1.5 text-xs font-bold text-white shadow-sm hover:bg-sky-600 transition-colors whitespace-nowrap"
                   >
                     ⚙️ ตั้งค่าเป้าหมาย
                   </button>
@@ -472,7 +472,7 @@ export default function PortfolioOverviewTab({
           <div className="flex-1 overflow-x-auto p-2 custom-scrollbar">
             <table className="w-full text-left text-sm min-w-[560px]">
               <thead>
-                <tr className="border-b border-sky-100 bg-sky-50/60 text-xs font-bold uppercase tracking-wider text-zinc-700">
+                <tr className="border-b border-sky-100 bg-sky-50/60 text-xs font-bold uppercase tracking-wider text-slate-700">
                   <th className="px-3.5 py-3 whitespace-nowrap">Bucket Name</th>
                   <th className="px-3.5 py-3 text-right whitespace-nowrap">Target %</th>
                   <th className="px-3.5 py-3 text-right whitespace-nowrap">Actual Value</th>
@@ -496,42 +496,50 @@ export default function PortfolioOverviewTab({
                   return (
                     <tr
                       key={s.bucket_id}
+                      role="button"
+                      tabIndex={0}
                       onClick={() => onSelectBucket(s.bucket_id)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault()
+                          onSelectBucket(s.bucket_id)
+                        }
+                      }}
                       onMouseEnter={() => setHoveredBucket(s.bucket_id)}
                       onMouseLeave={() => setHoveredBucket(null)}
-                      className={`cursor-pointer transition-all ${
+                      className={`cursor-pointer transition-all focus-visible:outline-none focus-visible:bg-sky-100/70 ${
                         isHovered ? 'bg-flow-cyan/15 scale-[1.005]' : 'hover:bg-sky-50/60'
                       }`}
                     >
-                      <td className="px-3.5 py-3.5 font-medium text-zinc-900 flex items-center gap-2.5" aria-label="Bucket Details">
+                      <td className="px-3.5 py-3.5 font-medium text-slate-900 flex items-center gap-2.5" aria-label="Bucket Details">
                         <span
-                          className="h-3 w-3 shrink-0 rounded-full shadow-xs"
+                          className="h-3 w-3 shrink-0 rounded-full shadow-sm"
                           style={{ backgroundColor: color }}
                         />
                         <div className="min-w-0">
-                          <div className="font-extrabold text-zinc-900 text-sm sm:text-base group-hover:text-flow-blue truncate max-w-[180px] sm:max-w-none">{s.name}</div>
-                          <div className="text-[11px] font-mono tabular-nums text-zinc-400 font-semibold truncate">{s.bucket_id}</div>
+                          <div className="font-extrabold text-slate-900 text-sm sm:text-base group-hover:text-flow-blue truncate max-w-[180px] sm:max-w-none">{s.name}</div>
+                          <div className="text-[11px] font-mono tabular-nums text-slate-500 font-semibold truncate">{s.bucket_id}</div>
                         </div>
                       </td>
-                      <td className="px-3.5 py-3.5 text-right font-sans tabular-nums font-bold text-zinc-800 text-xs sm:text-sm whitespace-nowrap">
+                      <td className="px-3.5 py-3.5 text-right font-sans tabular-nums font-bold text-slate-800 text-xs sm:text-sm whitespace-nowrap">
                         {s.target_percent.toFixed(1)}%
                       </td>
-                      <td className="px-3.5 py-3.5 text-right font-sans tabular-nums font-extrabold text-zinc-900 text-xs sm:text-sm whitespace-nowrap">
+                      <td className="px-3.5 py-3.5 text-right font-mono tabular-nums font-bold text-slate-900 text-xs sm:text-sm whitespace-nowrap">
                         {formatTHB(s.actual_value_thb)}
                       </td>
-                      <td className="px-3.5 py-3.5 text-right font-sans tabular-nums font-extrabold text-zinc-900 text-xs sm:text-sm whitespace-nowrap">
+                      <td className="px-3.5 py-3.5 text-right font-mono tabular-nums font-bold text-slate-900 text-xs sm:text-sm whitespace-nowrap">
                         {s.actual_percent.toFixed(1)}%
                       </td>
                       <td className="px-3.5 py-3.5 text-right align-middle whitespace-nowrap">
                         <div className="flex flex-col items-end gap-1">
                           <span
-                            className={`inline-block rounded-lg border px-2 py-0.5 text-xs font-sans tabular-nums font-bold ${varColorClass}`}
+                            className={`inline-block rounded-lg border px-2 py-0.5 text-xs font-mono tabular-nums font-bold ${varColorClass}`}
                           >
                             {s.variance > 0 ? '+' : ''}
                             {s.variance.toFixed(1)}%
                           </span>
-                          <div className="w-16 sm:w-20 h-1.5 bg-zinc-100 rounded-full overflow-hidden relative flex items-center">
-                            <div className="absolute left-1/2 top-0 bottom-0 w-[1px] bg-zinc-300 z-10" />
+                          <div className="w-16 sm:w-20 h-1.5 bg-slate-100 rounded-full overflow-hidden relative flex items-center">
+                            <div className="absolute left-1/2 top-0 bottom-0 w-[1px] bg-slate-300 z-10" />
                             {s.variance > 0 ? (
                               <div
                                 className="h-full bg-amber-500 rounded-r-full transition-all duration-300 absolute left-1/2"
@@ -553,12 +561,12 @@ export default function PortfolioOverviewTab({
                   <tr>
                     <td colSpan={5} className="py-16 text-center">
                       <div className="mx-auto max-w-md flex flex-col items-center justify-center space-y-4 animate-fade-in">
-                        <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-sky-50 border border-sky-100 text-flow-blue shadow-sm">
+                        <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-emerald-50 border border-emerald-100 text-section-accent shadow-sm">
                           <TradeIcon className="h-8 w-8" />
                         </div>
                         <div className="space-y-1">
-                          <h4 className="text-base font-extrabold text-zinc-900">ยังไม่มีสินทรัพย์ในพอร์ตการลงทุน</h4>
-                          <p className="text-xs text-zinc-500 max-w-sm">
+                          <h4 className="text-base font-extrabold text-slate-900">ยังไม่มีสินทรัพย์ในพอร์ตการลงทุน</h4>
+                          <p className="text-xs text-slate-500 max-w-sm">
                             เริ่มต้นสร้างพอร์ตของคุณด้วยการบันทึกรายการเทรด หรือซื้อหุ้น/กองทุนแรกเข้าสู่ระบบเพื่อติดตามสัดส่วนตามกลยุทธ์
                           </p>
                         </div>

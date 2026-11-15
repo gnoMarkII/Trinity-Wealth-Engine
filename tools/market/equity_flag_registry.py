@@ -30,6 +30,7 @@ EQUITY_FLAG_CATEGORIES: Dict[str, EquityFlagCategory] = {
     "hardcoded_country_risk_premium:dcf": EquityFlagCategory.ASSUMPTION,
     "hardcoded_cost_of_debt:dcf": EquityFlagCategory.ASSUMPTION,
     "tax_policy:US_FEDERAL_STATUTORY_21PCT": EquityFlagCategory.ASSUMPTION,
+    "tax_policy:normalized_statutory": EquityFlagCategory.ASSUMPTION,
     "rich_market_valuation_low_erp:dcf": EquityFlagCategory.ASSUMPTION,
     "operating_margin_proxy:dcf": EquityFlagCategory.ASSUMPTION,
     "cyclical_peak_margin_normalized:dcf": EquityFlagCategory.ASSUMPTION,

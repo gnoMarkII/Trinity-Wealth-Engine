@@ -38,6 +38,7 @@ from api.routers.pm_review_router import router as pm_review_router
 from api.routers.thesis_router import router as thesis_router
 from api.routers.governance_router import router as governance_router
 from api.routers.resilience_router import router as resilience_router
+from api.routers.roundtable_router import router as roundtable_router
 
 WEB_DIST = Path(__file__).resolve().parent.parent / "web" / "dist"
 
@@ -190,6 +191,7 @@ app.include_router(pm_review_router)
 app.include_router(thesis_router)
 app.include_router(governance_router)
 app.include_router(resilience_router)
+app.include_router(roundtable_router)
 
 
 @app.get("/health")

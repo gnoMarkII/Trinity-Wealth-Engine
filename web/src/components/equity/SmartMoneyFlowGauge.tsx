@@ -43,7 +43,7 @@ export const SmartMoneyFlowGauge: React.FC<SmartMoneyFlowGaugeProps> = ({
       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-edge/50 pb-2.5">
         <div className="flex items-center gap-2">
           <span className="text-base">🕵️</span>
-          <span className="text-xs font-bold text-zinc-800 tracking-tight">
+          <span className="text-xs font-bold text-slate-800 tracking-tight">
             Institutional Ownership & Smart Money Capital Flow (90D)
           </span>
           <ContextTooltip
@@ -59,7 +59,7 @@ export const SmartMoneyFlowGauge: React.FC<SmartMoneyFlowGaugeProps> = ({
               ? 'bg-emerald-50 text-emerald-800 border-emerald-300'
               : isBearish
               ? 'bg-rose-50 text-rose-800 border-rose-300'
-              : 'bg-zinc-100 text-zinc-700 border-zinc-200'
+              : 'bg-slate-100 text-slate-700 border-slate-200'
           }`}
         >
           {isBullish
@@ -73,7 +73,7 @@ export const SmartMoneyFlowGauge: React.FC<SmartMoneyFlowGaugeProps> = ({
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         {/* Metric 1: Institutional Ownership Gauge Bar */}
         <div className="p-3 rounded-xl bg-surface border border-edge/60 space-y-2">
-          <div className="flex items-center justify-between text-[11px] font-medium text-zinc-500">
+          <div className="flex items-center justify-between text-[11px] font-medium text-slate-500">
             <div className="flex items-center gap-1.5">
               <span>Institutional Float</span>
               <ContextTooltip
@@ -83,20 +83,20 @@ export const SmartMoneyFlowGauge: React.FC<SmartMoneyFlowGaugeProps> = ({
                 impactOnMoney="ช่วยหลีกเลี่ยงหุ้นที่มีแต่รายย่อยเก็งกำไรจนราคาผันผวนผิดปกติ"
               />
             </div>
-            <span className="font-bold text-zinc-900 font-mono">
+            <span className="font-bold text-slate-900 font-mono">
               {instOwnership > 0 ? `${instOwnership.toFixed(1)}%` : 'N/A'}
             </span>
           </div>
-          <div className="w-full h-2.5 rounded-full bg-zinc-200/80 overflow-hidden shadow-inner">
+          <div className="w-full h-2.5 rounded-full bg-slate-200/80 overflow-hidden shadow-inner">
             <div
-              className="h-full bg-gradient-to-r from-indigo-500 to-sky-500 rounded-full transition-all duration-500"
+              className="h-full bg-gradient-to-r from-blue-500 to-sky-500 rounded-full transition-all duration-500"
               style={{ width: `${Math.min(100, Math.max(5, instOwnership))}%` }}
               title={`Institutional Ownership: ${instOwnership}%`}
             />
           </div>
-          <div className="flex items-center justify-between text-[10px] text-zinc-400">
+          <div className="flex items-center justify-between text-[11px] text-slate-500">
             <span>Retail / Insider Float</span>
-            <span className="font-semibold text-zinc-600">
+            <span className="font-semibold text-slate-600">
               {instOwnership > 0 ? `${(100 - instOwnership).toFixed(1)}%` : 'N/A'}
             </span>
           </div>
@@ -104,7 +104,7 @@ export const SmartMoneyFlowGauge: React.FC<SmartMoneyFlowGaugeProps> = ({
 
         {/* Metric 2: SEC Form 4 Open-Market Purchases */}
         <div className="p-3 rounded-xl bg-surface border border-edge/60 space-y-1">
-          <div className="flex items-center justify-between text-[11px] font-medium text-zinc-500">
+          <div className="flex items-center justify-between text-[11px] font-medium text-slate-500">
             <div className="flex items-center gap-1.5">
               <span>Form 4 Insider Purchases (P)</span>
               <ContextTooltip
@@ -123,14 +123,14 @@ export const SmartMoneyFlowGauge: React.FC<SmartMoneyFlowGaugeProps> = ({
                 )})`
               : `0 (${currency}0)`}
           </div>
-          <span className="text-[10px] text-zinc-400 block">
+          <span className="text-[11px] text-slate-500 block">
             C-Suite: {insider?.c_suite_p_count || 0} รายการ (CEO/CFO Conviction)
           </span>
         </div>
 
         {/* Metric 3: Short Interest & Squeeze Risk Gauge */}
         <div className="p-3 rounded-xl bg-surface border border-edge/60 space-y-1">
-          <div className="flex items-center justify-between text-[11px] font-medium text-zinc-500">
+          <div className="flex items-center justify-between text-[11px] font-medium text-slate-500">
             <div className="flex items-center gap-1.5">
               <span>Short Interest (% Float)</span>
               <ContextTooltip
@@ -141,15 +141,15 @@ export const SmartMoneyFlowGauge: React.FC<SmartMoneyFlowGaugeProps> = ({
               />
             </div>
             {squeezeRisk && (
-              <span className="px-1.5 py-0.2 rounded bg-amber-100 text-amber-800 font-bold text-[9px] border border-amber-300 animate-pulse">
+              <span className="px-1.5 py-0.5 rounded bg-amber-100 text-amber-800 font-bold text-[11px] border border-amber-300 animate-pulse">
                 ⚡ Squeeze Risk
               </span>
             )}
           </div>
-          <div className="font-mono text-xl font-black text-zinc-900">
+          <div className="font-mono text-xl font-black text-slate-900">
             {shortInterest > 0 ? `${shortInterest.toFixed(2)}%` : 'Low / Minimal'}
           </div>
-          <span className="text-[10px] text-zinc-400 block">
+          <span className="text-[11px] text-slate-500 block">
             {squeezeRisk ? 'Bear crowding detected (>15% shorted)' : 'Healthy borrowing demand'}
           </span>
         </div>

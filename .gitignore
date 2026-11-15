@@ -86,3 +86,8 @@ node_modules/
 # Hermes Agent Upstream Clone
 services/hermes_agent/
 
+# =========================================
+# 10. Runtime Audio & Temporary Caches
+# =========================================
+.cache/
+

@@ -20,6 +20,21 @@ import { PromiseLedgerTable } from './promise_check/PromiseLedgerTable'
 import { PromiseMethodologyAccordion } from './promise_check/PromiseMethodologyAccordion'
 import { VerbatimQuoteModal } from './promise_check/VerbatimQuoteModal'
 import { ContextTooltip } from './explainer'
+import {
+  AlertTriangleIcon,
+  BulbIcon,
+  CalendarIcon,
+  ChartTrendIcon,
+  CloseIcon,
+  CpuIcon,
+  EditPenIcon,
+  FolderIcon,
+  KanbanBoardIcon,
+  MicStageIcon,
+  RefreshIcon,
+  SparklesIcon,
+  TargetIcon,
+} from '../ui/AppIcons'
 
 interface EarningsCallTabProps {
   ticker: string
@@ -284,8 +299,10 @@ export const EarningsCallTab: React.FC<EarningsCallTabProps> = ({ ticker }) => {
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
             <div className="flex items-center gap-2">
-              <span className="text-xl">🎙️</span>
-              <h3 className="text-lg font-bold text-zinc-900 dark:text-zinc-100 flex items-center gap-1.5">
+              <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-sky-100 text-sky-700 border border-sky-200/80 shadow-sm shrink-0">
+                <MicStageIcon className="h-4 w-4" />
+              </span>
+  <h3 className="text-lg font-bold text-slate-900 flex items-center gap-1.5">
                 <span>Earnings Call Insights & Transcript Analyzer</span>
                 <ContextTooltip
                   title="Promise Tracker (ระบบตรวจการบ้านสัญญาผู้บริหาร)"
@@ -294,11 +311,11 @@ export const EarningsCallTab: React.FC<EarningsCallTabProps> = ({ ticker }) => {
                   impactOnMoney="ช่วยคัดกรองผู้บริหารที่มีฝีมือและซื่อสัตย์ ป้องกันการตกเป็นเหยื่อของการปั่นกระแสหรือสัญญาที่ไม่เกิดขึ้นจริง"
                 />
               </h3>
-              <span className="rounded-md bg-sky-100 dark:bg-sky-950 px-2 py-0.5 text-xs font-semibold text-sky-800 dark:text-sky-300">
+  <span className="rounded-md bg-sky-100 px-2 py-0.5 text-xs font-semibold text-sky-800">
                 {ticker}
               </span>
             </div>
-            <p className="text-xs text-zinc-600 dark:text-zinc-400 mt-1 max-w-2xl leading-relaxed">
+  <p className="text-xs text-slate-600 mt-1 max-w-2xl leading-relaxed">
               ติดตามความน่าเชื่อถือของผู้บริหาร (Rolling 8-Quarter Commitment Tracker) และวิเคราะห์สรุปบทสนทนาผลประกอบการ บันทึกลง Obsidian Vault พร้อมระบบติดตามงานผ่าน Kanban
             </p>
           </div>
@@ -321,7 +338,7 @@ export const EarningsCallTab: React.FC<EarningsCallTabProps> = ({ ticker }) => {
                 </>
               ) : (
                 <>
-                  <span>🔄</span>
+                  <RefreshIcon className="h-3.5 w-3.5 shrink-0" />
                   <span>ซิงค์ 8 ไตรมาสอัตโนมัติ</span>
                 </>
               )}
@@ -333,34 +350,44 @@ export const EarningsCallTab: React.FC<EarningsCallTabProps> = ({ ticker }) => {
                 onClick={() => setShowNewForm(!showNewForm)}
                 className={`px-3.5 py-2 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all shadow-sm ${
                   showNewForm
-                    ? 'bg-zinc-200 text-zinc-800 hover:bg-zinc-300 dark:bg-zinc-800 dark:text-zinc-200'
-                    : 'bg-zinc-100 text-zinc-700 hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-200'
+  ?'bg-slate-200 text-slate-800 hover:bg-slate-300'
+  :'bg-slate-100 text-slate-700 hover:bg-slate-200'
                 }`}
               >
-                <span>{showNewForm ? '✕ ซ่อนแบบฟอร์ม' : '✨ สกัด Transcript ใหม่'}</span>
+                {showNewForm ? (
+                  <>
+                    <CloseIcon className="h-3.5 w-3.5" />
+                    <span>ซ่อนแบบฟอร์ม</span>
+                  </>
+                ) : (
+                  <>
+                    <SparklesIcon className="h-3.5 w-3.5" />
+                    <span>สกัด Transcript ใหม่</span>
+                  </>
+                )}
               </button>
             )}
           </div>
         </div>
 
         {/* Sub-tab Navigation Switcher */}
-        <div className="flex items-center gap-2 mt-4 pt-3 border-t border-edge/60">
+        <div className="flex flex-wrap items-center gap-2 mt-4 pt-3 border-t border-edge/60">
           <button
             type="button"
             onClick={() => setActiveSubTab('promise_check')}
             className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
               activeSubTab === 'promise_check'
                 ? 'bg-sky-600 text-white shadow-sm ring-2 ring-sky-600/20'
-                : 'bg-surface hover:bg-surface-strong text-zinc-600 dark:text-zinc-400 border border-edge'
+  :'bg-surface hover:bg-surface-strong text-slate-600 border border-edge'
             }`}
           >
-            <span>🎯</span>
+            <TargetIcon className="h-3.5 w-3.5 shrink-0" />
             <span>Promise Check (8 ไตรมาส)</span>
             {promiseData?.scores && (
-              <span className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold ${
+              <span className={`px-2 py-0.5 rounded-full text-[11px] font-extrabold ${
                 activeSubTab === 'promise_check'
                   ? 'bg-white/20 text-white'
-                  : 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300'
+  :'bg-emerald-100 text-emerald-800'
               }`}>
                 {promiseData.scores.credibility}/100 • Grade {promiseData.scores.grade}
               </span>
@@ -373,16 +400,16 @@ export const EarningsCallTab: React.FC<EarningsCallTabProps> = ({ ticker }) => {
             className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
               activeSubTab === 'single_call'
                 ? 'bg-sky-600 text-white shadow-sm ring-2 ring-sky-600/20'
-                : 'bg-surface hover:bg-surface-strong text-zinc-600 dark:text-zinc-400 border border-edge'
+  :'bg-surface hover:bg-surface-strong text-slate-600 border border-edge'
             }`}
           >
-            <span>📝</span>
+            <EditPenIcon className="h-3.5 w-3.5 shrink-0" />
             <span>สรุปและบันทึก Note รายไตรมาส</span>
             {existingCalls.length > 0 && (
-              <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+              <span className={`px-2 py-0.5 rounded-full text-[11px] font-bold ${
                 activeSubTab === 'single_call'
                   ? 'bg-white/20 text-white'
-                  : 'bg-zinc-200 text-zinc-800 dark:bg-zinc-700 dark:text-zinc-200'
+  :'bg-slate-200 text-slate-800'
               }`}>
                 {existingCalls.length} ไตรมาส
               </span>
@@ -395,10 +422,10 @@ export const EarningsCallTab: React.FC<EarningsCallTabProps> = ({ ticker }) => {
             className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
               activeSubTab === 'earnings_bridge'
                 ? 'bg-sky-600 text-white shadow-sm ring-2 ring-sky-600/20'
-                : 'bg-surface hover:bg-surface-strong text-zinc-600 dark:text-zinc-400 border border-edge'
+  :'bg-surface hover:bg-surface-strong text-slate-600 border border-edge'
             }`}
           >
-            <span>📊</span>
+            <ChartTrendIcon className="h-3.5 w-3.5 shrink-0" />
             <span>Earnings Bridge (Surprise Walk)</span>
           </button>
         </div>
@@ -411,7 +438,10 @@ export const EarningsCallTab: React.FC<EarningsCallTabProps> = ({ ticker }) => {
           {promiseError && (
             <div className="rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700" role="alert">
               <div className="font-semibold flex items-center justify-between">
-                <span className="flex items-center gap-2">⚠️ {promiseError}</span>
+                <span className="flex items-center gap-2">
+                  <AlertTriangleIcon className="h-4 w-4 text-rose-600 shrink-0" />
+                  <span>{promiseError}</span>
+                </span>
                 <button
                   type="button"
                   onClick={() => handleSyncPromise(8)}
@@ -426,7 +456,7 @@ export const EarningsCallTab: React.FC<EarningsCallTabProps> = ({ ticker }) => {
 
           {/* Loading Skeleton */}
           {isLoadingPromise && !promiseData && (
-            <div className="rounded-2xl border border-edge bg-panel p-8 text-center text-zinc-500 animate-pulse space-y-3">
+            <div className="rounded-2xl border border-edge bg-panel p-8 text-center text-slate-500 animate-pulse space-y-3">
               <div className="text-2xl">⏳</div>
               <div className="text-sm font-medium">กำลังโหลดข้อมูล Promise Check ย้อนหลัง 8 ไตรมาส...</div>
             </div>
@@ -481,12 +511,14 @@ export const EarningsCallTab: React.FC<EarningsCallTabProps> = ({ ticker }) => {
           {/* Empty State with One-Click Sync */}
           {!isLoadingPromise && (!promiseData || !promiseData.ledger?.promises || promiseData.ledger.promises.length === 0) && (
             <div className="rounded-2xl border border-dashed border-edge bg-panel p-10 text-center space-y-4">
-              <div className="text-4xl">🎯</div>
+              <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-sky-50 text-sky-600 border border-sky-200/80 shadow-sm">
+                <TargetIcon className="h-7 w-7" />
+              </div>
               <div className="max-w-md mx-auto space-y-2">
-                <h4 className="text-base font-bold text-zinc-800 dark:text-zinc-200">
+  <h4 className="text-base font-bold text-slate-800">
                   ยังไม่มีฐานข้อมูลคำมั่นสัญญา (Promise Ledger) สำหรับ {ticker}
                 </h4>
-                <p className="text-xs text-zinc-500 leading-relaxed">
+                <p className="text-xs text-slate-500 leading-relaxed">
                   ระบบสามารถดึง Transcript ย้อนหลัง 8 ไตรมาสอัตโนมัติจาก StockAnalysis, สกัดคำมั่นสัญญาของผู้บริหารพร้อมโควทคำพูดจริง (Verbatim Quotes) และคำนวณคะแนน Credibility Score
                 </p>
               </div>
@@ -506,7 +538,7 @@ export const EarningsCallTab: React.FC<EarningsCallTabProps> = ({ ticker }) => {
                   </>
                 ) : (
                   <>
-                    <span>🚀</span>
+                    <SparklesIcon className="h-4 w-4 shrink-0" />
                     <span>ดึงและวิเคราะห์ Transcript 8 ไตรมาสทันที</span>
                   </>
                 )}
@@ -521,8 +553,8 @@ export const EarningsCallTab: React.FC<EarningsCallTabProps> = ({ ticker }) => {
         <div className="space-y-6">
           {/* Loading Skeleton */}
           {isLoadingExisting && (
-            <div className="rounded-2xl border border-edge bg-panel p-8 text-center text-zinc-500 animate-pulse space-y-3">
-              <div className="text-2xl">⏳</div>
+            <div className="rounded-2xl border border-edge bg-panel p-8 text-center text-slate-500 animate-pulse space-y-3">
+              <div className="mx-auto w-7 h-7 border-2 border-section-accent border-t-transparent rounded-full animate-spin" />
               <div className="text-sm font-medium">กำลังโหลดข้อมูล Earnings Call จาก Obsidian Vault...</div>
             </div>
           )}
@@ -531,11 +563,11 @@ export const EarningsCallTab: React.FC<EarningsCallTabProps> = ({ ticker }) => {
           {showNewForm && (
             <div className="rounded-2xl border border-sky-200 bg-sky-50/40 p-5 shadow-sm space-y-4 animate-page-in">
               {existingCalls.length === 0 && (
-                <div className="rounded-xl border border-sky-200/80 bg-sky-100/60 dark:bg-sky-950/40 p-3.5 text-xs text-sky-900 dark:text-sky-200 flex items-start gap-2.5">
-                  <span className="text-base leading-none">💡</span>
+  <div className="rounded-xl border border-sky-200/80 bg-sky-100/60 p-3.5 text-xs text-sky-900 flex items-start gap-2.5">
+                  <BulbIcon className="h-4 w-4 text-sky-700 shrink-0 mt-0.5" />
                   <div className="space-y-0.5">
                     <span className="font-bold block">ยังไม่พบบันทึกสรุปรายไตรมาสของ {ticker} ใน Obsidian Vault</span>
-                    <span className="text-sky-800 dark:text-sky-300 block">
+  <span className="text-sky-800 block">
                       คุณสามารถวางเนื้อหาบทสนทนาแถลงผลประกอบการ (Transcript) ด้านล่างเพื่อให้ AI สกัด 5 ประเด็นสำคัญ บันทึกลง Obsidian และสร้างการ์ดติดตามใน Kanban ได้ทันที
                     </span>
                   </div>
@@ -544,7 +576,7 @@ export const EarningsCallTab: React.FC<EarningsCallTabProps> = ({ ticker }) => {
 
               <div className="flex items-center justify-between border-b border-sky-200/60 pb-3">
                 <h4 className="text-sm font-bold text-sky-900 flex items-center gap-2">
-                  <span>✨</span>
+                  <SparklesIcon className="h-4 w-4 text-sky-700 shrink-0" />
                   <span>แบบฟอร์มสกัดและบันทึก Transcript ใหม่ ({ticker})</span>
                 </h4>
                 <span className="text-xs text-sky-700">AI จะสกัด 5 หัวข้อสำคัญและบันทึกลง Obsidian อัตโนมัติ</span>
@@ -553,7 +585,7 @@ export const EarningsCallTab: React.FC<EarningsCallTabProps> = ({ ticker }) => {
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="flex flex-col sm:flex-row gap-4">
                   <div className="sm:w-1/3">
-                    <label htmlFor="period-input" className="block text-xs font-semibold text-zinc-700 uppercase tracking-wider mb-1.5">
+                    <label htmlFor="period-input" className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
                       ไตรมาส / งวดผลประกอบการ <span className="text-rose-500">*</span>
                     </label>
                     <input
@@ -562,7 +594,7 @@ export const EarningsCallTab: React.FC<EarningsCallTabProps> = ({ ticker }) => {
                       value={period}
                       onChange={(e) => setPeriod(e.target.value)}
                       placeholder="เช่น Q2 2026 หรือ 2Q26"
-                      className="w-full rounded-lg border border-edge bg-surface px-3 py-2 text-sm text-zinc-900 placeholder:text-zinc-400 focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500 transition-colors"
+                      className="w-full rounded-lg border border-edge bg-surface px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500 transition-colors"
                       disabled={status === 'loading'}
                       required
                     />
@@ -571,10 +603,10 @@ export const EarningsCallTab: React.FC<EarningsCallTabProps> = ({ ticker }) => {
 
                 <div>
                   <div className="flex justify-between items-center mb-1.5">
-                    <label htmlFor="transcript-input" className="block text-xs font-semibold text-zinc-700 uppercase tracking-wider">
+                    <label htmlFor="transcript-input" className="block text-xs font-semibold text-slate-700 uppercase tracking-wider">
                       เนื้อหา Transcript (Copy & Paste มาวางที่นี่) <span className="text-rose-500">*</span>
                     </label>
-                    <span className={`text-xs ${transcript.length > 120000 ? 'text-rose-500 font-semibold' : 'text-zinc-400'}`}>
+                    <span className={`text-xs ${transcript.length > 120000 ? 'text-rose-500 font-semibold' : 'text-slate-500'}`}>
                       {transcript.length.toLocaleString()} / 120,000 ตัวอักษร
                     </span>
                   </div>
@@ -584,7 +616,7 @@ export const EarningsCallTab: React.FC<EarningsCallTabProps> = ({ ticker }) => {
                     value={transcript}
                     onChange={(e) => setTranscript(e.target.value)}
                     placeholder="วางเนื้อหา Transcript ภาษาอังกฤษหรือไทยที่นี่ เช่น บทสนทนาของผู้บริหารและนักวิเคราะห์..."
-                    className="w-full rounded-lg border border-edge bg-surface p-3 text-sm text-zinc-900 placeholder:text-zinc-400 font-mono text-xs leading-relaxed focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500 transition-colors"
+                    className="w-full rounded-lg border border-edge bg-surface p-3 text-sm text-slate-900 placeholder:text-slate-400 font-mono text-xs leading-relaxed focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500 transition-colors"
                     disabled={status === 'loading'}
                     required
                   />
@@ -594,7 +626,7 @@ export const EarningsCallTab: React.FC<EarningsCallTabProps> = ({ ticker }) => {
                   <button
                     type="submit"
                     disabled={status === 'loading' || !transcript.trim()}
-                    className="px-4 py-2.5 rounded-lg bg-sky-600 hover:bg-sky-700 disabled:bg-zinc-300 disabled:cursor-not-allowed text-white text-sm font-semibold flex items-center gap-2 shadow-sm transition-colors"
+                    className="px-4 py-2.5 rounded-lg bg-sky-600 hover:bg-sky-700 disabled:bg-slate-300 disabled:cursor-not-allowed text-white text-sm font-semibold flex items-center gap-2 shadow-sm transition-colors"
                   >
                     {status === 'loading' ? (
                       <>
@@ -606,7 +638,7 @@ export const EarningsCallTab: React.FC<EarningsCallTabProps> = ({ ticker }) => {
                       </>
                     ) : (
                       <>
-                        <span>✨</span>
+                        <SparklesIcon className="h-4 w-4 shrink-0" />
                         <span>แปลงเป็น Highlights & ส่งเข้า Kanban</span>
                       </>
                     )}
@@ -616,7 +648,7 @@ export const EarningsCallTab: React.FC<EarningsCallTabProps> = ({ ticker }) => {
                     <button
                       type="button"
                       onClick={handleReset}
-                      className="px-3 py-2 rounded-lg border border-edge bg-surface hover:bg-surface-strong text-zinc-600 text-sm font-medium transition-colors"
+                      className="px-3 py-2 rounded-lg border border-edge bg-surface hover:bg-surface-strong text-slate-600 text-sm font-medium transition-colors"
                     >
                       ล้างข้อความ
                     </button>
@@ -630,7 +662,7 @@ export const EarningsCallTab: React.FC<EarningsCallTabProps> = ({ ticker }) => {
           {(status === 'error' || errorMessage) && (
             <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700" role="alert">
               <div className="font-semibold flex items-center gap-2">
-                <span>⚠️</span>
+                <AlertTriangleIcon className="h-4 w-4 text-red-600 shrink-0" />
                 <span>เกิดข้อผิดพลาด</span>
               </div>
               <p className="mt-1">{errorMessage}</p>
@@ -651,9 +683,10 @@ export const EarningsCallTab: React.FC<EarningsCallTabProps> = ({ ticker }) => {
                   type="button"
                   onClick={handleRetry}
                   disabled={isRetrying}
-                  className="px-3 py-1 bg-amber-600 hover:bg-amber-700 disabled:opacity-50 text-white rounded text-xs font-semibold flex items-center gap-1 shadow-sm transition-colors"
+                  className="px-3 py-1 bg-amber-600 hover:bg-amber-700 disabled:opacity-50 text-white rounded text-xs font-semibold flex items-center gap-1.5 shadow-sm transition-colors"
                 >
-                  {isRetrying ? 'กำลัง Retry...' : '🔄 ลองส่งใหม่ (Retry)'}
+                  <RefreshIcon className={`h-3 w-3 ${isRetrying ? 'animate-spin' : ''}`} />
+                  <span>{isRetrying ? 'กำลัง Retry...' : 'ลองส่งใหม่ (Retry)'}</span>
                 </button>
               </div>
               {result.vault_path && (
@@ -678,9 +711,10 @@ export const EarningsCallTab: React.FC<EarningsCallTabProps> = ({ ticker }) => {
                   type="button"
                   onClick={handleRetry}
                   disabled={isRetrying}
-                  className="px-3 py-1 bg-rose-600 hover:bg-rose-700 disabled:opacity-50 text-white rounded text-xs font-semibold flex items-center gap-1 shadow-sm transition-colors"
+                  className="px-3 py-1 bg-rose-600 hover:bg-rose-700 disabled:opacity-50 text-white rounded text-xs font-semibold flex items-center gap-1.5 shadow-sm transition-colors"
                 >
-                  {isRetrying ? 'กำลัง Retry...' : '🔄 ลองส่งใหม่ (Retry)'}
+                  <RefreshIcon className={`h-3 w-3 ${isRetrying ? 'animate-spin' : ''}`} />
+                  <span>{isRetrying ? 'กำลัง Retry...' : 'ลองส่งใหม่ (Retry)'}</span>
                 </button>
               </div>
               {result.vault_path && (
@@ -695,7 +729,7 @@ export const EarningsCallTab: React.FC<EarningsCallTabProps> = ({ ticker }) => {
           {existingCalls.length > 0 && (
             <div className="flex flex-wrap items-center justify-between gap-3 border-b border-edge/60 pb-3">
               <div className="flex items-center gap-2 overflow-x-auto py-1">
-                <span className="text-xs font-semibold uppercase tracking-wider text-zinc-400 mr-1">
+                <span className="text-xs font-semibold uppercase tracking-wider text-slate-500 mr-1">
                   ไตรมาสที่บันทึกแล้ว:
                 </span>
                 {existingCalls.map((call, idx) => (
@@ -705,17 +739,17 @@ export const EarningsCallTab: React.FC<EarningsCallTabProps> = ({ ticker }) => {
                     className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 ${
                       selectedCallIndex === idx
                         ? 'bg-sky-600 text-white shadow-sm ring-2 ring-sky-600/30'
-                        : 'bg-surface-strong text-zinc-700 hover:bg-zinc-200 hover:text-zinc-900 border border-edge/60'
+                        : 'bg-surface-strong text-slate-700 hover:bg-slate-200 hover:text-slate-900 border border-edge/60'
                     }`}
                   >
-                    <span>📅</span>
+                    <CalendarIcon className="h-3.5 w-3.5 shrink-0" />
                     <span>{call.period}</span>
                   </button>
                 ))}
               </div>
 
               {currentActiveCall && (
-                <div className="flex items-center gap-2 text-xs text-zinc-500">
+                <div className="flex items-center gap-2 text-xs text-slate-500">
                   <span>อัปเดต: {currentActiveCall.date}</span>
                 </div>
               )}
@@ -728,34 +762,34 @@ export const EarningsCallTab: React.FC<EarningsCallTabProps> = ({ ticker }) => {
               {/* Metadata Cards */}
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
                 <div className="rounded-xl border border-edge bg-panel p-3.5 shadow-sm">
-                  <div className="flex items-center gap-2 text-zinc-500 font-medium mb-1">
-                    <span>📁</span>
+                  <div className="flex items-center gap-2 text-slate-500 font-medium mb-1">
+                    <FolderIcon className="h-3.5 w-3.5 text-sky-600 shrink-0" />
                     <span>Obsidian Vault Note</span>
                   </div>
-                  <div className="font-mono text-zinc-800 font-semibold truncate" title={currentActiveCall.vault_path}>
+                  <div className="font-mono text-slate-800 font-semibold truncate" title={currentActiveCall.vault_path}>
                     {currentActiveCall.vault_path}
                   </div>
-                  <div className="text-[11px] text-zinc-400 mt-1">
+                  <div className="text-[11px] text-slate-500 mt-1">
                     มีข้อมูล AI Highlights และ Full Transcript
                   </div>
                 </div>
 
                 <div className="rounded-xl border border-edge bg-panel p-3.5 shadow-sm">
-                  <div className="flex items-center gap-2 text-zinc-500 font-medium mb-1">
-                    <span>📅</span>
+                  <div className="flex items-center gap-2 text-slate-500 font-medium mb-1">
+                    <CalendarIcon className="h-3.5 w-3.5 text-sky-600 shrink-0" />
                     <span>รอบผลประกอบการ</span>
                   </div>
                   <div className="text-sm font-bold text-sky-600">
                     {currentActiveCall.period}
                   </div>
-                  <div className="text-[11px] text-zinc-400 mt-1">
+                  <div className="text-[11px] text-slate-500 mt-1">
                     วันที่วิเคราะห์: {currentActiveCall.date}
                   </div>
                 </div>
 
                 <div className="rounded-xl border border-edge bg-panel p-3.5 shadow-sm">
-                  <div className="flex items-center gap-2 text-zinc-500 font-medium mb-1">
-                    <span>📋</span>
+                  <div className="flex items-center gap-2 text-slate-500 font-medium mb-1">
+                    <KanbanBoardIcon className="h-3.5 w-3.5 text-sky-600 shrink-0" />
                     <span>Kanban Workflow</span>
                   </div>
                   <div>
@@ -777,11 +811,11 @@ export const EarningsCallTab: React.FC<EarningsCallTabProps> = ({ ticker }) => {
               <div className="rounded-2xl border border-edge bg-panel p-6 sm:p-8 shadow-sm">
                 <div className="border-b border-edge pb-4 mb-6 flex flex-wrap items-center justify-between gap-3">
                   <div>
-                    <h4 className="text-lg font-bold text-zinc-900 flex items-center gap-2">
-                      <span>🤖</span>
+                    <h4 className="text-lg font-bold text-slate-900 flex items-center gap-2">
+                      <CpuIcon className="h-5 w-5 text-section-accent shrink-0" />
                       <span>{currentActiveCall.title || `${ticker} Earnings Call — ${currentActiveCall.period}`}</span>
                     </h4>
-                    <p className="text-xs text-zinc-500 mt-0.5">
+                    <p className="text-xs text-slate-500 mt-0.5">
                       สกัดและจัดระเบียบสาระสำคัญโดย AI Multi-Agent Engine
                     </p>
                   </div>
@@ -791,7 +825,7 @@ export const EarningsCallTab: React.FC<EarningsCallTabProps> = ({ ticker }) => {
                   </span>
                 </div>
 
-                <div className="prose prose-sm sm:prose max-w-none text-zinc-800 leading-relaxed">
+                <div className="prose prose-sm sm:prose max-w-none text-slate-800 leading-relaxed">
                   <ReactMarkdown
                     components={{
                       a: ({ children, href }) => (
@@ -800,23 +834,23 @@ export const EarningsCallTab: React.FC<EarningsCallTabProps> = ({ ticker }) => {
                         </a>
                       ),
                       code: ({ children, className }) => (
-                        <code className={className || "rounded bg-surface-strong px-1.5 py-0.5 font-mono text-[0.84em] text-purple-700 font-semibold"}>{children}</code>
+                        <code className={className || "rounded bg-surface-strong px-1.5 py-0.5 font-mono text-[0.84em] text-blue-700 font-semibold"}>{children}</code>
                       ),
-                      h1: ({ children }) => <h1 className="text-xl font-bold text-zinc-900 border-b border-edge pb-2 mt-6 mb-3 first:mt-0">{children}</h1>,
-                      h2: ({ children }) => <h2 className="text-lg font-bold text-zinc-900 border-b border-edge/60 pb-1.5 mt-6 mb-3 first:mt-0">{children}</h2>,
+                      h1: ({ children }) => <h1 className="text-xl font-bold text-slate-900 border-b border-edge pb-2 mt-6 mb-3 first:mt-0">{children}</h1>,
+                      h2: ({ children }) => <h2 className="text-lg font-bold text-slate-900 border-b border-edge/60 pb-1.5 mt-6 mb-3 first:mt-0">{children}</h2>,
                       h3: ({ children }) => (
                         <div className="rounded-xl bg-surface-strong/70 border border-edge/80 px-4 py-2.5 mt-6 mb-3">
-                          <h3 className="text-sm font-bold text-zinc-900 m-0">{children}</h3>
+                          <h3 className="text-sm font-bold text-slate-900 m-0">{children}</h3>
                         </div>
                       ),
-                      h4: ({ children }) => <h4 className="text-sm font-semibold text-zinc-800 mt-3 mb-1.5 first:mt-0">{children}</h4>,
-                      p: ({ children }) => <p className="my-3 leading-relaxed text-zinc-700 text-sm">{children}</p>,
-                      ul: ({ children }) => <ul className="my-3 space-y-2 list-disc pl-5 text-zinc-700 text-sm">{children}</ul>,
-                      ol: ({ children }) => <ol className="my-3 space-y-2 list-decimal pl-5 text-zinc-700 text-sm">{children}</ol>,
+                      h4: ({ children }) => <h4 className="text-sm font-semibold text-slate-800 mt-3 mb-1.5 first:mt-0">{children}</h4>,
+                      p: ({ children }) => <p className="my-3 leading-relaxed text-slate-700 text-sm">{children}</p>,
+                      ul: ({ children }) => <ul className="my-3 space-y-2 list-disc pl-5 text-slate-700 text-sm">{children}</ul>,
+                      ol: ({ children }) => <ol className="my-3 space-y-2 list-decimal pl-5 text-slate-700 text-sm">{children}</ol>,
                       li: ({ children }) => <li className="pl-0.5 leading-relaxed">{children}</li>,
-                      strong: ({ children }) => <strong className="font-bold text-zinc-900">{children}</strong>,
+                      strong: ({ children }) => <strong className="font-bold text-slate-900">{children}</strong>,
                       blockquote: ({ children }) => (
-                        <blockquote className="border-l-4 border-sky-500 bg-sky-50/60 italic px-4 py-3 my-4 rounded-r-xl text-zinc-800 text-sm shadow-sm">
+                        <blockquote className="border-l-4 border-sky-500 bg-sky-50/60 italic px-4 py-3 my-4 rounded-r-xl text-slate-800 text-sm shadow-sm">
                           {children}
                         </blockquote>
                       ),
@@ -833,11 +867,13 @@ export const EarningsCallTab: React.FC<EarningsCallTabProps> = ({ ticker }) => {
           {/* Empty State when no calls exist and form not open */}
           {!isLoadingExisting && existingCalls.length === 0 && !showNewForm && (
             <div className="rounded-2xl border border-dashed border-edge bg-panel p-10 text-center space-y-3">
-              <div className="text-3xl">🎙️</div>
-              <div className="text-sm font-semibold text-zinc-700">
+              <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-sky-50 text-sky-600 border border-sky-200/80 shadow-sm">
+                <MicStageIcon className="h-6 w-6" />
+              </div>
+              <div className="text-sm font-semibold text-slate-700">
                 ยังไม่มีข้อมูล Earnings Call สำหรับ {ticker}
               </div>
-              <p className="text-xs text-zinc-500 max-w-md mx-auto">
+              <p className="text-xs text-slate-500 max-w-md mx-auto">
                 คุณสามารถวางเนื้อหาบทสนทนาแถลงผลประกอบการ (Transcript) เพื่อให้ AI สกัดประเด็นสำคัญและบันทึกลง Obsidian ได้ทันที
               </p>
               <button
@@ -845,7 +881,8 @@ export const EarningsCallTab: React.FC<EarningsCallTabProps> = ({ ticker }) => {
                 onClick={() => setShowNewForm(true)}
                 className="mt-2 px-4 py-2 bg-sky-600 hover:bg-sky-700 text-white rounded-lg text-xs font-semibold inline-flex items-center gap-1.5 shadow-sm transition-colors"
               >
-                <span>✨ วาง Transcript ใหม่</span>
+                <SparklesIcon className="h-3.5 w-3.5" />
+                <span>วาง Transcript ใหม่</span>
               </button>
             </div>
           )}
@@ -858,7 +895,7 @@ export const EarningsCallTab: React.FC<EarningsCallTabProps> = ({ ticker }) => {
           {bridgeData ? (
             <EarningsBridgeCard data={bridgeData} isLoading={isLoadingBridge} />
           ) : (
-            <div className="rounded-xl border border-edge bg-panel p-8 text-center text-zinc-500">
+            <div className="rounded-xl border border-edge bg-panel p-8 text-center text-slate-500">
               {isLoadingBridge ? 'กำลังโหลดข้อมูล Earnings Bridge...' : `ไม่มีข้อมูล Earnings Bridge สำหรับ ${ticker}`}
             </div>
           )}

@@ -60,7 +60,7 @@ export const PriceSpectrumGauge: React.FC<PriceSpectrumGaugeProps> = ({
 
   // Zone status text
   let zoneStatusText = ''
-  let zoneStatusColor = 'text-zinc-600 bg-zinc-100 border-zinc-200'
+  let zoneStatusColor = 'text-slate-600 bg-slate-100 border-slate-200'
   if (isInBuyZone) {
     zoneStatusText = '🎯 อยู่ในโซนเข้าซื้อที่ปลอดภัย (In Optimal Buy Zone)'
     zoneStatusColor = 'text-emerald-700 bg-emerald-50 border-emerald-300'
@@ -75,18 +75,18 @@ export const PriceSpectrumGauge: React.FC<PriceSpectrumGaugeProps> = ({
   }
 
   return (
-    <div className="rounded-2xl border border-edge/90 bg-surface/80 p-5 shadow-xs space-y-5 animate-card-in">
+    <div className="rounded-2xl border border-edge/90 bg-surface/80 p-5 shadow-sm space-y-5 animate-card-in">
       {/* Big Number Tier 1 Header */}
       <div className="flex flex-wrap items-end justify-between gap-4 border-b border-edge/60 pb-4">
         {/* Left: Current Price & Target Price with Big Number Callout */}
         <div className="flex flex-wrap items-baseline gap-6 sm:gap-8">
           <div>
-            <span className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 block mb-0.5">
+            <span className="text-[11px] font-bold uppercase tracking-widest text-slate-500 block mb-0.5">
               <span>Current Close Price</span>
-              <span className="font-normal text-zinc-400 ml-1.5 lowercase tracking-normal">(ราคาปิดล่าสุด)</span>
+              <span className="font-normal text-slate-500 ml-1.5 lowercase tracking-normal">(ราคาปิดล่าสุด)</span>
             </span>
             <div className="flex items-baseline gap-1.5">
-              <span className="font-mono text-3xl sm:text-4xl font-extrabold tracking-tight text-zinc-900">
+              <span className="font-mono text-3xl sm:text-4xl font-extrabold tracking-tight text-slate-900">
                 {currency}{currentPrice.toFixed(2)}
               </span>
             </div>
@@ -94,9 +94,9 @@ export const PriceSpectrumGauge: React.FC<PriceSpectrumGaugeProps> = ({
 
           {targetPrice12m != null && (
             <div className="pr-2 border-l border-edge/60 pl-6 sm:pl-8">
-              <span className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 block mb-0.5">
+              <span className="text-[11px] font-bold uppercase tracking-widest text-slate-500 block mb-0.5">
                 <span>12M Target Price (Reverse DCF)</span>
-                <span className="font-normal text-zinc-400 ml-1.5 lowercase tracking-normal">(เป้าหมาย 12 เดือน)</span>
+                <span className="font-normal text-slate-500 ml-1.5 lowercase tracking-normal">(เป้าหมาย 12 เดือน)</span>
               </span>
               <div className="flex items-baseline gap-2">
                 <span className="font-mono text-3xl sm:text-4xl font-extrabold tracking-tight text-emerald-600">
@@ -121,16 +121,16 @@ export const PriceSpectrumGauge: React.FC<PriceSpectrumGaugeProps> = ({
         {/* Right: Action Stance Badge & Dynamic Guidance */}
         <div className="flex flex-col items-start sm:items-end gap-1.5">
           <div className="flex items-center gap-2">
-            <span className="text-[10px] font-bold uppercase tracking-widest text-zinc-400">
+            <span className="text-[11px] font-bold uppercase tracking-widest text-slate-500">
               Verdict Stance:
             </span>
-            <span className="px-3 py-1 rounded-full text-xs font-extrabold tracking-wider uppercase border bg-sky-50 text-sky-800 border-sky-300 shadow-2xs flex items-center gap-1.5">
+            <span className="px-3 py-1 rounded-full text-xs font-extrabold tracking-wider uppercase border bg-sky-50 text-sky-800 border-sky-300 shadow-sm flex items-center gap-1.5">
               <span className="w-2 h-2 rounded-full bg-sky-500 animate-pulse" />
               {actionStance.replace(/_/g, ' ')}
             </span>
           </div>
           {stanceReason && (
-            <p className="text-xs text-zinc-500 max-w-sm text-left sm:text-right italic">
+            <p className="text-xs text-slate-500 max-w-sm text-left sm:text-right italic">
               {stanceReason}
             </p>
           )}
@@ -139,10 +139,10 @@ export const PriceSpectrumGauge: React.FC<PriceSpectrumGaugeProps> = ({
 
       {/* Infographic 1: Linear Price Spectrum Bar */}
       <div className="space-y-3 pt-1">
-        <div className="flex items-center justify-between text-xs font-semibold text-zinc-500">
+        <div className="flex items-center justify-between text-xs font-semibold text-slate-500">
           <span className="flex items-center gap-1.5">
             <span>🎯</span>
-            <span className="tracking-wide uppercase text-[11px] text-zinc-600 font-bold">
+            <span className="tracking-wide uppercase text-[11px] text-slate-600 font-bold">
               Valuation & Execution Spectrum
             </span>
           </span>
@@ -156,7 +156,7 @@ export const PriceSpectrumGauge: React.FC<PriceSpectrumGaugeProps> = ({
         {/* The Track Container */}
         <div className="relative pt-7 pb-8 px-2">
           {/* Background Track */}
-          <div className="h-3 w-full rounded-full bg-zinc-200/80 relative overflow-hidden">
+          <div className="h-3 w-full rounded-full bg-slate-200/80 relative overflow-hidden">
             {/* Optimal Buy Zone Highlight on Track */}
             {buyMinPct != null && buyMaxPct != null && (
               <div
@@ -187,8 +187,8 @@ export const PriceSpectrumGauge: React.FC<PriceSpectrumGaugeProps> = ({
               style={{ left: `${stopLossPct}%` }}
               title={`Invalidation Stop Loss: ${currency}${stopLoss.toFixed(2)} (จุดตัดขาดทุนเมื่อสมมติฐานผิด)`}
             >
-              <span className="text-[10px] font-bold font-mono text-rose-600 bg-rose-50 px-1.5 py-0.2 rounded border border-rose-200 whitespace-nowrap shadow-2xs">
-                Stop {currency}{stopLoss.toFixed(2)} <span className="font-sans font-normal text-[9px] text-rose-500">(ตัดขาดทุน)</span>
+              <span className="text-[11px] font-bold font-mono text-rose-600 bg-rose-50 px-1.5 py-0.5 rounded border border-rose-200 whitespace-nowrap shadow-sm">
+                Stop {currency}{stopLoss.toFixed(2)} <span className="font-sans font-normal text-[11px] text-rose-500">(ตัดขาดทุน)</span>
               </span>
               <div className="w-0.5 h-4 bg-rose-500 mt-0.5" />
             </div>
@@ -197,7 +197,7 @@ export const PriceSpectrumGauge: React.FC<PriceSpectrumGaugeProps> = ({
           {/* Marker 2: Optimal Buy Zone Range Labels (Below track) */}
           {buyMinPct != null && buyMaxPct != null && (
             <div
-              className="absolute top-10 flex justify-between text-[10px] font-bold font-mono text-emerald-800"
+              className="absolute top-10 flex justify-between text-[11px] font-bold font-mono text-emerald-800"
               style={{
                 left: `${buyMinPct}%`,
                 width: `${Math.max(buyMaxPct - buyMinPct, 1)}%`,
@@ -205,14 +205,14 @@ export const PriceSpectrumGauge: React.FC<PriceSpectrumGaugeProps> = ({
             >
               <div className="flex flex-col items-start -translate-x-1/2">
                 <div className="w-0.5 h-2 bg-emerald-600" />
-                <span className="bg-emerald-50 px-1 py-0.2 rounded border border-emerald-200 shadow-2xs whitespace-nowrap mt-0.5">
-                  Buy {currency}{buyZoneMin?.toFixed(2)} <span className="font-sans font-normal text-[9px] text-emerald-600">(เริ่มซื้อ)</span>
+                <span className="bg-emerald-50 px-1 py-0.5 rounded border border-emerald-200 shadow-sm whitespace-nowrap mt-0.5">
+                  Buy {currency}{buyZoneMin?.toFixed(2)} <span className="font-sans font-normal text-[11px] text-emerald-600">(เริ่มซื้อ)</span>
                 </span>
               </div>
               <div className="flex flex-col items-end translate-x-1/2">
                 <div className="w-0.5 h-2 bg-emerald-600" />
-                <span className="bg-emerald-50 px-1 py-0.2 rounded border border-emerald-200 shadow-2xs whitespace-nowrap mt-0.5">
-                  Max {currency}{buyZoneMax?.toFixed(2)} <span className="font-sans font-normal text-[9px] text-emerald-600">(เพดานซื้อ)</span>
+                <span className="bg-emerald-50 px-1 py-0.5 rounded border border-emerald-200 shadow-sm whitespace-nowrap mt-0.5">
+                  Max {currency}{buyZoneMax?.toFixed(2)} <span className="font-sans font-normal text-[11px] text-emerald-600">(เพดานซื้อ)</span>
                 </span>
               </div>
             </div>
@@ -225,8 +225,8 @@ export const PriceSpectrumGauge: React.FC<PriceSpectrumGaugeProps> = ({
               style={{ left: `${intrinsicPct}%` }}
               title={`Intrinsic Value Today: ${currency}${intrinsicValue.toFixed(2)} (มูลค่าพื้นฐานวันนี้)`}
             >
-              <span className="text-[10px] font-bold font-mono text-sky-700 bg-sky-50 px-1.5 py-0.2 rounded border border-sky-200 whitespace-nowrap shadow-2xs">
-                Intrinsic {currency}{intrinsicValue.toFixed(2)} <span className="font-sans font-normal text-[9px] text-sky-600">(มูลค่าจริง)</span>
+              <span className="text-[11px] font-bold font-mono text-sky-700 bg-sky-50 px-1.5 py-0.5 rounded border border-sky-200 whitespace-nowrap shadow-sm">
+                Intrinsic {currency}{intrinsicValue.toFixed(2)} <span className="font-sans font-normal text-[11px] text-sky-600">(มูลค่าจริง)</span>
               </span>
               <div className="w-0.5 h-4 bg-sky-400 mt-0.5" />
             </div>
@@ -239,8 +239,8 @@ export const PriceSpectrumGauge: React.FC<PriceSpectrumGaugeProps> = ({
               style={{ left: `${targetPct}%` }}
               title={`12M Target Price: ${currency}${targetPrice12m.toFixed(2)} (ราคาเป้าหมาย 12 เดือน)`}
             >
-              <span className="text-[10px] font-bold font-mono text-emerald-800 bg-emerald-100 px-2 py-0.5 rounded border border-emerald-300 whitespace-nowrap shadow-xs">
-                Target {currency}{targetPrice12m.toFixed(2)} <span className="font-sans font-normal text-[9px] text-emerald-700">(เป้าหมาย)</span>
+              <span className="text-[11px] font-bold font-mono text-emerald-800 bg-emerald-100 px-2 py-0.5 rounded border border-emerald-300 whitespace-nowrap shadow-sm">
+                Target {currency}{targetPrice12m.toFixed(2)} <span className="font-sans font-normal text-[11px] text-emerald-700">(เป้าหมาย)</span>
               </span>
               <div className="w-0.5 h-4 bg-emerald-600 mt-0.5" />
             </div>
@@ -251,11 +251,11 @@ export const PriceSpectrumGauge: React.FC<PriceSpectrumGaugeProps> = ({
             className="absolute top-0 -translate-x-1/2 flex flex-col items-center z-20"
             style={{ left: `${currentPct}%` }}
           >
-            <div className="px-2 py-0.5 rounded-full bg-zinc-900 text-white font-mono text-[11px] font-bold shadow-md border border-white/20 whitespace-nowrap flex items-center gap-1">
+            <div className="px-2 py-0.5 rounded-full bg-slate-900 text-white font-mono text-[11px] font-bold shadow-md border border-white/20 whitespace-nowrap flex items-center gap-1">
               <span className="w-1.5 h-1.5 rounded-full bg-sky-400 animate-ping" />
-              <span>Now: {currency}{currentPrice.toFixed(2)} <span className="font-sans font-normal text-[9px] text-zinc-300">(ราคาปัจจุบัน)</span></span>
+              <span>Now: {currency}{currentPrice.toFixed(2)} <span className="font-sans font-normal text-[11px] text-slate-300">(ราคาปัจจุบัน)</span></span>
             </div>
-            <div className="w-3 h-3 bg-zinc-900 border-2 border-white rounded-full shadow-md -mt-0.5" />
+            <div className="w-3 h-3 bg-slate-900 border-2 border-white rounded-full shadow-md -mt-0.5" />
           </div>
         </div>
       </div>

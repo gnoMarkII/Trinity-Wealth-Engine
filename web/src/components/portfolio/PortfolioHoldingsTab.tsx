@@ -378,13 +378,13 @@ export default function PortfolioHoldingsTab({
 
       {/* Floating Action Bar (Visible when selections made) */}
       {selectedVisibleCount > 0 && (
-        <div className="sticky top-4 z-20 flex items-center justify-between rounded-xl border border-sky-200 bg-zinc-900 px-5 py-3 text-white shadow-xl animate-bounce-short">
+        <div className="sticky top-4 z-20 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-sky-200/90 bg-white/95 backdrop-blur-md px-5 py-3 text-slate-800 shadow-[0_12px_30px_rgba(14,165,233,0.12)] animate-bounce-short">
           <div className="flex items-center gap-3">
-            <span className="rounded-full bg-flow-cyan px-3 py-0.5 text-xs font-extrabold text-zinc-900">
+            <span className="rounded-full bg-sky-100 border border-sky-200 px-3 py-0.5 text-xs font-extrabold text-sky-800">
               {selectedVisibleCount} Selected
             </span>
-            <span className="text-xs text-zinc-300">
-              เลือกสินทรัพย์ทั่วไปเพื่อดำเนินการแบบกลุ่ม (Batch Actions)
+            <span className="text-xs text-slate-600 font-medium">
+              เลือกสินทรัพย์เพื่อดำเนินการแบบกลุ่ม (Batch Actions)
             </span>
           </div>
           <div className="flex items-center gap-2">
@@ -408,7 +408,7 @@ export default function PortfolioHoldingsTab({
             <button
               type="button"
               onClick={() => { setSelectedSymbols(new Set()); setSelectionNotice(null) }}
-              className="rounded-lg bg-zinc-800 px-2.5 py-1.5 text-xs font-medium text-zinc-300 hover:bg-zinc-700"
+              className="rounded-lg bg-slate-800 px-2.5 py-1.5 text-xs font-medium text-slate-300 hover:bg-slate-700"
             >
               ยกเลิก
             </button>
@@ -418,22 +418,22 @@ export default function PortfolioHoldingsTab({
 
       {/* Quick-Access Fund Look-Through Pill Bar */}
       {fundHoldings.length > 0 && (
-        <div className="rounded-2xl border border-purple-200/90 bg-gradient-to-r from-purple-50/80 via-indigo-50/40 to-white p-4 shadow-2xs">
+        <div className="rounded-2xl border border-sky-200/90 bg-gradient-to-r from-sky-50/80 via-blue-50/40 to-white p-4 shadow-sm">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div className="flex items-center gap-2.5">
-              <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-purple-100 text-purple-700 text-sm shadow-2xs">
+              <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-sky-100 text-blue-700 text-sm shadow-sm">
                 🔍
               </span>
               <div>
                 <div className="flex items-center gap-2">
-                  <h4 className="font-extrabold text-zinc-900 text-xs sm:text-sm">
+                  <h4 className="font-extrabold text-slate-900 text-xs sm:text-sm">
                     Fund Constituents Look-Through
                   </h4>
-                  <span className="rounded-full bg-purple-100 px-2 py-0.5 text-[10px] font-bold text-purple-800">
+                  <span className="rounded-full bg-sky-100 px-2 py-0.5 text-[11px] font-bold text-blue-800">
                     {fundHoldings.length} กองทุน
                   </span>
                 </div>
-                <p className="text-[11px] text-zinc-500">
+                <p className="text-[11px] text-slate-500">
                   ส่องทะลุไส้ในกองทุน (Top Holdings & Sectors) ผ่าน Side Drawer ขอบขวาจอ
                 </p>
               </div>
@@ -448,20 +448,20 @@ export default function PortfolioHoldingsTab({
                     type="button"
                     onClick={() => openLookThroughDrawer(fh.symbol)}
                     aria-label={`เปิดลิ้นชักส่องไส้ใน ${fh.symbol}`}
-                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-mono font-bold transition-all shadow-2xs ${
+                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-mono font-bold transition-all shadow-sm ${
                       isSelected
-                        ? 'bg-purple-600 text-white shadow-xs scale-102 ring-2 ring-purple-300'
-                        : 'bg-white hover:bg-purple-50 text-purple-900 border border-purple-200 hover:border-purple-300'
+                        ? 'bg-blue-600 text-white shadow-sm scale-102 ring-2 ring-sky-300'
+                        : 'bg-white hover:bg-sky-50 text-blue-900 border border-sky-200 hover:border-sky-300'
                     }`}
                     title={`เปิดลิ้นชักส่องไส้ใน ${fh.symbol}`}
                   >
                     <span>{fh.symbol}</span>
                     {cached?.master_fund_ticker && (
-                      <span className="font-mono text-[9px] px-1 py-0.2 rounded bg-indigo-100 text-indigo-700 font-semibold">
+                      <span className="font-mono text-[11px] px-1 py-0.5 rounded bg-blue-100 text-blue-700 font-semibold">
                         {cached.master_fund_ticker}
                       </span>
                     )}
-                    <span className="text-[10px] text-purple-400">→</span>
+                    <span className="text-[11px] text-sky-400">→</span>
                   </button>
                 )
               })}
@@ -474,8 +474,8 @@ export default function PortfolioHoldingsTab({
       <div className="rounded-2xl border border-sky-100 bg-panel shadow-sm overflow-hidden">
         <div className="border-b border-sky-100 bg-sky-50/40 px-6 py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
-            <h3 className="text-base font-bold text-zinc-900">Portfolio Holdings ({filteredHoldings.length})</h3>
-            <p className="text-xs text-zinc-500">
+            <h3 className="text-base font-bold text-slate-900">Portfolio Holdings ({filteredHoldings.length})</h3>
+            <p className="text-xs text-slate-500">
               ตารางแสดง 12-Column ครบถ้วน พร้อมรายละเอียด 2-line Stacked Grid (ข้อมูลหลักและข้อมูลพื้นฐานบริษัท)
             </p>
             {holdings.some(isPvdHolding) && (
@@ -495,7 +495,7 @@ export default function PortfolioHoldingsTab({
                 <span>Trading Journal ทั่วไป ({journalRows.length})</span>
               </button>
             )}
-            <div className="text-xs text-zinc-500 hidden md:block">
+            <div className="text-xs text-slate-500 hidden md:block">
               คลิกหัวตารางเพื่อเรียงลำดับ | เลือก Checkbox เพื่อจัดการ
             </div>
           </div>
@@ -504,7 +504,7 @@ export default function PortfolioHoldingsTab({
         <div className="overflow-x-auto custom-scrollbar">
           <table className="w-full text-left text-sm min-w-[1180px]">
             <thead>
-              <tr className="border-b border-sky-100 bg-zinc-50/90 font-bold uppercase tracking-wider text-xs text-zinc-700 whitespace-nowrap">
+              <tr className="border-b border-sky-100 bg-slate-50/90 font-bold uppercase tracking-wider text-xs text-slate-700 whitespace-nowrap">
                 <th className="w-10 px-4 py-3.5 text-center">
                   <input
                     type="checkbox"
@@ -581,8 +581,8 @@ export default function PortfolioHoldingsTab({
 
                       {/* Col 1: Symbol (Line 1) + Company Name (Line 2) + Glass-Box Look-Through Badge */}
                       <td className="px-4 py-4 align-top">
-                        <div className="font-extrabold text-zinc-900 text-base tracking-tight font-mono">{h.symbol}</div>
-                        <div className="mt-0.5 text-xs text-zinc-500 line-clamp-1 font-medium">
+                        <div className="font-extrabold text-slate-900 text-base tracking-tight font-mono">{h.symbol}</div>
+                        <div className="mt-0.5 text-xs text-slate-500 line-clamp-1 font-medium">
                           {h.company_name || (h.asset_type === 'Gold' ? 'ARR Paotang Gold 99.99%' : 'N/A')}
                         </div>
                         {(h.asset_type === 'Fund' || isPvd || h.symbol.startsWith('PVD_')) && (
@@ -590,18 +590,18 @@ export default function PortfolioHoldingsTab({
                             <button
                               type="button"
                               onClick={() => openLookThroughDrawer(h.symbol)}
-                              className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-bold border transition-all shadow-2xs ${
+                              className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-bold border transition-all shadow-sm ${
                                 drawerFundSymbol === h.symbol
-                                  ? 'bg-purple-600 text-white border-purple-600 shadow-xs'
-                                  : 'bg-purple-50 text-purple-700 border-purple-200 hover:bg-purple-100 hover:border-purple-300'
+                                  ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
+                                  : 'bg-sky-50 text-blue-700 border-sky-200 hover:bg-sky-100 hover:border-sky-300'
                               }`}
                               title="คลิกเพื่อส่องดูไส้ในกองทุน (Top Holdings & Sectors) ผ่าน Side Drawer"
                             >
                               <span>🔍 ส่องไส้ในกองทุน</span>
-                              <span className="text-[9px]">→</span>
+                              <span className="text-[11px]">→</span>
                             </button>
                             {fundConstituentsCache[h.symbol]?.master_fund_ticker && (
-                              <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-indigo-50 text-indigo-700 border border-indigo-200 font-semibold">
+                              <span className="text-[11px] font-mono px-1.5 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-200 font-semibold">
                                 Master: {fundConstituentsCache[h.symbol]?.master_fund_ticker}
                               </span>
                             )}
@@ -615,7 +615,7 @@ export default function PortfolioHoldingsTab({
                           h.asset_type === 'Gold'
                             ? 'bg-amber-100/80 border border-amber-300 text-amber-900'
                             : h.asset_type === 'Fund'
-                            ? 'bg-purple-50 border border-purple-100 text-purple-800'
+                            ? 'bg-sky-50 border border-sky-100 text-blue-800'
                             : 'bg-sky-50 border border-sky-100 text-sky-800'
                         }`}>
                           {h.asset_type === 'Gold' ? '🥇 Gold' : h.asset_type}
@@ -632,11 +632,11 @@ export default function PortfolioHoldingsTab({
                                 setSelectedSymbols(new Set([h.symbol]))
                                 setBatchAssignModalOpen(true)
                               }}
-                              className="font-semibold text-zinc-900 text-xs sm:text-sm hover:text-flow-blue transition-colors text-left flex items-center gap-1 group"
+                              className="font-semibold text-slate-900 text-xs sm:text-sm hover:text-flow-blue transition-colors text-left flex items-center gap-1 group"
                               title="คลิกเพื่อเปลี่ยน Bucket ให้กับสินทรัพย์นี้"
                             >
                               <span>{bucketDisplayName || h.bucket_id}</span>
-                              <span className="text-[11px] text-zinc-400 group-hover:text-flow-blue">✎</span>
+                              <span className="text-[11px] text-slate-500 group-hover:text-flow-blue">✎</span>
                             </button>
                             {(() => {
                               const pb = allocationPolicy?.purpose_buckets?.find(
@@ -650,7 +650,7 @@ export default function PortfolioHoldingsTab({
                               ) {
                                 return (
                                   <span
-                                    className="text-[10px] text-amber-800 bg-amber-100/80 rounded px-1.5 py-0.5 font-medium whitespace-nowrap"
+                                    className="text-[11px] text-amber-800 bg-amber-100/80 rounded px-1.5 py-0.5 font-medium whitespace-nowrap"
                                     title={`ประเภทสินทรัพย์ ${h.asset_type} ไม่อยู่ในรายชื่อสินทรัพย์ที่แนะนำสำหรับ Bucket นี้`}
                                   >
                                     ⚠️ นอกเกณฑ์แนะนำ
@@ -671,7 +671,7 @@ export default function PortfolioHoldingsTab({
                                 setEditingHolding(h)
                               }
                             }}
-                            className="inline-flex items-center gap-1 rounded bg-amber-100/90 hover:bg-amber-200 text-amber-900 px-2 py-0.5 text-[11px] font-bold shadow-2xs transition-colors whitespace-nowrap"
+                            className="inline-flex items-center gap-1 rounded bg-amber-100/90 hover:bg-amber-200 text-amber-900 px-2 py-0.5 text-[11px] font-bold shadow-sm transition-colors whitespace-nowrap"
                             title="คลิกเพื่อกำหนด Bucket ให้กับสินทรัพย์นี้"
                           >
                             <span>⚠️ ยังไม่ระบุหมวด</span>
@@ -681,29 +681,29 @@ export default function PortfolioHoldingsTab({
 
                       {/* Col 3: Shares/Units (Line 1) + Avg Cost (Line 2) */}
                       <td className="px-4 py-4 text-right align-top tabular-nums">
-                        <div className="font-extrabold text-zinc-900 text-base font-mono">
+                        <div className="font-extrabold text-slate-900 text-base font-mono">
                           {h.units.toLocaleString('en-US', { maximumFractionDigits: 4 })}
                           {h.asset_type === 'Gold' && (
                             <span className="text-xs font-semibold text-amber-800 ml-1">Oz</span>
                           )}
                         </div>
-                        <div className="mt-0.5 text-xs text-zinc-500 font-medium">
+                        <div className="mt-0.5 text-xs text-slate-500 font-medium">
                           Avg: {isPvd ? (
-                            <span className="font-bold text-zinc-400 font-mono" title="ไม่มีต้นทุนซื้อจริงรายกองจาก Statement">—</span>
+                            <span className="font-bold text-slate-500 font-mono" title="ไม่มีต้นทุนซื้อจริงรายกองจาก Statement">—</span>
                           ) : (
-                            <span className="font-bold text-zinc-800 font-mono">{formatPrice(h.avg_cost_usd, h.avg_cost_thb)}</span>
+                            <span className="font-bold text-slate-800 font-mono">{formatPrice(h.avg_cost_usd, h.avg_cost_thb)}</span>
                           )}
                         </div>
                       </td>
 
                       {/* Col 4: Current Price (Line 1) + Currency tag (Line 2) */}
                       <td className="px-4 py-4 text-right align-top tabular-nums">
-                        <div className="font-extrabold text-zinc-900 text-base font-mono">
+                        <div className="font-extrabold text-slate-900 text-base font-mono">
                           {isPvd
                             ? displayStatementNav
                             : formatPrice(h.current_price_usd, h.current_price_thb)}
                         </div>
-                        <div className="mt-0.5 text-xs text-zinc-400 font-semibold">
+                        <div className="mt-0.5 text-xs text-slate-500 font-semibold">
                           {isPvd
                             ? `NAV ตาม Statement · ${statementDate}`
                             : h.current_price_usd !== null && h.current_price_usd !== undefined ? 'USD' : 'THB'}
@@ -712,16 +712,16 @@ export default function PortfolioHoldingsTab({
 
                       {/* Col 5: Market Value THB (Line 1) + Market Cap (Line 2) */}
                       <td className="px-4 py-4 text-right align-top tabular-nums">
-                        <div className="font-extrabold text-zinc-950 text-base font-mono">
+                        <div className="font-extrabold text-slate-950 text-base font-mono">
                           {formatTHB(h.market_value_thb)}
                         </div>
-                        <div className="mt-0.5 text-xs text-zinc-500 font-medium">
+                        <div className="mt-0.5 text-xs text-slate-500 font-medium">
                           {isPvd ? (
                             <span>มูลค่าตาม Statement</span>
                           ) : (
                           <>
                           Cap:{' '}
-                          <span className="text-zinc-600 font-mono">
+                          <span className="text-slate-600 font-mono">
                             {h.market_cap_value
                               ? (h.current_price_usd !== null && h.current_price_usd !== undefined
                                 ? formatPrice(h.market_cap_value / 1e9, null) + 'B'
@@ -736,7 +736,7 @@ export default function PortfolioHoldingsTab({
                       {/* Col 6: Unrealized PnL % (Line 1) + Unrealized PnL Value (Line 2) */}
                       <td className="px-4 py-4 text-right align-top tabular-nums">
                         {isPvd ? (
-                          <span className="text-zinc-400 text-sm" title="ดูผลประโยชน์รวมตาม Statement">
+                          <span className="text-slate-500 text-sm" title="ดูผลประโยชน์รวมตาม Statement">
                             <span className="block font-bold" aria-label="ไม่มีผลตอบแทนจริงรายกอง">—</span>
                             <span className="mt-0.5 block text-[11px]">ดูผลประโยชน์รวมตาม Statement</span>
                           </span>
@@ -752,20 +752,20 @@ export default function PortfolioHoldingsTab({
                             </div>
                           </>
                         ) : (
-                          <span className="text-zinc-400 text-sm">-</span>
+                          <span className="text-slate-500 text-sm">-</span>
                         )}
                       </td>
 
                       {/* Col 7: P/E Ratio (Line 1) + EPS & Payout Ratio (Line 2) */}
                       <td className="px-4 py-4 text-right align-top tabular-nums">
-                        <div className="font-bold text-zinc-800 text-sm font-mono">
-                          <span className="text-zinc-400 font-normal text-xs">PE: </span>
+                        <div className="font-bold text-slate-800 text-sm font-mono">
+                          <span className="text-slate-500 font-normal text-xs">PE: </span>
                           {h.pe_ratio ? `${h.pe_ratio.toFixed(1)}x` : 'N/A'}
                         </div>
-                        <div className="mt-0.5 text-xs text-zinc-500 font-medium">
-                          <span className="text-zinc-400">EPS: </span>
-                          <span className="font-mono text-zinc-700">{h.eps ? `$${h.eps.toFixed(2)}` : 'N/A'}</span>{' '}
-                          {h.payout_ratio ? <span className="text-zinc-400 font-mono">({h.payout_ratio.toFixed(0)}% PO)</span> : ''}
+                        <div className="mt-0.5 text-xs text-slate-500 font-medium">
+                          <span className="text-slate-500">EPS: </span>
+                          <span className="font-mono text-slate-700">{h.eps ? `$${h.eps.toFixed(2)}` : 'N/A'}</span>{' '}
+                          {h.payout_ratio ? <span className="text-slate-500 font-mono">({h.payout_ratio.toFixed(0)}% PO)</span> : ''}
                         </div>
                       </td>
 
@@ -775,19 +775,19 @@ export default function PortfolioHoldingsTab({
                           <span className="text-amber-800/60 font-medium text-xs">YoC: </span>
                           {h.yield_on_cost ? `${h.yield_on_cost.toFixed(2)}%` : 'N/A'}
                         </div>
-                        <div className="mt-0.5 text-xs text-zinc-600 font-medium">
-                          <span className="text-zinc-400">Div: </span>
-                          <span className="font-mono text-zinc-700">{h.dividend_yield ? `${h.dividend_yield.toFixed(2)}%` : 'N/A'}</span>{' '}
-                          {h.dividend_per_share ? <span className="text-zinc-400 font-mono">(${h.dividend_per_share.toFixed(2)})</span> : ''}
+                        <div className="mt-0.5 text-xs text-slate-600 font-medium">
+                          <span className="text-slate-500">Div: </span>
+                          <span className="font-mono text-slate-700">{h.dividend_yield ? `${h.dividend_yield.toFixed(2)}%` : 'N/A'}</span>{' '}
+                          {h.dividend_per_share ? <span className="text-slate-500 font-mono">(${h.dividend_per_share.toFixed(2)})</span> : ''}
                         </div>
                       </td>
 
                       {/* Col 9: Market Cap Tier (Line 1) + Fundamentals Updated At (Line 2) */}
                       <td className="px-4 py-4 text-center align-top">
-                        <span className="inline-block rounded-full border border-sky-200 bg-white px-2.5 py-0.5 text-xs font-bold text-zinc-700 shadow-2xs">
+                        <span className="inline-block rounded-full border border-sky-200 bg-white px-2.5 py-0.5 text-xs font-bold text-slate-700 shadow-sm">
                           {h.market_cap_tier || 'N/A'}
                         </span>
-                        <div className="mt-1 text-xs text-zinc-400 font-medium">
+                        <div className="mt-1 text-xs text-slate-500 font-medium">
                           {h.fundamentals_updated_at
                             ? new Date(h.fundamentals_updated_at * 1000).toLocaleDateString('th-TH', { month: 'short', day: 'numeric' })
                             : 'Not cached'}
@@ -801,9 +801,9 @@ export default function PortfolioHoldingsTab({
                           <button
                             type="button"
                             onClick={() => setExpandedSymbol(expandedSymbol === h.symbol ? null : h.symbol)}
-                            className={`h-8 px-2.5 rounded-lg border text-xs font-bold transition-all flex items-center justify-center gap-1 shadow-2xs ${
+                            className={`h-8 px-2.5 rounded-lg border text-xs font-bold transition-all flex items-center justify-center gap-1 shadow-sm ${
                               expandedSymbol === h.symbol
-                                ? 'border-flow-blue bg-flow-blue text-white shadow-xs'
+                                ? 'border-flow-blue bg-flow-blue text-white shadow-sm'
                                 : 'border-sky-200 bg-sky-50 text-sky-700 hover:bg-sky-600 hover:text-white'
                             }`}
                             title="ดู/เขียน Trading Journal สำหรับหุ้นนี้"
@@ -817,7 +817,7 @@ export default function PortfolioHoldingsTab({
                             <button
                               type="button"
                               onClick={() => onViewTransactions(h.symbol)}
-                              className="h-8 px-2.5 rounded-lg border border-emerald-200 bg-emerald-50 text-xs font-bold text-emerald-700 hover:bg-emerald-600 hover:text-white transition-all flex items-center justify-center gap-1 shadow-2xs"
+                              className="h-8 px-2.5 rounded-lg border border-emerald-200 bg-emerald-50 text-xs font-bold text-emerald-700 hover:bg-emerald-600 hover:text-white transition-all flex items-center justify-center gap-1 shadow-sm"
                               title={isPvd ? `ดูประวัติ Statement ของ ${h.symbol}` : `ดูประวัติ Transactions ของ ${h.symbol}`}
                             >
                               <TradeIcon className="h-4 w-4" />
@@ -830,7 +830,7 @@ export default function PortfolioHoldingsTab({
                             <button
                               type="button"
                               onClick={() => setReviewHolding(h)}
-                              className="h-8 px-2 rounded-lg border border-indigo-200 bg-indigo-50 text-xs font-bold text-indigo-700 hover:bg-indigo-600 hover:text-white transition-all flex items-center justify-center shadow-2xs"
+                              className="h-8 px-2 rounded-lg border border-blue-200 bg-blue-50 text-xs font-bold text-blue-700 hover:bg-blue-600 hover:text-white transition-all flex items-center justify-center shadow-sm"
                               title={`ดู Position Review ของ ${h.symbol}`}
                             >
                               🔍
@@ -842,7 +842,7 @@ export default function PortfolioHoldingsTab({
                             <button
                               type="button"
                               onClick={() => setEditingHolding(h)}
-                              className="h-8 w-8 rounded-lg border border-sky-200 bg-sky-50 text-flow-blue hover:bg-flow-blue hover:text-white transition-all flex items-center justify-center shadow-2xs"
+                              className="h-8 w-8 rounded-lg border border-sky-200 bg-sky-50 text-flow-blue hover:bg-flow-blue hover:text-white transition-all flex items-center justify-center shadow-sm"
                               title="แก้ไข / ปรับปรุงข้อมูล"
                             >
                               <EditIcon className="h-4 w-4" />
@@ -854,7 +854,7 @@ export default function PortfolioHoldingsTab({
                             <button
                               type="button"
                               onClick={() => handleRemoveSingle(h.symbol)}
-                              className="h-7 w-7 rounded-lg border border-rose-200 bg-rose-50 text-rose-600 hover:bg-rose-600 hover:text-white transition-all flex items-center justify-center shadow-2xs"
+                              className="h-7 w-7 rounded-lg border border-rose-200 bg-rose-50 text-rose-600 hover:bg-rose-600 hover:text-white transition-all flex items-center justify-center shadow-sm"
                               title="ลบ Holding ออกจากพอร์ต"
                             >
                               <DeleteIcon className="h-3.5 w-3.5" />
@@ -873,7 +873,7 @@ export default function PortfolioHoldingsTab({
                                 <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-flow-blue/10 text-flow-blue">
                                   <JournalIcon className="h-4 w-4" />
                                 </span>
-                                <h4 className="font-bold text-zinc-900 text-sm">
+                                <h4 className="font-bold text-slate-900 text-sm">
                                   Trading Journal & Activity Log สำหรับ [{h.symbol}] ({symbolEntries.length} บันทึก)
                                 </h4>
                               </div>
@@ -884,7 +884,7 @@ export default function PortfolioHoldingsTab({
                                     setJournalModalSymbol(h.symbol)
                                     setJournalModalOpen(true)
                                   }}
-                                  className="rounded-lg bg-flow-blue px-3 py-1.5 text-xs font-bold text-white shadow-2xs hover:bg-sky-600 transition-colors shrink-0"
+                                  className="rounded-lg bg-flow-blue px-3 py-1.5 text-xs font-bold text-white shadow-sm hover:bg-sky-600 transition-colors shrink-0"
                                 >
                                   + เขียนบันทึกสำหรับ [{h.symbol}]
                                 </button>
@@ -895,9 +895,9 @@ export default function PortfolioHoldingsTab({
                               {symbolEntries.map((entry, idx) => (
                                 <div
                                   key={`${entry.timestamp}-${idx}`}
-                                  className="rounded-xl border border-sky-100 bg-sky-50/40 p-3.5 font-sans text-xs text-zinc-800"
+                                  className="rounded-xl border border-sky-100 bg-sky-50/40 p-3.5 font-sans text-xs text-slate-800"
                                 >
-                                  <div className="flex items-center justify-between text-[11px] text-zinc-400 font-mono tabular-nums mb-1.5">
+                                  <div className="flex items-center justify-between text-[11px] text-slate-500 font-mono tabular-nums mb-1.5">
                                     <span>🕒 {entry.timestamp}</span>
                                     <span className="rounded bg-white px-1.5 py-0.5 border border-sky-200 text-sky-700">Wikilink Obsidian</span>
                                   </div>
@@ -905,7 +905,7 @@ export default function PortfolioHoldingsTab({
                                 </div>
                               ))}
                               {symbolEntries.length === 0 && (
-                                <div className="py-8 text-center text-xs text-zinc-400 italic">
+                                <div className="py-8 text-center text-xs text-slate-500 italic">
                                   ยังไม่มีบันทึก Trading Journal ที่กล่าวถึงหุ้น [{h.symbol}] ในขณะนี้
                                 </div>
                               )}
@@ -928,8 +928,8 @@ export default function PortfolioHoldingsTab({
                           <TradeIcon className="h-8 w-8" />
                         </div>
                         <div className="space-y-1">
-                          <h4 className="text-base font-extrabold text-zinc-900">ยังไม่มีสินทรัพย์ในพอร์ตการลงทุน</h4>
-                          <p className="text-xs text-zinc-500 max-w-sm">
+                          <h4 className="text-base font-extrabold text-slate-900">ยังไม่มีสินทรัพย์ในพอร์ตการลงทุน</h4>
+                          <p className="text-xs text-slate-500 max-w-sm">
                             เริ่มต้นสร้างพอร์ตของคุณด้วยการบันทึกรายการเทรด ซื้อหุ้น หรือกองทุนแรกของคุณเข้าสู่ระบบ
                           </p>
                         </div>
@@ -948,8 +948,8 @@ export default function PortfolioHoldingsTab({
                       <div className="mx-auto max-w-md flex flex-col items-center justify-center space-y-3 py-4 animate-fade-in">
                         <span className="text-3xl">🔍</span>
                         <div className="space-y-1">
-                          <h4 className="text-sm font-bold text-zinc-800">ไม่พบรายการ Holding ตามเงื่อนไขตัวกรอง</h4>
-                          <p className="text-xs text-zinc-500">
+                          <h4 className="text-sm font-bold text-slate-800">ไม่พบรายการ Holding ตามเงื่อนไขตัวกรอง</h4>
+                          <p className="text-xs text-slate-500">
                             {selectedBucket ? `กำลังกรองเฉพาะ Strategy Bucket [${selectedBucket}]` : 'ไม่มีหุ้นหรือสินทรัพย์ที่ตรงกับการค้นหาปัจจุบัน'}
                           </p>
                         </div>
@@ -957,7 +957,7 @@ export default function PortfolioHoldingsTab({
                           <button
                             type="button"
                             onClick={onClearBucketFilter}
-                            className="rounded-xl border border-sky-300 bg-sky-50 px-3 py-1.5 text-xs font-bold text-flow-blue shadow-2xs hover:bg-sky-100 transition-colors"
+                            className="rounded-xl border border-sky-300 bg-sky-50 px-3 py-1.5 text-xs font-bold text-flow-blue shadow-sm hover:bg-sky-100 transition-colors"
                           >
                             🧹 ล้างตัวกรอง Bucket
                           </button>
@@ -1004,7 +1004,7 @@ export default function PortfolioHoldingsTab({
           panelClassName="max-w-3xl rounded-2xl border border-sky-100 bg-white p-6 shadow-2xl space-y-4"
         >
           <div className="flex items-center justify-between border-b border-sky-100 pb-3">
-            <h3 id="all-journal-entries-title" className="text-base font-bold text-zinc-900 flex items-center gap-2">
+            <h3 id="all-journal-entries-title" className="text-base font-bold text-slate-900 flex items-center gap-2">
               <span>📓 Trading Journal ทั่วไป (All Entries)</span>
               <span className="rounded-full bg-sky-100 px-2.5 py-0.5 text-xs text-flow-blue">
                 {journalRows.length} บันทึก
@@ -1013,7 +1013,7 @@ export default function PortfolioHoldingsTab({
             <button
               type="button"
               onClick={() => setAllEntriesModalOpen(false)}
-              className="text-zinc-400 hover:text-zinc-600"
+              className="text-slate-500 hover:text-slate-600"
             >
               ✕
             </button>
@@ -1026,13 +1026,13 @@ export default function PortfolioHoldingsTab({
                 placeholder="ค้นหาข้อความในบันทึกทั้งหมด (เช่น AAPL, DEPOSIT, MISTAKE...)"
                 value={journalKeyword || ''}
                 onChange={(e) => onChangeJournalKeyword?.(e.target.value)}
-                className="w-full rounded-xl border border-sky-200 bg-white px-3.5 py-1.5 text-xs text-zinc-800 focus:border-flow-blue focus:outline-none"
+                className="w-full rounded-xl border border-sky-200 bg-white px-3.5 py-1.5 text-xs text-slate-800 focus:border-flow-blue focus:outline-none"
               />
               {journalKeyword && (
                 <button
                   type="button"
                   onClick={() => onChangeJournalKeyword?.('')}
-                  className="absolute right-3 top-2 text-xs text-zinc-400 hover:text-zinc-600"
+                  className="absolute right-3 top-2 text-xs text-slate-500 hover:text-slate-600"
                 >
                   ✕
                 </button>
@@ -1054,19 +1054,19 @@ export default function PortfolioHoldingsTab({
             {journalRows.map((entry, idx) => (
               <div
                 key={`${entry.timestamp}-${idx}`}
-                className="rounded-xl border border-sky-100 bg-panel p-4 shadow-2xs hover:shadow-sm transition-shadow text-left"
+                className="rounded-xl border border-sky-100 bg-panel p-4 shadow-sm hover:shadow-sm transition-shadow text-left"
               >
-                <div className="flex items-center justify-between text-xs text-zinc-400 font-mono tabular-nums mb-2">
+                <div className="flex items-center justify-between text-xs text-slate-500 font-mono tabular-nums mb-2">
                   <span>🕒 {entry.timestamp}</span>
-                  <span className="rounded-md bg-sky-50 px-2 py-0.5 text-[10px] text-sky-700 font-semibold">Obsidian Journal</span>
+                  <span className="rounded-md bg-sky-50 px-2 py-0.5 text-[11px] text-sky-700 font-semibold">Obsidian Journal</span>
                 </div>
-                <div className="text-xs text-zinc-800 leading-relaxed whitespace-pre-wrap font-sans">
+                <div className="text-xs text-slate-800 leading-relaxed whitespace-pre-wrap font-sans">
                   {entry.content}
                 </div>
               </div>
             ))}
             {journalRows.length === 0 && (
-              <div className="rounded-2xl border border-dashed border-sky-200 p-12 text-center text-zinc-400 text-xs">
+              <div className="rounded-2xl border border-dashed border-sky-200 p-12 text-center text-slate-500 text-xs">
                 ไม่พบบันทึก Trading Journal ที่ตรงกับคำค้นหา
               </div>
             )}
@@ -1076,7 +1076,7 @@ export default function PortfolioHoldingsTab({
             <button
               type="button"
               onClick={() => setAllEntriesModalOpen(false)}
-              className="rounded-xl border border-zinc-300 bg-white px-4 py-2 text-xs font-semibold text-zinc-700 hover:bg-zinc-50"
+              className="rounded-xl border border-slate-300 bg-white px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50"
             >
               ปิดหน้าต่าง
             </button>

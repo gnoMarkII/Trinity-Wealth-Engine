@@ -178,6 +178,10 @@ DATA_QUALITY_FLAG_TRANSLATIONS: dict[str, tuple[str, str]] = {
         "ใช้อัตราภาษีนิติบุคคลสหรัฐฯ (21%)",
         "คำนวณอัตราภาษีมาตรฐาน US Federal Statutory Tax Rate 21%",
     ),
+    "tax_policy:normalized_statutory": (
+        "ปรับอัตราภาษีกลับสู่ระดับมาตรฐาน (Statutory Tax Normalization)",
+        "อัตราภาษีที่เกิดขึ้นจริงในงวดล่าสุดผิดปกติชั่วคราว (<5% หรือ >35%) ระบบจึงปรับมาใช้อัตราภาษีนิติบุคคลมาตรฐาน (21% US / 20% TH) เพื่อไม่ให้บิดเบือน DCF",
+    ),
     "operating_margin_proxy:dcf": (
         "ใช้อัตรากำไรจากการดำเนินงานเป็นตัวแทน",
         "ใช้อัตรากำไรจากการดำเนินงานเฉลี่ยเพื่อประมาณการกระแสเงินสด",
@@ -382,8 +386,23 @@ def format_equity_analysis_report(output: MicroQuantOutput) -> str:
         "### 🎯 Price Target Outlook (Consensus)\n",
         f"- Target Upside: {_fmt(q.upside_pct)}%",
         f"- Target Downside: {_fmt(q.downside_pct)}%",
-        "",
     ])
+    ref_price = q.raw_analysis_price or (q.atomic_market_snapshot.analysis_price if q.atomic_market_snapshot else None)
+    if q.reverse_dcf_result and getattr(q.reverse_dcf_result, "consensus_target_price", None) is not None:
+        rd_cons = q.reverse_dcf_result
+        cons_mean = rd_cons.consensus_target_price
+        cons_upside_str = ""
+        if ref_price and ref_price > 0:
+            cons_upside_pct = round(((cons_mean - ref_price) / ref_price) * 100.0, 1)
+            cons_upside_str = f" (Upside: {cons_upside_pct:+.1f}%)"
+        range_parts = []
+        if getattr(rd_cons, "consensus_target_low", None) is not None and getattr(rd_cons, "consensus_target_high", None) is not None:
+            range_parts.append(f"Range: ${rd_cons.consensus_target_low:,.2f} - ${rd_cons.consensus_target_high:,.2f}")
+        if getattr(rd_cons, "analyst_count", None):
+            range_parts.append(f"{rd_cons.analyst_count} analysts")
+        meta_str = f" | {' | '.join(range_parts)}" if range_parts else ""
+        lines.append(f"- **Consensus Target Mean:** **${cons_mean:,.2f}**{cons_upside_str}{meta_str}")
+    lines.append("")
 
     # -------------------------------------------------------------
     # 🩺 Piotroski F-Score Breakdown
@@ -422,8 +441,22 @@ def format_equity_analysis_report(output: MicroQuantOutput) -> str:
             f"- **Market Implied Operating Margin:** {_fmt(rd.market_implied_margin_pct)}%",
             f"- Enterprise Value: ${_fmt_large(rd.enterprise_value, '$')} | Equity Value: ${_fmt_large(rd.equity_value, '$')}",
             f"- PV of 5Y FCF: ${_fmt_large(rd.sum_pv_5y_fcf, '$')} | PV of Terminal Value: ${_fmt_large(rd.terminal_value_pv, '$')}",
-            "",
         ])
+        if getattr(rd, "target_price_exit_multiple_12m", None) is not None:
+            exit_mult_str = f"{_fmt(rd.exit_multiple_used)}x" if getattr(rd, "exit_multiple_used", None) is not None else "N/A"
+            exit_upside_str = ""
+            if ref_price and ref_price > 0:
+                exit_upside = round(((rd.target_price_exit_multiple_12m - ref_price) / ref_price) * 100.0, 1)
+                exit_upside_str = f" (Upside: {exit_upside:+.1f}%)"
+            lines.append(
+                f"- **Exit-Multiple Target Price (12M, EV/EBITDA {exit_mult_str}):** **${rd.target_price_exit_multiple_12m:,.2f}**{exit_upside_str}"
+            )
+        if getattr(rd, "implied_exit_ebitda_multiple", None) is not None:
+            lines.append(f"- **Implied Exit EV/EBITDA (Gordon TV):** {_fmt(rd.implied_exit_ebitda_multiple)}x")
+        sa = getattr(rd, "valuation_sanity_audit", None)
+        if sa and getattr(sa, "sanity_warnings", None):
+            lines.append(f"- ⚠️ **Valuation Sanity Notes:** {'; '.join(sa.sanity_warnings)}")
+        lines.append("")
         if getattr(rd, "alternative_valuation_model", None):
             lines.extend([
                 f"#### 🏛️ Sector Alternative Valuation (`{rd.alternative_valuation_model}`)\n",

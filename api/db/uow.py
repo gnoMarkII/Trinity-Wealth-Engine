@@ -139,3 +139,12 @@ class DbUnitOfWork:
 
             self._equity_exports = SqliteEquityExportRepositoryAdapter(conn=self.conn)
         return self._equity_exports
+
+    @property
+    def roundtable(self):
+        """Connection-bound :class:`RoundtableSessionRepoPort` adapter."""
+        if getattr(self, "_roundtable", None) is None:
+            from api.db.adapters import SqliteRoundtableRepositoryAdapter
+
+            self._roundtable = SqliteRoundtableRepositoryAdapter(conn=self.conn)
+        return self._roundtable

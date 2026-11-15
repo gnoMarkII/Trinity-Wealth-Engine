@@ -4836,6 +4836,312 @@
         ]
       }
     },
+    "/api/roundtable/audio/{audio_cache_key}": {
+      "get": {
+        "operationId": "get_roundtable_audio_api_roundtable_audio__audio_cache_key__get",
+        "tags": [
+          "roundtable"
+        ],
+        "summary": "Get Roundtable Audio",
+        "parameters": [
+          {
+            "name": "audio_cache_key",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Audio Cache Key"
+            }
+          }
+        ],
+        "has_request_body": false,
+        "responses": [
+          "200",
+          "422"
+        ]
+      }
+    },
+    "/api/roundtable/guru-profiles": {
+      "get": {
+        "operationId": "get_roundtable_guru_profiles_api_roundtable_guru_profiles_get",
+        "tags": [
+          "roundtable"
+        ],
+        "summary": "Get Roundtable Guru Profiles",
+        "parameters": [],
+        "has_request_body": false,
+        "responses": [
+          "200"
+        ]
+      },
+      "put": {
+        "operationId": "update_roundtable_guru_profiles_api_roundtable_guru_profiles_put",
+        "tags": [
+          "roundtable"
+        ],
+        "summary": "Update Roundtable Guru Profiles",
+        "parameters": [],
+        "has_request_body": true,
+        "responses": [
+          "200",
+          "422"
+        ]
+      }
+    },
+    "/api/roundtable/guru-profiles/reset": {
+      "post": {
+        "operationId": "reset_roundtable_guru_profiles_api_roundtable_guru_profiles_reset_post",
+        "tags": [
+          "roundtable"
+        ],
+        "summary": "Reset Roundtable Guru Profiles",
+        "parameters": [],
+        "has_request_body": true,
+        "responses": [
+          "200",
+          "422"
+        ]
+      }
+    },
+    "/api/roundtable/prerequisites/{ticker}/dispatch": {
+      "post": {
+        "operationId": "dispatch_roundtable_prerequisite_api_roundtable_prerequisites__ticker__dispatch_post",
+        "tags": [
+          "roundtable"
+        ],
+        "summary": "Dispatch Roundtable Prerequisite",
+        "parameters": [
+          {
+            "name": "ticker",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Ticker"
+            }
+          }
+        ],
+        "has_request_body": false,
+        "responses": [
+          "200",
+          "422"
+        ]
+      }
+    },
+    "/api/roundtable/sessions": {
+      "get": {
+        "operationId": "list_roundtable_sessions_api_roundtable_sessions_get",
+        "tags": [
+          "roundtable"
+        ],
+        "summary": "List Roundtable Sessions",
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 30,
+              "title": "Limit"
+            }
+          }
+        ],
+        "has_request_body": false,
+        "responses": [
+          "200",
+          "422"
+        ]
+      },
+      "post": {
+        "operationId": "create_roundtable_session_api_roundtable_sessions_post",
+        "tags": [
+          "roundtable"
+        ],
+        "summary": "Create Roundtable Session",
+        "parameters": [],
+        "has_request_body": true,
+        "responses": [
+          "201",
+          "422"
+        ]
+      }
+    },
+    "/api/roundtable/sessions/{session_id}": {
+      "get": {
+        "operationId": "get_roundtable_session_api_roundtable_sessions__session_id__get",
+        "tags": [
+          "roundtable"
+        ],
+        "summary": "Get Roundtable Session",
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Session Id"
+            }
+          },
+          {
+            "name": "check_drift",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": true,
+              "title": "Check Drift"
+            }
+          }
+        ],
+        "has_request_body": false,
+        "responses": [
+          "200",
+          "422"
+        ]
+      }
+    },
+    "/api/roundtable/sessions/{session_id}/interject": {
+      "post": {
+        "operationId": "interject_roundtable_session_api_roundtable_sessions__session_id__interject_post",
+        "tags": [
+          "roundtable"
+        ],
+        "summary": "Interject Roundtable Session",
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Session Id"
+            }
+          }
+        ],
+        "has_request_body": true,
+        "responses": [
+          "200",
+          "422"
+        ]
+      }
+    },
+    "/api/roundtable/sessions/{session_id}/save-to-vault": {
+      "post": {
+        "operationId": "save_roundtable_to_vault_api_roundtable_sessions__session_id__save_to_vault_post",
+        "tags": [
+          "roundtable"
+        ],
+        "summary": "Save Roundtable To Vault",
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Session Id"
+            }
+          }
+        ],
+        "has_request_body": true,
+        "responses": [
+          "200",
+          "422"
+        ]
+      }
+    },
+    "/api/roundtable/sessions/{session_id}/stream": {
+      "post": {
+        "operationId": "stream_roundtable_debate_api_roundtable_sessions__session_id__stream_post",
+        "tags": [
+          "roundtable"
+        ],
+        "summary": "Stream Roundtable Debate",
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Session Id"
+            }
+          }
+        ],
+        "has_request_body": true,
+        "responses": [
+          "200",
+          "422"
+        ]
+      }
+    },
+    "/api/roundtable/sessions/{session_id}/update-thesis": {
+      "post": {
+        "operationId": "update_thesis_from_roundtable_api_roundtable_sessions__session_id__update_thesis_post",
+        "tags": [
+          "roundtable"
+        ],
+        "summary": "Update Thesis From Roundtable",
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Session Id"
+            }
+          }
+        ],
+        "has_request_body": true,
+        "responses": [
+          "200",
+          "422"
+        ]
+      }
+    },
+    "/api/roundtable/sessions/{session_id}/youtube-pack": {
+      "get": {
+        "operationId": "download_roundtable_youtube_pack_api_roundtable_sessions__session_id__youtube_pack_get",
+        "tags": [
+          "roundtable"
+        ],
+        "summary": "Download Roundtable Youtube Pack",
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Session Id"
+            }
+          }
+        ],
+        "has_request_body": false,
+        "responses": [
+          "200",
+          "422"
+        ]
+      }
+    },
+    "/api/roundtable/voices/preview": {
+      "post": {
+        "operationId": "preview_roundtable_voice_api_roundtable_voices_preview_post",
+        "tags": [
+          "roundtable"
+        ],
+        "summary": "Preview Roundtable Voice",
+        "parameters": [],
+        "has_request_body": true,
+        "responses": [
+          "200",
+          "422"
+        ]
+      }
+    },
     "/api/thesis/batch-synthesize": {
       "post": {
         "operationId": "batch_synthesize_portfolio_theses_api_thesis_batch_synthesize_post",

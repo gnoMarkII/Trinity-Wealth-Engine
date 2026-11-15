@@ -147,7 +147,7 @@ export const RunEquityAnalysisModal: React.FC<RunEquityAnalysisModalProps> = ({
     }
 
     try {
-      const job = await api.dispatchJob(instruction, cardId, 'manager', 'both')
+      const job = await api.dispatchJob(instruction, cardId, 'manager', 'both', true)
       onDispatched?.(job.job_id, cardId, cleanTicker)
       onClose()
     } catch (err) {
@@ -166,15 +166,15 @@ export const RunEquityAnalysisModal: React.FC<RunEquityAnalysisModalProps> = ({
   return (
     <Modal titleId="run-equity-analysis-title" onClose={onClose}>
       <form onSubmit={handleSubmit} className="space-y-4">
-        <div className="flex items-center justify-between border-b border-zinc-100 pb-3">
-          <h3 id="run-equity-analysis-title" className="text-base font-semibold text-zinc-900">
+        <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+          <h3 id="run-equity-analysis-title" className="text-base font-semibold text-slate-900">
             📊 วิเคราะห์หุ้นและดึงข่าวล่าสุด
           </h3>
           <button
             type="button"
             onClick={onClose}
             aria-label="Close"
-            className="text-zinc-400 hover:text-zinc-600 transition-colors"
+            className="text-slate-500 hover:text-slate-600 transition-colors"
           >
             ✕
           </button>
@@ -188,12 +188,12 @@ export const RunEquityAnalysisModal: React.FC<RunEquityAnalysisModalProps> = ({
 
         <div className="space-y-3">
           {loadingStocks && (
-            <div className="text-xs text-zinc-400 animate-pulse">กำลังโหลดรายชื่อหุ้นจาก พอร์ต และ Watchlist...</div>
+            <div className="text-xs text-slate-500 animate-pulse">กำลังโหลดรายชื่อหุ้นจาก พอร์ต และ Watchlist...</div>
           )}
 
           {hasOptions && (
             <div>
-              <label htmlFor="run-equity-select-opt" className="block text-xs font-medium text-zinc-700 mb-1">
+              <label htmlFor="run-equity-select-opt" className="block text-xs font-medium text-slate-700 mb-1">
                 เลือกหุ้นจาก Portfolio / Watchlist
               </label>
               <select
@@ -211,7 +211,7 @@ export const RunEquityAnalysisModal: React.FC<RunEquityAnalysisModalProps> = ({
                   }
                   e.target.value = ''
                 }}
-                className="w-full rounded-xl border border-sky-200 bg-panel px-3 py-2 text-sm text-zinc-900 outline-none shadow-sm transition-colors focus:border-flow-cyan focus:ring-2 focus:ring-flow-cyan/20"
+                className="w-full rounded-xl border border-sky-200 bg-panel px-3 py-2 text-sm text-slate-900 outline-none shadow-sm transition-colors focus:border-flow-cyan focus:ring-2 focus:ring-flow-cyan/20"
               >
                 <option value="">-- เลือกหุ้นจาก Portfolio หรือ Watchlist --</option>
                 {portfolioOptions.length > 0 && (
@@ -268,7 +268,7 @@ export const RunEquityAnalysisModal: React.FC<RunEquityAnalysisModalProps> = ({
           )}
 
           <div>
-            <label htmlFor="run-equity-ticker" className="block text-xs font-medium text-zinc-700 mb-1">
+            <label htmlFor="run-equity-ticker" className="block text-xs font-medium text-slate-700 mb-1">
               Ticker Symbol (สัญลักษณ์หุ้น)
             </label>
             <TextInput
@@ -282,7 +282,7 @@ export const RunEquityAnalysisModal: React.FC<RunEquityAnalysisModalProps> = ({
           </div>
 
           <div>
-            <label htmlFor="run-equity-market" className="block text-xs font-medium text-zinc-700 mb-1">
+            <label htmlFor="run-equity-market" className="block text-xs font-medium text-slate-700 mb-1">
               ตลาด (Market)
             </label>
             <select
@@ -292,7 +292,7 @@ export const RunEquityAnalysisModal: React.FC<RunEquityAnalysisModalProps> = ({
                 setMarket(e.target.value as 'US' | 'TH')
                 setUserTouchedMarket(true)
               }}
-              className="w-full rounded-xl border border-sky-200 bg-panel px-3 py-2 text-sm text-zinc-900 outline-none shadow-sm transition-colors focus:border-flow-cyan focus:ring-2 focus:ring-flow-cyan/20"
+              className="w-full rounded-xl border border-sky-200 bg-panel px-3 py-2 text-sm text-slate-900 outline-none shadow-sm transition-colors focus:border-flow-cyan focus:ring-2 focus:ring-flow-cyan/20"
             >
               <option value="US">🇺🇸 สหรัฐฯ (US - S&P 500 / NASDAQ)</option>
               <option value="TH">🇹🇭 ไทย (TH - SET Index)</option>
@@ -300,16 +300,16 @@ export const RunEquityAnalysisModal: React.FC<RunEquityAnalysisModalProps> = ({
           </div>
 
           <div className="rounded-xl border border-sky-100 bg-sky-50/50 p-3 text-xs text-sky-800 leading-relaxed">
-            💡 ระบบจะทำการสร้างการ์ดลง Kanban Board บันทึกลง Obsidian Vault และเริ่มงานวิเคราะห์ Quant + ข่าวพร้อมกันทันที
+            💡 ระบบจะสร้างการ์ดลง Kanban Board (ช่อง Request Approve) และหยุดรอให้คุณกดยอมรับก่อนเริ่มรัน Workers
           </div>
         </div>
 
-        <div className="flex justify-end gap-2 pt-2 border-t border-zinc-100">
+        <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
           <Button type="button" variant="secondary" onClick={onClose} disabled={loading}>
             ยกเลิก
           </Button>
           <Button type="submit" variant="primary" disabled={loading || !ticker.trim()}>
-            {loading ? 'กำลังส่งงาน...' : '🚀 สร้างการ์ดและเริ่มวิเคราะห์'}
+            {loading ? 'กำลังส่งคำขอ...' : '📋 สร้างการ์ด (รอกดยอมรับก่อนรัน)'}
           </Button>
         </div>
       </form>

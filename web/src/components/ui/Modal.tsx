@@ -16,24 +16,56 @@ interface Props {
 const DEFAULT_PANEL_CLASS =
   'max-w-lg rounded-2xl border border-sky-100 bg-white/95 p-5 shadow-2xl shadow-sky-900/10 backdrop-blur-xl'
 
-export default function Modal({ titleId, onClose, children, panelClassName, zIndexClassName = 'z-50' }: Props) {
+export interface InPlaceDialogProps {
+  titleId: string
+  onClose: () => void
+  children: ReactNode
+  wrapperClassName?: string
+  backdropClassName?: string
+  panelClassName?: string
+}
+
+/**
+ * กล่อง Dialog มาตรฐานที่ render ในต้นไม้ DOM เดิม (ไม่ portal ออกนอก root)
+ * ใช้สำหรับโมดอลเฉพาะกิจหรือ slide-over drawer เพื่อให้ได้ role="dialog", aria-modal,
+ * backdrop aria-hidden, และ useFocusTrap ร่วมกันโดยไม่เปลี่ยนตำแหน่ง DOM เดิม
+ */
+export function InPlaceDialog({
+  titleId,
+  onClose,
+  children,
+  wrapperClassName = 'animate-fade-in fixed inset-0 z-50 flex items-center justify-center p-4',
+  backdropClassName = 'absolute inset-0 bg-slate-900/40 backdrop-blur-sm',
+  panelClassName,
+}: InPlaceDialogProps) {
   const dialogRef = useFocusTrap<HTMLDivElement>(true, onClose)
 
-  return createPortal(
-    <div className={`animate-fade-in fixed inset-0 flex items-center justify-center p-4 ${zIndexClassName}`}>
-      {/* backdrop เป็น sibling แยกจาก dialog (ไม่ใช่ parent) — ปิดด้วยคลิกได้โดยไม่ต้อง
-          stopPropagation และใส่ aria-hidden ได้เพราะเป็นแค่ฉากหลังตกแต่ง (คีย์บอร์ดใช้ Escape) */}
-      <div aria-hidden="true" onClick={onClose} className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
+  return (
+    <div className={wrapperClassName}>
+      <div aria-hidden="true" onClick={onClose} className={backdropClassName} />
       <div
         ref={dialogRef}
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
-        className={`animate-modal-in relative w-full ${panelClassName ?? DEFAULT_PANEL_CLASS}`}
+        className={`relative ${panelClassName ?? `w-full ${DEFAULT_PANEL_CLASS}`}`}
       >
         {children}
       </div>
-    </div>,
+    </div>
+  )
+}
+
+export default function Modal({ titleId, onClose, children, panelClassName, zIndexClassName = 'z-50' }: Props) {
+  return createPortal(
+    <InPlaceDialog
+      titleId={titleId}
+      onClose={onClose}
+      wrapperClassName={`animate-fade-in fixed inset-0 flex items-center justify-center p-4 ${zIndexClassName}`}
+      panelClassName={`animate-modal-in w-full ${panelClassName ?? DEFAULT_PANEL_CLASS}`}
+    >
+      {children}
+    </InPlaceDialog>,
     document.body
   )
 }

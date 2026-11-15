@@ -1,13 +1,19 @@
 import type { ButtonHTMLAttributes } from 'react'
 
 interface Props extends ButtonHTMLAttributes<HTMLButtonElement> {
-  variant?: 'primary' | 'secondary'
+  variant?: 'primary' | 'secondary' | 'ghost' | 'danger'
   size?: 'sm' | 'md'
 }
 
-const VARIANT_CLASS: Record<string, string> = {
-  primary: 'bg-flow-blue text-white shadow-[0_10px_24px_rgba(14,165,233,0.2)] hover:bg-sky-600',
-  secondary: 'border border-sky-200 bg-white/70 text-sky-900 shadow-sm shadow-sky-100/60 hover:bg-sky-50',
+const VARIANT_CLASS: Record<NonNullable<Props['variant']>, string> = {
+  primary:
+    'bg-section-accent text-white shadow-[0_8px_20px_rgb(var(--section-accent)/0.22)] hover:brightness-110',
+  secondary:
+    'border border-sky-200/90 bg-white/85 text-slate-700 shadow-sm hover:border-sky-300 hover:bg-sky-50/70 hover:text-slate-900',
+  ghost:
+    'text-slate-600 hover:bg-sky-50/70 hover:text-slate-900',
+  danger:
+    'border border-rose-200 bg-rose-50/80 text-rose-700 hover:bg-rose-600 hover:text-white',
 }
 
 const SIZE_CLASS: Record<string, string> = {

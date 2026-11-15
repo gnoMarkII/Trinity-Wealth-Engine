@@ -76,8 +76,8 @@ export const RadialGauge: React.FC<RadialGaugeProps> = ({
     >
       <div className="flex items-center justify-between border-b border-sky-100/60 pb-3">
         <div>
-          <h3 className="font-semibold text-zinc-900 tracking-tight">{title}</h3>
-          {subtitle && <p className="text-xs text-zinc-500">{subtitle}</p>}
+          <h3 className="font-semibold text-slate-900 tracking-tight">{title}</h3>
+          {subtitle && <p className="text-xs text-slate-500">{subtitle}</p>}
         </div>
         {asOfDate && (
           <div className="text-right">
@@ -85,7 +85,7 @@ export const RadialGauge: React.FC<RadialGaugeProps> = ({
               {asOfDate}
             </span>
             {dataLagNote && (
-              <span className="block text-[10px] text-zinc-400 mt-0.5">{dataLagNote}</span>
+              <span className="block text-[11px] text-slate-500 mt-0.5">{dataLagNote}</span>
             )}
           </div>
         )}
@@ -141,7 +141,7 @@ export const RadialGauge: React.FC<RadialGaugeProps> = ({
                 ? (value > 0 ? `+${value.toFixed(2)}` : value.toFixed(2))
                 : '—'}
             </span>
-            {unit && <span className="font-mono text-xs text-zinc-500 font-semibold">{unit}</span>}
+            {unit && <span className="font-mono text-xs text-slate-500 font-semibold">{unit}</span>}
           </div>
           <span
             className="mt-1 rounded-full px-2.5 py-0.5 text-xs font-semibold"
@@ -167,7 +167,7 @@ export const RadialGauge: React.FC<RadialGaugeProps> = ({
                   key={item.label}
                   className="rounded-lg bg-slate-50/80 p-2 border border-slate-100/80"
                 >
-                  <p className="truncate text-[11px] font-medium text-zinc-500">{item.label}</p>
+                  <p className="truncate text-[11px] font-medium text-slate-500">{item.label}</p>
                   <p
                     className={`font-mono text-xs font-bold mt-0.5 ${
                       isPositive ? 'text-amber-600' : 'text-emerald-600'

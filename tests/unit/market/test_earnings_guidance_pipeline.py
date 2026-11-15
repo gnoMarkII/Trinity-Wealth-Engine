@@ -138,3 +138,63 @@ Gross margin stabilized cleanly in Q3.
         assert len(guidance.key_executive_quotes) == 1
         assert "Gross margin stabilized cleanly in Q3." in guidance.key_executive_quotes[0]
 
+
+def test_guidance_v2_stocks_earnings_dir_excludes_index_and_avoids_ftnt_defaults(tmp_path):
+    """Option 2: Searches Stocks/{TICKER}/Earnings/, skips index.md & navigation notes, matches ISO period, zero FTNT fallback."""
+    v2_dir = tmp_path / "30_Knowledge_Base" / "Stocks" / "ACME" / "Earnings"
+    v2_dir.mkdir(parents=True, exist_ok=True)
+    # Navigation index must be skipped even though it is sorted first alphabetically
+    (v2_dir / "index.md").write_text("---\ndocument_role: navigation\n---\n# Index\n", encoding="utf-8")
+    (v2_dir / "ACME_Nav.md").write_text("---\nentity_type: navigation\n---\n# Nav\n", encoding="utf-8")
+
+    # Older call Q1
+    (v2_dir / "ACME_2026Q1_Call.md").write_text(
+        """---
+date: "2026-04-25"
+period: "2026-Q1"
+guidance:
+  management_tone: "neutral"
+---
+> "First quarter demand remained stable across regions."
+""",
+        encoding="utf-8",
+    )
+    # Newer call Q2 with USD scalar keys (converted from raw USD -> billions) and NO operating_margin_trajectory
+    (v2_dir / "ACME_2026Q2_Call.md").write_text(
+        """---
+date: "2026-07-28"
+period: "2026-Q2"
+guidance:
+  management_tone: "bullish"
+  revenue_guidance_range_usd: [1200000000, 1400000000]
+  prior_fy_revenue_usd: 1000000000
+  non_gaap_operating_margin_pct: 22.5
+  key_executive_quotes:
+    - "We expect full-year revenue between $1.2B and $1.4B on strong cloud adoption."
+---
+# ACME Q2 2026 Call
+We expect full-year revenue between $1.2B and $1.4B on strong cloud adoption.
+""",
+        encoding="utf-8",
+    )
+
+    # ISO fiscal period "2026-06-30" must match "2026-Q2" cleanly
+    ctx, flags = extract_verified_earnings_guidance(ticker="ACME", target_fiscal_period="2026-06-30", vault_base=tmp_path)
+    assert ctx is not None
+    assert ctx.status == "available"
+    assert ctx.fiscal_quarter == "2026-Q2"
+    assert ctx.revenue_growth_guidance_pct == 30.0  # (1.3B - 1.0B)/1.0B * 100
+    assert ctx.operating_margin_trajectory is None  # No hardcoded "expanding" fallback!
+    margin_claim = next(c for c in ctx.verified_claims if c.metric_name == "non_gaap_operating_margin_midpoint_pct")
+    assert margin_claim.numeric_value == 22.5
+    assert not any("transcript_lags_reported_period" in f for f in flags)
+
+    # Lagging period still preserves claims/growth with status="partial"
+    lag_ctx, lag_flags = extract_verified_earnings_guidance(ticker="ACME", target_fiscal_period="2027-Q4", vault_base=tmp_path)
+    assert lag_ctx is not None
+    assert lag_ctx.status == "partial"
+    assert lag_ctx.revenue_growth_guidance_pct == 30.0
+    assert len(lag_ctx.verified_claims) >= 2
+    assert "transcript_lags_reported_period:2027-Q4" in lag_flags
+
+

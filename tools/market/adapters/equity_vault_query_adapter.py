@@ -181,6 +181,26 @@ class EquityVaultQueryAdapter:
         relative = str(sidecar.relative_to(vault_path)).replace("\\", "/")
         quant = model.quant_signals.model_dump()
         sentiment = model.sentiment_context.model_dump()
+        for additive_key in (
+            "piotroski_breakdown",
+            "reverse_dcf_result",
+            "tactical_setup",
+            "insider_conviction",
+            "earnings_guidance_context",
+            "deterministic_scorecard",
+            "thesis_falsifiers",
+            "evidence_snapshot",
+        ):
+            top_val = getattr(model, additive_key, None)
+            if top_val is not None and quant.get(additive_key) in (None, [], {}):
+                if hasattr(top_val, "model_dump"):
+                    quant[additive_key] = top_val.model_dump()
+                elif isinstance(top_val, list):
+                    quant[additive_key] = [
+                        x.model_dump() if hasattr(x, "model_dump") else x for x in top_val
+                    ]
+                else:
+                    quant[additive_key] = top_val
 
         # Check if companion markdown report actually exists on disk
         companion_md = sidecar.with_suffix(".md")
@@ -475,22 +495,48 @@ class EquityVaultQueryAdapter:
                     seen.add(relative)
                     if folder_name == "YouTube_Summaries":
                         matched_by = "youtube"
-                    elif "Earnings_Calls" in folder_name:
+                    elif "Earnings" in folder_name:
                         matched_by = "earnings_call"
+                    elif folder_name.endswith("/Analysis") or "/Analysis" in folder_name:
+                        matched_by = "equity_analysis"
                     else:
                         matched_by = "news"
-                    lines = [line.strip() for line in content.splitlines() if line.strip() and not line.startswith("---")]
+                    body_text = re.sub(r"\A\ufeff?---\r?\n[\s\S]*?\r?\n---(?:\r?\n|\Z)", "", content)
+                    body_text = re.sub(r"<!--[\s\S]*?-->", " ", body_text)
+                    lines: list[str] = []
+                    for raw_line in body_text.splitlines():
+                        ln = raw_line.strip()
+                        if not ln or ln.startswith("---") or re.match(r"^\|[\s\-:|]+\|$", ln):
+                            continue
+                        ln = re.sub(r"^(?:#+\s*|>\s*)", "", ln).replace("**", "").strip()
+                        if ln:
+                            lines.append(ln)
+                        if len(lines) >= 4:
+                            break
                     notes.append({
                         "title": path.stem,
                         "folder": str(path.parent.relative_to(self.vault_path)).replace("\\", "/"),
                         "relative_path": relative,
                         "obsidian_uri": f"obsidian://open?vault={vault_name}&file={relative}",
-                        "snippet": " ".join(lines[:3])[:250],
+                        "snippet": " ".join(lines)[:250],
                         "modified_at": note_dt.isoformat(),
                         "matched_by": matched_by,
                     })
                 except OSError as exc:
                     log.warning("Failed to inspect Equity note %s: %s", path, exc)
+        folders_with_dated = {
+            item["folder"]
+            for item in notes
+            if not re.search(r"(?:^|[_\s\-])latest$", item["title"], re.IGNORECASE)
+        }
+        notes = [
+            item
+            for item in notes
+            if not (
+                re.search(r"(?:^|[_\s\-])latest$", item["title"], re.IGNORECASE)
+                and item["folder"] in folders_with_dated
+            )
+        ]
         notes.sort(key=lambda item: item["modified_at"], reverse=True)
         return {"ticker": clean, "total_count": len(notes), "items": notes}
 

@@ -54,16 +54,16 @@ export default function ManagerSwarmView({ activeStatus }: ManagerSwarmViewProps
             <div>
               <h3 className="text-xs font-bold text-sky-950 flex items-center gap-1.5">
                 <span>Trinity Swarm</span>
-                <span className="text-[10px] text-sky-600 font-semibold">(5 Specialists)</span>
+                <span className="text-[11px] text-sky-600 font-semibold">(5 Specialists)</span>
               </h3>
-              <p className="text-[10px] text-zinc-500">
+              <p className="text-[11px] text-slate-500">
                 Institutional Autonomous AI Team
               </p>
             </div>
           </div>
 
           <span
-            className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-semibold transition-all ${
+            className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold transition-all ${
               isRunning
                 ? 'border border-emerald-200 bg-emerald-50 text-emerald-700 shadow-[0_0_10px_rgba(16,185,129,0.25)]'
                 : 'border border-sky-200 bg-sky-50/70 text-sky-700'
@@ -94,10 +94,10 @@ export default function ManagerSwarmView({ activeStatus }: ManagerSwarmViewProps
       {/* Agents Roster Cards */}
       <div className="space-y-3">
         <div className="flex items-center justify-between px-1">
-          <span className="text-xs font-bold uppercase tracking-wider text-zinc-400">
+          <span className="text-xs font-bold uppercase tracking-wider text-slate-500">
             รายชื่อ Institutional Agents
           </span>
-          <span className="text-xs text-zinc-400 font-mono">
+          <span className="text-xs text-slate-500 font-mono">
             Node: {activeNode ? nodeDisplayName(activeNode) : 'idle'}
           </span>
         </div>
@@ -131,7 +131,7 @@ export default function ManagerSwarmView({ activeStatus }: ManagerSwarmViewProps
                     className={`relative flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-lg shadow-sm transition-transform ${
                       isActive
                         ? 'bg-gradient-to-tr from-emerald-400 to-cyan-500 text-white scale-105'
-                        : 'bg-sky-100/70 text-zinc-700'
+                        : 'bg-sky-100/70 text-slate-700'
                     }`}
                   >
                     <span>{agent.icon}</span>
@@ -151,7 +151,7 @@ export default function ManagerSwarmView({ activeStatus }: ManagerSwarmViewProps
                     >
                       {agent.label}
                     </h4>
-                    <p className="text-xs text-zinc-500 font-medium truncate mt-0.5">
+                    <p className="text-xs text-slate-500 font-medium truncate mt-0.5">
                       {caps.roleTitle}
                     </p>
                   </div>
@@ -164,7 +164,7 @@ export default function ManagerSwarmView({ activeStatus }: ManagerSwarmViewProps
                       กำลังทำงาน
                     </span>
                   ) : (
-                    <span className="inline-flex items-center gap-1 rounded-full border border-zinc-200/80 bg-zinc-50 px-2 py-0.5 text-xs font-semibold text-zinc-500">
+                    <span className="inline-flex items-center gap-1 rounded-full border border-slate-200/80 bg-slate-50 px-2 py-0.5 text-xs font-semibold text-slate-500">
                       Standby
                     </span>
                   )}
@@ -172,7 +172,7 @@ export default function ManagerSwarmView({ activeStatus }: ManagerSwarmViewProps
               </div>
 
               {/* Focus Area Description */}
-              <p className="mt-2.5 text-xs sm:text-[13px] leading-relaxed text-zinc-600">
+              <p className="mt-2.5 text-xs sm:text-[13px] leading-relaxed text-slate-600">
                 {caps.focusArea}
               </p>
 
@@ -198,29 +198,29 @@ export default function ManagerSwarmView({ activeStatus }: ManagerSwarmViewProps
 
       {/* Collaboration Flow Diagram Card */}
       <div className="rounded-2xl border border-sky-100 bg-white/70 p-4 shadow-sm">
-        <h4 className="text-xs font-bold uppercase tracking-wider text-zinc-500 mb-2.5">
+        <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-2.5">
           🏛️ Trinity Multi-Agent Architecture
         </h4>
-        <div className="flex flex-col gap-2 text-xs font-medium text-zinc-700">
+        <div className="flex flex-col gap-2 text-xs font-medium text-slate-700">
           <div className="flex items-center gap-2.5 p-2 rounded-xl bg-sky-50/70 border border-sky-100">
             <span className="font-bold text-sky-900 shrink-0">1. Hermes (Manager)</span>
-            <span className="text-zinc-400">➔</span>
-            <span className="text-zinc-600 truncate">วิเคราะห์เจตนา & สั่งรันสายพานวิจัยอัตโนมัติ</span>
+            <span className="text-slate-500">➔</span>
+            <span className="text-slate-600 truncate">วิเคราะห์เจตนา & สั่งรันสายพานวิจัยอัตโนมัติ</span>
           </div>
           <div className="flex items-center gap-2.5 p-2 rounded-xl bg-cyan-50/70 border border-cyan-100">
             <span className="font-bold text-cyan-900 shrink-0">2. Specialists</span>
-            <span className="text-zinc-400">➔</span>
-            <span className="text-zinc-600 truncate">Macro Quant, Economist, Equity Intel</span>
+            <span className="text-slate-500">➔</span>
+            <span className="text-slate-600 truncate">Macro Quant, Economist, Equity Intel</span>
           </div>
-          <div className="flex items-center gap-2.5 p-2 rounded-xl bg-indigo-50/70 border border-indigo-100">
-            <span className="font-bold text-indigo-900 shrink-0">3. Allocator</span>
-            <span className="text-zinc-400">➔</span>
-            <span className="text-zinc-600 truncate">วาง Guardrails & สัดส่วนพอร์ต 3 ถัง</span>
+          <div className="flex items-center gap-2.5 p-2 rounded-xl bg-blue-50/70 border border-blue-100">
+            <span className="font-bold text-blue-900 shrink-0">3. Allocator</span>
+            <span className="text-slate-500">➔</span>
+            <span className="text-slate-600 truncate">วาง Guardrails & สัดส่วนพอร์ต 3 ถัง</span>
           </div>
           <div className="flex items-center gap-2.5 p-2 rounded-xl bg-emerald-50/70 border border-emerald-100">
             <span className="font-bold text-emerald-900 shrink-0">4. Archivist</span>
-            <span className="text-zinc-400">➔</span>
-            <span className="text-zinc-600 truncate">จัดเก็บบันทึกลง Obsidian Memory Vault</span>
+            <span className="text-slate-500">➔</span>
+            <span className="text-slate-600 truncate">จัดเก็บบันทึกลง Obsidian Memory Vault</span>
           </div>
         </div>
       </div>

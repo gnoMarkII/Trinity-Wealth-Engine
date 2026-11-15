@@ -25,7 +25,7 @@ export const TacticalStageCycleBar: React.FC<TacticalStageCycleBarProps> = ({
       action: 'เฝ้ารอ: ใส่ Watchlist รอดักตอนเบรกเอาท์ผ่านกรอบ',
       isActive: isStage1,
       activeColor: 'bg-sky-500 text-white border-sky-600 shadow-[0_0_12px_rgba(14,165,233,0.4)]',
-      barColor: isStage1 ? 'bg-sky-500' : 'bg-zinc-200',
+      barColor: isStage1 ? 'bg-sky-500' : 'bg-slate-200',
     },
     {
       num: 2,
@@ -34,7 +34,7 @@ export const TacticalStageCycleBar: React.FC<TacticalStageCycleBarProps> = ({
       action: 'สเตจที่ดีที่สุด: ทยอยสะสมเมื่อราคาย่อตัวใน Buy Zone',
       isActive: isStage2,
       activeColor: 'bg-emerald-600 text-white border-emerald-700 shadow-[0_0_12px_rgba(16,185,129,0.5)]',
-      barColor: isStage2 ? 'bg-emerald-500' : 'bg-zinc-200',
+      barColor: isStage2 ? 'bg-emerald-500' : 'bg-slate-200',
     },
     {
       num: 3,
@@ -43,7 +43,7 @@ export const TacticalStageCycleBar: React.FC<TacticalStageCycleBarProps> = ({
       action: 'ระวังตัว: ทยอยล็อคกำไร ห้ามไล่ราคาเด็ดขาด',
       isActive: isStage3,
       activeColor: 'bg-amber-500 text-white border-amber-600 shadow-[0_0_12px_rgba(245,158,11,0.4)]',
-      barColor: isStage3 ? 'bg-amber-500' : 'bg-zinc-200',
+      barColor: isStage3 ? 'bg-amber-500' : 'bg-slate-200',
     },
     {
       num: 4,
@@ -52,7 +52,7 @@ export const TacticalStageCycleBar: React.FC<TacticalStageCycleBarProps> = ({
       action: 'อันตรายสูงสุด: ถือเงินสด ห้ามรับมีดหรือถัวเฉลี่ยเด็ดขาด',
       isActive: isStage4,
       activeColor: 'bg-rose-600 text-white border-rose-700 shadow-[0_0_12px_rgba(244,63,94,0.5)]',
-      barColor: isStage4 ? 'bg-rose-500' : 'bg-zinc-200',
+      barColor: isStage4 ? 'bg-rose-500' : 'bg-slate-200',
     },
   ]
 
@@ -64,7 +64,7 @@ export const TacticalStageCycleBar: React.FC<TacticalStageCycleBarProps> = ({
       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-edge/50 pb-2.5">
         <div className="flex items-center gap-2">
           <span className="text-base">🔄</span>
-          <span className="text-xs font-bold text-zinc-800 tracking-tight">
+          <span className="text-xs font-bold text-slate-800 tracking-tight">
             Stan Weinstein 4-Stage Market Cycle Timeline
           </span>
           <ContextTooltip
@@ -75,7 +75,7 @@ export const TacticalStageCycleBar: React.FC<TacticalStageCycleBarProps> = ({
           />
         </div>
         <div className="flex items-center gap-1.5">
-          <span className="text-[11px] text-zinc-400">Current Phase:</span>
+          <span className="text-[11px] text-slate-500">Current Phase:</span>
           <span
             className={`px-2.5 py-0.5 text-xs font-bold rounded-full uppercase border ${
               isStage2
@@ -99,13 +99,13 @@ export const TacticalStageCycleBar: React.FC<TacticalStageCycleBarProps> = ({
             className={`relative rounded-xl p-3 border transition-all ${
               st.isActive
                 ? `${st.activeColor} ring-2 ring-offset-2 ring-offset-surface ring-current scale-[1.02]`
-                : 'bg-surface border-edge/60 text-zinc-600 hover:border-zinc-300'
+                : 'bg-surface border-edge/60 text-slate-600 hover:border-slate-300'
             }`}
           >
             <div className="flex items-center justify-between mb-1">
               <span
-                className={`text-[10px] font-black uppercase tracking-wider px-1.5 py-0.2 rounded ${
-                  st.isActive ? 'bg-black/20 text-white' : 'bg-zinc-100 text-zinc-500'
+                className={`text-[11px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded ${
+                  st.isActive ? 'bg-black/20 text-white' : 'bg-slate-100 text-slate-500'
                 }`}
               >
                 Stage {st.num}
@@ -118,19 +118,19 @@ export const TacticalStageCycleBar: React.FC<TacticalStageCycleBarProps> = ({
               )}
             </div>
 
-            <div className={`text-xs font-bold ${st.isActive ? 'text-white' : 'text-zinc-900'} truncate`}>
+            <div className={`text-xs font-bold ${st.isActive ? 'text-white' : 'text-slate-900'} truncate`}>
               {st.title.split(': ')[1]}
             </div>
 
-            <div className={`text-[10px] mt-0.5 leading-snug ${st.isActive ? 'text-white/90' : 'text-zinc-500'}`}>
+            <div className={`text-[11px] mt-0.5 leading-snug ${st.isActive ? 'text-white/90' : 'text-slate-500'}`}>
               {st.sub}
             </div>
 
             <div
-              className={`mt-2 pt-1.5 border-t text-[10px] font-semibold ${
+              className={`mt-2 pt-1.5 border-t text-[11px] font-semibold ${
                 st.isActive
                   ? 'border-white/20 text-white font-bold'
-                  : 'border-edge/40 text-zinc-400'
+                  : 'border-edge/40 text-slate-500'
               }`}
             >
               👉 {st.action}

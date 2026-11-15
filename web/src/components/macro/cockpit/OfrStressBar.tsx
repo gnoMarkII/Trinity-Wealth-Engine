@@ -43,7 +43,7 @@ export const OfrStressBar: React.FC<OfrStressBarProps> = ({
           <span>⚠️</span>
           <span>US Financial Stress Index: ไม่สามารถโหลดข้อมูลได้</span>
         </div>
-        <p className="mt-1 text-zinc-600">{error || 'ไม่มีข้อมูลจาก Office of Financial Research (OFR)'}</p>
+        <p className="mt-1 text-slate-600">{error || 'ไม่มีข้อมูลจาก Office of Financial Research (OFR)'}</p>
       </div>
     )
   }
@@ -57,7 +57,7 @@ export const OfrStressBar: React.FC<OfrStressBarProps> = ({
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between border-b border-sky-100/70 pb-3">
         <div>
           <div className="flex items-center gap-2">
-            <h3 className="font-bold text-zinc-900 text-sm tracking-tight">
+            <h3 className="font-bold text-slate-900 text-sm tracking-tight">
               US Financial Stress Index (OFR FSI)
             </h3>
             <ContextTooltip
@@ -67,7 +67,7 @@ export const OfrStressBar: React.FC<OfrStressBarProps> = ({
               impactOnMoney="ถ้าค่าติดลบ เป็นบวกต่อสินทรัพย์เสี่ยงและหุ้น ถ้าค่าพุ่งเป็นบวกสูง ควรถือเงินสดสำรองเพิ่ม"
             />
             <span
-              className={`rounded-md border px-2 py-0.5 text-[10px] font-bold uppercase ${
+              className={`rounded-md border px-2 py-0.5 text-[11px] font-bold uppercase ${
                 isStressPositive
                   ? 'border-rose-200 bg-rose-50 text-rose-700'
                   : 'border-emerald-200 bg-emerald-50 text-emerald-700'
@@ -76,7 +76,7 @@ export const OfrStressBar: React.FC<OfrStressBarProps> = ({
               {regime || (isStressPositive ? 'Elevated Stress' : 'Below Average Stress')}
             </span>
           </div>
-          <p className="text-xs text-zinc-500 mt-0.5">
+          <p className="text-xs text-slate-500 mt-0.5">
             ดัชนีความตึงตัวในตลาดการเงินสหรัฐฯ 5 หมวด (ค่า 0 = ระดับความเครียดเฉลี่ยในอดีต)
           </p>
           <div className="mt-2">
@@ -106,8 +106,8 @@ export const OfrStressBar: React.FC<OfrStressBarProps> = ({
       {/* Aggregate Score Display */}
       <div className="mt-4 flex flex-wrap items-baseline justify-between gap-2 rounded-xl bg-slate-50 p-3 border border-slate-100">
         <div>
-          <span className="text-[11px] font-semibold text-zinc-600">คะแนนความตึงตัวรวม (FSI Aggregate):</span>
-          <p className="text-[10px] text-zinc-400">หน่วยเป็นส่วนเบี่ยงเบนมาตรฐาน (σ) รอบค่าเฉลี่ย 0</p>
+          <span className="text-[11px] font-semibold text-slate-600">คะแนนความตึงตัวรวม (FSI Aggregate):</span>
+          <p className="text-[11px] text-slate-500">หน่วยเป็นส่วนเบี่ยงเบนมาตรฐาน (σ) รอบค่าเฉลี่ย 0</p>
         </div>
         <div className="flex items-baseline gap-1.5 font-mono">
           <span
@@ -117,14 +117,14 @@ export const OfrStressBar: React.FC<OfrStressBarProps> = ({
           >
             {fsiValue > 0 ? `+${fsiValue.toFixed(2)}` : fsiValue.toFixed(2)}
           </span>
-          <span className="text-xs text-zinc-500 font-semibold">σ</span>
+          <span className="text-xs text-slate-500 font-semibold">σ</span>
         </div>
       </div>
 
       {/* 5 Categories Diverging Bars around Zero Baseline */}
       {categories.length > 0 && (
         <div className="mt-4 space-y-2 text-xs">
-          <div className="flex items-center justify-between text-[10px] text-zinc-400 font-semibold uppercase px-1">
+          <div className="flex items-center justify-between text-[11px] text-slate-500 font-semibold uppercase px-1">
             <span>หมวดความเสี่ยง</span>
             <div className="flex items-center gap-16 mr-2">
               <span>← สงบกว่าปกติ</span>
@@ -141,7 +141,7 @@ export const OfrStressBar: React.FC<OfrStressBarProps> = ({
               return (
                 <div key={cat.label} className="rounded-lg bg-slate-50/60 p-2 border border-slate-100/70">
                   <div className="flex items-center justify-between mb-1 text-[11px]">
-                    <span className="font-semibold text-zinc-800">{cat.label}</span>
+                    <span className="font-semibold text-slate-800">{cat.label}</span>
                     <span
                       className={`font-mono font-bold ${
                         isPos ? 'text-amber-600' : 'text-emerald-600'
@@ -163,7 +163,7 @@ export const OfrStressBar: React.FC<OfrStressBarProps> = ({
                       )}
                     </div>
                     {/* Zero divider */}
-                    <div className="w-[1px] h-full bg-zinc-400 z-10" />
+                    <div className="w-[1px] h-full bg-slate-400 z-10" />
                     {/* Right half (Positive: Elevated stress) */}
                     <div className="relative w-1/2 h-full flex justify-start">
                       {isPos && (
@@ -181,7 +181,7 @@ export const OfrStressBar: React.FC<OfrStressBarProps> = ({
         </div>
       )}
 
-      <p className="mt-3 text-[11px] text-zinc-400">
+      <p className="mt-3 text-[11px] text-slate-500">
         ℹ️ ใช้ Diverging Bars รอบแกน 0 แทนการใช้กรอบสมมติ ข้อมูลประกาศย้อนหลัง 2 วันทำการตามธรรมชาติของรายงาน OFR
       </p>
     </div>

@@ -7,6 +7,8 @@ vi.mock('../../api/client', () => ({
   api: {
     getNewsFunnelPending: vi.fn(),
     getNewsFunnelFiltered: vi.fn(),
+    getJobStatus: vi.fn(),
+    getJobOutputs: vi.fn(),
     resumeJob: vi.fn(),
   },
   ApiError: class ApiError extends Error {},
@@ -27,6 +29,18 @@ vi.mock('../LiveTerminal', () => ({
         >
           Trigger Approval
         </button>
+        <button
+          onClick={() =>
+            onAwaitingApproval?.({
+              type: 'pre_run_approval',
+              title: 'News Funnel High-Impact',
+              instruction: '### News Funnel',
+              flow: 'news_funnel',
+            })
+          }
+        >
+          Trigger Pre-Run Approval
+        </button>
       </div>
     )
   },
@@ -35,6 +49,15 @@ vi.mock('../LiveTerminal', () => ({
 describe('KanbanDetailDrawer', () => {
   beforeEach(() => {
     vi.resetAllMocks()
+    vi.mocked(api.getJobOutputs).mockResolvedValue({
+      job_id: 'job-1',
+      status: 'awaiting_approval',
+      executive_summary: '',
+      executive_summary_created_at: 0,
+      specialists: [],
+      last_seq: 0,
+      error_message: null,
+    })
   })
 
   it('triggers onDispatchCard and auto-resumes with pre-selected IDs on awaiting_approval without showing ApprovalPanel', async () => {
@@ -240,6 +263,96 @@ describe('KanbanDetailDrawer', () => {
     expect(screen.queryByRole('switch', { name: /สลับการแจ้งเตือน Discord/i })).toBeNull()
     expect(screen.queryByText('แจ้งเตือนผ่าน Discord')).toBeNull()
     expect(screen.queryByText('โพสต์ลง Discord (นักข่าวส่วนตัว)')).toBeNull()
+  })
+
+  it('never skips pre_run_approval even when news_funnel has pre-selected items, and supports approve/reject', async () => {
+    vi.mocked(api.getNewsFunnelPending).mockResolvedValue([
+      {
+        event_id: 'ev-1',
+        canonical_title: 'News 1',
+        comprehensive_summary: 'Summary 1',
+        macro_impact_score: 8,
+        asset_impact_score: 7,
+        extracted_tickers: [],
+        extracted_themes: [],
+        primary_tags: [],
+        sources: [],
+        links: [],
+      },
+    ])
+    vi.mocked(api.getNewsFunnelFiltered).mockResolvedValue([])
+    vi.mocked(api.getJobStatus).mockResolvedValue({
+      job_id: 'job-pre-1',
+      status: 'awaiting_approval',
+      card_id: 'card-pre-1',
+      error_message: null,
+      current_node: null,
+      interrupt_payload: {
+        type: 'pre_run_approval',
+        title: 'News Funnel High-Impact',
+        instruction: '### News Funnel',
+        flow: 'news_funnel',
+      },
+      log_count: 0,
+      created_at: 1700000000,
+      updated_at: 1700000000,
+    })
+    vi.mocked(api.resumeJob).mockResolvedValue({
+      job_id: 'job-pre-1',
+      status: 'queued',
+      card_id: 'card-pre-1',
+      error_message: null,
+      current_node: null,
+      interrupt_payload: null,
+      log_count: 0,
+      created_at: 1700000000,
+      updated_at: 1700000000,
+    })
+
+    const card = {
+      card_id: 'card-pre-1',
+      title: 'News Funnel High-Impact',
+      prompt: '### News Funnel',
+      flow: 'news_funnel',
+      scope: 'both',
+      column_name: 'approval',
+      display_seq: 3,
+      discord_notify: false,
+      is_verified: false,
+      created_at: 1700000000,
+      updated_at: 1700000000,
+      job_id: 'job-pre-1',
+    }
+
+    render(
+      <KanbanDetailDrawer
+        card={card}
+        onClose={vi.fn()}
+        onCardTransition={vi.fn()}
+        onDispatchCard={vi.fn()}
+      />
+    )
+
+    // Pre-run approval panel must be rendered and resumeJob must NOT be auto-called
+    await waitFor(() => {
+      expect(screen.getByText(/รอการยอมรับก่อนเริ่มรัน/)).toBeInTheDocument()
+    })
+    expect(api.resumeJob).not.toHaveBeenCalled()
+
+    // Click Approve
+    fireEvent.click(screen.getByRole('button', { name: /✅ ยอมรับและเริ่มรัน/ }))
+    await waitFor(() => {
+      expect(api.resumeJob).toHaveBeenCalledWith(
+        'job-pre-1',
+        [],
+        [],
+        undefined,
+        undefined,
+        'approve',
+        undefined,
+        undefined
+      )
+    })
   })
 })
 

@@ -52,7 +52,7 @@ export const MetalsCotCard: React.FC<MetalsCotCardProps> = ({
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-sky-100/60 pb-3">
         <div>
           <div className="flex items-center gap-2">
-            <h3 className="font-semibold text-zinc-900 tracking-tight">
+            <h3 className="font-semibold text-slate-900 tracking-tight">
               {commodity.toUpperCase()} Futures Positioning (CFTC COT)
             </h3>
             <ContextTooltip
@@ -61,11 +61,11 @@ export const MetalsCotCard: React.FC<MetalsCotCardProps> = ({
               howToRead="ดู Net Managed Money: ฝั่ง Long ชนะ แปลว่ากองทุนมองขึ้น ถ้า Percentile 52w เกิน 90% แปลว่าเปิด Long แน่นมาก อาจใกล้จุดกลับตัว"
               impactOnMoney="ช่วยให้เราไม่ไปไล่ซื้อทองคำตอนที่กองทุนทั่วโลกกำลังจ้องทำกำไร"
             />
-            <span className="rounded-full bg-amber-100 px-2 py-0.5 font-mono text-[10px] font-bold text-amber-800">
+            <span className="rounded-full bg-amber-100 px-2 py-0.5 font-mono text-[11px] font-bold text-amber-800">
               DISAGGREGATED
             </span>
           </div>
-          <p className="text-xs text-zinc-500 mt-0.5">
+          <p className="text-xs text-slate-500 mt-0.5">
             CME / NYMEX Futures & Options • Weekly Hedge Fund / Speculative Flows
           </p>
           <div className="mt-2 text-[11px] text-amber-950 bg-amber-50/80 rounded-lg p-2 border border-amber-100/70 font-medium leading-relaxed">
@@ -76,7 +76,7 @@ export const MetalsCotCard: React.FC<MetalsCotCardProps> = ({
         {/* Date Separation (Tuesday as_of vs Friday published) */}
         <div className="text-right">
           <div className="flex items-center gap-2">
-            <span className="rounded-md bg-slate-100 px-2 py-0.5 font-mono text-[11px] font-semibold text-zinc-700">
+            <span className="rounded-md bg-slate-100 px-2 py-0.5 font-mono text-[11px] font-semibold text-slate-700">
               As of: {asOfDate} (Tue)
             </span>
             <span className="rounded-md bg-sky-50 px-2 py-0.5 font-mono text-[11px] font-semibold text-sky-700">
@@ -99,7 +99,7 @@ export const MetalsCotCard: React.FC<MetalsCotCardProps> = ({
       <div className="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-3">
         {/* Net Managed Money */}
         <div className="rounded-xl bg-slate-50/80 p-3 border border-slate-100">
-          <span className="text-[10px] uppercase font-bold text-zinc-400">
+          <span className="text-[11px] uppercase font-bold text-slate-500">
             Managed Money Net Positioning
           </span>
           <p
@@ -109,7 +109,7 @@ export const MetalsCotCard: React.FC<MetalsCotCardProps> = ({
           >
             {isMmBullish ? `+${safeNetMm.toLocaleString()}` : safeNetMm.toLocaleString()}
           </p>
-          <span className="text-[11px] text-zinc-500">
+          <span className="text-[11px] text-slate-500">
             Longs {(managedMoney?.long_contracts ?? 0).toLocaleString()} • Shorts{' '}
             {(managedMoney?.short_contracts ?? 0).toLocaleString()}
           </span>
@@ -117,7 +117,7 @@ export const MetalsCotCard: React.FC<MetalsCotCardProps> = ({
 
         {/* 52-Week Percentile */}
         <div className="rounded-xl bg-slate-50/80 p-3 border border-slate-100">
-          <span className="text-[10px] uppercase font-bold text-zinc-400">
+          <span className="text-[11px] uppercase font-bold text-slate-500">
             52-Week Percentile Rank
           </span>
           <p className="font-mono text-xl font-extrabold text-sky-800 mt-0.5">
@@ -133,23 +133,23 @@ export const MetalsCotCard: React.FC<MetalsCotCardProps> = ({
 
         {/* Total Open Interest */}
         <div className="rounded-xl bg-slate-50/80 p-3 border border-slate-100">
-          <span className="text-[10px] uppercase font-bold text-zinc-400">Total Open Interest</span>
-          <p className="font-mono text-xl font-extrabold text-zinc-900 mt-0.5">
+          <span className="text-[11px] uppercase font-bold text-slate-500">Total Open Interest</span>
+          <p className="font-mono text-xl font-extrabold text-slate-900 mt-0.5">
             {safeOi.toLocaleString()}
           </p>
-          <span className="text-[11px] text-zinc-500">Aggregate CME Market Contracts</span>
+          <span className="text-[11px] text-slate-500">Aggregate CME Market Contracts</span>
         </div>
       </div>
 
       {/* Disaggregated Breakdown Table */}
       <div className="mt-4">
-        <h4 className="text-xs font-bold uppercase tracking-wider text-zinc-600 mb-2">
+        <h4 className="text-xs font-bold uppercase tracking-wider text-slate-600 mb-2">
           Disaggregated Trader Classes
         </h4>
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs">
             <thead>
-              <tr className="border-b border-slate-100 text-[10px] uppercase font-bold text-zinc-400">
+              <tr className="border-b border-slate-100 text-[11px] uppercase font-bold text-slate-500">
                 <th className="pb-1.5 font-semibold">Trader Category</th>
                 <th className="pb-1.5 font-semibold text-right">Longs</th>
                 <th className="pb-1.5 font-semibold text-right">Shorts</th>
@@ -168,11 +168,11 @@ export const MetalsCotCard: React.FC<MetalsCotCardProps> = ({
                 const isNetPos = net >= 0
                 return (
                   <tr key={cls.class_name} className="hover:bg-slate-50/60 transition-colors">
-                    <td className="py-2 text-zinc-800 font-medium font-sans">{cls.class_name}</td>
-                    <td className="py-2 text-right text-zinc-700">
+                    <td className="py-2 text-slate-800 font-medium font-sans">{cls.class_name}</td>
+                    <td className="py-2 text-right text-slate-700">
                       {(cls.long_contracts ?? 0).toLocaleString()}
                     </td>
-                    <td className="py-2 text-right text-zinc-700">
+                    <td className="py-2 text-right text-slate-700">
                       {(cls.short_contracts ?? 0).toLocaleString()}
                     </td>
                     <td
@@ -182,10 +182,10 @@ export const MetalsCotCard: React.FC<MetalsCotCardProps> = ({
                     >
                       {isNetPos ? `+${net.toLocaleString()}` : net.toLocaleString()}
                     </td>
-                    <td className="py-2 text-right text-zinc-500">
+                    <td className="py-2 text-right text-slate-500">
                       {cls.change_long !== undefined ? cls.change_long.toLocaleString() : '—'}
                     </td>
-                    <td className="py-2 text-right text-zinc-500">
+                    <td className="py-2 text-right text-slate-500">
                       {cls.change_short !== undefined ? cls.change_short.toLocaleString() : '—'}
                     </td>
                   </tr>

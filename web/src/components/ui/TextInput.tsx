@@ -17,7 +17,7 @@ const TextInput = forwardRef<HTMLInputElement, Props>(function TextInput(
     <input
       ref={ref}
       {...rest}
-      className={`rounded-xl border border-sky-200 bg-panel text-zinc-900 outline-none shadow-sm shadow-sky-100/40 transition-colors placeholder-zinc-400 focus:border-flow-cyan focus:ring-2 focus:ring-flow-cyan/20 ${SIZE_CLASS[uiSize]} ${className}`}
+      className={`rounded-xl border border-sky-200/85 bg-surface-2 text-slate-900 outline-none shadow-sm transition-colors placeholder:text-slate-400 focus:border-section-accent focus-visible:ring-2 focus-visible:ring-section-accent/25 ${SIZE_CLASS[uiSize]} ${className}`}
     />
   )
 })

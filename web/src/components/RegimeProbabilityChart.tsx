@@ -41,7 +41,7 @@ export default function RegimeProbabilityChart({ probabilities }: Props) {
         const pct = parseProbability(probabilities[name])
         return (
           <div key={name} className="flex items-center gap-3">
-            <span className="w-28 shrink-0 text-sm text-zinc-700">{name}</span>
+            <span className="w-28 shrink-0 text-sm text-slate-700">{name}</span>
             <div className="h-4 flex-1 overflow-hidden rounded-full bg-sky-50">
               {/* square ที่ baseline (0%), โค้งแค่ data-end (ปลายขวา) ตาม mark spec */}
               <div
@@ -49,7 +49,7 @@ export default function RegimeProbabilityChart({ probabilities }: Props) {
                 style={{ width: `${pct}%`, backgroundColor: colorFor(name), animationDelay: `${i * 60}ms` }}
               />
             </div>
-            <span className="w-12 shrink-0 text-right font-mono text-sm text-zinc-500">{pct}%</span>
+            <span className="w-12 shrink-0 text-right font-mono text-sm text-slate-500">{pct}%</span>
           </div>
         )
       })}

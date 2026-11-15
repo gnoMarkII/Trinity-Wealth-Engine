@@ -2,6 +2,7 @@ import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react'
 import ReactMarkdown from 'react-markdown'
 import { api, ApiError } from '../../api/client'
 import type { ApprovalPayload, KanbanCardDTO } from '../../api/types'
+import { BoltStrategyIcon, CloseIcon } from '../ui/AppIcons'
 import LiveTerminal from '../LiveTerminal'
 import ApprovalPanel from '../ApprovalPanel'
 import NewsFunnelPromptViewer from './NewsFunnelPromptViewer'
@@ -80,6 +81,23 @@ export default function KanbanDetailDrawer({
   }, [card?.card_id])
 
   useEffect(() => {
+    if (!card?.job_id || card.column_name !== 'approval' || approvalPayload) return
+    const getStatus = api.getJobStatus
+    if (!getStatus) return
+    let cancelled = false
+    getStatus(card.job_id)
+      .then((dto) => {
+        if (!cancelled && dto.status === 'awaiting_approval' && dto.interrupt_payload) {
+          setApprovalPayload(dto.interrupt_payload)
+        }
+      })
+      .catch(() => {})
+    return () => {
+      cancelled = true
+    }
+  }, [card?.card_id, card?.job_id, card?.column_name, approvalPayload])
+
+  useEffect(() => {
     return () => {
       if (outputsRefreshTimer.current) window.clearTimeout(outputsRefreshTimer.current)
     }
@@ -147,7 +165,7 @@ export default function KanbanDetailDrawer({
     approvedYoutubeLinks: string[],
     approvedEventIds?: string[],
     approvedPitchIds?: string[],
-    action: 'approve' | 'refresh_sources' = 'approve',
+    action: 'approve' | 'refresh_sources' | 'reject' = 'approve',
     unverifiedDraftSelections?: import('../../api/types').UnverifiedDraftSelection[],
     pitchPresentationStyles?: Record<string, string>
   ) {
@@ -158,9 +176,11 @@ export default function KanbanDetailDrawer({
       await api.resumeJob(card.job_id, approvedNewsLinks, approvedYoutubeLinks, approvedEventIds, approvedPitchIds, action, unverifiedDraftSelections, pitchPresentationStyles)
       setApprovalPayload(null)
       onCardTransition()
-      setTerminalKey((k) => k + 1)
-      setTerminalCollapsed(false)
-      setOutputsRefreshVersion((version) => version + 1)
+      if (action !== 'reject') {
+        setTerminalKey((k) => k + 1)
+        setTerminalCollapsed(false)
+        setOutputsRefreshVersion((version) => version + 1)
+      }
     } catch (e) {
       setError(e instanceof ApiError ? e.message : 'อนุมัติไม่สำเร็จ')
     } finally {
@@ -169,7 +189,11 @@ export default function KanbanDetailDrawer({
   }
 
   function handleAwaitingApproval(payload: ApprovalPayload) {
-    if (card?.flow === 'news_funnel' && preSelectedEventIds !== null) {
+    if (
+      payload.type === 'news_funnel_approval' &&
+      card?.flow === 'news_funnel' &&
+      preSelectedEventIds !== null
+    ) {
       const selectedIds = preSelectedEventIds
       setPreSelectedEventIds(null)
       handleApprove([], [], selectedIds)
@@ -183,7 +207,7 @@ export default function KanbanDetailDrawer({
       style={embedded ? undefined : { width }}
       className={
         embedded
-          ? 'flex h-full w-full min-h-0 flex-col bg-surface border-l border-zinc-200 overflow-hidden'
+          ? 'flex h-full w-full min-h-0 flex-col bg-surface border-l border-slate-200 overflow-hidden'
           : 'flow-panel sticky top-0 -mr-5 -my-5 flex h-screen shrink-0 border-r-0 sm:-mr-8 sm:-my-8 overflow-hidden'
       }
     >
@@ -195,7 +219,7 @@ export default function KanbanDetailDrawer({
           }}
           className={`group -ml-1.5 w-3 shrink-0 cursor-col-resize touch-none ${resizing ? 'bg-sky-400/20' : ''}`}
         >
-          <div className="mx-auto h-full w-px bg-zinc-200 transition-colors group-hover:bg-sky-400/60" />
+          <div className="mx-auto h-full w-px bg-slate-200 transition-colors group-hover:bg-sky-400/60" />
         </div>
       )}
 
@@ -204,14 +228,14 @@ export default function KanbanDetailDrawer({
           {card ? (
             <div className="flex items-center gap-2">
               {card.display_seq != null && (
-                <span className="font-mono text-xs text-zinc-400">#AG-{card.display_seq}</span>
+                <span className="font-mono text-xs text-slate-500">#AG-{card.display_seq}</span>
               )}
-              <span className="rounded border border-purple-200/60 bg-purple-50 px-1.5 py-0.5 text-[10px] text-purple-700">
+              <span className="rounded border border-sky-200/60 bg-sky-50 px-1.5 py-0.5 text-[11px] text-blue-700">
                 {FLOW_TAG[card.flow] ?? `#${card.flow}`}
               </span>
             </div>
           ) : (
-            <span className="text-xs font-semibold text-zinc-500">Task Details</span>
+            <span className="text-xs font-semibold text-slate-500">Task Details</span>
           )}
           <div className="flex items-center gap-1.5">
             {card && onAskAi && (
@@ -228,20 +252,21 @@ export default function KanbanDetailDrawer({
               <button
                 type="button"
                 onClick={() => onWatchPipeline(card.job_id!)}
-                className="inline-flex items-center gap-1 rounded bg-purple-50 px-2 py-1 text-xs font-medium text-purple-700 border border-purple-200 hover:bg-purple-100 transition-colors"
+                className="inline-flex items-center gap-1 rounded bg-sky-50 px-2 py-1 text-xs font-medium text-blue-700 border border-sky-200 hover:bg-sky-100 transition-colors"
                 title="สลับไปดูสถานะใน Live Pipeline"
               >
-                <span>⚡ Pipeline</span>
+                <BoltStrategyIcon className="h-3.5 w-3.5 shrink-0" />
+                <span>Pipeline</span>
               </button>
             )}
             {card && (
               <button
                 onClick={onClose}
-                className="rounded p-1 text-zinc-400 transition-colors hover:bg-surface-strong hover:text-zinc-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-sky-500"
+                className="rounded-lg p-1.5 text-slate-500 transition-colors hover:bg-surface-strong hover:text-slate-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-sky-500"
                 title="ยกเลิกการเลือก"
                 aria-label="ยกเลิกการเลือก"
               >
-                ✕
+                <CloseIcon className="h-4 w-4" />
               </button>
             )}
           </div>
@@ -249,7 +274,7 @@ export default function KanbanDetailDrawer({
 
         <div className="min-h-0 flex-1 space-y-4 overflow-y-auto p-4 custom-scrollbar overscroll-contain">
           {!card ? (
-            <div className="flex h-full flex-col items-center justify-center gap-2 text-center text-zinc-400">
+            <div className="flex h-full flex-col items-center justify-center gap-2 text-center text-slate-500">
               <span className="text-2xl">🗂️</span>
               <p className="text-xs">คลิกการ์ดในบอร์ดเพื่อดูรายละเอียด</p>
             </div>
@@ -259,8 +284,8 @@ export default function KanbanDetailDrawer({
                 <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">{error}</p>
               )}
               <div>
-                <h2 className="text-sm font-medium leading-snug text-zinc-900">{card.title}</h2>
-                <p className="mt-1 text-xs text-zinc-500">
+                <h2 className="text-sm font-medium leading-snug text-slate-900">{card.title}</h2>
+                <p className="mt-1 text-xs text-slate-500">
                   สร้างเมื่อ {new Date(card.created_at * 1000).toLocaleString('th-TH')}
                 </p>
                 {isDiscordSupportedFlow(card.flow) && (
@@ -270,7 +295,7 @@ export default function KanbanDetailDrawer({
                         className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg transition-colors ${
                           card.discord_notify
                             ? 'bg-[#5865F2] text-white shadow-sm'
-                            : 'bg-zinc-200 text-zinc-400'
+                            : 'bg-slate-200 text-slate-500'
                         }`}
                       >
                         <svg className="h-4 w-4 fill-current" viewBox="0 0 24 24">
@@ -279,22 +304,22 @@ export default function KanbanDetailDrawer({
                       </div>
                       <div>
                         <div className="flex items-center gap-1.5">
-                          <span className="text-xs font-semibold text-zinc-800">
+                          <span className="text-xs font-semibold text-slate-800">
                             {card.flow === 'notebooklm'
                               ? 'โพสต์ลง Discord (นักข่าวส่วนตัว)'
                               : 'แจ้งเตือนผ่าน Discord'}
                           </span>
                           <span
-                            className={`inline-flex rounded px-1.5 py-0.5 text-[10px] font-bold ${
+                            className={`inline-flex rounded px-1.5 py-0.5 text-[11px] font-bold ${
                               card.discord_notify
                                 ? 'bg-emerald-100 text-emerald-700'
-                                : 'bg-zinc-100 text-zinc-500'
+                                : 'bg-slate-100 text-slate-500'
                             }`}
                           >
                             {card.discord_notify ? 'เปิด' : 'ปิด'}
                           </span>
                         </div>
-                        <p className="text-[11px] text-zinc-500">
+                        <p className="text-[11px] text-slate-500">
                           {card.flow === 'notebooklm'
                             ? 'ส่งไฟล์เสียง Podcast เข้าห้อง Discord ทันทีเมื่อสร้างเสร็จ'
                             : 'ส่งสรุปการวิเคราะห์/ข่าวไปยัง Discord Webhook'}
@@ -316,7 +341,7 @@ export default function KanbanDetailDrawer({
                         }
                       }}
                       className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus-visible:outline focus-visible:outline-2 focus-visible:outline-sky-500 ${
-                        card.discord_notify ? 'bg-[#5865F2]' : 'bg-zinc-300'
+                        card.discord_notify ? 'bg-[#5865F2]' : 'bg-slate-300'
                       }`}
                     >
                       <span
@@ -372,7 +397,7 @@ export default function KanbanDetailDrawer({
                       isExecOrDone={!!card.job_id}
                     />
                   ) : (
-                    <div className="mt-3.5 rounded-xl border border-edge bg-surface p-3.5 text-xs text-zinc-700 leading-relaxed shadow-sm">
+                    <div className="mt-3.5 rounded-xl border border-edge bg-surface p-3.5 text-xs text-slate-700 leading-relaxed shadow-sm">
                       <ReactMarkdown
                         components={{
                           a: ({ children, href }) => (
@@ -380,11 +405,11 @@ export default function KanbanDetailDrawer({
                               {children}
                             </a>
                           ),
-                          code: ({ children }) => <code className="rounded bg-surface-strong px-1 py-0.5 font-mono text-[0.84em] text-zinc-700">{children}</code>,
-                          h1: ({ children }) => <h4 className="mt-4 text-sm font-bold text-zinc-900 first:mt-0">{children}</h4>,
-                          h2: ({ children }) => <h4 className="mt-4 text-sm font-bold text-zinc-900 first:mt-0">{children}</h4>,
+                          code: ({ children }) => <code className="rounded bg-surface-strong px-1 py-0.5 font-mono text-[0.84em] text-slate-700">{children}</code>,
+                          h1: ({ children }) => <h4 className="mt-4 text-sm font-bold text-slate-900 first:mt-0">{children}</h4>,
+                          h2: ({ children }) => <h4 className="mt-4 text-sm font-bold text-slate-900 first:mt-0">{children}</h4>,
                           h3: ({ children }) => <h5 className="mt-3 text-xs font-bold text-sky-900 first:mt-0">{children}</h5>,
-                          h4: ({ children }) => <h6 className="mt-3 text-xs font-bold text-zinc-800 first:mt-0">{children}</h6>,
+                          h4: ({ children }) => <h6 className="mt-3 text-xs font-bold text-slate-800 first:mt-0">{children}</h6>,
                           li: ({ children }) => <li className="ml-4 list-disc pl-1 mt-0.5">{children}</li>,
                           p: ({ children }) => <p className="mt-2 first:mt-0 leading-relaxed">{children}</p>,
                           ul: ({ children }) => <ul className="mt-1.5 space-y-1">{children}</ul>,
@@ -400,17 +425,20 @@ export default function KanbanDetailDrawer({
 
               {card.flow === 'notebooklm' ? (
                 <div className="space-y-3">
+                  {approvalPayload && (
+                    <ApprovalPanel payload={approvalPayload} onApprove={handleApprove} submitting={approving} />
+                  )}
                   <NotebookLMCardDetail card={card} onCardTransition={onCardTransition} />
                   {card.job_id && (
                     terminalCollapsed ? (
                       <details className="rounded-xl border border-edge bg-surface p-3">
-                        <summary className="cursor-pointer text-xs font-medium text-zinc-600">Execution trace</summary>
+                        <summary className="cursor-pointer text-xs font-medium text-slate-600">Execution trace</summary>
                         <div className="mt-3">
-                          <LiveTerminal key={terminalKey} jobId={card.job_id} onStatusChange={handleTerminalStatusChange} />
+                          <LiveTerminal key={terminalKey} jobId={card.job_id} onStatusChange={handleTerminalStatusChange} onAwaitingApproval={handleAwaitingApproval} />
                         </div>
                       </details>
                     ) : (
-                      <LiveTerminal key={terminalKey} jobId={card.job_id} onStatusChange={handleTerminalStatusChange} />
+                      <LiveTerminal key={terminalKey} jobId={card.job_id} onStatusChange={handleTerminalStatusChange} onAwaitingApproval={handleAwaitingApproval} />
                     )
                   )}
                 </div>
@@ -426,7 +454,7 @@ export default function KanbanDetailDrawer({
                         />
                       </Suspense>
                       <details className="rounded-xl border border-edge bg-surface p-3">
-                        <summary className="cursor-pointer text-xs font-medium text-zinc-600">Execution trace</summary>
+                        <summary className="cursor-pointer text-xs font-medium text-slate-600">Execution trace</summary>
                         <div className="mt-3">
                           <LiveTerminal
                             key={terminalKey}
@@ -461,7 +489,7 @@ export default function KanbanDetailDrawer({
                   )}
                 </div>
               ) : (
-                <p className="rounded-lg border border-edge bg-surface p-3 text-xs text-zinc-500">
+                <p className="rounded-lg border border-edge bg-surface p-3 text-xs text-slate-500">
                   การ์ดนี้ยังไม่ได้ถูก dispatch — กดปุ่ม ▶ บนการ์ดใน Backlog เพื่อเริ่มทำงาน
                 </p>
               )}

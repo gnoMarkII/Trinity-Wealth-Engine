@@ -31,14 +31,14 @@ export default function PortfolioWatchlistTab({ portfolioId, items, lastUpdated,
     <div className="space-y-6">
       <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
         <div>
-          <h3 className="text-base font-bold text-zinc-900">Watchlist ({items.length} รายการ)</h3>
-          <p className="text-xs text-zinc-500">
+          <h3 className="text-base font-bold text-slate-900">Watchlist ({items.length} รายการ)</h3>
+          <p className="text-xs text-slate-500">
             รายการสินทรัพย์ที่เฝ้าติดตามราคาเป้าหมาย (Target Price) และบันทึกข้อสังเกตจาก Trading Journal
           </p>
         </div>
         <div className="flex items-center gap-3">
           {lastUpdated && (
-            <span className="text-xs text-zinc-400">
+            <span className="text-xs text-slate-500">
               อัปเดตล่าสุด: {new Date(lastUpdated).toLocaleString('th-TH')}
             </span>
           )}
@@ -68,7 +68,7 @@ export default function PortfolioWatchlistTab({ portfolioId, items, lastUpdated,
         <div className="overflow-x-auto custom-scrollbar">
           <table className="w-full text-left text-sm min-w-[700px]">
             <thead>
-              <tr className="border-b border-sky-100 bg-zinc-50/80 text-xs font-semibold uppercase tracking-wider text-zinc-500 whitespace-nowrap">
+              <tr className="border-b border-sky-100 bg-slate-50/80 text-xs font-semibold uppercase tracking-wider text-slate-500 whitespace-nowrap">
                 <th className="px-6 py-3.5 whitespace-nowrap">Symbol</th>
                 <th className="px-6 py-3.5 whitespace-nowrap">Asset Type</th>
                 <th className="px-6 py-3.5 whitespace-nowrap">Strategy Bucket</th>
@@ -81,7 +81,7 @@ export default function PortfolioWatchlistTab({ portfolioId, items, lastUpdated,
             <tbody className="divide-y divide-sky-50">
               {items.map((item) => (
                 <tr key={item.symbol} className="hover:bg-sky-50/50 transition-colors">
-                  <td className="px-6 py-4 font-bold text-zinc-900">{item.symbol}</td>
+                  <td className="px-6 py-4 font-bold text-slate-900">{item.symbol}</td>
                   <td className="px-6 py-4">
                     <span className="inline-block rounded-md bg-sky-50 px-2 py-0.5 text-xs font-semibold text-sky-800">
                       {item.asset_type}
@@ -89,11 +89,11 @@ export default function PortfolioWatchlistTab({ portfolioId, items, lastUpdated,
                   </td>
                   <td className="px-6 py-4">
                     {item.suggested_bucket_id ? (
-                      <span className="inline-block rounded-md bg-indigo-50 px-2 py-0.5 text-xs font-semibold text-indigo-700 font-mono">
+                      <span className="inline-block rounded-md bg-blue-50 px-2 py-0.5 text-xs font-semibold text-blue-700 font-mono">
                         {item.suggested_bucket_id}
                       </span>
                     ) : (
-                      <span className="text-zinc-400 text-xs">-</span>
+                      <span className="text-slate-500 text-xs">-</span>
                     )}
                   </td>
                   <td className="px-6 py-4 text-right font-mono tabular-nums font-bold text-flow-blue">
@@ -101,8 +101,8 @@ export default function PortfolioWatchlistTab({ portfolioId, items, lastUpdated,
                       ? item.target_price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
                       : 'N/A'}
                   </td>
-                  <td className="px-6 py-4 text-xs font-mono tabular-nums text-zinc-500">{item.added_date}</td>
-                  <td className="px-6 py-4 text-xs text-zinc-600 max-w-xs truncate">{item.notes || '-'}</td>
+                  <td className="px-6 py-4 text-xs font-mono tabular-nums text-slate-500">{item.added_date}</td>
+                  <td className="px-6 py-4 text-xs text-slate-600 max-w-xs truncate">{item.notes || '-'}</td>
                   <td className="px-6 py-4 text-right space-x-2">
                     {onSuccess && (
                       <>
@@ -127,7 +127,7 @@ export default function PortfolioWatchlistTab({ portfolioId, items, lastUpdated,
               ))}
               {items.length === 0 && (
                 <tr>
-                  <td colSpan={7} className="py-16 text-center text-zinc-400">
+                  <td colSpan={7} className="py-16 text-center text-slate-500">
                     ยังไม่มีรายการ Watchlist ในขณะนี้
                   </td>
                 </tr>

@@ -172,3 +172,83 @@ def test_catalyst_status_and_direction_enums():
     assert restored.status == "CONFIRMED"
     assert restored.direction == "AHEAD"
 
+
+def test_validate_ticker_allows_thai_mutual_fund_symbols_and_blocks_traversal():
+    from core.security import validate_ticker
+    import pytest
+
+    assert validate_ticker("SCBGVALUE(E)") == "SCBGVALUE(E)"
+    assert validate_ticker("SCBS&P500E") == "SCBS&P500E"
+    assert validate_ticker("INTC") == "INTC"
+
+    for bad in ("../INTC", "INTC/foo", "INTC\\bar", ".hidden", "INTC;rm -rf"):
+        with pytest.raises(ValueError):
+            validate_ticker(bad)
+
+
+def test_thesis_file_store_lists_fund_symbols_and_skips_bad_files(tmp_path):
+    from tools.thesis.thesis_file_store import ThesisFileStore
+    from core.thesis.models import FalsifierRule, ThesisClaimRecord
+    from core.thesis.evidence_taxonomy import EvidenceTier
+
+    store = ThesisFileStore(data_dir=tmp_path / "data", vault_dir=tmp_path / "vault")
+    claim_fund = ThesisClaimRecord.create(
+        claim_id="TH-SCB-v1",
+        ticker="SCBGVALUE(E)",
+        version=1,
+        as_of_utc="2026-11-12T10:00:00Z",
+        claim_statement="Thai value equity fund thesis",
+        evidence_tier=EvidenceTier.DOCUMENTED,
+    )
+    claim_intc = ThesisClaimRecord.create(
+        claim_id="TH-INTC-v1",
+        ticker="INTC",
+        version=1,
+        as_of_utc="2026-11-12T16:27:06Z",
+        claim_statement="Intel turnaround watchlist thesis",
+        falsifiers=[
+            FalsifierRule(
+                falsifier_id="FAL-INTC-PRICE",
+                metric_name="current_price",
+                operator="<",
+                threshold_value=Decimal("54.17"),
+                unit="USD",
+            )
+        ],
+        evidence_tier=EvidenceTier.INFERRED,
+    )
+    store.save_claim(claim_fund)
+    store.save_claim(claim_intc)
+    # Write a corrupted file to verify list_all_active_claims does not abort remaining claims
+    (tmp_path / "data" / "BROKEN_theses.json").write_text("{not valid json", encoding="utf-8")
+
+    active = store.list_all_active_claims()
+    tickers = {c.ticker for c in active}
+    assert "SCBGVALUE(E)" in tickers
+    assert "INTC" in tickers
+
+
+def test_get_thesis_coverage_includes_monitored_theses_newest_first():
+    store = InMemoryThesisStore()
+    exc_store = InMemoryExceptionStore()
+    svc = ThesisApplicationService(store=store, exception_store=exc_store)
+
+    svc.record_new_thesis(
+        ticker="NVDA",
+        claim_statement="Portfolio stock thesis",
+        as_of_utc="2026-11-01T00:00:00Z",
+    )
+    svc.record_new_thesis(
+        ticker="INTC",
+        claim_statement="Watchlist stock thesis",
+        as_of_utc="2026-11-12T16:27:06Z",
+    )
+
+    cov = svc.get_thesis_coverage(["NVDA", "SCBGVALUE(E)"])
+    assert cov["covered_count"] == 1
+    monitored = cov["monitored_theses"]
+    assert monitored[0]["ticker"] == "INTC"
+    assert monitored[0]["in_portfolio"] is False
+    assert monitored[1]["ticker"] == "NVDA"
+    assert monitored[1]["in_portfolio"] is True
+

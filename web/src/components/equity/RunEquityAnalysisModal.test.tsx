@@ -158,7 +158,7 @@ describe('RunEquityAnalysisModal', () => {
     const input = screen.getByPlaceholderText('เช่น AAPL, NVDA, PTT.BK')
     fireEvent.change(input, { target: { value: 'aapl' } })
 
-    const submitBtn = screen.getByRole('button', { name: '🚀 สร้างการ์ดและเริ่มวิเคราะห์' })
+    const submitBtn = screen.getByRole('button', { name: '📋 สร้างการ์ด (รอกดยอมรับก่อนรัน)' })
     fireEvent.click(submitBtn)
 
     await waitFor(() => {
@@ -172,7 +172,8 @@ describe('RunEquityAnalysisModal', () => {
         'วิเคราะห์หุ้น AAPL (US) และดึงข่าวล่าสุดพร้อมประเมิน Valuation',
         'card-123',
         'manager',
-        'both'
+        'both',
+        true
       )
       expect(handleDispatched).toHaveBeenCalledWith('job-456', 'card-123', 'AAPL')
       expect(handleClose).toHaveBeenCalled()

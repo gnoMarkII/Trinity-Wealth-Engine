@@ -53,13 +53,25 @@ class YFinancePositionReviewAdapter:
             if rev_g is not None:
                 result["revenue_growth_pct"] = float(rev_g) * 100.0
 
-            # Upcoming earnings date from calendar
+            # Upcoming earnings date from calendar (ignore already-elapsed dates)
             cal = getattr(tk, "calendar", None)
             if cal is not None and not (hasattr(cal, "empty") and cal.empty):
                 if isinstance(cal, dict) and "Earnings Date" in cal:
                     ed = cal["Earnings Date"]
                     if ed and len(ed) > 0:
-                        result["upcoming_earnings_date"] = str(ed[0])[:10]
+                        from datetime import date, datetime
+                        today_d = date.today()
+                        future_dates = []
+                        for item in ed:
+                            try:
+                                item_str = str(item)[:10]
+                                item_d = datetime.strptime(item_str, "%Y-%m-%d").date()
+                                if item_d >= today_d:
+                                    future_dates.append(item_str)
+                            except Exception:
+                                pass
+                        if future_dates:
+                            result["upcoming_earnings_date"] = min(future_dates)
 
             # Try to fetch historical EPS (1Y and 3Y ago) from income_stmt
             try:

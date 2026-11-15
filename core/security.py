@@ -40,15 +40,22 @@ def anonymize_pii(text: str) -> tuple[str, bool]:
     return result, result != text
 
 
-_TICKER_REGEX = re.compile(r"^[A-Za-z0-9_\.\-]+$")
+_TICKER_REGEX = re.compile(r"^[A-Za-z0-9_\.\-\(\)&]+$")
 
 
 def validate_ticker(ticker: str) -> str:
-    """Validates that a ticker is alphanumeric with standard separators and has no path traversal."""
+    """Validates that a ticker is alphanumeric with standard symbol characters and has no path traversal."""
     if not isinstance(ticker, str):
         raise ValueError(f"Ticker must be a string, got {type(ticker).__name__}")
     clean = ticker.strip().upper()
-    if not clean or not _TICKER_REGEX.match(clean) or ".." in clean or "/" in clean or "\\" in clean:
+    if (
+        not clean
+        or clean.startswith(".")
+        or not _TICKER_REGEX.match(clean)
+        or ".." in clean
+        or "/" in clean
+        or "\\" in clean
+    ):
         raise ValueError(f"Invalid ticker or path traversal attempt detected: {ticker!r}")
     return clean
 

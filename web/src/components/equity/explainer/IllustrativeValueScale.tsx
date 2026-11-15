@@ -34,11 +34,11 @@ export const IllustrativeValueScale: React.FC<IllustrativeValueScaleProps> = ({
   return (
     <div className={`rounded-xl border border-sky-100 bg-sky-50/40 p-3.5 text-xs ${className}`}>
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 border-b border-sky-100 pb-2">
-        <span className="font-bold text-zinc-900 flex items-center gap-1.5">
+        <span className="font-bold text-slate-900 flex items-center gap-1.5">
           <span>🏷️</span>
           <span>โมเดลเปรียบเทียบมูลค่า 100 บาท (Illustrative 100-Unit Scale)</span>
         </span>
-        <span className="font-mono text-[11px] text-zinc-500">
+        <span className="font-mono text-[11px] text-slate-500">
           ราคาตลาด {currencySymbol}{currentPrice.toFixed(2)} vs มูลค่าแท้จริง {currencySymbol}{intrinsicValue.toFixed(2)}
         </span>
       </div>
@@ -57,10 +57,10 @@ export const IllustrativeValueScale: React.FC<IllustrativeValueScaleProps> = ({
                 <span className="font-mono">+{discountOrPremiumPct}%</span>
               </span>
             ) : (
-              <span className="font-bold text-zinc-800">⚪ ราคาเหมาะสมกับมูลค่าพื้นฐานพอดี</span>
+              <span className="font-bold text-slate-800">⚪ ราคาเหมาะสมกับมูลค่าพื้นฐานพอดี</span>
             )}
           </div>
-          <span className="font-mono font-bold text-zinc-900 text-sm">
+          <span className="font-mono font-bold text-slate-900 text-sm">
             {normalizedPrice} / 100 บาท
           </span>
         </div>
@@ -75,13 +75,13 @@ export const IllustrativeValueScale: React.FC<IllustrativeValueScaleProps> = ({
           />
           {/* Target Fair Value Marker (at 100 / 150 = 66.6%) */}
           <div
-            className="absolute top-0 bottom-0 w-0.5 bg-zinc-800 shadow-sm"
+            className="absolute top-0 bottom-0 w-0.5 bg-slate-800 shadow-sm"
             style={{ left: `${100 / 1.5}%` }}
             title="มูลค่าแท้จริง 100 บาท (Fair Value)"
           />
         </div>
 
-        <p className="text-[11px] text-zinc-600 leading-relaxed">
+        <p className="text-[11px] text-slate-600 leading-relaxed">
           {isDiscount ? (
             <>
               💡 <strong>แปลภาษาคน:</strong> ถ้ามูลค่าแท้จริงของหุ้นตัวนี้คือ <strong>100 บาท</strong> วันนี้ตลาดกำลังขายลดราคาให้คุณที่ <strong>{normalizedPrice} บาท</strong> (ประหยัดไป {Math.abs(discountOrPremiumPct)} บาท เป็นแต้มต่อความปลอดภัย)

@@ -225,7 +225,7 @@ export default function ManagerLiveExecutionView({
           <h3 className="text-sm font-bold text-sky-950 mb-1">
             พร้อมติดตามความคืบหน้างานวิจัย
           </h3>
-          <p className="text-xs text-zinc-500 leading-relaxed max-w-xs mx-auto mb-4">
+          <p className="text-xs text-slate-500 leading-relaxed max-w-xs mx-auto mb-4">
             ยังไม่มีงานวิจัยที่กำลังทำงานอยู่ เมื่อคุณสั่งให้ AI วิเคราะห์ภาพรวมเศรษฐกิจหรือหุ้นรายตัว รายละเอียดขั้นตอนจะแสดงสดที่นี่ทันที
           </p>
 
@@ -276,16 +276,16 @@ export default function ManagerLiveExecutionView({
       {/* Job Selector Switcher (if multiple jobs available) */}
       {allJobIds.length > 1 && (
         <div className="flex items-center gap-2 overflow-x-auto pb-1 custom-scrollbar">
-          <span className="text-[10px] font-bold text-zinc-400 shrink-0">เลือกงาน:</span>
+          <span className="text-[11px] font-bold text-slate-500 shrink-0">เลือกงาน:</span>
           {allJobIds.map((id) => (
             <button
               key={id}
               type="button"
               onClick={() => onSelectJob?.(id)}
-              className={`shrink-0 rounded-lg px-2 py-0.5 text-[10px] font-mono transition-all ${
+              className={`shrink-0 rounded-lg px-2 py-0.5 text-[11px] font-mono transition-all ${
                 id === jobId
                   ? 'border border-sky-300 bg-sky-100 text-sky-900 font-bold shadow-sm'
-                  : 'border border-zinc-200 bg-white/70 text-zinc-600 hover:bg-sky-50'
+                  : 'border border-slate-200 bg-white/70 text-slate-600 hover:bg-sky-50'
               }`}
             >
               {id.slice(0, 8)}...
@@ -310,7 +310,7 @@ export default function ManagerLiveExecutionView({
                   type="button"
                   onClick={handleCopyJobId}
                   title="คลิกเพื่อคัดลอก Job ID"
-                  className="font-mono text-[10px] text-zinc-500 hover:text-sky-700 flex items-center gap-1 transition-colors"
+                  className="font-mono text-[11px] text-slate-500 hover:text-sky-700 flex items-center gap-1 transition-colors"
                 >
                   <span>ID: {jobId.slice(0, 14)}...</span>
                   <span className="text-[11px]">{copied ? '✓' : '📋'}</span>
@@ -322,7 +322,7 @@ export default function ManagerLiveExecutionView({
           {/* Status Badge & Elapsed Timer */}
           <div className="flex flex-col items-end gap-1 shrink-0">
             <span
-              className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[10px] font-semibold transition-all ${
+              className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[11px] font-semibold transition-all ${
                 isDone
                   ? 'border border-emerald-200 bg-emerald-50 text-emerald-700'
                   : isError
@@ -346,7 +346,7 @@ export default function ManagerLiveExecutionView({
                   : 'กำลังประมวลผล'}
             </span>
 
-            <span className="font-mono text-[10px] text-zinc-400 flex items-center gap-1">
+            <span className="font-mono text-[11px] text-slate-500 flex items-center gap-1">
               <span>⏱️</span>
               <span>{formattedTimer}</span>
             </span>
@@ -355,7 +355,7 @@ export default function ManagerLiveExecutionView({
 
         {/* Shimmering Progress Bar */}
         <div className="mt-3">
-          <div className="flex justify-between text-[10px] font-semibold text-zinc-500 mb-1">
+          <div className="flex justify-between text-[11px] font-semibold text-slate-500 mb-1">
             <span>ความคืบหน้ารวม</span>
             <span className="font-mono text-sky-800">{progressPercent}%</span>
           </div>
@@ -377,10 +377,10 @@ export default function ManagerLiveExecutionView({
       {/* Visual Multi-Stage Workflow Pipeline */}
       <div className="rounded-2xl border border-sky-100 bg-white/80 p-3.5 shadow-sm">
         <div className="flex items-center justify-between mb-3 px-0.5">
-          <h4 className="text-[10px] font-bold uppercase tracking-wider text-zinc-500 flex items-center gap-1">
+          <h4 className="text-[11px] font-bold uppercase tracking-wider text-slate-500 flex items-center gap-1">
             <span>🗺️ ลำดับขั้นตอนการทำงาน (Workflow Pipeline)</span>
           </h4>
-          <span className="text-[10px] font-mono text-zinc-400">
+          <span className="text-[11px] font-mono text-slate-500">
             {completedStagesCount}/{pipeline.length} เสร็จสิ้น
           </span>
         </div>
@@ -408,7 +408,7 @@ export default function ManagerLiveExecutionView({
                       ? 'border-sky-300 bg-gradient-to-r from-sky-50 to-cyan-50/80 shadow-[0_2px_12px_rgba(14,165,233,0.15)] ring-2 ring-sky-300/60 animate-card-in'
                       : isStageCompleted
                         ? 'border-emerald-100 bg-emerald-50/50 text-emerald-950'
-                        : 'border-zinc-100 bg-white/50 opacity-60'
+                        : 'border-slate-100 bg-white/50 opacity-60'
                   }`}
                 >
                   <div className="flex items-center gap-2.5 min-w-0">
@@ -419,7 +419,7 @@ export default function ManagerLiveExecutionView({
                           ? 'bg-gradient-to-tr from-sky-400 to-cyan-500 text-white shadow-[0_2px_8px_rgba(14,165,233,0.35)] scale-105'
                           : isStageCompleted
                             ? 'bg-emerald-100 text-emerald-700'
-                            : 'bg-zinc-100 text-zinc-400'
+                            : 'bg-slate-100 text-slate-500'
                       }`}
                     >
                       {isStageCompleted ? (
@@ -445,13 +445,13 @@ export default function ManagerLiveExecutionView({
                               ? 'text-sky-950 font-bold'
                               : isStageCompleted
                                 ? 'text-emerald-950 font-semibold'
-                                : 'text-zinc-600'
+                                : 'text-slate-600'
                           }`}
                         >
                           {stage.label}
                         </span>
                       </div>
-                      <p className="text-[10px] text-zinc-400 truncate">
+                      <p className="text-[11px] text-slate-500 truncate">
                         {stage.sublabel}
                       </p>
                     </div>
@@ -460,16 +460,16 @@ export default function ManagerLiveExecutionView({
                   {/* Stage Pill */}
                   <div className="shrink-0">
                     {isStageActive ? (
-                      <span className="inline-flex items-center gap-1 rounded-full border border-sky-300 bg-sky-100 px-2 py-0.5 text-[9px] font-bold text-sky-800 shadow-sm">
+                      <span className="inline-flex items-center gap-1 rounded-full border border-sky-300 bg-sky-100 px-2 py-0.5 text-[11px] font-bold text-sky-800 shadow-sm">
                         <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-sky-600" />
                         กำลังรัน
                       </span>
                     ) : isStageCompleted ? (
-                      <span className="inline-flex items-center gap-1 rounded-full border border-emerald-200 bg-emerald-100/70 px-1.5 py-0.5 text-[9px] font-semibold text-emerald-800">
+                      <span className="inline-flex items-center gap-1 rounded-full border border-emerald-200 bg-emerald-100/70 px-1.5 py-0.5 text-[11px] font-semibold text-emerald-800">
                         เสร็จแล้ว
                       </span>
                     ) : (
-                      <span className="inline-flex items-center rounded-full px-1.5 py-0.5 text-[9px] font-medium text-zinc-400">
+                      <span className="inline-flex items-center rounded-full px-1.5 py-0.5 text-[11px] font-medium text-slate-500">
                         รอเริ่ม
                       </span>
                     )}
@@ -492,14 +492,14 @@ export default function ManagerLiveExecutionView({
               ผลลัพธ์บทวิเคราะห์โดยสรุป
             </h4>
           </div>
-          <p className="text-[11px] leading-relaxed text-zinc-700 line-clamp-4 bg-white/70 p-2.5 rounded-xl border border-emerald-100">
+          <p className="text-[11px] leading-relaxed text-slate-700 line-clamp-4 bg-white/70 p-2.5 rounded-xl border border-emerald-100">
             {outputs.executive_summary}
           </p>
 
           <div className="mt-2.5 flex items-center justify-end gap-2">
             <a
               href={isEquity ? '/equity' : '/macro'}
-              className="rounded-lg border border-emerald-300 bg-emerald-600 px-2.5 py-1 text-[10px] font-bold text-white shadow-sm hover:bg-emerald-700 transition-colors"
+              className="rounded-lg border border-emerald-300 bg-emerald-600 px-2.5 py-1 text-[11px] font-bold text-white shadow-sm hover:bg-emerald-700 transition-colors"
             >
               เปิดดูรายงานเต็ม →
             </a>
@@ -523,11 +523,11 @@ export default function ManagerLiveExecutionView({
         <div className="flex items-center justify-between mb-2.5 px-0.5">
           <div className="flex items-center gap-1.5">
             <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
-            <h4 className="text-[10px] font-bold uppercase tracking-wider text-zinc-500">
+            <h4 className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
               ความเคลื่อนไหวสด (Live Thought Stream)
             </h4>
           </div>
-          <span className="text-[10px] font-mono text-zinc-400">
+          <span className="text-[11px] font-mono text-slate-500">
             {lines.length} กิจกรรม
           </span>
         </div>
@@ -538,7 +538,7 @@ export default function ManagerLiveExecutionView({
           className="max-h-64 overflow-y-auto space-y-2 custom-scrollbar p-1"
         >
           {groupedSteps.length === 0 && !isDone && (
-            <div className="py-6 text-center text-xs text-zinc-400 flex flex-col items-center gap-2">
+            <div className="py-6 text-center text-xs text-slate-500 flex flex-col items-center gap-2">
               <span className="h-4 w-4 animate-spin rounded-full border-2 border-sky-400 border-t-transparent" />
               <span>กำลังเตรียมเชื่อมต่อ Agent และเริ่มต้นการประมวลผล...</span>
             </div>
@@ -554,7 +554,7 @@ export default function ManagerLiveExecutionView({
                   <span>🤖</span>
                   <span>{nodeDisplayName(step.node)}</span>
                 </span>
-                <span className="font-mono text-[9px] text-zinc-400">
+                <span className="font-mono text-[11px] text-slate-500">
                   {step.node ?? 'system'}
                 </span>
               </div>
@@ -565,7 +565,7 @@ export default function ManagerLiveExecutionView({
                     key={j}
                     className={`text-[11px] leading-relaxed ${
                       m.role === 'instruction'
-                        ? 'text-zinc-600 font-mono italic bg-white/60 p-1.5 rounded-lg border border-sky-100/40'
+                        ? 'text-slate-600 font-mono italic bg-white/60 p-1.5 rounded-lg border border-sky-100/40'
                         : 'text-sky-950 font-normal'
                     }`}
                   >

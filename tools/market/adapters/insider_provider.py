@@ -38,6 +38,35 @@ def _number(value: Any, default: float = 0.0) -> float:
     return result if result == result and abs(result) != float("inf") else default
 
 
+def _classify_yf_insider_transaction(
+    transaction_str: str,
+    text_str: str,
+    price_per_share: float,
+) -> tuple[str, str]:
+    """Classify yfinance insider transaction honestly without mislabelling $0 awards/exercises as 'P'."""
+    combined = f"{transaction_str} {text_str}".lower().strip()
+    is_award_or_grant = any(k in combined for k in ("award", "grant", "rsu", "restricted", "vest", "compensation"))
+    is_exercise = any(k in combined for k in ("exercise", "conversion", "option"))
+    is_tax_withhold = any(k in combined for k in ("tax", "withhold", "surrender"))
+    is_gift = "gift" in combined
+    is_sale = any(k in combined for k in ("sale", "sold", "sell", "dispose"))
+    is_open_buy = any(k in combined for k in ("purchase", "buy")) and not is_award_or_grant and not is_exercise
+
+    if is_sale:
+        return "S", "D"
+    if is_tax_withhold:
+        return "F", "D"
+    if is_gift:
+        return "G", "D"
+    if is_exercise:
+        return "M", "A"
+    if is_award_or_grant or price_per_share <= 0.0:
+        return "A", "A"
+    if is_open_buy and price_per_share > 0.0:
+        return "P", "A"
+    return "O", "A"
+
+
 class YFinanceInsiderHistoryAdapter(InsiderHistoryProviderPort):
     """Fetch and normalize the bounded yfinance insider transaction table."""
 
@@ -53,7 +82,8 @@ class YFinanceInsiderHistoryAdapter(InsiderHistoryProviderPort):
         for index, row in table.head(30).iterrows():
             insider_name = _text(row.get("Insider"), "Unknown")
             position = _text(row.get("Position"))
-            tx_text = _text(row.get("Text")).lower()
+            tx_type_raw = _text(row.get("Transaction"))
+            tx_text_raw = _text(row.get("Text"))
             date_value = row.get("Start Date") or row.get("Date")
             if hasattr(date_value, "strftime"):
                 transaction_date = date_value.strftime("%Y-%m-%d")
@@ -66,8 +96,11 @@ class YFinanceInsiderHistoryAdapter(InsiderHistoryProviderPort):
             shares = _number(row.get("Shares"))
             total_value = _number(row.get("Value"))
             price_per_share = round(total_value / shares, 2) if shares > 0 and total_value > 0 else 0.0
-            acquired_or_disposed = "D" if "sale" in tx_text or "sold" in tx_text else "A"
-            transaction_code = "S" if acquired_or_disposed == "D" else "P"
+            transaction_code, acquired_or_disposed = _classify_yf_insider_transaction(
+                tx_type_raw,
+                tx_text_raw,
+                price_per_share,
+            )
             accession = f"yf_{ticker}_{transaction_date}_{index}"
             records.append(
                 {

@@ -93,10 +93,10 @@ export const IllustrativeAllocationPie: React.FC<IllustrativeAllocationPieProps>
     {
       label: 'พันธบัตรรัฐบาล',
       amount: fi,
-      color: 'bg-indigo-500',
-      textColor: 'text-indigo-900',
-      bgLight: 'bg-indigo-50',
-      border: 'border-indigo-200',
+      color: 'bg-blue-500',
+      textColor: 'text-blue-900',
+      bgLight: 'bg-blue-50',
+      border: 'border-blue-200',
       icon: '🏛️',
       note: 'รับผลตอบแทนดอกเบี้ยสูง',
     },
@@ -123,19 +123,19 @@ export const IllustrativeAllocationPie: React.FC<IllustrativeAllocationPieProps>
   ]
 
   return (
-    <div className={`rounded-xl border border-sky-100 bg-white/90 p-4 shadow-xs space-y-3 ${className}`}>
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 border-b border-zinc-100 pb-2">
-        <div className="flex items-center gap-1.5 font-bold text-zinc-900 text-xs sm:text-[13px]">
+    <div className={`rounded-xl border border-sky-100 bg-white/90 p-4 shadow-sm space-y-3 ${className}`}>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 border-b border-slate-100 pb-2">
+        <div className="flex items-center gap-1.5 font-bold text-slate-900 text-xs sm:text-[13px]">
           <span>💰</span>
           <span>ตัวอย่างเงิน 100 บาท วันนี้ควรแบ่งยังไง (Illustrative 100-Baht Split)</span>
         </div>
-        <span className="text-[10px] text-zinc-400 font-medium">
+        <span className="text-[11px] text-slate-500 font-medium">
           คำนวณตาม Tactical Tilt ล่าสุดของ AI
         </span>
       </div>
 
       {/* Visual Multi-Segment Bar */}
-      <div className="h-4 w-full rounded-full overflow-hidden flex bg-zinc-100 p-0.5">
+      <div className="h-4 w-full rounded-full overflow-hidden flex bg-slate-100 p-0.5">
         {slices.map((s, idx) => (
           <div
             key={idx}
@@ -154,17 +154,17 @@ export const IllustrativeAllocationPie: React.FC<IllustrativeAllocationPieProps>
             className={`rounded-lg border p-2 text-xs flex flex-col justify-between ${s.bgLight} ${s.border}`}
           >
             <div>
-              <div className="flex items-center justify-between text-[11px] font-semibold text-zinc-700">
+              <div className="flex items-center justify-between text-[11px] font-semibold text-slate-700">
                 <span className="truncate flex items-center gap-1">
                   <span>{s.icon}</span>
                   <span className="truncate">{s.label}</span>
                 </span>
               </div>
-              <div className="mt-1 text-base font-extrabold text-zinc-900">
-                {s.amount} <span className="text-[11px] font-normal text-zinc-500">บาท</span>
+              <div className="mt-1 text-base font-extrabold text-slate-900">
+                {s.amount} <span className="text-[11px] font-normal text-slate-500">บาท</span>
               </div>
             </div>
-            <p className="mt-1 text-[10px] text-zinc-500 line-clamp-1" title={s.note}>
+            <p className="mt-1 text-[11px] text-slate-500 line-clamp-1" title={s.note}>
               {s.note}
             </p>
           </div>

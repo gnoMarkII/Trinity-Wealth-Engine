@@ -31,7 +31,7 @@ export const BreadthStackedBar: React.FC<BreadthStackedBarProps> = ({
           <span>⚠️</span>
           <span>SET Market Breadth: ไม่สามารถโหลดข้อมูลได้</span>
         </div>
-        <p className="mt-1 text-zinc-600">{error || 'ไม่มีข้อมูลการกระจายตัวของราคาหุ้นจาก Settrade'}</p>
+        <p className="mt-1 text-slate-600">{error || 'ไม่มีข้อมูลการกระจายตัวของราคาหุ้นจาก Settrade'}</p>
       </div>
     )
   }
@@ -48,7 +48,7 @@ export const BreadthStackedBar: React.FC<BreadthStackedBarProps> = ({
           <span>⏳</span>
           <span>SET Market Breadth: อยู่ระหว่างรอเชื่อมต่อข้อมูลความกว้างตลาด</span>
         </div>
-        <p className="mt-1 text-zinc-600">
+        <p className="mt-1 text-slate-600">
           ยังไม่มีข้อมูลสัดส่วนหุ้นขึ้น/ตกรายวันจากตลาดหลักทรัพย์แห่งประเทศไทย (SET)
         </p>
       </div>
@@ -65,13 +65,13 @@ export const BreadthStackedBar: React.FC<BreadthStackedBarProps> = ({
       {/* Header & Provenance */}
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between border-b border-sky-100/70 pb-3">
         <div>
-          <h3 className="font-bold text-zinc-900 text-sm tracking-tight flex items-center gap-2">
+          <h3 className="font-bold text-slate-900 text-sm tracking-tight flex items-center gap-2">
             <span>SET Market Breadth (100% Stacked Distribution)</span>
-            <span className="font-mono text-[10px] bg-slate-100 text-zinc-600 font-semibold px-2 py-0.5 rounded">
+            <span className="font-mono text-[11px] bg-slate-100 text-slate-600 font-semibold px-2 py-0.5 rounded">
               {breadth.market || 'SET'}
             </span>
           </h3>
-          <p className="text-xs text-zinc-500 mt-0.5">
+          <p className="text-xs text-slate-500 mt-0.5">
             สัดส่วนการกระจายตัวของหุ้นที่ราคาปรับขึ้น เสมอตัว และปรับลงทั้งตลาด
           </p>
         </div>
@@ -86,17 +86,17 @@ export const BreadthStackedBar: React.FC<BreadthStackedBarProps> = ({
 
       {/* A/D Ratio metric */}
       <div className="mt-3 flex items-baseline justify-between">
-        <div className="text-xs text-zinc-600">
+        <div className="text-xs text-slate-600">
           Advance/Decline Ratio (A/D):
         </div>
         <div className="flex items-baseline gap-1.5 font-mono">
-          <span className="text-xl font-extrabold text-zinc-900">{adRatio}x</span>
-          <span className={`text-[10px] font-bold uppercase rounded px-1.5 py-0.2 ${
+          <span className="text-xl font-extrabold text-slate-900">{adRatio}x</span>
+          <span className={`text-[11px] font-bold uppercase rounded px-1.5 py-0.5 ${
             losers > 0 && gainers / losers >= 1.2
               ? 'bg-emerald-100 text-emerald-800'
               : losers > 0 && gainers / losers <= 0.8
               ? 'bg-rose-100 text-rose-800'
-              : 'bg-zinc-100 text-zinc-700'
+              : 'bg-slate-100 text-slate-700'
           }`}>
             {losers > 0 && gainers / losers >= 1.2 ? 'Bullish Breadth' : losers > 0 && gainers / losers <= 0.8 ? 'Bearish Breadth' : 'Neutral'}
           </span>
@@ -127,19 +127,19 @@ export const BreadthStackedBar: React.FC<BreadthStackedBarProps> = ({
       {/* Breakdown counters */}
       <div className="mt-3 grid grid-cols-3 gap-2 text-center text-xs">
         <div className="rounded-lg bg-emerald-50/70 p-2 border border-emerald-100">
-          <span className="text-[10px] text-emerald-800 block">ขึ้น (Gainers)</span>
+          <span className="text-[11px] text-emerald-800 block">ขึ้น (Gainers)</span>
           <span className="font-mono text-base font-extrabold text-emerald-700">{gainers}</span>
-          <span className="text-[10px] text-zinc-400 block font-mono">({gainPct.toFixed(1)}%)</span>
+          <span className="text-[11px] text-slate-500 block font-mono">({gainPct.toFixed(1)}%)</span>
         </div>
         <div className="rounded-lg bg-slate-50 p-2 border border-slate-100">
-          <span className="text-[10px] text-zinc-600 block">เสมอ (Unchanged)</span>
-          <span className="font-mono text-base font-extrabold text-zinc-700">{unchanged}</span>
-          <span className="text-[10px] text-zinc-400 block font-mono">({unchPct.toFixed(1)}%)</span>
+          <span className="text-[11px] text-slate-600 block">เสมอ (Unchanged)</span>
+          <span className="font-mono text-base font-extrabold text-slate-700">{unchanged}</span>
+          <span className="text-[11px] text-slate-500 block font-mono">({unchPct.toFixed(1)}%)</span>
         </div>
         <div className="rounded-lg bg-rose-50/70 p-2 border border-rose-100">
-          <span className="text-[10px] text-rose-800 block">ลง (Losers)</span>
+          <span className="text-[11px] text-rose-800 block">ลง (Losers)</span>
           <span className="font-mono text-base font-extrabold text-rose-700">{losers}</span>
-          <span className="text-[10px] text-zinc-400 block font-mono">({lossPct.toFixed(1)}%)</span>
+          <span className="text-[11px] text-slate-500 block font-mono">({lossPct.toFixed(1)}%)</span>
         </div>
       </div>
     </div>

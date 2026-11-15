@@ -59,7 +59,7 @@ export default function GoalFundingTensionSimulator({
   return (
     <div
       data-testid="goal-funding-tension-simulator"
-      className={`rounded-2xl border transition-all shadow-2xs overflow-hidden ${
+      className={`rounded-2xl border transition-all shadow-sm overflow-hidden ${
         isCritical
           ? 'border-rose-200/90 bg-gradient-to-b from-rose-50/70 via-white to-rose-50/30 text-rose-950'
           : 'border-amber-200/90 bg-gradient-to-b from-amber-50/70 via-white to-amber-50/30 text-amber-950'
@@ -78,13 +78,13 @@ export default function GoalFundingTensionSimulator({
           <span className="text-base sm:text-lg shrink-0">{isCritical ? '⚠️' : '⚡'}</span>
           <div className="min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
-              <h4 className="font-bold text-xs sm:text-sm text-zinc-900 tracking-tight">
+              <h4 className="font-bold text-xs sm:text-sm text-slate-900 tracking-tight">
                 {isCritical
                   ? 'เป้าหมายมีความตึงเครียดสูง (Required Return สูงกว่าพอร์ต)'
                   : 'เป้าหมายต้องพึ่งพาผลตอบแทนเชิงรุก'}
               </h4>
               <span
-                className={`px-2 py-0.5 rounded-full text-[10px] font-bold border uppercase tracking-wider shrink-0 ${
+                className={`px-2 py-0.5 rounded-full text-[11px] font-bold border uppercase tracking-wider shrink-0 ${
                   isCritical
                     ? 'bg-rose-100 text-rose-800 border-rose-300'
                     : 'bg-amber-100 text-amber-800 border-amber-300'
@@ -93,7 +93,7 @@ export default function GoalFundingTensionSimulator({
                 Risk Gap: +{gapPct.toFixed(1)}% ต่อปี
               </span>
             </div>
-            <p className="text-[11px] text-zinc-500 mt-0.5 truncate">
+            <p className="text-[11px] text-slate-500 mt-0.5 truncate">
               {isExpanded
                 ? `ผลตอบแทนที่ต้องการ (${reqPct.toFixed(1)}%) สูงกว่าพอร์ต (${expectedAnnualReturn.toFixed(1)}%) • ปรับแผนได้ด้วย 4 คานงัด:`
                 : `ผลตอบแทนที่ต้องการ (${reqPct.toFixed(1)}%) สูงกว่าพอร์ต (${expectedAnnualReturn.toFixed(1)}%) • คลิกเพื่อเปิดจำลอง 4 คานงัด`}
@@ -102,14 +102,14 @@ export default function GoalFundingTensionSimulator({
         </div>
 
         <div className="flex items-center gap-1.5 shrink-0">
-          <span className="hidden sm:inline-block text-[11px] font-bold text-zinc-600">
+          <span className="hidden sm:inline-block text-[11px] font-bold text-slate-600">
             {isExpanded ? 'หุบแบบจำลอง' : 'จำลอง 4 คานงัด'}
           </span>
           <span
-            className={`w-6 h-6 rounded-full flex items-center justify-center border text-xs font-bold transition-transform duration-200 shadow-2xs ${
+            className={`w-6 h-6 rounded-full flex items-center justify-center border text-xs font-bold transition-transform duration-200 shadow-sm ${
               isExpanded
-                ? 'rotate-180 bg-zinc-800 text-white border-zinc-800'
-                : 'bg-white text-zinc-700 border-zinc-300'
+                ? 'rotate-180 bg-slate-800 text-white border-slate-800'
+                : 'bg-white text-slate-700 border-slate-300'
             }`}
           >
             ▾
@@ -121,8 +121,8 @@ export default function GoalFundingTensionSimulator({
       {isExpanded && (
         <div className="p-4 sm:p-5 pt-3.5 space-y-4">
           {/* 2. Tension Gap Meter (Visual Gauge) */}
-          <div className="space-y-1.5 rounded-xl border border-edge/60 bg-white/90 p-3 shadow-2xs">
-            <div className="flex items-center justify-between text-[11px] font-semibold text-zinc-600">
+          <div className="space-y-1.5 rounded-xl border border-edge/60 bg-white/90 p-3 shadow-sm">
+            <div className="flex items-center justify-between text-[11px] font-semibold text-slate-600">
               <span className="flex items-center gap-1 text-emerald-700">
                 <span>🛡️</span>
                 <span>พอร์ตคาดหวังทั่วไป: <strong>{expectedAnnualReturn.toFixed(1)}% ต่อปี</strong></span>
@@ -134,7 +134,7 @@ export default function GoalFundingTensionSimulator({
             </div>
 
             {/* Gauge Track */}
-            <div className="relative w-full h-3.5 rounded-full bg-zinc-100 overflow-hidden border border-edge/50">
+            <div className="relative w-full h-3.5 rounded-full bg-slate-100 overflow-hidden border border-edge/50">
               {/* Gradient background track */}
               <div className="absolute inset-0 bg-gradient-to-r from-emerald-300 via-amber-300 to-rose-500 opacity-60" />
 
@@ -162,7 +162,7 @@ export default function GoalFundingTensionSimulator({
               />
             </div>
 
-            <div className="flex items-center justify-between text-[10px] text-zinc-400 font-mono pt-0.5">
+            <div className="flex items-center justify-between text-[11px] text-slate-500 font-mono pt-0.5">
               <span>0%</span>
               <span className="text-rose-700 font-bold">
                 ⚡ ช่องว่างผลตอบแทนที่เกินกำลังพอร์ต: +{gapPct.toFixed(1)}% ต่อปี
@@ -173,12 +173,12 @@ export default function GoalFundingTensionSimulator({
 
       {/* 3. The 4 Interactive Lever Cards */}
       <div className="space-y-2">
-        <div className="flex flex-wrap items-center justify-between gap-1 text-[11px] font-semibold text-zinc-500">
+        <div className="flex flex-wrap items-center justify-between gap-1 text-[11px] font-semibold text-slate-500">
           <span className="flex items-center gap-1">
             <span>🎮</span>
             <span>จำลอง 4 คานงัด (Interactive Simulator):</span>
           </span>
-          <span className="text-zinc-400 text-[10px] shrink-0">คลิกการ์ดเพื่อสลับดูผล</span>
+          <span className="text-slate-500 text-[11px] shrink-0">คลิกการ์ดเพื่อสลับดูผล</span>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
@@ -193,24 +193,24 @@ export default function GoalFundingTensionSimulator({
             }`}
           >
             <div className="flex items-center justify-between gap-1.5 mb-1.5">
-              <span className="font-bold text-zinc-900 text-xs flex items-center gap-1.5 shrink-0">
+              <span className="font-bold text-slate-900 text-xs flex items-center gap-1.5 shrink-0">
                 <span className={`w-3.5 h-3.5 rounded-full border-2 flex items-center justify-center shrink-0 ${
                   selectedLever === 'save_more'
                     ? 'border-emerald-600 bg-emerald-600'
-                    : 'border-zinc-300 bg-white'
+                    : 'border-slate-300 bg-white'
                 }`}>
                   {selectedLever === 'save_more' && <span className="w-1.5 h-1.5 rounded-full bg-white block" />}
                 </span>
                 <span>💰 1. ออมเพิ่ม</span>
               </span>
-              <span className="text-[9px] px-1.5 py-0.5 rounded font-bold uppercase tracking-wider bg-emerald-100 text-emerald-800 border border-emerald-200 shrink-0">
+              <span className="text-[11px] px-1.5 py-0.5 rounded font-bold uppercase tracking-wider bg-emerald-100 text-emerald-800 border border-emerald-200 shrink-0">
                 ควบคุมได้
               </span>
             </div>
             <div className="font-mono font-black text-sm sm:text-base text-emerald-950 mt-1 whitespace-nowrap">
               +{formatTHB(adjustmentLevers.save_more_monthly_thb)}/ด.
             </div>
-            <div className="text-[10px] text-zinc-500 mt-1 font-mono truncate">
+            <div className="text-[11px] text-slate-500 mt-1 font-mono truncate">
               รวมใหม่: {formatTHB(adjustmentLevers.total_monthly_savings_needed_thb)}/ด.
             </div>
           </button>
@@ -226,24 +226,24 @@ export default function GoalFundingTensionSimulator({
             }`}
           >
             <div className="flex items-center justify-between gap-1.5 mb-1.5">
-              <span className="font-bold text-zinc-900 text-xs flex items-center gap-1.5 shrink-0">
+              <span className="font-bold text-slate-900 text-xs flex items-center gap-1.5 shrink-0">
                 <span className={`w-3.5 h-3.5 rounded-full border-2 flex items-center justify-center shrink-0 ${
                   selectedLever === 'extend_timeline'
                     ? 'border-sky-600 bg-sky-600'
-                    : 'border-zinc-300 bg-white'
+                    : 'border-slate-300 bg-white'
                 }`}>
                   {selectedLever === 'extend_timeline' && <span className="w-1.5 h-1.5 rounded-full bg-white block" />}
                 </span>
                 <span>⏳ 2. ยืดเวลา</span>
               </span>
-              <span className="text-[9px] px-1.5 py-0.5 rounded font-bold uppercase tracking-wider bg-sky-100 text-sky-800 border border-sky-200 shrink-0">
+              <span className="text-[11px] px-1.5 py-0.5 rounded font-bold uppercase tracking-wider bg-sky-100 text-sky-800 border border-sky-200 shrink-0">
                 เวลาทบต้น
               </span>
             </div>
             <div className="font-mono font-black text-sm sm:text-base text-sky-950 mt-1 whitespace-nowrap">
               +{adjustmentLevers.extend_timeline_months} เดือน
             </div>
-            <div className="text-[10px] text-zinc-500 mt-1 font-mono truncate">
+            <div className="text-[11px] text-slate-500 mt-1 font-mono truncate">
               ({formatMonthsToYears(adjustmentLevers.extend_timeline_months)}) • รวม {adjustmentLevers.total_months_needed} ด.
             </div>
           </button>
@@ -259,24 +259,24 @@ export default function GoalFundingTensionSimulator({
             }`}
           >
             <div className="flex items-center justify-between gap-1.5 mb-1.5">
-              <span className="font-bold text-zinc-900 text-xs flex items-center gap-1.5 shrink-0">
+              <span className="font-bold text-slate-900 text-xs flex items-center gap-1.5 shrink-0">
                 <span className={`w-3.5 h-3.5 rounded-full border-2 flex items-center justify-center shrink-0 ${
                   selectedLever === 'downsize_target'
                     ? 'border-amber-600 bg-amber-600'
-                    : 'border-zinc-300 bg-white'
+                    : 'border-slate-300 bg-white'
                 }`}>
                   {selectedLever === 'downsize_target' && <span className="w-1.5 h-1.5 rounded-full bg-white block" />}
                 </span>
                 <span>📉 3. ปรับเป้าหมาย</span>
               </span>
-              <span className="text-[9px] px-1.5 py-0.5 rounded font-bold uppercase tracking-wider bg-amber-100 text-amber-800 border border-amber-200 shrink-0">
+              <span className="text-[11px] px-1.5 py-0.5 rounded font-bold uppercase tracking-wider bg-amber-100 text-amber-800 border border-amber-200 shrink-0">
                 เป้าสอดคล้อง
               </span>
             </div>
             <div className="font-mono font-black text-sm sm:text-base text-amber-950 mt-1 whitespace-nowrap">
               เหลือ {formatTHB(adjustmentLevers.downsized_target_thb)}
             </div>
-            <div className="text-[10px] text-zinc-500 mt-1 font-mono truncate">
+            <div className="text-[11px] text-slate-500 mt-1 font-mono truncate">
               ลดลง -{formatTHB(targetReduction)} (-{targetReductionPct.toFixed(1)}%)
             </div>
           </button>
@@ -292,24 +292,24 @@ export default function GoalFundingTensionSimulator({
             }`}
           >
             <div className="flex items-center justify-between gap-1.5 mb-1.5">
-              <span className="font-bold text-zinc-900 text-xs flex items-center gap-1.5 shrink-0">
+              <span className="font-bold text-slate-900 text-xs flex items-center gap-1.5 shrink-0">
                 <span className={`w-3.5 h-3.5 rounded-full border-2 flex items-center justify-center shrink-0 ${
                   selectedLever === 'accept_risk'
                     ? 'border-rose-600 bg-rose-600'
-                    : 'border-zinc-300 bg-white'
+                    : 'border-slate-300 bg-white'
                 }`}>
                   {selectedLever === 'accept_risk' && <span className="w-1.5 h-1.5 rounded-full bg-white block" />}
                 </span>
                 <span>🚀 4. รับเสี่ยงเพิ่ม</span>
               </span>
-              <span className="text-[9px] px-1.5 py-0.5 rounded font-bold uppercase tracking-wider bg-rose-100 text-rose-800 border border-rose-200 shrink-0">
+              <span className="text-[11px] px-1.5 py-0.5 rounded font-bold uppercase tracking-wider bg-rose-100 text-rose-800 border border-rose-200 shrink-0">
                 เสี่ยงพิเศษ
               </span>
             </div>
             <div className="font-mono font-black text-sm sm:text-base text-rose-950 mt-1 whitespace-nowrap">
               พอร์ต {reqPct.toFixed(1)}% CAGR
             </div>
-            <div className="text-[10px] text-zinc-500 mt-1 font-mono truncate">
+            <div className="text-[11px] text-slate-500 mt-1 font-mono truncate">
               เกินเกณฑ์ปกติ +{gapPct.toFixed(1)}% ต่อปี
             </div>
           </button>
@@ -317,14 +317,14 @@ export default function GoalFundingTensionSimulator({
       </div>
 
       {/* 4. Simulator Preview Drawer (Before vs After Plan Comparison) */}
-      <div className="rounded-xl border border-edge/80 bg-white p-3.5 space-y-3 shadow-2xs">
+      <div className="rounded-xl border border-edge/80 bg-white p-3.5 space-y-3 shadow-sm">
         <div className="flex flex-wrap items-center justify-between gap-2 border-b border-edge/50 pb-2">
           <div className="flex items-center gap-2">
-            <div className="font-bold text-zinc-800 text-xs flex items-center gap-1.5">
+            <div className="font-bold text-slate-800 text-xs flex items-center gap-1.5">
               <span>📋</span>
               <span>
                 ผลลัพธ์จำลองเมื่อเลือก:{' '}
-                <strong className="text-zinc-950 underline decoration-indigo-400 underline-offset-2">
+                <strong className="text-slate-950 underline decoration-indigo-400 underline-offset-2">
                   {selectedLever === 'save_more' && 'คานงัดที่ 1: ออมเพิ่มรายเดือน'}
                   {selectedLever === 'extend_timeline' && 'คานงัดที่ 2: ขยายระยะเวลา'}
                   {selectedLever === 'downsize_target' && 'คานงัดที่ 3: ปรับขนาดเป้าหมาย'}
@@ -333,7 +333,7 @@ export default function GoalFundingTensionSimulator({
               </span>
             </div>
           </div>
-          <span className="text-[10px] px-2 py-0.5 rounded bg-zinc-100 text-zinc-600 font-medium">
+          <span className="text-[11px] px-2 py-0.5 rounded bg-slate-100 text-slate-600 font-medium">
             เป้าหมาย: {goalName}
           </span>
         </div>
@@ -342,18 +342,18 @@ export default function GoalFundingTensionSimulator({
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 text-xs">
           {/* Monthly Savings */}
           <div className="rounded-lg bg-surface p-2.5 border border-edge/60 space-y-1">
-            <span className="text-[10px] text-zinc-400 font-bold uppercase block">เงินออมต่อเดือน</span>
+            <span className="text-[11px] text-slate-500 font-bold uppercase block">เงินออมต่อเดือน</span>
             <div className="font-mono">
               {selectedLever === 'save_more' ? (
                 <div>
-                  <div className="text-xs line-through text-zinc-400">{formatTHB(monthlySavingsThb)}/ด.</div>
+                  <div className="text-xs line-through text-slate-500">{formatTHB(monthlySavingsThb)}/ด.</div>
                   <div className="text-sm font-bold text-emerald-700">
                     {formatTHB(adjustmentLevers.total_monthly_savings_needed_thb)}/ด.
                   </div>
                 </div>
               ) : (
-                <div className="text-xs font-semibold text-zinc-800">
-                  {formatTHB(monthlySavingsThb)}/ด. <span className="text-[10px] text-zinc-400">(คงเดิม)</span>
+                <div className="text-xs font-semibold text-slate-800">
+                  {formatTHB(monthlySavingsThb)}/ด. <span className="text-[11px] text-slate-500">(คงเดิม)</span>
                 </div>
               )}
             </div>
@@ -361,18 +361,18 @@ export default function GoalFundingTensionSimulator({
 
           {/* Timeline */}
           <div className="rounded-lg bg-surface p-2.5 border border-edge/60 space-y-1">
-            <span className="text-[10px] text-zinc-400 font-bold uppercase block">ระยะเวลาที่เหลือ</span>
+            <span className="text-[11px] text-slate-500 font-bold uppercase block">ระยะเวลาที่เหลือ</span>
             <div className="font-mono">
               {selectedLever === 'extend_timeline' ? (
                 <div>
-                  <div className="text-xs line-through text-zinc-400">{currentMonths} เดือน</div>
+                  <div className="text-xs line-through text-slate-500">{currentMonths} เดือน</div>
                   <div className="text-sm font-bold text-sky-700">
                     {adjustmentLevers.total_months_needed} เดือน ({formatMonthsToYears(adjustmentLevers.total_months_needed)})
                   </div>
                 </div>
               ) : (
-                <div className="text-xs font-semibold text-zinc-800">
-                  {currentMonths} เดือน <span className="text-[10px] text-zinc-400">(คงเดิม)</span>
+                <div className="text-xs font-semibold text-slate-800">
+                  {currentMonths} เดือน <span className="text-[11px] text-slate-500">(คงเดิม)</span>
                 </div>
               )}
             </div>
@@ -380,18 +380,18 @@ export default function GoalFundingTensionSimulator({
 
           {/* Target Amount */}
           <div className="rounded-lg bg-surface p-2.5 border border-edge/60 space-y-1">
-            <span className="text-[10px] text-zinc-400 font-bold uppercase block">เงินเป้าหมาย</span>
+            <span className="text-[11px] text-slate-500 font-bold uppercase block">เงินเป้าหมาย</span>
             <div className="font-mono">
               {selectedLever === 'downsize_target' ? (
                 <div>
-                  <div className="text-xs line-through text-zinc-400">{formatTHB(targetAmountThb)}</div>
+                  <div className="text-xs line-through text-slate-500">{formatTHB(targetAmountThb)}</div>
                   <div className="text-sm font-bold text-amber-700">
                     {formatTHB(adjustmentLevers.downsized_target_thb)}
                   </div>
                 </div>
               ) : (
-                <div className="text-xs font-semibold text-zinc-800">
-                  {formatTHB(targetAmountThb)} <span className="text-[10px] text-zinc-400">(คงเดิม)</span>
+                <div className="text-xs font-semibold text-slate-800">
+                  {formatTHB(targetAmountThb)} <span className="text-[11px] text-slate-500">(คงเดิม)</span>
                 </div>
               )}
             </div>
@@ -399,20 +399,20 @@ export default function GoalFundingTensionSimulator({
 
           {/* Required Return / Risk */}
           <div className="rounded-lg bg-surface p-2.5 border border-edge/60 space-y-1">
-            <span className="text-[10px] text-zinc-400 font-bold uppercase block">ผลตอบแทนที่ต้องการ</span>
+            <span className="text-[11px] text-slate-500 font-bold uppercase block">ผลตอบแทนที่ต้องการ</span>
             <div className="font-mono">
               {selectedLever === 'accept_risk' ? (
                 <div>
                   <div className="text-sm font-bold text-rose-700">{reqPct.toFixed(1)}% ต่อปี</div>
-                  <span className="text-[9px] text-rose-600 font-sans block">⚠️ เสี่ยงสูงพิเศษ</span>
+                  <span className="text-[11px] text-rose-600 font-sans block">⚠️ เสี่ยงสูงพิเศษ</span>
                 </div>
               ) : (
                 <div>
-                  <div className="text-xs line-through text-zinc-400">{reqPct.toFixed(1)}% ต่อปี</div>
+                  <div className="text-xs line-through text-slate-500">{reqPct.toFixed(1)}% ต่อปี</div>
                   <div className="text-sm font-bold text-emerald-700">
                     {expectedAnnualReturn.toFixed(1)}% ต่อปี
                   </div>
-                  <span className="text-[9px] text-emerald-600 font-sans block">✅ เกณฑ์ปลอดภัย</span>
+                  <span className="text-[11px] text-emerald-600 font-sans block">✅ เกณฑ์ปลอดภัย</span>
                 </div>
               )}
             </div>
@@ -420,7 +420,7 @@ export default function GoalFundingTensionSimulator({
         </div>
 
         {/* Narrative Strategic Guidance */}
-        <div className="text-[11px] leading-relaxed p-2.5 rounded-lg bg-zinc-50 border border-edge/50 text-zinc-700">
+        <div className="text-[11px] leading-relaxed p-2.5 rounded-lg bg-slate-50 border border-edge/50 text-slate-700">
           {selectedLever === 'save_more' && (
             <div className="space-y-0.5">
               <span className="font-bold text-emerald-900 block">💡 ข้อแนะนำเชิงกลยุทธ์ (วินัยการเงิน):</span>
@@ -464,7 +464,7 @@ export default function GoalFundingTensionSimulator({
         <button
           type="button"
           onClick={() => setIsExpanded(false)}
-          className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-zinc-500 hover:text-zinc-800 hover:bg-zinc-100 px-3.5 py-1 rounded-full border border-zinc-200 transition-colors cursor-pointer bg-white/80 shadow-2xs"
+          className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-slate-500 hover:text-slate-800 hover:bg-slate-100 px-3.5 py-1 rounded-full border border-slate-200 transition-colors cursor-pointer bg-white/80 shadow-sm"
         >
           <span>▴</span>
           <span>หุบแบบจำลอง 4 คานงัด</span>

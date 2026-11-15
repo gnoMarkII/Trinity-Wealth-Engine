@@ -481,7 +481,21 @@ export interface YoutubePitchApprovalPayload {
   source_refresh_attempts?: number
 }
 
-export type ApprovalPayload = NewsYoutubeApprovalPayload | NewsFunnelApprovalPayload | YoutubePitchApprovalPayload
+export interface PreRunApprovalPayload {
+  type: 'pre_run_approval'
+  title?: string
+  instruction: string
+  flow?: string
+  scope?: string
+  ticker?: string | null
+  research_type?: string | null
+}
+
+export type ApprovalPayload =
+  | PreRunApprovalPayload
+  | NewsYoutubeApprovalPayload
+  | NewsFunnelApprovalPayload
+  | YoutubePitchApprovalPayload
 
 export interface JobStatusDTO {
   job_id: string
@@ -4097,6 +4111,32 @@ export interface MorningReviewPacketDTO {
     coverage_pct: number
     covered_tickers: string[]
     uncovered_tickers: string[]
+    monitored_theses?: Array<{
+      claim_id: string
+      ticker: string
+      version: number
+      as_of_utc: string
+      status: string
+      author_role?: string
+      evidence_tier?: string
+      claim_statement: string
+      in_portfolio?: boolean
+      falsifiers: Array<{
+        falsifier_id: string
+        metric_name: string
+        operator: string
+        threshold_value: string
+        unit: string
+        period_basis: string
+        invalidation_impact: string
+      }>
+      linked_catalysts?: Array<{
+        catalyst_id: string
+        event_name: string
+        expected_date_str: string
+        status: string
+      }>
+    }>
     [key: string]: unknown
   }
   quarantined_holdings?: Array<{
@@ -4255,4 +4295,292 @@ export interface RoutineStatusReportDTO {
   delay_minutes: number
   grace_period_minutes: number
   freshness_label: string
+}
+
+// ---------------------------------------------------------
+// Trinity Guru Roundtable Studio DTOs
+// ---------------------------------------------------------
+
+export type RoundtableStanceType = 'BUY' | 'OVERWEIGHT' | 'HOLD' | 'UNDERWEIGHT' | 'SELL' | 'REVIEW'
+export type RoundStageType =
+  | 'stage_intro'
+  | 'opening'
+  | 'rebuttal'
+  | 'crossfire'
+  | 'interjection_reply'
+  | 'synthesis'
+  | 'user_interjection'
+export type DebateIntensityType = 'balanced' | 'heated' | 'crossfire'
+export type DebateDepthType = 'concise' | 'deep_youtube'
+export type CoreGuruIdType =
+  | 'hermes_moderator'
+  | 'value_guru'
+  | 'quality_guru'
+  | 'growth_guru'
+  | 'macro_tactical_guru'
+  | 'skeptic_guru'
+export type SpeakerIdType = CoreGuruIdType | 'user'
+export type AudioStatusType = 'ready' | 'cached' | 'fallback_web_speech' | 'disabled'
+
+export interface ConsensusTensionAxisDTO {
+  topic: string
+  bull_side_speaker: string
+  bull_argument: string
+  bear_side_speaker: string
+  bear_argument: string
+}
+
+export interface PersonalAxisCheckItemDTO {
+  dimension: string
+  status: 'aligned' | 'caution' | 'conflict' | 'not_set'
+  detail: string
+}
+
+export interface ActionPlaybookOptionDTO {
+  option_id: string
+  label: string
+  speaker_source: string
+  conviction_level: number
+  action_steps: string[]
+  entry_zone?: string | null
+  sizing_note?: string | null
+}
+
+export interface ActionPlaybookSpecDTO {
+  primary_action: ActionPlaybookOptionDTO
+  alternatives: ActionPlaybookOptionDTO[]
+}
+
+export interface DistilledDecisionPlaybookDTO {
+  final_rating: RoundtableStanceType
+  action_stance: string
+  core_conviction_score: number
+  executive_verdict: string
+  guru_stance_breakdown: Record<string, RoundtableStanceType>
+  consensus_points: string[]
+  tension_axes: ConsensusTensionAxisDTO[]
+  personal_axis_alignment: PersonalAxisCheckItemDTO[]
+  portfolio_context_summary: string
+  action_playbook: ActionPlaybookSpecDTO
+  kill_switches: string[]
+  reflection_summary?: string | null
+}
+
+export interface PastScorecardDTO {
+  previous_session_id: string
+  previous_date: string
+  primary_ticker: string
+  benchmark_ticker: string
+  entry_price?: string | null
+  settlement_price?: string | null
+  raw_return_pct?: string | null
+  benchmark_return_pct?: string | null
+  alpha_pct?: string | null
+  previous_final_rating: RoundtableStanceType
+  outcome_label: string
+  reflection_lesson?: string | null
+  settlement_status: string
+}
+
+export interface GuruPersonaDTO {
+  speaker_id: string
+  display_name: string
+  short_name: string
+  archetype: string
+  voice_name: string
+  accent_color: string
+  is_prioritized_role_model: boolean
+  emoji?: string
+  pitch?: number
+  rate?: number
+  enabled?: boolean
+  debate_order?: number
+  preset_id?: string
+  preset_label?: string
+  speaking_style?: string
+  custom_directive?: string
+  role_lens_label?: string
+  focus_summary?: string
+  primary_evidence_labels?: string[]
+  analytical_rubric?: string
+}
+
+export interface UpdateGuruPersonaInputDTO {
+  speaker_id: CoreGuruIdType
+  display_name?: string | null
+  short_name?: string | null
+  archetype?: string | null
+  speaking_style?: string | null
+  custom_directive?: string | null
+  preset_id?: string | null
+  voice_name?: string | null
+  pitch?: number | null
+  rate?: number | null
+  accent_color?: string | null
+  emoji?: string | null
+  enabled?: boolean | null
+  debate_order?: number | null
+}
+
+export interface VoiceCatalogItemDTO {
+  voice_name: string
+  gender_tone: string
+  label_th: string
+  recommended_for: string
+  default_pitch: number
+  default_rate: number
+  default_sample_text: string
+}
+
+export interface GuruPresetItemDTO {
+  preset_id: string
+  speaker_id: string
+  label_th: string
+  display_name: string
+  short_name: string
+  archetype: string
+  speaking_style: string
+  custom_directive: string
+  recommended_voice: string
+  emoji: string
+  role_lens_label?: string
+  focus_summary?: string
+  primary_evidence_labels?: string[]
+  analytical_rubric?: string
+}
+
+export interface RoundtableGuruConfigCatalogDTO {
+  personas: GuruPersonaDTO[]
+  voices: VoiceCatalogItemDTO[]
+  presets: GuruPresetItemDTO[]
+}
+
+export interface VoicePreviewRequestDTO {
+  speaker_id: CoreGuruIdType
+  voice_name: string
+  sample_text?: string | null
+  pitch?: number
+  rate?: number
+}
+
+export interface VoicePreviewResponseDTO {
+  audio_status: AudioStatusType
+  audio_cache_key?: string | null
+  sample_text: string
+  voice_name: string
+  pitch: number
+  rate: number
+  error_message?: string | null
+}
+
+export interface RoundtableTurnDTO {
+  turn_id: string
+  session_id: string
+  seq: number
+  speaker_id: string
+  round_stage: string
+  replying_to?: string | null
+  spoken_dialogue: string
+  evidence_bullets: string[]
+  stance_tag: RoundtableStanceType
+  sizing_posture?: string | null
+  audio_cache_key?: string | null
+  audio_status: AudioStatusType
+  created_at: number
+}
+
+export interface RoundtableSessionSummaryDTO {
+  session_id: string
+  title: string
+  primary_ticker?: string | null
+  benchmark_ticker?: string | null
+  agenda_prompt: string
+  context_refs: string[]
+  final_rating: RoundtableStanceType
+  settlement_status: string
+  settled_return_pct?: string | null
+  settled_alpha_pct?: string | null
+  status: string
+  created_at: number
+  updated_at: number
+}
+
+export interface DebatePillarStatusDTO {
+  pillar: string
+  raised_by: string[]
+  challenged_by: string[]
+  is_challenged: boolean
+}
+
+export interface DebatePillarCoverageDTO {
+  pillars: DebatePillarStatusDTO[]
+  raised_count: number
+  challenged_count: number
+  unchallenged_pillars: string[]
+}
+
+export interface RoundtableSessionDetailDTO {
+  session: RoundtableSessionSummaryDTO
+  turns: RoundtableTurnDTO[]
+  decision_playbook?: DistilledDecisionPlaybookDTO | null
+  past_scorecard?: PastScorecardDTO | null
+  missing_prerequisite_tickers: string[]
+  prioritized_speakers: string[]
+  user_role_models: string[]
+  portfolio_attachment_state: string
+  context_drift_detected: boolean
+  packet_fingerprint_sha256: string
+  debate_intensity?: DebateIntensityType
+  debate_depth?: DebateDepthType
+  personas: GuruPersonaDTO[]
+  pillar_coverage?: DebatePillarCoverageDTO | null
+}
+
+export interface CreateRoundtableSessionRequestDTO {
+  title?: string | null
+  agenda_prompt: string
+  context_refs?: string[]
+  portfolio_id?: string
+  proceed_without_missing_tickers?: boolean
+  debate_intensity?: DebateIntensityType
+  debate_depth?: DebateDepthType
+  persona_overrides?: UpdateGuruPersonaInputDTO[] | null
+}
+
+export interface InterjectRequestDTO {
+  message: string
+  target_speaker_id?: SpeakerIdType | null
+  voice_enabled?: boolean
+  run_sandbox_math?: boolean
+  refresh_context?: boolean
+}
+
+export interface RoundtableToolCallEventDTO {
+  tool_name: string
+  status: 'running' | 'completed' | 'failed'
+  elapsed_ms?: number | null
+  summary: string
+  detail_json?: Record<string, unknown> | null
+}
+
+export interface RoundtableInterjectResponseDTO {
+  session_id: string
+  user_turn: RoundtableTurnDTO
+  reply_turn: RoundtableTurnDTO
+  tool_calls: RoundtableToolCallEventDTO[]
+  context_refreshed: boolean
+}
+
+export interface SaveToVaultResponseDTO {
+  ok: boolean
+  vault_path?: string | null
+  thesis_claim_id?: string | null
+  message: string
+}
+
+export interface RoundtableDispatchPrerequisiteResponseDTO {
+  ok: boolean
+  ticker: string
+  job_id?: string | null
+  message: string
 }

@@ -92,8 +92,8 @@ export const SupportResistanceTable: React.FC<SupportResistanceTableProps> = ({
     return (
       <div className="flex h-full flex-col justify-center items-center rounded-2xl border border-edge bg-panel p-6 text-center shadow-sm">
         <span className="text-3xl mb-2">🎯</span>
-        <h4 className="font-medium text-zinc-800">ไม่มีข้อมูลแนวรับ-แนวต้าน</h4>
-        <p className="text-xs text-zinc-400 mt-1 max-w-xs">
+        <h4 className="font-medium text-slate-800">ไม่มีข้อมูลแนวรับ-แนวต้าน</h4>
+        <p className="text-xs text-slate-500 mt-1 max-w-xs">
           ยังไม่มีข้อมูลราคาในอดีตเพียงพอสำหรับการคำนวณ Pivot Point
         </p>
       </div>
@@ -126,11 +126,11 @@ export const SupportResistanceTable: React.FC<SupportResistanceTableProps> = ({
       {/* Header Title & Controls */}
       <div className="border-b border-edge/60 pb-4">
         <div className="flex items-center justify-between">
-          <h3 className="text-base font-bold text-zinc-900 flex items-center gap-1.5">
+          <h3 className="text-base font-bold text-slate-900 flex items-center gap-1.5">
             <span>🎯</span>
             <span>ตารางคำนวณ แนวรับ-แนวต้าน</span>
           </h3>
-          <span className="text-xs font-mono text-zinc-500 bg-surface px-2 py-0.5 rounded border border-edge">
+          <span className="text-xs font-mono text-slate-500 bg-surface px-2 py-0.5 rounded border border-edge">
             Pivot: {currSign}{pivotLevels.pivot.toFixed(2)}
           </span>
         </div>
@@ -138,11 +138,11 @@ export const SupportResistanceTable: React.FC<SupportResistanceTableProps> = ({
         {/* Capital Input & Remember Checkbox */}
         <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-2">
-            <label htmlFor="capital-input" className="text-xs font-semibold text-zinc-700">
+            <label htmlFor="capital-input" className="text-xs font-semibold text-slate-700">
               ใส่เงินลงทุนเพิ่ม ({currency}):
             </label>
             <div className="relative">
-              <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs text-zinc-400 font-medium">
+              <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs text-slate-500 font-medium">
                 {currSign}
               </span>
               <input
@@ -152,17 +152,17 @@ export const SupportResistanceTable: React.FC<SupportResistanceTableProps> = ({
                 step="100"
                 value={capital === 0 ? '' : capital}
                 onChange={handleCapitalChange}
-                className="w-28 rounded-lg border border-edge bg-surface pl-6 pr-2.5 py-1 text-xs font-mono font-bold text-zinc-900 focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
+                className="w-28 rounded-lg border border-edge bg-surface pl-6 pr-2.5 py-1 text-xs font-mono font-bold text-slate-900 focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
               />
             </div>
           </div>
 
-          <label className="flex items-center gap-1.5 text-xs text-zinc-500 cursor-pointer hover:text-zinc-800 select-none">
+          <label className="flex items-center gap-1.5 text-xs text-slate-500 cursor-pointer hover:text-slate-800 select-none">
             <input
               type="checkbox"
               checked={rememberCapital}
               onChange={handleRememberToggle}
-              className="h-3.5 w-3.5 rounded border-zinc-300 text-sky-600 focus:ring-sky-500"
+              className="h-3.5 w-3.5 rounded border-slate-300 text-sky-600 focus:ring-sky-500"
             />
             <span>จดจำนวนเงินนี้ไว้</span>
           </label>
@@ -173,12 +173,12 @@ export const SupportResistanceTable: React.FC<SupportResistanceTableProps> = ({
       <div className="mt-4 overflow-x-auto">
         <table className="w-full text-left border-collapse">
           <thead>
-            <tr className="border-b border-edge text-[11px] font-semibold uppercase text-zinc-600 bg-surface/70">
+            <tr className="border-b border-edge text-[11px] font-semibold uppercase text-slate-600 bg-surface/70">
               <th className="py-2.5 px-3 rounded-l-lg">ซื้อที่</th>
               {rLevels.map((r) => (
                 <th key={r.label} className="py-2.5 px-3 text-right">
                   <div>{r.label}</div>
-                  <div className="font-mono text-[10px] text-zinc-500 font-normal">
+                  <div className="font-mono text-[11px] text-slate-500 font-normal">
                     {currSign}{r.price.toFixed(2)}
                   </div>
                 </th>
@@ -192,13 +192,13 @@ export const SupportResistanceTable: React.FC<SupportResistanceTableProps> = ({
                 <tr key={s.label} className="hover:bg-surface/50 transition-colors">
                   {/* Row Header (Sx) */}
                   <td className="py-2.5 px-3">
-                    <div className="font-bold text-zinc-900 flex items-center gap-1">
+                    <div className="font-bold text-slate-900 flex items-center gap-1">
                       <span>{s.label}</span>
                       {isBelowCurrent && (
                         <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" title="ต่ำกว่าราคาปัจจุบัน" />
                       )}
                     </div>
-                    <div className="text-[11px] text-zinc-500">
+                    <div className="text-[11px] text-slate-500">
                       {currSign}{s.price.toFixed(2)}
                     </div>
                   </td>
@@ -225,7 +225,7 @@ export const SupportResistanceTable: React.FC<SupportResistanceTableProps> = ({
                             maximumFractionDigits: 2,
                           })}
                         </div>
-                        <div className="text-[10px] opacity-85">
+                        <div className="text-[11px] opacity-85">
                           ({isProfit ? '+' : ''}
                           {profitPct.toFixed(2)}%)
                         </div>
@@ -240,18 +240,18 @@ export const SupportResistanceTable: React.FC<SupportResistanceTableProps> = ({
       </div>
 
       {/* Footnote Metadata */}
-      <div className="mt-4 flex flex-wrap items-center justify-between gap-2 border-t border-edge/60 pt-3 text-[11px] text-zinc-400">
+      <div className="mt-4 flex flex-wrap items-center justify-between gap-2 border-t border-edge/60 pt-3 text-[11px] text-slate-500">
         <div>
           <span>สูตร Classic Pivot ({pivotPeriod ?? 'monthly'})</span>
           {pivotAsOf && (
             <span className="ml-1.5">
-              • ฐานคำนวณ: แท่งสิ้นเดือน <strong className="text-zinc-600">{pivotAsOf}</strong>
+              • ฐานคำนวณ: แท่งสิ้นเดือน <strong className="text-slate-600">{pivotAsOf}</strong>
             </span>
           )}
         </div>
         {currentPrice !== null && (
-          <div className="text-zinc-500">
-            ราคาปัจจุบัน: <span className="font-mono font-semibold text-zinc-700">{currSign}{currentPrice.toFixed(2)}</span>
+          <div className="text-slate-500">
+            ราคาปัจจุบัน: <span className="font-mono font-semibold text-slate-700">{currSign}{currentPrice.toFixed(2)}</span>
           </div>
         )}
       </div>

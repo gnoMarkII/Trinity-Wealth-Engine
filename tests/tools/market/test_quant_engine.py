@@ -305,3 +305,39 @@ class TestComputePricePercentile:
         assert q.stale_reason == "insufficient_trading_history"
 
 
+def test_quant_engine_handles_multiindex_yfinance_columns():
+    """Option 2: Squeeze MultiIndex single-ticker columns cleanly in _get_price_history and Amihud calculation."""
+    from unittest.mock import MagicMock, patch
+    from tools.market.quant_engine import (
+        compute_amihud_illiquidity_20d_with_metadata,
+        _select_return_price_series,
+    )
+
+    _HISTORY_CACHE.clear()
+    _HISTORY_ERROR_CACHE.clear()
+    dates = pd.bdate_range("2026-01-01", periods=25)
+    cols = pd.MultiIndex.from_tuples([
+        ("Close", "FTNT"),
+        ("Adj Close", "FTNT"),
+        ("Volume", "FTNT"),
+    ])
+    mi_df = pd.DataFrame(
+        [[100.0 + i, 100.0 + i, 1_000_000.0] for i in range(25)],
+        index=dates,
+        columns=cols,
+    )
+    mock_tk = MagicMock()
+    mock_tk.history.return_value = mi_df
+    with patch("tools.market.quant_engine.yf.Ticker", return_value=mock_tk):
+        hist = _get_price_history("FTNT", "1y")
+        assert isinstance(hist["Close"], pd.Series)
+        assert float(hist["Close"].iloc[-1]) == 124.0
+
+    ret_s = _select_return_price_series(mi_df)
+    assert isinstance(ret_s, pd.Series)
+    meta = compute_amihud_illiquidity_20d_with_metadata(mi_df, currency="USD")
+    assert meta["value"] is not None
+    assert meta["status"] == "available"
+
+
+

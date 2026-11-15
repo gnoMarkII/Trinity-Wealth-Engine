@@ -4,6 +4,14 @@ import ManagerLiveExecutionView from './ManagerLiveExecutionView'
 import ManagerSwarmView from './ManagerSwarmView'
 import ManagerKanbanView from './ManagerKanbanView'
 import MorningDeltaCard from './MorningDeltaCard'
+import {
+  CloseIcon,
+  CompactLayoutIcon,
+  ExpandIcon,
+  KanbanBoardIcon,
+  SwarmNodesIcon,
+  TempleReviewIcon,
+} from '../ui/AppIcons'
 
 export type ManagerRightPanelTab = 'kanban' | 'execution' | 'swarm' | 'review'
 export type KanbanWidthMode = 'compact' | 'wide' | 'full'
@@ -112,6 +120,17 @@ export default function ManagerRightPanel({
     }
   }, [isResizing, updateWidth])
 
+  useEffect(() => {
+    if (!isOpen) return
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.key === 'Escape' && window.innerWidth < 1280) {
+        onClose()
+      }
+    }
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [isOpen, onClose])
+
   if (!isOpen) return null
 
   const isFullMode = activeTab === 'kanban' && kanbanWidthMode === 'full'
@@ -166,7 +185,7 @@ export default function ManagerRightPanel({
     <>
       {/* Mobile Backdrop Overlay (only on < xl screens) */}
       <div
-        className="fixed inset-0 z-40 bg-sky-950/20 backdrop-blur-sm xl:hidden"
+        className="fixed inset-0 z-40 bg-slate-900/20 backdrop-blur-sm xl:hidden"
         onClick={onClose}
         aria-hidden="true"
       />
@@ -175,9 +194,8 @@ export default function ManagerRightPanel({
       <aside
         style={inlinePanelStyle}
         data-testid="manager-right-panel"
-        className={`fixed inset-y-0 right-0 z-50 flex flex-col border-l border-sky-100/80 bg-panel/95 shadow-[-12px_0_32px_rgba(14,165,233,0.05)] backdrop-blur-xl ${
-          isResizing ? 'transition-none' : 'transition-[width] duration-200 ease-out'
-        } xl:static xl:z-auto xl:h-full ${widthClasses}`}
+        className={`fixed inset-y-0 right-0 z-50 flex flex-col border-l border-sky-100/80 bg-panel/95 shadow-[-12px_0_32px_rgba(14,165,233,0.05)] backdrop-blur-xl ${isResizing ? 'transition-none' : 'transition-[width] duration-200 ease-out'
+          } xl:static xl:z-auto xl:h-full ${widthClasses}`}
         aria-label="Agent Work, Kanban and Swarm Panel"
       >
         {/* Interactive Drag-to-Resize Handle on Left Edge */}
@@ -193,21 +211,19 @@ export default function ManagerRightPanel({
           onMouseDown={handleResizeStart}
           onDoubleClick={handleResizeDoubleClick}
           onKeyDown={handleResizeKeyDown}
-          className={`group absolute inset-y-0 -left-1.5 z-30 hidden w-3 cursor-col-resize items-center justify-center xl:flex ${
-            isResizing ? 'bg-sky-400/20' : 'hover:bg-sky-400/15'
-          }`}
+          className={`group absolute inset-y-0 -left-1.5 z-30 hidden w-3 cursor-col-resize items-center justify-center xl:flex ${isResizing ? 'bg-sky-400/20' : 'hover:bg-sky-400/15'
+            }`}
         >
           {/* Subtle central grip pill */}
           <div
-            className={`h-10 w-1 rounded-full transition-all ${
-              isResizing
-                ? 'h-16 bg-sky-500 shadow-[0_0_8px_rgba(14,165,233,0.6)]'
-                : 'bg-sky-200/80 group-hover:h-14 group-hover:bg-sky-400'
-            }`}
+            className={`h-10 w-1 rounded-full transition-all ${isResizing
+              ? 'h-16 bg-sky-500 shadow-[0_0_8px_rgba(14,165,233,0.6)]'
+              : 'bg-sky-200/80 group-hover:h-14 group-hover:bg-sky-400'
+              }`}
           />
           {/* Floating width indicator badge while actively dragging */}
           {isResizing && (
-            <span className="pointer-events-none absolute -left-16 top-1/2 -translate-y-1/2 rounded-lg bg-sky-950/90 px-2 py-0.5 font-mono text-xs font-semibold text-white shadow-md">
+            <span className="pointer-events-none absolute -left-16 top-1/2 -translate-y-1/2 rounded-lg bg-slate-900/90 px-2 py-0.5 font-mono text-xs font-semibold text-white shadow-md">
               {panelWidth}px
             </span>
           )}
@@ -221,13 +237,12 @@ export default function ManagerRightPanel({
             <button
               type="button"
               onClick={() => onTabChange('review')}
-              className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-semibold transition-all ${
-                activeTab === 'review'
-                  ? 'bg-white text-sky-950 shadow-sm'
-                  : 'text-zinc-600 hover:text-sky-900'
-              }`}
+              className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-semibold transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-section-accent/45 ${activeTab === 'review'
+                ? 'bg-white text-slate-900 shadow-sm'
+                : 'text-slate-600 hover:text-slate-900'
+                }`}
             >
-              <span>🏛️</span>
+              <TempleReviewIcon className="h-3.5 w-3.5 text-section-accent" />
               <span>Morning Delta</span>
             </button>
 
@@ -235,16 +250,15 @@ export default function ManagerRightPanel({
             <button
               type="button"
               onClick={() => onTabChange('kanban')}
-              className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-semibold transition-all ${
-                activeTab === 'kanban'
-                  ? 'bg-white text-sky-950 shadow-sm'
-                  : 'text-zinc-600 hover:text-sky-900'
-              }`}
+              className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-semibold transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-section-accent/45 ${activeTab === 'kanban'
+                ? 'bg-white text-slate-900 shadow-sm'
+                : 'text-slate-600 hover:text-slate-900'
+                }`}
             >
-              <span>📋</span>
+              <KanbanBoardIcon className="h-3.5 w-3.5 text-section-accent" />
               <span>บอร์ดงาน</span>
               {approvalCount > 0 && (
-                <span className="rounded-full bg-purple-100 px-1.5 py-0.5 text-xs font-mono font-bold text-purple-700 animate-pulse">
+                <span className="rounded-full bg-amber-100 px-1.5 py-0.5 text-xs font-mono font-bold text-amber-800 animate-pulse">
                   {approvalCount}
                 </span>
               )}
@@ -254,13 +268,12 @@ export default function ManagerRightPanel({
             <button
               type="button"
               onClick={() => onTabChange('swarm')}
-              className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-semibold transition-all ${
-                activeTab === 'swarm'
-                  ? 'bg-white text-sky-950 shadow-sm'
-                  : 'text-zinc-600 hover:text-sky-900'
-              }`}
+              className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-semibold transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-section-accent/45 ${activeTab === 'swarm'
+                ? 'bg-white text-slate-900 shadow-sm'
+                : 'text-slate-600 hover:text-slate-900'
+                }`}
             >
-              <span>🐝</span>
+              <SwarmNodesIcon className="h-3.5 w-3.5 text-section-accent" />
               <span>Trinity Swarm</span>
               <span className="rounded-full bg-sky-200/80 px-1.5 py-0.5 text-xs font-mono font-bold text-sky-900">
                 5
@@ -279,25 +292,25 @@ export default function ManagerRightPanel({
                     setPanelWidth(DEFAULT_PANEL_WIDTH)
                   }}
                   title="มุมมองกะทัดรัด (คอลัมน์เดียว)"
-                  className={`rounded px-1.5 py-1 text-[10px] font-medium transition-all ${
-                    effectiveKanbanLayout === 'compact'
-                      ? 'bg-sky-100 text-sky-900 font-bold'
-                      : 'text-zinc-400 hover:text-zinc-700'
-                  }`}
+                  aria-label="มุมมองกะทัดรัด (คอลัมน์เดียว)"
+                  className={`rounded p-1 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-section-accent/45 ${effectiveKanbanLayout === 'compact'
+                    ? 'bg-sky-100 text-sky-900 font-bold'
+                    : 'text-slate-500 hover:text-slate-700'
+                    }`}
                 >
-                  ▍
+                  <CompactLayoutIcon className="h-3.5 w-3.5" />
                 </button>
                 <button
                   type="button"
                   onClick={() => setKanbanWidthMode('full')}
                   title="มุมมองขยายเต็มจอ"
-                  className={`rounded px-1.5 py-1 text-[10px] font-medium transition-all ${
-                    effectiveKanbanLayout === 'full'
-                      ? 'bg-sky-100 text-sky-900 font-bold'
-                      : 'text-zinc-400 hover:text-zinc-700'
-                  }`}
+                  aria-label="มุมมองขยายเต็มจอ"
+                  className={`rounded p-1 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-section-accent/45 ${effectiveKanbanLayout === 'full'
+                    ? 'bg-sky-100 text-sky-900 font-bold'
+                    : 'text-slate-500 hover:text-slate-700'
+                    }`}
                 >
-                  ⛶
+                  <ExpandIcon className="h-3.5 w-3.5" />
                 </button>
               </div>
             )}
@@ -307,9 +320,10 @@ export default function ManagerRightPanel({
               type="button"
               onClick={onClose}
               title="ย่อแถบด้านข้าง"
-              className="flex h-8 w-8 items-center justify-center rounded-xl border border-sky-100 text-zinc-400 hover:bg-sky-50 hover:text-sky-800 transition-colors"
+              aria-label="ย่อแถบด้านข้าง"
+              className="flex h-8 w-8 items-center justify-center rounded-xl border border-sky-100 text-slate-500 hover:bg-sky-50 hover:text-slate-700 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-section-accent/45"
             >
-              <span className="text-sm">✕</span>
+              <CloseIcon className="h-4 w-4" />
             </button>
           </div>
         </div>
@@ -318,7 +332,7 @@ export default function ManagerRightPanel({
         <div className="flex-1 min-h-0 overflow-hidden relative flex flex-col">
           {activeTab === 'review' ? (
             <div className="h-full overflow-y-auto p-3.5 custom-scrollbar">
-              <MorningDeltaCard defaultExpanded={true} />
+              <MorningDeltaCard defaultExpanded={true} refreshTrigger={refreshTrigger} />
             </div>
           ) : activeTab === 'kanban' ? (
             <ManagerKanbanView

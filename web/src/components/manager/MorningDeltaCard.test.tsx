@@ -470,4 +470,84 @@ describe('MorningDeltaCard Component', () => {
       expect(reviewSpy).toHaveBeenCalledWith('EXC-CAT-01', 'Non-material schedule shift')
     })
   })
+
+  it('renders monitored active theses (including Watchlist) and groups NOT_EVALUABLE exceptions with manual refresh', async () => {
+    const packetWithWatchdog: MorningReviewPacketDTO = {
+      ...mockPacket,
+      thesis_exceptions: [
+        {
+          exception_id: 'EXC-INTC-1',
+          claim_id: 'TH-INTC-v1',
+          ticker: 'INTC',
+          detected_at_utc: '2026-11-12T00:00:00Z',
+          exception_type: 'FALSIFIER_BREACHED',
+          metric_name: 'revenue_growth_yoy',
+          expected_value: '< 5.0 PERCENT',
+          observed_value: '-0.47 PERCENT',
+        },
+        {
+          exception_id: 'EXC-NE-1',
+          claim_id: 'TH-NVDA-v1',
+          ticker: 'NVDA',
+          detected_at_utc: '2026-11-12T00:00:00Z',
+          exception_type: 'NOT_EVALUABLE',
+          metric_name: 'fcf_margin',
+          expected_value: '< 5.0 PERCENT',
+        },
+      ],
+      thesis_coverage: {
+        total_holdings_count: 1,
+        covered_count: 1,
+        uncovered_count: 0,
+        coverage_pct: 100,
+        covered_tickers: ['NVDA'],
+        uncovered_tickers: [],
+        monitored_theses: [
+          {
+            claim_id: 'TH-INTC-v1',
+            ticker: 'INTC',
+            version: 1,
+            as_of_utc: '2026-11-12T16:27:06Z',
+            status: 'ACTIVE',
+            in_portfolio: false,
+            claim_statement: 'Intel Turnaround Thesis',
+            falsifiers: [
+              {
+                falsifier_id: 'FAL-INTC-PRICE-STOP',
+                metric_name: 'current_price',
+                operator: '<',
+                threshold_value: '54.17',
+                unit: 'USD',
+                period_basis: 'DAILY',
+                invalidation_impact: 'FORCES_PORTFOLIO_TRIM',
+              },
+            ],
+          },
+        ],
+      },
+    }
+
+    const fetchSpy = vi.spyOn(api, 'getMorningReviewToday').mockResolvedValue(packetWithWatchdog)
+
+    render(<MorningDeltaCard />)
+
+    await waitFor(() => {
+      expect(screen.getByTestId('watchdog-monitored-theses')).toBeInTheDocument()
+    })
+
+    expect(screen.getByTestId('watchdog-thesis-INTC')).toBeInTheDocument()
+    expect(screen.getByText('TH-INTC-v1')).toBeInTheDocument()
+    expect(screen.getByText('Watchlist')).toBeInTheDocument()
+    expect(screen.getByText('BREACHED')).toBeInTheDocument()
+    expect(screen.getByText(/current_price < 54.17 USD/)).toBeInTheDocument()
+    expect(screen.getByText('$INTC: FALSIFIER_BREACHED')).toBeInTheDocument()
+    expect(screen.getByTestId('not-evaluable-exceptions-group')).toBeInTheDocument()
+    expect(screen.getByText(/รอข้อมูล Metric เพิ่มเติม \(1 เงื่อนไข\)/)).toBeInTheDocument()
+
+    // Manual refresh button re-scans Watchdog
+    fireEvent.click(screen.getByTestId('refresh-watchdog-btn'))
+    await waitFor(() => {
+      expect(fetchSpy).toHaveBeenCalledTimes(2)
+    })
+  })
 })

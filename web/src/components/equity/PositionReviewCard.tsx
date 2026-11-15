@@ -73,13 +73,13 @@ export const PositionReviewCard: React.FC<PositionReviewCardProps> = ({
         className={`flow-panel rounded-2xl border border-edge/80 p-6 shadow-sm animate-pulse space-y-4 ${className}`}
       >
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-xl bg-zinc-200" />
+          <div className="w-8 h-8 rounded-xl bg-slate-200" />
           <div className="space-y-1.5 flex-1">
-            <div className="h-4 w-48 bg-zinc-200 rounded" />
-            <div className="h-3 w-80 bg-zinc-100 rounded" />
+            <div className="h-4 w-48 bg-slate-200 rounded" />
+            <div className="h-3 w-80 bg-slate-100 rounded" />
           </div>
         </div>
-        <div className="h-28 bg-zinc-100/60 rounded-xl" />
+        <div className="h-28 bg-slate-100/60 rounded-xl" />
       </section>
     )
   }
@@ -116,7 +116,7 @@ export const PositionReviewCard: React.FC<PositionReviewCardProps> = ({
           <div className="text-[11px] font-bold uppercase tracking-wider text-sky-700/80">
             Portfolio Context & Thesis Evaluation
           </div>
-          <h3 className="text-lg font-bold text-zinc-900 flex items-center gap-2 mt-0.5">
+          <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2 mt-0.5">
             <span>💼 ทบทวนสถานะพอร์ตและสมมติฐานการลงทุน (Position Review)</span>
             <ContextTooltip
               title="Position Review & Decision Framework"
@@ -125,7 +125,7 @@ export const PositionReviewCard: React.FC<PositionReviewCardProps> = ({
               impactOnMoney="ช่วยตัดสินใจว่าควรถือต่อ ทยอยขายทำกำไร หรือตัดขาดทุนอย่างมีวินัย ป้องกันการติดดอยยาวข้ามปี"
             />
           </h3>
-          <p className="text-xs text-zinc-500 mt-0.5">
+          <p className="text-xs text-slate-500 mt-0.5">
             ตรวจสุขภาพหุ้นในมือเราเอง — แยกแยะกำไรจริงออกจากกระแสเก็งกำไร พร้อมคำถามสะกิดสติไม่ให้ยึดติดราคาต้นทุน
           </p>
         </div>
@@ -136,10 +136,10 @@ export const PositionReviewCard: React.FC<PositionReviewCardProps> = ({
             <span
               className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider border ${
                 data.action_stance.includes('ACCUMULATE') || data.action_stance.includes('BUY')
-                  ? 'bg-emerald-50 text-emerald-700 border-emerald-200 shadow-2xs'
+                  ? 'bg-emerald-50 text-emerald-700 border-emerald-200 shadow-sm'
                   : data.action_stance.includes('TRIM') || data.action_stance.includes('EXIT')
-                  ? 'bg-rose-50 text-rose-700 border-rose-200 shadow-2xs'
-                  : 'bg-sky-50 text-sky-700 border-sky-200 shadow-2xs'
+                  ? 'bg-rose-50 text-rose-700 border-rose-200 shadow-sm'
+                  : 'bg-sky-50 text-sky-700 border-sky-200 shadow-sm'
               }`}
             >
               {data.action_stance.replace(/_/g, ' ')}
@@ -150,8 +150,8 @@ export const PositionReviewCard: React.FC<PositionReviewCardProps> = ({
 
       {/* 2. Holding Context Banner: Held in Portfolio vs Watchlist Simulation */}
       {isHeld ? (
-        <div className="p-4 rounded-xl bg-surface border border-edge/80 shadow-2xs">
-          <div className="text-[11px] font-bold text-zinc-500 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+        <div className="p-4 rounded-xl bg-surface border border-edge/80 shadow-sm">
+          <div className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2 flex items-center gap-1.5">
             <span className="flex h-2 w-2 relative">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
               <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
@@ -161,15 +161,15 @@ export const PositionReviewCard: React.FC<PositionReviewCardProps> = ({
 
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-xs">
             <div className="p-2.5 rounded-lg bg-surface-strong/40 border border-edge/40">
-              <span className="text-[10px] font-medium text-zinc-400 block uppercase">จำนวนที่ถือครอง</span>
-              <span className="font-mono text-base font-bold text-zinc-900 mt-0.5 block">
+              <span className="text-[11px] font-medium text-slate-500 block uppercase">จำนวนที่ถือครอง</span>
+              <span className="font-mono text-base font-bold text-slate-900 mt-0.5 block">
                 {data.holding_summary.units.toLocaleString()} หุ้น
               </span>
             </div>
 
             <div className="p-2.5 rounded-lg bg-surface-strong/40 border border-edge/40">
-              <span className="text-[10px] font-medium text-zinc-400 block uppercase">ต้นทุนเฉลี่ย (Avg Cost)</span>
-              <span className="font-mono text-base font-bold text-zinc-900 mt-0.5 block">
+              <span className="text-[11px] font-medium text-slate-500 block uppercase">ต้นทุนเฉลี่ย (Avg Cost)</span>
+              <span className="font-mono text-base font-bold text-slate-900 mt-0.5 block">
                 {data.holding_summary.avg_cost != null
                   ? `${currencySymbol}${data.holding_summary.avg_cost.toFixed(2)}`
                   : 'N/A'}
@@ -177,7 +177,7 @@ export const PositionReviewCard: React.FC<PositionReviewCardProps> = ({
             </div>
 
             <div className="p-2.5 rounded-lg bg-surface-strong/40 border border-edge/40">
-              <span className="text-[10px] font-medium text-zinc-400 block uppercase">กำไร/ขาดทุนทางบัญชี (P&amp;L)</span>
+              <span className="text-[11px] font-medium text-slate-500 block uppercase">กำไร/ขาดทุนทางบัญชี (P&amp;L)</span>
               <span
                 className={`font-mono text-base font-bold mt-0.5 block ${
                   (data.holding_summary.unrealized_pnl_pct ?? 0) >= 0 ? 'text-emerald-600' : 'text-rose-600'
@@ -190,7 +190,7 @@ export const PositionReviewCard: React.FC<PositionReviewCardProps> = ({
             </div>
 
             <div className="p-2.5 rounded-lg bg-surface-strong/40 border border-edge/40">
-              <span className="text-[10px] font-medium text-zinc-400 block uppercase">สัดส่วนในพอร์ต (Weight)</span>
+              <span className="text-[11px] font-medium text-slate-500 block uppercase">สัดส่วนในพอร์ต (Weight)</span>
               <span className="font-mono text-base font-bold text-sky-700 mt-0.5 block">
                 {data.holding_summary.current_weight_pct.toFixed(2)}%
               </span>
@@ -216,7 +216,7 @@ export const PositionReviewCard: React.FC<PositionReviewCardProps> = ({
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <span className="text-sm">📊</span>
-            <h4 className="text-sm font-bold text-zinc-900">
+            <h4 className="text-sm font-bold text-slate-900">
               1. ถอดรหัสการเคลื่อนที่ของราคา (Price Move Decomposition)
             </h4>
             <ContextTooltip
@@ -226,7 +226,7 @@ export const PositionReviewCard: React.FC<PositionReviewCardProps> = ({
               impactOnMoney="ช่วยให้เราไม่หลงดีใจกับราคาหุ้นที่วิ่งขึ้นมา แต่สามารถแยกแยะได้ว่านี่คือของจริงหรือเพียงฟองสบู่ชั่วคราว"
             />
           </div>
-          <span className="text-[11px] text-zinc-400">Horizon: 1Y &amp; 3Y Historical</span>
+          <span className="text-[11px] text-slate-500">Horizon: 1Y &amp; 3Y Historical</span>
         </div>
 
         {data.decompositions && data.decompositions.length > 0 ? (
@@ -236,7 +236,7 @@ export const PositionReviewCard: React.FC<PositionReviewCardProps> = ({
             ))}
           </div>
         ) : (
-          <p className="text-xs text-zinc-400 p-4 rounded-xl bg-surface border border-edge/60 text-center">
+          <p className="text-xs text-slate-500 p-4 rounded-xl bg-surface border border-edge/60 text-center">
             ไม่มีข้อมูล Price Move Decomposition สำหรับหุ้นตัวนี้
           </p>
         )}
@@ -247,7 +247,7 @@ export const PositionReviewCard: React.FC<PositionReviewCardProps> = ({
         <div className="space-y-3 pt-2 border-t border-edge/60">
           <div className="flex items-center gap-2">
             <span className="text-sm">🔄</span>
-            <h4 className="text-sm font-bold text-zinc-900">
+            <h4 className="text-sm font-bold text-slate-900">
               2. ทบทวนสมมติฐานการลงทุน (Then vs Now Evolution)
             </h4>
             <ContextTooltip
@@ -262,16 +262,16 @@ export const PositionReviewCard: React.FC<PositionReviewCardProps> = ({
             {/* Then Card */}
             <div className="p-4 rounded-xl bg-surface border border-edge/70 space-y-2">
               <div className="flex items-center justify-between text-xs">
-                <span className="font-bold text-zinc-600 uppercase tracking-wider text-[10px]">
+                <span className="font-bold text-slate-600 uppercase tracking-wider text-[11px]">
                   สมมติฐานเดิมในอดีต (Then)
                 </span>
-                <span className="font-mono text-zinc-400 text-[11px]">{data.then_vs_now.then_date}</span>
+                <span className="font-mono text-slate-500 text-[11px]">{data.then_vs_now.then_date}</span>
               </div>
               <div className="flex items-baseline gap-3 text-xs">
-                <span className="text-zinc-500">ราคา: <strong>{currencySymbol}{data.then_vs_now.then_price.toFixed(2)}</strong></span>
-                <span className="text-zinc-500">P/E: <strong>{data.then_vs_now.then_pe != null ? `${data.then_vs_now.then_pe.toFixed(1)}x` : 'N/A'}</strong></span>
+                <span className="text-slate-500">ราคา: <strong>{currencySymbol}{data.then_vs_now.then_price.toFixed(2)}</strong></span>
+                <span className="text-slate-500">P/E: <strong>{data.then_vs_now.then_pe != null ? `${data.then_vs_now.then_pe.toFixed(1)}x` : 'N/A'}</strong></span>
               </div>
-              <p className="text-xs text-zinc-700 leading-relaxed pt-1 border-t border-edge/40">
+              <p className="text-xs text-slate-700 leading-relaxed pt-1 border-t border-edge/40">
                 {data.then_vs_now.what_was_true_then}
               </p>
             </div>
@@ -279,23 +279,23 @@ export const PositionReviewCard: React.FC<PositionReviewCardProps> = ({
             {/* Now Card */}
             <div className="p-4 rounded-xl bg-surface border border-sky-200/80 space-y-2">
               <div className="flex items-center justify-between text-xs">
-                <span className="font-bold text-sky-800 uppercase tracking-wider text-[10px]">
+                <span className="font-bold text-sky-800 uppercase tracking-wider text-[11px]">
                   ความเป็นจริงในปัจจุบัน (Now)
                 </span>
-                <span className="font-mono text-zinc-400 text-[11px]">{data.then_vs_now.now_date}</span>
+                <span className="font-mono text-slate-500 text-[11px]">{data.then_vs_now.now_date}</span>
               </div>
               <div className="flex items-baseline gap-3 text-xs">
-                <span className="text-zinc-500">ราคา: <strong>{currencySymbol}{data.then_vs_now.now_price.toFixed(2)}</strong></span>
-                <span className="text-zinc-500">P/E: <strong>{data.then_vs_now.now_pe != null ? `${data.then_vs_now.now_pe.toFixed(1)}x` : 'N/A'}</strong></span>
+                <span className="text-slate-500">ราคา: <strong>{currencySymbol}{data.then_vs_now.now_price.toFixed(2)}</strong></span>
+                <span className="text-slate-500">P/E: <strong>{data.then_vs_now.now_pe != null ? `${data.then_vs_now.now_pe.toFixed(1)}x` : 'N/A'}</strong></span>
               </div>
-              <p className="text-xs text-zinc-700 leading-relaxed pt-1 border-t border-edge/40">
+              <p className="text-xs text-slate-700 leading-relaxed pt-1 border-t border-edge/40">
                 {data.then_vs_now.what_is_true_now}
               </p>
             </div>
           </div>
 
           {/* Anti-Anchoring Reflection Question */}
-          <div className="p-3.5 rounded-xl bg-amber-50/80 border border-amber-200/90 text-xs text-amber-950 flex items-start gap-2.5 shadow-2xs">
+          <div className="p-3.5 rounded-xl bg-amber-50/80 border border-amber-200/90 text-xs text-amber-950 flex items-start gap-2.5 shadow-sm">
             <span className="text-base shrink-0 mt-0.5">💡</span>
             <div className="space-y-0.5">
               <span className="font-bold block text-amber-900">
@@ -319,7 +319,7 @@ export const PositionReviewCard: React.FC<PositionReviewCardProps> = ({
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <span className="text-sm">🎯</span>
-              <h4 className="text-sm font-bold text-zinc-900">
+              <h4 className="text-sm font-bold text-slate-900">
                 3. ปัจจัยชี้ขาดเพื่อตัดสินใจ (Portfolio-Aware Decision Triggers)
               </h4>
               <ContextTooltip
@@ -329,7 +329,7 @@ export const PositionReviewCard: React.FC<PositionReviewCardProps> = ({
                 impactOnMoney="ช่วยลดการใช้อารมณ์ในการเทรด ทำให้การซื้อขายเป็นไปตามวินัยที่วางไว้ล่วงหน้า"
               />
             </div>
-            <span className="text-[11px] text-zinc-400">{data.triggers.length} เงื่อนไขเฝ้าระวัง</span>
+            <span className="text-[11px] text-slate-500">{data.triggers.length} เงื่อนไขเฝ้าระวัง</span>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -339,10 +339,10 @@ export const PositionReviewCard: React.FC<PositionReviewCardProps> = ({
                 className="p-3 rounded-xl bg-surface border border-edge/70 flex items-start justify-between gap-3 text-xs"
               >
                 <div className="space-y-1">
-                  <div className="font-bold text-zinc-900">{trig.title}</div>
-                  <div className="text-[11px] text-zinc-500 leading-snug">{trig.condition_text}</div>
+                  <div className="font-bold text-slate-900">{trig.title}</div>
+                  <div className="text-[11px] text-slate-500 leading-snug">{trig.condition_text}</div>
                 </div>
-                <span className="shrink-0 px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-zinc-100 text-zinc-700 border border-zinc-200">
+                <span className="shrink-0 px-2 py-0.5 rounded text-[11px] font-bold uppercase bg-slate-100 text-slate-700 border border-slate-200">
                   {trig.case_impact.replace(/_/g, ' ')}
                 </span>
               </div>

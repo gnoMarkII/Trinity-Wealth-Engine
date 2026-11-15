@@ -174,9 +174,12 @@ describe('Macro Page - Dual Track Cockpit', () => {
         'วิเคราะห์ภาวะเศรษฐกิจมหภาค (Macro Intelligence & Regime Analysis) ล่าสุดพร้อมประเมิน Asset Allocation',
         'macro-card-1',
         'manager',
-        'both'
+        'both',
+        true
       )
-      expect(screen.getByText('สั่งงานวิเคราะห์ภาวะเศรษฐกิจมหภาคเรียบร้อย')).toBeInTheDocument()
+      expect(
+        screen.getByText('ส่งคำขอวิเคราะห์ภาวะเศรษฐกิจมหภาคเข้า Request Approve แล้ว — กรุณากดยอมรับใน Kanban ก่อนเริ่มรัน')
+      ).toBeInTheDocument()
     })
   })
 

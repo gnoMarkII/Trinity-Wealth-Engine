@@ -5,7 +5,7 @@ import { nodeDisplayName } from '../lib/nodeDisplayNames'
 import { groupIntoSteps, type LogLine } from '../lib/terminalSteps'
 
 const LAST_STEP_DOT_CLASS: Record<TerminalStatus, string> = {
-  idle: 'bg-zinc-300',
+  idle: 'bg-slate-300',
   streaming: 'animate-pulse bg-emerald-500',
   done: 'bg-emerald-500',
   done_with_warnings: 'bg-amber-400',
@@ -135,14 +135,14 @@ export default function LiveTerminal({ jobId, onStatusChange, onNodeUpdate, onAw
     status === 'streaming'
       ? 'text-emerald-700'
       : status === 'done'
-        ? 'text-zinc-500'
+        ? 'text-slate-500'
         : status === 'done_with_errors'
           ? 'text-amber-700'
         : status === 'awaiting_approval'
           ? 'text-amber-700'
           : status === 'error'
             ? 'text-red-700'
-            : 'text-zinc-400'
+            : 'text-slate-500'
 
   if (hideUi) return null
 
@@ -151,7 +151,7 @@ export default function LiveTerminal({ jobId, onStatusChange, onNodeUpdate, onAw
   return (
     <div className="rounded-xl border border-edge bg-surface shadow-sm shadow-black/5">
       <div className="flex items-center justify-between border-b border-edge px-3 py-2">
-        <span className="font-mono text-xs text-zinc-500">Live Execution Terminal</span>
+        <span className="font-mono text-xs text-slate-500">Live Execution Terminal</span>
         <span className={`flex items-center gap-1.5 font-mono text-xs ${statusColor}`}>
           {status === 'streaming' && (
             <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-500" />
@@ -165,22 +165,22 @@ export default function LiveTerminal({ jobId, onStatusChange, onNodeUpdate, onAw
             <span className="font-semibold">ข้อผิดพลาดของงาน: </span>{errorMessage}
           </p>
         )}
-        {steps.length === 0 && <p className="text-xs text-zinc-400">รอสั่งงาน...</p>}
+        {steps.length === 0 && <p className="text-xs text-slate-500">รอสั่งงาน...</p>}
         {steps.map((step, i) => {
           const isLast = i === steps.length - 1
-          const dotClass = isLast ? LAST_STEP_DOT_CLASS[status] : 'bg-zinc-400'
+          const dotClass = isLast ? LAST_STEP_DOT_CLASS[status] : 'bg-slate-400'
           return (
             <div key={step.key} className="flex gap-3">
               <div className="flex flex-col items-center">
                 <span className={`mt-1 h-2 w-2 shrink-0 rounded-full ${dotClass}`} />
-                {!isLast && <div className="w-px flex-1 bg-zinc-200" />}
+                {!isLast && <div className="w-px flex-1 bg-slate-200" />}
               </div>
               <div className={`min-w-0 flex-1 ${isLast ? 'pb-1' : 'pb-3'}`}>
-                <p className="text-xs font-semibold text-zinc-700">{nodeDisplayName(step.node)}</p>
+                <p className="text-xs font-semibold text-slate-700">{nodeDisplayName(step.node)}</p>
                 {step.messages.map((m, j) =>
                   m.role === 'instruction' ? (
-                    <p key={j} className="mt-0.5 font-mono text-xs text-zinc-500">
-                      <span className="text-zinc-400">↳ [{m.label ?? m.node}]</span> {m.content}
+                    <p key={j} className="mt-0.5 font-mono text-xs text-slate-500">
+                      <span className="text-slate-500">↳ [{m.label ?? m.node}]</span> {m.content}
                     </p>
                   ) : (
                     <p key={j} className="mt-0.5 font-mono text-xs text-emerald-700">

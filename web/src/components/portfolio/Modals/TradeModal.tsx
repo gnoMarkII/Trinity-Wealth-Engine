@@ -160,28 +160,28 @@ export default function TradeModal({ targets, holdings, selectedPortfolioId, onC
       submitText={action === 'buy' ? '✅ ยืนยันการซื้อ (BUY)' : '🚨 ยืนยันการขาย (SELL)'}
       submitClassName={action === 'buy' ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-rose-600 hover:bg-rose-700'}
     >
-      <div className="flex items-center justify-between rounded-xl bg-zinc-50 border border-zinc-200/80 px-3 py-2 text-xs">
-        <span className="font-semibold text-zinc-600 flex items-center gap-1.5">
+      <div className="flex items-center justify-between rounded-xl bg-slate-50 border border-slate-200/80 px-3 py-2 text-xs">
+        <span className="font-semibold text-slate-600 flex items-center gap-1.5">
           <span>💵</span> เงินสดคงเหลือในพอร์ต:
         </span>
         <div className="flex items-center gap-2 font-mono font-bold">
-          <span className={cashUsd > 0 ? 'text-emerald-700' : 'text-zinc-500'}>
+          <span className={cashUsd > 0 ? 'text-emerald-700' : 'text-slate-500'}>
             ${cashUsd.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} USD
           </span>
-          <span className="text-zinc-300">|</span>
-          <span className={cashThb > 0 ? 'text-emerald-700' : 'text-zinc-500'}>
+          <span className="text-slate-300">|</span>
+          <span className={cashThb > 0 ? 'text-emerald-700' : 'text-slate-500'}>
             ฿{cashThb.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} THB
           </span>
         </div>
       </div>
       <div className="grid grid-cols-2 gap-3">
         <FormField label="ประเภทรายการ">
-          <div className="flex rounded-xl bg-zinc-100 p-1 font-bold">
+          <div className="flex rounded-xl bg-slate-100 p-1 font-bold">
             <button
               type="button"
               onClick={() => setAction('buy')}
               className={`flex-1 rounded-lg py-1.5 text-center transition-all ${
-                action === 'buy' ? 'bg-emerald-600 text-white shadow-sm' : 'text-zinc-600 hover:text-zinc-900'
+                action === 'buy' ? 'bg-emerald-600 text-white shadow-sm' : 'text-slate-600 hover:text-slate-900'
               }`}
             >
               ซื้อ (BUY)
@@ -190,7 +190,7 @@ export default function TradeModal({ targets, holdings, selectedPortfolioId, onC
               type="button"
               onClick={() => setAction('sell')}
               className={`flex-1 rounded-lg py-1.5 text-center transition-all ${
-                action === 'sell' ? 'bg-rose-600 text-white shadow-sm' : 'text-zinc-600 hover:text-zinc-900'
+                action === 'sell' ? 'bg-rose-600 text-white shadow-sm' : 'text-slate-600 hover:text-slate-900'
               }`}
             >
               ขาย (SELL)
@@ -306,7 +306,7 @@ export default function TradeModal({ targets, holdings, selectedPortfolioId, onC
               type="button"
               onClick={() => fetchFxForDate(date)}
               disabled={fetchingFx}
-              className="absolute right-1.5 top-1/2 -translate-y-1/2 rounded-lg bg-zinc-100 hover:bg-zinc-200 px-2 py-1 text-[11px] font-semibold text-zinc-600 disabled:opacity-50 transition-colors"
+              className="absolute right-1.5 top-1/2 -translate-y-1/2 rounded-lg bg-slate-100 hover:bg-slate-200 px-2 py-1 text-[11px] font-semibold text-slate-600 disabled:opacity-50 transition-colors"
             >
               {fetchingFx ? '⏳' : '🔄 ดึงเรท'}
             </button>

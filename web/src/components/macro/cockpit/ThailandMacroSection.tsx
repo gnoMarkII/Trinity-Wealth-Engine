@@ -216,7 +216,7 @@ export const ThailandMacroSection: React.FC<ThailandMacroSectionProps> = ({
         <div className="rounded-2xl border border-amber-200/90 bg-amber-50/70 p-5 text-xs text-amber-900 shadow-sm">
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between border-b border-amber-200/70 pb-3">
             <div className="flex items-center gap-2">
-              <span className="rounded-md border border-amber-300 bg-amber-100 px-2 py-0.5 font-mono text-[10px] font-bold uppercase text-amber-900">
+              <span className="rounded-md border border-amber-300 bg-amber-100 px-2 py-0.5 font-mono text-[11px] font-bold uppercase text-amber-900">
                 สถานะเศรษฐกิจไทย: ยังประเมินไม่ได้ (Data Gaps)
               </span>
               <span className="font-semibold text-amber-800 text-xs">
@@ -240,11 +240,11 @@ export const ThailandMacroSection: React.FC<ThailandMacroSectionProps> = ({
                 const parsed = parseGapDetails(gap)
                 return (
                   <div key={gIdx} className="rounded-lg bg-amber-100/60 p-2.5 border border-amber-200/80">
-                    <span className="font-mono text-[10px] text-amber-800 block font-semibold">
+                    <span className="font-mono text-[11px] text-amber-800 block font-semibold">
                       {parsed.authority}
                     </span>
                     <span className="font-bold text-amber-950 text-xs block mt-0.5">{parsed.label}</span>
-                    <span className="text-[10px] text-amber-700 block mt-1 leading-snug">{parsed.reason}</span>
+                    <span className="text-[11px] text-amber-700 block mt-1 leading-snug">{parsed.reason}</span>
                   </div>
                 )
               })}
@@ -258,7 +258,7 @@ export const ThailandMacroSection: React.FC<ThailandMacroSectionProps> = ({
         <div className="rounded-2xl border border-emerald-200/90 bg-emerald-50/70 p-5 text-xs text-emerald-900 shadow-sm">
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between border-b border-emerald-200/70 pb-3">
             <div className="flex items-center gap-2">
-              <span className="rounded-md border border-emerald-300 bg-emerald-100 px-2 py-0.5 font-mono text-[10px] font-bold uppercase text-emerald-900">
+              <span className="rounded-md border border-emerald-300 bg-emerald-100 px-2 py-0.5 font-mono text-[11px] font-bold uppercase text-emerald-900">
                 สถานะเศรษฐกิจไทย: {thState}
               </span>
               <span className="font-semibold text-emerald-800 text-xs">
@@ -285,10 +285,10 @@ export const ThailandMacroSection: React.FC<ThailandMacroSectionProps> = ({
       <div className="rounded-2xl border border-slate-200 bg-white/95 p-5 shadow-sm space-y-4">
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between border-b border-slate-100 pb-3">
           <div>
-            <h2 className="text-base font-bold text-zinc-900 tracking-tight flex items-center gap-2">
+            <h2 className="text-base font-bold text-slate-900 tracking-tight flex items-center gap-2">
               <span>🏛️ ความยั่งยืนทางการคลังและหนี้สาธารณะ (Thai Sovereign Fiscal Health)</span>
             </h2>
-            <p className="text-xs text-zinc-500">
+            <p className="text-xs text-slate-500">
               สถิติหนี้สาธารณะคงค้างและสัดส่วนต่อ GDP จากสำนักงานบริหารหนี้สาธารณะ กระทรวงการคลัง (MOF Data Services)
             </p>
             {liveThaiPublicDebt?.is_stale && (
@@ -307,32 +307,32 @@ export const ThailandMacroSection: React.FC<ThailandMacroSectionProps> = ({
 
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
           <div className="rounded-xl bg-slate-50 p-3.5 border border-slate-100">
-            <span className="text-[10px] text-zinc-500 block">สัดส่วนหนี้สาธารณะต่อ GDP</span>
+            <span className="text-[11px] text-slate-500 block">สัดส่วนหนี้สาธารณะต่อ GDP</span>
             <span className={`font-mono text-xl font-extrabold mt-0.5 block ${
               resolvedDebtToGdp !== null && resolvedDebtToGdp <= statLimit
                 ? 'text-emerald-700'
                 : resolvedDebtToGdp !== null && resolvedDebtToGdp > statLimit
                 ? 'text-rose-700'
-                : 'text-zinc-700'
+                : 'text-slate-700'
             }`}>
               {resolvedDebtToGdp !== null ? `${resolvedDebtToGdp.toFixed(2)}%` : 'รอข้อมูล MOF'}
             </span>
-            <div className="flex items-center justify-between text-[10px] text-zinc-400 mt-1">
+            <div className="flex items-center justify-between text-[11px] text-slate-500 mt-1">
               <span>เพดาน พ.ร.บ. วินัยการคลัง</span>
-              <span className="font-mono font-semibold text-zinc-600">≤ {statLimit.toFixed(0)}%</span>
+              <span className="font-mono font-semibold text-slate-600">≤ {statLimit.toFixed(0)}%</span>
             </div>
           </div>
 
           <div className="rounded-xl bg-slate-50 p-3.5 border border-slate-100">
-            <span className="text-[10px] text-zinc-500 block">ยอดหนี้สาธารณะคงค้างรวม</span>
-            <span className="font-mono text-xl font-extrabold text-zinc-900 mt-0.5 block">
+            <span className="text-[11px] text-slate-500 block">ยอดหนี้สาธารณะคงค้างรวม</span>
+            <span className="font-mono text-xl font-extrabold text-slate-900 mt-0.5 block">
               {resolvedPublicDebtMb !== null
                 ? `${(resolvedPublicDebtMb / 1e6).toFixed(2)} ล้านล้านบาท`
                 : 'รอข้อมูล MOF'}
             </span>
-            <div className="flex items-center justify-between text-[10px] text-zinc-400 mt-1">
+            <div className="flex items-center justify-between text-[11px] text-slate-500 mt-1">
               <span>หน่วย: ล้านล้านบาท</span>
-              <span className="font-mono text-zinc-500">
+              <span className="font-mono text-slate-500">
                 {resolvedPublicDebtMb !== null ? `${resolvedPublicDebtMb.toLocaleString('th-TH', { maximumFractionDigits: 2 })} ลบ.` : '—'}
               </span>
             </div>
@@ -340,7 +340,7 @@ export const ThailandMacroSection: React.FC<ThailandMacroSectionProps> = ({
 
           <div className="rounded-xl bg-slate-50 p-3.5 border border-slate-100 flex flex-col justify-between">
             <div>
-              <span className="text-[10px] text-zinc-500 block">สถานะวินัยการเงินการคลัง</span>
+              <span className="text-[11px] text-slate-500 block">สถานะวินัยการเงินการคลัง</span>
               <div className="mt-1">
                 {resolvedDebtToGdp !== null ? (
                   resolvedDebtToGdp <= statLimit ? (
@@ -353,13 +353,13 @@ export const ThailandMacroSection: React.FC<ThailandMacroSectionProps> = ({
                     </span>
                   )
                 ) : (
-                  <span className="inline-flex items-center rounded-md bg-slate-200 px-2 py-1 text-xs font-semibold text-zinc-700">
+                  <span className="inline-flex items-center rounded-md bg-slate-200 px-2 py-1 text-xs font-semibold text-slate-700">
                     รอข้อมูล
                   </span>
                 )}
               </div>
             </div>
-            <span className="text-[10px] text-zinc-400 mt-2 block">
+            <span className="text-[11px] text-slate-500 mt-2 block">
               พ.ร.บ. วินัยการเงินการคลังของรัฐ พ.ศ. 2561
             </span>
           </div>
@@ -370,10 +370,10 @@ export const ThailandMacroSection: React.FC<ThailandMacroSectionProps> = ({
       <div className="rounded-2xl border border-slate-200 bg-white/95 p-5 shadow-sm space-y-4">
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between border-b border-slate-100 pb-3">
           <div>
-            <h2 className="text-base font-bold text-zinc-900 tracking-tight flex items-center gap-2">
+            <h2 className="text-base font-bold text-slate-900 tracking-tight flex items-center gap-2">
               <span>📈 เส้นผลตอบแทนพันธบัตรรัฐบาลไทย (Thai Government Bond Yield Curve)</span>
             </h2>
-            <p className="text-xs text-zinc-500">
+            <p className="text-xs text-slate-500">
               เส้นอัตราผลตอบแทนพันธบัตรรัฐบาลไทยแบบจำลอง (Model Yield Curve) จากสมาคมตลาดตราสารหนี้ไทย (ThaiBMA)
             </p>
           </div>
@@ -387,36 +387,36 @@ export const ThailandMacroSection: React.FC<ThailandMacroSectionProps> = ({
 
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
           <div className="rounded-xl bg-slate-50 p-3.5 border border-slate-100">
-            <span className="text-[10px] text-zinc-500 block">อัตราผลตอบแทนพันธบัตร 2 ปี (2Y)</span>
-            <span className="font-mono text-xl font-extrabold text-zinc-900 mt-0.5 block">
+            <span className="text-[11px] text-slate-500 block">อัตราผลตอบแทนพันธบัตร 2 ปี (2Y)</span>
+            <span className="font-mono text-xl font-extrabold text-slate-900 mt-0.5 block">
               {resolvedY2 !== null ? `${resolvedY2.toFixed(2)}%` : 'รอข้อมูล ThaiBMA'}
             </span>
-            <span className="text-[10px] text-zinc-400 mt-1 block">ตัวแทนคาดการณ์ดอกเบี้ยระยะสั้น-กลาง</span>
+            <span className="text-[11px] text-slate-500 mt-1 block">ตัวแทนคาดการณ์ดอกเบี้ยระยะสั้น-กลาง</span>
           </div>
 
           <div className="rounded-xl bg-slate-50 p-3.5 border border-slate-100">
-            <span className="text-[10px] text-zinc-500 block">อัตราผลตอบแทนพันธบัตร 10 ปี (10Y)</span>
-            <span className="font-mono text-xl font-extrabold text-zinc-900 mt-0.5 block">
+            <span className="text-[11px] text-slate-500 block">อัตราผลตอบแทนพันธบัตร 10 ปี (10Y)</span>
+            <span className="font-mono text-xl font-extrabold text-slate-900 mt-0.5 block">
               {resolvedY10 !== null ? `${resolvedY10.toFixed(2)}%` : 'รอข้อมูล ThaiBMA'}
             </span>
-            <span className="text-[10px] text-zinc-400 mt-1 block">Benchmark ผลตอบแทนพันธบัตรระยะยาว</span>
+            <span className="text-[11px] text-slate-500 mt-1 block">Benchmark ผลตอบแทนพันธบัตรระยะยาว</span>
           </div>
 
           <div className="rounded-xl bg-slate-50 p-3.5 border border-slate-100 flex flex-col justify-between">
             <div>
-              <span className="text-[10px] text-zinc-500 block">ส่วนต่างอัตราผลตอบแทน (10Y-2Y Spread)</span>
+              <span className="text-[11px] text-slate-500 block">ส่วนต่างอัตราผลตอบแทน (10Y-2Y Spread)</span>
               <div className="flex items-baseline gap-2 mt-0.5">
                 <span className={`font-mono text-xl font-extrabold ${
                   resolvedSpread !== null && resolvedSpread > 0
                     ? 'text-emerald-700'
                     : resolvedSpread !== null && resolvedSpread < 0
                     ? 'text-rose-700'
-                    : 'text-zinc-700'
+                    : 'text-slate-700'
                 }`}>
                   {resolvedSpread !== null ? `${resolvedSpread > 0 ? '+' : ''}${resolvedSpread.toFixed(1)} bps` : 'รอข้อมูล'}
                 </span>
                 {resolvedSpread !== null && (
-                  <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded ${
+                  <span className={`text-[11px] font-semibold px-1.5 py-0.5 rounded ${
                     resolvedSpread > 0 ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'
                   }`}>
                     {resolvedSpread > 0 ? 'Normal (ชันขึ้น)' : 'Inverted (ผกผัน)'}
@@ -424,7 +424,7 @@ export const ThailandMacroSection: React.FC<ThailandMacroSectionProps> = ({
                 )}
               </div>
             </div>
-            <span className="text-[10px] text-zinc-400 mt-2 block">
+            <span className="text-[11px] text-slate-500 mt-2 block">
               {resolvedSpread !== null && resolvedSpread > 0
                 ? 'เส้นผลตอบแทนลาดชันปกติ สะท้อนคาดการณ์เศรษฐกิจขยายตัว'
                 : 'ส่วนต่างผลตอบแทน 10 ปี ลบ 2 ปี'}
@@ -437,10 +437,10 @@ export const ThailandMacroSection: React.FC<ThailandMacroSectionProps> = ({
       <div className="rounded-2xl border border-slate-200 bg-white/95 p-5 shadow-sm space-y-4">
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between border-b border-slate-100 pb-3">
           <div>
-            <h2 className="text-base font-bold text-zinc-900 tracking-tight flex items-center gap-2">
+            <h2 className="text-base font-bold text-slate-900 tracking-tight flex items-center gap-2">
               <span>🇹🇭 สภาวะตลาดทุนและสภาพคล่องไทย (Thai Market Microstructure)</span>
             </h2>
-            <p className="text-xs text-zinc-500">
+            <p className="text-xs text-slate-500">
               ข้อมูลโครงสร้างตลาดสด: กระแสเงินทุนต่างชาติ ความกว้างตลาด อัตราส่วนมูลค่า และราคาทองคำแท่ง
             </p>
             {aiData && (!flow || !breadth || !valuation || !gold) && (
@@ -460,60 +460,60 @@ export const ThailandMacroSection: React.FC<ThailandMacroSectionProps> = ({
         {/* Microstructure Cards */}
         <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 text-xs">
           <div className="rounded-xl bg-slate-50 p-3 border border-slate-100">
-            <span className="text-[10px] text-zinc-500 block">Foreign Net Flow</span>
+            <span className="text-[11px] text-slate-500 block">Foreign Net Flow</span>
             <span className={`font-mono text-base font-extrabold mt-0.5 block ${
               foreignFlowMb !== null && foreignFlowMb > 0
                 ? 'text-emerald-700'
                 : foreignFlowMb !== null && foreignFlowMb < 0
                 ? 'text-rose-700'
-                : 'text-zinc-700'
+                : 'text-slate-700'
             }`}>
               {foreignFlowMb !== null && (foreignFlowMb !== 0 || (flow?.total_value ?? 0) > 0)
                 ? `${foreignFlowMb.toLocaleString('th-TH')} ลบ.`
                 : 'ไม่มีข้อมูล'}
             </span>
-            <span className="text-[10px] text-zinc-400 mt-0.5 flex items-center justify-between">
+            <span className="text-[11px] text-slate-500 mt-0.5 flex items-center justify-between">
               <span>{foreignFlowMb !== null && foreignFlowMb < 0 ? 'ต่างชาติขายสุทธิ' : foreignFlowMb !== null && foreignFlowMb > 0 ? 'ต่างชาติซื้อสุทธิ' : 'Settrade Data'}</span>
-              <span className="text-[9px] bg-slate-200/70 px-1 py-0.2 rounded font-mono text-zinc-600">SET</span>
+              <span className="text-[11px] bg-slate-200/70 px-1 py-0.5 rounded font-mono text-slate-600">SET</span>
             </span>
-            <span className="text-[9px] text-zinc-400 block mt-1">{flow?.as_of || (foreignFlowMb !== null && aiData ? `ณ รอบรายงาน ${aiData.evaluated_at}` : '')}</span>
+            <span className="text-[11px] text-slate-500 block mt-1">{flow?.as_of || (foreignFlowMb !== null && aiData ? `ณ รอบรายงาน ${aiData.evaluated_at}` : '')}</span>
           </div>
 
           <div className="rounded-xl bg-slate-50 p-3 border border-slate-100">
-            <span className="text-[10px] text-zinc-500 block">Market Breadth (A/D)</span>
-            <span className="font-mono text-base font-extrabold text-zinc-900 mt-0.5 block">
+            <span className="text-[11px] text-slate-500 block">Market Breadth (A/D)</span>
+            <span className="font-mono text-base font-extrabold text-slate-900 mt-0.5 block">
               {adRatio !== null && adRatio > 0 ? `${adRatio.toFixed(2)}x` : 'ไม่มีข้อมูล'}
             </span>
-            <span className="text-[10px] text-zinc-400 mt-0.5 flex items-center justify-between">
+            <span className="text-[11px] text-slate-500 mt-0.5 flex items-center justify-between">
               <span className="capitalize">{breadthSentiment ? `Sentiment: ${breadthSentiment}` : 'สัดส่วนหุ้นขึ้น/ตก'}</span>
-              <span className="text-[9px] bg-slate-200/70 px-1 py-0.2 rounded font-mono text-zinc-600">SET</span>
+              <span className="text-[11px] bg-slate-200/70 px-1 py-0.5 rounded font-mono text-slate-600">SET</span>
             </span>
           </div>
 
           <div className="rounded-xl bg-slate-50 p-3 border border-slate-100">
-            <span className="text-[10px] text-zinc-500 block">SET Valuation P/E</span>
-            <span className="font-mono text-base font-extrabold text-zinc-900 mt-0.5 block">
+            <span className="text-[11px] text-slate-500 block">SET Valuation P/E</span>
+            <span className="font-mono text-base font-extrabold text-slate-900 mt-0.5 block">
               {peRatio !== null && peRatio > 0 ? `${peRatio.toFixed(2)}x` : 'ไม่มีข้อมูล'}
             </span>
-            <span className="text-[10px] text-zinc-400 mt-0.5 flex items-center justify-between">
+            <span className="text-[11px] text-slate-500 mt-0.5 flex items-center justify-between">
               <span>ราคาเทียบกำไรตลาด</span>
-              <span className="text-[9px] bg-slate-200/70 px-1 py-0.2 rounded font-mono text-zinc-600">SET</span>
+              <span className="text-[11px] bg-slate-200/70 px-1 py-0.5 rounded font-mono text-slate-600">SET</span>
             </span>
           </div>
 
           <div className="rounded-xl bg-slate-50 p-3 border border-slate-100">
-            <span className="text-[10px] text-zinc-500 block">GTA Gold (96.5%)</span>
+            <span className="text-[11px] text-slate-500 block">GTA Gold (96.5%)</span>
             <span className="font-mono text-base font-extrabold text-amber-800 mt-0.5 block">
               {goldBarSell !== null ? `${goldBarSell.toLocaleString('th-TH')} ฿` : 'รอประกาศ'}
             </span>
-            <span className="text-[10px] text-zinc-400 mt-0.5 flex items-center justify-between">
+            <span className="text-[11px] text-slate-500 mt-0.5 flex items-center justify-between">
               <span>ทองคำแท่งขายออก</span>
-              <span className="text-[9px] bg-amber-200/70 px-1 py-0.2 rounded font-mono text-amber-800">GTA</span>
+              <span className="text-[11px] bg-amber-200/70 px-1 py-0.5 rounded font-mono text-amber-800">GTA</span>
             </span>
           </div>
 
           <div className="rounded-xl bg-slate-50 p-3 border border-slate-100 col-span-2 sm:col-span-1">
-            <span className="text-[10px] text-zinc-500 block">US-TH Policy Spread</span>
+            <span className="text-[11px] text-slate-500 block">US-TH Policy Spread</span>
             {(() => {
               const { text, hasValue } = formatPolicySpreadBps(policySpreadBps)
               return (
@@ -521,16 +521,16 @@ export const ThailandMacroSection: React.FC<ThailandMacroSectionProps> = ({
                   className={
                     hasValue
                       ? 'font-mono text-base font-extrabold text-amber-700 mt-0.5 block'
-                      : 'text-xs text-zinc-400 font-medium mt-1 block'
+                      : 'text-xs text-slate-500 font-medium mt-1 block'
                   }
                 >
                   {text}
                 </span>
               )
             })()}
-            <span className="text-[10px] text-zinc-400 mt-0.5 flex items-center justify-between">
+            <span className="text-[11px] text-slate-500 mt-0.5 flex items-center justify-between">
               <span>ส่วนต่าง Fed - BOT</span>
-              <span className="text-[9px] bg-indigo-100 px-1 py-0.2 rounded font-mono text-indigo-700">BIS</span>
+              <span className="text-[11px] bg-blue-100 px-1 py-0.5 rounded font-mono text-blue-700">BIS</span>
             </span>
           </div>
         </div>
@@ -541,7 +541,7 @@ export const ThailandMacroSection: React.FC<ThailandMacroSectionProps> = ({
         <div className="flex items-center justify-between border-b border-sky-100/70 pb-2">
           <div>
             <div className="flex items-center gap-2">
-              <h2 className="text-base font-bold text-zinc-900 tracking-tight flex items-center gap-2">
+              <h2 className="text-base font-bold text-slate-900 tracking-tight flex items-center gap-2">
                 <span>ข้อมูลจุลภาคตลาดทุนและทองคำไทย (Thai Market Observables)</span>
               </h2>
               <ContextTooltip
@@ -551,7 +551,7 @@ export const ThailandMacroSection: React.FC<ThailandMacroSectionProps> = ({
                 impactOnMoney="บอกว่าตลาดขับเคลื่อนด้วยแรงซื้อจริงของสถาบันหรือเป็นแค่การเก็งกำไรระยะสั้น"
               />
             </div>
-            <p className="text-xs text-zinc-500">
+            <p className="text-xs text-slate-500">
               ข้อมูลตรวจสอบได้รายวันจาก Settrade และสมาคมค้าทองคำ (GTA)
             </p>
           </div>
@@ -570,9 +570,9 @@ export const ThailandMacroSection: React.FC<ThailandMacroSectionProps> = ({
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between border-b border-sky-100/70 pb-3">
             <div>
               <div className="flex items-center gap-2">
-                <h3 className="font-bold text-zinc-900 text-sm tracking-tight flex items-center gap-2">
+                <h3 className="font-bold text-slate-900 text-sm tracking-tight flex items-center gap-2">
                   <span>SET Market Valuation</span>
-                  <span className="font-mono text-[10px] bg-slate-100 text-zinc-600 font-semibold px-2 py-0.5 rounded">
+                  <span className="font-mono text-[11px] bg-slate-100 text-slate-600 font-semibold px-2 py-0.5 rounded">
                     {valuation?.market || 'SET'}
                   </span>
                 </h3>
@@ -583,7 +583,7 @@ export const ThailandMacroSection: React.FC<ThailandMacroSectionProps> = ({
                   impactOnMoney="เป็นจังหวะทยอยสะสมหุ้นไทยพื้นฐานดีที่ปันผลสม่ำเสมอสำหรับเงินลงทุนระยะยาว"
                 />
               </div>
-              <p className="text-xs text-zinc-500 mt-0.5">
+              <p className="text-xs text-slate-500 mt-0.5">
                 ระดับการประเมินมูลค่าตลาดหลักทรัพย์แห่งประเทศไทย (ไม่ใช้ Badge เกณฑ์สมมติ)
               </p>
               {valuation?.pe_ratio != null && valuation.pe_ratio > 0 && (
@@ -609,49 +609,49 @@ export const ThailandMacroSection: React.FC<ThailandMacroSectionProps> = ({
 
           <div className="mt-4 grid grid-cols-2 gap-3 text-xs">
             <div className="rounded-xl bg-slate-50 p-3 border border-slate-100">
-              <span className="text-[10px] text-zinc-500 block">SET P/E Ratio</span>
-              <span className="font-mono text-xl font-extrabold text-zinc-900 mt-0.5 block">
+              <span className="text-[11px] text-slate-500 block">SET P/E Ratio</span>
+              <span className="font-mono text-xl font-extrabold text-slate-900 mt-0.5 block">
                 {valuation?.pe_ratio !== null && valuation?.pe_ratio !== undefined && valuation.pe_ratio > 0
                   ? `${valuation.pe_ratio.toFixed(2)}x`
                   : 'รอข้อมูล'}
               </span>
-              <span className="text-[10px] text-zinc-400 mt-1 block">ราคาต่อกำไรสุทธิ</span>
+              <span className="text-[11px] text-slate-500 mt-1 block">ราคาต่อกำไรสุทธิ</span>
             </div>
 
             <div className="rounded-xl bg-slate-50 p-3 border border-slate-100">
-              <span className="text-[10px] text-zinc-500 block">SET P/BV Ratio</span>
-              <span className="font-mono text-xl font-extrabold text-zinc-900 mt-0.5 block">
+              <span className="text-[11px] text-slate-500 block">SET P/BV Ratio</span>
+              <span className="font-mono text-xl font-extrabold text-slate-900 mt-0.5 block">
                 {valuation?.pbv_ratio !== null && valuation?.pbv_ratio !== undefined && valuation.pbv_ratio > 0
                   ? `${valuation.pbv_ratio.toFixed(2)}x`
                   : 'รอข้อมูล'}
               </span>
-              <span className="text-[10px] text-zinc-400 mt-1 block">ราคาต่อมูลค่าทางบัญชี</span>
+              <span className="text-[11px] text-slate-500 mt-1 block">ราคาต่อมูลค่าทางบัญชี</span>
             </div>
 
             <div className="rounded-xl bg-slate-50 p-3 border border-slate-100">
-              <span className="text-[10px] text-zinc-500 block">Dividend Yield</span>
+              <span className="text-[11px] text-slate-500 block">Dividend Yield</span>
               <span className="font-mono text-xl font-extrabold text-emerald-700 mt-0.5 block">
                 {valuation?.dividend_yield !== null && valuation?.dividend_yield !== undefined && valuation.dividend_yield > 0
                   ? `${valuation.dividend_yield.toFixed(2)}%`
                   : 'รอข้อมูล'}
               </span>
-              <span className="text-[10px] text-zinc-400 mt-1 block">อัตราเงินปันผลตอบแทน</span>
+              <span className="text-[11px] text-slate-500 mt-1 block">อัตราเงินปันผลตอบแทน</span>
             </div>
 
             <div className="rounded-xl bg-slate-50 p-3 border border-slate-100">
-              <span className="text-[10px] text-zinc-500 block">Turnover Ratio</span>
-              <span className="font-mono text-xl font-extrabold text-zinc-700 mt-0.5 block">
+              <span className="text-[11px] text-slate-500 block">Turnover Ratio</span>
+              <span className="font-mono text-xl font-extrabold text-slate-700 mt-0.5 block">
                 {valuation?.turnover_ratio !== null && valuation?.turnover_ratio !== undefined && valuation.turnover_ratio > 0
                   ? `${valuation.turnover_ratio.toFixed(2)}%`
                   : 'รอข้อมูล'}
               </span>
-              <span className="text-[10px] text-zinc-400 mt-1 block">อัตราการหมุนเวียนซื้อขาย</span>
+              <span className="text-[11px] text-slate-500 mt-1 block">อัตราการหมุนเวียนซื้อขาย</span>
             </div>
           </div>
 
-          <div className="mt-3 flex justify-between text-[11px] text-zinc-400 border-t border-slate-100 pt-2 font-mono">
+          <div className="mt-3 flex justify-between text-[11px] text-slate-500 border-t border-slate-100 pt-2 font-mono">
             <span>Market Cap รวม:</span>
-            <span className="font-semibold text-zinc-700">
+            <span className="font-semibold text-slate-700">
               {valuation?.market_cap && valuation.market_cap > 0 ? `${(valuation.market_cap / 1e12).toFixed(2)} ล้านล้านบาท` : 'รอข้อมูล'}
             </span>
           </div>
@@ -662,10 +662,10 @@ export const ThailandMacroSection: React.FC<ThailandMacroSectionProps> = ({
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between border-b border-sky-100/70 pb-3">
             <div>
               <div className="flex items-center gap-2">
-                <h3 className="font-bold text-zinc-900 text-sm tracking-tight flex items-center gap-2">
+                <h3 className="font-bold text-slate-900 text-sm tracking-tight flex items-center gap-2">
                   <span>ราคาทองคำแท่งและรูปพรรณ (GTA Physical Gold)</span>
                   {gold?.revision && (
-                    <span className="font-mono text-[10px] bg-amber-100 text-amber-800 font-semibold px-2 py-0.5 rounded">
+                    <span className="font-mono text-[11px] bg-amber-100 text-amber-800 font-semibold px-2 py-0.5 rounded">
                       รอบที่ {gold.revision}
                     </span>
                   )}
@@ -677,7 +677,7 @@ export const ThailandMacroSection: React.FC<ThailandMacroSectionProps> = ({
                   impactOnMoney="คนไทยควรดูทั้งราคาทองโลกและค่าเงินบาทประกอบกัน หากบาทแข็งมาก ราคาทองในไทยอาจขึ้นช้ากว่าตลาดโลก"
                 />
               </div>
-              <p className="text-xs text-zinc-500 mt-0.5">
+              <p className="text-xs text-slate-500 mt-0.5">
                 ราคาซื้อขายทองคำแท้ 96.5% ตามประกาศสมาคมค้าทองคำแห่งประเทศไทย
               </p>
             </div>
@@ -694,44 +694,44 @@ export const ThailandMacroSection: React.FC<ThailandMacroSectionProps> = ({
             <div className="rounded-xl bg-amber-50/70 p-3.5 border border-amber-200/80">
               <span className="font-bold text-amber-900 text-xs block mb-1">ทองคำแท่ง (96.5%)</span>
               <div className="flex items-baseline justify-between">
-                <span className="text-zinc-600">ขายออก:</span>
+                <span className="text-slate-600">ขายออก:</span>
                 <span className="font-mono text-lg font-extrabold text-amber-800">
-                  {formatThb(gold?.bar?.sell)} <span className="text-xs font-normal text-zinc-500">THB</span>
+                  {formatThb(gold?.bar?.sell)} <span className="text-xs font-normal text-slate-500">THB</span>
                 </span>
               </div>
-              <div className="flex items-baseline justify-between mt-1 text-zinc-600">
+              <div className="flex items-baseline justify-between mt-1 text-slate-600">
                 <span>รับซื้อ:</span>
-                <span className="font-mono font-bold text-zinc-800">
+                <span className="font-mono font-bold text-slate-800">
                   {formatThb(gold?.bar?.buy)} THB
                 </span>
               </div>
-              <div className="mt-2 text-[10px] text-amber-800/80 font-mono border-t border-amber-200/60 pt-1">
+              <div className="mt-2 text-[11px] text-amber-800/80 font-mono border-t border-amber-200/60 pt-1">
                 ส่วนต่างซื้อขาย: {gold?.bar?.sell && gold?.bar?.buy ? `${gold.bar.sell - gold.bar.buy} THB/บาททอง` : '—'}
               </div>
             </div>
 
             {/* Gold Ornament (96.5%) */}
             <div className="rounded-xl bg-slate-50 p-3.5 border border-slate-100">
-              <span className="font-bold text-zinc-800 text-xs block mb-1">ทองรูปพรรณ (96.5%)</span>
+              <span className="font-bold text-slate-800 text-xs block mb-1">ทองรูปพรรณ (96.5%)</span>
               <div className="flex items-baseline justify-between">
-                <span className="text-zinc-600">ขายออก:</span>
-                <span className="font-mono text-lg font-extrabold text-zinc-900">
-                  {formatThb(gold?.ornament?.sell)} <span className="text-xs font-normal text-zinc-500">THB</span>
+                <span className="text-slate-600">ขายออก:</span>
+                <span className="font-mono text-lg font-extrabold text-slate-900">
+                  {formatThb(gold?.ornament?.sell)} <span className="text-xs font-normal text-slate-500">THB</span>
                 </span>
               </div>
-              <div className="flex items-baseline justify-between mt-1 text-zinc-600">
+              <div className="flex items-baseline justify-between mt-1 text-slate-600">
                 <span>รับซื้อ (ฐานภาษี):</span>
-                <span className="font-mono font-bold text-zinc-700">
+                <span className="font-mono font-bold text-slate-700">
                   {formatThb(gold?.ornament?.buy)} THB
                 </span>
               </div>
-              <div className="mt-2 text-[10px] text-zinc-400 font-mono border-t border-slate-200 pt-1">
+              <div className="mt-2 text-[11px] text-slate-500 font-mono border-t border-slate-200 pt-1">
                 หน่วย: บาททองคำ (15.244 กรัม)
               </div>
             </div>
           </div>
 
-          <p className="mt-3 text-[11px] text-zinc-400">
+          <p className="mt-3 text-[11px] text-slate-500">
             ℹ️ ราคาทองคำแท่งในประเทศแยกขาดจาก CME Gold Futures (USD/oz) และสะท้อนทั้งราคาทองคำโลกและอัตราแลกเปลี่ยน USD/THB
           </p>
         </div>

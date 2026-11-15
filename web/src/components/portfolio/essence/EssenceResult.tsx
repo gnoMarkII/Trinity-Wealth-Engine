@@ -18,7 +18,7 @@ interface EssenceResultProps {
 const SOURCE_LABELS: Record<string, { label: string; style: string }> = {
   user_stated: { label: 'คุณบอกไว้', style: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
   ai_interpreted: { label: 'AI ตีความ', style: 'bg-sky-50 text-sky-700 border-sky-200' },
-  user_edited: { label: 'คุณแก้ไข', style: 'bg-purple-50 text-purple-700 border-purple-200' },
+  user_edited: { label: 'คุณแก้ไข', style: 'bg-sky-50 text-blue-700 border-sky-200' },
 }
 
 export default function EssenceResult({
@@ -39,15 +39,15 @@ export default function EssenceResult({
 
   if (!summary && !confirmedEssence) {
     return (
-      <div className="max-w-xl mx-auto rounded-2xl border border-sky-100 bg-white p-8 text-center shadow-xs space-y-5">
+      <div className="max-w-xl mx-auto rounded-2xl border border-sky-100 bg-white p-8 text-center shadow-sm space-y-5">
         <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-sky-50 text-2xl text-sky-600">
           ⏳
         </div>
         <div>
-          <h3 className="text-base font-bold text-zinc-900">
+          <h3 className="text-base font-bold text-slate-900">
             ยังไม่มีข้อสรุปแก่นแท้
           </h3>
-          <p className="text-xs text-zinc-500 mt-1 max-w-sm mx-auto leading-relaxed">
+          <p className="text-xs text-slate-500 mt-1 max-w-sm mx-auto leading-relaxed">
             ระบบยังไม่ได้สร้างบทสรุปแก่นแท้ หรือเกิดข้อผิดพลาดในการประมวลผลก่อนหน้า
           </p>
         </div>
@@ -104,10 +104,10 @@ export default function EssenceResult({
               ✨
             </span>
             <div>
-              <h1 className="text-xl sm:text-2xl font-extrabold text-zinc-900 tracking-tight">
+              <h1 className="text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight">
                 แก่นแท้การลงทุนของฉัน (Investor Essence)
               </h1>
-              <p className="text-xs text-zinc-500 mt-0.5">
+              <p className="text-xs text-slate-500 mt-0.5">
                 ค้นพบจากคำตอบ 10 ข้อของคุณ เพื่อสะท้อนเป้าหมายและค่านิยมที่แท้จริง
               </p>
             </div>
@@ -130,11 +130,11 @@ export default function EssenceResult({
 
         {/* Core Statement Card */}
         {statement && (
-          <div className="mt-6 rounded-xl bg-white p-5 border border-sky-200/80 shadow-xs">
+          <div className="mt-6 rounded-xl bg-white p-5 border border-sky-200/80 shadow-sm">
             <span className="text-[11px] font-bold uppercase tracking-wider text-sky-600 block mb-1">
               คำประกาศแก่นแท้ (Core Identity)
             </span>
-            <p className="text-base sm:text-lg font-semibold text-zinc-800 leading-relaxed italic">
+            <p className="text-base sm:text-lg font-semibold text-slate-800 leading-relaxed italic">
               "{statement}"
             </p>
           </div>
@@ -145,14 +145,14 @@ export default function EssenceResult({
       <div className="rounded-2xl border border-sky-100 bg-white p-6 sm:p-8 shadow-sm space-y-6">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-sky-50 pb-4">
           <div>
-            <h2 className="text-base sm:text-lg font-bold text-zinc-900">
+            <h2 className="text-base sm:text-lg font-bold text-slate-900">
               ข้อสรุปแก่นแท้การลงทุน (Bulleted List)
             </h2>
-            <p className="text-xs text-zinc-500 mt-0.5">
+            <p className="text-xs text-slate-500 mt-0.5">
               ตรวจความตรงของแต่ละข้อ หากตรงกด “ตรงกับฉัน” หากต้องการปรับกด “ตรงบางส่วน” เพื่อแก้ไข
             </p>
           </div>
-          <span className="text-xs font-semibold text-zinc-400">
+          <span className="text-xs font-semibold text-slate-500">
             {claims.length} ข้อสรุป
           </span>
         </div>
@@ -166,7 +166,7 @@ export default function EssenceResult({
             const isExact = claim.fit_rating === 'exact'
             const sourceInfo = SOURCE_LABELS[claim.source_kind] || {
               label: claim.source_kind,
-              style: 'bg-zinc-100 text-zinc-700 border-zinc-200',
+              style: 'bg-slate-100 text-slate-700 border-slate-200',
             }
 
             return (
@@ -174,12 +174,12 @@ export default function EssenceResult({
                 key={claim.claim_id}
                 className={`rounded-xl border p-4 transition-all ${
                   isExcluded
-                    ? 'border-zinc-200 bg-zinc-50 opacity-60'
+                    ? 'border-slate-200 bg-slate-50 opacity-60'
                     : isExact
                     ? 'border-emerald-200 bg-emerald-50/30'
                     : isPartial
-                    ? 'border-purple-200 bg-purple-50/20'
-                    : 'border-zinc-200/90 bg-white hover:border-sky-200'
+                    ? 'border-sky-200 bg-sky-50/20'
+                    : 'border-slate-200/90 bg-white hover:border-sky-200'
                 }`}
               >
                 <div className="flex items-start justify-between gap-3">
@@ -195,21 +195,21 @@ export default function EssenceResult({
                             minRows={2}
                             value={editText}
                             onChange={(e) => setEditText(e.target.value)}
-                            className="w-full rounded-lg border border-purple-300 bg-white p-2.5 text-sm text-zinc-800 focus:outline-none focus:ring-2 focus:ring-purple-400"
+                            className="w-full rounded-lg border border-sky-300 bg-white p-2.5 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-sky-400"
                           />
                           <div className="flex items-center gap-2">
                             <button
                               type="button"
                               onClick={() => handleSaveEdit(claim.claim_id)}
                               disabled={loading}
-                              className="rounded-lg bg-purple-600 px-3 py-1 text-xs font-bold text-white hover:bg-purple-700"
+                              className="rounded-lg bg-blue-600 px-3 py-1 text-xs font-bold text-white hover:bg-blue-700"
                             >
                               บันทึกการแก้ไข
                             </button>
                             <button
                               type="button"
                               onClick={handleCancelEdit}
-                              className="rounded-lg border border-zinc-200 px-3 py-1 text-xs font-semibold text-zinc-600 hover:bg-zinc-50"
+                              className="rounded-lg border border-slate-200 px-3 py-1 text-xs font-semibold text-slate-600 hover:bg-slate-50"
                             >
                               ยกเลิก
                             </button>
@@ -219,7 +219,7 @@ export default function EssenceResult({
                         <div>
                           <p
                             className={`text-sm sm:text-base font-semibold leading-relaxed ${
-                              isExcluded ? 'line-through text-zinc-400' : 'text-zinc-800'
+                              isExcluded ? 'line-through text-slate-500' : 'text-slate-800'
                             }`}
                           >
                             {claim.effective_text}
@@ -262,8 +262,8 @@ export default function EssenceResult({
                         disabled={loading}
                         className={`rounded-lg px-2.5 py-1 text-xs font-bold transition-all ${
                           isExact
-                            ? 'bg-emerald-600 text-white shadow-xs'
-                            : 'border border-zinc-200 text-zinc-600 hover:bg-emerald-50 hover:text-emerald-700 hover:border-emerald-200'
+                            ? 'bg-emerald-600 text-white shadow-sm'
+                            : 'border border-slate-200 text-slate-600 hover:bg-emerald-50 hover:text-emerald-700 hover:border-emerald-200'
                         }`}
                         title="ตรงกับเป้าหมายและค่านิยมของฉัน"
                       >
@@ -279,8 +279,8 @@ export default function EssenceResult({
                         disabled={loading}
                         className={`rounded-lg px-2.5 py-1 text-xs font-bold transition-all ${
                           isPartial
-                            ? 'bg-purple-600 text-white shadow-xs'
-                            : 'border border-zinc-200 text-zinc-600 hover:bg-purple-50 hover:text-purple-700 hover:border-purple-200'
+                            ? 'bg-blue-600 text-white shadow-sm'
+                            : 'border border-slate-200 text-slate-600 hover:bg-sky-50 hover:text-blue-700 hover:border-sky-200'
                         }`}
                         title="ตรงบางส่วน และต้องการปรับถ้อยคำ"
                       >
@@ -299,8 +299,8 @@ export default function EssenceResult({
                         disabled={loading}
                         className={`rounded-lg px-2.5 py-1 text-xs font-bold transition-all ${
                           isExcluded
-                            ? 'bg-zinc-600 text-white'
-                            : 'border border-zinc-200 text-zinc-400 hover:bg-rose-50 hover:text-rose-600 hover:border-rose-200'
+                            ? 'bg-slate-600 text-white'
+                            : 'border border-slate-200 text-slate-500 hover:bg-rose-50 hover:text-rose-600 hover:border-rose-200'
                         }`}
                         title="ไม่ตรงกับฉัน ไม่ส่งต่อข้อนี้ไปสร้างแกนหลัก"
                       >
@@ -312,10 +312,10 @@ export default function EssenceResult({
 
                 {/* Evidence Disclosure Dropdown */}
                 {expandedEvidenceId === claim.claim_id && claim.evidence_refs?.length > 0 && (
-                  <div className="mt-3 pt-3 border-t border-sky-100 bg-sky-50/50 p-3 rounded-lg text-xs space-y-1 text-zinc-600">
+                  <div className="mt-3 pt-3 border-t border-sky-100 bg-sky-50/50 p-3 rounded-lg text-xs space-y-1 text-slate-600">
                     <span className="font-bold text-sky-800 block mb-1">หลักฐานจากการตอบ:</span>
                     {claim.evidence_refs.map((ev, i) => (
-                      <p key={i} className="italic text-zinc-700">
+                      <p key={i} className="italic text-slate-700">
                         • "{ev.quote}" ({ev.evidence_type === 'hypothetical' ? 'สถานการณ์สมมติ' : 'คำตอบจริง'})
                       </p>
                     ))}
@@ -340,7 +340,7 @@ export default function EssenceResult({
 
         {/* Action Bar: Save for now vs Proceed to Axis */}
         <div className="pt-6 border-t border-sky-100 flex flex-col sm:flex-row items-center justify-between gap-4">
-          <div className="text-xs text-zinc-500">
+          <div className="text-xs text-slate-500">
             {statusText ? (
               <span className="flex items-center gap-2 text-sky-700 font-semibold animate-pulse">
                 <span className="h-2 w-2 rounded-full bg-sky-500" />
@@ -360,7 +360,7 @@ export default function EssenceResult({
               type="button"
               onClick={onRestart}
               disabled={loading}
-              className="rounded-xl border border-zinc-200 px-4 py-2.5 text-xs font-semibold text-zinc-600 hover:bg-zinc-50 transition-all"
+              className="rounded-xl border border-slate-200 px-4 py-2.5 text-xs font-semibold text-slate-600 hover:bg-slate-50 transition-all"
             >
               เริ่มทำแบบสอบถามใหม่
             </button>

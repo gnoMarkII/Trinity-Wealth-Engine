@@ -531,6 +531,7 @@ def compute_dcf_valuation(
     trailing_eps: Optional[float] = None,
     is_us_domestic: bool = True,
     cash_and_equivalents: float = 0.0,
+    ebit: Optional[float] = None,
 ) -> Tuple[Optional[DCFResult], List[str]]:
     """คำนวณ DCF Multi-Scenario (Bull/Base/Bear) ด้วย Real WACC, Observable Refs, และ Tax Policy Guards"""
     flags: List[str] = []
@@ -649,8 +650,9 @@ def compute_dcf_valuation(
 
     # Damodaran Synthetic Rating & Cost of Debt Benchmark
     approx_ebit = (fcf_per_share * (market_cap / current_price)) if (current_price > 0 and fcf_per_share > 0) else None
+    effective_ebit = ebit if ebit is not None else approx_ebit
     synth_rating, icr_ratio, credit_spread_bps, benchmark_kd = calculate_synthetic_credit_rating(
-        ebit=approx_ebit,
+        ebit=effective_ebit,
         interest_expense=interest_expense,
         total_debt=total_debt,
         risk_free_rate_pct=risk_free_rate,
@@ -867,6 +869,7 @@ def _calculate_per_share_value(
     base_rd_pct: Optional[float] = None,
     base_sga_pct: Optional[float] = None,
     target_terminal_margin: Optional[float] = None,
+    base_da_pct: Optional[float] = None,
 ) -> Tuple[float, List[ExplicitFCFProjection], float, float, Optional[float]]:
     """Helper คำนวณ Intrinsic Value per share จาก Forecast 5 ปีเต็ม พร้อม Staged Fade, Reinvestment Breakdown, Functional OpEx, และ Dual TV"""
     projections: List[ExplicitFCFProjection] = []
@@ -953,7 +956,8 @@ def _calculate_per_share_value(
         net_capex = round(max(0.0, tot_reinvest - delta_nwc), 2)
         reinvest_currency = net_capex + delta_nwc
 
-        deprec = round(curr_rev * 0.04, 2)
+        effective_da_pct = base_da_pct if (base_da_pct is not None and base_da_pct > 0) else 0.04
+        deprec = round(curr_rev * effective_da_pct, 2)
         capex = round(deprec + net_capex, 2)
         capex_ratio = round(capex / deprec, 2) if deprec > 0 else None
         if capex_ratio is not None:
@@ -1410,9 +1414,10 @@ def compute_institutional_reverse_dcf(
     else:
         default_exit_mult = 20.0
 
-    # Derive baseline OpEx % from latest historical period if available
+    # Derive baseline OpEx % and D&A % from latest historical period if available
     base_rd_pct = None
     base_sga_pct = None
+    base_da_pct = None
     if historical_financials:
         latest_h = historical_financials[-1]
         if latest_h.revenue and latest_h.revenue > 0:
@@ -1420,6 +1425,9 @@ def compute_institutional_reverse_dcf(
                 base_rd_pct = latest_h.research_and_development / latest_h.revenue
             if latest_h.selling_general_admin is not None:
                 base_sga_pct = latest_h.selling_general_admin / latest_h.revenue
+            if getattr(latest_h, "depreciation", None) is not None and abs(latest_h.depreciation) > 0:
+                raw_da_pct = abs(latest_h.depreciation) / latest_h.revenue
+                base_da_pct = max(0.02, min(0.25, raw_da_pct))
 
     # Company Archetype & Mid-Cycle Normalization
     archetype, mid_cycle_margin_pct, is_mid_cycle_norm, arch_rationale = classify_company_archetype_and_normalization(
@@ -1454,6 +1462,7 @@ def compute_institutional_reverse_dcf(
         base_rd_pct=base_rd_pct,
         base_sga_pct=base_sga_pct,
         target_terminal_margin=target_term_m,
+        base_da_pct=base_da_pct,
     )
 
     # Multi-Scenario 5Y Explicit Forecasts (Bear, Base, Bull)
@@ -1475,6 +1484,7 @@ def compute_institutional_reverse_dcf(
         base_rd_pct=base_rd_pct,
         base_sga_pct=base_sga_pct,
         target_terminal_margin=target_term_m,
+        base_da_pct=base_da_pct,
     )
 
     bull_growth = base_growth + 0.04
@@ -1495,6 +1505,7 @@ def compute_institutional_reverse_dcf(
         base_rd_pct=base_rd_pct,
         base_sga_pct=base_sga_pct,
         target_terminal_margin=target_term_m,
+        base_da_pct=base_da_pct,
     )
 
     explicit_forecast_5y_scenarios = {
@@ -1539,6 +1550,7 @@ def compute_institutional_reverse_dcf(
             base_rd_pct=base_rd_pct,
             base_sga_pct=base_sga_pct,
             target_terminal_margin=target_term_m,
+            base_da_pct=base_da_pct,
         )
         return val
 

@@ -196,7 +196,7 @@ export const EventStudyTab: React.FC<EventStudyTabProps> = ({ ticker, market = '
   return (
     <div className="space-y-6">
       {/* 1. Header & Controls */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-4 rounded-xl border border-zinc-200/80 bg-zinc-50/70 shadow-sm">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-4 rounded-xl border border-slate-200/80 bg-slate-50/70 shadow-sm">
         <div className="space-y-1">
           <div className="flex items-center gap-2">
             <span className="text-xs font-bold uppercase tracking-wider text-sky-600">Event Study Engine</span>
@@ -204,24 +204,24 @@ export const EventStudyTab: React.FC<EventStudyTabProps> = ({ ticker, market = '
               Quantitative Backtest
             </span>
           </div>
-          <h2 className="text-lg font-bold text-zinc-900">
+          <h2 className="text-lg font-bold text-slate-900">
             {studyData?.event_name || 'Historical Event Analysis'}
           </h2>
-          <p className="text-xs text-zinc-500">
+          <p className="text-xs text-slate-500">
             วิเคราะห์ผลตอบแทนไปข้างหน้า (Forward Returns) นับจากราคาเปิดวันถัดไป ($Open_{'{t+1}'}$) เพื่อกำจัด Look-Ahead Bias
           </p>
         </div>
 
         {/* Preset Selector */}
         <div className="flex items-center gap-2">
-          <label htmlFor="preset-select" className="text-xs font-semibold text-zinc-600 whitespace-nowrap">
+          <label htmlFor="preset-select" className="text-xs font-semibold text-slate-600 whitespace-nowrap">
             เลือกเหตุการณ์:
           </label>
           <select
             id="preset-select"
             value={selectedPreset}
             onChange={(e) => handlePresetChange(e.target.value)}
-            className="text-xs font-medium px-3 py-1.5 rounded-lg border border-zinc-300 bg-white text-zinc-800 shadow-sm focus:outline-none focus:ring-2 focus:ring-sky-500"
+            className="text-xs font-medium px-3 py-1.5 rounded-lg border border-slate-300 bg-white text-slate-800 shadow-sm focus:outline-none focus:ring-2 focus:ring-sky-500"
           >
             {recommendedPresets.length > 0 && (
               <optgroup label={`เหตุการณ์ของ ${ticker.toUpperCase()} & เหตุการณ์สากล`}>
@@ -264,14 +264,14 @@ export const EventStudyTab: React.FC<EventStudyTabProps> = ({ ticker, market = '
             placeholder="ชื่อเหตุการณ์ เช่น FDA Approvals, Product Launch..."
             value={customEventName}
             onChange={(e) => setCustomEventName(e.target.value)}
-            className="w-full text-xs px-3 py-2 rounded-lg border border-zinc-300 bg-white text-zinc-900 focus:outline-none focus:ring-2 focus:ring-sky-500"
+            className="w-full text-xs px-3 py-2 rounded-lg border border-slate-300 bg-white text-slate-900 focus:outline-none focus:ring-2 focus:ring-sky-500"
           />
           <textarea
             rows={3}
             placeholder="2024-01-15, 2023-06-20, 2022-11-10..."
             value={customDatesInput}
             onChange={(e) => setCustomDatesInput(e.target.value)}
-            className="w-full text-xs font-mono px-3 py-2 rounded-lg border border-zinc-300 bg-white text-zinc-900 focus:outline-none focus:ring-2 focus:ring-sky-500"
+            className="w-full text-xs font-mono px-3 py-2 rounded-lg border border-slate-300 bg-white text-slate-900 focus:outline-none focus:ring-2 focus:ring-sky-500"
           />
           <button
             onClick={() => executeAnalysis('custom')}
@@ -303,9 +303,9 @@ export const EventStudyTab: React.FC<EventStudyTabProps> = ({ ticker, market = '
 
       {/* Loading Skeleton */}
       {loading && !studyData && (
-        <div className="p-8 text-center space-y-3 rounded-xl border border-zinc-200 bg-white">
+        <div className="p-8 text-center space-y-3 rounded-xl border border-slate-200 bg-white">
           <div className="inline-block w-8 h-8 border-4 border-sky-600 border-t-transparent rounded-full animate-spin" />
-          <p className="text-xs font-medium text-zinc-500">กำลังประมวลผลแท่งเทียนและ Forward Returns ย้อนหลัง...</p>
+          <p className="text-xs font-medium text-slate-500">กำลังประมวลผลแท่งเทียนและ Forward Returns ย้อนหลัง...</p>
         </div>
       )}
 
@@ -335,10 +335,10 @@ export const EventStudyTab: React.FC<EventStudyTabProps> = ({ ticker, market = '
                   className={`text-left p-4 rounded-xl border transition-all ${
                     isSelected
                       ? 'border-sky-500 bg-sky-50/50 shadow-md ring-2 ring-sky-500/20'
-                      : 'border-zinc-200 bg-white hover:border-zinc-300 hover:bg-zinc-50/50 shadow-sm'
+                      : 'border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50/50 shadow-sm'
                   }`}
                 >
-                  <div className="flex items-center justify-between text-xs text-zinc-500 font-semibold mb-1">
+                  <div className="flex items-center justify-between text-xs text-slate-500 font-semibold mb-1">
                     <span>ขอบเขต {h} วันทำการ</span>
                     <span className="text-[11px] font-mono">N={stats?.sample_size ?? 0}</span>
                   </div>
@@ -352,11 +352,11 @@ export const EventStudyTab: React.FC<EventStudyTabProps> = ({ ticker, market = '
                       {isPositive ? '+' : ''}
                       {avg.toFixed(2)}%
                     </span>
-                    <span className="text-[11px] font-medium text-zinc-400">เฉลี่ย</span>
+                    <span className="text-[11px] font-medium text-slate-500">เฉลี่ย</span>
                   </div>
 
-                  <div className="flex items-center justify-between text-xs mt-2.5 pt-2 border-t border-zinc-100">
-                    <span className="text-zinc-500 font-medium">Hit Rate:</span>
+                  <div className="flex items-center justify-between text-xs mt-2.5 pt-2 border-t border-slate-100">
+                    <span className="text-slate-500 font-medium">Hit Rate:</span>
                     <span
                       className={`px-2 py-0.5 rounded-md font-bold text-xs ${
                         hitRate >= 50
@@ -368,9 +368,9 @@ export const EventStudyTab: React.FC<EventStudyTabProps> = ({ ticker, market = '
                     </span>
                   </div>
 
-                  <div className="flex items-center justify-between text-[11px] text-zinc-400 mt-1">
+                  <div className="flex items-center justify-between text-[11px] text-slate-500 mt-1">
                     <span>มัธยฐาน (Median):</span>
-                    <span className="font-mono text-zinc-700 font-semibold">
+                    <span className="font-mono text-slate-700 font-semibold">
                       {stats?.median_return_pct ? `${stats.median_return_pct > 0 ? '+' : ''}${stats.median_return_pct}%` : '0%'}
                     </span>
                   </div>
@@ -380,27 +380,27 @@ export const EventStudyTab: React.FC<EventStudyTabProps> = ({ ticker, market = '
           </div>
 
           {/* 3. Interactive PnL Spaghetti Path Chart */}
-          <div className="p-5 rounded-xl border border-zinc-200/90 bg-white shadow-sm space-y-3">
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 border-b border-zinc-100 pb-3">
+          <div className="p-5 rounded-xl border border-slate-200/90 bg-white shadow-sm space-y-3">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 border-b border-slate-100 pb-3">
               <div>
-                <h3 className="text-sm font-bold text-zinc-900">
+                <h3 className="text-sm font-bold text-slate-900">
                   PnL Cumulative Path Chart (เส้นทางผลตอบแทนสะสม {activeHorizon} วัน)
                 </h3>
-                <p className="text-xs text-zinc-500">
+                <p className="text-xs text-slate-500">
                   เส้นสีเขียว = จบด้วยกำไร ณ วันที่ {activeHorizon} | เส้นสีแดง = จบด้วยขาดทุน | เส้นประสีฟ้าหนา = ค่าเฉลี่ย
                 </p>
               </div>
 
               {/* Horizon Tabs */}
-              <div className="flex items-center gap-1 bg-zinc-100 p-1 rounded-lg border border-zinc-200">
+              <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-lg border border-slate-200">
                 {[5, 10, 20, 60].map((h) => (
                   <button
                     key={h}
                     onClick={() => setActiveHorizon(h)}
                     className={`px-2.5 py-1 text-xs font-bold rounded-md transition-all ${
                       activeHorizon === h
-                        ? 'bg-white text-zinc-900 shadow-xs'
-                        : 'text-zinc-600 hover:text-zinc-900'
+                        ? 'bg-white text-slate-900 shadow-sm'
+                        : 'text-slate-600 hover:text-slate-900'
                     }`}
                   >
                     {h}D
@@ -435,7 +435,7 @@ export const EventStudyTab: React.FC<EventStudyTabProps> = ({ ticker, market = '
                         x={padLeft - 8}
                         y={y + 3.5}
                         textAnchor="end"
-                        className="text-[10px] font-mono fill-zinc-400 font-medium"
+                        className="text-[11px] font-mono fill-slate-400 font-medium"
                       >
                         {val > 0 ? `+${val}%` : `${val}%`}
                       </text>
@@ -463,7 +463,7 @@ export const EventStudyTab: React.FC<EventStudyTabProps> = ({ ticker, market = '
                           x={x}
                           y={padTop + plotHeight + 16}
                           textAnchor="middle"
-                          className="text-[10px] font-mono fill-zinc-400 font-medium"
+                          className="text-[11px] font-mono fill-slate-400 font-medium"
                         >
                           D+{d}
                         </text>
@@ -538,7 +538,7 @@ export const EventStudyTab: React.FC<EventStudyTabProps> = ({ ticker, market = '
 
               {/* Hover Legend Callout */}
               {hoveredEventId && (
-                <div className="absolute top-2 right-2 bg-zinc-900/90 text-white text-xs p-2.5 rounded-lg shadow-lg backdrop-blur-xs max-w-xs space-y-1">
+                <div className="absolute top-2 right-2 bg-slate-900/90 text-white text-xs p-2.5 rounded-lg shadow-lg backdrop-blur-sm max-w-xs space-y-1">
                   {(() => {
                     const ev = studyData.events.find((e) => e.event_id === hoveredEventId)
                     if (!ev) return null
@@ -546,10 +546,10 @@ export const EventStudyTab: React.FC<EventStudyTabProps> = ({ ticker, market = '
                     return (
                       <>
                         <div className="font-bold text-sky-300">{ev.description || ev.event_date}</div>
-                        <div className="text-[11px] text-zinc-300">
+                        <div className="text-[11px] text-slate-300">
                           วันที่ประกาศ: <span className="font-mono text-white">{ev.event_date}</span>
                         </div>
-                        <div className="text-[11px] text-zinc-300">
+                        <div className="text-[11px] text-slate-300">
                           เข้าซื้อ ({ev.entry_date}): <span className="font-mono text-white">{currency}{ev.entry_price}</span>
                         </div>
                         <div className="text-[11px] font-bold">
@@ -569,7 +569,7 @@ export const EventStudyTab: React.FC<EventStudyTabProps> = ({ ticker, market = '
               )}
             </div>
 
-            <div className="flex items-center justify-between text-xs text-zinc-500 pt-2 border-t border-zinc-100">
+            <div className="flex items-center justify-between text-xs text-slate-500 pt-2 border-t border-slate-100">
               <div className="flex items-center gap-4">
                 <span className="flex items-center gap-1.5">
                   <span className="w-3 h-1 bg-emerald-500 rounded-full" /> รอบที่กำไร
@@ -581,18 +581,18 @@ export const EventStudyTab: React.FC<EventStudyTabProps> = ({ ticker, market = '
                   <span className="w-3 h-1 border-t-2 border-dashed border-sky-600" /> ค่าเฉลี่ยทุกลูป
                 </span>
               </div>
-              <span className="text-[11px] text-zinc-400">ชี้เมาส์ที่เส้นเพื่อดูรายละเอียดแต่ละเหตุการณ์</span>
+              <span className="text-[11px] text-slate-500">ชี้เมาส์ที่เส้นเพื่อดูรายละเอียดแต่ละเหตุการณ์</span>
             </div>
           </div>
 
           {/* 4. Horizon Distribution Stats Table */}
-          <div className="p-4 rounded-xl border border-zinc-200 bg-white shadow-sm space-y-3">
-            <h3 className="text-sm font-bold text-zinc-900">
+          <div className="p-4 rounded-xl border border-slate-200 bg-white shadow-sm space-y-3">
+            <h3 className="text-sm font-bold text-slate-900">
               สถิติการกระจายตัวของผลตอบแทน (Statistical Distribution Summary)
             </h3>
             <div className="overflow-x-auto">
               <table className="w-full text-xs text-left">
-                <thead className="bg-zinc-50 text-zinc-600 font-bold border-b border-zinc-200">
+                <thead className="bg-slate-50 text-slate-600 font-bold border-b border-slate-200">
                   <tr>
                     <th className="py-2.5 px-3">ขอบเขต</th>
                     <th className="py-2.5 px-3">จำนวนรอบ (N)</th>
@@ -606,18 +606,18 @@ export const EventStudyTab: React.FC<EventStudyTabProps> = ({ ticker, market = '
                     <th className="py-2.5 px-3 font-extrabold text-sky-800">Risk/Reward</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-zinc-100 font-mono">
+                <tbody className="divide-y divide-slate-100 font-mono">
                   {[5, 10, 20, 60].map((h) => {
                     const st = studyData.horizon_stats[String(h)]
                     if (!st) return null
                     return (
                       <tr
                         key={h}
-                        className={`hover:bg-zinc-50/80 transition-colors ${
+                        className={`hover:bg-slate-50/80 transition-colors ${
                           activeHorizon === h ? 'bg-sky-50/40 font-semibold' : ''
                         }`}
                       >
-                        <td className="py-2.5 px-3 font-sans font-bold text-zinc-900">{h} วัน</td>
+                        <td className="py-2.5 px-3 font-sans font-bold text-slate-900">{h} วัน</td>
                         <td className="py-2.5 px-3">{st.sample_size}</td>
                         <td className="py-2.5 px-3">
                           <span
@@ -633,7 +633,7 @@ export const EventStudyTab: React.FC<EventStudyTabProps> = ({ ticker, market = '
                         <td className={`py-2.5 px-3 font-bold ${st.avg_return_pct >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
                           {st.avg_return_pct > 0 ? '+' : ''}{st.avg_return_pct.toFixed(2)}%
                         </td>
-                        <td className="py-2.5 px-3 text-zinc-700">
+                        <td className="py-2.5 px-3 text-slate-700">
                           {st.median_return_pct > 0 ? '+' : ''}{st.median_return_pct.toFixed(2)}%
                         </td>
                         <td className="py-2.5 px-3 text-emerald-600">
@@ -660,13 +660,13 @@ export const EventStudyTab: React.FC<EventStudyTabProps> = ({ ticker, market = '
           </div>
 
           {/* 5. Event Instance Breakdown Ledger */}
-          <div className="p-4 rounded-xl border border-zinc-200 bg-white shadow-sm space-y-3">
-            <h3 className="text-sm font-bold text-zinc-900">
+          <div className="p-4 rounded-xl border border-slate-200 bg-white shadow-sm space-y-3">
+            <h3 className="text-sm font-bold text-slate-900">
               รายละเอียดเหตุการณ์ในอดีต (Event Instances Ledger)
             </h3>
             <div className="overflow-x-auto">
               <table className="w-full text-xs text-left">
-                <thead className="bg-zinc-50 text-zinc-600 font-bold border-b border-zinc-200">
+                <thead className="bg-slate-50 text-slate-600 font-bold border-b border-slate-200">
                   <tr>
                     <th className="py-2.5 px-3">วันที่ประกาศ</th>
                     <th className="py-2.5 px-3">ชื่อเหตุการณ์ / หัวข้อ</th>
@@ -678,7 +678,7 @@ export const EventStudyTab: React.FC<EventStudyTabProps> = ({ ticker, market = '
                     <th className="py-2.5 px-3">60D (%)</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-zinc-100 font-mono">
+                <tbody className="divide-y divide-slate-100 font-mono">
                   {studyData.events.map((ev) => {
                     const isHovered = hoveredEventId === ev.event_id
                     return (
@@ -687,17 +687,17 @@ export const EventStudyTab: React.FC<EventStudyTabProps> = ({ ticker, market = '
                         onMouseEnter={() => setHoveredEventId(ev.event_id)}
                         onMouseLeave={() => setHoveredEventId(null)}
                         className={`transition-colors cursor-pointer ${
-                          isHovered ? 'bg-sky-50 font-semibold' : 'hover:bg-zinc-50'
+                          isHovered ? 'bg-sky-50 font-semibold' : 'hover:bg-slate-50'
                         }`}
                       >
-                        <td className="py-2 px-3 text-zinc-900 font-sans">{ev.event_date}</td>
-                        <td className="py-2 px-3 text-zinc-700 font-sans">{ev.description || '-'}</td>
-                        <td className="py-2 px-3 text-zinc-500 font-sans">{ev.entry_date}</td>
-                        <td className="py-2 px-3 text-zinc-900">{currency}{ev.entry_price.toFixed(2)}</td>
+                        <td className="py-2 px-3 text-slate-900 font-sans">{ev.event_date}</td>
+                        <td className="py-2 px-3 text-slate-700 font-sans">{ev.description || '-'}</td>
+                        <td className="py-2 px-3 text-slate-500 font-sans">{ev.entry_date}</td>
+                        <td className="py-2 px-3 text-slate-900">{currency}{ev.entry_price.toFixed(2)}</td>
                         {[5, 10, 20, 60].map((h) => {
                           const ret = ev.forward_returns[String(h)]
                           if (ret == null) {
-                            return <td key={h} className="py-2 px-3 text-zinc-300">-</td>
+                            return <td key={h} className="py-2 px-3 text-slate-300">-</td>
                           }
                           const isWin = ret >= 0
                           return (

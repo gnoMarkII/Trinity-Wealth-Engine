@@ -7,7 +7,7 @@ interface Props {
 
 const LEGEND: { key: 'overweight' | 'neutral' | 'underweight'; label: string; dotClass: string; barClass: string }[] = [
   { key: 'overweight', label: 'Overweight', dotClass: 'bg-emerald-500', barClass: 'bg-emerald-500' },
-  { key: 'neutral', label: 'Neutral', dotClass: 'bg-zinc-300', barClass: 'bg-zinc-300' },
+  { key: 'neutral', label: 'Neutral', dotClass: 'bg-slate-300', barClass: 'bg-slate-300' },
   { key: 'underweight', label: 'Underweight', dotClass: 'bg-red-500', barClass: 'bg-red-500' },
 ]
 
@@ -28,7 +28,7 @@ export default function PortfolioStanceBar({ allocations }: Props) {
           />
         ))}
       </div>
-      <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-zinc-500">
+      <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-500">
         {LEGEND.map((item) => (
           <span key={item.key} className="flex items-center gap-1.5">
             <span className={`h-1.5 w-1.5 rounded-full ${item.dotClass}`} />

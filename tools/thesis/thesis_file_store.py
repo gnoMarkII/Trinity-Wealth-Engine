@@ -164,7 +164,11 @@ class ThesisFileStore:
         active_list: List[ThesisClaimRecord] = []
         for file in self.data_dir.glob("*_theses.json"):
             ticker = file.stem.replace("_theses", "")
-            act = self.get_active_claim(ticker)
+            try:
+                act = self.get_active_claim(ticker)
+            except Exception as err:
+                log.warning("Skipping invalid or unreadable thesis file %s: %s", file.name, err)
+                continue
             if act:
                 active_list.append(act)
         return active_list

@@ -38,6 +38,18 @@ _HISTORY_SUCCESS_TTL_SECONDS = 6 * 3600
 _HISTORY_ERROR_TTL_SECONDS = 60.0
 
 
+def _extract_col_series(df: Optional[pd.DataFrame], col_name: str) -> Optional[pd.Series]:
+    """Extract a 1D column Series safely even when yfinance returns MultiIndex/duplicate columns."""
+    if df is None or col_name not in df:
+        return None
+    col = df[col_name]
+    if isinstance(col, pd.DataFrame):
+        if col.shape[1] == 0:
+            return None
+        col = col.iloc[:, 0]
+    return col
+
+
 def _get_price_history(provider_symbol: str, period: str) -> pd.DataFrame:
     """ดึงราคาย้อนหลังพร้อม retry + cache TTL (success 6h / error 60s) ป้องกัน rate-limit จาก .history()"""
     key = (provider_symbol, period)
@@ -62,14 +74,28 @@ def _get_price_history(provider_symbol: str, period: str) -> pd.DataFrame:
         _HISTORY_ERROR_CACHE[key] = now
         raise
 
-    if df is not None and not df.empty and "Close" in df:
-        df = df.dropna(subset=["Close"])
-        cond = (df["Close"] > 0)
-        if "High" in df and "Low" in df:
-            cond = cond & (df["High"] >= df["Low"]) & (df["High"] > 0) & (df["Low"] >= 0)
-        if "Volume" in df:
-            cond = cond & (df["Volume"] >= 0)
-        df = df[cond]
+    if df is not None and isinstance(df.columns, pd.MultiIndex):
+        df = df.copy()
+        level_0 = df.columns.get_level_values(0)
+        level_1 = df.columns.get_level_values(1) if df.columns.nlevels > 1 else level_0
+        df.columns = level_1 if ("Close" not in level_0 and "Close" in level_1) else level_0
+        if df.columns.duplicated().any():
+            df = df.loc[:, ~df.columns.duplicated(keep="first")]
+
+    close_s = _extract_col_series(df, "Close")
+    if df is not None and not df.empty and close_s is not None:
+        valid_mask = close_s.notna() & (pd.to_numeric(close_s, errors="coerce") > 0)
+        high_s = _extract_col_series(df, "High")
+        low_s = _extract_col_series(df, "Low")
+        vol_s = _extract_col_series(df, "Volume")
+        if high_s is not None and low_s is not None:
+            high_n = pd.to_numeric(high_s, errors="coerce")
+            low_n = pd.to_numeric(low_s, errors="coerce")
+            valid_mask = valid_mask & (high_n >= low_n) & (high_n > 0) & (low_n >= 0)
+        if vol_s is not None:
+            vol_n = pd.to_numeric(vol_s, errors="coerce")
+            valid_mask = valid_mask & (vol_n >= 0)
+        df = df[valid_mask]
 
     _HISTORY_CACHE[key] = (df, now)
     return df
@@ -79,11 +105,15 @@ def _select_return_price_series(df: pd.DataFrame) -> pd.Series:
     """Select appropriate price series for return/volatility/beta calculation.
     Prefers 'Adj Close' when available and strictly positive/finite to remove artificial jumps from splits/dividends;
     falls back to finite positive 'Close'."""
-    if "Adj Close" in df.columns:
-        adj = pd.to_numeric(df["Adj Close"], errors="coerce")
+    adj_col = _extract_col_series(df, "Adj Close")
+    if adj_col is not None:
+        adj = pd.to_numeric(adj_col, errors="coerce")
         if len(adj) == len(df) and bool(np.isfinite(adj).all()) and bool((adj > 0).all()):
             return adj.astype(float)
-    close = pd.to_numeric(df["Close"], errors="coerce")
+    close_col = _extract_col_series(df, "Close")
+    if close_col is None:
+        return pd.Series(dtype=float)
+    close = pd.to_numeric(close_col, errors="coerce")
     return close.where(np.isfinite(close) & (close > 0))
 
 
@@ -602,18 +632,23 @@ def compute_amihud_illiquidity_20d_with_metadata(
         return base_meta
 
     used_adj = False
-    if "Adj Close" in df.columns:
-        adj_check = pd.to_numeric(df["Adj Close"], errors="coerce")
+    adj_col = _extract_col_series(df, "Adj Close")
+    if adj_col is not None:
+        adj_check = pd.to_numeric(adj_col, errors="coerce")
         if len(adj_check) == len(df) and bool(np.isfinite(adj_check).all()) and bool((adj_check > 0).all()):
             used_adj = True
 
     return_series = _select_return_price_series(df)
     daily_returns = return_series.pct_change()
+    close_col = _extract_col_series(df, "Close")
+    volume_col = _extract_col_series(df, "Volume")
+    if close_col is None or volume_col is None:
+        return base_meta
 
     sub_df = pd.DataFrame({
         "ret": pd.to_numeric(daily_returns, errors="coerce").abs(),
-        "close": pd.to_numeric(df["Close"], errors="coerce"),
-        "volume": pd.to_numeric(df["Volume"], errors="coerce"),
+        "close": pd.to_numeric(close_col, errors="coerce"),
+        "volume": pd.to_numeric(volume_col, errors="coerce"),
     })
     sub_df = sub_df.replace([np.inf, -np.inf], np.nan).dropna()
     sub_df = sub_df[(sub_df["close"] > 0) & (sub_df["volume"] > 0)]

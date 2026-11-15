@@ -67,10 +67,10 @@ export const UsMacroSection: React.FC<UsMacroSectionProps> = ({
       <div className="space-y-3">
         <div className="flex items-center justify-between border-b border-sky-100/70 pb-2">
           <div>
-            <h2 className="text-base font-bold text-zinc-900 tracking-tight flex items-center gap-2">
+            <h2 className="text-base font-bold text-slate-900 tracking-tight flex items-center gap-2">
               <span>ข้อมูลตลาดและอัตราผลตอบแทนสหรัฐฯ (US Observables)</span>
             </h2>
-            <p className="text-xs text-zinc-500">
+            <p className="text-xs text-slate-500">
               ข้อมูลปฐมภูมิทางการจาก US Treasury และ OFR ใช้ประเมินเส้นอัตราผลตอบแทนและความตึงตัวของระบบการเงิน
             </p>
           </div>
@@ -94,16 +94,16 @@ export const UsMacroSection: React.FC<UsMacroSectionProps> = ({
         <button
           type="button"
           onClick={() => setShowGlobalContext(!showGlobalContext)}
-          className="flex items-center justify-between w-full text-left font-semibold text-sm text-zinc-800 hover:text-sky-700 transition-colors"
+          className="flex items-center justify-between w-full text-left font-semibold text-sm text-slate-800 hover:text-sky-700 transition-colors"
         >
           <div className="flex items-center gap-2">
             <span>🌐</span>
             <span>บริบทโลกที่มีผลต่อสหรัฐฯ (Commodity Vol, Gold COT, Debt & Auctions)</span>
-            <span className="text-[11px] font-normal text-zinc-400">
+            <span className="text-[11px] font-normal text-slate-500">
               {showGlobalContext ? '(คลิกเพื่อย่อ)' : '(คลิกเพื่อขยายดูรายละเอียด 4 แผง)'}
             </span>
           </div>
-          <span className="font-mono text-xs text-zinc-400">{showGlobalContext ? '▲' : '▼'}</span>
+          <span className="font-mono text-xs text-slate-500">{showGlobalContext ? '▲' : '▼'}</span>
         </button>
 
         {showGlobalContext && (
@@ -124,7 +124,7 @@ export const UsMacroSection: React.FC<UsMacroSectionProps> = ({
                   producerMerchant={metalsCot.producer_merchant}
                 />
               ) : (
-                <div className="rounded-xl border border-slate-100 bg-slate-50 p-4 text-xs text-zinc-500">
+                <div className="rounded-xl border border-slate-100 bg-slate-50 p-4 text-xs text-slate-500">
                   ไม่มีข้อมูล CFTC Gold COT
                 </div>
               )}

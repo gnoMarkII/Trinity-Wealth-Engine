@@ -215,17 +215,17 @@ export default function PortfolioAnalyticsTab({
       {/* Header + Range Selector */}
       <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
         <div>
-          <h3 className="text-base font-bold text-zinc-900">
+          <h3 className="text-base font-bold text-slate-900">
             Performance History ({performanceRows.length} จุดข้อมูล)
           </h3>
-          <p className="text-xs text-zinc-500">
+          <p className="text-xs text-slate-500">
             ติดตามประวัติ NAV Snapshot การเปลี่ยนแปลงต้นทุน และกำไร/ขาดทุนที่ยังไม่เกิดขึ้นจริง (Unrealized PnL)
           </p>
         </div>
 
         {/* Days selector bar */}
-        <div className="flex items-center gap-2 rounded-xl border border-sky-100 bg-panel p-2 shadow-2xs">
-          <span className="text-xs font-semibold text-zinc-600 ml-1">ช่วงเวลา:</span>
+        <div className="flex items-center gap-2 rounded-xl border border-sky-100 bg-panel p-2 shadow-sm">
+          <span className="text-xs font-semibold text-slate-600 ml-1">ช่วงเวลา:</span>
           <div className="flex gap-1">
             {[
               { label: '30 วัน', val: 30 },
@@ -239,8 +239,8 @@ export default function PortfolioAnalyticsTab({
                 onClick={() => onChangeDaysRange(opt.val)}
                 className={`rounded-lg px-3 py-1 text-xs font-semibold transition-colors ${
                   daysRange === opt.val
-                    ? 'bg-flow-blue text-white shadow-2xs font-bold'
-                    : 'bg-sky-50 text-zinc-500 hover:bg-sky-100'
+                    ? 'bg-flow-blue text-white shadow-sm font-bold'
+                    : 'bg-sky-50 text-slate-500 hover:bg-sky-100'
                 }`}
               >
                 {opt.label}
@@ -256,25 +256,25 @@ export default function PortfolioAnalyticsTab({
         <div className="flex flex-wrap items-center justify-between gap-4 border-b border-sky-100 pb-4 mb-4">
           <div className="flex items-center gap-6">
             <div>
-              <span className="text-[11px] font-semibold uppercase text-zinc-400">Snapshot Date</span>
-              <div className="text-sm font-bold font-mono text-zinc-800">
+              <span className="text-[11px] font-semibold uppercase text-slate-500">Snapshot Date</span>
+              <div className="text-sm font-bold font-mono text-slate-800">
                 {activePoint ? activePoint.date : 'N/A'}
               </div>
             </div>
             <div>
-              <span className="text-[11px] font-semibold uppercase text-zinc-400">Total NAV</span>
+              <span className="text-[11px] font-semibold uppercase text-slate-500">Total NAV</span>
               <div className="text-lg font-extrabold font-mono tabular-nums text-flow-blue">
                 {activePoint ? formatTHB(activePoint.nav) : '—'}
               </div>
             </div>
             <div>
-              <span className="text-[11px] font-semibold uppercase text-zinc-400">Cost Basis</span>
-              <div className="text-sm font-bold font-mono tabular-nums text-zinc-600">
+              <span className="text-[11px] font-semibold uppercase text-slate-500">Cost Basis</span>
+              <div className="text-sm font-bold font-mono tabular-nums text-slate-600">
                 {activePoint ? formatTHB(activePoint.cost) : '—'}
               </div>
             </div>
             <div>
-              <span className="text-[11px] font-semibold uppercase text-zinc-400">Unrealized PnL</span>
+              <span className="text-[11px] font-semibold uppercase text-slate-500">Unrealized PnL</span>
               <div
                 className={`text-sm font-bold font-mono tabular-nums ${
                   activePoint && activePoint.pnl >= 0 ? 'text-emerald-600' : 'text-rose-600'
@@ -288,11 +288,11 @@ export default function PortfolioAnalyticsTab({
           </div>
 
           <div className="flex items-center gap-4 text-xs font-medium">
-            <span className="flex items-center gap-1.5 text-zinc-700">
+            <span className="flex items-center gap-1.5 text-slate-700">
               <span className="inline-block h-3 w-3 rounded-sm bg-flow-blue" />
               Total NAV Area
             </span>
-            <span className="flex items-center gap-1.5 text-zinc-500">
+            <span className="flex items-center gap-1.5 text-slate-500">
               <span className="inline-block h-0.5 w-3 bg-slate-500 border-t border-dashed border-slate-500" />
               Cost Basis
             </span>
@@ -326,7 +326,7 @@ export default function PortfolioAnalyticsTab({
                     x={padLeft - 10}
                     y={gl.y + 4}
                     textAnchor="end"
-                    className="text-[10px] font-mono fill-zinc-400"
+                    className="text-[11px] font-mono fill-slate-400"
                   >
                     {gl.val >= 1000 ? `${(gl.val / 1000).toFixed(0)}k` : gl.val.toFixed(0)}
                   </text>
@@ -344,7 +344,7 @@ export default function PortfolioAnalyticsTab({
                     x={pt.x}
                     y={height - 10}
                     textAnchor={anchor}
-                    className="text-[10px] font-mono fill-zinc-400"
+                    className="text-[11px] font-mono fill-slate-400"
                   >
                     {pt.date}
                   </text>
@@ -401,7 +401,7 @@ export default function PortfolioAnalyticsTab({
             </svg>
           </div>
         ) : (
-          <div className="py-20 text-center font-sans text-zinc-400">
+          <div className="py-20 text-center font-sans text-slate-500">
             ต้องการข้อมูล Snapshot อย่างน้อย 2 วันเพื่อแสดงกราฟแนวโน้ม (ปัจจุบัน: {sortedRows.length} วัน)
           </div>
         )}
@@ -441,8 +441,8 @@ export default function PortfolioAnalyticsTab({
           />
         ) : (
           <div className="rounded-2xl border border-sky-100 bg-panel p-6 shadow-sm text-center">
-            <h4 className="text-sm font-bold text-zinc-900">Historical Asset-Class Allocation</h4>
-            <p className="mt-2 text-xs text-zinc-500 max-w-lg mx-auto">
+            <h4 className="text-sm font-bold text-slate-900">Historical Asset-Class Allocation</h4>
+            <p className="mt-2 text-xs text-slate-500 max-w-lg mx-auto">
               ระบบบันทึกประวัติการกระจายสินทรัพย์ (Asset-Class Breakdown) ตั้งแต่ snapshot ปัจจุบันเป็นต้นไป สำหรับ snapshot ย้อนหลังที่ไม่มีข้อมูลแยกสินทรัพย์จะแสดงเป็นช่องว่าง (gap) ตามหลักความถูกต้องของข้อมูลโดยไม่ทำการประมาณค่าหรือ backfill จาก holdings ปัจจุบัน
             </p>
           </div>
@@ -461,15 +461,15 @@ export default function PortfolioAnalyticsTab({
       {/* Performance Table (ย้ายมาอยู่ใต้อาณาบริเวณกราฟ) */}
       <div className="rounded-2xl border border-sky-100 bg-panel shadow-sm overflow-hidden">
         <div className="border-b border-sky-100 bg-sky-50/40 px-6 py-4">
-          <h4 className="text-sm font-bold text-zinc-900">ตารางบันทึกประวัติ Snapshot (Table Data)</h4>
-          <p className="text-xs text-zinc-500">
+          <h4 className="text-sm font-bold text-slate-900">ตารางบันทึกประวัติ Snapshot (Table Data)</h4>
+          <p className="text-xs text-slate-500">
             แสดงรายละเอียดตัวเลขประจำวันของ NAV Snapshot ในช่วงเวลาที่เลือก
           </p>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm">
             <thead>
-              <tr className="border-b border-sky-100 bg-zinc-50/80 text-xs font-semibold uppercase tracking-wider text-zinc-500">
+              <tr className="border-b border-sky-100 bg-slate-50/80 text-xs font-semibold uppercase tracking-wider text-slate-500">
                 <th className="px-6 py-3.5">Date</th>
                 <th className="px-6 py-3.5 text-right">Total NAV</th>
                 <th className="px-6 py-3.5 text-right">Total Cost</th>
@@ -482,20 +482,20 @@ export default function PortfolioAnalyticsTab({
                 const isPos = row.Unrealized_PnL >= 0
                 return (
                   <tr key={row.Date} className="hover:bg-sky-50/60 transition-colors">
-                    <td className="px-6 py-4 font-bold text-zinc-900">{row.Date}</td>
-                    <td className="px-6 py-4 text-right font-bold text-zinc-900">{formatTHB(row.Total_NAV)}</td>
-                    <td className="px-6 py-4 text-right text-zinc-600">{formatTHB(row.Total_Cost)}</td>
+                    <td className="px-6 py-4 font-bold text-slate-900">{row.Date}</td>
+                    <td className="px-6 py-4 text-right font-bold text-slate-900">{formatTHB(row.Total_NAV)}</td>
+                    <td className="px-6 py-4 text-right text-slate-600">{formatTHB(row.Total_Cost)}</td>
                     <td className={`px-6 py-4 text-right font-bold ${isPos ? 'text-emerald-600' : 'text-rose-600'}`}>
                       {isPos ? '+' : ''}
                       {formatTHB(row.Unrealized_PnL)}
                     </td>
-                    <td className="px-6 py-4 text-right text-zinc-700">{formatTHB(row.Cash_Balance)}</td>
+                    <td className="px-6 py-4 text-right text-slate-700">{formatTHB(row.Cash_Balance)}</td>
                   </tr>
                 )
               })}
               {sortedRows.length === 0 && (
                 <tr>
-                  <td colSpan={5} className="py-16 text-center font-sans text-zinc-400">
+                  <td colSpan={5} className="py-16 text-center font-sans text-slate-500">
                     ยังไม่มีประวัติการบันทึก NAV Snapshot ในช่วงเวลาที่เลือก
                   </td>
                 </tr>

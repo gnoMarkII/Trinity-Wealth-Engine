@@ -2,6 +2,8 @@ import { useState, useMemo } from 'react'
 import type { ActualPortfolioStateDTO, DividendRoundDTO, SyncDividendsResponseDTO } from '../../api/types'
 import { api } from '../../api/client'
 import { formatTHB } from '../../utils/formatters'
+import { CalendarIcon, CloseIcon } from '../ui/AppIcons'
+import { InPlaceDialog } from '../ui/Modal'
 import { IncomeIcon } from './icons/PortfolioIcons'
 
 interface Props {
@@ -150,10 +152,10 @@ export default function PortfolioIncomesTab({
             <IncomeIcon className="h-6 w-6" />
           </div>
           <div>
-            <h2 className="text-base sm:text-lg font-bold text-zinc-900 tracking-tight flex items-center gap-2">
+            <h2 className="text-base sm:text-lg font-bold text-slate-900 tracking-tight flex items-center gap-2">
               ประวัติเงินปันผลและรายรับ (Dividends & Passive Income)
             </h2>
-            <p className="text-xs text-zinc-500">
+            <p className="text-xs text-slate-500">
               แยกส่วนได้รับแล้วสะสม และรอรับเงินปันผล พร้อมคำนวณสกุลเงินดั้งเดิมอัตโนมัติ
             </p>
           </div>
@@ -239,7 +241,7 @@ export default function PortfolioIncomesTab({
           className={`flex items-center gap-2.5 rounded-xl px-5 py-3 text-sm sm:text-base font-bold transition-all cursor-pointer shadow-sm ${
             activeSubTab === 'received'
               ? 'bg-flow-blue text-white shadow-md'
-              : 'border border-sky-200 bg-white text-zinc-600 hover:bg-sky-50'
+              : 'border border-sky-200 bg-white text-slate-600 hover:bg-sky-50'
           }`}
         >
           <span>💰</span>
@@ -259,7 +261,7 @@ export default function PortfolioIncomesTab({
           className={`flex items-center gap-2.5 rounded-xl px-5 py-3 text-sm sm:text-base font-bold transition-all cursor-pointer shadow-sm ${
             activeSubTab === 'upcoming'
               ? 'bg-flow-blue text-white shadow-md'
-              : 'border border-sky-200 bg-white text-zinc-600 hover:bg-sky-50'
+              : 'border border-sky-200 bg-white text-slate-600 hover:bg-sky-50'
           }`}
         >
           <span>🕒</span>
@@ -281,41 +283,41 @@ export default function PortfolioIncomesTab({
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             {/* Card 1: Total Received */}
             <div className="flex flex-col justify-between rounded-2xl border border-sky-100 bg-gradient-to-br from-panel via-panel to-sky-50/40 p-5 sm:p-6 shadow-sm transition-all hover:shadow-md relative overflow-hidden">
-              <div className="flex items-center justify-between text-xs sm:text-sm font-bold uppercase tracking-wider text-zinc-500">
+              <div className="flex items-center justify-between text-xs sm:text-sm font-bold uppercase tracking-wider text-slate-500">
                 <span>เงินปันผลสะสมทั้งหมด (Total Accumulated)</span>
                 <span className="rounded-full bg-emerald-50 border border-emerald-200 px-2.5 py-0.5 text-xs font-bold text-emerald-700">NET RECEIVED</span>
               </div>
               <div className="mt-2.5 text-2xl sm:text-3xl lg:text-4xl font-extrabold font-mono text-emerald-600 flex items-baseline gap-2">
                 <span>{formatTHB(totalAccDividend)}</span>
                 {totalUsdReceived > 0 && (
-                  <span className="text-sm font-bold text-zinc-500 font-sans">
+                  <span className="text-sm font-bold text-slate-500 font-sans">
                     (${totalUsdReceived.toFixed(2)} USD)
                   </span>
                 )}
               </div>
-              <div className="mt-1.5 text-xs text-zinc-500 font-medium">
+              <div className="mt-1.5 text-xs text-slate-500 font-medium">
                 คำนวณสุทธิหลังหักภาษี ณ ที่จ่าย (WHT 10% / 15%)
               </div>
             </div>
 
             {/* Card 2: Sync Status */}
             <div className="flex flex-col justify-between rounded-2xl border border-sky-100 bg-gradient-to-br from-panel via-panel to-sky-50/40 p-5 sm:p-6 shadow-sm transition-all hover:shadow-md relative overflow-hidden">
-              <div className="flex items-center justify-between text-xs sm:text-sm font-bold uppercase tracking-wider text-zinc-500">
+              <div className="flex items-center justify-between text-xs sm:text-sm font-bold uppercase tracking-wider text-slate-500">
                 <span>สถานะการเชื่อมต่อ (Sync Status)</span>
                 <span className="rounded-full bg-sky-50 border border-sky-200 px-2.5 py-0.5 text-xs font-bold text-flow-blue">HOLDINGS</span>
               </div>
               <div className="mt-2.5 flex items-baseline gap-2">
-                <span className="text-2xl sm:text-3xl lg:text-4xl font-extrabold font-mono text-zinc-900">{syncedCount}</span>
-                <span className="text-sm font-semibold text-zinc-500">/ {stockHoldings.length} สินทรัพย์</span>
+                <span className="text-2xl sm:text-3xl lg:text-4xl font-extrabold font-mono text-slate-900">{syncedCount}</span>
+                <span className="text-sm font-semibold text-slate-500">/ {stockHoldings.length} สินทรัพย์</span>
               </div>
               <div className="mt-1.5 flex items-center gap-2 text-xs font-medium">
                 <span className="text-emerald-700 font-bold bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">🤖 {syncedCount} Synced</span>
-                <span className="text-zinc-400">•</span>
+                <span className="text-slate-500">•</span>
                 <span className="text-amber-700 font-bold bg-amber-50 px-2 py-0.5 rounded-md border border-amber-200">✏️ {manualCount} Manual</span>
                 {unsyncedCount > 0 && (
                   <>
-                    <span className="text-zinc-400">•</span>
-                    <span className="text-zinc-500">{unsyncedCount} ยังไม่ซิงค์</span>
+                    <span className="text-slate-500">•</span>
+                    <span className="text-slate-500">{unsyncedCount} ยังไม่ซิงค์</span>
                   </>
                 )}
               </div>
@@ -323,14 +325,14 @@ export default function PortfolioIncomesTab({
 
             {/* Card 3: Passive Income YTD */}
             <div className="flex flex-col justify-between rounded-2xl border border-sky-100 bg-gradient-to-br from-panel via-panel to-sky-50/40 p-5 sm:p-6 shadow-sm transition-all hover:shadow-md relative overflow-hidden">
-              <div className="flex items-center justify-between text-xs sm:text-sm font-bold uppercase tracking-wider text-zinc-500">
+              <div className="flex items-center justify-between text-xs sm:text-sm font-bold uppercase tracking-wider text-slate-500">
                 <span>Passive Income YTD</span>
                 <span className="rounded-full bg-cyan-50 border border-cyan-200 px-2.5 py-0.5 text-xs font-bold text-cyan-700">YTD</span>
               </div>
               <div className="mt-2.5 text-2xl sm:text-3xl lg:text-4xl font-extrabold font-mono text-flow-blue">
                 {formatTHB(state?.summary.passive_income_ytd ?? 0)}
               </div>
-              <div className="mt-1 text-[11px] text-zinc-500">
+              <div className="mt-1 text-[11px] text-slate-500">
                 รายรับเงินปันผลและดอกเบี้ยตั้งแต่ต้นปี
               </div>
             </div>
@@ -345,14 +347,14 @@ export default function PortfolioIncomesTab({
                   placeholder="🔍 ค้นหาสัญลักษณ์หุ้น..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-64 rounded-xl border border-sky-200 bg-white px-3.5 py-2 text-xs text-zinc-900 placeholder-zinc-400 focus:border-flow-blue focus:outline-none focus:ring-1 focus:ring-flow-blue shadow-sm"
+                  className="w-64 rounded-xl border border-sky-200 bg-white px-3.5 py-2 text-xs text-slate-900 placeholder-slate-400 focus:border-flow-blue focus:outline-none focus:ring-1 focus:ring-flow-blue shadow-sm"
                 />
               </div>
               {searchQuery && (
                 <button
                   type="button"
                   onClick={() => setSearchQuery('')}
-                  className="rounded-lg border border-sky-200 bg-white px-2.5 py-1.5 text-xs text-zinc-500 hover:text-zinc-900 shadow-sm cursor-pointer"
+                  className="rounded-lg border border-sky-200 bg-white px-2.5 py-1.5 text-xs text-slate-500 hover:text-slate-900 shadow-sm cursor-pointer"
                 >
                   ล้าง
                 </button>
@@ -376,7 +378,7 @@ export default function PortfolioIncomesTab({
                     className={`rounded-xl px-3 py-1.5 text-xs font-semibold transition-all cursor-pointer shadow-sm ${
                       isActive
                         ? 'bg-flow-blue text-white shadow-md'
-                        : 'border border-sky-200 bg-white text-zinc-600 hover:bg-sky-50'
+                        : 'border border-sky-200 bg-white text-slate-600 hover:bg-sky-50'
                     }`}
                   >
                     {labels[filterKey]}
@@ -390,7 +392,7 @@ export default function PortfolioIncomesTab({
           <div className="rounded-2xl border border-sky-100 bg-panel shadow-sm overflow-hidden">
             <div className="overflow-x-auto custom-scrollbar">
               <table className="w-full text-left text-sm min-w-[950px]">
-                <thead className="border-b border-sky-100 bg-sky-50/80 text-xs font-bold uppercase tracking-wider text-zinc-700 whitespace-nowrap">
+                <thead className="border-b border-sky-100 bg-sky-50/80 text-xs font-bold uppercase tracking-wider text-slate-700 whitespace-nowrap">
                   <tr>
                     <th className="px-4 py-3.5 whitespace-nowrap">สัญลักษณ์</th>
                     <th className="px-3 py-3.5 whitespace-nowrap">ประเภท</th>
@@ -405,7 +407,7 @@ export default function PortfolioIncomesTab({
                 <tbody className="divide-y divide-sky-100/60 font-sans">
                   {filteredHoldings.length === 0 ? (
                     <tr>
-                      <td colSpan={8} className="py-12 text-center text-zinc-500 font-medium">
+                      <td colSpan={8} className="py-12 text-center text-slate-500 font-medium">
                         ไม่พบข้อมูลสินทรัพย์ตามเงื่อนไขที่ค้นหา
                       </td>
                     </tr>
@@ -418,10 +420,10 @@ export default function PortfolioIncomesTab({
                       return (
                         <tr key={`${h.symbol}-${idx}`} className="hover:bg-sky-50/50 transition-colors">
                           <td className="px-4 py-3.5 font-sans">
-                            <div className="font-extrabold text-zinc-900 flex items-center gap-2 text-base font-mono">
+                            <div className="font-extrabold text-slate-900 flex items-center gap-2 text-base font-mono">
                               <span>{h.symbol}</span>
                               {h.company_name && (
-                                <span className="text-xs text-zinc-500 font-sans font-medium truncate max-w-[160px]">
+                                <span className="text-xs text-slate-500 font-sans font-medium truncate max-w-[160px]">
                                   {h.company_name}
                                 </span>
                               )}
@@ -434,11 +436,11 @@ export default function PortfolioIncomesTab({
                             </span>
                           </td>
 
-                          <td className="px-3 py-3.5 text-right font-mono font-semibold text-zinc-900 text-sm sm:text-base">
+                          <td className="px-3 py-3.5 text-right font-mono font-semibold text-slate-900 text-sm sm:text-base">
                             {h.units.toLocaleString('en-US', { minimumFractionDigits: 2 })}
                           </td>
 
-                          <td className="px-3 py-3.5 text-right font-mono font-semibold text-zinc-800 text-sm sm:text-base">
+                          <td className="px-3 py-3.5 text-right font-mono font-semibold text-slate-800 text-sm sm:text-base">
                             {h.dividend_per_share !== null && h.dividend_per_share !== undefined
                               ? isUSD
                                 ? `$${h.dividend_per_share.toFixed(2)}`
@@ -446,7 +448,7 @@ export default function PortfolioIncomesTab({
                               : '-'}
                           </td>
 
-                          <td className="px-3 py-3.5 text-right font-mono font-semibold text-zinc-800 text-sm sm:text-base">
+                          <td className="px-3 py-3.5 text-right font-mono font-semibold text-slate-800 text-sm sm:text-base">
                             {h.dividend_yield !== null && h.dividend_yield !== undefined
                               ? `${(h.dividend_yield * 100).toFixed(2)}%`
                               : '-'}
@@ -458,7 +460,7 @@ export default function PortfolioIncomesTab({
                                 <span className="font-extrabold text-emerald-600 text-sm sm:text-base">
                                   ${(h.accumulated_dividend_native ?? 0).toFixed(2)}
                                 </span>
-                                <span className="text-xs text-zinc-500 font-sans font-medium">
+                                <span className="text-xs text-slate-500 font-sans font-medium">
                                   ({formatTHB(h.accumulated_dividend_thb ?? 0)})
                                 </span>
                               </div>
@@ -482,7 +484,7 @@ export default function PortfolioIncomesTab({
                                 <span>✏️</span> Manual
                               </span>
                             ) : (
-                              <span className="inline-flex items-center rounded-full bg-zinc-100 border border-zinc-200 px-2.5 py-1 text-xs font-medium text-zinc-500">
+                              <span className="inline-flex items-center rounded-full bg-slate-100 border border-slate-200 px-2.5 py-1 text-xs font-medium text-slate-500">
                                 — Not Synced
                               </span>
                             )}
@@ -503,7 +505,7 @@ export default function PortfolioIncomesTab({
                                 🔍 ดู {symbolRounds.length} รอบ
                               </button>
                             ) : (
-                              <span className="text-xs text-zinc-400 font-medium">—</span>
+                              <span className="text-xs text-slate-500 font-medium">—</span>
                             )}
                           </td>
                         </tr>
@@ -524,40 +526,40 @@ export default function PortfolioIncomesTab({
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             {/* Card 1: Total Upcoming */}
             <div className="flex flex-col justify-between rounded-2xl border border-amber-100 bg-gradient-to-br from-panel via-panel to-amber-50/40 p-5 sm:p-6 shadow-sm transition-all hover:shadow-md relative overflow-hidden">
-              <div className="flex items-center justify-between text-xs sm:text-sm font-bold uppercase tracking-wider text-zinc-500">
+              <div className="flex items-center justify-between text-xs sm:text-sm font-bold uppercase tracking-wider text-slate-500">
                 <span>เงินปันผลที่รอรับทั้งหมด (Total Upcoming)</span>
                 <span className="rounded-full bg-amber-50 border border-amber-200 px-2.5 py-0.5 text-xs font-bold text-amber-800">PENDING PAY</span>
               </div>
               <div className="mt-2.5 text-2xl sm:text-3xl lg:text-4xl font-extrabold font-mono text-amber-600 flex items-baseline gap-2">
                 <span>{formatTHB(totalUpcomingThb)}</span>
                 {totalUpcomingUsd > 0 && (
-                  <span className="text-sm font-bold text-zinc-500 font-sans">
+                  <span className="text-sm font-bold text-slate-500 font-sans">
                     (${totalUpcomingUsd.toFixed(2)} USD)
                   </span>
                 )}
               </div>
-              <div className="mt-1.5 text-xs text-zinc-500 font-medium">
+              <div className="mt-1.5 text-xs text-slate-500 font-medium">
                 เงินจะถูกบันทึกเป็น "ได้รับแล้ว" อัตโนมัติเมื่อถึงวันจ่ายเงิน (Payment Date)
               </div>
             </div>
 
             {/* Card 2: Upcoming Rounds Count */}
             <div className="flex flex-col justify-between rounded-2xl border border-sky-100 bg-gradient-to-br from-panel via-panel to-sky-50/40 p-5 sm:p-6 shadow-sm transition-all hover:shadow-md relative overflow-hidden">
-              <div className="flex items-center justify-between text-xs sm:text-sm font-bold uppercase tracking-wider text-zinc-500">
+              <div className="flex items-center justify-between text-xs sm:text-sm font-bold uppercase tracking-wider text-slate-500">
                 <span>รอบการจ่ายที่รออยู่ (Upcoming Rounds)</span>
                 <span className="rounded-full bg-sky-50 border border-sky-200 px-2.5 py-0.5 text-xs font-bold text-flow-blue">SCHEDULE</span>
               </div>
-              <div className="mt-2.5 text-2xl sm:text-3xl lg:text-4xl font-extrabold font-mono text-zinc-900">
-                {allUpcomingRounds.length} <span className="text-sm font-semibold text-zinc-500">รายการ</span>
+              <div className="mt-2.5 text-2xl sm:text-3xl lg:text-4xl font-extrabold font-mono text-slate-900">
+                {allUpcomingRounds.length} <span className="text-sm font-semibold text-slate-500">รายการ</span>
               </div>
-              <div className="mt-1.5 text-xs text-zinc-500 font-medium">
+              <div className="mt-1.5 text-xs text-slate-500 font-medium">
                 ตามการขึ้นเครื่องหมาย XD และปฏิทินจ่ายเงิน
               </div>
             </div>
 
             {/* Card 3: Next Payout */}
             <div className="flex flex-col justify-between rounded-2xl border border-sky-100 bg-gradient-to-br from-panel via-panel to-sky-50/40 p-5 sm:p-6 shadow-sm transition-all hover:shadow-md relative overflow-hidden">
-              <div className="flex items-center justify-between text-xs sm:text-sm font-bold uppercase tracking-wider text-zinc-500">
+              <div className="flex items-center justify-between text-xs sm:text-sm font-bold uppercase tracking-wider text-slate-500">
                 <span>กำหนดจ่ายถัดไป (Next Payout)</span>
                 <span className="rounded-full bg-cyan-50 border border-cyan-200 px-2.5 py-0.5 text-xs font-bold text-cyan-700">NEXT</span>
               </div>
@@ -566,7 +568,7 @@ export default function PortfolioIncomesTab({
                   ? `${allUpcomingRounds[0].pay_date || allUpcomingRounds[0].ex_date} (${allUpcomingRounds[0].symbol})`
                   : 'ไม่มีรายการรอจ่าย'}
               </div>
-              <div className="mt-1.5 text-xs text-zinc-600 font-mono font-medium">
+              <div className="mt-1.5 text-xs text-slate-600 font-mono font-medium">
                 {allUpcomingRounds.length > 0 && allUpcomingRounds[0]
                   ? getDaysUntil(allUpcomingRounds[0].pay_date || allUpcomingRounds[0].ex_date).text
                   : 'ทุกรอบถูกจ่ายครบแล้ว'}
@@ -581,13 +583,13 @@ export default function PortfolioIncomesTab({
               placeholder="🔍 ค้นหาสัญลักษณ์หุ้น..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-64 rounded-xl border border-sky-200 bg-white px-3.5 py-2 text-xs sm:text-sm text-zinc-900 placeholder-zinc-400 focus:border-flow-blue focus:outline-none focus:ring-1 focus:ring-flow-blue shadow-sm"
+              className="w-64 rounded-xl border border-sky-200 bg-white px-3.5 py-2 text-xs sm:text-sm text-slate-900 placeholder-slate-400 focus:border-flow-blue focus:outline-none focus:ring-1 focus:ring-flow-blue shadow-sm"
             />
             {searchQuery && (
               <button
                 type="button"
                 onClick={() => setSearchQuery('')}
-                className="rounded-xl border border-sky-200 bg-white px-3 py-2 text-xs sm:text-sm font-bold text-zinc-600 hover:text-zinc-900 shadow-sm cursor-pointer"
+                className="rounded-xl border border-sky-200 bg-white px-3 py-2 text-xs sm:text-sm font-bold text-slate-600 hover:text-slate-900 shadow-sm cursor-pointer"
               >
                 ล้าง
               </button>
@@ -598,7 +600,7 @@ export default function PortfolioIncomesTab({
           <div className="rounded-2xl border border-amber-100 bg-panel shadow-sm overflow-hidden">
             <div className="overflow-x-auto custom-scrollbar">
               <table className="w-full text-left text-sm min-w-[950px]">
-                <thead className="border-b border-amber-100 bg-amber-50/80 text-xs font-bold uppercase tracking-wider text-zinc-700 whitespace-nowrap">
+                <thead className="border-b border-amber-100 bg-amber-50/80 text-xs font-bold uppercase tracking-wider text-slate-700 whitespace-nowrap">
                   <tr>
                     <th className="px-4 py-3.5 whitespace-nowrap">สัญลักษณ์</th>
                     <th className="px-3 py-3.5 whitespace-nowrap">วัน XD (Ex-Date)</th>
@@ -613,7 +615,7 @@ export default function PortfolioIncomesTab({
                 <tbody className="divide-y divide-amber-100/60 font-sans">
                   {filteredUpcomingRounds.length === 0 ? (
                     <tr>
-                      <td colSpan={8} className="py-12 text-center text-zinc-500 font-medium">
+                      <td colSpan={8} className="py-12 text-center text-slate-500 font-medium">
                         🎉 ไม่มีรายการเงินปันผลที่รอจ่ายในขณะนี้
                       </td>
                     </tr>
@@ -625,19 +627,19 @@ export default function PortfolioIncomesTab({
                       return (
                         <tr key={`upcoming-${r.symbol}-${r.ex_date}-${idx}`} className="hover:bg-amber-50/40 transition-colors">
                           <td className="px-4 py-3.5 font-sans">
-                            <div className="font-extrabold text-zinc-900 flex items-center gap-2 text-base font-mono">
+                            <div className="font-extrabold text-slate-900 flex items-center gap-2 text-base font-mono">
                               <span>{r.symbol}</span>
                               {r.company_name && (
-                                <span className="text-xs text-zinc-500 font-sans font-medium truncate max-w-[160px]">
+                                <span className="text-xs text-slate-500 font-sans font-medium truncate max-w-[160px]">
                                   {r.company_name}
                                 </span>
                               )}
                             </div>
                           </td>
 
-                          <td className="px-3 py-3.5 font-mono font-semibold text-zinc-700 text-sm sm:text-base">{r.ex_date}</td>
+                          <td className="px-3 py-3.5 font-mono font-semibold text-slate-700 text-sm sm:text-base">{r.ex_date}</td>
 
-                          <td className="px-3 py-3.5 font-mono font-bold text-zinc-900 text-sm sm:text-base">
+                          <td className="px-3 py-3.5 font-mono font-bold text-slate-900 text-sm sm:text-base">
                             {r.pay_date || '—'}
                           </td>
 
@@ -647,7 +649,7 @@ export default function PortfolioIncomesTab({
                                 countdown.isToday
                                   ? 'bg-rose-100 text-rose-800 border border-rose-200 animate-pulse'
                                   : countdown.isPast
-                                  ? 'bg-zinc-100 text-zinc-600 border border-zinc-200'
+                                  ? 'bg-slate-100 text-slate-600 border border-slate-200'
                                   : 'bg-amber-100 text-amber-800 border border-amber-200'
                               }`}
                             >
@@ -655,11 +657,11 @@ export default function PortfolioIncomesTab({
                             </span>
                           </td>
 
-                          <td className="px-3 py-3.5 text-right font-mono font-semibold text-zinc-800 text-sm sm:text-base">
+                          <td className="px-3 py-3.5 text-right font-mono font-semibold text-slate-800 text-sm sm:text-base">
                             {r.units_held.toLocaleString('en-US', { minimumFractionDigits: 2 })}
                           </td>
 
-                          <td className="px-3 py-3.5 text-right font-mono font-semibold text-zinc-800 text-sm sm:text-base">
+                          <td className="px-3 py-3.5 text-right font-mono font-semibold text-slate-800 text-sm sm:text-base">
                             {isUSD ? `$${r.dps.toFixed(4)}` : `฿${r.dps.toFixed(4)}`}
                           </td>
 
@@ -673,7 +675,7 @@ export default function PortfolioIncomesTab({
                                 <span className="font-extrabold text-amber-600 text-sm sm:text-base">
                                   ${(r.net_native ?? 0).toFixed(2)}
                                 </span>
-                                <span className="text-xs text-zinc-500 font-sans font-medium">
+                                <span className="text-xs text-slate-500 font-sans font-medium">
                                   ({formatTHB(r.net_thb)})
                                 </span>
                               </div>
@@ -694,29 +696,35 @@ export default function PortfolioIncomesTab({
 
       {/* Detailed Rounds Modal */}
       {selectedSymbolRounds && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-zinc-900/60 backdrop-blur-sm p-4 animate-fade-in">
-          <div className="w-full max-w-4xl rounded-2xl border border-sky-100 bg-panel p-6 shadow-2xl space-y-4">
+        <InPlaceDialog
+          titleId="income-rounds-modal-title"
+          onClose={() => setSelectedSymbolRounds(null)}
+          backdropClassName="absolute inset-0 bg-slate-900/60 backdrop-blur-sm"
+          panelClassName="w-full max-w-4xl rounded-2xl border border-sky-100 bg-panel p-6 shadow-2xl space-y-4"
+        >
             <div className="flex items-center justify-between border-b border-sky-100 pb-3">
               <div>
-                <h3 className="text-lg font-bold text-zinc-900 flex items-center gap-2">
-                  <span>📅</span> รายละเอียดรอบเงินปันผล: {selectedSymbolRounds.symbol}
+                <h3 id="income-rounds-modal-title" className="text-lg font-bold text-slate-900 flex items-center gap-2">
+                  <CalendarIcon className="h-5 w-5 text-section-accent shrink-0" />
+                  <span>รายละเอียดรอบเงินปันผล: {selectedSymbolRounds.symbol}</span>
                 </h3>
-                <p className="text-xs text-zinc-500 font-medium">
+                <p className="text-xs text-slate-500 font-medium">
                   รวม {selectedSymbolRounds.rounds.length} รอบตามประวัติการถือครอง
                 </p>
               </div>
               <button
                 type="button"
+                aria-label="ปิดหน้าต่าง"
                 onClick={() => setSelectedSymbolRounds(null)}
-                className="rounded-xl border border-sky-200 bg-white hover:bg-sky-50 p-2 text-zinc-500 hover:text-zinc-900 transition-colors shadow-sm cursor-pointer"
+                className="rounded-xl border border-sky-200 bg-white hover:bg-sky-50 p-2 text-slate-500 hover:text-slate-900 transition-colors shadow-sm cursor-pointer"
               >
-                ✕
+                <CloseIcon className="h-4 w-4" />
               </button>
             </div>
 
             <div className="overflow-x-auto max-h-[60vh]">
               <table className="w-full text-left text-sm">
-                <thead className="border-b border-sky-100 bg-sky-50/80 text-xs sm:text-sm font-bold uppercase tracking-wider text-zinc-700">
+                <thead className="border-b border-sky-100 bg-sky-50/80 text-xs sm:text-sm font-bold uppercase tracking-wider text-slate-700">
                   <tr>
                     <th className="px-3 py-3">รอบ</th>
                     <th className="px-3 py-3">สถานะ</th>
@@ -737,7 +745,7 @@ export default function PortfolioIncomesTab({
 
                     return (
                       <tr key={`${r.symbol}-${r.ex_date}-${idx}`} className="hover:bg-sky-50/40 transition-colors">
-                        <td className="px-3 py-3 text-zinc-500 text-xs">#{selectedSymbolRounds.rounds.length - idx}</td>
+                        <td className="px-3 py-3 text-slate-500 text-xs">#{selectedSymbolRounds.rounds.length - idx}</td>
 
                         <td className="px-3 py-3 font-sans">
                           {isUpcoming ? (
@@ -751,23 +759,23 @@ export default function PortfolioIncomesTab({
                           )}
                         </td>
 
-                        <td className="px-3 py-3 text-zinc-900 font-bold">{r.ex_date}</td>
+                        <td className="px-3 py-3 text-slate-900 font-bold">{r.ex_date}</td>
 
-                        <td className="px-3 py-3 text-zinc-700 font-semibold">{r.pay_date || '—'}</td>
+                        <td className="px-3 py-3 text-slate-700 font-semibold">{r.pay_date || '—'}</td>
 
-                        <td className="px-3 py-3 text-right text-zinc-800 font-semibold">{r.dps.toFixed(4)}</td>
+                        <td className="px-3 py-3 text-right text-slate-800 font-semibold">{r.dps.toFixed(4)}</td>
 
-                        <td className="px-3 py-3 text-right text-zinc-800 font-semibold">{r.units_held.toLocaleString('en-US')}</td>
+                        <td className="px-3 py-3 text-right text-slate-800 font-semibold">{r.units_held.toLocaleString('en-US')}</td>
 
                         <td className="px-3 py-3 text-right text-rose-600 font-bold">
                           {(r.tax_rate * 100).toFixed(0)}%
                         </td>
 
-                        <td className="px-3 py-3 text-right font-bold text-zinc-900">
+                        <td className="px-3 py-3 text-right font-bold text-slate-900">
                           {isUSD ? `$${(r.net_native ?? (r.net_thb / (r.fx_rate || 1))).toFixed(2)}` : formatTHB(r.net_thb)}
                         </td>
 
-                        <td className="px-3 py-3 text-right text-zinc-600">
+                        <td className="px-3 py-3 text-right text-slate-600">
                           {isUSD ? r.fx_rate.toFixed(4) : '-'}
                         </td>
 
@@ -785,13 +793,12 @@ export default function PortfolioIncomesTab({
               <button
                 type="button"
                 onClick={() => setSelectedSymbolRounds(null)}
-                className="rounded-xl border border-sky-200 bg-white hover:bg-sky-50 px-4 py-2 text-xs font-semibold text-zinc-700 transition-colors shadow-sm cursor-pointer"
+                className="rounded-xl border border-sky-200 bg-white hover:bg-sky-50 px-4 py-2 text-xs font-semibold text-slate-700 transition-colors shadow-sm cursor-pointer"
               >
                 ปิด
               </button>
             </div>
-          </div>
-        </div>
+        </InPlaceDialog>
       )}
     </div>
   )

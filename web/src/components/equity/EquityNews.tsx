@@ -81,11 +81,11 @@ export const EquityNews: React.FC<EquityNewsProps> = ({ ticker }) => {
     if (is404 || (!news && !error)) {
       return (
         <div className="flex flex-col justify-center items-center h-64 bg-surface rounded-xl border border-dashed border-edge p-8 text-center">
-          <svg className="w-12 h-12 text-zinc-400 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+          <svg className="w-12 h-12 text-slate-500 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z" />
           </svg>
-          <h3 className="text-lg font-medium text-zinc-900 mb-1">ยังไม่มีข้อมูลข่าวสำหรับหุ้นตัวนี้ในระบบ</h3>
-          <p className="text-zinc-500 max-w-md text-sm">
+          <h3 className="text-lg font-medium text-slate-900 mb-1">ยังไม่มีข้อมูลข่าวสำหรับหุ้นตัวนี้ในระบบ</h3>
+          <p className="text-slate-500 max-w-md text-sm">
             สามารถสั่งงานผ่าน Trinity Advisor (Manager) หรือสั่ง Research Swarm เพื่อเริ่มต้นดึงข่าวและวิเคราะห์หุ้นตัวนี้ได้
           </p>
         </div>
@@ -102,7 +102,7 @@ export const EquityNews: React.FC<EquityNewsProps> = ({ ticker }) => {
     }
 
     return (
-      <div className="bg-surface rounded-xl border border-edge p-6 text-center text-zinc-500 text-sm">
+      <div className="bg-surface rounded-xl border border-edge p-6 text-center text-slate-500 text-sm">
         ไม่พบรายการข่าวสารในระบบ
       </div>
     )
@@ -130,7 +130,7 @@ export const EquityNews: React.FC<EquityNewsProps> = ({ ticker }) => {
         )
       case 'noise':
         return (
-          <span className="shrink-0 px-2 py-0.5 rounded text-[11px] font-medium bg-zinc-100 text-zinc-500 border border-zinc-200">
+          <span className="shrink-0 px-2 py-0.5 rounded text-[11px] font-medium bg-slate-100 text-slate-500 border border-slate-200">
             💤 NOISE
           </span>
         )
@@ -149,7 +149,7 @@ export const EquityNews: React.FC<EquityNewsProps> = ({ ticker }) => {
               Analyzed Intelligence & News ({news!.items.length})
             </div>
             {news!.last_updated && (
-              <span className="text-xs text-zinc-400">
+              <span className="text-xs text-slate-500">
                 อัปเดตล่าสุด {news!.last_updated}
               </span>
             )}
@@ -163,7 +163,7 @@ export const EquityNews: React.FC<EquityNewsProps> = ({ ticker }) => {
               >
                 <div className="space-y-2.5">
                   <div className="flex flex-wrap items-start justify-between gap-2">
-                    <h4 className="font-semibold text-zinc-900 text-base leading-snug flex-1">
+                    <h4 className="font-semibold text-slate-900 text-base leading-snug flex-1">
                       {item.title}
                     </h4>
                     <div className="flex items-center gap-1.5 shrink-0">
@@ -178,8 +178,8 @@ export const EquityNews: React.FC<EquityNewsProps> = ({ ticker }) => {
 
                   {/* Structured Analysis: What Happened & Why it Matters */}
                   {item.what_happened && (
-                    <div className="text-xs text-zinc-700 leading-relaxed">
-                      <span className="font-semibold text-zinc-900">เหตุการณ์: </span>
+                    <div className="text-xs text-slate-700 leading-relaxed">
+                      <span className="font-semibold text-slate-900">เหตุการณ์: </span>
                       {item.what_happened}
                     </div>
                   )}
@@ -193,23 +193,23 @@ export const EquityNews: React.FC<EquityNewsProps> = ({ ticker }) => {
 
                   {/* Fallback to summary if no what_happened */}
                   {!item.what_happened && item.summary && (
-                    <p className="text-xs text-zinc-600 line-clamp-3 leading-relaxed">
+                    <p className="text-xs text-slate-600 line-clamp-3 leading-relaxed">
                       {item.summary}
                     </p>
                   )}
 
-                  <div className="flex flex-wrap items-center gap-3 text-xs text-zinc-500 pt-1">
-                    <span className="font-medium text-zinc-700">ที่มา: {item.source}</span>
+                  <div className="flex flex-wrap items-center gap-3 text-xs text-slate-500 pt-1">
+                    <span className="font-medium text-slate-700">ที่มา: {item.source}</span>
                     {item.sources_count && item.sources_count > 1 && (
-                      <span className="bg-surface-strong px-2 py-0.5 rounded text-zinc-600">
+                      <span className="bg-surface-strong px-2 py-0.5 rounded text-slate-600">
                         {item.sources_count} sources
                       </span>
                     )}
-                    <span className="text-zinc-400">•</span>
+                    <span className="text-slate-500">•</span>
                     <span>{item.freshness_reason || `${item.age_hours} ชั่วโมงที่แล้ว`}</span>
                     {item.macro_impact_score && (
                       <>
-                        <span className="text-zinc-400">•</span>
+                        <span className="text-slate-500">•</span>
                         <span className="font-medium text-sky-700">Macro Score: {item.macro_impact_score}/10</span>
                       </>
                     )}
@@ -243,7 +243,7 @@ export const EquityNews: React.FC<EquityNewsProps> = ({ ticker }) => {
                 <span className="text-red-600 text-sm">▶</span>
                 <span>YouTube Insights & Video Mentions ({news!.youtube_mentions!.length})</span>
               </h4>
-              <p className="mt-0.5 text-[11px] text-zinc-500">
+              <p className="mt-0.5 text-[11px] text-slate-500">
                 สรุปประเด็นจากวิดีโอรายการและช่องการเงินชั้นนำที่พูดถึงหุ้น {ticker}
               </p>
             </div>
@@ -253,11 +253,11 @@ export const EquityNews: React.FC<EquityNewsProps> = ({ ticker }) => {
             {news!.youtube_mentions!.map((yt, idx) => (
               <div
                 key={idx}
-                className="flex flex-col justify-between rounded-lg border border-edge bg-panel p-4 shadow-2xs hover:border-red-200 transition-colors"
+                className="flex flex-col justify-between rounded-lg border border-edge bg-panel p-4 shadow-sm hover:border-red-200 transition-colors"
               >
                 <div className="space-y-2">
                   <div className="flex flex-wrap items-baseline justify-between gap-2">
-                    <h5 className="font-semibold text-zinc-900 text-sm leading-snug">
+                    <h5 className="font-semibold text-slate-900 text-sm leading-snug">
                       {yt.thai_title || yt.title}
                     </h5>
                     <div className="flex items-center gap-1.5 shrink-0">
@@ -265,12 +265,12 @@ export const EquityNews: React.FC<EquityNewsProps> = ({ ticker }) => {
                         {yt.channel}
                       </span>
                       {yt.alignment_with_news === 'confirmed' && (
-                        <span className="rounded bg-emerald-50 text-emerald-700 px-2 py-0.5 text-[10px] font-bold border border-emerald-200">
+                        <span className="rounded bg-emerald-50 text-emerald-700 px-2 py-0.5 text-[11px] font-bold border border-emerald-200">
                           สอดคล้องกับข่าว
                         </span>
                       )}
                       {yt.alignment_with_news === 'contrarian' && (
-                        <span className="rounded bg-amber-50 text-amber-700 px-2 py-0.5 text-[10px] font-bold border border-amber-200">
+                        <span className="rounded bg-amber-50 text-amber-700 px-2 py-0.5 text-[11px] font-bold border border-amber-200">
                           มุมมองสวนทาง (Contrarian)
                         </span>
                       )}
@@ -278,7 +278,7 @@ export const EquityNews: React.FC<EquityNewsProps> = ({ ticker }) => {
                   </div>
 
                   {yt.key_takeaways && yt.key_takeaways.length > 0 && (
-                    <ul className="list-disc pl-4 space-y-1 text-xs text-zinc-700 leading-relaxed">
+                    <ul className="list-disc pl-4 space-y-1 text-xs text-slate-700 leading-relaxed">
                       {yt.key_takeaways.map((point, pIdx) => (
                         <li key={pIdx}>{point}</li>
                       ))}
@@ -286,7 +286,7 @@ export const EquityNews: React.FC<EquityNewsProps> = ({ ticker }) => {
                   )}
 
                   {yt.alignment_note && (
-                    <p className="text-xs text-zinc-500 italic">
+                    <p className="text-xs text-slate-500 italic">
                       หมายเหตุ: {yt.alignment_note}
                     </p>
                   )}
@@ -317,7 +317,7 @@ export const EquityNews: React.FC<EquityNewsProps> = ({ ticker }) => {
             <div>
               <h4 className="text-xs font-bold uppercase tracking-wider text-sky-800 flex items-center gap-2">
                 <span>RSS News Discovery Candidates</span>
-                <span className="rounded-full bg-sky-100 text-sky-800 text-[10px] font-bold px-2 py-0.5 border border-sky-200">
+                <span className="rounded-full bg-sky-100 text-sky-800 text-[11px] font-bold px-2 py-0.5 border border-sky-200">
                   SECONDARY RSS
                 </span>
               </h4>
@@ -340,15 +340,15 @@ export const EquityNews: React.FC<EquityNewsProps> = ({ ticker }) => {
             <div>
               <h4 className="text-xs font-bold uppercase tracking-wider text-sky-800 flex items-center gap-2">
                 <span>RSS News Discovery Candidates</span>
-                <span className="rounded-full bg-sky-100 text-sky-800 text-[10px] font-bold px-2 py-0.5 border border-sky-200">
+                <span className="rounded-full bg-sky-100 text-sky-800 text-[11px] font-bold px-2 py-0.5 border border-sky-200">
                   SECONDARY RSS
                 </span>
               </h4>
-              <p className="mt-0.5 text-[11px] text-zinc-500">
+              <p className="mt-0.5 text-[11px] text-slate-500">
                 News discovery from aggregator/RSS feeds — secondary discovery source, not guaranteed real-time or primary news wire.
               </p>
             </div>
-            <span className="text-xs text-zinc-500">
+            <span className="text-xs text-slate-500">
               {discoveryNews!.items.length} candidates
             </span>
           </div>
@@ -357,26 +357,26 @@ export const EquityNews: React.FC<EquityNewsProps> = ({ ticker }) => {
             {discoveryNews!.items.map((cand, idx) => (
               <div
                 key={idx}
-                className="flex flex-col justify-between rounded-lg border border-edge bg-panel p-3.5 shadow-2xs hover:border-sky-300 transition-colors"
+                className="flex flex-col justify-between rounded-lg border border-edge bg-panel p-3.5 shadow-sm hover:border-sky-300 transition-colors"
               >
                 <div className="space-y-1.5">
                   <div className="flex items-start justify-between gap-2">
-                    <h5 className="font-semibold text-zinc-900 text-sm leading-snug">
+                    <h5 className="font-semibold text-slate-900 text-sm leading-snug">
                       {cand.headline}
                     </h5>
                     {cand.is_stale && (
-                      <span className="shrink-0 px-1.5 py-0.5 rounded text-[10px] font-medium bg-amber-50 text-amber-700 border border-amber-200">
+                      <span className="shrink-0 px-1.5 py-0.5 rounded text-[11px] font-medium bg-amber-50 text-amber-700 border border-amber-200">
                         STALE
                       </span>
                     )}
                   </div>
-                  <div className="flex flex-wrap items-center gap-2 text-[11px] text-zinc-500">
-                    <span className="font-semibold text-zinc-700">{cand.publisher}</span>
-                    <span className="text-zinc-400">•</span>
+                  <div className="flex flex-wrap items-center gap-2 text-[11px] text-slate-500">
+                    <span className="font-semibold text-slate-700">{cand.publisher}</span>
+                    <span className="text-slate-500">•</span>
                     <span>{cand.source_type || 'RSS'}</span>
                     {cand.published_at && (
                       <>
-                        <span className="text-zinc-400">•</span>
+                        <span className="text-slate-500">•</span>
                         <span>{cand.published_at}</span>
                       </>
                     )}

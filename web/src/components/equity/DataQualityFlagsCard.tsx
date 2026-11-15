@@ -9,7 +9,7 @@ const CATEGORY_DOT: Record<FlagCategory, string> = {
   critical_fallback: 'bg-rose-500 shadow-[0_0_6px_rgba(244,63,94,0.5)]',
   model_methodology: 'bg-sky-500 shadow-[0_0_6px_rgba(14,165,233,0.5)]',
   market_warning: 'bg-amber-500 shadow-[0_0_6px_rgba(245,158,11,0.5)]',
-  low_impact_fallback: 'bg-zinc-400',
+  low_impact_fallback: 'bg-slate-400',
 }
 
 const CATEGORY_ACCENT: Record<
@@ -35,9 +35,9 @@ const CATEGORY_ACCENT: Record<
     shortLabel: 'Market Context',
   },
   low_impact_fallback: {
-    borderL: 'border-l-zinc-400',
+    borderL: 'border-l-slate-400',
     bg: 'bg-surface hover:bg-surface-strong',
-    badgeClass: 'bg-zinc-100 text-zinc-700 border-zinc-200',
+    badgeClass: 'bg-slate-100 text-slate-700 border-slate-200',
     shortLabel: 'Note',
   },
 }
@@ -66,9 +66,9 @@ export const DataQualityFlagsCard: React.FC<DataQualityFlagsCardProps> = ({ flag
           <div className="flex items-center gap-2">
             <span className="text-base">🛡️</span>
             <div>
-              <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-900 flex items-center gap-2">
+              <h3 className="text-xs font-bold uppercase tracking-wider text-slate-900 flex items-center gap-2">
                 <span>Data Quality & Model Assumptions</span>
-                <span className="px-2 py-0.2 rounded-full bg-surface border border-edge text-[10px] font-bold text-zinc-600">
+                <span className="px-2 py-0.5 rounded-full bg-surface border border-edge text-[11px] font-bold text-slate-600">
                   {flags.length}
                 </span>
               </h3>
@@ -83,7 +83,7 @@ export const DataQualityFlagsCard: React.FC<DataQualityFlagsCardProps> = ({ flag
               return (
                 <span
                   key={cat}
-                  className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full border text-[10px] font-semibold ${cfg.badgeClass}`}
+                  className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full border text-[11px] font-semibold ${cfg.badgeClass}`}
                 >
                   <span className={`w-1.5 h-1.5 rounded-full ${CATEGORY_DOT[cat]}`} />
                   <span>
@@ -98,11 +98,11 @@ export const DataQualityFlagsCard: React.FC<DataQualityFlagsCardProps> = ({ flag
         {/* Expand / Collapse Button */}
         <button
           onClick={() => setIsExpanded((prev) => !prev)}
-          className="text-xs font-semibold text-sky-700 hover:text-sky-800 bg-surface hover:bg-surface-strong px-2.5 py-1 rounded-xl border border-edge flex items-center gap-1.5 transition-colors shadow-2xs"
+          className="text-xs font-semibold text-sky-700 hover:text-sky-800 bg-surface hover:bg-surface-strong px-2.5 py-1 rounded-xl border border-edge flex items-center gap-1.5 transition-colors shadow-sm"
           aria-expanded={isExpanded}
         >
           <span>{isExpanded ? 'ย่อแถบ' : 'ขยายดูรายละเอียด'}</span>
-          <span className="text-[10px]">{isExpanded ? '▲' : '▼'}</span>
+          <span className="text-[11px]">{isExpanded ? '▲' : '▼'}</span>
         </button>
       </div>
 
@@ -117,23 +117,23 @@ export const DataQualityFlagsCard: React.FC<DataQualityFlagsCardProps> = ({ flag
             return items.map((item, idx) => (
               <div
                 key={`${cat}-${idx}`}
-                className={`rounded-xl border border-edge/60 border-l-[3px] ${accent.borderL} ${accent.bg} p-2.5 transition-all shadow-2xs flex flex-col justify-between`}
+                className={`rounded-xl border border-edge/60 border-l-[3px] ${accent.borderL} ${accent.bg} p-2.5 transition-all shadow-sm flex flex-col justify-between`}
                 title={item.rawCode}
               >
                 <div className="flex items-start justify-between gap-2">
                   <div className="flex items-center gap-1.5">
                     <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${CATEGORY_DOT[cat]}`} />
-                    <span className="text-xs font-semibold text-zinc-900 leading-snug">
+                    <span className="text-xs font-semibold text-slate-900 leading-snug">
                       {item.label}
                     </span>
                   </div>
-                  <span className={`px-1.5 py-0.2 rounded text-[9px] font-bold border shrink-0 ${accent.badgeClass}`}>
+                  <span className={`px-1.5 py-0.5 rounded text-[11px] font-bold border shrink-0 ${accent.badgeClass}`}>
                     {accent.shortLabel}
                   </span>
                 </div>
 
                 {item.subtext && (
-                  <p className="text-[11px] text-zinc-500 mt-1 leading-relaxed pl-3">
+                  <p className="text-[11px] text-slate-500 mt-1 leading-relaxed pl-3">
                     {item.subtext}
                   </p>
                 )}

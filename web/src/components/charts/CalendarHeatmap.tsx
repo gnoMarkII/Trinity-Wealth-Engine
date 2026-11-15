@@ -114,16 +114,16 @@ export const CalendarHeatmap: React.FC<CalendarHeatmapProps> = ({
     >
       <div className="flex flex-wrap items-center justify-between gap-4 border-b border-sky-100/60 pb-3">
         <div>
-          <h3 className="font-semibold text-zinc-900 tracking-tight">{title}</h3>
-          {subtitle && <p className="text-xs text-zinc-500">{subtitle}</p>}
+          <h3 className="font-semibold text-slate-900 tracking-tight">{title}</h3>
+          {subtitle && <p className="text-xs text-slate-500">{subtitle}</p>}
         </div>
 
         {/* Mini stats badges */}
         <div className="flex items-center gap-3">
           <div className="rounded-lg bg-sky-50 px-2.5 py-1 text-right">
-            <span className="block text-[10px] uppercase font-bold text-sky-600">Total PnL</span>
+            <span className="block text-[11px] uppercase font-bold text-sky-600">Total PnL</span>
             <span
-              className={`font-mono text-xs font-bold ${
+              className={`font-mono tabular-nums text-xs font-bold ${
                 stats.totalPnl >= 0 ? 'text-emerald-600' : 'text-rose-600'
               }`}
             >
@@ -134,16 +134,16 @@ export const CalendarHeatmap: React.FC<CalendarHeatmapProps> = ({
           </div>
 
           <div className="rounded-lg bg-emerald-50 px-2.5 py-1 text-right">
-            <span className="block text-[10px] uppercase font-bold text-emerald-700">Win Rate</span>
-            <span className="font-mono text-xs font-bold text-emerald-800">
+            <span className="block text-[11px] uppercase font-bold text-emerald-700">Win Rate</span>
+            <span className="font-mono tabular-nums text-xs font-bold text-emerald-800">
               {stats.winRate.toFixed(1)}%
             </span>
           </div>
 
           {stats.totalTrades > 0 && (
             <div className="rounded-lg bg-slate-50 px-2.5 py-1 text-right">
-              <span className="block text-[10px] uppercase font-bold text-zinc-500">Trades</span>
-              <span className="font-mono text-xs font-bold text-zinc-700">
+              <span className="block text-[11px] uppercase font-bold text-slate-500">Trades</span>
+              <span className="font-mono tabular-nums text-xs font-bold text-slate-700">
                 {stats.totalTrades}
               </span>
             </div>
@@ -157,7 +157,7 @@ export const CalendarHeatmap: React.FC<CalendarHeatmapProps> = ({
           {/* Day of week labels + columns */}
           <div className="flex gap-1.5 items-start">
             {/* Day of week indicator */}
-            <div className="flex flex-col gap-1.5 pt-1 text-[10px] font-medium text-zinc-400 w-6 shrink-0">
+            <div className="flex flex-col gap-1.5 pt-1 text-[11px] font-medium text-slate-500 w-6 shrink-0">
               <span className="h-3 leading-3">M</span>
               <span className="h-3 leading-3">W</span>
               <span className="h-3 leading-3">F</span>
@@ -189,15 +189,15 @@ export const CalendarHeatmap: React.FC<CalendarHeatmapProps> = ({
           </div>
 
           {/* Legend and Active Day Detail */}
-          <div className="mt-4 flex flex-wrap items-center justify-between gap-2 border-t border-sky-100/60 pt-3 text-xs text-zinc-500">
+          <div className="mt-4 flex flex-wrap items-center justify-between gap-2 border-t border-sky-100/60 pt-3 text-xs text-slate-500">
             {/* Hover tooltip bar */}
             <div className="min-h-[20px]">
               {hoveredDay ? (
-                <span className="font-medium text-zinc-800">
+                <span className="font-medium text-slate-800">
                   <span className="font-mono font-semibold text-sky-700 mr-2">{hoveredDay.date}</span>
                   {hoveredDay.value !== 0 ? (
                     <span
-                      className={`font-mono font-bold ${
+                      className={`font-mono tabular-nums font-bold ${
                         hoveredDay.value > 0 ? 'text-emerald-600' : 'text-rose-600'
                       }`}
                     >
@@ -207,11 +207,11 @@ export const CalendarHeatmap: React.FC<CalendarHeatmapProps> = ({
                       {hoveredDay.count !== undefined ? `(${hoveredDay.count} trades)` : ''}
                     </span>
                   ) : (
-                    <span className="text-zinc-400">No trading activity</span>
+                    <span className="text-slate-500">No trading activity</span>
                   )}
                 </span>
               ) : (
-                <span className="text-zinc-400 italic">Hover over any day to inspect performance</span>
+                <span className="text-slate-500 italic">Hover over any day to inspect performance</span>
               )}
             </div>
 

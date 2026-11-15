@@ -15,6 +15,7 @@ from core.tool_harness import (
     wrap_tools_with_harness,
 )
 from tools.hermes_bridge.sandbox_adapter import SandboxAdapter
+from tools.market.ticker_resolver import resolve_equity_ticker
 
 log = logging.getLogger(__name__)
 
@@ -153,7 +154,7 @@ def get_latest_macro_summary() -> str:
             return sidecar_path.read_text(encoding="utf-8")
         except Exception:
             pass
-    return "ไม่พบข้อมูล Macro Snapshot ล่าสุดในระบบ กรุณาสั่งวิเคราะห์ผ่าน trigger_deep_research_job(research_type='macro_intel', ticker='')"
+    return "ไม่พบข้อมูล Macro Snapshot ล่าสุดในระบบ"
 
 
 @tool
@@ -192,10 +193,10 @@ def get_upcoming_economic_events() -> str:
 def get_equity_report_summary(ticker: str) -> str:
     """ดึงบทวิเคราะห์หุ้น 5-Tier (Valuation Spectrum, Moat, Quality, Financials, Smart Money Flow, Thesis Delta) ที่มีอยู่ในระบบสำหรับหุ้นที่ระบุ
 
-    **ใช้เครื่องมือนี้เป็นหลัก** เมื่อผู้ใช้ถามถึงบทวิเคราะห์, ขอรายงาน, ดู Fair Value หรือภาพรวมหุ้นที่มีการวิเคราะห์ไว้แล้ว
-    ห้ามใช้ trigger_deep_research_job หากผู้ใช้เพียงต้องการอ่านหรือถามข้อมูลจากรายงานเดิม
+    **ใช้เครื่องมือนี้เป็นหลัก** เมื่อผู้ใช้ถามถึงบทวิเคราะห์, ขอให้อธิบายบทวิเคราะห์, ขอรายงาน, ดู Fair Value หรือภาพรวมหุ้นที่มีการวิเคราะห์ไว้แล้ว (รองรับทั้ง Ticker เช่น INTC และชื่อบริษัท เช่น INTEL)
+    ห้ามใช้ trigger_deep_research_job หากผู้ใช้เพียงต้องการอ่านหรือให้อธิบายข้อมูลจากรายงานเดิม
     """
-    clean_ticker = ticker.strip().upper()
+    clean_ticker = resolve_equity_ticker(ticker)
     if _equity_report_provider is not None:
         try:
             return _equity_report_provider(clean_ticker)
@@ -209,7 +210,7 @@ def get_equity_report_summary(ticker: str) -> str:
         except Exception as exc:
             log.warning("Error reading equity sidecar for %s: %s", clean_ticker, exc)
 
-    return f"ไม่พบบทวิเคราะห์ของหุ้น {clean_ticker} ในฐานข้อมูล คุณสามารถสั่งวิเคราะห์เชิงลึกได้ด้วยคำสั่ง trigger_deep_research_job(research_type='equity_intel', ticker='{clean_ticker}')"
+    return f"ไม่พบบทวิเคราะห์ของหุ้น {clean_ticker} ในฐานข้อมูล"
 
 
 @tool
@@ -219,7 +220,7 @@ def get_equity_promises_and_reviews(ticker: str) -> str:
     **ใช้เครื่องมือนี้เป็นหลัก** เมื่อผู้ใช้ถามว่า "ตรวจ Thesis", "ตรวจสุขภาพหุ้น", "Thesis เปลี่ยนไปรึยัง", "คำสัญญาผู้บริหาร" หรือต้องการดูสถานะปัจจุบันของหุ้นที่มีรายงานอยู่แล้ว
     ห้ามใช้ trigger_deep_research_job เมื่อผู้ใช้ต้องการตรวจ Thesis หรือดูสถานะปัจจุบัน
     """
-    clean_ticker = ticker.strip().upper()
+    clean_ticker = resolve_equity_ticker(ticker)
     if _equity_promises_provider is not None:
         try:
             return _equity_promises_provider(clean_ticker)
@@ -371,23 +372,24 @@ def save_insight_to_vault(title: str, content: str) -> str:
 # ==========================================
 @tool
 def trigger_deep_research_job(research_type: str = "macro_intel", ticker: str = "") -> str:
-    """สั่งรันงานวิจัยใหม่เข้าคิวประมวลผล (Background Deep Research Job) สำหรับการค้นคว้าและสังเคราะห์ข้อมูลใหม่สดๆ จากอินเทอร์เน็ต
+    """สร้างการ์ดคำขอรันงานวิจัยใหม่ในสถานะรอผู้ใช้กดยอมรับ (Request Approve) ก่อนเริ่มประมวลผลจริง
 
     ⚠️ ข้อสำคัญ:
-    - ใช้เครื่องมือนี้ **เฉพาะเมื่อผู้ใช้สั่งให้ทำการวิจัยใหม่สดๆ เท่านั้น** (เช่น "สั่งรันงานวิจัย", "วิเคราะห์ใหม่ตั้งแต่ต้น", "อัปเดตบทวิเคราะห์ใหม่") หรือเมื่ออ่านรายงานเดิมแล้วพบว่า "ไม่พบข้อมูลในระบบ"
-    - **ห้ามใช้เครื่องมือนี้** หากผู้ใช้ต้องการเพียง "ตรวจ Thesis", "ตรวจสุขภาพหุ้น", "ขอดูบทวิเคราะห์", "สรุปหุ้น", หรือถามคำถามจากรายงานที่มีอยู่แล้ว — ให้ใช้ get_equity_promises_and_reviews หรือ get_equity_report_summary หรือ get_latest_macro_summary ก่อนเสมอ!
+    - ใช้เครื่องมือนี้ **เฉพาะเมื่อผู้ใช้สั่งให้ทำการวิจัยใหม่หรือสร้างการ์ดวิเคราะห์ใหม่เท่านั้น** (เช่น "สั่งรันงานวิจัย", "วิเคราะห์ใหม่ตั้งแต่ต้น", "อัปเดตบทวิเคราะห์ใหม่")
+    - **ห้ามใช้เครื่องมือนี้** หากผู้ใช้ต้องการเพียง "อธิบายบทวิเคราะห์", "ตรวจ Thesis", "ตรวจสุขภาพหุ้น", "ขอดูบทวิเคราะห์", "สรุปหุ้น", หรือถามคำถามจากรายงานที่มีอยู่แล้ว — ให้ใช้ get_equity_promises_and_reviews หรือ get_equity_report_summary หรือ get_latest_macro_summary ก่อนเสมอ!
+    - การ์ดที่สร้างจากเครื่องมือนี้จะยังไม่เริ่มรันทันที จนกว่าผู้ใช้จะกดยอมรับ (Approve) ก่อน
 
     Args:
         research_type: ประเภทงานวิจัย/โฟลว์ ได้แก่:
             - 'macro_intel' (อัปเดตรายงานภาวะเศรษฐกิจมหภาคและการจัดสรรสินทรัพย์)
-            - 'equity_intel' (วิเคราะห์หุ้นรายตัวเชิงลึก 4 ขั้นตอน เช่น NVDA, AAPL)
+            - 'equity_intel' (วิเคราะห์หุ้นรายตัวเชิงลึก 4 ขั้นตอน เช่น NVDA, AAPL, INTC)
             - 'news_youtube' (ดึงและวิเคราะห์ข่าวสารและคลิปวิดีโอ YouTube ล่าสุด)
             - 'news_funnel' (คัดกรองข่าวและเหตุการณ์สำคัญเข้าสู่ News Funnel)
             - 'youtube_pitch' (วิเคราะห์และสร้างหัวข้อพิทช์เนื้อหา YouTube)
             - 'notebooklm' (สร้างสรุปเสียง Podcast ผ่าน NotebookLM Audio)
-        ticker: สัญลักษณ์หุ้น (เช่น 'NVDA', 'AAPL') หากไม่ใช่การวิเคราะห์หุ้นรายตัว ให้ระบุเป็น ''
+        ticker: สัญลักษณ์หุ้น (เช่น 'NVDA', 'AAPL', 'INTC') หากไม่ใช่การวิเคราะห์หุ้นรายตัว ให้ระบุเป็น ''
     """
-    clean_ticker = ticker.strip().upper() if ticker else ""
+    clean_ticker = resolve_equity_ticker(ticker) if ticker else ""
     r_type = research_type.strip().lower() if research_type else ("equity_intel" if clean_ticker else "macro_intel")
     if _job_dispatcher is not None:
         try:
@@ -401,11 +403,17 @@ def trigger_deep_research_job(research_type: str = "macro_intel", ticker: str = 
                     )
                 )
             )
-            return f"ส่งงานวิจัย {r_type} สำหรับ {target_desc} เข้าคิวประมวลผลแล้ว (Job ID: {job_id})"
+            return (
+                f"สร้างการ์ดคำขอวิจัย {r_type} สำหรับ {target_desc} ลงในช่อง Request Approve แล้ว "
+                f"กำลังรอผู้ใช้กดยอมรับก่อนเริ่มรันจริง (Job ID: {job_id})"
+            )
         except Exception as exc:
-            return f"เกิดข้อผิดพลาดในการส่งงานวิจัยเข้าคิว: {exc}"
+            return f"เกิดข้อผิดพลาดในการสร้างคำขอวิจัย: {exc}"
     target_name = clean_ticker or r_type
-    return f"ระบบรับคำสั่งวิจัย {r_type} สำหรับ {target_name} เรียบร้อยแล้ว (Job ID: sim_{clean_ticker or r_type})"
+    return (
+        f"สร้างการ์ดคำขอวิจัย {r_type} สำหรับ {target_name} ลงในช่อง Request Approve แล้ว "
+        f"รอผู้ใช้กดยอมรับก่อนเริ่มรัน (Job ID: sim_{clean_ticker or r_type})"
+    )
 
 
 # ==========================================

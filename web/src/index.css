@@ -11,13 +11,24 @@
   --panel: rgb(255 255 255 / 0.76);
   --surface: rgb(248 251 254 / 0.86);
   --surface-strong: rgb(240 249 255 / 0.9);
+  --surface-1: rgb(255 255 255 / 0.74);
+  --surface-2: rgb(255 255 255 / 0.92);
+  --surface-3: rgb(255 255 255 / 0.97);
+  --surface-inset: rgb(240 249 255 / 0.72);
   --edge: rgb(186 230 253 / 0.9);
   --primary-rgb: 24 55 76;
   --muted-rgb: 100 116 139;
   --accent-rgb: 14 165 233;
+  --section-accent: 14 165 233;
+  --section-accent-2: 6 182 212;
+  --section-glow: rgb(56 189 248 / 0.16);
+  --section-glow-secondary: rgb(251 140 0 / 0.08);
+  --ink-primary: #18374c;
+  --ink-secondary: #334e68;
+  --ink-muted: #64748b;
   --primary: rgb(24 55 76);
   --muted: rgb(100 116 139);
-  --accent: rgb(14 165 233);
+  --accent: rgb(var(--section-accent));
 }
 
 html,
@@ -29,10 +40,29 @@ body,
 }
 
 body {
-  @apply bg-white text-zinc-900 antialiased;
+  @apply bg-white text-slate-900 antialiased;
   margin: 0;
   overflow: hidden;
   font-family: 'Plus Jakarta Sans', 'Noto Sans Thai', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+@layer base {
+  html,
+  body,
+  main {
+    scroll-padding-top: 4rem;
+  }
+
+  button:focus-visible,
+  a:focus-visible,
+  select:focus-visible,
+  input:focus-visible,
+  textarea:focus-visible,
+  [role='button']:focus-visible,
+  [tabindex]:not([tabindex='-1']):focus-visible {
+    outline: 2px solid rgb(var(--section-accent) / 0.65);
+    outline-offset: 2px;
+  }
 }
 
 .flow-theme {
@@ -41,25 +71,85 @@ body {
   --flow-coral: 251 140 0;
   --flow-border: 186 230 253;
   --flow-text: 24 55 76;
+  --aui-surface: rgba(255, 255, 255, 0.94);
+  --aui-subtle: rgba(240, 249, 255, 0.85);
+  --aui-border: rgba(186, 230, 253, 0.85);
+  --aui-ink: rgb(24 55 76);
+  --aui-muted: rgb(100 116 139);
+  --aui-placeholder: rgb(148 163 184);
+  --aui-blue: #0ea5e9;
+  --aui-success: #059669;
+  --aui-amber: #d97706;
+  --aui-red: #dc2626;
+  --aui-focus: rgba(14, 165, 233, 0.45);
+  --aui-font: 'Plus Jakarta Sans', 'Noto Sans Thai', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   min-height: 100%;
   background:
-    radial-gradient(circle at 94% 2%, rgb(var(--flow-sky) / 0.2), transparent 26rem),
-    radial-gradient(circle at 8% 100%, rgb(var(--flow-coral) / 0.1), transparent 30rem),
+    radial-gradient(circle at 94% 2%, var(--section-glow), transparent 28rem),
+    radial-gradient(circle at 8% 100%, var(--section-glow-secondary), transparent 30rem),
     linear-gradient(145deg, #ebf5fa 0%, #f8fbfe 52%, #ffffff 100%);
   color: rgb(var(--flow-text));
+  transition: background 500ms ease;
+}
+
+.flow-theme[data-section='manager'] {
+  --section-accent: 6 182 212;
+  --section-accent-2: 2 132 199;
+  --section-glow: rgb(6 182 212 / 0.14);
+}
+
+.flow-theme[data-section='roundtable'] {
+  --section-accent: 2 132 199;
+  --section-accent-2: 79 70 229;
+  --section-glow: rgb(79 70 229 / 0.11);
+}
+
+.flow-theme[data-section='digest'] {
+  --section-accent: 13 148 136;
+  --section-accent-2: 3 105 161;
+  --section-glow: rgb(13 148 136 / 0.11);
+}
+
+.flow-theme[data-section='portfolio'] {
+  --section-accent: 5 150 105;
+  --section-accent-2: 14 165 233;
+  --section-glow: rgb(16 185 129 / 0.11);
+}
+
+.flow-theme[data-section='advisory'] {
+  --section-accent: 2 132 199;
+  --section-accent-2: 217 119 6;
+  --section-glow: rgb(245 158 11 / 0.10);
+}
+
+.flow-theme[data-section='macro'] {
+  --section-accent: 30 64 175;
+  --section-accent-2: 14 165 233;
+  --section-glow: rgb(30 64 175 / 0.11);
+}
+
+.flow-theme[data-section='equity'] {
+  --section-accent: 30 58 138;
+  --section-accent-2: 37 99 235;
+  --section-glow: rgb(37 99 235 / 0.11);
 }
 
 .flow-main {
   background:
-    radial-gradient(ellipse at 78% 12%, rgb(var(--flow-sky) / 0.1), transparent 25rem),
-    radial-gradient(ellipse at 12% 92%, rgb(var(--flow-coral) / 0.07), transparent 30rem);
+    radial-gradient(ellipse at 78% 12%, var(--section-glow), transparent 26rem),
+    radial-gradient(ellipse at 12% 92%, var(--section-glow-secondary), transparent 30rem);
 }
 
 .flow-panel {
-  border: 1px solid rgb(var(--flow-border) / 0.8);
-  background: rgb(255 255 255 / 0.76);
-  box-shadow: 0 10px 35px rgb(var(--flow-cyan) / 0.06);
+  border: 1px solid rgb(var(--flow-border) / 0.72);
+  background: var(--surface-2);
+  box-shadow: 0 8px 28px -6px rgb(var(--section-accent) / 0.07);
   backdrop-filter: blur(14px);
+}
+
+.surface-inset {
+  background: var(--surface-inset);
+  border-radius: 0.75rem;
 }
 
 /* ---------- Entrance animations ----------
@@ -371,6 +461,77 @@ body {
   animation: stream-caret-pulse 0.9s ease-in-out infinite;
 }
 
+/* Roundtable 3D spatial utilities (GPU-accelerated) */
+.rt-perspective {
+  perspective: 1100px;
+}
+
+.rt-preserve-3d {
+  transform-style: preserve-3d;
+}
+
+@keyframes rt-orbit-spin-x {
+  from {
+    transform: rotateX(70deg) rotateZ(0deg);
+  }
+  to {
+    transform: rotateX(70deg) rotateZ(360deg);
+  }
+}
+
+@keyframes rt-orbit-spin-y {
+  from {
+    transform: rotateY(64deg) rotateX(22deg) rotateZ(0deg);
+  }
+  to {
+    transform: rotateY(64deg) rotateX(22deg) rotateZ(-360deg);
+  }
+}
+
+@keyframes rt-crystal-float {
+  0%, 100% {
+    transform: translate3d(0, 0, 10px) rotateX(10deg) rotateY(-12deg);
+  }
+  50% {
+    transform: translate3d(0, -6px, 22px) rotateX(-8deg) rotateY(16deg);
+  }
+}
+
+@keyframes rt-eq-bar {
+  0%, 100% {
+    transform: scaleY(0.32);
+    opacity: 0.55;
+  }
+  50% {
+    transform: scaleY(1);
+    opacity: 1;
+  }
+}
+
+.rt-orbit-ring-primary {
+  transform-style: preserve-3d;
+  animation: rt-orbit-spin-x 14s linear infinite;
+  will-change: transform;
+}
+
+.rt-orbit-ring-secondary {
+  transform-style: preserve-3d;
+  animation: rt-orbit-spin-y 19s linear infinite;
+  will-change: transform;
+}
+
+.rt-crystal-levitate {
+  transform-style: preserve-3d;
+  animation: rt-crystal-float 5.2s ease-in-out infinite;
+  will-change: transform;
+}
+
+.rt-eq-bar {
+  transform-origin: bottom;
+  animation: rt-eq-bar 0.85s ease-in-out infinite;
+  will-change: transform, opacity;
+}
+
 /* เคารพผู้ใช้ที่ปิด motion ในระบบ — ตัด animation/transition ทั้งหมดให้จบทันที
    (สถานะยังมองเห็นครบ เพราะทุก animation จบที่สถานะ "to" ที่อ่านได้ปกติ) */
 @media (prefers-reduced-motion: reduce) {
@@ -381,5 +542,12 @@ body {
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
+  }
+  .rt-orbit-ring-primary,
+  .rt-orbit-ring-secondary,
+  .rt-crystal-levitate,
+  .rt-eq-bar {
+    animation: none !important;
+    transform: none !important;
   }
 }

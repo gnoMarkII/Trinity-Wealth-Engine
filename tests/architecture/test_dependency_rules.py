@@ -77,6 +77,7 @@ def test_domain_layer_isolation():
         PROJECT_ROOT / "core" / "event_study",
         PROJECT_ROOT / "core" / "sandbox",
         PROJECT_ROOT / "core" / "news_digest",
+        PROJECT_ROOT / "core" / "roundtable",
         PROJECT_ROOT / "tools" / "portfolio" / "domain",
         PROJECT_ROOT / "tools" / "market" / "financials" / "domain",
         PROJECT_ROOT / "tools" / "market" / "ohlcv" / "domain",

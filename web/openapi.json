@@ -10395,6 +10395,630 @@
         }
       }
     },
+    "/api/roundtable/guru-profiles": {
+      "get": {
+        "tags": [
+          "roundtable"
+        ],
+        "summary": "Get Roundtable Guru Profiles",
+        "description": "Return effective Guru profiles paired with the 12-voice Gemini TTS catalog and 18 presets.",
+        "operationId": "get_roundtable_guru_profiles_api_roundtable_guru_profiles_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RoundtableGuruConfigCatalogDTO"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "roundtable"
+        ],
+        "summary": "Update Roundtable Guru Profiles",
+        "description": "Persist user-customized Guru profiles and voice selections globally.",
+        "operationId": "update_roundtable_guru_profiles_api_roundtable_guru_profiles_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateGuruProfilesRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RoundtableGuruConfigCatalogDTO"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/roundtable/guru-profiles/reset": {
+      "post": {
+        "tags": [
+          "roundtable"
+        ],
+        "summary": "Reset Roundtable Guru Profiles",
+        "description": "Reset one or all Guru profiles back to factory defaults.",
+        "operationId": "reset_roundtable_guru_profiles_api_roundtable_guru_profiles_reset_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ResetGuruProfilesRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RoundtableGuruConfigCatalogDTO"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/roundtable/voices/preview": {
+      "post": {
+        "tags": [
+          "roundtable"
+        ],
+        "summary": "Preview Roundtable Voice",
+        "description": "Synthesize or retrieve cached preview audio for a selected Gemini TTS voice.",
+        "operationId": "preview_roundtable_voice_api_roundtable_voices_preview_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VoicePreviewRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VoicePreviewResponseDTO"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/roundtable/sessions": {
+      "get": {
+        "tags": [
+          "roundtable"
+        ],
+        "summary": "List Roundtable Sessions",
+        "description": "List past Guru Roundtable sessions ordered by latest update.",
+        "operationId": "list_roundtable_sessions_api_roundtable_sessions_get",
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 30,
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/RoundtableSessionSummaryDTO"
+                  },
+                  "title": "Response List Roundtable Sessions Api Roundtable Sessions Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "roundtable"
+        ],
+        "summary": "Create Roundtable Session",
+        "description": "Create a new Roundtable session, freeze its context packet, and check past settlements.",
+        "operationId": "create_roundtable_session_api_roundtable_sessions_post",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateRoundtableSessionRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RoundtableSessionDetailDTO"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/roundtable/sessions/{session_id}": {
+      "get": {
+        "tags": [
+          "roundtable"
+        ],
+        "summary": "Get Roundtable Session",
+        "description": "Retrieve a single Roundtable session with turns, playbook, drift status & scorecard.",
+        "operationId": "get_roundtable_session_api_roundtable_sessions__session_id__get",
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Session Id"
+            }
+          },
+          {
+            "name": "check_drift",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": true,
+              "title": "Check Drift"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RoundtableSessionDetailDTO"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/roundtable/sessions/{session_id}/stream": {
+      "post": {
+        "tags": [
+          "roundtable"
+        ],
+        "summary": "Stream Roundtable Debate",
+        "description": "Stream turn-by-turn Guru Roundtable dialogue, TTS readiness, and Hermes playbook via SSE.",
+        "operationId": "stream_roundtable_debate_api_roundtable_sessions__session_id__stream_post",
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Session Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RoundtableStreamRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/roundtable/sessions/{session_id}/interject": {
+      "post": {
+        "tags": [
+          "roundtable"
+        ],
+        "summary": "Interject Roundtable Session",
+        "description": "Pause running stream, record user raise-hand question, run optional Sandbox Decimal math, and reply.",
+        "operationId": "interject_roundtable_session_api_roundtable_sessions__session_id__interject_post",
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Session Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InterjectRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Interject Roundtable Session Api Roundtable Sessions  Session Id  Interject Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/roundtable/audio/{audio_cache_key}": {
+      "get": {
+        "tags": [
+          "roundtable"
+        ],
+        "summary": "Get Roundtable Audio",
+        "description": "Stream cached WAV audio bytes generated by Gemini TTS.",
+        "operationId": "get_roundtable_audio_api_roundtable_audio__audio_cache_key__get",
+        "parameters": [
+          {
+            "name": "audio_cache_key",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Audio Cache Key"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/roundtable/sessions/{session_id}/youtube-pack": {
+      "get": {
+        "tags": [
+          "roundtable"
+        ],
+        "summary": "Download Roundtable Youtube Pack",
+        "description": "Download stitched WAV audio, SRT subtitles, and YouTube Production Kit as a ZIP archive.",
+        "operationId": "download_roundtable_youtube_pack_api_roundtable_sessions__session_id__youtube_pack_get",
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Session Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/roundtable/sessions/{session_id}/save-to-vault": {
+      "post": {
+        "tags": [
+          "roundtable"
+        ],
+        "summary": "Save Roundtable To Vault",
+        "description": "Save the distilled Roundtable Playbook & highlights to Obsidian Vault.",
+        "operationId": "save_roundtable_to_vault_api_roundtable_sessions__session_id__save_to_vault_post",
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Session Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SaveToVaultRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SaveToVaultResponseDTO"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/roundtable/sessions/{session_id}/update-thesis": {
+      "post": {
+        "tags": [
+          "roundtable"
+        ],
+        "summary": "Update Thesis From Roundtable",
+        "description": "Revise or create an Active Stock Thesis claim anchored on this Roundtable's verdict.",
+        "operationId": "update_thesis_from_roundtable_api_roundtable_sessions__session_id__update_thesis_post",
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Session Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateThesisFromPlaybookRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Update Thesis From Roundtable Api Roundtable Sessions  Session Id  Update Thesis Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/roundtable/prerequisites/{ticker}/dispatch": {
+      "post": {
+        "tags": [
+          "roundtable"
+        ],
+        "summary": "Dispatch Roundtable Prerequisite",
+        "description": "Dispatch background Deep Equity Analysis pipeline for an unanalyzed ticker.",
+        "operationId": "dispatch_roundtable_prerequisite_api_roundtable_prerequisites__ticker__dispatch_post",
+        "parameters": [
+          {
+            "name": "ticker",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Ticker"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Dispatch Roundtable Prerequisite Api Roundtable Prerequisites  Ticker  Dispatch Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/health": {
       "get": {
         "summary": "Health",
@@ -10418,6 +11042,84 @@
   },
   "components": {
     "schemas": {
+      "ActionPlaybookOption": {
+        "properties": {
+          "option_id": {
+            "type": "string",
+            "title": "Option Id"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "speaker_source": {
+            "type": "string",
+            "title": "Speaker Source"
+          },
+          "conviction_level": {
+            "type": "integer",
+            "maximum": 3.0,
+            "minimum": 0.0,
+            "title": "Conviction Level",
+            "default": 2
+          },
+          "action_steps": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Action Steps"
+          },
+          "entry_zone": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Entry Zone"
+          },
+          "sizing_note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sizing Note"
+          }
+        },
+        "type": "object",
+        "required": [
+          "option_id",
+          "label",
+          "speaker_source"
+        ],
+        "title": "ActionPlaybookOption"
+      },
+      "ActionPlaybookSpec": {
+        "properties": {
+          "primary_action": {
+            "$ref": "#/components/schemas/ActionPlaybookOption"
+          },
+          "alternatives": {
+            "items": {
+              "$ref": "#/components/schemas/ActionPlaybookOption"
+            },
+            "type": "array",
+            "title": "Alternatives"
+          }
+        },
+        "type": "object",
+        "required": [
+          "primary_action"
+        ],
+        "title": "ActionPlaybookSpec"
+      },
       "ActiveAgentStatusDTO": {
         "properties": {
           "running": {
@@ -13905,6 +14607,39 @@
         ],
         "title": "ConfirmationResponse"
       },
+      "ConsensusTensionAxis": {
+        "properties": {
+          "topic": {
+            "type": "string",
+            "title": "Topic"
+          },
+          "bull_side_speaker": {
+            "type": "string",
+            "title": "Bull Side Speaker"
+          },
+          "bull_argument": {
+            "type": "string",
+            "title": "Bull Argument"
+          },
+          "bear_side_speaker": {
+            "type": "string",
+            "title": "Bear Side Speaker"
+          },
+          "bear_argument": {
+            "type": "string",
+            "title": "Bear Argument"
+          }
+        },
+        "type": "object",
+        "required": [
+          "topic",
+          "bull_side_speaker",
+          "bull_argument",
+          "bear_side_speaker",
+          "bear_argument"
+        ],
+        "title": "ConsensusTensionAxis"
+      },
       "ContentOptionSchema": {
         "properties": {
           "option_id": {
@@ -14336,6 +15071,87 @@
           "name"
         ],
         "title": "CreatePortfolioRequestDTO"
+      },
+      "CreateRoundtableSessionRequest": {
+        "properties": {
+          "title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          },
+          "agenda_prompt": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Agenda Prompt",
+            "description": "Agenda or question for the Guru Roundtable"
+          },
+          "context_refs": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Context Refs",
+            "description": "Attached context cards e.g. $NVDA, @Portfolio, @Macro, @Digest, @Essence"
+          },
+          "portfolio_id": {
+            "type": "string",
+            "title": "Portfolio Id",
+            "default": "default"
+          },
+          "proceed_without_missing_tickers": {
+            "type": "boolean",
+            "title": "Proceed Without Missing Tickers",
+            "description": "If true, bypass missing ticker prerequisite block and run with available context only.",
+            "default": false
+          },
+          "persona_overrides": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/UpdateGuruPersonaInput"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Persona Overrides",
+            "description": "Optional per-session guru persona & voice overrides"
+          },
+          "debate_intensity": {
+            "type": "string",
+            "enum": [
+              "balanced",
+              "heated",
+              "crossfire"
+            ],
+            "title": "Debate Intensity",
+            "description": "Adversarial intensity: balanced (2 rounds) | heated (no soft agreement + 1 crossfire duel) | crossfire (2 duels full clash)",
+            "default": "crossfire"
+          },
+          "debate_depth": {
+            "type": "string",
+            "enum": [
+              "concise",
+              "deep_youtube"
+            ],
+            "title": "Debate Depth",
+            "description": "Dialogue thoroughness: concise (2-4 sentences) | deep_youtube (Hermes opening hook + 4-7 sentences/turn YouTube deep dive)",
+            "default": "deep_youtube"
+          }
+        },
+        "type": "object",
+        "required": [
+          "agenda_prompt"
+        ],
+        "title": "CreateRoundtableSessionRequest"
       },
       "CreateSessionRequest": {
         "properties": {
@@ -15117,6 +15933,68 @@
         ],
         "title": "DataAnomalyWarningDTO"
       },
+      "DebatePillarCoverageDTO": {
+        "properties": {
+          "pillars": {
+            "items": {
+              "$ref": "#/components/schemas/DebatePillarStatusDTO"
+            },
+            "type": "array",
+            "title": "Pillars"
+          },
+          "raised_count": {
+            "type": "integer",
+            "title": "Raised Count",
+            "default": 0
+          },
+          "challenged_count": {
+            "type": "integer",
+            "title": "Challenged Count",
+            "default": 0
+          },
+          "unchallenged_pillars": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Unchallenged Pillars"
+          }
+        },
+        "type": "object",
+        "title": "DebatePillarCoverageDTO"
+      },
+      "DebatePillarStatusDTO": {
+        "properties": {
+          "pillar": {
+            "type": "string",
+            "title": "Pillar"
+          },
+          "raised_by": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Raised By"
+          },
+          "challenged_by": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Challenged By"
+          },
+          "is_challenged": {
+            "type": "boolean",
+            "title": "Is Challenged",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": [
+          "pillar"
+        ],
+        "title": "DebatePillarStatusDTO"
+      },
       "DigestCandidatesResponseDTO": {
         "properties": {
           "last_fetched_at": {
@@ -15854,6 +16732,11 @@
             "type": "string",
             "title": "Scope",
             "default": "both"
+          },
+          "require_approval": {
+            "type": "boolean",
+            "title": "Require Approval",
+            "default": false
           }
         },
         "type": "object",
@@ -15861,6 +16744,108 @@
           "instruction"
         ],
         "title": "DispatchRequest"
+      },
+      "DistilledDecisionPlaybook": {
+        "properties": {
+          "final_rating": {
+            "type": "string",
+            "enum": [
+              "BUY",
+              "OVERWEIGHT",
+              "HOLD",
+              "UNDERWEIGHT",
+              "SELL",
+              "REVIEW"
+            ],
+            "title": "Final Rating",
+            "default": "REVIEW"
+          },
+          "action_stance": {
+            "type": "string",
+            "title": "Action Stance",
+            "default": "REVIEW"
+          },
+          "core_conviction_score": {
+            "type": "integer",
+            "maximum": 3.0,
+            "minimum": 0.0,
+            "title": "Core Conviction Score",
+            "default": 1
+          },
+          "executive_verdict": {
+            "type": "string",
+            "title": "Executive Verdict"
+          },
+          "guru_stance_breakdown": {
+            "additionalProperties": {
+              "type": "string",
+              "enum": [
+                "BUY",
+                "OVERWEIGHT",
+                "HOLD",
+                "UNDERWEIGHT",
+                "SELL",
+                "REVIEW"
+              ]
+            },
+            "type": "object",
+            "title": "Guru Stance Breakdown"
+          },
+          "consensus_points": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Consensus Points"
+          },
+          "tension_axes": {
+            "items": {
+              "$ref": "#/components/schemas/ConsensusTensionAxis"
+            },
+            "type": "array",
+            "title": "Tension Axes"
+          },
+          "personal_axis_alignment": {
+            "items": {
+              "$ref": "#/components/schemas/PersonalAxisCheckItem"
+            },
+            "type": "array",
+            "title": "Personal Axis Alignment"
+          },
+          "portfolio_context_summary": {
+            "type": "string",
+            "title": "Portfolio Context Summary",
+            "default": ""
+          },
+          "action_playbook": {
+            "$ref": "#/components/schemas/ActionPlaybookSpec"
+          },
+          "kill_switches": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Kill Switches"
+          },
+          "reflection_summary": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reflection Summary"
+          }
+        },
+        "type": "object",
+        "required": [
+          "executive_verdict",
+          "action_playbook"
+        ],
+        "title": "DistilledDecisionPlaybook",
+        "description": "Right-hand Decision Distillation card synthesized by Hermes Moderator."
       },
       "DividendRoundDTO": {
         "properties": {
@@ -19780,6 +20765,196 @@
         "title": "GuidanceBiasDTO",
         "description": "Categorization of management guidance tendencies."
       },
+      "GuruPersonaDTO": {
+        "properties": {
+          "speaker_id": {
+            "type": "string",
+            "title": "Speaker Id"
+          },
+          "display_name": {
+            "type": "string",
+            "title": "Display Name"
+          },
+          "short_name": {
+            "type": "string",
+            "title": "Short Name"
+          },
+          "archetype": {
+            "type": "string",
+            "title": "Archetype"
+          },
+          "voice_name": {
+            "type": "string",
+            "title": "Voice Name"
+          },
+          "accent_color": {
+            "type": "string",
+            "title": "Accent Color"
+          },
+          "is_prioritized_role_model": {
+            "type": "boolean",
+            "title": "Is Prioritized Role Model",
+            "default": false
+          },
+          "emoji": {
+            "type": "string",
+            "title": "Emoji",
+            "default": "\ud83c\udf99\ufe0f"
+          },
+          "pitch": {
+            "type": "number",
+            "title": "Pitch",
+            "default": 1.0
+          },
+          "rate": {
+            "type": "number",
+            "title": "Rate",
+            "default": 1.0
+          },
+          "enabled": {
+            "type": "boolean",
+            "title": "Enabled",
+            "default": true
+          },
+          "debate_order": {
+            "type": "integer",
+            "title": "Debate Order",
+            "default": 1
+          },
+          "preset_id": {
+            "type": "string",
+            "title": "Preset Id",
+            "default": "default"
+          },
+          "preset_label": {
+            "type": "string",
+            "title": "Preset Label",
+            "default": ""
+          },
+          "speaking_style": {
+            "type": "string",
+            "title": "Speaking Style",
+            "default": ""
+          },
+          "custom_directive": {
+            "type": "string",
+            "title": "Custom Directive",
+            "default": ""
+          },
+          "role_lens_label": {
+            "type": "string",
+            "title": "Role Lens Label",
+            "default": ""
+          },
+          "focus_summary": {
+            "type": "string",
+            "title": "Focus Summary",
+            "default": ""
+          },
+          "primary_evidence_labels": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Primary Evidence Labels"
+          },
+          "analytical_rubric": {
+            "type": "string",
+            "title": "Analytical Rubric",
+            "default": ""
+          }
+        },
+        "type": "object",
+        "required": [
+          "speaker_id",
+          "display_name",
+          "short_name",
+          "archetype",
+          "voice_name",
+          "accent_color"
+        ],
+        "title": "GuruPersonaDTO"
+      },
+      "GuruPresetItemDTO": {
+        "properties": {
+          "preset_id": {
+            "type": "string",
+            "title": "Preset Id"
+          },
+          "speaker_id": {
+            "type": "string",
+            "title": "Speaker Id"
+          },
+          "label_th": {
+            "type": "string",
+            "title": "Label Th"
+          },
+          "display_name": {
+            "type": "string",
+            "title": "Display Name"
+          },
+          "short_name": {
+            "type": "string",
+            "title": "Short Name"
+          },
+          "archetype": {
+            "type": "string",
+            "title": "Archetype"
+          },
+          "speaking_style": {
+            "type": "string",
+            "title": "Speaking Style"
+          },
+          "custom_directive": {
+            "type": "string",
+            "title": "Custom Directive",
+            "default": ""
+          },
+          "recommended_voice": {
+            "type": "string",
+            "title": "Recommended Voice"
+          },
+          "emoji": {
+            "type": "string",
+            "title": "Emoji"
+          },
+          "role_lens_label": {
+            "type": "string",
+            "title": "Role Lens Label",
+            "default": ""
+          },
+          "focus_summary": {
+            "type": "string",
+            "title": "Focus Summary",
+            "default": ""
+          },
+          "primary_evidence_labels": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Primary Evidence Labels"
+          },
+          "analytical_rubric": {
+            "type": "string",
+            "title": "Analytical Rubric",
+            "default": ""
+          }
+        },
+        "type": "object",
+        "required": [
+          "preset_id",
+          "speaker_id",
+          "label_th",
+          "display_name",
+          "short_name",
+          "archetype",
+          "speaking_style",
+          "recommended_voice",
+          "emoji"
+        ],
+        "title": "GuruPresetItemDTO"
+      },
       "HTTPValidationError": {
         "properties": {
           "detail": {
@@ -20891,6 +22066,59 @@
           "is_amendment"
         ],
         "title": "InsiderTransactionSchema"
+      },
+      "InterjectRequest": {
+        "properties": {
+          "message": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Message",
+            "description": "User interjection message (may mention @Guru)"
+          },
+          "target_speaker_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "hermes_moderator",
+                  "value_guru",
+                  "quality_guru",
+                  "growth_guru",
+                  "macro_tactical_guru",
+                  "skeptic_guru",
+                  "user"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target Speaker Id",
+            "description": "Optional targeted guru to respond first"
+          },
+          "voice_enabled": {
+            "type": "boolean",
+            "title": "Voice Enabled",
+            "default": true
+          },
+          "run_sandbox_math": {
+            "type": "boolean",
+            "title": "Run Sandbox Math",
+            "description": "Force Python Sandbox Decimal calculation if numerical scenario is requested.",
+            "default": false
+          },
+          "refresh_context": {
+            "type": "boolean",
+            "title": "Refresh Context",
+            "description": "Refresh frozen context packet before answering if drift detected.",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": [
+          "message"
+        ],
+        "title": "InterjectRequest"
       },
       "InterviewConfigResponse": {
         "properties": {
@@ -24758,6 +25986,123 @@
         ],
         "title": "PairTradeDTO"
       },
+      "PastScorecardDTO": {
+        "properties": {
+          "previous_session_id": {
+            "type": "string",
+            "title": "Previous Session Id"
+          },
+          "previous_date": {
+            "type": "string",
+            "title": "Previous Date"
+          },
+          "primary_ticker": {
+            "type": "string",
+            "title": "Primary Ticker"
+          },
+          "benchmark_ticker": {
+            "type": "string",
+            "title": "Benchmark Ticker"
+          },
+          "entry_price": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Entry Price"
+          },
+          "settlement_price": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Settlement Price"
+          },
+          "raw_return_pct": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Raw Return Pct"
+          },
+          "benchmark_return_pct": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Benchmark Return Pct"
+          },
+          "alpha_pct": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Alpha Pct"
+          },
+          "previous_final_rating": {
+            "type": "string",
+            "enum": [
+              "BUY",
+              "OVERWEIGHT",
+              "HOLD",
+              "UNDERWEIGHT",
+              "SELL",
+              "REVIEW"
+            ],
+            "title": "Previous Final Rating",
+            "default": "REVIEW"
+          },
+          "outcome_label": {
+            "type": "string",
+            "title": "Outcome Label",
+            "default": "pending"
+          },
+          "reflection_lesson": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reflection Lesson"
+          },
+          "settlement_status": {
+            "type": "string",
+            "title": "Settlement Status",
+            "default": "pending"
+          }
+        },
+        "type": "object",
+        "required": [
+          "previous_session_id",
+          "previous_date",
+          "primary_ticker",
+          "benchmark_ticker"
+        ],
+        "title": "PastScorecardDTO"
+      },
       "PerformanceSnapshotDTO": {
         "properties": {
           "Date": {
@@ -24870,6 +26215,35 @@
           "Cash_Balance"
         ],
         "title": "PerformanceSnapshotDTO"
+      },
+      "PersonalAxisCheckItem": {
+        "properties": {
+          "dimension": {
+            "type": "string",
+            "title": "Dimension"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "aligned",
+              "caution",
+              "conflict",
+              "not_set"
+            ],
+            "title": "Status"
+          },
+          "detail": {
+            "type": "string",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "required": [
+          "dimension",
+          "status",
+          "detail"
+        ],
+        "title": "PersonalAxisCheckItem"
       },
       "PivotLevelsDTO": {
         "properties": {
@@ -27610,6 +28984,31 @@
         ],
         "title": "RenamePortfolioRequestDTO"
       },
+      "ResetGuruProfilesRequest": {
+        "properties": {
+          "speaker_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "hermes_moderator",
+                  "value_guru",
+                  "quality_guru",
+                  "growth_guru",
+                  "macro_tactical_guru",
+                  "skeptic_guru"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Speaker Id"
+          }
+        },
+        "type": "object",
+        "title": "ResetGuruProfilesRequest"
+      },
       "ResumeRequest": {
         "properties": {
           "approved_news_links": {
@@ -27682,7 +29081,8 @@
             "type": "string",
             "enum": [
               "approve",
-              "refresh_sources"
+              "refresh_sources",
+              "reject"
             ],
             "title": "Action",
             "default": "approve"
@@ -28017,6 +29417,379 @@
           "as_of"
         ],
         "title": "RotationPoint"
+      },
+      "RoundtableGuruConfigCatalogDTO": {
+        "properties": {
+          "personas": {
+            "items": {
+              "$ref": "#/components/schemas/GuruPersonaDTO"
+            },
+            "type": "array",
+            "title": "Personas"
+          },
+          "voices": {
+            "items": {
+              "$ref": "#/components/schemas/VoiceCatalogItemDTO"
+            },
+            "type": "array",
+            "title": "Voices"
+          },
+          "presets": {
+            "items": {
+              "$ref": "#/components/schemas/GuruPresetItemDTO"
+            },
+            "type": "array",
+            "title": "Presets"
+          }
+        },
+        "type": "object",
+        "required": [
+          "personas",
+          "voices",
+          "presets"
+        ],
+        "title": "RoundtableGuruConfigCatalogDTO"
+      },
+      "RoundtableSessionDetailDTO": {
+        "properties": {
+          "session": {
+            "$ref": "#/components/schemas/RoundtableSessionSummaryDTO"
+          },
+          "turns": {
+            "items": {
+              "$ref": "#/components/schemas/RoundtableTurnDTO"
+            },
+            "type": "array",
+            "title": "Turns"
+          },
+          "decision_playbook": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DistilledDecisionPlaybook"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "past_scorecard": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PastScorecardDTO"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "missing_prerequisite_tickers": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Missing Prerequisite Tickers"
+          },
+          "prioritized_speakers": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Prioritized Speakers"
+          },
+          "user_role_models": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "User Role Models"
+          },
+          "portfolio_attachment_state": {
+            "type": "string",
+            "title": "Portfolio Attachment State",
+            "default": "NOT_ATTACHED_DO_NOT_ASSUME"
+          },
+          "context_drift_detected": {
+            "type": "boolean",
+            "title": "Context Drift Detected",
+            "default": false
+          },
+          "packet_fingerprint_sha256": {
+            "type": "string",
+            "title": "Packet Fingerprint Sha256",
+            "default": ""
+          },
+          "debate_intensity": {
+            "type": "string",
+            "enum": [
+              "balanced",
+              "heated",
+              "crossfire"
+            ],
+            "title": "Debate Intensity",
+            "default": "crossfire"
+          },
+          "debate_depth": {
+            "type": "string",
+            "enum": [
+              "concise",
+              "deep_youtube"
+            ],
+            "title": "Debate Depth",
+            "default": "deep_youtube"
+          },
+          "personas": {
+            "items": {
+              "$ref": "#/components/schemas/GuruPersonaDTO"
+            },
+            "type": "array",
+            "title": "Personas"
+          },
+          "pillar_coverage": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DebatePillarCoverageDTO"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "session"
+        ],
+        "title": "RoundtableSessionDetailDTO"
+      },
+      "RoundtableSessionSummaryDTO": {
+        "properties": {
+          "session_id": {
+            "type": "string",
+            "title": "Session Id"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "primary_ticker": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Primary Ticker"
+          },
+          "benchmark_ticker": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Benchmark Ticker"
+          },
+          "agenda_prompt": {
+            "type": "string",
+            "title": "Agenda Prompt"
+          },
+          "context_refs": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Context Refs"
+          },
+          "final_rating": {
+            "type": "string",
+            "enum": [
+              "BUY",
+              "OVERWEIGHT",
+              "HOLD",
+              "UNDERWEIGHT",
+              "SELL",
+              "REVIEW"
+            ],
+            "title": "Final Rating",
+            "default": "REVIEW"
+          },
+          "settlement_status": {
+            "type": "string",
+            "title": "Settlement Status",
+            "default": "pending"
+          },
+          "settled_return_pct": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Settled Return Pct"
+          },
+          "settled_alpha_pct": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Settled Alpha Pct"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status",
+            "default": "active"
+          },
+          "created_at": {
+            "type": "number",
+            "title": "Created At"
+          },
+          "updated_at": {
+            "type": "number",
+            "title": "Updated At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "session_id",
+          "title",
+          "agenda_prompt",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "RoundtableSessionSummaryDTO"
+      },
+      "RoundtableStreamRequest": {
+        "properties": {
+          "voice_enabled": {
+            "type": "boolean",
+            "title": "Voice Enabled",
+            "default": true
+          },
+          "refresh_context_on_drift": {
+            "type": "boolean",
+            "title": "Refresh Context On Drift",
+            "default": false
+          }
+        },
+        "type": "object",
+        "title": "RoundtableStreamRequest"
+      },
+      "RoundtableTurnDTO": {
+        "properties": {
+          "turn_id": {
+            "type": "string",
+            "title": "Turn Id"
+          },
+          "session_id": {
+            "type": "string",
+            "title": "Session Id"
+          },
+          "seq": {
+            "type": "integer",
+            "title": "Seq"
+          },
+          "speaker_id": {
+            "type": "string",
+            "title": "Speaker Id"
+          },
+          "round_stage": {
+            "type": "string",
+            "title": "Round Stage"
+          },
+          "replying_to": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Replying To"
+          },
+          "spoken_dialogue": {
+            "type": "string",
+            "title": "Spoken Dialogue"
+          },
+          "evidence_bullets": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Evidence Bullets"
+          },
+          "stance_tag": {
+            "type": "string",
+            "enum": [
+              "BUY",
+              "OVERWEIGHT",
+              "HOLD",
+              "UNDERWEIGHT",
+              "SELL",
+              "REVIEW"
+            ],
+            "title": "Stance Tag",
+            "default": "REVIEW"
+          },
+          "sizing_posture": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sizing Posture"
+          },
+          "audio_cache_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Audio Cache Key"
+          },
+          "audio_status": {
+            "type": "string",
+            "enum": [
+              "ready",
+              "cached",
+              "fallback_web_speech",
+              "disabled"
+            ],
+            "title": "Audio Status",
+            "default": "disabled"
+          },
+          "created_at": {
+            "type": "number",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "turn_id",
+          "session_id",
+          "seq",
+          "speaker_id",
+          "round_stage",
+          "spoken_dialogue",
+          "created_at"
+        ],
+        "title": "RoundtableTurnDTO"
       },
       "RoutineExecutionRecordDTO": {
         "properties": {
@@ -28589,6 +30362,68 @@
           "scratch_files_count"
         ],
         "title": "SandboxStateSnapshotDTO"
+      },
+      "SaveToVaultRequest": {
+        "properties": {
+          "note_title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note Title"
+          },
+          "also_update_thesis": {
+            "type": "boolean",
+            "title": "Also Update Thesis",
+            "default": false
+          }
+        },
+        "type": "object",
+        "title": "SaveToVaultRequest"
+      },
+      "SaveToVaultResponseDTO": {
+        "properties": {
+          "ok": {
+            "type": "boolean",
+            "title": "Ok"
+          },
+          "vault_path": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Vault Path"
+          },
+          "thesis_claim_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Thesis Claim Id"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          }
+        },
+        "type": "object",
+        "required": [
+          "ok",
+          "message"
+        ],
+        "title": "SaveToVaultResponseDTO"
       },
       "SecCompanyFactsSnapshotSchema": {
         "properties": {
@@ -32613,6 +34448,229 @@
         "type": "object",
         "title": "UpdateFinancialContextRequest"
       },
+      "UpdateGuruPersonaInput": {
+        "properties": {
+          "speaker_id": {
+            "type": "string",
+            "enum": [
+              "hermes_moderator",
+              "value_guru",
+              "quality_guru",
+              "growth_guru",
+              "macro_tactical_guru",
+              "skeptic_guru"
+            ],
+            "title": "Speaker Id"
+          },
+          "display_name": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 60
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Display Name"
+          },
+          "short_name": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 24
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Short Name"
+          },
+          "archetype": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 80
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Archetype"
+          },
+          "speaking_style": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 200
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Speaking Style"
+          },
+          "custom_directive": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 500
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Custom Directive"
+          },
+          "preset_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 48
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Preset Id"
+          },
+          "voice_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Voice Name"
+          },
+          "pitch": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 1.25,
+                "minimum": 0.75
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pitch"
+          },
+          "rate": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 1.25,
+                "minimum": 0.8
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rate"
+          },
+          "accent_color": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^#[0-9A-Fa-f]{6}$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Accent Color"
+          },
+          "emoji": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 8
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Emoji"
+          },
+          "enabled": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Enabled"
+          },
+          "debate_order": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 99.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Debate Order"
+          }
+        },
+        "type": "object",
+        "required": [
+          "speaker_id"
+        ],
+        "title": "UpdateGuruPersonaInput"
+      },
+      "UpdateGuruProfilesRequest": {
+        "properties": {
+          "profiles": {
+            "items": {
+              "$ref": "#/components/schemas/UpdateGuruPersonaInput"
+            },
+            "type": "array",
+            "minItems": 1,
+            "title": "Profiles"
+          }
+        },
+        "type": "object",
+        "required": [
+          "profiles"
+        ],
+        "title": "UpdateGuruProfilesRequest"
+      },
+      "UpdateThesisFromPlaybookRequest": {
+        "properties": {
+          "ticker": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ticker"
+          },
+          "claim_statement": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Claim Statement"
+          }
+        },
+        "type": "object",
+        "title": "UpdateThesisFromPlaybookRequest"
+      },
       "UpdateTransactionNoteRequestDTO": {
         "properties": {
           "notes": {
@@ -33282,6 +35340,162 @@
         ],
         "title": "VariantPerceptionSnapshotDTO",
         "description": "Three-way surprise and variant alpha realization (Chapter 2 & 5)."
+      },
+      "VoiceCatalogItemDTO": {
+        "properties": {
+          "voice_name": {
+            "type": "string",
+            "title": "Voice Name"
+          },
+          "gender_tone": {
+            "type": "string",
+            "title": "Gender Tone"
+          },
+          "label_th": {
+            "type": "string",
+            "title": "Label Th"
+          },
+          "recommended_for": {
+            "type": "string",
+            "title": "Recommended For"
+          },
+          "default_pitch": {
+            "type": "number",
+            "title": "Default Pitch"
+          },
+          "default_rate": {
+            "type": "number",
+            "title": "Default Rate"
+          },
+          "default_sample_text": {
+            "type": "string",
+            "title": "Default Sample Text"
+          }
+        },
+        "type": "object",
+        "required": [
+          "voice_name",
+          "gender_tone",
+          "label_th",
+          "recommended_for",
+          "default_pitch",
+          "default_rate",
+          "default_sample_text"
+        ],
+        "title": "VoiceCatalogItemDTO"
+      },
+      "VoicePreviewRequest": {
+        "properties": {
+          "speaker_id": {
+            "type": "string",
+            "enum": [
+              "hermes_moderator",
+              "value_guru",
+              "quality_guru",
+              "growth_guru",
+              "macro_tactical_guru",
+              "skeptic_guru"
+            ],
+            "title": "Speaker Id"
+          },
+          "voice_name": {
+            "type": "string",
+            "title": "Voice Name"
+          },
+          "sample_text": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 280
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sample Text"
+          },
+          "pitch": {
+            "type": "number",
+            "maximum": 1.25,
+            "minimum": 0.75,
+            "title": "Pitch",
+            "default": 1.0
+          },
+          "rate": {
+            "type": "number",
+            "maximum": 1.25,
+            "minimum": 0.8,
+            "title": "Rate",
+            "default": 1.0
+          }
+        },
+        "type": "object",
+        "required": [
+          "speaker_id",
+          "voice_name"
+        ],
+        "title": "VoicePreviewRequest"
+      },
+      "VoicePreviewResponseDTO": {
+        "properties": {
+          "audio_status": {
+            "type": "string",
+            "enum": [
+              "ready",
+              "cached",
+              "fallback_web_speech",
+              "disabled"
+            ],
+            "title": "Audio Status"
+          },
+          "audio_cache_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Audio Cache Key"
+          },
+          "sample_text": {
+            "type": "string",
+            "title": "Sample Text"
+          },
+          "voice_name": {
+            "type": "string",
+            "title": "Voice Name"
+          },
+          "pitch": {
+            "type": "number",
+            "title": "Pitch",
+            "default": 1.0
+          },
+          "rate": {
+            "type": "number",
+            "title": "Rate",
+            "default": 1.0
+          },
+          "error_message": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error Message"
+          }
+        },
+        "type": "object",
+        "required": [
+          "audio_status",
+          "sample_text",
+          "voice_name"
+        ],
+        "title": "VoicePreviewResponseDTO"
       },
       "WarningDTO": {
         "properties": {

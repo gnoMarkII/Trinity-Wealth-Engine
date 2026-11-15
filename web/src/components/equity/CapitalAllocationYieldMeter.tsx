@@ -33,15 +33,15 @@ export const CapitalAllocationYieldMeter: React.FC<CapitalAllocationYieldMeterPr
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-1.5">
           <span className="text-sm">💰</span>
-          <span className="text-xs font-bold text-zinc-800 tracking-tight">
+          <span className="text-xs font-bold text-slate-800 tracking-tight">
             Capital Allocation & Shareholder Yield
           </span>
         </div>
         <span
-          className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${
+          className={`px-2 py-0.5 rounded-full text-[11px] font-bold border ${
             netYield > 0
               ? 'bg-emerald-50 text-emerald-800 border-emerald-300'
-              : 'bg-zinc-100 text-zinc-700 border-zinc-200'
+              : 'bg-slate-100 text-slate-700 border-slate-200'
           }`}
         >
           {isZeroDividend ? 'Zero Dividend (Pure Reinvestment / Buybacks)' : 'Dividend Paying'}
@@ -52,50 +52,50 @@ export const CapitalAllocationYieldMeter: React.FC<CapitalAllocationYieldMeterPr
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center text-xs">
         {/* Dividend Yield */}
         <div className="p-2 rounded-lg bg-surface border border-edge/40">
-          <span className="text-[10px] text-zinc-400 uppercase tracking-wider block">
+          <span className="text-[11px] text-slate-500 uppercase tracking-wider block">
             Dividend Yield
           </span>
-          <span className="font-bold text-zinc-800 text-sm">
+          <span className="font-bold text-slate-800 text-sm">
             {divYield > 0 ? `${divYield.toFixed(2)}%` : '0.00%'}
           </span>
           {isZeroDividend && (
-            <span className="text-[9px] text-zinc-400 block -mt-0.5">Reinvested in R&D</span>
+            <span className="text-[11px] text-slate-500 block -mt-0.5">Reinvested in R&D</span>
           )}
         </div>
 
         {/* Share Buyback Yield */}
         <div className="p-2 rounded-lg bg-surface border border-edge/40">
-          <span className="text-[10px] text-zinc-400 uppercase tracking-wider block">
+          <span className="text-[11px] text-slate-500 uppercase tracking-wider block">
             Buyback Yield
           </span>
           <span
             className={`font-bold text-sm ${
-              bbYield > 0 ? 'text-emerald-700' : 'text-zinc-800'
+              bbYield > 0 ? 'text-emerald-700' : 'text-slate-800'
             }`}
           >
             {bbYield != null ? `${bbYield >= 0 ? '+' : ''}${bbYield.toFixed(2)}%` : 'N/A'}
           </span>
-          <span className="text-[9px] text-zinc-400 block -mt-0.5">Share Repurchases</span>
+          <span className="text-[11px] text-slate-500 block -mt-0.5">Share Repurchases</span>
         </div>
 
         {/* SBC Dilution Offset (if applicable) */}
         <div className="p-2 rounded-lg bg-surface border border-edge/40">
-          <span className="text-[10px] text-zinc-400 uppercase tracking-wider block">
+          <span className="text-[11px] text-slate-500 uppercase tracking-wider block">
             SBC Dilution Est.
           </span>
           <span
             className={`font-bold text-sm ${
-              estimatedDilutionPct > 0 ? 'text-rose-600' : 'text-zinc-600'
+              estimatedDilutionPct > 0 ? 'text-rose-600' : 'text-slate-600'
             }`}
           >
             {estimatedDilutionPct > 0 ? `-${estimatedDilutionPct.toFixed(2)}%` : '0.00%'}
           </span>
-          <span className="text-[9px] text-zinc-400 block -mt-0.5">Stock Compensation</span>
+          <span className="text-[11px] text-slate-500 block -mt-0.5">Stock Compensation</span>
         </div>
 
         {/* Net Shareholder Yield */}
-        <div className="p-2 rounded-lg bg-surface border border-edge/60 shadow-xs">
-          <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider block">
+        <div className="p-2 rounded-lg bg-surface border border-edge/60 shadow-sm">
+          <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block">
             Net Cash Yield
           </span>
           <span
@@ -107,7 +107,7 @@ export const CapitalAllocationYieldMeter: React.FC<CapitalAllocationYieldMeterPr
             {netYield.toFixed(2)}%
           </span>
           {fcfYieldPct != null && (
-            <span className="text-[9px] text-zinc-400 block -mt-0.5" title="Free Cash Flow Yield">
+            <span className="text-[11px] text-slate-500 block -mt-0.5" title="Free Cash Flow Yield">
               FCF Yield: {fcfYieldPct.toFixed(1)}%
             </span>
           )}
@@ -116,7 +116,7 @@ export const CapitalAllocationYieldMeter: React.FC<CapitalAllocationYieldMeterPr
 
       {/* Visual Mini Allocation Bar */}
       <div className="space-y-1">
-        <div className="w-full h-2 rounded-full bg-zinc-200/80 overflow-hidden flex shadow-inner">
+        <div className="w-full h-2 rounded-full bg-slate-200/80 overflow-hidden flex shadow-inner">
           {divYield > 0 && (
             <div
               className="h-full bg-sky-500"
@@ -139,9 +139,9 @@ export const CapitalAllocationYieldMeter: React.FC<CapitalAllocationYieldMeterPr
             />
           )}
         </div>
-        <div className="flex items-center justify-between text-[10px] text-zinc-500 pt-0.5">
+        <div className="flex items-center justify-between text-[11px] text-slate-500 pt-0.5">
           <span>Net Return to Equity Holders</span>
-          <span className="font-semibold text-zinc-700">
+          <span className="font-semibold text-slate-700">
             {netYield >= 0 ? 'Accretive Capital Return' : 'Net Dilutive Distribution'}
           </span>
         </div>

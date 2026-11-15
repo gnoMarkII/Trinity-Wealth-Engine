@@ -19,10 +19,10 @@ function OutputMarkdown({ content }: { content: string }) {
             {children}
           </a>
         ),
-        code: ({ children }) => <code className="rounded bg-surface-strong px-1 py-0.5 font-mono text-[0.84em] text-zinc-700">{children}</code>,
-        h1: ({ children }) => <h4 className="mt-4 text-sm font-semibold text-zinc-900 first:mt-0">{children}</h4>,
-        h2: ({ children }) => <h4 className="mt-4 text-sm font-semibold text-zinc-900 first:mt-0">{children}</h4>,
-        h3: ({ children }) => <h5 className="mt-3 text-xs font-semibold text-zinc-800 first:mt-0">{children}</h5>,
+        code: ({ children }) => <code className="rounded bg-surface-strong px-1 py-0.5 font-mono text-[0.84em] text-slate-700">{children}</code>,
+        h1: ({ children }) => <h4 className="mt-4 text-sm font-semibold text-slate-900 first:mt-0">{children}</h4>,
+        h2: ({ children }) => <h4 className="mt-4 text-sm font-semibold text-slate-900 first:mt-0">{children}</h4>,
+        h3: ({ children }) => <h5 className="mt-3 text-xs font-semibold text-slate-800 first:mt-0">{children}</h5>,
         li: ({ children }) => <li className="ml-4 list-disc pl-1">{children}</li>,
         p: ({ children }) => <p className="mt-2 first:mt-0">{children}</p>,
         ul: ({ children }) => <ul className="mt-2 space-y-1">{children}</ul>,
@@ -85,14 +85,14 @@ export default function KanbanCardOutputs({ jobId, refreshVersion, onStatusChang
   return (
     <section className="space-y-3" aria-live="polite">
       <div className="flex items-center justify-between gap-3">
-        <h3 className="text-xs font-semibold uppercase tracking-wide text-zinc-500">Card Outputs</h3>
-        {loading && <span className="text-[10px] text-zinc-400">Updating…</span>}
+        <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-500">Card Outputs</h3>
+        {loading && <span className="text-[11px] text-slate-500">Updating…</span>}
       </div>
 
       {outputs.executive_summary ? (
         <article className="rounded-xl border border-orange-200/80 bg-orange-50/60 p-3 shadow-[0_8px_22px_rgba(251,140,0,0.06)]">
-          <p className="text-[10px] font-semibold uppercase tracking-wide text-orange-800">Executive Research Summary</p>
-          <div className="mt-2 text-xs leading-relaxed text-zinc-700">
+          <p className="text-[11px] font-semibold uppercase tracking-wide text-orange-800">Executive Research Summary</p>
+          <div className="mt-2 text-xs leading-relaxed text-slate-700">
             <OutputMarkdown content={outputs.executive_summary} />
           </div>
         </article>
@@ -109,14 +109,14 @@ export default function KanbanCardOutputs({ jobId, refreshVersion, onStatusChang
           งานเสร็จพร้อมคำเตือน: {outputs.error_message || 'Completed with Unverified Drafts'}
         </p>
       ) : (
-        <p className="rounded-lg border border-edge bg-surface p-3 text-xs text-zinc-500">
+        <p className="rounded-lg border border-edge bg-surface p-3 text-xs text-slate-500">
           Executive Research Summary จะปรากฏเมื่อการทำงานเสร็จสมบูรณ์
         </p>
       )}
 
       {outputs.specialists.length > 0 && activeOutput && (
         <section className="rounded-xl border border-sky-100 bg-panel p-3 shadow-[0_8px_24px_rgba(14,165,233,0.05)] backdrop-blur-sm">
-          <p className="text-[10px] font-semibold uppercase tracking-wide text-sky-800">Specialist Breakdown</p>
+          <p className="text-[11px] font-semibold uppercase tracking-wide text-sky-800">Specialist Breakdown</p>
           <div className="mt-2 flex gap-1 overflow-x-auto pb-1">
             {outputs.specialists.map((item) => (
               <button
@@ -126,15 +126,15 @@ export default function KanbanCardOutputs({ jobId, refreshVersion, onStatusChang
                 className={`shrink-0 rounded-md px-2 py-1 text-[11px] font-medium transition-colors ${
                   item.node_name === activeOutput.node_name
                     ? 'bg-flow-cyan/10 text-sky-700'
-                    : 'text-zinc-500 hover:bg-sky-50 hover:text-zinc-800'
+                    : 'text-slate-500 hover:bg-sky-50 hover:text-slate-800'
                 }`}
               >
                 {nodeDisplayName(item.node_name)}
               </button>
             ))}
           </div>
-          <div className="mt-2 border-t border-edge pt-2 text-xs leading-relaxed text-zinc-600">
-            <p className="mb-2 text-[10px] font-medium uppercase tracking-wide text-zinc-400">{activeOutput.label}</p>
+          <div className="mt-2 border-t border-edge pt-2 text-xs leading-relaxed text-slate-600">
+            <p className="mb-2 text-[11px] font-medium uppercase tracking-wide text-slate-500">{activeOutput.label}</p>
             <OutputMarkdown content={activeOutput.content} />
           </div>
         </section>

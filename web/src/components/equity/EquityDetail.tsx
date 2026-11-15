@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react'
+import React, { lazy, Suspense, useState, useEffect } from 'react'
+import { useInRouterContext, useNavigate } from 'react-router-dom'
 import { api } from '../../api/client'
 import type {
   EquityDetailDTO,
@@ -7,13 +8,7 @@ import type {
 } from '../../api/types'
 import ScoreRing from './ScoreRing'
 import { sentimentClass } from '../../lib/sentiment'
-import { EquityNews } from './EquityNews'
-import { EquityNotesTab } from './EquityNotesTab'
-import { EquityChartTab } from './EquityChartTab'
-import { FinancialsTab } from './FinancialsTab'
 import { DataQualityFlagsCard } from './DataQualityFlagsCard'
-import { EarningsCallTab } from './EarningsCallTab'
-import { EventStudyTab } from './EventStudyTab'
 import ExecutiveThesisHero from './ExecutiveThesisHero'
 import { InstitutionalThesisCard } from './InstitutionalThesisCard'
 import ValuationWorkbenchCard from './ValuationWorkbenchCard'
@@ -21,15 +16,32 @@ import { VariantPerceptionCard } from './VariantPerceptionCard'
 import TacticalFlowMatrixCard from './TacticalFlowMatrixCard'
 import { EvidenceProvenanceDrawer } from './EvidenceProvenanceDrawer'
 import { NasdaqConsensusCard } from './NasdaqConsensusCard'
-import { OptionsOiStrikeLadder } from '../charts/OptionsOiStrikeLadder'
-import { OptionsVolSmile } from '../charts/OptionsVolSmile'
 import { EquityNotebookLMExport } from './EquityNotebookLMExport'
 import { EquityDetailSkeleton } from '../ui/FlowSkeleton'
 import { PositionReviewCard } from './PositionReviewCard'
-import { PositionReviewModal } from './PositionReviewModal'
 import { ExpectationGapCard } from './ExpectationGapCard'
 import { KillSwitchProximityMeter } from './KillSwitchProximityMeter'
-import { EquityGlossaryDrawer, StockWayfinderBanner, SectionWaypointHeader } from './explainer'
+import { StockWayfinderBanner, SectionWaypointHeader } from './explainer'
+
+const EquityNews = lazy(() => import('./EquityNews').then((m) => ({ default: m.EquityNews })))
+const EquityNotesTab = lazy(() => import('./EquityNotesTab').then((m) => ({ default: m.EquityNotesTab })))
+const EquityChartTab = lazy(() => import('./EquityChartTab').then((m) => ({ default: m.EquityChartTab })))
+const FinancialsTab = lazy(() => import('./FinancialsTab').then((m) => ({ default: m.FinancialsTab })))
+const EarningsCallTab = lazy(() => import('./EarningsCallTab').then((m) => ({ default: m.EarningsCallTab })))
+const EventStudyTab = lazy(() => import('./EventStudyTab').then((m) => ({ default: m.EventStudyTab })))
+const EquityGlossaryDrawer = lazy(() => import('./explainer').then((m) => ({ default: m.EquityGlossaryDrawer })))
+const PositionReviewModal = lazy(() => import('./PositionReviewModal').then((m) => ({ default: m.PositionReviewModal })))
+const OptionsOiStrikeLadder = lazy(() => import('../charts/OptionsOiStrikeLadder').then((m) => ({ default: m.OptionsOiStrikeLadder })))
+const OptionsVolSmile = lazy(() => import('../charts/OptionsVolSmile').then((m) => ({ default: m.OptionsVolSmile })))
+import {
+  BoltStrategyIcon,
+  BookOpenIcon,
+  BriefcasePortfolioIcon,
+  MicStageIcon,
+  RefreshIcon,
+  SearchIcon,
+  SlidersIcon,
+} from '../ui/AppIcons'
 
 interface EquityDetailProps {
   status: 'loading' | 'error' | 'not-found' | 'success' | 'idle'
@@ -42,7 +54,39 @@ interface EquityDetailProps {
   portfolioId?: string
 }
 
-const eyebrowClass = 'text-xs font-bold uppercase tracking-wider text-sky-700/80'
+const eyebrowClass = 'text-xs font-bold uppercase tracking-wider text-section-accent/80'
+
+function RoundtableRouterButton({ ticker }: { ticker: string }) {
+  const navigate = useNavigate()
+  return (
+    <button
+      type="button"
+      onClick={() => navigate(`/roundtable?ticker=${encodeURIComponent(ticker)}`)}
+      className="px-3 py-1.5 rounded-lg border border-sky-200 bg-sky-50/90 text-sky-900 hover:bg-sky-100 text-xs font-semibold flex items-center gap-1.5 transition-colors shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-section-accent/45"
+      title={`เปิดห้องประชุมสภากูรูสำหรับ ${ticker}`}
+    >
+      <MicStageIcon className="h-3.5 w-3.5 text-section-accent" />
+      <span>ประชุมกูรูหุ้นนี้</span>
+    </button>
+  )
+}
+
+function RoundtableLaunchButton({ ticker }: { ticker: string }) {
+  const inRouter = useInRouterContext()
+  if (inRouter) {
+    return <RoundtableRouterButton ticker={ticker} />
+  }
+  return (
+    <a
+      href={`/roundtable?ticker=${encodeURIComponent(ticker)}`}
+      className="px-3 py-1.5 rounded-lg border border-sky-200 bg-sky-50/90 text-sky-900 hover:bg-sky-100 text-xs font-semibold flex items-center gap-1.5 transition-colors shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-section-accent/45"
+      title={`เปิดห้องประชุมสภากูรูสำหรับ ${ticker}`}
+    >
+      <MicStageIcon className="h-3.5 w-3.5 text-section-accent" />
+      <span>ประชุมกูรูหุ้นนี้</span>
+    </a>
+  )
+}
 
 export const EquityDetail: React.FC<EquityDetailProps> = ({
   status,
@@ -170,18 +214,18 @@ export const EquityDetail: React.FC<EquityDetailProps> = ({
             <div className="space-y-2">
               <div className={eyebrowClass}>Institutional Equity Intelligence</div>
               <div className="flex flex-wrap items-center gap-3">
-                <h2 className="font-serif text-3xl sm:text-4xl font-semibold tracking-tight text-zinc-900">
-                  {summaryPreview.ticker} <span className="text-zinc-500 font-normal text-lg">({summaryPreview.market})</span>
+                <h2 className="font-sans text-3xl sm:text-4xl font-extrabold tracking-tight text-slate-900">
+                  {summaryPreview.ticker} <span className="text-slate-500 font-normal text-lg">({summaryPreview.market})</span>
                 </h2>
               </div>
               {summaryPreview.company_name && (
-                <p className="text-zinc-600 font-medium text-sm sm:text-base">{summaryPreview.company_name}</p>
+                <p className="text-slate-600 font-medium text-sm sm:text-base">{summaryPreview.company_name}</p>
               )}
               <div className="flex flex-wrap items-center gap-2 pt-1">
                 <span className={`px-2.5 py-0.5 rounded-full border text-xs font-semibold uppercase tracking-wider ${sentimentClass(summaryPreview.market_sentiment)}`}>
                   {summaryPreview.market_sentiment}
                 </span>
-                <span className="text-xs text-zinc-400">
+                <span className="text-xs text-slate-500">
                   ประเมินเมื่อ {new Date(summaryPreview.evaluated_at).toLocaleString('th-TH')}
                 </span>
               </div>
@@ -191,8 +235,8 @@ export const EquityDetail: React.FC<EquityDetailProps> = ({
               <div className="flex items-center gap-2">
                 <ScoreRing score={summaryPreview.composite_score} />
                 <div>
-                  <div className="text-[10px] font-bold text-zinc-400 uppercase">Composite</div>
-                  <div className="text-xs font-semibold text-zinc-700">
+                  <div className="text-[11px] font-bold text-slate-500 uppercase">Composite</div>
+                  <div className="font-mono tabular-nums text-xs font-semibold text-slate-700">
                     {summaryPreview.composite_score != null ? `${summaryPreview.composite_score.toFixed(1)}` : 'N/A'}
                   </div>
                 </div>
@@ -211,11 +255,11 @@ export const EquityDetail: React.FC<EquityDetailProps> = ({
   if (status === 'not-found') {
     return (
       <div className="flex flex-col justify-center items-center h-64 bg-surface rounded-2xl border border-dashed border-edge p-8 text-center shadow-sm">
-        <svg className="w-12 h-12 text-zinc-400 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+        <svg className="w-12 h-12 text-slate-500 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 002-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
         </svg>
-        <h3 className="text-lg font-medium text-zinc-900 mb-1">ไม่พบข้อมูล</h3>
-        <p className="text-zinc-500 max-w-sm mb-4 text-sm">
+        <h3 className="text-lg font-medium text-slate-900 mb-1">ไม่พบข้อมูล</h3>
+        <p className="text-slate-500 max-w-sm mb-4 text-sm">
           ยังไม่มีการวิเคราะห์สำหรับหุ้นตัวนี้ กรุณาสั่งงานผ่าน Trinity Advisor (Manager) หรือสั่ง Research Swarm เริ่มการวิเคราะห์ระดับสูง
         </p>
       </div>
@@ -253,19 +297,19 @@ export const EquityDetail: React.FC<EquityDetailProps> = ({
         <div className="space-y-2">
           <div className={eyebrowClass}>Institutional Equity Intelligence</div>
           <div className="flex flex-wrap items-center gap-3">
-            <h2 className="font-serif text-3xl sm:text-4xl font-semibold tracking-tight text-zinc-900">
-              {data.ticker} <span className="text-zinc-500 font-normal text-lg">({data.market})</span>
+            <h2 className="font-sans text-3xl sm:text-4xl font-extrabold tracking-tight text-slate-900">
+              {data.ticker} <span className="text-slate-500 font-normal text-lg">({data.market})</span>
             </h2>
             <button
               onClick={() => onOpenAnalysisModal?.(data.ticker, (data.market || 'US') as 'US' | 'TH')}
               disabled={isUpdating}
-              className={`px-3 py-1 rounded-xl border text-xs font-semibold flex items-center gap-1.5 transition-colors shadow-2xs ${isUpdating
+              className={`px-3 py-1.5 rounded-lg border text-xs font-semibold flex items-center gap-1.5 transition-colors shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-section-accent/45 ${isUpdating
                   ? 'border-amber-200 bg-amber-50 text-amber-700 opacity-80 cursor-not-allowed'
-                  : 'border-sky-200 bg-sky-50 text-sky-700 hover:bg-sky-100'
+                  : 'border-sky-200 bg-sky-50 text-section-accent hover:bg-sky-100'
                 }`}
               title={isUpdating ? 'กำลังประมวลผลการวิเคราะห์...' : 'วิเคราะห์ใหม่และดึงข่าวล่าสุด'}
             >
-              <span className={isUpdating ? 'inline-block animate-spin' : ''}>🔄</span>
+              <RefreshIcon className={isUpdating ? 'h-3.5 w-3.5 animate-spin' : 'h-3.5 w-3.5'} />
               <span>{isUpdating ? 'กำลังวิเคราะห์...' : 'อัปเดตบทวิเคราะห์'}</span>
             </button>
             <EquityNotebookLMExport
@@ -275,25 +319,26 @@ export const EquityDetail: React.FC<EquityDetailProps> = ({
             />
             <button
               onClick={() => setIsGlossaryOpen(true)}
-              className="px-3 py-1 rounded-xl border border-emerald-200 bg-emerald-50 text-emerald-800 hover:bg-emerald-100 text-xs font-semibold flex items-center gap-1.5 transition-colors shadow-2xs"
+              className="px-3 py-1.5 rounded-lg border border-emerald-200 bg-emerald-50 text-emerald-800 hover:bg-emerald-100 text-xs font-semibold flex items-center gap-1.5 transition-colors shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-section-accent/45"
               title="เปิดคู่มือคำศัพท์หุ้นภาษาคน (30 คำศัพท์วิเคราะห์หุ้นระดับสถาบัน)"
             >
-              <span>📖</span>
+              <BookOpenIcon className="h-3.5 w-3.5" />
               <span>คู่มือศัพท์หุ้นภาษาคน</span>
             </button>
+            <RoundtableLaunchButton ticker={data.ticker} />
           </div>
           {isUpdating && (
             <div className="flex items-center gap-2 rounded-xl border border-amber-200 bg-amber-50/80 px-3 py-1.5 text-xs text-amber-900 font-medium">
-              <span className="inline-block animate-spin">⚙️</span>
+              <SlidersIcon className="h-3.5 w-3.5 animate-spin shrink-0" />
               <span>กำลังวิเคราะห์และดึงข่าวล่าสุดสำหรับ {data.ticker} ({data.market})... ระบบจะรีเฟรชข้อมูลอัตโนมัติเมื่อเสร็จสิ้น</span>
             </div>
           )}
-          {data.company_name && <p className="text-zinc-600 font-medium text-sm sm:text-base">{data.company_name}</p>}
+          {data.company_name && <p className="text-slate-600 font-medium text-sm sm:text-base">{data.company_name}</p>}
           <div className="flex flex-wrap items-center gap-2 pt-1">
             <span className={`px-2.5 py-0.5 rounded-full border text-xs font-semibold uppercase tracking-wider ${sentimentClass(data.market_sentiment)}`}>
               {data.market_sentiment}
             </span>
-            <span className="text-xs text-zinc-400">
+            <span className="text-xs text-slate-500">
               ประเมินเมื่อ {new Date(data.evaluated_at).toLocaleString('th-TH')}
             </span>
           </div>
@@ -303,8 +348,8 @@ export const EquityDetail: React.FC<EquityDetailProps> = ({
         <div className="flex flex-wrap items-center gap-4 self-start rounded-2xl border border-edge/80 bg-panel px-5 py-3.5 shadow-sm shadow-black/5">
           {resolvedCurrentPrice != null && (
             <div className="flex flex-col items-start pr-4 border-r border-edge/60">
-              <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Analysis Price</span>
-              <div className="font-mono text-xl font-extrabold text-zinc-900 mt-0.5">
+              <span className="text-[11px] font-bold text-slate-500 uppercase tracking-widest">Analysis Price</span>
+              <div className="font-mono tabular-nums text-xl font-extrabold text-slate-900 mt-0.5">
                 {currencySymbol}{resolvedCurrentPrice.toFixed(2)}
               </div>
             </div>
@@ -314,8 +359,8 @@ export const EquityDetail: React.FC<EquityDetailProps> = ({
           <div className="flex items-center gap-2.5">
             <ScoreRing score={data.composite_score} />
             <div>
-              <div className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Composite</div>
-              <div className="text-xs font-semibold text-zinc-700">
+              <div className="text-[11px] font-bold text-slate-500 uppercase tracking-widest">Composite</div>
+              <div className="font-mono tabular-nums text-xs font-semibold text-slate-700">
                 {data.composite_score != null ? `${data.composite_score.toFixed(1)} / 100` : 'N/A'}
               </div>
             </div>
@@ -331,115 +376,123 @@ export const EquityDetail: React.FC<EquityDetailProps> = ({
       />
 
       {/* Sub-nav Tab Switcher */}
-      <div className="flex border-b border-edge gap-6 text-sm font-medium">
+      <div className="flex overflow-x-auto border-b border-edge gap-6 text-sm font-medium">
         <button
           onClick={() => handleTabSelect('overview')}
-          className={`pb-3 border-b-2 transition-colors flex items-center gap-2 ${activeTab === 'overview'
-              ? 'border-sky-600 text-sky-600 font-semibold'
-              : 'border-transparent text-zinc-500 hover:text-zinc-900'
+          className={`pb-3 border-b-2 transition-colors flex items-center gap-2 whitespace-nowrap focus-visible:outline-none ${activeTab === 'overview'
+              ? 'border-section-accent text-section-accent font-semibold'
+              : 'border-transparent text-slate-500 hover:text-slate-900'
             }`}
         >
           <span>📊 Overview</span>
         </button>
         <button
           onClick={() => handleTabSelect('chart')}
-          className={`pb-3 border-b-2 transition-colors flex items-center gap-2 ${activeTab === 'chart'
-              ? 'border-sky-600 text-sky-600 font-semibold'
-              : 'border-transparent text-zinc-500 hover:text-zinc-900'
+          className={`pb-3 border-b-2 transition-colors flex items-center gap-2 whitespace-nowrap focus-visible:outline-none ${activeTab === 'chart'
+              ? 'border-section-accent text-section-accent font-semibold'
+              : 'border-transparent text-slate-500 hover:text-slate-900'
             }`}
         >
           <span>📈 Chart</span>
         </button>
         <button
           onClick={() => handleTabSelect('financials')}
-          className={`pb-3 border-b-2 transition-colors flex items-center gap-2 ${activeTab === 'financials'
-              ? 'border-sky-600 text-sky-600 font-semibold'
-              : 'border-transparent text-zinc-500 hover:text-zinc-900'
+          className={`pb-3 border-b-2 transition-colors flex items-center gap-2 whitespace-nowrap focus-visible:outline-none ${activeTab === 'financials'
+              ? 'border-section-accent text-section-accent font-semibold'
+              : 'border-transparent text-slate-500 hover:text-slate-900'
             }`}
         >
           <span>📑 Financials</span>
         </button>
         <button
           onClick={() => handleTabSelect('news')}
-          className={`pb-3 border-b-2 transition-colors flex items-center gap-2 ${activeTab === 'news'
-              ? 'border-sky-600 text-sky-600 font-semibold'
-              : 'border-transparent text-zinc-500 hover:text-zinc-900'
+          className={`pb-3 border-b-2 transition-colors flex items-center gap-2 whitespace-nowrap focus-visible:outline-none ${activeTab === 'news'
+              ? 'border-section-accent text-section-accent font-semibold'
+              : 'border-transparent text-slate-500 hover:text-slate-900'
             }`}
         >
           <span>📰 News</span>
         </button>
         <button
           onClick={() => handleTabSelect('notes')}
-          className={`pb-3 border-b-2 transition-colors flex items-center gap-2 ${activeTab === 'notes'
-              ? 'border-sky-600 text-sky-600 font-semibold'
-              : 'border-transparent text-zinc-500 hover:text-zinc-900'
+          className={`pb-3 border-b-2 transition-colors flex items-center gap-2 whitespace-nowrap focus-visible:outline-none ${activeTab === 'notes'
+              ? 'border-section-accent text-section-accent font-semibold'
+              : 'border-transparent text-slate-500 hover:text-slate-900'
             }`}
         >
           <span>📓 Notes</span>
         </button>
         <button
           onClick={() => handleTabSelect('earnings-call')}
-          className={`pb-3 border-b-2 transition-colors flex items-center gap-2 ${activeTab === 'earnings-call'
-              ? 'border-sky-600 text-sky-600 font-semibold'
-              : 'border-transparent text-zinc-500 hover:text-zinc-900'
+          className={`pb-3 border-b-2 transition-colors flex items-center gap-2 whitespace-nowrap focus-visible:outline-none ${activeTab === 'earnings-call'
+              ? 'border-section-accent text-section-accent font-semibold'
+              : 'border-transparent text-slate-500 hover:text-slate-900'
             }`}
         >
           <span>🎙️ Earnings Call</span>
         </button>
         <button
           onClick={() => handleTabSelect('event-study')}
-          className={`pb-3 border-b-2 transition-colors flex items-center gap-2 ${activeTab === 'event-study'
-              ? 'border-sky-600 text-sky-600 font-semibold'
-              : 'border-transparent text-zinc-500 hover:text-zinc-900'
+          className={`pb-3 border-b-2 transition-colors flex items-center gap-2 whitespace-nowrap focus-visible:outline-none ${activeTab === 'event-study'
+              ? 'border-section-accent text-section-accent font-semibold'
+              : 'border-transparent text-slate-500 hover:text-slate-900'
             }`}
         >
           <span>🔬 Event Study</span>
         </button>
       </div>
 
-      {visitedTabs.has('chart') && (
-        <div className={activeTab === 'chart' ? 'block animate-fade-in' : 'hidden'}>
-          <EquityChartTab
-            ticker={data.ticker}
-            companyName={data.company_name ?? undefined}
-            market={data.market}
-            currentPrice={resolvedCurrentPrice}
-          />
-        </div>
-      )}
+      <Suspense
+        fallback={
+          <div className="flow-panel rounded-2xl border border-edge p-8 text-center text-xs text-slate-500 animate-pulse">
+            กำลังโหลดมุมมองวิเคราะห์เชิงลึก...
+          </div>
+        }
+      >
+        {visitedTabs.has('chart') && (
+          <div className={activeTab === 'chart' ? 'block animate-fade-in' : 'hidden'}>
+            <EquityChartTab
+              ticker={data.ticker}
+              companyName={data.company_name ?? undefined}
+              market={data.market}
+              currentPrice={resolvedCurrentPrice}
+            />
+          </div>
+        )}
 
-      {visitedTabs.has('financials') && (
-        <div className={activeTab === 'financials' ? 'block animate-fade-in' : 'hidden'}>
-          <FinancialsTab
-            ticker={data.ticker}
-            market={data.market}
-          />
-        </div>
-      )}
+        {visitedTabs.has('financials') && (
+          <div className={activeTab === 'financials' ? 'block animate-fade-in' : 'hidden'}>
+            <FinancialsTab
+              ticker={data.ticker}
+              market={data.market}
+            />
+          </div>
+        )}
 
-      {visitedTabs.has('news') && (
-        <div className={activeTab === 'news' ? 'block animate-fade-in' : 'hidden'}>
-          <EquityNews ticker={data.ticker} />
-        </div>
-      )}
+        {visitedTabs.has('news') && (
+          <div className={activeTab === 'news' ? 'block animate-fade-in' : 'hidden'}>
+            <EquityNews ticker={data.ticker} />
+          </div>
+        )}
 
-      {visitedTabs.has('notes') && (
-        <div className={activeTab === 'notes' ? 'block animate-fade-in' : 'hidden'}>
-          <EquityNotesTab ticker={data.ticker} />
-        </div>
-      )}
+        {visitedTabs.has('notes') && (
+          <div className={activeTab === 'notes' ? 'block animate-fade-in' : 'hidden'}>
+            <EquityNotesTab ticker={data.ticker} />
+          </div>
+        )}
 
-      {visitedTabs.has('earnings-call') && (
-        <div className={activeTab === 'earnings-call' ? 'block animate-fade-in' : 'hidden'}>
-          <EarningsCallTab ticker={data.ticker} market={data.market} />
-        </div>
-      )}
+        {visitedTabs.has('earnings-call') && (
+          <div className={activeTab === 'earnings-call' ? 'block animate-fade-in' : 'hidden'}>
+            <EarningsCallTab ticker={data.ticker} market={data.market} />
+          </div>
+        )}
 
-      {visitedTabs.has('event-study') && (
-        <div className={activeTab === 'event-study' ? 'block animate-fade-in' : 'hidden'}>
-          <EventStudyTab ticker={data.ticker} market={data.market} />
-        </div>
-      )}
+        {visitedTabs.has('event-study') && (
+          <div className={activeTab === 'event-study' ? 'block animate-fade-in' : 'hidden'}>
+            <EventStudyTab ticker={data.ticker} market={data.market} />
+          </div>
+        )}
+      </Suspense>
 
       {visitedTabs.has('overview') && (
         <div className={activeTab === 'overview' ? 'space-y-8 block animate-fade-in' : 'hidden'}>
@@ -473,7 +526,7 @@ export const EquityDetail: React.FC<EquityDetailProps> = ({
 
             {/* Evidence Provenance Drawer (If Opened) */}
             {isProvenanceDrawerOpen && evidenceSnapshot && (
-              <div className="flow-panel rounded-2xl border border-edge/80 p-5 shadow-xs">
+              <div className="flow-panel rounded-2xl border border-edge/80 p-5 shadow-sm">
                 <EvidenceProvenanceDrawer snapshot={evidenceSnapshot} />
               </div>
             )}
@@ -496,7 +549,7 @@ export const EquityDetail: React.FC<EquityDetailProps> = ({
           <div className="space-y-4">
             <SectionWaypointHeader
               tierNumber={2}
-              icon="💼"
+              icon={<BriefcasePortfolioIcon className="h-4 w-4 text-section-accent" />}
               title="ส่วนที่ 2: ทบทวนสถานะพอร์ตและจิตวิทยาการลงทุน"
               plainLanguageSummary="ตรวจดูว่าหุ้นในมือเรา ราคาขึ้นเพราะกำไรแท้จริง (EPS Growth) หรือเพราะตลาดเก็งกำไรจน P/E พอง"
               frameworkLabel="Position & Decision Review"
@@ -506,9 +559,9 @@ export const EquityDetail: React.FC<EquityDetailProps> = ({
               <button
                 type="button"
                 onClick={() => setIsPositionReviewModalOpen(true)}
-                className="rounded-xl border border-sky-200 bg-sky-50 px-3 py-1.5 text-xs font-bold text-sky-700 hover:bg-sky-100 transition-colors shadow-2xs flex items-center gap-1.5"
+                className="rounded-xl border border-sky-200 bg-sky-50 px-3 py-1.5 text-xs font-bold text-section-accent hover:bg-sky-100 transition-colors shadow-sm flex items-center gap-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-section-accent/45"
               >
-                <span>🔍</span>
+                <SearchIcon className="h-3.5 w-3.5" />
                 <span>เปิด Position Review (Full View)</span>
               </button>
             </div>
@@ -626,62 +679,64 @@ export const EquityDetail: React.FC<EquityDetailProps> = ({
                   aria-label="Toggle institutional derivatives"
                 >
                   <div className="flex items-center gap-2">
-                    <span className="text-base">⚡</span>
+                    <BoltStrategyIcon className="h-4 w-4 text-section-accent shrink-0" />
                     <div>
-                      <h3 className="text-sm font-bold text-zinc-900">
+                      <h3 className="text-sm font-bold text-slate-900">
                         Institutional Derivatives & Sell-Side Consensus
                       </h3>
-                      <p className="text-xs text-zinc-500">
+                      <p className="text-xs text-slate-500">
                         Cboe Options Open Interest Ladder, Volatility Smile & Nasdaq Analyst Consensus
                       </p>
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
                     {maxPain?.max_pain_strike != null && (
-                      <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-zinc-100 border border-zinc-200 text-zinc-700">
+                      <span className="font-mono tabular-nums text-xs font-semibold px-2.5 py-0.5 rounded-full bg-slate-100 border border-slate-200 text-slate-700">
                         Max Pain: ${maxPain.max_pain_strike.toFixed(2)}
                       </span>
                     )}
-                    <span className="text-xs font-medium text-sky-600 hover:text-sky-700">
+                    <span className="text-xs font-medium text-section-accent hover:text-blue-900">
                       {isDerivativesExpanded ? '▲ ซ่อน' : '▼ ดูข้อมูลอนุพันธ์'}
                     </span>
                   </div>
                 </button>
                 {isDerivativesExpanded && (
-                  <div className="mt-5 space-y-6 pt-4 border-t border-edge/60 animate-fade-in">
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
-                      {nasdaqConsensus && (
-                        <NasdaqConsensusCard
-                          symbol={nasdaqConsensus.symbol}
-                          coverageStatus={nasdaqConsensus.coverage_status}
-                          hasEarningsSurprise={nasdaqConsensus.has_earnings_surprise}
-                          hasAnalystRatings={nasdaqConsensus.has_analyst_ratings}
-                          upcomingEarnings={nasdaqConsensus.upcoming_earnings}
-                          ratings={nasdaqConsensus.ratings}
-                          surpriseHistory={nasdaqConsensus.surprise_history}
-                        />
-                      )}
-                      {strikeLadderData.length > 0 && (
-                        <OptionsOiStrikeLadder
+                  <Suspense fallback={null}>
+                    <div className="mt-5 space-y-6 pt-4 border-t border-edge/60 animate-fade-in">
+                      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
+                        {nasdaqConsensus && (
+                          <NasdaqConsensusCard
+                            symbol={nasdaqConsensus.symbol}
+                            coverageStatus={nasdaqConsensus.coverage_status}
+                            hasEarningsSurprise={nasdaqConsensus.has_earnings_surprise}
+                            hasAnalystRatings={nasdaqConsensus.has_analyst_ratings}
+                            upcomingEarnings={nasdaqConsensus.upcoming_earnings}
+                            ratings={nasdaqConsensus.ratings}
+                            surpriseHistory={nasdaqConsensus.surprise_history}
+                          />
+                        )}
+                        {strikeLadderData.length > 0 && (
+                          <OptionsOiStrikeLadder
+                            symbol={data.ticker}
+                            strikes={strikeLadderData}
+                            currentPrice={resolvedCurrentPrice ?? undefined}
+                            maxPainStrike={maxPain?.max_pain_strike ?? undefined}
+                            expirationDate={optionsChain?.expiration_date ?? undefined}
+                            putCallRatio={optionsChain?.put_call_ratio ?? undefined}
+                          />
+                        )}
+                      </div>
+                      {optionsChain?.contracts && optionsChain.contracts.length > 0 && (
+                        <OptionsVolSmile
                           symbol={data.ticker}
-                          strikes={strikeLadderData}
+                          expiry={optionsChain.expiration_date || 'Current Expiry'}
                           currentPrice={resolvedCurrentPrice ?? undefined}
-                          maxPainStrike={maxPain?.max_pain_strike ?? undefined}
-                          expirationDate={optionsChain?.expiration_date ?? undefined}
-                          putCallRatio={optionsChain?.put_call_ratio ?? undefined}
+                          contracts={optionsChain.contracts}
+                          asOfDate={optionsChain.as_of}
                         />
                       )}
                     </div>
-                    {optionsChain?.contracts && optionsChain.contracts.length > 0 && (
-                      <OptionsVolSmile
-                        symbol={data.ticker}
-                        expiry={optionsChain.expiration_date || 'Current Expiry'}
-                        currentPrice={resolvedCurrentPrice ?? undefined}
-                        contracts={optionsChain.contracts}
-                        asOfDate={optionsChain.as_of}
-                      />
-                    )}
-                  </div>
+                  </Suspense>
                 )}
               </section>
             )}
@@ -695,29 +750,31 @@ export const EquityDetail: React.FC<EquityDetailProps> = ({
       )}
 
       {/* Footer Meta */}
-      <div className="border-t border-edge pt-4 text-xs text-zinc-400 flex flex-wrap justify-between gap-y-2">
+      <div className="border-t border-edge pt-4 text-xs text-slate-500 flex flex-wrap justify-between gap-y-2">
         <div className="flex items-center gap-3">
           <span>Source: {data.source_file}</span>
           <span>•</span>
           <span>Generated by: {data.generated_by}</span>
         </div>
-        <div className="text-zinc-400">
+        <div className="text-slate-500">
           Flow Theme • Institutional Equity Suite v3.1
         </div>
       </div>
 
-      <EquityGlossaryDrawer
-        isOpen={isGlossaryOpen}
-        onClose={() => setIsGlossaryOpen(false)}
-      />
+      <Suspense fallback={null}>
+        <EquityGlossaryDrawer
+          isOpen={isGlossaryOpen}
+          onClose={() => setIsGlossaryOpen(false)}
+        />
 
-      <PositionReviewModal
-        isOpen={isPositionReviewModalOpen}
-        onClose={() => setIsPositionReviewModalOpen(false)}
-        ticker={data.ticker}
-        market={data.market || 'US'}
-        portfolioId={portfolioId}
-      />
+        <PositionReviewModal
+          isOpen={isPositionReviewModalOpen}
+          onClose={() => setIsPositionReviewModalOpen(false)}
+          ticker={data.ticker}
+          market={data.market || 'US'}
+          portfolioId={portfolioId}
+        />
+      </Suspense>
     </div>
   )
 }

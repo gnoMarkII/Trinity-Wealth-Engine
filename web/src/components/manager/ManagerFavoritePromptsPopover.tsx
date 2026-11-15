@@ -45,9 +45,9 @@ const CATEGORY_STYLES: Record<
     accent: 'text-sky-800',
   },
   equity: {
-    badge: 'bg-indigo-50 text-indigo-700 border-indigo-200',
-    border: 'border-indigo-100 hover:border-indigo-300',
-    accent: 'text-indigo-800',
+    badge: 'bg-blue-50 text-blue-700 border-blue-200',
+    border: 'border-blue-100 hover:border-blue-300',
+    accent: 'text-blue-800',
   },
   portfolio: {
     badge: 'bg-emerald-50 text-emerald-700 border-emerald-200',
@@ -204,7 +204,7 @@ export default function ManagerFavoritePromptsPopover({
               <h2 id="favorite-prompts-title" className="text-sm font-bold text-sky-950">
                 คลังคำสั่งอัจฉริยะ (Favorite Prompts Library)
               </h2>
-              <p className="text-[11px] text-zinc-500">
+              <p className="text-[11px] text-slate-500">
                 คำสั่งครอบคลุมครบทุกมิติ Macro, Equity, Portfolio & Workflows
               </p>
             </div>
@@ -222,7 +222,7 @@ export default function ManagerFavoritePromptsPopover({
             <button
               type="button"
               onClick={onClose}
-              className="flex h-8 w-8 items-center justify-center rounded-xl border border-sky-100 text-zinc-400 hover:bg-sky-50 hover:text-sky-800 transition-colors"
+              className="flex h-8 w-8 items-center justify-center rounded-xl border border-sky-100 text-slate-500 hover:bg-sky-50 hover:text-sky-800 transition-colors"
               title="ปิดหน้าต่าง (Esc)"
             >
               ✕
@@ -246,7 +246,7 @@ export default function ManagerFavoritePromptsPopover({
               <button
                 type="button"
                 onClick={() => setSearch('')}
-                className="rounded-lg px-2 py-1 text-xs text-zinc-400 hover:text-zinc-600"
+                className="rounded-lg px-2 py-1 text-xs text-slate-500 hover:text-slate-600"
               >
                 ล้างคำค้น
               </button>
@@ -270,13 +270,13 @@ export default function ManagerFavoritePromptsPopover({
                   className={`flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-bold transition-all ${
                     active
                       ? 'border border-sky-300 bg-sky-500 text-white shadow-sm shadow-sky-500/25'
-                      : 'border border-sky-100 bg-panel text-zinc-600 hover:bg-sky-50 hover:text-sky-900'
+                      : 'border border-sky-100 bg-panel text-slate-600 hover:bg-sky-50 hover:text-sky-900'
                   }`}
                 >
                   <span>{tab.icon}</span>
                   <span>{tab.label}</span>
                   <span
-                    className={`rounded-full px-1.5 py-0.2 text-[9px] font-mono ${
+                    className={`rounded-full px-1.5 py-0.5 text-[11px] font-mono ${
                       active ? 'bg-white/25 text-white' : 'bg-sky-100 text-sky-800'
                     }`}
                   >
@@ -289,8 +289,8 @@ export default function ManagerFavoritePromptsPopover({
 
           {/* Live Ticker Bar (when in Equity or when viewing Ticker prompts) */}
           {showTickerBar && (
-            <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-indigo-100 bg-indigo-50/50 p-2 text-xs">
-              <span className="font-semibold text-indigo-950 flex items-center gap-1">
+            <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-blue-100 bg-blue-50/50 p-2 text-xs">
+              <span className="font-semibold text-blue-950 flex items-center gap-1">
                 <span>🎯</span>
                 <span>หุ้นเป้าหมาย [TICKER]:</span>
               </span>
@@ -302,8 +302,8 @@ export default function ManagerFavoritePromptsPopover({
                     onClick={() => onActiveTickerChange(t)}
                     className={`rounded-lg px-2 py-0.5 text-xs font-bold transition-all ${
                       activeTicker.toUpperCase() === t
-                        ? 'bg-indigo-600 text-white shadow-sm'
-                        : 'bg-white text-indigo-800 border border-indigo-200 hover:bg-indigo-100/60'
+                        ? 'bg-blue-600 text-white shadow-sm'
+                        : 'bg-white text-blue-800 border border-blue-200 hover:bg-blue-100/60'
                     }`}
                   >
                     {t}
@@ -315,7 +315,7 @@ export default function ManagerFavoritePromptsPopover({
                 value={activeTicker}
                 onChange={(e) => onActiveTickerChange(e.target.value.toUpperCase())}
                 placeholder="ระบุหุ้นอื่นๆ เช่น DELTA"
-                className="w-28 rounded-lg border border-indigo-200 bg-white px-2 py-0.5 text-xs font-bold uppercase text-indigo-900 placeholder:normal-case placeholder-zinc-400 focus:outline-none focus:ring-1 focus:ring-indigo-400"
+                className="w-28 rounded-lg border border-blue-200 bg-white px-2 py-0.5 text-xs font-bold uppercase text-blue-900 placeholder:normal-case placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-blue-400"
               />
             </div>
           )}
@@ -334,7 +334,7 @@ export default function ManagerFavoritePromptsPopover({
               <button
                 type="button"
                 onClick={() => setIsFormOpen(false)}
-                className="text-xs text-zinc-400 hover:text-zinc-600"
+                className="text-xs text-slate-500 hover:text-slate-600"
               >
                 ยกเลิก
               </button>
@@ -369,7 +369,7 @@ export default function ManagerFavoritePromptsPopover({
 
             <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
               <div className="flex items-center gap-2">
-                <span className="text-[11px] text-zinc-500 font-medium">หมวดหมู่:</span>
+                <span className="text-[11px] text-slate-500 font-medium">หมวดหมู่:</span>
                 <select
                   value={formCategory}
                   onChange={(e) => setFormCategory(e.target.value as FavoritePromptCategory)}
@@ -384,16 +384,16 @@ export default function ManagerFavoritePromptsPopover({
 
               {/* Context toggles */}
               <div className="flex items-center gap-1">
-                <span className="text-[11px] text-zinc-500">บริบท:</span>
+                <span className="text-[11px] text-slate-500">บริบท:</span>
                 {['@Portfolio', '@Macro', '@Digest', '@Essence'].map((pill) => (
                   <button
                     key={pill}
                     type="button"
                     onClick={() => toggleFormContext(pill)}
-                    className={`rounded-md px-2 py-0.5 text-[10px] font-semibold transition-all ${
+                    className={`rounded-md px-2 py-0.5 text-[11px] font-semibold transition-all ${
                       formContextRefs.includes(pill)
                         ? 'bg-sky-500 text-white'
-                        : 'bg-zinc-100 text-zinc-600 hover:bg-zinc-200'
+                        : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                     }`}
                   >
                     {pill}
@@ -414,11 +414,11 @@ export default function ManagerFavoritePromptsPopover({
         {/* Cards Grid Body */}
         <div className="flex-1 min-h-0 overflow-y-auto p-4 custom-scrollbar">
           {filteredPrompts.length === 0 ? (
-            <div className="flex h-48 flex-col items-center justify-center text-center text-zinc-400">
+            <div className="flex h-48 flex-col items-center justify-center text-center text-slate-500">
               <span className="text-3xl mb-1">🔍</span>
               <p className="text-xs">ไม่พบคำสั่งที่ตรงกับตัวกรองนี้</p>
               {activeTab === 'pinned' && (
-                <p className="text-[11px] text-zinc-400 mt-1">
+                <p className="text-[11px] text-slate-500 mt-1">
                   กดติดดาว ⭐ บนการ์ดคำสั่งที่คุณใช้บ่อยเพื่อรวมไว้ที่นี่
                 </p>
               )}
@@ -440,12 +440,12 @@ export default function ManagerFavoritePromptsPopover({
                       <div className="flex items-center justify-between gap-1.5 mb-2">
                         <div className="flex items-center gap-1.5 flex-wrap">
                           <span
-                            className={`rounded-md border px-2 py-0.5 text-[10px] font-bold ${style.badge}`}
+                            className={`rounded-md border px-2 py-0.5 text-[11px] font-bold ${style.badge}`}
                           >
                             {item.dimensionBadge}
                           </span>
                           {item.isCustom && (
-                            <span className="rounded-md border border-purple-200 bg-purple-50 px-1.5 py-0.5 text-[9px] font-semibold text-purple-700">
+                            <span className="rounded-md border border-sky-200 bg-sky-50 px-1.5 py-0.5 text-[11px] font-semibold text-blue-700">
                               Custom
                             </span>
                           )}
@@ -458,7 +458,7 @@ export default function ManagerFavoritePromptsPopover({
                                 type="button"
                                 onClick={() => openEditForm(item)}
                                 title="แก้ไขคำสั่ง"
-                                className="rounded p-1 text-zinc-400 hover:text-sky-700 hover:bg-sky-50"
+                                className="rounded p-1 text-slate-500 hover:text-sky-700 hover:bg-sky-50"
                               >
                                 ✎
                               </button>
@@ -466,7 +466,7 @@ export default function ManagerFavoritePromptsPopover({
                                 type="button"
                                 onClick={() => onDeleteCustom(item.id)}
                                 title="ลบคำสั่ง"
-                                className="rounded p-1 text-zinc-400 hover:text-rose-600 hover:bg-rose-50"
+                                className="rounded p-1 text-slate-500 hover:text-rose-600 hover:bg-rose-50"
                               >
                                 🗑️
                               </button>
@@ -479,7 +479,7 @@ export default function ManagerFavoritePromptsPopover({
                             className={`rounded-lg p-1 text-sm transition-transform active:scale-125 ${
                               item.isPinned
                                 ? 'text-amber-500 animate-icon-pop'
-                                : 'text-zinc-300 hover:text-amber-400'
+                                : 'text-slate-300 hover:text-amber-400'
                             }`}
                           >
                             ⭐
@@ -493,7 +493,7 @@ export default function ManagerFavoritePromptsPopover({
                       </h4>
 
                       {/* Prompt Snippet */}
-                      <p className="text-[11px] text-zinc-600 leading-relaxed line-clamp-3 mb-2.5">
+                      <p className="text-[11px] text-slate-600 leading-relaxed line-clamp-3 mb-2.5">
                         {resolved.prompt}
                       </p>
                     </div>
@@ -504,7 +504,7 @@ export default function ManagerFavoritePromptsPopover({
                         {resolved.contextRefs.map((ref) => (
                           <span
                             key={ref}
-                            className="rounded border border-sky-200/80 bg-sky-50 px-1.5 py-0.2 text-[9px] font-mono text-sky-800"
+                            className="rounded border border-sky-200/80 bg-sky-50 px-1.5 py-0.5 text-[11px] font-mono text-sky-800"
                           >
                             {ref}
                           </span>

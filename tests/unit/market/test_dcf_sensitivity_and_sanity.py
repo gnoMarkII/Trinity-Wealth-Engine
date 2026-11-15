@@ -662,6 +662,90 @@ def test_institutional_margin_of_safety_entry_price(mock_macro_registry):
     assert "in_margin_of_safety_buy_zone:dcf" in flags_bargain
 
 
+def test_reverse_dcf_adaptive_da_and_clamp(mock_macro_registry):
+    """Verify Reverse DCF uses historical D&A % of revenue (clamped 2%-25%) instead of hardcoded 4%."""
+    hist_fab = [
+        HistoricalFinancialItem(
+            fiscal_year="2025A",
+            revenue=50_000_000_000.0,
+            ebit=5_000_000_000.0,
+            ebit_margin_pct=10.0,
+            depreciation=11_000_000_000.0,  # 22% of revenue (foundry-heavy)
+        )
+    ]
+    res_fab, _ = compute_institutional_reverse_dcf(
+        ticker="FABCO",
+        market="US",
+        current_price=40.0,
+        shares_outstanding=4_000_000_000,
+        base_revenue=50_000_000_000.0,
+        base_ebit_margin_pct=10.0,
+        tax_rate=0.21,
+        reinvestment_rate_pct=10.0,
+        beta=1.1,
+        total_debt=20_000_000_000.0,
+        cash_and_equivalents=10_000_000_000.0,
+        interest_expense=1_000_000_000.0,
+        macro_registry=mock_macro_registry,
+        sector="Technology",
+        forecast_revenue_growth_pct=6.0,
+        historical_financials=hist_fab,
+    )
+    y1 = res_fab.explicit_forecast_5y[0]
+    assert y1.projected_depreciation == pytest.approx(y1.projected_revenue * 0.22, rel=1e-3)
+    assert res_fab.terminal_ebitda > res_fab.explicit_forecast_5y[-1].projected_ebit + (y1.projected_revenue * 0.15)
+
+    # Upper clamp check (e.g. 40% D&A clamped to 25%)
+    hist_extreme = [
+        HistoricalFinancialItem(
+            fiscal_year="2025A",
+            revenue=100.0,
+            ebit=10.0,
+            ebit_margin_pct=10.0,
+            depreciation=40.0,
+        )
+    ]
+    res_clamped, _ = compute_institutional_reverse_dcf(
+        ticker="CLAMP",
+        market="US",
+        current_price=10.0,
+        shares_outstanding=10.0,
+        base_revenue=100.0,
+        base_ebit_margin_pct=10.0,
+        tax_rate=0.21,
+        reinvestment_rate_pct=10.0,
+        beta=1.0,
+        macro_registry=mock_macro_registry,
+        sector="Technology",
+        forecast_revenue_growth_pct=5.0,
+        historical_financials=hist_extreme,
+    )
+    y1_c = res_clamped.explicit_forecast_5y[0]
+    assert y1_c.projected_depreciation == pytest.approx(y1_c.projected_revenue * 0.25, rel=1e-3)
+
+
+def test_simple_dcf_uses_explicit_ebit_for_synthetic_rating(mock_macro_registry):
+    """Verify compute_dcf_valuation uses passed ebit for ICR/synthetic rating rather than FCF proxy."""
+    # FCF = $100M, real EBIT = $500M, interest = $50M -> ICR = 10.0x (AAA), whereas approx_ebit=100M would give 2.0x (BB+)
+    res, _ = compute_dcf_valuation(
+        ticker="REAL_EBIT",
+        market="US",
+        current_price=50.0,
+        beta=1.1,
+        fcf_per_share=1.0,
+        market_cap=5_000.0,  # 100 shares -> total FCF = 100
+        total_debt=1_000.0,
+        interest_expense=50.0,
+        tax_rate=0.21,
+        fcf_cagr_3y=10.0,
+        macro_registry=mock_macro_registry,
+        ebit=500.0,
+    )
+    assert res is not None
+    assert res.interest_coverage_ratio == 10.0
+    assert res.synthetic_credit_rating == "AAA"
+
+
 
 
 

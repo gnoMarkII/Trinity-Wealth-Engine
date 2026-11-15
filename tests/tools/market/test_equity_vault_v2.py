@@ -152,3 +152,40 @@ def test_ftnt_quant_and_earnings_v2(tmp_path: Path, monkeypatch) -> None:
     assert notes[0].ticker == "FTNT"
     assert notes[0].period == "2026-Q2"
     assert "Revenue grew 15%" in notes[0].highlights
+
+
+def test_list_notes_strips_yaml_frontmatter_labels_equity_analysis_and_hides_duplicate_latest(tmp_path: Path, monkeypatch) -> None:
+    """WP-S4: Vault list_notes strips YAML frontmatter, tags equity_analysis, and deduplicates *latest.md."""
+    vault_dir = tmp_path / "vault_v2"
+    analysis_dir = vault_dir / "30_Knowledge_Base" / "Stocks" / "FTNT" / "Analysis"
+    analysis_dir.mkdir(parents=True)
+    note_body = (
+        "---\n"
+        "schema_version: 2\n"
+        "title: FTNT Equity Analysis 2026-11-10\n"
+        "entity_type: equity_analysis\n"
+        "ticker: FTNT\n"
+        "date: 2026-11-10\n"
+        "tags: [stock_analysis, ftnt]\n"
+        "---\n\n"
+        "<!-- comment -->\n"
+        "# 📊 บทวิเคราะห์: Fortinet Inc. (FTNT)\n"
+        "> **Analysis Price:** **$84.50**\n\n"
+        "| Metric | Value |\n|---|---|\n\n"
+        "Strong FCF conversion supports recurring firewall billings.\n"
+    )
+    (analysis_dir / "FTNT Equity Analysis 2026-11-10.md").write_text(note_body, encoding="utf-8")
+    (analysis_dir / "FTNT Equity Analysis latest.md").write_text(note_body, encoding="utf-8")
+
+    monkeypatch.setenv("OBSIDIAN_VAULT_PATH", str(vault_dir))
+    adapter = EquityVaultQueryAdapter(vault_path=vault_dir)
+    res = adapter.list_notes("FTNT", days=0)
+    assert res["total_count"] == 1
+    item = res["items"][0]
+    assert item["title"] == "FTNT Equity Analysis 2026-11-10"
+    assert item["matched_by"] == "equity_analysis"
+    assert "schema_version:" not in item["snippet"]
+    assert "entity_type:" not in item["snippet"]
+    assert "---" not in item["snippet"]
+    assert "Fortinet Inc." in item["snippet"]
+    assert "Strong FCF conversion" in item["snippet"]

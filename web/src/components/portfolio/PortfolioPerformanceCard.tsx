@@ -135,21 +135,21 @@ export default function PortfolioPerformanceCard({
       <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center border-b border-sky-100 pb-4">
         <div>
           <div className="flex items-center gap-2">
-            <h3 className="text-sm sm:text-base font-extrabold text-zinc-900 tracking-tight">
+            <h3 className="text-sm sm:text-base font-extrabold text-slate-900 tracking-tight">
               ผลการดำเนินงานและการเติบโต (Performance & NAV Growth)
             </h3>
-            <span className="rounded-full bg-sky-100 px-2 py-0.5 text-[10px] font-bold text-sky-800">
+            <span className="rounded-full bg-sky-100 px-2 py-0.5 text-[11px] font-bold text-sky-800">
               {sortedRows.length} จุดข้อมูล
             </span>
           </div>
-          <p className="text-xs text-zinc-500 mt-0.5">
+          <p className="text-xs text-slate-500 mt-0.5">
             ติดตามประวัติการเติบโตของมูลค่าพอร์ต (NAV) เปรียบเทียบกับต้นทุนสะสม
           </p>
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
           {/* Days selector */}
-          <div className="flex items-center rounded-xl border border-sky-100 bg-surface p-1 shadow-2xs">
+          <div className="flex items-center rounded-xl border border-sky-100 bg-surface p-1 shadow-sm">
             {[
               { label: '30 วัน', val: 30 },
               { label: '90 วัน', val: 90 },
@@ -162,8 +162,8 @@ export default function PortfolioPerformanceCard({
                 onClick={() => onChangeDaysRange(opt.val)}
                 className={`rounded-lg px-2.5 py-1 text-xs font-semibold transition-colors ${
                   daysRange === opt.val
-                    ? 'bg-flow-blue text-white shadow-2xs font-bold'
-                    : 'text-zinc-500 hover:bg-sky-50'
+                    ? 'bg-flow-blue text-white shadow-sm font-bold'
+                    : 'text-slate-500 hover:bg-sky-50'
                 }`}
               >
                 {opt.label}
@@ -176,7 +176,7 @@ export default function PortfolioPerformanceCard({
             className={`inline-flex items-center gap-1.5 rounded-xl border px-3 py-1.5 text-xs font-semibold ${
               hasSnapshotToday
                 ? 'border-emerald-200 bg-emerald-50/70 text-emerald-700'
-                : 'border-zinc-200 bg-zinc-50 text-zinc-500'
+                : 'border-slate-200 bg-slate-50 text-slate-500'
             }`}
             title={
               hasSnapshotToday
@@ -207,28 +207,28 @@ export default function PortfolioPerformanceCard({
       {/* Metrics Row */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-surface rounded-xl p-3 border border-sky-50">
         <div>
-          <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400">Snapshot Date</span>
-          <div className="text-xs font-mono font-bold text-zinc-800 mt-0.5">
+          <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">Snapshot Date</span>
+          <div className="text-xs font-mono font-bold text-slate-800 mt-0.5">
             {activePoint ? activePoint.date : '—'}
           </div>
         </div>
 
         <div>
-          <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400">Total NAV</span>
+          <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">Total NAV</span>
           <div className="text-sm font-mono font-extrabold tabular-nums text-flow-blue mt-0.5">
             {activePoint ? formatTHB(activePoint.nav) : '—'}
           </div>
         </div>
 
         <div>
-          <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400">Cost Basis</span>
-          <div className="text-xs font-mono font-semibold tabular-nums text-zinc-600 mt-0.5">
+          <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">Cost Basis</span>
+          <div className="text-xs font-mono font-semibold tabular-nums text-slate-600 mt-0.5">
             {activePoint ? formatTHB(activePoint.cost) : '—'}
           </div>
         </div>
 
         <div>
-          <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400">Unrealized PnL</span>
+          <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">Unrealized PnL</span>
           <div
             className={`text-xs font-mono font-bold tabular-nums mt-0.5 ${
               activePoint && activePoint.pnl >= 0 ? 'text-emerald-600' : 'text-rose-600'
@@ -270,7 +270,7 @@ export default function PortfolioPerformanceCard({
                   x={padLeft - 8}
                   y={gl.y + 4}
                   textAnchor="end"
-                  className="text-[10px] font-mono fill-zinc-400"
+                  className="text-[11px] font-mono fill-slate-400"
                 >
                   {gl.val >= 1000 ? `${(gl.val / 1000).toFixed(0)}k` : gl.val.toFixed(0)}
                 </text>
@@ -288,7 +288,7 @@ export default function PortfolioPerformanceCard({
                   x={pt.x}
                   y={height - 8}
                   textAnchor={anchor}
-                  className="text-[10px] font-mono fill-zinc-400"
+                  className="text-[11px] font-mono fill-slate-400"
                 >
                   {pt.date}
                 </text>
@@ -345,7 +345,7 @@ export default function PortfolioPerformanceCard({
           </svg>
 
           {/* Legend */}
-          <div className="flex items-center justify-end gap-4 text-[11px] font-medium pt-2 text-zinc-500">
+          <div className="flex items-center justify-end gap-4 text-[11px] font-medium pt-2 text-slate-500">
             <span className="flex items-center gap-1.5">
               <span className="inline-block h-2.5 w-2.5 rounded-sm bg-flow-blue" />
               <span>Total NAV</span>
@@ -357,9 +357,9 @@ export default function PortfolioPerformanceCard({
           </div>
         </div>
       ) : (
-        <div className="py-12 text-center text-xs text-zinc-400 bg-surface rounded-xl border border-dashed border-sky-100">
+        <div className="py-12 text-center text-xs text-slate-500 bg-surface rounded-xl border border-dashed border-sky-100">
           ต้องการข้อมูล Snapshot อย่างน้อย 2 วันเพื่อวาดกราฟแนวโน้ม (ปัจจุบัน: {sortedRows.length} วัน)
-          <p className="mt-2 text-[11px] text-zinc-500">
+          <p className="mt-2 text-[11px] text-slate-500">
             กดปุ่ม <span className="font-bold text-flow-blue">"อัปเดตราคาตลาด & Snapshot วันนี้"</span> ด้านบนเพื่อเริ่มสร้างประวัติพอร์ต
           </p>
         </div>
@@ -370,17 +370,17 @@ export default function PortfolioPerformanceCard({
         <button
           type="button"
           onClick={() => setTableOpen(!tableOpen)}
-          className="flex items-center justify-between w-full text-xs font-semibold text-zinc-600 hover:text-zinc-900 transition-colors py-1"
+          className="flex items-center justify-between w-full text-xs font-semibold text-slate-600 hover:text-slate-900 transition-colors py-1"
         >
           <span>ดูตารางประวัติ Snapshot ({sortedRows.length} วัน)</span>
-          <span className="text-zinc-400 text-sm">{tableOpen ? '▴ ซ่อนตาราง' : '▾ กางตาราง'}</span>
+          <span className="text-slate-500 text-sm">{tableOpen ? '▴ ซ่อนตาราง' : '▾ กางตาราง'}</span>
         </button>
 
         {tableOpen && (
           <div className="mt-3 overflow-x-auto rounded-xl border border-sky-100 animate-fade-in">
             <table className="w-full text-left text-xs">
               <thead>
-                <tr className="border-b border-sky-100 bg-sky-50/50 font-bold uppercase text-[10px] text-zinc-500">
+                <tr className="border-b border-sky-100 bg-sky-50/50 font-bold uppercase text-[11px] text-slate-500">
                   <th className="px-4 py-2.5">Date</th>
                   <th className="px-4 py-2.5 text-right">Total NAV</th>
                   <th className="px-4 py-2.5 text-right">Total Cost</th>
@@ -393,14 +393,14 @@ export default function PortfolioPerformanceCard({
                   const isPos = r.Unrealized_PnL >= 0
                   return (
                     <tr key={r.Date} className="hover:bg-sky-50/40 transition-colors">
-                      <td className="px-4 py-2 font-bold text-zinc-800">{r.Date}</td>
-                      <td className="px-4 py-2 text-right font-bold text-zinc-900">{formatTHB(r.Total_NAV)}</td>
-                      <td className="px-4 py-2 text-right text-zinc-600">{formatTHB(r.Total_Cost)}</td>
+                      <td className="px-4 py-2 font-bold text-slate-800">{r.Date}</td>
+                      <td className="px-4 py-2 text-right font-bold text-slate-900">{formatTHB(r.Total_NAV)}</td>
+                      <td className="px-4 py-2 text-right text-slate-600">{formatTHB(r.Total_Cost)}</td>
                       <td className={`px-4 py-2 text-right font-bold ${isPos ? 'text-emerald-600' : 'text-rose-600'}`}>
                         {isPos ? '+' : ''}
                         {formatTHB(r.Unrealized_PnL)}
                       </td>
-                      <td className="px-4 py-2 text-right text-zinc-600">{formatTHB(r.Cash_Balance)}</td>
+                      <td className="px-4 py-2 text-right text-slate-600">{formatTHB(r.Cash_Balance)}</td>
                     </tr>
                   )
                 })}

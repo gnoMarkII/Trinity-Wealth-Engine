@@ -80,7 +80,7 @@ export default function AddCardDropdown({
         >
           {groups.map((group) => (
             <div key={group.flow} className="mb-1 last:mb-0">
-              <p className="px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-zinc-400">
+              <p className="px-2 py-1 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
                 {group.label}
               </p>
               {group.items.map((t) => (
@@ -91,7 +91,7 @@ export default function AddCardDropdown({
                       onQuickCreate(t.label, t.instruction, t.flow, t.scope)
                       setOpen(false)
                     }}
-                    className="block flex-1 truncate px-2 py-1.5 text-left text-xs text-zinc-700 group-hover/item:text-sky-500"
+                    className="block flex-1 truncate px-2 py-1.5 text-left text-xs text-slate-700 group-hover/item:text-sky-500"
                   >
                     {t.label}
                   </button>
@@ -103,7 +103,7 @@ export default function AddCardDropdown({
                       onEditTemplate(t.index)
                       setOpen(false)
                     }}
-                    className="shrink-0 rounded px-1.5 py-1.5 text-zinc-400 opacity-0 transition-opacity hover:text-sky-800 focus:opacity-100 focus-visible:opacity-100 group-hover/item:opacity-100"
+                    className="shrink-0 rounded px-1.5 py-1.5 text-slate-500 opacity-0 transition-opacity hover:text-sky-800 focus:opacity-100 focus-visible:opacity-100 group-hover/item:opacity-100"
                   >
                     ✎
                   </button>

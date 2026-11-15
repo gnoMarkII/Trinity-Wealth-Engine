@@ -22,8 +22,8 @@ export default function ScoreRing({ score, size = 88, textSizeClass = 'text-2xl'
     return () => cancelAnimationFrame(id)
   }, [targetOffset])
 
-  let ringClass = 'stroke-zinc-300'
-  let textClass = 'text-zinc-400'
+  let ringClass = 'stroke-slate-300'
+  let textClass = 'text-slate-500'
   if (!isNull) {
     if (score < 40) {
       ringClass = 'stroke-red-400'

@@ -1,8 +1,11 @@
 import { useState } from 'react'
+import { AlertTriangleIcon, BulbIcon, CheckSmallIcon, CloseIcon } from './ui/AppIcons'
+import { InPlaceDialog } from './ui/Modal'
 import type {
   ApprovalPayload,
   NewsFunnelApprovalPayload,
   NewsYoutubeApprovalPayload,
+  PreRunApprovalPayload,
   YoutubePitchApprovalPayload,
 } from '../api/types'
 
@@ -13,7 +16,7 @@ interface Props {
     approvedYoutubeLinks: string[],
     approvedEventIds?: string[],
     approvedPitchIds?: string[],
-    action?: 'approve' | 'refresh_sources',
+    action?: 'approve' | 'refresh_sources' | 'reject',
     unverifiedDraftSelections?: import('../api/types').UnverifiedDraftSelection[],
     pitchPresentationStyles?: Record<string, string>
   ) => void
@@ -21,6 +24,9 @@ interface Props {
 }
 
 export default function ApprovalPanel({ payload, onApprove, submitting }: Props) {
+  if (payload.type === 'pre_run_approval') {
+    return <PreRunApprovalView payload={payload} onApprove={onApprove} submitting={submitting} />
+  }
   if (payload.type === 'news_funnel_approval') {
     return <NewsFunnelApprovalView payload={payload} onApprove={onApprove} submitting={submitting} />
   }
@@ -28,6 +34,75 @@ export default function ApprovalPanel({ payload, onApprove, submitting }: Props)
     return <YoutubePitchApprovalView payload={payload} onApprove={onApprove} submitting={submitting} />
   }
   return <NewsYoutubeApprovalView payload={payload} onApprove={onApprove} submitting={submitting} />
+}
+
+function PreRunApprovalView({
+  payload,
+  onApprove,
+  submitting,
+}: {
+  payload: PreRunApprovalPayload
+  onApprove: Props['onApprove']
+  submitting?: boolean
+}) {
+  return (
+    <div className="space-y-3 rounded-xl border border-amber-200 bg-amber-50 p-4 shadow-sm shadow-black/5">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="flex items-center gap-2">
+          <span className="h-2 w-2 rounded-full bg-amber-500" />
+          <h3 className="text-sm font-semibold text-amber-900">
+            รอการยอมรับก่อนเริ่มรัน (Pre-Run Approval)
+          </h3>
+        </div>
+        <div className="flex items-center gap-1.5">
+          {payload.ticker && (
+            <span className="rounded border border-sky-200 bg-sky-50 px-1.5 py-0.5 text-[11px] font-semibold text-sky-800">
+              {payload.ticker}
+            </span>
+          )}
+          {payload.flow && (
+            <span className="rounded border border-sky-200 bg-sky-50 px-1.5 py-0.5 text-[11px] font-medium text-blue-700">
+              #{payload.flow}
+            </span>
+          )}
+        </div>
+      </div>
+
+      {payload.title && payload.title !== payload.instruction && (
+        <p className="text-xs font-semibold text-slate-900">{payload.title}</p>
+      )}
+
+      <div className="rounded-lg border border-amber-200/70 bg-white/90 p-2.5 text-xs text-slate-700 leading-relaxed">
+        {payload.instruction}
+      </div>
+
+      <p className="text-[11px] text-amber-800">
+        งานนี้ยังไม่ได้ส่งให้ Workers ประมวลผล — กรุณากดยอมรับเพื่อเริ่มรัน หรือกดยกเลิกเพื่อย้ายกลับ Backlog
+      </p>
+
+      <div className="flex flex-wrap items-center gap-2">
+        <button
+          type="button"
+          onClick={() => onApprove([], [], undefined, undefined, 'approve')}
+          disabled={submitting}
+          aria-label={submitting ? 'กำลังดำเนินการ...' : '✅ ยอมรับและเริ่มรัน'}
+          className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 px-4 py-2 text-xs font-semibold text-white shadow-sm transition-colors hover:bg-emerald-700 disabled:opacity-50"
+        >
+          <CheckSmallIcon className="h-3.5 w-3.5 shrink-0" />
+          <span>{submitting ? 'กำลังดำเนินการ...' : 'ยอมรับและเริ่มรัน'}</span>
+        </button>
+        <button
+          type="button"
+          onClick={() => onApprove([], [], undefined, undefined, 'reject')}
+          disabled={submitting}
+          className="inline-flex items-center gap-1.5 rounded-lg border border-rose-200 bg-white px-3.5 py-2 text-xs font-semibold text-rose-700 transition-colors hover:bg-rose-50 disabled:opacity-50"
+        >
+          <CloseIcon className="h-3.5 w-3.5 shrink-0" />
+          <span>ยกเลิก (ส่งกลับ Backlog)</span>
+        </button>
+      </div>
+    </div>
+  )
 }
 
 function NewsFunnelApprovalView({
@@ -86,7 +161,7 @@ function NewsFunnelApprovalView({
             const maxScore = Math.max(c.macro_impact_score || 0, c.asset_impact_score || 0)
             return (
               <li key={c.event_id}>
-                <label className="relative flex cursor-pointer items-start gap-2.5 rounded-lg border border-edge bg-panel p-3 text-xs text-zinc-700 transition-colors hover:border-zinc-300">
+                <label className="relative flex cursor-pointer items-start gap-2.5 rounded-lg border border-edge bg-panel p-3 text-xs text-slate-700 transition-colors hover:border-slate-300">
                   <input
                     type="checkbox"
                     checked={selectedEventIds.has(c.event_id)}
@@ -101,15 +176,16 @@ function NewsFunnelApprovalView({
                       {c.triage_source === 'heuristic_fallback' && (
                         <span
                           title={`คะแนนจาก heuristic fallback (${c.triage_fallback_reason ? `สาเหตุ: ${c.triage_fallback_reason}` : 'LLM triage ล้มเหลวรอบ ingest'}) — โปรดตรวจสอบเนื้อหาก่อนอนุมัติ`}
-                          className="rounded border border-red-200 bg-red-50 px-1.5 py-0.5 text-[10px] font-semibold text-red-700"
+                          className="inline-flex items-center gap-1 rounded border border-red-200 bg-red-50 px-1.5 py-0.5 text-[11px] font-semibold text-red-700"
                         >
-                          ⚠️ Heuristic{c.triage_fallback_reason ? ` (${c.triage_fallback_reason})` : ''}
+                          <AlertTriangleIcon className="h-3 w-3 shrink-0" />
+                          <span>Heuristic{c.triage_fallback_reason ? ` (${c.triage_fallback_reason})` : ''}</span>
                         </span>
                       )}
-                      <span className="font-semibold text-zinc-900">{c.canonical_title}</span>
+                      <span className="font-semibold text-slate-900">{c.canonical_title}</span>
                     </div>
                     {c.comprehensive_summary && (
-                      <p className="text-zinc-600">{c.comprehensive_summary}</p>
+                      <p className="text-slate-600">{c.comprehensive_summary}</p>
                     )}
                     <div className="flex flex-wrap gap-1.5 pt-0.5">
                       {c.extracted_tickers?.map((ticker) => {
@@ -118,7 +194,7 @@ function NewsFunnelApprovalView({
                         return (
                           <span
                             key={ticker}
-                            className="rounded border border-sky-200 bg-sky-50 px-1.5 py-0.5 text-[10px] font-medium text-sky-800"
+                            className="rounded border border-sky-200 bg-sky-50 px-1.5 py-0.5 text-[11px] font-medium text-sky-800"
                           >
                             {t}
                           </span>
@@ -130,7 +206,7 @@ function NewsFunnelApprovalView({
                         return (
                           <span
                             key={theme}
-                            className="rounded border border-purple-200 bg-purple-50 px-1.5 py-0.5 text-[10px] font-medium text-purple-800"
+                            className="rounded border border-sky-200 bg-sky-50 px-1.5 py-0.5 text-[11px] font-medium text-blue-800"
                           >
                             {th}
                           </span>
@@ -144,14 +220,14 @@ function NewsFunnelApprovalView({
           })}
         </ul>
       ) : (
-        <p className="text-xs text-zinc-500">ไม่มีรายการข่าว High-Impact รออนุมัติ</p>
+        <p className="text-xs text-slate-500">ไม่มีรายการข่าว High-Impact รออนุมัติ</p>
       )}
 
       <button
         onClick={() => onApprove([], [], Array.from(selectedEventIds))}
         disabled={submitting}
         className={`rounded-lg px-4 py-2 text-sm font-medium text-white transition-colors disabled:opacity-50 ${
-          selectedEventIds.size === 0 ? 'bg-zinc-600 hover:bg-zinc-700' : 'bg-sky-500 hover:bg-sky-600'
+          selectedEventIds.size === 0 ? 'bg-slate-600 hover:bg-slate-700' : 'bg-sky-500 hover:bg-sky-600'
         }`}
       >
         {submitting
@@ -241,7 +317,7 @@ function NewsYoutubeApprovalView({
       {visibleNews.length > 0 && (
         <div>
           <div className="mb-2 flex items-center justify-between">
-            <h4 className="text-xs font-semibold uppercase tracking-wide text-zinc-500">
+            <h4 className="text-xs font-semibold uppercase tracking-wide text-slate-500">
               ข่าว ({visibleNews.length})
             </h4>
             <button
@@ -255,7 +331,7 @@ function NewsYoutubeApprovalView({
           <ul className="space-y-1.5">
             {visibleNews.map((n) => (
               <li key={n.link}>
-                <label className="flex cursor-pointer items-start gap-2 rounded-lg border border-edge bg-panel p-2 text-xs text-zinc-700 hover:border-zinc-300">
+                <label className="flex cursor-pointer items-start gap-2 rounded-lg border border-edge bg-panel p-2 text-xs text-slate-700 hover:border-slate-300">
                   <input
                     type="checkbox"
                     checked={selectedNews.has(n.link)}
@@ -263,13 +339,13 @@ function NewsYoutubeApprovalView({
                     className="mt-0.5 accent-sky-500"
                   />
                   <span>
-                    <span className={n.is_fetched ? 'text-zinc-400 line-through' : 'text-zinc-800'}>{n.title}</span>{' '}
+                    <span className={n.is_fetched ? 'text-slate-500 line-through' : 'text-slate-800'}>{n.title}</span>{' '}
                     {n.is_fetched && (
-                      <span className="rounded border border-edge bg-surface px-1 py-0.5 text-[10px] text-zinc-500">
+                      <span className="rounded border border-edge bg-surface px-1 py-0.5 text-[11px] text-slate-500">
                         อ่านแล้ว
                       </span>
                     )}{' '}
-                    <span className="text-zinc-500">
+                    <span className="text-slate-500">
                       · {n.source} · {n.age_hours}h{n.is_stale ? ' ⚠️' : ''}
                     </span>
                   </span>
@@ -284,18 +360,18 @@ function NewsYoutubeApprovalView({
         <div>
           <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
             <div className="flex flex-wrap items-center gap-2">
-              <h4 className="text-xs font-semibold uppercase tracking-wide text-zinc-500">
+              <h4 className="text-xs font-semibold uppercase tracking-wide text-slate-500">
                 YouTube ({sortedYoutube.length})
               </h4>
-              <div className="flex items-center gap-1 rounded-md border border-edge bg-white px-1.5 py-0.5 text-[11px] shadow-2xs">
-                <span className="text-zinc-400">เรียงตาม:</span>
+              <div className="flex items-center gap-1 rounded-md border border-edge bg-white px-1.5 py-0.5 text-[11px] shadow-sm">
+                <span className="text-slate-500">เรียงตาม:</span>
                 <button
                   type="button"
                   onClick={() => setYoutubeSort('date_desc')}
                   className={`rounded px-1.5 py-0.5 font-medium transition-colors ${
                     youtubeSort === 'date_desc'
-                      ? 'bg-sky-500 text-white shadow-2xs'
-                      : 'text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900'
+                      ? 'bg-sky-500 text-white shadow-sm'
+                      : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
                   }`}
                   title="เรียงตามวันที่ใหม่สุดไปเก่าสุด"
                 >
@@ -306,8 +382,8 @@ function NewsYoutubeApprovalView({
                   onClick={() => setYoutubeSort('date_asc')}
                   className={`rounded px-1.5 py-0.5 font-medium transition-colors ${
                     youtubeSort === 'date_asc'
-                      ? 'bg-sky-500 text-white shadow-2xs'
-                      : 'text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900'
+                      ? 'bg-sky-500 text-white shadow-sm'
+                      : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
                   }`}
                   title="เรียงตามวันที่เก่าสุดไปใหม่สุด"
                 >
@@ -318,8 +394,8 @@ function NewsYoutubeApprovalView({
                   onClick={() => setYoutubeSort('channel')}
                   className={`rounded px-1.5 py-0.5 font-medium transition-colors ${
                     youtubeSort === 'channel'
-                      ? 'bg-sky-500 text-white shadow-2xs'
-                      : 'text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900'
+                      ? 'bg-sky-500 text-white shadow-sm'
+                      : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
                   }`}
                   title="จัดกลุ่มเรียงตามชื่อช่อง"
                 >
@@ -338,7 +414,7 @@ function NewsYoutubeApprovalView({
           <ul className="space-y-1.5">
             {sortedYoutube.map((v) => (
               <li key={v.link}>
-                <label className="flex cursor-pointer items-start gap-2 rounded-lg border border-edge bg-panel p-2 text-xs text-zinc-700 hover:border-zinc-300">
+                <label className="flex cursor-pointer items-start gap-2 rounded-lg border border-edge bg-panel p-2 text-xs text-slate-700 hover:border-slate-300">
                   <input
                     type="checkbox"
                     checked={selectedYoutube.has(v.link)}
@@ -346,14 +422,14 @@ function NewsYoutubeApprovalView({
                     className="mt-0.5 accent-sky-500"
                   />
                   <span>
-                    <span className={v.is_fetched ? 'text-zinc-400 line-through' : 'text-zinc-800 font-medium'}>{v.title}</span>{' '}
+                    <span className={v.is_fetched ? 'text-slate-500 line-through' : 'text-slate-800 font-medium'}>{v.title}</span>{' '}
                     {v.is_fetched && (
-                      <span className="rounded border border-edge bg-surface px-1 py-0.5 text-[10px] text-zinc-500">
+                      <span className="rounded border border-edge bg-surface px-1 py-0.5 text-[11px] text-slate-500">
                         อ่านแล้ว
                       </span>
                     )}{' '}
-                    <span className="text-zinc-500">
-                      · <span className="font-medium text-sky-700">{v.channel}</span> · <span className="inline-flex items-center rounded border border-zinc-200/60 bg-zinc-100 px-1 py-0.2 font-mono text-[10px] text-zinc-600">📅 {v.published}</span>
+                    <span className="text-slate-500">
+                      · <span className="font-medium text-sky-700">{v.channel}</span> · <span className="inline-flex items-center rounded border border-slate-200/60 bg-slate-100 px-1 py-0.5 font-mono text-[11px] text-slate-600">📅 {v.published}</span>
                     </span>
                   </span>
                 </label>
@@ -364,7 +440,7 @@ function NewsYoutubeApprovalView({
       )}
 
       {visibleNews.length === 0 && visibleYoutube.length === 0 && (
-        <p className="text-xs text-zinc-500">
+        <p className="text-xs text-slate-500">
           {fetchedCount > 0 && !showFetched
             ? `ไม่มีรายการใหม่ — มี ${fetchedCount} รายการที่เคยอ่านแล้ว (กด "แสดงรายการที่อ่านแล้ว" ด้านบน)`
             : 'ไม่มีรายการใหม่ให้เลือก'}
@@ -375,7 +451,7 @@ function NewsYoutubeApprovalView({
         onClick={() => onApprove(Array.from(selectedNews), Array.from(selectedYoutube))}
         disabled={submitting}
         className={`rounded-lg px-4 py-2 text-sm font-medium text-white transition-colors disabled:opacity-50 ${
-          totalSelected === 0 ? 'bg-zinc-600 hover:bg-zinc-700' : 'bg-sky-500 hover:bg-sky-600'
+          totalSelected === 0 ? 'bg-slate-600 hover:bg-slate-700' : 'bg-sky-500 hover:bg-sky-600'
         }`}
       >
         {submitting
@@ -457,10 +533,17 @@ function YoutubePitchApprovalView({
   return (
     <div className="space-y-4 rounded-xl border border-sky-200 bg-sky-50/50 p-4 shadow-sm shadow-black/5 relative">
       {draftModalTarget && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="w-full max-w-md rounded-xl bg-white p-5 shadow-lg relative z-50">
-            <h4 className="text-lg font-bold text-red-700">⚠️ สร้าง Unverified Draft?</h4>
-            <p className="mt-2 text-sm text-zinc-600">
+        <InPlaceDialog
+          titleId="approval-unverified-draft-title"
+          onClose={() => setDraftModalTarget(null)}
+          backdropClassName="absolute inset-0 bg-slate-900/50 backdrop-blur-sm"
+          panelClassName="w-full max-w-md rounded-xl bg-white p-5 shadow-lg"
+        >
+          <h4 id="approval-unverified-draft-title" className="flex items-center gap-2 text-lg font-bold text-red-700">
+            <AlertTriangleIcon className="h-5 w-5 shrink-0" />
+            <span>สร้าง Unverified Draft?</span>
+          </h4>
+            <p className="mt-2 text-sm text-slate-600">
               การสร้าง Draft สำหรับหัวข้อ <strong>{draftModalTarget.working_titles[0]}</strong> จะข้ามขั้นตอนตรวจสอบแหล่งข่าว โดยพบปัญหาดังนี้:
             </p>
             {draftModalTarget.source_readiness_issues && draftModalTarget.source_readiness_issues.length > 0 && (
@@ -470,7 +553,7 @@ function YoutubePitchApprovalView({
                 ))}
               </ul>
             )}
-            <p className="mt-2 text-sm text-zinc-600">
+            <p className="mt-2 text-sm text-slate-600">
               ทำให้ Briefing Book ที่ได้อาจมีข้อมูลที่ไม่สามารถตรวจสอบความถูกต้องได้
             </p>
             <label className="mt-4 flex cursor-pointer items-start gap-2 rounded-lg bg-red-50 p-3 text-sm text-red-900 border border-red-200">
@@ -485,7 +568,7 @@ function YoutubePitchApprovalView({
             <div className="mt-5 flex justify-end gap-3">
               <button
                 onClick={() => setDraftModalTarget(null)}
-                className="rounded-lg px-4 py-2 text-sm font-medium text-zinc-600 hover:bg-zinc-100"
+                className="rounded-lg px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100"
               >
                 ยกเลิก
               </button>
@@ -497,8 +580,7 @@ function YoutubePitchApprovalView({
                 ยืนยันการสร้าง Draft
               </button>
             </div>
-          </div>
-        </div>
+        </InPlaceDialog>
       )}
 
       <div className="flex items-center justify-between gap-2">
@@ -538,7 +620,7 @@ function YoutubePitchApprovalView({
             const approved = canApprove(p)
             return (
             <li key={p.pitch_id}>
-              <label className={`relative flex items-start gap-3 rounded-xl border border-edge bg-panel p-3.5 text-xs text-zinc-700 transition-colors ${approved ? 'cursor-pointer hover:border-sky-300' : 'cursor-not-allowed border-red-200 bg-red-50/40'}`}>
+              <label className={`relative flex items-start gap-3 rounded-xl border border-edge bg-panel p-3.5 text-xs text-slate-700 transition-colors ${approved ? 'cursor-pointer hover:border-sky-300' : 'cursor-not-allowed border-red-200 bg-red-50/40'}`}>
                 <input
                   type="checkbox"
                   checked={selectedPitchIds.has(p.pitch_id)}
@@ -549,7 +631,7 @@ function YoutubePitchApprovalView({
                 <div className="flex-1 space-y-2 pr-2">
                   <div className="flex flex-wrap items-center gap-2">
                     {p.investigation_mode && (
-                      <span className="rounded bg-indigo-50 px-2 py-0.5 text-[11px] font-semibold text-indigo-800 border border-indigo-200/60 uppercase">
+                      <span className="rounded bg-blue-50 px-2 py-0.5 text-[11px] font-semibold text-blue-800 border border-blue-200/60 uppercase">
                         🔍 Mode: {p.investigation_mode}
                       </span>
                     )}
@@ -559,7 +641,7 @@ function YoutubePitchApprovalView({
                       </span>
                     )}
                     {p.target_audience && (
-                      <span className="rounded bg-purple-50 px-2 py-0.5 text-[11px] font-medium text-purple-800 border border-purple-200/60">
+                      <span className="rounded bg-sky-50 px-2 py-0.5 text-[11px] font-medium text-blue-800 border border-sky-200/60">
                         👥 {p.target_audience}
                       </span>
                     )}
@@ -569,12 +651,12 @@ function YoutubePitchApprovalView({
                       </span>
                     )}
                     <div className="flex items-center gap-1.5 ml-auto">
-                      <span className="text-[11px] font-medium text-zinc-500">Style:</span>
+                      <span className="text-[11px] font-medium text-slate-500">Style:</span>
                       <select
                         value={pitchStyles[p.pitch_id] || p.presentation_style || 'narrative'}
                         onChange={(e) => setPitchStyles(prev => ({ ...prev, [p.pitch_id]: e.target.value }))}
                         onClick={(e) => e.stopPropagation()}
-                        className="rounded border border-zinc-200 bg-white px-2 py-0.5 text-[11px] font-medium text-zinc-700 shadow-2xs hover:border-sky-300 focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
+                        className="rounded border border-slate-200 bg-white px-2 py-0.5 text-[11px] font-medium text-slate-700 shadow-sm hover:border-sky-300 focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
                       >
                         <option value="narrative">บทบรรยาย (Narrative)</option>
                         <option value="interview_qa">สัมภาษณ์ (Interview Q&A)</option>
@@ -583,8 +665,8 @@ function YoutubePitchApprovalView({
                   </div>
 
                   <div className="space-y-1">
-                    <p className="text-[11px] font-semibold text-zinc-500 uppercase tracking-wide">🎯 ตัวเลือก Working Titles:</p>
-                    <ul className="list-inside list-disc space-y-0.5 font-semibold text-zinc-900">
+                    <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-wide">🎯 ตัวเลือก Working Titles:</p>
+                    <ul className="list-inside list-disc space-y-0.5 font-semibold text-slate-900">
                       {(p.working_titles || []).map((title, idx) => (
                         <li key={idx} className="text-sm">{title}</li>
                       ))}
@@ -599,14 +681,14 @@ function YoutubePitchApprovalView({
 
                   {(p.core_thesis || p.core_hook) && (
                     <div className="rounded-lg bg-surface/70 p-2 border border-edge/60">
-                      <span className="font-semibold text-zinc-800">🎯 Core Thesis:</span> {p.core_thesis || p.core_hook}
+                      <span className="font-semibold text-slate-800">🎯 Core Thesis:</span> {p.core_thesis || p.core_hook}
                     </div>
                   )}
 
                   {(p.parking_lot_ideas?.length ?? 0) > 0 && (
-                    <div className="rounded-lg bg-purple-50/70 p-2 border border-purple-200/60 text-purple-950">
-                      <span className="font-semibold text-purple-800">📦 Parking Lot ({p.parking_lot_ideas?.length} ideas):</span>
-                      <ul className="list-disc list-inside mt-1 space-y-0.5 text-xs text-purple-900">
+                    <div className="rounded-lg bg-sky-50/70 p-2 border border-sky-200/60 text-blue-950">
+                      <span className="font-semibold text-blue-800">📦 Parking Lot ({p.parking_lot_ideas?.length} ideas):</span>
+                      <ul className="list-disc list-inside mt-1 space-y-0.5 text-xs text-blue-900">
                         {p.parking_lot_ideas?.map((idea, idx) => (
                           <li key={idx}>{idea}</li>
                         ))}
@@ -666,8 +748,9 @@ function YoutubePitchApprovalView({
                         )}
                       </div>
                       {draftSelections.some(d => d.pitch_id === p.pitch_id) && (
-                        <p className="mt-1 text-xs font-bold text-red-600 bg-red-100 p-1.5 rounded inline-block">
-                          ⚠️ รออนุมัติสร้างเป็น Unverified Draft
+                        <p className="mt-1 inline-flex items-center gap-1 text-xs font-bold text-red-600 bg-red-100 p-1.5 rounded">
+                          <AlertTriangleIcon className="h-3.5 w-3.5 shrink-0" />
+                          <span>รออนุมัติสร้างเป็น Unverified Draft</span>
                         </p>
                       )}
                       {p.source_readiness_issues && p.source_readiness_issues.length > 0 && (
@@ -682,15 +765,15 @@ function YoutubePitchApprovalView({
                   )}
 
                   {(p.key_questions_to_answer?.length > 0 || p.research_hypotheses?.length > 0) && (
-                    <details className="mt-1 text-xs text-zinc-600">
+                    <details className="mt-1 text-xs text-slate-600">
                       <summary className="cursor-pointer font-medium text-sky-700 hover:underline">
                         ดู Key Questions & Research Hypotheses ({((p.key_questions_to_answer?.length || 0) + (p.research_hypotheses?.length || 0))} รายการ)
                       </summary>
                       <div className="mt-2 space-y-2 pl-2 border-l-2 border-sky-200">
                         {p.key_questions_to_answer?.length > 0 && (
                           <div>
-                            <p className="font-semibold text-zinc-700">❓ Key Questions to Answer:</p>
-                            <ul className="list-inside list-disc space-y-0.5 text-zinc-600">
+                            <p className="font-semibold text-slate-700">❓ Key Questions to Answer:</p>
+                            <ul className="list-inside list-disc space-y-0.5 text-slate-600">
                               {p.key_questions_to_answer.map((q, idx) => (
                                 <li key={idx}>{q}</li>
                               ))}
@@ -699,8 +782,11 @@ function YoutubePitchApprovalView({
                         )}
                         {p.research_hypotheses?.length > 0 && (
                           <div>
-                            <p className="font-semibold text-zinc-700">💡 Research Hypotheses:</p>
-                            <ul className="list-inside list-disc space-y-0.5 text-zinc-600">
+                            <p className="flex items-center gap-1 font-semibold text-slate-700">
+                              <BulbIcon className="h-3.5 w-3.5 text-amber-500 shrink-0" />
+                              <span>Research Hypotheses:</span>
+                            </p>
+                            <ul className="list-inside list-disc space-y-0.5 text-slate-600">
                               {p.research_hypotheses.map((h, idx) => (
                                 <li key={idx}>{h}</li>
                               ))}
@@ -717,7 +803,7 @@ function YoutubePitchApprovalView({
           })}
         </ul>
       ) : (
-        <p className="text-xs text-zinc-500">ไม่มีไอเดียคลิป YouTube รออนุมัติ</p>
+        <p className="text-xs text-slate-500">ไม่มีไอเดียคลิป YouTube รออนุมัติ</p>
       )}
 
       {(selectablePitches.length > 0 || draftSelections.length > 0) && (
@@ -725,7 +811,7 @@ function YoutubePitchApprovalView({
           onClick={() => onApprove([], [], [], Array.from(selectedPitchIds), 'approve', draftSelections, pitchStyles)}
           disabled={submitting}
           className={`rounded-lg px-4 py-2 text-sm font-medium text-white transition-colors disabled:opacity-50 ${
-            (selectedPitchIds.size === 0 && draftSelections.length === 0) ? 'bg-zinc-600 hover:bg-zinc-700' : 'bg-sky-500 hover:bg-sky-600'
+            (selectedPitchIds.size === 0 && draftSelections.length === 0) ? 'bg-slate-600 hover:bg-slate-700' : 'bg-sky-500 hover:bg-sky-600'
           }`}
         >
           {submitting

@@ -16,7 +16,7 @@ export const DCFScenariosChart: React.FC<DCFScenariosChartProps> = ({ dcf }) => 
 
   if (scenarios.length === 0) {
     return (
-      <div className="my-3 rounded-lg border border-edge/60 bg-surface/50 p-4 text-xs text-zinc-500">
+      <div className="my-3 rounded-lg border border-edge/60 bg-surface/50 p-4 text-xs text-slate-500">
         Targets unavailable or suppressed due to non-actionable valuation model.
       </div>
     )
@@ -26,10 +26,10 @@ export const DCFScenariosChart: React.FC<DCFScenariosChartProps> = ({ dcf }) => 
 
   return (
     <div className="space-y-4 my-3">
-      <div className="flex items-center justify-between text-xs text-zinc-500">
+      <div className="flex items-center justify-between text-xs text-slate-500">
         <span>Scenarios Target Price</span>
         <span>
-          WACC: <strong className="text-zinc-900 font-semibold">{dcf.wacc_pct ?? 'N/A'}%</strong> (Ke: {dcf.cost_of_equity_pct ?? 'N/A'}%, Kd: {dcf.cost_of_debt_pct ?? 'N/A'}%)
+          WACC: <strong className="text-slate-900 font-semibold">{dcf.wacc_pct ?? 'N/A'}%</strong> (Ke: {dcf.cost_of_equity_pct ?? 'N/A'}%, Kd: {dcf.cost_of_debt_pct ?? 'N/A'}%)
         </span>
       </div>
 
@@ -39,9 +39,9 @@ export const DCFScenariosChart: React.FC<DCFScenariosChartProps> = ({ dcf }) => 
           return (
             <div key={sc.key} className="space-y-1.5">
               <div className="flex items-center justify-between text-sm">
-                <span className="font-medium text-zinc-700">{sc.label}</span>
+                <span className="font-medium text-slate-700">{sc.label}</span>
                 <div className="flex items-center gap-2">
-                  <span className="font-bold text-zinc-900">${sc.data.target_price}</span>
+                  <span className="font-bold text-slate-900">${sc.data.target_price}</span>
                   <span
                     className={`text-xs px-2 py-0.5 rounded-full font-semibold border ${
                       sc.data.upside_pct >= 0
@@ -53,7 +53,7 @@ export const DCFScenariosChart: React.FC<DCFScenariosChartProps> = ({ dcf }) => 
                   </span>
                 </div>
               </div>
-              <div className="w-full bg-zinc-100 rounded-full h-2.5 overflow-hidden border border-zinc-200/60">
+              <div className="w-full bg-slate-100 rounded-full h-2.5 overflow-hidden border border-slate-200/60">
                 <div className={`h-2.5 rounded-full ${sc.barColor} transition-all duration-500`} style={{ width: `${pct}%` }} />
               </div>
             </div>

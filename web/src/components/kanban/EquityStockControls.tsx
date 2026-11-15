@@ -223,7 +223,7 @@ export default function EquityStockControls({
                   handleSelectOption(match)
                 }
               }}
-              className="w-full rounded-lg border border-sky-200 bg-white px-2.5 py-1.5 text-xs text-zinc-900 outline-none shadow-sm transition-colors focus:border-flow-cyan focus:ring-1 focus:ring-flow-cyan/30 disabled:opacity-50"
+              className="w-full rounded-lg border border-sky-200 bg-white px-2.5 py-1.5 text-xs text-slate-900 outline-none shadow-sm transition-colors focus:border-flow-cyan focus:ring-1 focus:ring-flow-cyan/30 disabled:opacity-50"
             >
               <option value="">-- เลือกหุ้นจาก Portfolio หรือ Watchlist --</option>
               {portfolioOptions.length > 0 && (
@@ -305,7 +305,7 @@ export default function EquityStockControls({
               disabled={disabled}
               value={market}
               onChange={(e) => handleMarketChange(e.target.value as 'US' | 'TH')}
-              className="w-full rounded-xl border border-sky-200 bg-white px-2 py-1.5 text-xs font-medium text-zinc-900 outline-none shadow-sm transition-colors focus:border-flow-cyan focus:ring-1 focus:ring-flow-cyan/30 disabled:opacity-50"
+              className="w-full rounded-xl border border-sky-200 bg-white px-2 py-1.5 text-xs font-medium text-slate-900 outline-none shadow-sm transition-colors focus:border-flow-cyan focus:ring-1 focus:ring-flow-cyan/30 disabled:opacity-50"
             >
               <option value="US">🇺🇸 US</option>
               <option value="TH">🇹🇭 TH</option>

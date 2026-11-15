@@ -70,6 +70,7 @@ TICKER_TO_CIK: Dict[str, str] = {
     "ORCL": "0001341439",
     "PLTR": "0001321655",
     "COIN": "0001679788",
+    "FTNT": "0001262039",
 }
 
 # Concept priority lists (aliases)
@@ -130,12 +131,38 @@ class SecEdgarAdapter(SecFinancialsPort, SecInsiderTradesPort):
             "Accept-Encoding": "gzip, deflate",
         }
 
+    def _fetch_company_tickers_map(self) -> Dict[str, str]:
+        resp = self._request_get("https://www.sec.gov/files/company_tickers.json")
+        payload = resp.json()
+        mapping: Dict[str, str] = {}
+        if isinstance(payload, dict):
+            for entry in payload.values():
+                if not isinstance(entry, dict):
+                    continue
+                tk = str(entry.get("ticker") or "").strip().upper()
+                cik_raw = entry.get("cik_str")
+                if tk and cik_raw is not None:
+                    mapping[tk] = str(cik_raw).zfill(10)
+        return mapping
+
     def _resolve_cik(self, symbol: str) -> str:
         sym = symbol.strip().upper()
         if sym in TICKER_TO_CIK:
             return TICKER_TO_CIK[sym]
         if sym.isdigit():
             return sym.zfill(10)
+        if not (self._facts_fixture_path or self._submissions_fixture_path or self._form4_fixture_path):
+            try:
+                ticker_map = self._cache.get_or_set(
+                    key="sec:company_tickers_map",
+                    loader=self._fetch_company_tickers_map,
+                    ttl_seconds=86400.0,
+                    max_stale_seconds=86400.0,
+                )
+                if isinstance(ticker_map, dict) and sym in ticker_map:
+                    return ticker_map[sym]
+            except Exception as exc:
+                logger.debug("SEC company_tickers dynamic lookup failed for %s: %s", sym, exc)
         raise DataUnavailableError(f"CIK mapping not found for symbol: {symbol}", capability="sec-edgar", source="SEC EDGAR")
 
     def _request_get(self, url: str) -> requests.Response:

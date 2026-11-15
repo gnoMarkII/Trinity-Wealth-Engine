@@ -47,14 +47,14 @@ export const ExpectationGapCard: React.FC<ExpectationGapCardProps> = ({
   const tvPct = totalPv > 0 && pvOfTerminalValue ? (pvOfTerminalValue / totalPv) * 100 : 75
 
   return (
-    <div className="rounded-2xl border border-edge/90 bg-surface/80 p-5 shadow-xs space-y-5 animate-card-in">
+    <div className="rounded-2xl border border-edge/90 bg-surface/80 p-5 shadow-sm space-y-5 animate-card-in">
       {/* Header */}
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-edge/60 pb-3">
         <div className="flex items-center gap-2">
           <span className="text-lg">⚖️</span>
           <div>
             <div className="flex items-center gap-2">
-              <h4 className="text-sm font-bold text-zinc-900 tracking-tight">
+              <h4 className="text-sm font-bold text-slate-900 tracking-tight">
                 Reverse DCF: Market Expectation vs Reality Gap
               </h4>
               <ContextTooltip
@@ -64,21 +64,21 @@ export const ExpectationGapCard: React.FC<ExpectationGapCardProps> = ({
                 decisionImpact="ช่วยเช็คว่าเรากำลังซื้อหุ้นที่แบกความหวังไว้สูงเกินไปหรือไม่"
               />
             </div>
-            <p className="text-xs text-zinc-500">
+            <p className="text-xs text-slate-500">
               ราคาปัจจุบันตลาดแฝงความคาดหวังไว้ต่ำหรือสูงกว่าความสามารถจริงของกิจการ
             </p>
           </div>
         </div>
 
         {solverStatus && (
-          <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-zinc-100 text-zinc-700 border border-zinc-200">
+          <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold uppercase tracking-wider bg-slate-100 text-slate-700 border border-slate-200">
             Solver: {solverStatus}
           </span>
         )}
       </div>
 
       {/* Beginner Interpretation Banner */}
-      <div className={`rounded-xl border p-3.5 text-xs flex items-start gap-3 shadow-2xs ${
+      <div className={`rounded-xl border p-3.5 text-xs flex items-start gap-3 shadow-sm ${
         growthGap != null && growthGap >= 0
           ? 'border-emerald-200 bg-emerald-50/70 text-emerald-950'
           : 'border-amber-200 bg-amber-50/70 text-amber-950'
@@ -93,7 +93,7 @@ export const ExpectationGapCard: React.FC<ExpectationGapCardProps> = ({
             }`}>
               ถอดรหัสราคาหุ้นวันนี้เป็นภาษาคน (Investor Takeaway):
             </span>
-            <span className={`px-2 py-0.2 rounded-full text-[10px] font-extrabold uppercase ${
+            <span className={`px-2 py-0.5 rounded-full text-[11px] font-extrabold uppercase ${
               growthGap != null && growthGap >= 0
                 ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
                 : 'bg-amber-100 text-amber-800 border border-amber-300'
@@ -115,7 +115,7 @@ export const ExpectationGapCard: React.FC<ExpectationGapCardProps> = ({
         {hasGrowth && (
           <div className="p-4 rounded-xl border border-edge bg-panel/60 space-y-3">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-zinc-500 uppercase tracking-wider">
+              <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
                 1. Revenue Growth YoY
               </span>
               {growthGap != null && (
@@ -134,15 +134,15 @@ export const ExpectationGapCard: React.FC<ExpectationGapCardProps> = ({
             {/* Big Number Tier 2 Display */}
             <div className="grid grid-cols-2 gap-2 text-center py-1">
               <div className="p-2 rounded-lg bg-surface border border-edge/80">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 block mb-0.5">
+                <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 block mb-0.5">
                   ตลาดคาดหวัง (Implied)
                 </span>
-                <span className="font-mono text-xl sm:text-2xl font-bold text-zinc-600">
+                <span className="font-mono text-xl sm:text-2xl font-bold text-slate-600">
                   {marketImpliedRevenueGrowth?.toFixed(2)}%
                 </span>
               </div>
               <div className="p-2 rounded-lg bg-emerald-500/10 border border-emerald-500/30">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-700 block mb-0.5">
+                <span className="text-[11px] font-bold uppercase tracking-wider text-emerald-700 block mb-0.5">
                   ผลงานจริง (Actual)
                 </span>
                 <span className="font-mono text-xl sm:text-2xl font-bold text-emerald-600">
@@ -158,13 +158,13 @@ export const ExpectationGapCard: React.FC<ExpectationGapCardProps> = ({
               const actW = Math.min(100, Math.max(10, (Math.abs(actualRevenueGrowth || 0) / maxG) * 100))
               return (
                 <div className="space-y-1.5 pt-1">
-                  <div className="flex justify-between text-[11px] text-zinc-500">
+                  <div className="flex justify-between text-[11px] text-slate-500">
                     <span>ความคาดหวังในราคา</span>
                     <span>{marketImpliedRevenueGrowth?.toFixed(1)}%</span>
                   </div>
-                  <div className="h-2 w-full rounded-full bg-zinc-200 overflow-hidden">
+                  <div className="h-2 w-full rounded-full bg-slate-200 overflow-hidden">
                     <div
-                      className="h-full bg-zinc-400 rounded-full"
+                      className="h-full bg-slate-400 rounded-full"
                       style={{ width: `${impW}%` }}
                     />
                   </div>
@@ -189,7 +189,7 @@ export const ExpectationGapCard: React.FC<ExpectationGapCardProps> = ({
         {hasMargin && (
           <div className="p-4 rounded-xl border border-edge bg-panel/60 space-y-3">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-zinc-500 uppercase tracking-wider">
+              <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
                 2. Operating (EBIT) Margin
               </span>
               {marginGap != null && (
@@ -208,15 +208,15 @@ export const ExpectationGapCard: React.FC<ExpectationGapCardProps> = ({
             {/* Big Number Tier 2 Display */}
             <div className="grid grid-cols-2 gap-2 text-center py-1">
               <div className="p-2 rounded-lg bg-surface border border-edge/80">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 block mb-0.5">
+                <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 block mb-0.5">
                   ตลาดคาดหวัง (Implied)
                 </span>
-                <span className="font-mono text-xl sm:text-2xl font-bold text-zinc-600">
+                <span className="font-mono text-xl sm:text-2xl font-bold text-slate-600">
                   {marketImpliedOperatingMargin?.toFixed(2)}%
                 </span>
               </div>
               <div className="p-2 rounded-lg bg-emerald-500/10 border border-emerald-500/30">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-700 block mb-0.5">
+                <span className="text-[11px] font-bold uppercase tracking-wider text-emerald-700 block mb-0.5">
                   GAAP จริง (Actual)
                 </span>
                 <span className="font-mono text-xl sm:text-2xl font-bold text-emerald-600">
@@ -232,13 +232,13 @@ export const ExpectationGapCard: React.FC<ExpectationGapCardProps> = ({
               const actMW = Math.min(100, Math.max(10, (Math.abs(actualOperatingMargin || 0) / maxM) * 100))
               return (
                 <div className="space-y-1.5 pt-1">
-                  <div className="flex justify-between text-[11px] text-zinc-500">
+                  <div className="flex justify-between text-[11px] text-slate-500">
                     <span>อัตรากำไรที่ราคาตลาดแฝงไว้</span>
                     <span>{marketImpliedOperatingMargin?.toFixed(1)}%</span>
                   </div>
-                  <div className="h-2 w-full rounded-full bg-zinc-200 overflow-hidden">
+                  <div className="h-2 w-full rounded-full bg-slate-200 overflow-hidden">
                     <div
-                      className="h-full bg-zinc-400 rounded-full"
+                      className="h-full bg-slate-400 rounded-full"
                       style={{ width: `${impMW}%` }}
                     />
                   </div>
@@ -263,33 +263,33 @@ export const ExpectationGapCard: React.FC<ExpectationGapCardProps> = ({
       {/* Enterprise Value Capital Distribution (Stacked Bar) */}
       {(pvOf5yFcf != null || pvOfTerminalValue != null) && (
         <div className="p-4 rounded-xl border border-edge bg-panel/40 space-y-2">
-          <div className="flex items-center justify-between text-xs font-semibold text-zinc-600">
+          <div className="flex items-center justify-between text-xs font-semibold text-slate-600">
             <span>Enterprise Value Breakdown: {formatLargeNum(enterpriseValue, currency)}</span>
-            <span className="text-zinc-400 text-[11px]">
+            <span className="text-slate-500 text-[11px]">
               PV of 5Y FCF ({fcfPct.toFixed(1)}%) + Terminal Value ({tvPct.toFixed(1)}%)
             </span>
           </div>
 
-          <div className="h-3 w-full rounded-full overflow-hidden flex bg-zinc-200">
+          <div className="h-3 w-full rounded-full overflow-hidden flex bg-slate-200">
             <div
               className="h-full bg-sky-500"
               style={{ width: `${fcfPct}%` }}
               title={`PV of 5-Year Free Cash Flow: ${formatLargeNum(pvOf5yFcf, currency)} (${fcfPct.toFixed(1)}%)`}
             />
             <div
-              className="h-full bg-indigo-500"
+              className="h-full bg-blue-500"
               style={{ width: `${tvPct}%` }}
               title={`PV of Terminal Value: ${formatLargeNum(pvOfTerminalValue, currency)} (${tvPct.toFixed(1)}%)`}
             />
           </div>
 
-          <div className="flex items-center justify-between text-[11px] text-zinc-500 pt-0.5">
+          <div className="flex items-center justify-between text-[11px] text-slate-500 pt-0.5">
             <span className="flex items-center gap-1.5">
               <span className="w-2 h-2 rounded-full bg-sky-500" />
               <span>5Y FCF: {formatLargeNum(pvOf5yFcf, currency)}</span>
             </span>
             <span className="flex items-center gap-1.5">
-              <span className="w-2 h-2 rounded-full bg-indigo-500" />
+              <span className="w-2 h-2 rounded-full bg-blue-500" />
               <span>Terminal Value: {formatLargeNum(pvOfTerminalValue, currency)}</span>
             </span>
           </div>

@@ -62,6 +62,9 @@ class JobRepositoryPort(Protocol):
     def clear_job_resume_value(self, job_id: str) -> None:
         ...
 
+    def cancel_job_approval(self, job_id: str, reason: str) -> None:
+        ...
+
     def append_job_log(
         self,
         job_id: str,

@@ -172,7 +172,7 @@ export function FinancialSummaryChart({ data, currency = '$' }: FinancialSummary
 
           <div className="bg-surface/60 border border-edge/60 rounded-xl p-3">
             <span className="text-[11px] font-medium text-muted block mb-0.5">Free Cash Flow</span>
-            <div className={`text-base font-bold font-mono tabular-nums tracking-tight ${(latestPoint?.free_cash_flow || 0) >= 0 ? 'text-indigo-400' : 'text-rose-400'}`}>
+            <div className={`text-base font-bold font-mono tabular-nums tracking-tight ${(latestPoint?.free_cash_flow || 0) >= 0 ? 'text-blue-400' : 'text-rose-400'}`}>
               {formatScaledVal(latestPoint?.free_cash_flow)}
             </div>
           </div>
@@ -256,14 +256,14 @@ export function FinancialSummaryChart({ data, currency = '$' }: FinancialSummary
           )}
           {showFCF && (
             <div className="flex items-center gap-1.5" title="Standard bar displays Calculated GAAP FCF (OCF - CapEx). Hover card displays 8-K Company-Reported Non-GAAP comparison if adjustments exist.">
-              <span className="w-3 h-3 rounded-md bg-gradient-to-t from-indigo-600 to-purple-400 shadow-sm" />
+              <span className="w-3 h-3 rounded-md bg-gradient-to-t from-blue-600 to-sky-400 shadow-sm" />
               <span className="text-muted">Calculated FCF (GAAP)</span>
             </div>
           )}
           {showMarginLine && (
             <div className="flex items-center gap-1.5">
               <span className="w-3 h-1 bg-amber-400 rounded-full" />
-              <span className="w-2 h-2 rounded-full bg-amber-400 -ml-2.5 border-2 border-white dark:border-zinc-900" />
+  <span className="w-2 h-2 rounded-full bg-amber-400 -ml-2.5 border-2 border-white"/>
               <span className="text-muted">Op. Margin %</span>
             </div>
           )}
@@ -541,8 +541,8 @@ export function FinancialSummaryChart({ data, currency = '$' }: FinancialSummary
               </strong>
             </span>
 
-            <span className="text-indigo-400 font-mono flex items-center gap-1.5">
-              <span className="w-2 h-2 rounded-full bg-indigo-400" />
+            <span className="text-blue-400 font-mono flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-blue-400" />
               <span>FCF:</span>
               <strong className="text-primary tabular-nums">
                 {formatScaledVal(chronological[hoveredIdx].free_cash_flow)}
@@ -550,7 +550,7 @@ export function FinancialSummaryChart({ data, currency = '$' }: FinancialSummary
               {chronological[hoveredIdx].reported_free_cash_flow !== null &&
                 chronological[hoveredIdx].reported_free_cash_flow !== undefined &&
                 chronological[hoveredIdx].reported_free_cash_flow !== chronological[hoveredIdx].free_cash_flow && (
-                  <span className="text-purple-400 text-[10px]" title="Company-Reported Non-GAAP FCF from 8-K">
+                  <span className="text-sky-400 text-[11px]" title="Company-Reported Non-GAAP FCF from 8-K">
                     (Rep: {formatScaledVal(chronological[hoveredIdx].reported_free_cash_flow)})
                   </span>
                 )}

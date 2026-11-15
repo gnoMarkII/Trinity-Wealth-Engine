@@ -30,6 +30,7 @@ class DispatchRequest(BaseModel):
     card_id: Optional[str] = None
     flow: str = "manager"
     scope: str = "both"
+    require_approval: bool = False
 
 
 class ResumeRequest(BaseModel):
@@ -39,7 +40,7 @@ class ResumeRequest(BaseModel):
     approved_pitch_ids: Optional[list[str]] = None
     unverified_draft_selections: Optional[list[UnverifiedDraftSelection]] = None
     pitch_presentation_styles: dict[str, str] = {}
-    action: Literal["approve", "refresh_sources"] = "approve"
+    action: Literal["approve", "refresh_sources", "reject"] = "approve"
 
 
 def _status_to_dto(status: dict[str, Any]) -> JobStatusDTO:
@@ -87,13 +88,20 @@ def dispatch_job(
     if not payload.instruction.strip():
         raise HTTPException(status_code=400, detail="instruction ว่างเปล่า")
     job_id = request.app.state.job_queue.dispatch(
-        payload.instruction, payload.card_id, flow=payload.flow, scope=payload.scope
+        payload.instruction,
+        payload.card_id,
+        flow=payload.flow,
+        scope=payload.scope,
+        require_approval=payload.require_approval,
     )
-    if payload.card_id is not None and kanban_service.get_card(payload.card_id) is not None:
-        kanban_service.move_card(payload.card_id, "executing", job_id=job_id)
     status = job_service.get_status(job_id)
     if status is None:
         raise HTTPException(status_code=404, detail="ไม่พบ job นี้")
+    if payload.card_id is not None and kanban_service.get_card(payload.card_id) is not None:
+        if status.get("status") == "awaiting_approval":
+            kanban_service.move_card(payload.card_id, "approval", job_id=job_id)
+        elif status.get("status") in ("queued", "running"):
+            kanban_service.move_card(payload.card_id, "executing", job_id=job_id)
     return _status_to_dto(status)
 
 
@@ -141,12 +149,27 @@ def resume_job(
     payload: ResumeRequest,
     request: Request,
     job_service: JobApplicationService = Depends(get_job_service),
+    kanban_service: KanbanApplicationService = Depends(get_kanban_service),
 ) -> JobStatusDTO:
     job = job_service.get_job(job_id)
     if job is None:
         raise HTTPException(status_code=404, detail="job not found")
     if job["status"] != "awaiting_approval":
         raise HTTPException(status_code=409, detail="job is no longer awaiting approval")
+
+    if payload.action == "reject":
+        try:
+            job_service.cancel_approval(job_id, reason="ยกเลิกโดยผู้ใช้ก่อนเริ่มรัน")
+        except ValueError as exc:
+            detail = str(exc)
+            status_code = 409 if detail == "approval_already_claimed" else 400
+            raise HTTPException(status_code=status_code, detail=detail) from exc
+        if job.get("card_id") is not None and kanban_service.get_card(job["card_id"]) is not None:
+            kanban_service.move_card(job["card_id"], "backlog", job_id=job_id)
+        status = job_service.get_status(job_id)
+        if status is None:
+            raise HTTPException(status_code=404, detail="job not found")
+        return _status_to_dto(status)
 
     interrupt_payload = json.loads(job["interrupt_payload"]) if job.get("interrupt_payload") else {}
     pitches = interrupt_payload.get("pitches") if isinstance(interrupt_payload, dict) else None
@@ -205,6 +228,10 @@ def resume_job(
                 "approval_revision": claims.approval_revision,
             })
 
+    is_pre_run_approval = (
+        isinstance(interrupt_payload, dict)
+        and interrupt_payload.get("type") == "pre_run_approval"
+    )
     resume_value = {
         "approved_news_links": payload.approved_news_links or [],
         "approved_youtube_links": payload.approved_youtube_links or [],
@@ -213,6 +240,7 @@ def resume_job(
         "unverified_draft_selections": [selection.model_dump() for selection in draft_selections] or [],
         "pitch_presentation_styles": payload.pitch_presentation_styles or {},
         "action": payload.action,
+        **({"pre_run_approved": True} if is_pre_run_approval and payload.action == "approve" else {}),
     }
     try:
         job_service.claim_resume(
@@ -224,6 +252,9 @@ def resume_job(
         detail = str(exc)
         status_code = 409 if detail in {"approval_already_claimed", "eligibility_token_already_used"} else 400
         raise HTTPException(status_code=status_code, detail=detail) from exc
+
+    if job.get("card_id") is not None and kanban_service.get_card(job["card_id"]) is not None:
+        kanban_service.move_card(job["card_id"], "executing", job_id=job_id)
 
     status = job_service.get_status(job_id)
     request.app.state.job_queue.enqueue(job_id)

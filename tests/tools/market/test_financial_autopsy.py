@@ -13,6 +13,7 @@ from tools.market.financial_autopsy import (
     ingest_financial_autopsy,
     _AUTOPSY_SUCCESS_CACHE,
     _AUTOPSY_ERROR_CACHE,
+    _build_rolling_ttm_period,
 )
 
 
@@ -210,3 +211,71 @@ def test_get_financial_autopsy_fiscal_alignment_and_debt_summing(mock_fetch):
     assert p.free_cash_flow == 150.0
     # Verify that total_debt summed long term (500) + short term (100) = 600
     assert p.total_debt == 600.0
+
+
+@pytest.mark.parametrize(
+    "dates",
+    [
+        ["2026-09-30", "2026-06-30", "2025-12-31", "2025-09-30"],
+        ["2026-09-30", "2025-12-31", "2025-09-30", "2025-06-30"],
+    ],
+)
+def test_rolling_ttm_rejects_missing_fiscal_quarters(dates):
+    financials = pd.DataFrame(
+        [[200.0, 100.0, 80.0, 60.0], [80.0, 20.0, 20.0, 20.0]],
+        index=["Total Revenue", "Gross Profit"],
+        columns=pd.to_datetime(dates),
+    )
+    assert _build_rolling_ttm_period(financials, None) is None
+
+
+def test_rolling_ttm_accepts_off_calendar_52_53_week_quarter_ends():
+    dates = pd.to_datetime(["2026-10-03", "2026-06-27", "2026-03-28", "2025-12-27"])
+    financials = pd.DataFrame(
+        [[200.0, 100.0, 80.0, 60.0], [80.0, 20.0, 20.0, 20.0]],
+        index=["Total Revenue", "Gross Profit"],
+        columns=dates,
+    )
+    ttm = _build_rolling_ttm_period(financials, None)
+    assert ttm is not None
+    assert ttm.period_type == "ttm"
+    assert ttm.total_revenue == 440.0
+    assert ttm.gross_profit == 140.0
+
+
+def test_rolling_ttm_does_not_fill_missing_latest_income_period_from_older_quarter():
+    financial_dates = pd.to_datetime(["2026-06-30", "2026-03-31", "2025-12-31"])
+    cashflow_dates = pd.to_datetime(["2026-09-30", "2026-06-30", "2026-03-31", "2025-12-31"])
+    financials = pd.DataFrame(
+        [[100.0, 80.0, 60.0], [20.0, 20.0, 20.0]],
+        index=["Total Revenue", "Gross Profit"],
+        columns=financial_dates,
+    )
+    cashflow = pd.DataFrame(
+        [[50.0, 25.0, 20.0, 15.0]],
+        index=["Operating Cash Flow"],
+        columns=cashflow_dates,
+    )
+
+    ttm = _build_rolling_ttm_period(financials, cashflow)
+    assert ttm is not None
+    assert ttm.fiscal_period_end == "2026-09-30 (TTM)"
+    assert ttm.total_revenue is None
+    assert ttm.gross_profit is None
+
+    from tools.market.sector_kpi_engine import compute_sector_kpis
+
+    for industry, name in (
+        ("Semiconductors", "Gross Margin (%)"),
+        ("Software - Infrastructure", "Subscription / Gross Margin"),
+    ):
+        summary = compute_sector_kpis(
+            sector="Technology",
+            periods=[],
+            industry=industry,
+            ttm_period=ttm,
+        )
+        gross_margin = next(kpi for kpi in summary.kpis if kpi.name == name)
+        assert gross_margin.status == "unavailable"
+        assert gross_margin.value is None
+        assert gross_margin.period_basis == "ttm"

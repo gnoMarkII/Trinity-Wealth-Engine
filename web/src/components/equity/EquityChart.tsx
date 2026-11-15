@@ -446,11 +446,11 @@ export const EquityChart: React.FC<EquityChartProps> = ({
       <div className="flex flex-wrap items-start justify-between gap-4 border-b border-edge/60 pb-4">
         <div>
           <div className="flex flex-wrap items-center gap-2">
-            <h3 className="font-serif text-2xl font-bold tracking-tight text-zinc-900">
+            <h3 className="font-serif text-2xl font-bold tracking-tight text-slate-900">
               {ticker}
             </h3>
             {companyName && (
-              <span className="text-sm font-medium text-zinc-500 truncate max-w-[200px] sm:max-w-xs">
+              <span className="text-sm font-medium text-slate-500 truncate max-w-[200px] sm:max-w-xs">
                 {companyName}
               </span>
             )}
@@ -463,7 +463,7 @@ export const EquityChart: React.FC<EquityChartProps> = ({
                 </span>
               )}
               {config.overlay === 'EMA' && (
-                <span className="rounded-full bg-indigo-50 px-2 py-0.5 text-xs font-semibold text-indigo-700 border border-indigo-200">
+                <span className="rounded-full bg-blue-50 px-2 py-0.5 text-xs font-semibold text-blue-700 border border-blue-200">
                   EMA (20, 50, 200)
                 </span>
               )}
@@ -473,7 +473,7 @@ export const EquityChart: React.FC<EquityChartProps> = ({
                 </span>
               )}
               {config.vwap && isIntraday && (
-                <span className="rounded-full bg-indigo-50 px-2 py-0.5 text-xs font-semibold text-indigo-700 border border-indigo-200">
+                <span className="rounded-full bg-blue-50 px-2 py-0.5 text-xs font-semibold text-blue-700 border border-blue-200">
                   VWAP
                 </span>
               )}
@@ -488,7 +488,7 @@ export const EquityChart: React.FC<EquityChartProps> = ({
                 </span>
               )}
               {config.momentum === 'MACD' && (
-                <span className="rounded-full bg-purple-50 px-2 py-0.5 text-xs font-semibold text-purple-700 border border-purple-200">
+                <span className="rounded-full bg-sky-50 px-2 py-0.5 text-xs font-semibold text-blue-700 border border-sky-200">
                   MACD (12, 26, 9)
                 </span>
               )}
@@ -513,7 +513,7 @@ export const EquityChart: React.FC<EquityChartProps> = ({
                 </span>
               )}
               {config.insider && (insiderFilings?.length ?? 0) > 0 && (
-                <span className="rounded-full bg-purple-50 px-2 py-0.5 text-xs font-semibold text-purple-700 border border-purple-200">
+                <span className="rounded-full bg-sky-50 px-2 py-0.5 text-xs font-semibold text-blue-700 border border-sky-200">
                   Insider ({insiderFilings?.length} filings)
                 </span>
               )}
@@ -522,7 +522,7 @@ export const EquityChart: React.FC<EquityChartProps> = ({
 
           {/* Current Price and Daily Change */}
           <div className="mt-1 flex flex-wrap items-baseline gap-2.5">
-            <span className="font-mono text-3xl font-bold tracking-tight text-zinc-900">
+            <span className="font-mono text-3xl font-bold tracking-tight text-slate-900">
               {currentPrice !== null ? `${currSign}${currentPrice.toFixed(2)}` : '—'}
             </span>
 
@@ -536,12 +536,12 @@ export const EquityChart: React.FC<EquityChartProps> = ({
                   {priceChange.toFixed(2)} ({isPositive ? '+' : ''}
                   {priceChangePct.toFixed(2)}%)
                 </span>
-                <span className="text-[10px] text-zinc-400 font-normal ml-0.5">วันนี้</span>
+                <span className="text-[11px] text-slate-500 font-normal ml-0.5">วันนี้</span>
               </div>
             )}
 
             {priceAsOf && (
-              <span className="text-[11px] text-zinc-400">
+              <span className="text-[11px] text-slate-500">
                 ณ{' '}
                 {new Date(priceAsOf).toLocaleTimeString('th-TH', {
                   hour: '2-digit',
@@ -553,7 +553,7 @@ export const EquityChart: React.FC<EquityChartProps> = ({
             {/* Next Earnings Date Countdown Badge */}
             {analystContext?.next_earnings_date && (
               <span
-                className="inline-flex items-center gap-1 rounded-md bg-blue-50 border border-blue-200 px-2 py-0.5 text-[10px] font-medium text-blue-700"
+                className="inline-flex items-center gap-1 rounded-md bg-blue-50 border border-blue-200 px-2 py-0.5 text-[11px] font-medium text-blue-700"
                 title={`Next Earnings Date: ${analystContext.next_earnings_date}`}
               >
                 📅 Earnings · {analystContext.days_to_earnings !== null && analystContext.days_to_earnings !== undefined ? `${analystContext.days_to_earnings} days` : analystContext.next_earnings_date}
@@ -563,7 +563,7 @@ export const EquityChart: React.FC<EquityChartProps> = ({
             {/* Stale Consensus Warning Badge */}
             {config.consensus && analystContext?.data_status === 'stale' && (
               <span
-                className="inline-flex items-center gap-1 rounded-md bg-amber-50 border border-amber-200 px-2 py-0.5 text-[10px] font-medium text-amber-700"
+                className="inline-flex items-center gap-1 rounded-md bg-amber-50 border border-amber-200 px-2 py-0.5 text-[11px] font-medium text-amber-700"
                 title={`Consensus target price is stale. As of: ${analystContext.source_as_of || 'N/A'}`}
               >
                 ⚠️ Street Stale (as of {analystContext.source_as_of?.slice(0, 10)})
@@ -572,7 +572,7 @@ export const EquityChart: React.FC<EquityChartProps> = ({
 
             {eventsMetadata?.status === 'partial' && (
               <span
-                className="inline-flex items-center gap-1 rounded-md bg-amber-50 border border-amber-200 px-2 py-0.5 text-[10px] font-medium text-amber-700"
+                className="inline-flex items-center gap-1 rounded-md bg-amber-50 border border-amber-200 px-2 py-0.5 text-[11px] font-medium text-amber-700"
                 title={`Missing: ${eventsMetadata.missing_sources.join(', ')} | As of: ${eventsMetadata.as_of || 'N/A'}`}
               >
                 ⚠️ Partial Events
@@ -580,7 +580,7 @@ export const EquityChart: React.FC<EquityChartProps> = ({
             )}
             {eventsMetadata?.status === 'unavailable' && (
               <span
-                className="inline-flex items-center gap-1 rounded-md bg-zinc-100 border border-zinc-200 px-2 py-0.5 text-[10px] font-medium text-zinc-500"
+                className="inline-flex items-center gap-1 rounded-md bg-slate-100 border border-slate-200 px-2 py-0.5 text-[11px] font-medium text-slate-500"
                 title="Corporate actions data temporarily unavailable"
               >
                 Events unavailable
@@ -589,7 +589,7 @@ export const EquityChart: React.FC<EquityChartProps> = ({
             {/* Active Indicator Warmup / Burn-In Badge */}
             {config.overlay === 'EMA' && indicatorWarmup?.EMA200?.status === 'partial' && (
               <span
-                className="inline-flex items-center gap-1 rounded-md bg-amber-50 border border-amber-200 px-2 py-0.5 text-[10px] font-medium text-amber-700"
+                className="inline-flex items-center gap-1 rounded-md bg-amber-50 border border-amber-200 px-2 py-0.5 text-[11px] font-medium text-amber-700"
                 title={`EMA200 Burn-in: ${indicatorWarmup.EMA200.burn_in_bars_remaining} bars remaining until mathematical stability`}
               >
                 ⚠️ EMA200 Burn-in (+{indicatorWarmup.EMA200.burn_in_bars_remaining} bars)
@@ -597,7 +597,7 @@ export const EquityChart: React.FC<EquityChartProps> = ({
             )}
             {config.overlay === 'EMA' && indicatorWarmup?.EMA200?.status === 'unavailable' && (
               <span
-                className="inline-flex items-center gap-1 rounded-md bg-rose-50 border border-rose-200 px-2 py-0.5 text-[10px] font-medium text-rose-700"
+                className="inline-flex items-center gap-1 rounded-md bg-rose-50 border border-rose-200 px-2 py-0.5 text-[11px] font-medium text-rose-700"
                 title="Total available bars insufficient for EMA200 calculation"
               >
                 ⚠️ EMA200 Insufficient Data
@@ -606,7 +606,7 @@ export const EquityChart: React.FC<EquityChartProps> = ({
             {/* DCF Valuation Status & Comparability Warnings */}
             {config.dcf && valuationTargets?.status === 'available' && valuationTargets.comparability_status === 'comparable' && valuationTargets.scenarios.length > 0 && (
               <span
-                className="inline-flex items-center gap-1 rounded-md bg-teal-50 border border-teal-200 px-2 py-0.5 text-[10px] font-medium text-teal-800"
+                className="inline-flex items-center gap-1 rounded-md bg-teal-50 border border-teal-200 px-2 py-0.5 text-[11px] font-medium text-teal-800"
                 title={`DCF Model: ${valuationTargets.model_version} | ${valuationTargets.as_of_label} | WACC: ${valuationTargets.wacc_pct ? valuationTargets.wacc_pct.toFixed(1) + '%' : 'N/A'}`}
               >
                 🎯 {valuationTargets.scenarios[0]?.label}: {currSign}{valuationTargets.scenarios[0]?.target_price.toFixed(2)}
@@ -614,7 +614,7 @@ export const EquityChart: React.FC<EquityChartProps> = ({
             )}
             {config.dcf && valuationTargets?.comparability_status === 'not_comparable' && (
               <span
-                className="inline-flex items-center gap-1 rounded-md bg-amber-50 border border-amber-200 px-2 py-0.5 text-[10px] font-medium text-amber-800"
+                className="inline-flex items-center gap-1 rounded-md bg-amber-50 border border-amber-200 px-2 py-0.5 text-[11px] font-medium text-amber-800"
                 title={valuationTargets.comparability_reasons.join(' | ')}
               >
                 ⚠️ DCF Suppressed (Not comparable)
@@ -641,8 +641,8 @@ export const EquityChart: React.FC<EquityChartProps> = ({
                   onClick={() => onIntervalChange?.(key)}
                   className={`rounded-lg px-2.5 py-1 text-xs font-semibold transition-all ${
                     isSelected
-                      ? 'bg-white text-indigo-700 shadow-sm border border-indigo-200'
-                      : 'text-zinc-500 hover:text-zinc-900'
+                      ? 'bg-white text-blue-700 shadow-sm border border-blue-200'
+                      : 'text-slate-500 hover:text-slate-900'
                   }`}
                 >
                   {label}
@@ -671,8 +671,8 @@ export const EquityChart: React.FC<EquityChartProps> = ({
                     isSelected
                       ? 'bg-white text-sky-700 shadow-sm border border-sky-200'
                       : isAllowed
-                      ? 'text-zinc-500 hover:text-zinc-900'
-                      : 'text-zinc-300 cursor-not-allowed'
+                      ? 'text-slate-500 hover:text-slate-900'
+                      : 'text-slate-300 cursor-not-allowed'
                   }`}
                 >
                   {label}
@@ -694,7 +694,7 @@ export const EquityChart: React.FC<EquityChartProps> = ({
         <div className="flex flex-wrap items-center gap-3 text-xs">
           {/* Overlay Group */}
           <div role="group" aria-label="Overlay indicator" className="flex items-center gap-1">
-            <span className="font-medium text-zinc-400 mr-1">Overlay:</span>
+            <span className="font-medium text-slate-500 mr-1">Overlay:</span>
             <div className="flex items-center rounded-lg bg-surface p-0.5 border border-edge/60">
               {OVERLAY_OPTIONS.map(({ key, label }) => {
                 const isActive = config.overlay === key
@@ -707,7 +707,7 @@ export const EquityChart: React.FC<EquityChartProps> = ({
                     className={`rounded-md px-2 py-0.5 text-xs font-medium transition-all ${
                       isActive
                         ? 'bg-white text-sky-700 shadow-sm border border-sky-200'
-                        : 'text-zinc-500 hover:text-zinc-800'
+                        : 'text-slate-500 hover:text-slate-800'
                     }`}
                   >
                     {label}
@@ -726,7 +726,7 @@ export const EquityChart: React.FC<EquityChartProps> = ({
               className={`rounded-lg border px-2.5 py-0.5 text-xs font-medium transition-all ${
                 config.volume
                   ? 'bg-slate-800 text-white border-slate-800 shadow-sm'
-                  : 'bg-surface text-zinc-500 border-edge/80 hover:text-zinc-900'
+                  : 'bg-surface text-slate-500 border-edge/80 hover:text-slate-900'
               }`}
             >
               VOL
@@ -739,10 +739,10 @@ export const EquityChart: React.FC<EquityChartProps> = ({
               onClick={() => updateConfig({ vwap: !config.vwap })}
               className={`rounded-lg border px-2.5 py-0.5 text-xs font-medium transition-all ${
                 config.vwap && isIntraday
-                  ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm'
+                  ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
                   : isIntraday
-                  ? 'bg-surface text-zinc-500 border-edge/80 hover:text-zinc-900'
-                  : 'bg-surface text-zinc-300 border-edge/40 cursor-not-allowed opacity-60'
+                  ? 'bg-surface text-slate-500 border-edge/80 hover:text-slate-900'
+                  : 'bg-surface text-slate-300 border-edge/40 cursor-not-allowed opacity-60'
               }`}
             >
               VWAP
@@ -751,7 +751,7 @@ export const EquityChart: React.FC<EquityChartProps> = ({
 
           {/* Momentum Group */}
           <div role="group" aria-label="Momentum indicator" className="flex items-center gap-1">
-            <span className="font-medium text-zinc-400 mr-1">Momentum:</span>
+            <span className="font-medium text-slate-500 mr-1">Momentum:</span>
             <div className="flex items-center rounded-lg bg-surface p-0.5 border border-edge/60">
               {MOMENTUM_OPTIONS.map(({ key, label }) => {
                 const isActive = config.momentum === key
@@ -764,7 +764,7 @@ export const EquityChart: React.FC<EquityChartProps> = ({
                     className={`rounded-md px-2 py-0.5 text-xs font-medium transition-all ${
                       isActive
                         ? 'bg-white text-teal-700 shadow-sm border border-teal-200'
-                        : 'text-zinc-500 hover:text-zinc-800'
+                        : 'text-slate-500 hover:text-slate-800'
                     }`}
                   >
                     {label}
@@ -780,7 +780,7 @@ export const EquityChart: React.FC<EquityChartProps> = ({
             aria-label="Volatility and events toggles"
             className="flex items-center gap-1.5"
           >
-            <span className="font-medium text-zinc-400 mr-0.5">Context:</span>
+            <span className="font-medium text-slate-500 mr-0.5">Context:</span>
             <button
               type="button"
               aria-pressed={config.atr}
@@ -788,7 +788,7 @@ export const EquityChart: React.FC<EquityChartProps> = ({
               className={`rounded-lg border px-2 py-0.5 text-xs font-medium transition-all ${
                 config.atr
                   ? 'bg-amber-600 text-white border-amber-600 shadow-sm'
-                  : 'bg-surface text-zinc-500 border-edge/80 hover:text-zinc-900'
+                  : 'bg-surface text-slate-500 border-edge/80 hover:text-slate-900'
               }`}
             >
               ATR(14)
@@ -800,7 +800,7 @@ export const EquityChart: React.FC<EquityChartProps> = ({
               className={`rounded-lg border px-2 py-0.5 text-xs font-medium transition-all ${
                 config.week52
                   ? 'bg-emerald-600 text-white border-emerald-600 shadow-sm'
-                  : 'bg-surface text-zinc-500 border-edge/80 hover:text-zinc-900'
+                  : 'bg-surface text-slate-500 border-edge/80 hover:text-slate-900'
               }`}
             >
               52W
@@ -811,8 +811,8 @@ export const EquityChart: React.FC<EquityChartProps> = ({
               onClick={() => updateConfig({ events: !config.events })}
               className={`rounded-lg border px-2 py-0.5 text-xs font-medium transition-all ${
                 config.events
-                  ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm'
-                  : 'bg-surface text-zinc-500 border-edge/80 hover:text-zinc-900'
+                  ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
+                  : 'bg-surface text-slate-500 border-edge/80 hover:text-slate-900'
               }`}
             >
               Events
@@ -824,7 +824,7 @@ export const EquityChart: React.FC<EquityChartProps> = ({
               className={`rounded-lg border px-2 py-0.5 text-xs font-medium transition-all ${
                 config.dcf
                   ? 'bg-teal-700 text-white border-teal-700 shadow-sm'
-                  : 'bg-surface text-zinc-500 border-edge/80 hover:text-zinc-900'
+                  : 'bg-surface text-slate-500 border-edge/80 hover:text-slate-900'
               }`}
             >
               DCF
@@ -843,8 +843,8 @@ export const EquityChart: React.FC<EquityChartProps> = ({
                 config.consensus && analystContext?.target_mean && analystContext.data_status !== 'unavailable'
                   ? 'bg-amber-600 text-white border-amber-600 shadow-sm'
                   : analystContext?.target_mean && analystContext.data_status !== 'unavailable'
-                  ? 'bg-surface text-zinc-500 border-edge/80 hover:text-zinc-900'
-                  : 'bg-surface text-zinc-300 border-edge/40 cursor-not-allowed opacity-60'
+                  ? 'bg-surface text-slate-500 border-edge/80 hover:text-slate-900'
+                  : 'bg-surface text-slate-300 border-edge/40 cursor-not-allowed opacity-60'
               }`}
             >
               Street
@@ -855,8 +855,8 @@ export const EquityChart: React.FC<EquityChartProps> = ({
               onClick={() => updateConfig({ insider: !config.insider })}
               className={`rounded-lg border px-2 py-0.5 text-xs font-medium transition-all ${
                 config.insider
-                  ? 'bg-purple-700 text-white border-purple-700 shadow-sm'
-                  : 'bg-surface text-zinc-500 border-edge/80 hover:text-zinc-900'
+                  ? 'bg-blue-700 text-white border-blue-700 shadow-sm'
+                  : 'bg-surface text-slate-500 border-edge/80 hover:text-slate-900'
               }`}
             >
               Insider
@@ -870,7 +870,7 @@ export const EquityChart: React.FC<EquityChartProps> = ({
           aria-label="Drawing tools"
           className="flex items-center gap-1 rounded-lg bg-surface p-0.5 border border-edge/60 text-xs"
         >
-          <span className="text-[10px] font-semibold text-zinc-400 px-1">Draw:</span>
+          <span className="text-[11px] font-semibold text-slate-500 px-1">Draw:</span>
           <button
             type="button"
             title="Trendline (Line)"
@@ -879,7 +879,7 @@ export const EquityChart: React.FC<EquityChartProps> = ({
             className={`rounded px-1.5 py-0.5 transition-all ${
               activeDrawing === 'straightLine'
                 ? 'bg-sky-600 text-white shadow-sm font-semibold'
-                : 'text-zinc-600 hover:text-zinc-900'
+                : 'text-slate-600 hover:text-slate-900'
             }`}
           >
             📏 Line
@@ -892,7 +892,7 @@ export const EquityChart: React.FC<EquityChartProps> = ({
             className={`rounded px-1.5 py-0.5 transition-all ${
               activeDrawing === 'horizontalStraightLine'
                 ? 'bg-sky-600 text-white shadow-sm font-semibold'
-                : 'text-zinc-600 hover:text-zinc-900'
+                : 'text-slate-600 hover:text-slate-900'
             }`}
           >
             〰️ Horiz
@@ -905,7 +905,7 @@ export const EquityChart: React.FC<EquityChartProps> = ({
             className={`rounded px-1.5 py-0.5 transition-all ${
               activeDrawing === 'fibonacciLine'
                 ? 'bg-sky-600 text-white shadow-sm font-semibold'
-                : 'text-zinc-600 hover:text-zinc-900'
+                : 'text-slate-600 hover:text-slate-900'
             }`}
           >
             🔶 Fib
@@ -914,7 +914,7 @@ export const EquityChart: React.FC<EquityChartProps> = ({
             type="button"
             title="Clear All User Drawings"
             onClick={handleClearDrawings}
-            className="rounded px-1.5 py-0.5 text-zinc-400 hover:text-rose-600 hover:bg-rose-50 transition-all"
+            className="rounded px-1.5 py-0.5 text-slate-500 hover:text-rose-600 hover:bg-rose-50 transition-all"
           >
             🗑️
           </button>
@@ -956,12 +956,12 @@ export const EquityChart: React.FC<EquityChartProps> = ({
               pointerEvents: 'none',
               zIndex: 30,
             }}
-            className="rounded-lg bg-zinc-900/95 backdrop-blur-sm px-3 py-2 text-xs text-white shadow-xl border border-zinc-700 max-w-xs animate-fade-in"
+            className="rounded-lg bg-slate-900/95 backdrop-blur-sm px-3 py-2 text-xs text-white shadow-xl border border-slate-700 max-w-xs animate-fade-in"
           >
-            <div className="font-semibold text-[11px] text-zinc-300">
+            <div className="font-semibold text-[11px] text-slate-300">
               {hoveredEvent.event.event_type.toUpperCase()} • {hoveredEvent.event.date_str}
             </div>
-            <div className="mt-0.5 text-[11px] leading-relaxed text-zinc-100">
+            <div className="mt-0.5 text-[11px] leading-relaxed text-slate-100">
               {hoveredEvent.event.tooltip}
               {(() => {
                 const ev = hoveredEvent.event
@@ -990,18 +990,18 @@ export const EquityChart: React.FC<EquityChartProps> = ({
               pointerEvents: 'none',
               zIndex: 30,
             }}
-            className="rounded-lg bg-zinc-900/95 backdrop-blur-sm px-3.5 py-2.5 text-xs text-white shadow-xl border border-zinc-700 max-w-xs animate-fade-in"
+            className="rounded-lg bg-slate-900/95 backdrop-blur-sm px-3.5 py-2.5 text-xs text-white shadow-xl border border-slate-700 max-w-xs animate-fade-in"
           >
             <div className="flex items-center justify-between gap-2">
-              <span className="font-semibold text-[11px] text-purple-300">
+              <span className="font-semibold text-[11px] text-sky-300">
                 {hoveredInsider.filing.label}
               </span>
-              <span className="text-[10px] text-zinc-400">Click to pin 📌</span>
+              <span className="text-[11px] text-slate-500">Click to pin 📌</span>
             </div>
-            <div className="mt-1 font-medium text-[11px] text-zinc-100">
+            <div className="mt-1 font-medium text-[11px] text-slate-100">
               {hoveredInsider.filing.insider_name}
             </div>
-            <div className="text-[10px] text-zinc-300">
+            <div className="text-[11px] text-slate-300">
               {hoveredInsider.filing.shares.toLocaleString()} หุ้น @ ${hoveredInsider.filing.price.toFixed(2)}
             </div>
           </div>
@@ -1018,24 +1018,24 @@ export const EquityChart: React.FC<EquityChartProps> = ({
               pointerEvents: 'auto',
               zIndex: 40,
             }}
-            className="rounded-xl bg-white/95 backdrop-blur-md p-4 text-xs text-zinc-900 shadow-2xl border border-purple-200 max-w-sm animate-fade-in"
+            className="rounded-xl bg-white/95 backdrop-blur-md p-4 text-xs text-slate-900 shadow-2xl border border-sky-200 max-w-sm animate-fade-in"
           >
-            <div className="flex items-start justify-between gap-3 border-b border-zinc-100 pb-2">
+            <div className="flex items-start justify-between gap-3 border-b border-slate-100 pb-2">
               <div>
-                <span className="inline-flex items-center gap-1 rounded bg-purple-50 px-1.5 py-0.5 text-[10px] font-bold text-purple-700 border border-purple-200">
+                <span className="inline-flex items-center gap-1 rounded bg-sky-50 px-1.5 py-0.5 text-[11px] font-bold text-blue-700 border border-sky-200">
                   {pinnedInsider.label}
                 </span>
-                <h5 className="mt-1 font-bold text-zinc-900 text-sm">
+                <h5 className="mt-1 font-bold text-slate-900 text-sm">
                   {pinnedInsider.insider_name}
                 </h5>
                 {pinnedInsider.officer_title && (
-                  <p className="text-[11px] text-zinc-500">{pinnedInsider.officer_title}</p>
+                  <p className="text-[11px] text-slate-500">{pinnedInsider.officer_title}</p>
                 )}
               </div>
               <button
                 type="button"
                 onClick={() => setPinnedInsider(null)}
-                className="rounded-lg p-1 text-zinc-400 hover:bg-zinc-100 hover:text-zinc-700 transition-colors"
+                className="rounded-lg p-1 text-slate-500 hover:bg-slate-100 hover:text-slate-700 transition-colors"
                 title="ปิด"
               >
                 ✕
@@ -1043,18 +1043,18 @@ export const EquityChart: React.FC<EquityChartProps> = ({
             </div>
 
             <div className="mt-3 space-y-1.5 text-[11px]">
-              <div className="flex justify-between text-zinc-600">
+              <div className="flex justify-between text-slate-600">
                 <span>จำนวนหุ้นรวม:</span>
-                <span className="font-semibold text-zinc-900">{pinnedInsider.shares.toLocaleString()} หุ้น</span>
+                <span className="font-semibold text-slate-900">{pinnedInsider.shares.toLocaleString()} หุ้น</span>
               </div>
-              <div className="flex justify-between text-zinc-600">
+              <div className="flex justify-between text-slate-600">
                 <span>ราคาเฉลี่ย:</span>
-                <span className="font-semibold text-zinc-900">${pinnedInsider.price.toFixed(2)}</span>
+                <span className="font-semibold text-slate-900">${pinnedInsider.price.toFixed(2)}</span>
               </div>
               {pinnedInsider.all_filers && pinnedInsider.all_filers.length > 0 && (
-                <div className="mt-2 pt-2 border-t border-zinc-100">
-                  <span className="text-[10px] font-semibold text-zinc-400">ผู้รายงานในรอบนี้:</span>
-                  <ul className="mt-1 space-y-1 text-[10px] text-zinc-600">
+                <div className="mt-2 pt-2 border-t border-slate-100">
+                  <span className="text-[11px] font-semibold text-slate-500">ผู้รายงานในรอบนี้:</span>
+                  <ul className="mt-1 space-y-1 text-[11px] text-slate-600">
                     {pinnedInsider.all_filers.map((f, i) => (
                       <li key={i} className="flex justify-between">
                         <span className="truncate max-w-[150px]">{f.name}</span>
@@ -1066,12 +1066,12 @@ export const EquityChart: React.FC<EquityChartProps> = ({
               )}
             </div>
 
-            <div className="mt-3 pt-2.5 border-t border-zinc-100 flex items-center justify-between">
+            <div className="mt-3 pt-2.5 border-t border-slate-100 flex items-center justify-between">
               <a
                 href={pinnedInsider.filing_url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-1 text-[11px] font-semibold text-purple-600 hover:text-purple-800 hover:underline"
+                className="inline-flex items-center gap-1 text-[11px] font-semibold text-blue-600 hover:text-blue-800 hover:underline"
               >
                 <span>ดูเอกสาร SEC EDGAR</span>
                 <span>↗</span>
@@ -1079,7 +1079,7 @@ export const EquityChart: React.FC<EquityChartProps> = ({
               <button
                 type="button"
                 onClick={() => setPinnedInsider(null)}
-                className="rounded-lg bg-zinc-100 px-2.5 py-1 text-[10px] font-semibold text-zinc-600 hover:bg-zinc-200"
+                className="rounded-lg bg-slate-100 px-2.5 py-1 text-[11px] font-semibold text-slate-600 hover:bg-slate-200"
               >
                 เสร็จสิ้น
               </button>
@@ -1089,7 +1089,7 @@ export const EquityChart: React.FC<EquityChartProps> = ({
 
         {isLoading && (
           <div className="absolute inset-0 flex items-center justify-center bg-white/60 backdrop-blur-[1px] transition-opacity">
-            <div className="flex items-center gap-2 rounded-xl bg-white px-3 py-1.5 shadow-md border border-edge text-xs font-medium text-zinc-600">
+            <div className="flex items-center gap-2 rounded-xl bg-white px-3 py-1.5 shadow-md border border-edge text-xs font-medium text-slate-600">
               <svg
                 className="h-4 w-4 animate-spin text-sky-600"
                 xmlns="http://www.w3.org/2000/svg"
@@ -1117,7 +1117,7 @@ export const EquityChart: React.FC<EquityChartProps> = ({
       </div>
 
       {/* Static Context & Navigation Hint */}
-      <div className="mt-2.5 flex flex-wrap items-center justify-between gap-2 text-[11px] text-zinc-400 px-1">
+      <div className="mt-2.5 flex flex-wrap items-center justify-between gap-2 text-[11px] text-slate-500 px-1">
         <span>
           ℹ️ กราฟแสดงราคาปรับสิทธิ (Adjusted Basis) • เหตุการณ์ (E, XD, S) แสดงบริบทเหตุการณ์สำคัญ
         </span>

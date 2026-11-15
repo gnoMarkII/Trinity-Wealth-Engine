@@ -1,6 +1,7 @@
 """Typed Financial Autopsy สำหรับดึงและคำนวณข้อมูลการเงินย้อนหลัง 3-5 ปีจริง (FCF, Debt, Payout Ratio)"""
 from typing import Optional, Literal, Dict, Tuple, List, Any
 from datetime import datetime
+from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
 from concurrent.futures import ThreadPoolExecutor, TimeoutError as FuturesTimeoutError
 import time
 import requests
@@ -206,27 +207,82 @@ def _build_rolling_ttm_period(
     q_cashflow: Any,
     balance_sheet: Any = None,
 ) -> Optional[FinancialAutopsyPeriod]:
-    """สร้าง TTM Period จากการรวมงบ 4 ไตรมาสล่าสุด (Rolling 4-Quarter Sum) ตามแบบรายงาน SEC (10-Q/10-K)"""
+    """Build a rolling four-quarter period from distinct, one-to-one source periods."""
     if q_financials is None and q_cashflow is None:
         return None
 
-    cf_cols = list(q_cashflow.columns) if (q_cashflow is not None and isinstance(q_cashflow, pd.DataFrame)) else []
-    fin_cols = list(q_financials.columns) if (q_financials is not None and isinstance(q_financials, pd.DataFrame)) else []
+    def _columns_by_date(frame: Any) -> Dict[Any, Any]:
+        if frame is None or not isinstance(frame, pd.DataFrame) or frame.empty:
+            return {}
+        by_date: Dict[Any, Any] = {}
+        for column in frame.columns:
+            try:
+                normalized = pd.to_datetime(column, errors="coerce")
+                if pd.isna(normalized):
+                    continue
+                key = normalized.normalize()
+            except Exception:
+                continue
+            by_date.setdefault(key, column)
+        return by_date
 
-    all_q_cols = set(cf_cols).union(fin_cols)
-    if not all_q_cols:
+    fin_by_date = _columns_by_date(q_financials)
+    cf_by_date = _columns_by_date(q_cashflow)
+    if not fin_by_date and not cf_by_date:
         return None
 
-    sorted_q_cols = sorted(
-        list(all_q_cols),
-        key=lambda c: pd.to_datetime(c) if hasattr(pd, "to_datetime") else str(c),
-        reverse=True
-    )[:4]
+    # Pair nearest source dates once each so a reporting-date drift cannot create
+    # a duplicate fiscal period or match one cash-flow column to multiple quarters.
+    candidate_pairs = []
+    for fin_date in fin_by_date:
+        for cf_date in cf_by_date:
+            diff_days = abs((fin_date - cf_date).days)
+            if diff_days <= 45:
+                candidate_pairs.append((diff_days, fin_date, cf_date))
+    candidate_pairs.sort(key=lambda item: (item[0], -item[1].value, -item[2].value))
 
-    if len(sorted_q_cols) < 4:
+    used_fin = set()
+    used_cf = set()
+    periods = []
+    for _diff, fin_date, cf_date in candidate_pairs:
+        if fin_date in used_fin or cf_date in used_cf:
+            continue
+        used_fin.add(fin_date)
+        used_cf.add(cf_date)
+        periods.append({"date": fin_date, "fin_col": fin_by_date[fin_date], "cf_col": cf_by_date[cf_date]})
+    for fin_date, fin_col in fin_by_date.items():
+        if fin_date not in used_fin:
+            periods.append({"date": fin_date, "fin_col": fin_col, "cf_col": None})
+    for cf_date, cf_col in cf_by_date.items():
+        if cf_date not in used_cf:
+            periods.append({"date": cf_date, "fin_col": None, "cf_col": cf_col})
+
+    periods.sort(key=lambda period: period["date"], reverse=True)
+    periods = periods[:4]
+    if len(periods) < 4:
         return None
 
-    ttm_rev = 0.0
+    # The source provides fiscal period end dates but not quarter labels. Allow
+    # off-calendar and 52/53-week reporting cadences while rejecting a missing
+    # quarter: four consecutive quarter ends span about nine months and have
+    # three gaps near one quarter. This is separate from the 45-day statement
+    # date-alignment tolerance used above to pair income and cash-flow columns.
+    quarter_gaps = [
+        (periods[index]["date"] - periods[index + 1]["date"]).days
+        for index in range(3)
+    ]
+    four_quarter_span = (periods[0]["date"] - periods[3]["date"]).days
+    if (
+        any(gap < 70 or gap > 110 for gap in quarter_gaps)
+        or four_quarter_span < 250
+        or four_quarter_span > 330
+    ):
+        return None
+
+    ttm_rev = Decimal("0")
+    revenue_quarters = 0
+    ttm_gp = Decimal("0")
+    gross_profit_quarters = 0
     ttm_op_inc = 0.0
     ttm_ebit = 0.0
     ttm_net_inc = 0.0
@@ -235,7 +291,6 @@ def _build_rolling_ttm_period(
     ttm_fcf = 0.0
     ttm_deprec = 0.0
 
-    has_rev = False
     has_op_inc = False
     has_ebit = False
     has_net_inc = False
@@ -244,30 +299,47 @@ def _build_rolling_ttm_period(
     has_fcf = False
     has_deprec = False
 
-    for col in sorted_q_cols:
-        rev = _extract_df_val_aligned(q_financials, col, ["Total Revenue", "Operating Revenue", "Revenue"])
+    for period in periods:
+        fin_col = period["fin_col"]
+        cf_col = period["cf_col"]
+        rev = _extract_df_val(q_financials, fin_col, ["Total Revenue", "Operating Revenue", "Revenue"]) if fin_col is not None else None
         if rev is not None:
-            ttm_rev += rev
-            has_rev = True
+            try:
+                rev_decimal = Decimal(str(rev))
+                if rev_decimal.is_finite():
+                    ttm_rev += rev_decimal
+                    revenue_quarters += 1
+            except (InvalidOperation, ValueError):
+                pass
 
-        op_inc = _extract_df_val_aligned(q_financials, col, ["Operating Income", "Total Operating Income As Reported"])
+        gp = _extract_df_val(q_financials, fin_col, ["Gross Profit"]) if fin_col is not None else None
+        if gp is not None:
+            try:
+                gp_decimal = Decimal(str(gp))
+                if gp_decimal.is_finite():
+                    ttm_gp += gp_decimal
+                    gross_profit_quarters += 1
+            except (InvalidOperation, ValueError):
+                pass
+
+        op_inc = _extract_df_val(q_financials, fin_col, ["Operating Income", "Total Operating Income As Reported"]) if fin_col is not None else None
         if op_inc is not None:
             ttm_op_inc += op_inc
             has_op_inc = True
 
-        ebit = _extract_df_val_aligned(q_financials, col, ["EBIT", "Operating Income", "Total Operating Income As Reported"])
+        ebit = _extract_df_val(q_financials, fin_col, ["EBIT", "Operating Income", "Total Operating Income As Reported"]) if fin_col is not None else None
         if ebit is not None:
             ttm_ebit += ebit
             has_ebit = True
 
-        net_inc = _extract_df_val_aligned(q_financials, col, ["Net Income", "Net Income Common Stockholders", "Net Income Loss"])
+        net_inc = _extract_df_val(q_financials, fin_col, ["Net Income", "Net Income Common Stockholders", "Net Income Loss"]) if fin_col is not None else None
         if net_inc is not None:
             ttm_net_inc += net_inc
             has_net_inc = True
 
-        ocf = _extract_df_val_aligned(q_cashflow, col, ["Operating Cash Flow", "Total Cash From Operating Activities", "Cash Flow From Continuing Operating Activities"])
-        capex = _extract_df_val_aligned(q_cashflow, col, ["Capital Expenditure", "Capital Expenditures"])
-        fcf = _extract_df_val_aligned(q_cashflow, col, ["Free Cash Flow"])
+        ocf = _extract_df_val(q_cashflow, cf_col, ["Operating Cash Flow", "Total Cash From Operating Activities", "Cash Flow From Continuing Operating Activities"]) if cf_col is not None else None
+        capex = _extract_df_val(q_cashflow, cf_col, ["Capital Expenditure", "Capital Expenditures"]) if cf_col is not None else None
+        fcf = _extract_df_val(q_cashflow, cf_col, ["Free Cash Flow"]) if cf_col is not None else None
 
         if ocf is not None:
             ttm_ocf += ocf
@@ -275,9 +347,9 @@ def _build_rolling_ttm_period(
         if capex is not None:
             ttm_capex += abs(capex)
             has_capex = True
-        deprec = _extract_df_val_aligned(q_cashflow, col, ["Depreciation And Amortization", "Depreciation & Amortization", "Depreciation Amortization Depletion", "Depreciation"])
-        if deprec is None:
-            deprec = _extract_df_val_aligned(q_financials, col, ["Depreciation And Amortization", "Depreciation & Amortization", "Depreciation Amortization Depletion", "Depreciation"])
+        deprec = _extract_df_val(q_cashflow, cf_col, ["Depreciation And Amortization", "Depreciation & Amortization", "Depreciation Amortization Depletion", "Depreciation"]) if cf_col is not None else None
+        if deprec is None and fin_col is not None:
+            deprec = _extract_df_val(q_financials, fin_col, ["Depreciation And Amortization", "Depreciation & Amortization", "Depreciation Amortization Depletion", "Depreciation"])
         if deprec is not None:
             ttm_deprec += abs(deprec)
             has_deprec = True
@@ -288,8 +360,10 @@ def _build_rolling_ttm_period(
             ttm_fcf += (ocf - abs(capex))
             has_fcf = True
 
-    latest_q = sorted_q_cols[0]
-    dt_str = latest_q.strftime("%Y-%m-%d") if hasattr(latest_q, "strftime") else str(latest_q)[:10]
+    has_rev = revenue_quarters == 4
+    has_gp = gross_profit_quarters == 4
+    latest_q = periods[0]["date"]
+    dt_str = latest_q.strftime("%Y-%m-%d")
 
     return FinancialAutopsyPeriod(
         fiscal_period_end=f"{dt_str} (TTM)",
@@ -297,14 +371,14 @@ def _build_rolling_ttm_period(
         operating_cash_flow=round(ttm_ocf, 2) if has_ocf else None,
         capital_expenditure=round(ttm_capex, 2) if has_capex else None,
         depreciation=round(ttm_deprec, 2) if has_deprec else None,
-        total_revenue=round(ttm_rev, 2) if has_rev else None,
+        total_revenue=float(ttm_rev.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)) if has_rev else None,
+        gross_profit=float(ttm_gp.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)) if has_gp else None,
         operating_income=round(ttm_op_inc, 2) if has_op_inc else None,
         ebit=round(ttm_ebit, 2) if has_ebit else None,
         net_income=round(ttm_net_inc, 2) if has_net_inc else None,
         source_tier="filing_authoritative",
         period_type="ttm",
     )
-
 
 def _fetch_autopsy_raw(provider_symbol: str, timeout: float = 10.0) -> Tuple[dict, Any, Any, Any, Any, Any]:
     session = None

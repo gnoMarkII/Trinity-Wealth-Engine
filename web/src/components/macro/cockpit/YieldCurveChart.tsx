@@ -112,7 +112,7 @@ export const YieldCurveChart: React.FC<YieldCurveChartProps> = ({
           <span>⚠️</span>
           <span>US Treasury Yield Curve: ไม่สามารถโหลดข้อมูลได้</span>
         </div>
-        <p className="mt-1 text-zinc-600">{error || 'ไม่มีข้อมูล Yield Curve จากกระทรวงการคลังสหรัฐฯ (Fiscal Data)'}</p>
+        <p className="mt-1 text-slate-600">{error || 'ไม่มีข้อมูล Yield Curve จากกระทรวงการคลังสหรัฐฯ (Fiscal Data)'}</p>
       </div>
     )
   }
@@ -123,7 +123,7 @@ export const YieldCurveChart: React.FC<YieldCurveChartProps> = ({
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between border-b border-sky-100/70 pb-3">
         <div>
           <div className="flex items-center gap-2">
-            <h3 className="font-bold text-zinc-900 text-sm tracking-tight">
+            <h3 className="font-bold text-slate-900 text-sm tracking-tight">
               US Treasury Yield Curve (Cross-Section)
             </h3>
             <ContextTooltip
@@ -133,16 +133,16 @@ export const YieldCurveChart: React.FC<YieldCurveChartProps> = ({
               impactOnMoney="หากเส้นกลับหัว ควรระวังการลงทุนในหุ้นและเพิ่มเงินสดสำรอง หากเส้นปกติสะท้อนว่าตลาดยังไม่เห็นวิกฤตระยะสั้น"
             />
             {isInverted ? (
-              <span className="rounded-md border border-rose-200 bg-rose-50 px-2 py-0.5 text-[10px] font-bold text-rose-700">
+              <span className="rounded-md border border-rose-200 bg-rose-50 px-2 py-0.5 text-[11px] font-bold text-rose-700">
                 INVERTED (กลับหัว)
               </span>
             ) : (
-              <span className="rounded-md border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[10px] font-bold text-emerald-700">
+              <span className="rounded-md border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[11px] font-bold text-emerald-700">
                 NORMAL (ชันปกติ)
               </span>
             )}
           </div>
-          <p className="text-xs text-zinc-500 mt-0.5">
+          <p className="text-xs text-slate-500 mt-0.5">
             อัตราผลตอบแทนพันธบัตรรัฐบาลสหรัฐฯ ณ สิ้นวันทำการข้าม Tenor (1M ถึง 30Y)
           </p>
           <div className="mt-2">
@@ -172,44 +172,44 @@ export const YieldCurveChart: React.FC<YieldCurveChartProps> = ({
       {/* Yield Spreads Key Metrics */}
       <div className="mt-3 grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
         <div className="rounded-xl bg-slate-50 p-2.5 border border-slate-100">
-          <span className="text-[10px] text-zinc-500 block">Spread 10Y – 2Y</span>
+          <span className="text-[11px] text-slate-500 block">Spread 10Y – 2Y</span>
           <span className={`font-mono text-base font-extrabold ${
             (spread10y2y ?? 0) < 0 ? 'text-rose-600' : 'text-emerald-700'
           }`}>
             {spread10y2y !== null && spread10y2y !== undefined ? `${spread10y2y > 0 ? '+' : ''}${spread10y2y} bps` : '—'}
           </span>
-          <span className="text-[9px] text-zinc-400 block mt-0.5">สัญญาณเศรษฐกิจถดถอย</span>
+          <span className="text-[11px] text-slate-500 block mt-0.5">สัญญาณเศรษฐกิจถดถอย</span>
         </div>
 
         <div className="rounded-xl bg-slate-50 p-2.5 border border-slate-100">
-          <span className="text-[10px] text-zinc-500 block">Spread 10Y – 3M</span>
+          <span className="text-[11px] text-slate-500 block">Spread 10Y – 3M</span>
           <span className={`font-mono text-base font-extrabold ${
             (spread10y3m ?? 0) < 0 ? 'text-rose-600' : 'text-emerald-700'
           }`}>
             {spread10y3m !== null && spread10y3m !== undefined ? `${spread10y3m > 0 ? '+' : ''}${spread10y3m} bps` : '—'}
           </span>
-          <span className="text-[9px] text-zinc-400 block mt-0.5">โมเดล Fed NY ติดตาม</span>
+          <span className="text-[11px] text-slate-500 block mt-0.5">โมเดล Fed NY ติดตาม</span>
         </div>
 
         <div className="rounded-xl bg-slate-50 p-2.5 border border-slate-100">
-          <span className="text-[10px] text-zinc-500 block">2-Year Note Yield</span>
-          <span className="font-mono text-base font-extrabold text-zinc-900">
+          <span className="text-[11px] text-slate-500 block">2-Year Note Yield</span>
+          <span className="font-mono text-base font-extrabold text-slate-900">
             {yieldsMap.get('2 Yr') !== undefined ? `${yieldsMap.get('2 Yr')?.toFixed(2)}%` : '—'}
           </span>
-          <span className="text-[9px] text-zinc-400 block mt-0.5">นโยบาย Fed ระยะสั้น</span>
+          <span className="text-[11px] text-slate-500 block mt-0.5">นโยบาย Fed ระยะสั้น</span>
         </div>
 
         <div className="rounded-xl bg-slate-50 p-2.5 border border-slate-100">
-          <span className="text-[10px] text-zinc-500 block">10-Year Benchmark</span>
+          <span className="text-[11px] text-slate-500 block">10-Year Benchmark</span>
           <span className="font-mono text-base font-extrabold text-sky-800">
             {yieldsMap.get('10 Yr') !== undefined ? `${yieldsMap.get('10 Yr')?.toFixed(2)}%` : '—'}
           </span>
-          <span className="text-[9px] text-zinc-400 block mt-0.5">อัตราปลอดความเสี่ยงโลก</span>
+          <span className="text-[11px] text-slate-500 block mt-0.5">อัตราปลอดความเสี่ยงโลก</span>
         </div>
       </div>
 
       {/* SVG Cross-Section Chart */}
-      <div className="mt-4 overflow-hidden rounded-xl border border-sky-100 bg-gradient-to-b from-slate-50/80 via-white to-sky-50/20 p-3.5 shadow-2xs">
+      <div className="mt-4 overflow-hidden rounded-xl border border-sky-100 bg-gradient-to-b from-slate-50/80 via-white to-sky-50/20 p-3.5 shadow-sm">
         <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-auto select-none" role="img" aria-label="Yield Curve Chart">
           {/* Y Axis Grid lines */}
           {[0, 0.25, 0.5, 0.75, 1].map((frac, i) => {
@@ -267,7 +267,7 @@ export const YieldCurveChart: React.FC<YieldCurveChartProps> = ({
         </svg>
       </div>
 
-      <p className="mt-2 text-[11px] text-zinc-400">
+      <p className="mt-2 text-[11px] text-slate-500">
         ℹ️ กราฟนี้เป็นภาพตัดขวาง (Cross-section) ณ วันเดียว ไม่ใช่แนวโน้มตามเวลา จุดเด่น 3M, 2Y และ 10Y ใช้คำนวณ Spread ชี้วัดวงจรเศรษฐกิจ
       </p>
     </div>

@@ -4,7 +4,7 @@ import type { ColumnDef, WorkspacePreview } from './types'
 
 const STATUS_DOT: Record<string, string> = {
   backlog: 'bg-blue-500',
-  approval: 'bg-purple-500',
+  approval: 'bg-sky-500',
   executing: 'bg-emerald-500 animate-pulse',
   done: 'bg-emerald-600',
 }
@@ -16,15 +16,19 @@ interface Props {
   column: ColumnDef
   cards: KanbanCardDTO[]
   isBacklogColumn: boolean
+  isApprovalColumn?: boolean
   removingIds: Set<string>
   selectedCardId?: string | null
   workspacePreviewFor: (card: KanbanCardDTO) => WorkspacePreview | undefined
   staggerCards?: boolean
   dispatchDisabled?: boolean
+  approvalActionDisabled?: boolean
   onDeleteCard: (cardId: string) => void
   onCardClick: (card: KanbanCardDTO) => void
   onEditCard?: (card: KanbanCardDTO) => void
   onDispatchCard?: (card: KanbanCardDTO) => void
+  onApproveCard?: (card: KanbanCardDTO) => void
+  onRejectCard?: (card: KanbanCardDTO) => void
   onAskAiCard?: (card: KanbanCardDTO) => void
 }
 
@@ -32,22 +36,26 @@ export default function KanbanColumn({
   column,
   cards,
   isBacklogColumn,
+  isApprovalColumn,
   removingIds,
   selectedCardId,
   workspacePreviewFor,
   staggerCards,
   dispatchDisabled,
+  approvalActionDisabled,
   onDeleteCard,
   onCardClick,
   onEditCard,
   onDispatchCard,
+  onApproveCard,
+  onRejectCard,
   onAskAiCard,
 }: Props) {
   return (
     <div className="flex h-full flex-col rounded-2xl border border-sky-100 bg-white/70 p-2.5 shadow-[0_10px_35px_rgba(14,165,233,0.06)] backdrop-blur-md transition-colors duration-150">
       <h3 className="mb-3 flex shrink-0 items-center gap-1.5 px-1 text-xs font-semibold text-sky-950">
-        <span className={`h-1.5 w-1.5 rounded-full ${STATUS_DOT[column.key] ?? 'bg-zinc-400'}`} />
-        {column.label} <span className="text-zinc-400">({cards.length})</span>
+        <span className={`h-1.5 w-1.5 rounded-full ${STATUS_DOT[column.key] ?? 'bg-slate-400'}`} />
+        {column.label} <span className="text-slate-500">({cards.length})</span>
       </h3>
       <div className="min-h-0 flex-1 space-y-2.5 overflow-y-auto pt-2.5 px-0.5 pb-2">
         {cards.map((c, i) => (
@@ -60,9 +68,13 @@ export default function KanbanColumn({
             onDelete={() => onDeleteCard(c.card_id)}
             onClick={() => onCardClick(c)}
             editable={isBacklogColumn}
+            awaitingApproval={Boolean(isApprovalColumn)}
+            approvalActionDisabled={approvalActionDisabled}
             dispatchDisabled={dispatchDisabled}
             onEdit={onEditCard ? () => onEditCard(c) : undefined}
             onDispatch={onDispatchCard ? () => onDispatchCard(c) : undefined}
+            onApprove={isApprovalColumn && onApproveCard ? () => onApproveCard(c) : undefined}
+            onReject={isApprovalColumn && onRejectCard ? () => onRejectCard(c) : undefined}
             onAskAi={onAskAiCard ? () => onAskAiCard(c) : undefined}
             style={staggerCards ? { animationDelay: `${Math.min(i * STAGGER_STEP_MS, STAGGER_CAP_MS)}ms` } : undefined}
           />

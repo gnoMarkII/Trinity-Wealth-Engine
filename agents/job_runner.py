@@ -81,6 +81,8 @@ def _resolve_stream_input(
     Otherwise, return fresh_inputs.
     """
     if resume_value is not None:
+        if isinstance(resume_value, dict) and resume_value.get("pre_run_approved"):
+            return fresh_inputs
         from langgraph.types import Command
 
         return Command(resume=resume_value)

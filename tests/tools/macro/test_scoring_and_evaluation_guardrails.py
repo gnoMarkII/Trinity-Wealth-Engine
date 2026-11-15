@@ -385,7 +385,7 @@ def test_fx_fed_bot_spread_guardrail_when_unavailable():
         stance="Overweight",
         allocation_delta="+3% vs benchmark",
         confidence="high",
-        rationale="ดอลลาร์ได้เปรียบจากส่วนต่างอัตราดอกเบี้ยนโยบาย Fed-BoT ที่กว้าง +275 bps",
+        rationale="ดอลลาร์ได้เปรียบจากส่วนต่างอัตราดอกเบี้ยนโยบาย (+287.5 bps) และส่วนต่าง Fed-BoT ที่กว้าง +275 bps",
         supporting_data=["ส่วนต่างอัตราดอกเบี้ยนโยบาย +275 bps"],
         source_refs=["Global_Macro_Snapshot.md"],
         observable_refs=["obs_us10y"],
@@ -405,8 +405,10 @@ def test_fx_fed_bot_spread_guardrail_when_unavailable():
     direction = direction.revalidate_with_registry(registry)
 
     alloc = direction.asset_allocation[0]
-    # Rationale must be sanitized
+    # Rationale must be sanitized without leftover empty parentheses
     assert "+275 bps" not in alloc.rationale
+    assert "+287.5 bps" not in alloc.rationale
+    assert "()" not in alloc.rationale
     assert "ปัจจุบันยังไม่มีข้อมูลส่วนต่างอัตราดอกเบี้ยนโยบายที่ยืนยันได้" in alloc.rationale
     # Confidence must be downgraded from high
     assert alloc.confidence in ("medium", "low")

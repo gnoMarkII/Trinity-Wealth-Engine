@@ -59,7 +59,7 @@ export const OptionsOiStrikeLadder: React.FC<OptionsOiStrikeLadderProps> = ({
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-edge/60 pb-3">
         <div>
           <div className="flex items-center gap-2">
-            <h3 className="font-semibold text-zinc-900 tracking-tight">
+            <h3 className="font-semibold text-slate-900 tracking-tight">
               {symbol} Options Open Interest by Strike
             </h3>
             {expirationDate && (
@@ -68,7 +68,7 @@ export const OptionsOiStrikeLadder: React.FC<OptionsOiStrikeLadderProps> = ({
               </span>
             )}
           </div>
-          <p className="text-xs text-zinc-500 mt-0.5">
+          <p className="text-xs text-slate-500 mt-0.5">
             Cboe Institutional Options Chain • Call OI (Left) vs Put OI (Right)
           </p>
         </div>
@@ -76,21 +76,21 @@ export const OptionsOiStrikeLadder: React.FC<OptionsOiStrikeLadderProps> = ({
         {/* Stats Summary */}
         <div className="flex items-center gap-2 text-xs">
           <div className="rounded-lg bg-emerald-50 px-2.5 py-1 text-right">
-            <span className="block text-[10px] uppercase font-bold text-emerald-700">Total Calls</span>
+            <span className="block text-[11px] uppercase font-bold text-emerald-700">Total Calls</span>
             <span className="font-mono font-bold text-emerald-800">
               {totals.totalCallOi.toLocaleString()}
             </span>
           </div>
 
           <div className="rounded-lg bg-rose-50 px-2.5 py-1 text-right">
-            <span className="block text-[10px] uppercase font-bold text-rose-700">Total Puts</span>
+            <span className="block text-[11px] uppercase font-bold text-rose-700">Total Puts</span>
             <span className="font-mono font-bold text-rose-800">
               {totals.totalPutOi.toLocaleString()}
             </span>
           </div>
 
           <div className="rounded-lg bg-sky-50 px-2.5 py-1 text-right">
-            <span className="block text-[10px] uppercase font-bold text-sky-700">P/C Ratio</span>
+            <span className="block text-[11px] uppercase font-bold text-sky-700">P/C Ratio</span>
             <span className="font-mono font-bold text-sky-800">{totals.pcr.toFixed(2)}</span>
           </div>
         </div>
@@ -133,7 +133,7 @@ export const OptionsOiStrikeLadder: React.FC<OptionsOiStrikeLadderProps> = ({
             >
               {/* Call OI Bar (Right-aligned, extends to left) */}
               <div className="flex flex-1 items-center justify-end gap-1.5">
-                <span className="font-mono text-[11px] text-zinc-500 w-12 text-right">
+                <span className="font-mono tabular-nums text-[11px] text-slate-500 w-12 text-right">
                   {row.callOi.toLocaleString()}
                 </span>
                 <div className="h-4 flex-1 max-w-[160px] flex justify-end bg-slate-100 rounded-sm overflow-hidden">
@@ -146,12 +146,12 @@ export const OptionsOiStrikeLadder: React.FC<OptionsOiStrikeLadderProps> = ({
 
               {/* Center Strike Marker */}
               <div
-                className={`w-20 shrink-0 text-center font-mono text-xs font-bold py-0.5 rounded ${
+                className={`w-20 shrink-0 text-center font-mono tabular-nums text-xs font-bold py-0.5 rounded ${
                   isMaxPain
                     ? 'bg-amber-500 text-white shadow-sm'
                     : isAtTheMoney
-                    ? 'bg-zinc-800 text-white'
-                    : 'bg-slate-100 text-zinc-700'
+                    ? 'bg-slate-800 text-white'
+                    : 'bg-slate-100 text-slate-700'
                 }`}
               >
                 ${row.strike.toFixed(1)}
@@ -165,7 +165,7 @@ export const OptionsOiStrikeLadder: React.FC<OptionsOiStrikeLadderProps> = ({
                     style={{ width: `${putWidth}%` }}
                   />
                 </div>
-                <span className="font-mono text-[11px] text-zinc-500 w-12 text-left">
+                <span className="font-mono tabular-nums text-[11px] text-slate-500 w-12 text-left">
                   {row.putOi.toLocaleString()}
                 </span>
               </div>
@@ -175,22 +175,22 @@ export const OptionsOiStrikeLadder: React.FC<OptionsOiStrikeLadderProps> = ({
       </div>
 
       {/* Legend & Current Price Marker */}
-      <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-sky-100/60 pt-3 text-xs text-zinc-500">
+      <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-sky-100/60 pt-3 text-xs text-slate-500">
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-1.5">
             <span className="h-3 w-3 rounded-sm bg-emerald-500" />
-            <span className="font-medium text-zinc-700">Call Open Interest</span>
+            <span className="font-medium text-slate-700">Call Open Interest</span>
           </div>
           <div className="flex items-center gap-1.5">
             <span className="h-3 w-3 rounded-sm bg-rose-500" />
-            <span className="font-medium text-zinc-700">Put Open Interest</span>
+            <span className="font-medium text-slate-700">Put Open Interest</span>
           </div>
         </div>
 
         <div className="flex items-center gap-3">
           {currentPrice && (
             <div className="flex items-center gap-1.5">
-              <span className="inline-block px-1.5 py-0.5 rounded bg-zinc-800 text-white font-mono text-[10px] font-bold">
+              <span className="inline-block px-1.5 py-0.5 rounded bg-slate-800 text-white font-mono tabular-nums text-[11px] font-bold">
                 ${currentPrice.toFixed(2)}
               </span>
               <span>Spot Price</span>
@@ -198,7 +198,7 @@ export const OptionsOiStrikeLadder: React.FC<OptionsOiStrikeLadderProps> = ({
           )}
           {maxPainStrike && (
             <div className="flex items-center gap-1.5">
-              <span className="inline-block px-1.5 py-0.5 rounded bg-amber-500 text-white font-mono text-[10px] font-bold">
+              <span className="inline-block px-1.5 py-0.5 rounded bg-amber-500 text-white font-mono text-[11px] font-bold">
                 ${maxPainStrike.toFixed(1)}
               </span>
               <span className="font-semibold text-amber-700">Max Pain Strike</span>

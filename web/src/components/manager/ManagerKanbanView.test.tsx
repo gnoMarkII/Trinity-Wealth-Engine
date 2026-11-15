@@ -53,7 +53,7 @@ describe('ManagerKanbanView Component', () => {
     })
   })
 
-  it('auto-resumes all news_funnel candidates on direct play when drawer is NOT open for that card', async () => {
+  it('requires explicit user approval on Play (dispatches with requireApproval=true and NEVER auto-resumes news_funnel)', async () => {
     const card = {
       card_id: 'card-nf-1',
       title: 'News Funnel Card',
@@ -69,69 +69,21 @@ describe('ManagerKanbanView Component', () => {
       job_id: null,
     }
 
-    const candidate1 = {
-      event_id: 'ev-auto-1',
-      canonical_title: 'Title 1',
-      comprehensive_summary: 'Summary 1',
-      macro_impact_score: 8,
-      asset_impact_score: 8,
-      extracted_tickers: [],
-      extracted_themes: [],
-      primary_tags: [],
-      sources: [],
-      links: [],
-    }
-    const candidate2 = {
-      event_id: 'ev-auto-2',
-      canonical_title: 'Title 2',
-      comprehensive_summary: 'Summary 2',
-      macro_impact_score: 8,
-      asset_impact_score: 8,
-      extracted_tickers: [],
-      extracted_themes: [],
-      primary_tags: [],
-      sources: [],
-      links: [],
-    }
-
-    vi.mocked(api.listKanbanCards).mockResolvedValue([card])
+    vi.mocked(api.listKanbanCards)
+      .mockResolvedValueOnce([card])
+      .mockResolvedValue([{ ...card, column_name: 'approval', job_id: 'job-nf-1' }])
     vi.mocked(api.dispatchJob).mockResolvedValue({
-      job_id: 'job-nf-1',
-      status: 'running',
-      card_id: 'card-nf-1',
-      error_message: null,
-      current_node: 'load_pending',
-      interrupt_payload: null,
-      log_count: 0,
-      created_at: 1700000000,
-      updated_at: 1700000000,
-    })
-    vi.mocked(api.moveKanbanCard).mockResolvedValue({
-      ...card,
-      column_name: 'approval',
-      job_id: 'job-nf-1',
-    })
-    vi.mocked(api.getJobStatus).mockResolvedValue({
       job_id: 'job-nf-1',
       status: 'awaiting_approval',
       card_id: 'card-nf-1',
       error_message: null,
-      current_node: 'gate',
-      log_count: 0,
-      created_at: 1700000000,
-      updated_at: 1700000000,
+      current_node: null,
       interrupt_payload: {
-        type: 'news_funnel_approval',
-        candidates: [candidate1, candidate2],
+        type: 'pre_run_approval',
+        title: 'News Funnel Card',
+        instruction: '### News Funnel',
+        flow: 'news_funnel',
       },
-    })
-    vi.mocked(api.resumeJob).mockResolvedValue({
-      job_id: 'job-nf-1',
-      status: 'running',
-      card_id: 'card-nf-1',
-      error_message: null,
-      current_node: 'synthesize',
-      interrupt_payload: null,
       log_count: 0,
       created_at: 1700000000,
       updated_at: 1700000000,
@@ -143,25 +95,85 @@ describe('ManagerKanbanView Component', () => {
       expect(screen.getByText('News Funnel Card')).toBeInTheDocument()
     })
 
-    // Click Play ▶ on card directly
     const playBtn = screen.getByText('Play')
     fireEvent.click(playBtn)
 
     await waitFor(() => {
-      expect(api.dispatchJob).toHaveBeenCalledWith('### News Funnel', 'card-nf-1', 'news_funnel', 'both')
+      expect(api.dispatchJob).toHaveBeenCalledWith('### News Funnel', 'card-nf-1', 'news_funnel', 'both', true)
     })
 
-    // Trigger awaiting_approval from background LiveTerminal
-    const emitBtn = screen.getByText('Emit awaiting_approval')
-    fireEvent.click(emitBtn)
+    await waitFor(() => {
+      expect(screen.getByText(/รอยอมรับก่อนเริ่มรัน/)).toBeInTheDocument()
+    })
+    expect(api.resumeJob).not.toHaveBeenCalled()
+  })
+
+  it('approves and rejects pre-run approval cards directly from Request Approve column', async () => {
+    const approvalCard = {
+      card_id: 'card-ap-1',
+      title: 'วิเคราะห์หุ้น INTC (US)',
+      prompt: 'วิเคราะห์หุ้น INTC แบบละเอียด',
+      flow: 'manager',
+      scope: 'both',
+      column_name: 'approval',
+      display_seq: 5,
+      discord_notify: false,
+      is_verified: true,
+      created_at: 1700000000,
+      updated_at: 1700000000,
+      job_id: 'job-ap-1',
+    }
+
+    vi.mocked(api.listKanbanCards).mockResolvedValue([approvalCard])
+    vi.mocked(api.getJobStatus).mockResolvedValue({
+      job_id: 'job-ap-1',
+      status: 'awaiting_approval',
+      card_id: 'card-ap-1',
+      error_message: null,
+      current_node: null,
+      interrupt_payload: {
+        type: 'pre_run_approval',
+        title: 'วิเคราะห์หุ้น INTC (US)',
+        instruction: 'วิเคราะห์หุ้น INTC แบบละเอียด',
+        flow: 'manager',
+      },
+      log_count: 0,
+      created_at: 1700000000,
+      updated_at: 1700000000,
+    })
+    vi.mocked(api.resumeJob).mockResolvedValue({
+      job_id: 'job-ap-1',
+      status: 'queued',
+      card_id: 'card-ap-1',
+      error_message: null,
+      current_node: null,
+      interrupt_payload: null,
+      log_count: 0,
+      created_at: 1700000000,
+      updated_at: 1700000000,
+    })
+
+    render(<ManagerKanbanView layoutMode="wide" />)
 
     await waitFor(() => {
-      expect(api.getJobStatus).toHaveBeenCalledWith('job-nf-1')
-      expect(api.resumeJob).toHaveBeenCalledWith('job-nf-1', [], [], ['ev-auto-1', 'ev-auto-2'])
+      expect(screen.getByText('วิเคราะห์หุ้น INTC (US)')).toBeInTheDocument()
+    })
+
+    fireEvent.click(screen.getByRole('button', { name: '✅ ยอมรับและรัน' }))
+
+    await waitFor(() => {
+      expect(api.getJobStatus).toHaveBeenCalledWith('job-ap-1')
+      expect(api.resumeJob).toHaveBeenCalledWith('job-ap-1', [], [], undefined, undefined, 'approve')
+    })
+
+    fireEvent.click(screen.getByRole('button', { name: '❌ ยกเลิก' }))
+
+    await waitFor(() => {
+      expect(api.resumeJob).toHaveBeenCalledWith('job-ap-1', [], [], undefined, undefined, 'reject')
     })
   })
 
-  it('does NOT auto-resume from board when Drawer is open for that card (Race Condition Guard)', async () => {
+  it('does NOT auto-resume from board when awaiting_approval fires during execution', async () => {
     const card = {
       card_id: 'card-nf-1',
       title: 'News Funnel Card',
@@ -201,10 +213,6 @@ describe('ManagerKanbanView Component', () => {
       expect(screen.getByText('News Funnel Card')).toBeInTheDocument()
     })
 
-    // Click card to open Drawer (selectedCardId === 'card-nf-1')
-    fireEvent.click(screen.getByText('News Funnel Card'))
-
-    // Dispatch card
     const playBtn = screen.getByText('Play')
     fireEvent.click(playBtn)
 
@@ -212,16 +220,13 @@ describe('ManagerKanbanView Component', () => {
       expect(api.dispatchJob).toHaveBeenCalled()
     })
 
-    // Trigger awaiting_approval from background LiveTerminal
     const emitBtn = screen.getByText('Emit awaiting_approval')
     fireEvent.click(emitBtn)
 
-    // Move kanban card should still be called
     await waitFor(() => {
       expect(api.moveKanbanCard).toHaveBeenCalledWith('card-nf-1', 'approval')
     })
 
-    // But getJobStatus / resumeJob MUST NOT be called by ManagerKanbanView (left to Drawer)
     expect(api.getJobStatus).not.toHaveBeenCalled()
     expect(api.resumeJob).not.toHaveBeenCalled()
   })

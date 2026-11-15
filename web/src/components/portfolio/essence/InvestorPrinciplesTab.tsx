@@ -84,9 +84,9 @@ export default function InvestorPrinciplesTab({
 
   if (loading) {
     return (
-      <div className="rounded-2xl border border-sky-100 bg-white p-12 text-center shadow-xs space-y-3">
+      <div className="rounded-2xl border border-sky-100 bg-white p-12 text-center shadow-sm space-y-3">
         <div className="mx-auto h-8 w-8 animate-spin rounded-full border-4 border-sky-200 border-t-sky-600" />
-        <p className="text-sm font-semibold text-zinc-600">กำลังโหลดข้อมูลหลักการลงทุน...</p>
+        <p className="text-sm font-semibold text-slate-600">กำลังโหลดข้อมูลหลักการลงทุน...</p>
       </div>
     )
   }
@@ -100,29 +100,29 @@ export default function InvestorPrinciplesTab({
     ? { label: '✓ ยืนยันแล้ว', style: 'bg-emerald-100 text-emerald-800' }
     : session
     ? { label: `ตอบแล้ว ${session.answers_count}/10`, style: 'bg-sky-100 text-sky-800' }
-    : { label: 'ยังไม่เริ่ม', style: 'bg-zinc-100 text-zinc-600' }
+    : { label: 'ยังไม่เริ่ม', style: 'bg-slate-100 text-slate-600' }
 
   const axisBadge = isInterviewInProgress
-    ? { label: 'รอเริ่ม', style: 'bg-zinc-100 text-zinc-500' }
+    ? { label: 'รอเริ่ม', style: 'bg-slate-100 text-slate-500' }
     : confirmedAxis
     ? { label: '✓ ยืนยันแล้ว', style: 'bg-emerald-100 text-emerald-800' }
     : axisDraft
     ? { label: 'ร่างนโยบาย', style: 'bg-amber-100 text-amber-800' }
-    : { label: 'รอเริ่ม', style: 'bg-zinc-100 text-zinc-500' }
+    : { label: 'รอเริ่ม', style: 'bg-slate-100 text-slate-500' }
 
   const bucketsBadge = isInterviewInProgress
-    ? { label: 'รอเริ่ม', style: 'bg-zinc-100 text-zinc-500' }
+    ? { label: 'รอเริ่ม', style: 'bg-slate-100 text-slate-500' }
     : applyReceipt
     ? { label: '✓ นำไปใช้แล้ว', style: 'bg-emerald-100 text-emerald-800' }
     : bucketPlan
-    ? { label: 'ร่าง Buckets', style: 'bg-purple-100 text-purple-800' }
-    : { label: 'ทางเลือก', style: 'bg-zinc-100 text-zinc-500' }
+    ? { label: 'ร่าง Buckets', style: 'bg-sky-100 text-blue-800' }
+    : { label: 'ทางเลือก', style: 'bg-slate-100 text-slate-500' }
 
   return (
     <div className="space-y-6">
       {/* Error alert */}
       {error && (
-        <div className="flex items-center justify-between rounded-xl border border-rose-200 bg-rose-50 p-3 text-xs font-semibold text-rose-800 shadow-xs">
+        <div className="flex items-center justify-between rounded-xl border border-rose-200 bg-rose-50 p-3 text-xs font-semibold text-rose-800 shadow-sm">
           <span>⚠️ {error}</span>
           <button
             type="button"
@@ -135,7 +135,7 @@ export default function InvestorPrinciplesTab({
       )}
 
       {/* Milestone Stepper Bar */}
-      <div className="rounded-2xl border border-sky-100 bg-white p-2.5 shadow-xs">
+      <div className="rounded-2xl border border-sky-100 bg-white p-2.5 shadow-sm">
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
           {/* Milestone 1 */}
           <button
@@ -144,25 +144,25 @@ export default function InvestorPrinciplesTab({
             className={`p-3 rounded-xl text-left transition-all flex items-center justify-between gap-2 ${
               activeMilestone === 'essence'
                 ? 'bg-sky-50/80 border border-sky-300 ring-2 ring-sky-400/20'
-                : 'hover:bg-zinc-50 border border-transparent'
+                : 'hover:bg-slate-50 border border-transparent'
             }`}
           >
             <div className="flex items-center gap-2.5 min-w-0">
               <span
                 className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-xs font-extrabold ${
-                  activeMilestone === 'essence' ? 'bg-sky-600 text-white' : 'bg-zinc-100 text-zinc-600'
+                  activeMilestone === 'essence' ? 'bg-sky-600 text-white' : 'bg-slate-100 text-slate-600'
                 }`}
               >
                 1
               </span>
               <div className="truncate">
-                <span className="block text-xs font-bold text-zinc-900 truncate">
+                <span className="block text-xs font-bold text-slate-900 truncate">
                   ค้นหาแก่นแท้ (Essence)
                 </span>
-                <span className="text-[11px] text-zinc-500 truncate block">สำรวจเป้าหมายและค่านิยม · ใช้ร่วมกันทุกพอร์ต</span>
+                <span className="text-[11px] text-slate-500 truncate block">สำรวจเป้าหมายและค่านิยม · ใช้ร่วมกันทุกพอร์ต</span>
               </div>
             </div>
-            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 ${essenceBadge.style}`}>
+            <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full shrink-0 ${essenceBadge.style}`}>
               {essenceBadge.label}
             </span>
           </button>
@@ -174,25 +174,25 @@ export default function InvestorPrinciplesTab({
             className={`p-3 rounded-xl text-left transition-all flex items-center justify-between gap-2 ${
               activeMilestone === 'axis'
                 ? 'bg-sky-50/80 border border-sky-300 ring-2 ring-sky-400/20'
-                : 'hover:bg-zinc-50 border border-transparent'
+                : 'hover:bg-slate-50 border border-transparent'
             }`}
           >
             <div className="flex items-center gap-2.5 min-w-0">
               <span
                 className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-xs font-extrabold ${
-                  activeMilestone === 'axis' ? 'bg-sky-600 text-white' : 'bg-zinc-100 text-zinc-600'
+                  activeMilestone === 'axis' ? 'bg-sky-600 text-white' : 'bg-slate-100 text-slate-600'
                 }`}
               >
                 2
               </span>
               <div className="truncate">
-                <span className="block text-xs font-bold text-zinc-900 truncate">
+                <span className="block text-xs font-bold text-slate-900 truncate">
                   สร้างแกนหลัก (Axis)
                 </span>
-                <span className="text-[11px] text-zinc-500 truncate block">นโยบาย 8 หัวข้อ · เฉพาะพอร์ต {displayName}</span>
+                <span className="text-[11px] text-slate-500 truncate block">นโยบาย 8 หัวข้อ · เฉพาะพอร์ต {displayName}</span>
               </div>
             </div>
-            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 ${axisBadge.style}`}>
+            <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full shrink-0 ${axisBadge.style}`}>
               {axisBadge.label}
             </span>
           </button>
@@ -204,25 +204,25 @@ export default function InvestorPrinciplesTab({
             className={`p-3 rounded-xl text-left transition-all flex items-center justify-between gap-2 ${
               activeMilestone === 'buckets'
                 ? 'bg-sky-50/80 border border-sky-300 ring-2 ring-sky-400/20'
-                : 'hover:bg-zinc-50 border border-transparent'
+                : 'hover:bg-slate-50 border border-transparent'
             }`}
           >
             <div className="flex items-center gap-2.5 min-w-0">
               <span
                 className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-xs font-extrabold ${
-                  activeMilestone === 'buckets' ? 'bg-sky-600 text-white' : 'bg-zinc-100 text-zinc-600'
+                  activeMilestone === 'buckets' ? 'bg-sky-600 text-white' : 'bg-slate-100 text-slate-600'
                 }`}
               >
                 3
               </span>
               <div className="truncate">
-                <span className="block text-xs font-bold text-zinc-900 truncate">
+                <span className="block text-xs font-bold text-slate-900 truncate">
                   ออกแบบ Buckets
                 </span>
-                <span className="text-[11px] text-zinc-500 truncate block">จัดกลุ่มพอร์ตตามบทบาทเงิน · เฉพาะพอร์ต {displayName}</span>
+                <span className="text-[11px] text-slate-500 truncate block">จัดกลุ่มพอร์ตตามบทบาทเงิน · เฉพาะพอร์ต {displayName}</span>
               </div>
             </div>
-            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 ${bucketsBadge.style}`}>
+            <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full shrink-0 ${bucketsBadge.style}`}>
               {bucketsBadge.label}
             </span>
           </button>
@@ -237,20 +237,20 @@ export default function InvestorPrinciplesTab({
             {!session && !confirmedEssence ? (
               // Welcome Card
               <div className="max-w-2xl mx-auto rounded-2xl border border-sky-100 bg-white p-8 text-center shadow-sm space-y-6">
-                <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-sky-100 text-3xl text-sky-600 shadow-xs">
+                <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-sky-100 text-3xl text-sky-600 shadow-sm">
                   🧭
                 </div>
                 <div>
-                  <h2 className="text-xl sm:text-2xl font-extrabold text-zinc-900 tracking-tight">
+                  <h2 className="text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight">
                     ค้นหาแก่นแท้ในการลงทุนของคุณ
                   </h2>
-                  <p className="text-xs sm:text-sm text-zinc-600 mt-2 max-w-md mx-auto leading-relaxed">
+                  <p className="text-xs sm:text-sm text-slate-600 mt-2 max-w-md mx-auto leading-relaxed">
                     ตอบ 10 คำถามเพื่อค้นหาว่าคุณลงทุนเพื่ออะไรและให้ความสำคัญกับอะไร AI
                     จะสร้างคำถามทีละข้ออย่างเป็นกลางจากคำตอบก่อนหน้าของคุณ
                   </p>
                 </div>
 
-                <div className="rounded-xl bg-sky-50/60 p-4 border border-sky-100 text-left text-xs space-y-1.5 text-zinc-700">
+                <div className="rounded-xl bg-sky-50/60 p-4 border border-sky-100 text-left text-xs space-y-1.5 text-slate-700">
                   <p className="font-bold text-sky-900">✨ ประสบการณ์ที่จะได้รับ:</p>
                   <p>• 10 คำถามแบบ 4 ตัวเลือก เริ่มจากเรื่องชีวิตที่ตอบง่าย</p>
                   <p>• ตอบไม่แน่ใจได้ พักไว้ก่อนได้ และกลับมาทำต่อได้เสมอ</p>
@@ -390,14 +390,14 @@ export default function InvestorPrinciplesTab({
               </div>
             ) : !bucketPlan ? (
               <div className="max-w-2xl mx-auto rounded-2xl border border-sky-100 bg-white p-8 text-center shadow-sm space-y-6">
-                <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-purple-100 text-3xl text-purple-600 shadow-xs">
+                <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-sky-100 text-3xl text-blue-600 shadow-sm">
                   🗂️
                 </div>
                 <div>
-                  <h2 className="text-xl sm:text-2xl font-extrabold text-zinc-900 tracking-tight">
+                  <h2 className="text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight">
                     สร้าง Purpose Buckets จากแกนหลักฉบับยืนยัน
                   </h2>
-                  <p className="text-xs sm:text-sm text-zinc-600 mt-2 max-w-md mx-auto leading-relaxed">
+                  <p className="text-xs sm:text-sm text-slate-600 mt-2 max-w-md mx-auto leading-relaxed">
                     ระบบจะร่าง Purpose Buckets 3–5 รายการ พร้อมสัดส่วนและสีที่สอดคล้องกับแผนจัดสรรที่คุณยืนยันไว้
                   </p>
                 </div>
@@ -406,7 +406,7 @@ export default function InvestorPrinciplesTab({
                   type="button"
                   onClick={generateBucketPlan}
                   disabled={actionLoading}
-                  className="rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 px-8 py-3.5 text-sm font-bold text-white shadow-md shadow-purple-500/25 hover:from-purple-700 hover:to-indigo-700 active:scale-98 transition-all"
+                  className="rounded-xl bg-gradient-to-r from-blue-600 to-blue-600 px-8 py-3.5 text-sm font-bold text-white shadow-md shadow-sky-500/25 hover:from-blue-700 hover:to-blue-700 active:scale-98 transition-all"
                 >
                   {actionLoading ? 'กำลังร่าง Purpose Buckets...' : '✨ สร้าง Buckets จากแกนหลัก'}
                 </button>

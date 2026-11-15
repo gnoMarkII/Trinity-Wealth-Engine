@@ -46,15 +46,15 @@ export default function EssenceInterview({
   if (!currentQ) {
     if (session.answers_count >= 10 || session.is_complete || session.status === 'summary_pending') {
       return (
-        <div className="max-w-xl mx-auto rounded-2xl border border-sky-100 bg-white p-8 text-center shadow-xs space-y-5">
+        <div className="max-w-xl mx-auto rounded-2xl border border-sky-100 bg-white p-8 text-center shadow-sm space-y-5">
           <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-emerald-50 text-2xl text-emerald-600">
             ✨
           </div>
           <div>
-            <h3 className="text-base font-bold text-zinc-900">
+            <h3 className="text-base font-bold text-slate-900">
               ตอบคำถามครบ 10 ข้อเรียบร้อยแล้ว
             </h3>
-            <p className="text-xs text-zinc-500 mt-1 max-w-sm mx-auto leading-relaxed">
+            <p className="text-xs text-slate-500 mt-1 max-w-sm mx-auto leading-relaxed">
               คำตอบของคุณได้รับการบันทึกครบถ้วนแล้ว กดปุ่มด้านล่างเพื่อเริ่มการวิเคราะห์และสังเคราะห์แก่นแท้การลงทุน
             </p>
           </div>
@@ -78,15 +78,15 @@ export default function EssenceInterview({
 
     const nextSeq = (session.answers_count || 0) + 1
     return (
-      <div className="max-w-xl mx-auto rounded-2xl border border-sky-100 bg-white p-8 text-center shadow-xs space-y-5">
+      <div className="max-w-xl mx-auto rounded-2xl border border-sky-100 bg-white p-8 text-center shadow-sm space-y-5">
         <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-sky-50 text-2xl text-sky-600">
           🧭
         </div>
         <div>
-          <h3 className="text-base font-bold text-zinc-900">
+          <h3 className="text-base font-bold text-slate-900">
             ตอบแล้ว {session.answers_count} จาก 10 ข้อ
           </h3>
-          <p className="text-xs text-zinc-500 mt-1 max-w-sm mx-auto leading-relaxed">
+          <p className="text-xs text-slate-500 mt-1 max-w-sm mx-auto leading-relaxed">
             คำตอบของคุณได้รับการบันทึกแล้ว แต่ระบบยังไม่ได้สร้างคำถามข้อถัดไป
             กดปุ่มด้านล่างเพื่อสร้างคำถามข้อถัดไป
           </p>
@@ -157,7 +157,7 @@ export default function EssenceInterview({
             <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-sky-100 text-sky-700 font-extrabold text-sm">
               {currentQ.sequence_no}
             </span>
-            <span className="text-xs sm:text-sm font-bold text-zinc-700">
+            <span className="text-xs sm:text-sm font-bold text-slate-700">
               คำถามที่ {currentQ.sequence_no} จาก 10
             </span>
             <span className="rounded-full bg-sky-50 px-2.5 py-0.5 text-xs font-semibold text-sky-700 border border-sky-100">
@@ -166,14 +166,14 @@ export default function EssenceInterview({
           </div>
 
           <div className="flex items-center gap-2">
-            <span className="text-xs font-semibold text-zinc-400">
+            <span className="text-xs font-semibold text-slate-500">
               ตอบแล้ว {session.answers_count}/10
             </span>
             <button
               type="button"
               onClick={onPause}
               disabled={loading}
-              className="rounded-lg border border-zinc-200 px-3 py-1 text-xs font-semibold text-zinc-600 hover:bg-zinc-50 active:scale-95 transition-all cursor-pointer"
+              className="rounded-lg border border-slate-200 px-3 py-1 text-xs font-semibold text-slate-600 hover:bg-slate-50 active:scale-95 transition-all cursor-pointer"
               title="บันทึกร่างและกลับมาตอบต่อได้ตลอดเวลา"
             >
               พักไว้ก่อน
@@ -210,10 +210,10 @@ export default function EssenceInterview({
 
         {/* Question Text */}
         <div className="pt-6 pb-2">
-          <h2 className="text-lg sm:text-xl font-bold text-zinc-900 leading-relaxed">
+          <h2 className="text-lg sm:text-xl font-bold text-slate-900 leading-relaxed">
             {currentQ.text}
           </h2>
-          <p className="text-xs text-zinc-500 mt-1">
+          <p className="text-xs text-slate-500 mt-1">
             เลือกคำตอบที่ตรงกับตัวคุณที่สุด หรือพิมพ์อธิบายเพิ่มเติมด้วยคำของคุณเอง
           </p>
         </div>
@@ -230,13 +230,13 @@ export default function EssenceInterview({
                 disabled={loading}
                 className={`w-full text-left p-4 rounded-xl border transition-all flex items-start gap-3.5 ${
                   isSelected
-                    ? 'border-sky-500 bg-sky-50/70 text-zinc-900 shadow-xs ring-2 ring-sky-400/30'
-                    : 'border-zinc-200/80 bg-white hover:border-sky-300 hover:bg-sky-50/30 text-zinc-800'
+                    ? 'border-sky-500 bg-sky-50/70 text-slate-900 shadow-sm ring-2 ring-sky-400/30'
+                    : 'border-slate-200/80 bg-white hover:border-sky-300 hover:bg-sky-50/30 text-slate-800'
                 }`}
               >
                 <span
                   className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-bold transition-colors ${
-                    isSelected ? 'bg-sky-600 text-white' : 'bg-zinc-100 text-zinc-600'
+                    isSelected ? 'bg-sky-600 text-white' : 'bg-slate-100 text-slate-600'
                   }`}
                 >
                   {option.option_key}
@@ -258,7 +258,7 @@ export default function EssenceInterview({
             className={`rounded-xl px-3.5 py-2 text-xs sm:text-sm font-semibold transition-all border ${
               answerKind === 'unsure'
                 ? 'border-amber-400 bg-amber-50 text-amber-900 ring-2 ring-amber-300/40'
-                : 'border-zinc-200 text-zinc-600 hover:bg-zinc-50'
+                : 'border-slate-200 text-slate-600 hover:bg-slate-50'
             }`}
           >
             🤔 ยังไม่แน่ใจ / ยังไม่พร้อมตอบ
@@ -281,7 +281,7 @@ export default function EssenceInterview({
         {/* Free Text Input Box */}
         {showFreeTextInput && (
           <div className="mt-4 p-4 rounded-xl bg-sky-50/50 border border-sky-100 space-y-2 animate-fade-in">
-            <label htmlFor="free-text-input" className="block text-xs font-semibold text-zinc-700">
+            <label htmlFor="free-text-input" className="block text-xs font-semibold text-slate-700">
               อธิบายเพิ่มเติมหรือตอบด้วยคำของฉันเอง:
             </label>
             <AutoResizeTextarea
@@ -293,14 +293,14 @@ export default function EssenceInterview({
                 setAnswerKind('free_text')
               }}
               placeholder="เช่น มีภาระต้องใช้เงินก้อนในอีก 2 ปี หรืออยากเน้นเงินปันผลเพื่อค่าใช้จ่ายประจำเดือน..."
-              className="w-full rounded-lg border border-sky-200 bg-white p-3 text-sm text-zinc-800 focus:outline-none focus:ring-2 focus:ring-sky-400"
+              className="w-full rounded-lg border border-sky-200 bg-white p-3 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-sky-400"
             />
           </div>
         )}
 
         {/* Action Button: Next / View Essence */}
         <div className="pt-6 flex flex-col sm:flex-row items-center justify-between gap-4">
-          <div className="text-xs text-zinc-500">
+          <div className="text-xs text-slate-500">
             {statusText ? (
               <span className="flex items-center gap-2 text-sky-700 font-semibold animate-pulse">
                 <span className="inline-block w-2 h-2 rounded-full bg-sky-500" />
@@ -320,7 +320,7 @@ export default function EssenceInterview({
                 ? isFinalQuestion
                   ? 'bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 shadow-emerald-500/25 active:scale-98 cursor-pointer'
                   : 'bg-gradient-to-r from-sky-600 to-blue-600 hover:from-sky-700 hover:to-blue-700 shadow-sky-500/25 active:scale-98 cursor-pointer'
-                : 'bg-zinc-300 text-zinc-500 cursor-not-allowed shadow-none'
+                : 'bg-slate-300 text-slate-500 cursor-not-allowed shadow-none'
             }`}
           >
             {loading ? (

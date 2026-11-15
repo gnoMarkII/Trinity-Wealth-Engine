@@ -60,7 +60,7 @@ export function renderWithEvidenceBadges(node: React.ReactNode): React.ReactNode
       parts.push(
         <span
           key={match.index}
-          className="inline-flex items-center gap-1 mx-1 px-2 py-0.5 rounded-md border border-emerald-200 bg-emerald-50 text-xs font-semibold text-emerald-800 shadow-2xs"
+          className="inline-flex items-center gap-1 mx-1 px-2 py-0.5 rounded-md border border-emerald-200 bg-emerald-50 text-xs font-semibold text-emerald-800 shadow-sm"
           title={detail ? `Verified Primary Document: ${detail}` : 'Verified Primary Document'}
         >
           <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
@@ -71,7 +71,7 @@ export function renderWithEvidenceBadges(node: React.ReactNode): React.ReactNode
       parts.push(
         <span
           key={match.index}
-          className="inline-flex items-center gap-1 mx-1 px-2 py-0.5 rounded-md border border-sky-200 bg-sky-50 text-xs font-semibold text-sky-800 shadow-2xs"
+          className="inline-flex items-center gap-1 mx-1 px-2 py-0.5 rounded-md border border-sky-200 bg-sky-50 text-xs font-semibold text-sky-800 shadow-sm"
           title={detail ? `Deterministic Python Code: ${detail}` : 'Deterministic Python Code'}
         >
           <span className="w-1.5 h-1.5 rounded-full bg-sky-500 shrink-0" />
@@ -82,10 +82,10 @@ export function renderWithEvidenceBadges(node: React.ReactNode): React.ReactNode
       parts.push(
         <span
           key={match.index}
-          className="inline-flex items-center gap-1 mx-1 px-2 py-0.5 rounded-md border border-purple-200 bg-purple-50 text-xs font-semibold text-purple-800 shadow-2xs"
+          className="inline-flex items-center gap-1 mx-1 px-2 py-0.5 rounded-md border border-sky-200 bg-sky-50 text-xs font-semibold text-blue-800 shadow-sm"
           title={detail ? `Analytical Deduction: ${detail}` : 'Analytical Deduction'}
         >
-          <span className="w-1.5 h-1.5 rounded-full bg-purple-500 shrink-0" />
+          <span className="w-1.5 h-1.5 rounded-full bg-sky-500 shrink-0" />
           {detail ? `INFERRED: ${detail}` : 'INFERRED'}
         </span>
       )
@@ -93,7 +93,7 @@ export function renderWithEvidenceBadges(node: React.ReactNode): React.ReactNode
       parts.push(
         <span
           key={match.index}
-          className="inline-flex items-center gap-1 mx-1 px-2 py-0.5 rounded-md border border-amber-200 bg-amber-50 text-xs font-semibold text-amber-800 shadow-2xs"
+          className="inline-flex items-center gap-1 mx-1 px-2 py-0.5 rounded-md border border-amber-200 bg-amber-50 text-xs font-semibold text-amber-800 shadow-sm"
           title={detail ? `Unverified / Rumor: ${detail}` : 'Unverified Report'}
         >
           <span className="w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0" />
@@ -872,27 +872,27 @@ function renderCellContent(
     const isUnsigned = !clean.startsWith('+') && !isNegative
     if (isNegative && numVal !== 0) {
       return (
-        <span className="inline-flex items-center rounded-md border border-rose-200 bg-rose-50 px-2 py-0.5 font-mono text-xs font-bold text-rose-700 shadow-xs">
+        <span className="inline-flex items-center rounded-md border border-rose-200 bg-rose-50 px-2 py-0.5 font-mono text-xs font-bold text-rose-700 shadow-sm">
           {clean}
         </span>
       )
     }
     if (numVal === 0 && !clean.startsWith('+')) {
       return (
-        <span className="inline-flex items-center rounded-md border border-zinc-200 bg-zinc-50 px-2 py-0.5 font-mono text-xs font-semibold text-zinc-700 shadow-2xs">
+        <span className="inline-flex items-center rounded-md border border-slate-200 bg-slate-50 px-2 py-0.5 font-mono text-xs font-semibold text-slate-700 shadow-sm">
           {clean}
         </span>
       )
     }
     if (isUnsigned && opts.isWeightCol) {
       return (
-        <span className="inline-flex items-center rounded-md border border-sky-200 bg-sky-50 px-2 py-0.5 font-mono text-xs font-semibold text-sky-900 shadow-2xs">
+        <span className="inline-flex items-center rounded-md border border-sky-200 bg-sky-50 px-2 py-0.5 font-mono text-xs font-semibold text-sky-900 shadow-sm">
           {clean}
         </span>
       )
     }
     return (
-      <span className="inline-flex items-center rounded-md border border-emerald-200 bg-emerald-50 px-2 py-0.5 font-mono text-xs font-bold text-emerald-700 shadow-xs">
+      <span className="inline-flex items-center rounded-md border border-emerald-200 bg-emerald-50 px-2 py-0.5 font-mono text-xs font-bold text-emerald-700 shadow-sm">
         {clean.startsWith('+') ? clean : `+${clean}`}
       </span>
     )
@@ -909,11 +909,11 @@ function renderCellContent(
       <button
         type="button"
         onClick={() => opts.onTickerClick?.(sym)}
-        className="inline-flex items-center gap-1 rounded-lg border border-sky-200/90 bg-sky-50/80 px-2.5 py-0.5 font-mono text-xs font-bold text-sky-950 shadow-xs hover:border-sky-400 hover:bg-sky-100/90 hover:text-sky-900 transition-all cursor-pointer group"
+        className="inline-flex items-center gap-1 rounded-lg border border-sky-200/90 bg-sky-50/80 px-2.5 py-0.5 font-mono text-xs font-bold text-sky-950 shadow-sm hover:border-sky-400 hover:bg-sky-100/90 hover:text-sky-900 transition-all cursor-pointer group"
         title={`คลิกเพื่อเปิดชาร์ตราคาและสั่งวิเคราะห์ $${sym}`}
       >
         <span>${sym}</span>
-        <span className="text-[10px] text-sky-500 opacity-60 group-hover:opacity-100 transition-opacity">📈</span>
+        <span className="text-[11px] text-sky-500 opacity-60 group-hover:opacity-100 transition-opacity">📈</span>
       </button>
     )
   }
@@ -922,13 +922,13 @@ function renderCellContent(
   const parsedNum = parseNumericCell(clean)
   if (parsedNum.kind === 'numeric') {
     const colorCls =
-      parsedNum.value !== undefined && parsedNum.value < 0 ? 'text-rose-700' : 'text-zinc-900'
+      parsedNum.value !== undefined && parsedNum.value < 0 ? 'text-rose-700' : 'text-slate-900'
     return <span className={`font-mono text-xs font-semibold tabular-nums ${colorCls}`}>{clean}</span>
   }
 
   // 4. Default markdown rendering for complex text inside cell (e.g. **BUY**, **HOLD**, notes)
   return (
-    <span className="text-sm leading-relaxed text-zinc-800">
+    <span className="text-sm leading-relaxed text-slate-800">
       <ReactMarkdown>{clean}</ReactMarkdown>
     </span>
   )
@@ -1099,7 +1099,7 @@ function AdvisorTable({
               onClick={() => setViewMode('table')}
               className={`rounded-md px-2.5 py-1 text-xs font-medium transition-all ${
                 viewMode === 'table'
-                  ? 'bg-white text-sky-950 shadow-2xs font-semibold'
+                  ? 'bg-white text-sky-950 shadow-sm font-semibold'
                   : 'text-sky-700 hover:text-sky-900'
               }`}
             >
@@ -1110,7 +1110,7 @@ function AdvisorTable({
               onClick={() => setViewMode('chart')}
               className={`rounded-md px-2.5 py-1 text-xs font-medium transition-all ${
                 viewMode === 'chart'
-                  ? 'bg-white text-sky-950 shadow-2xs font-semibold'
+                  ? 'bg-white text-sky-950 shadow-sm font-semibold'
                   : 'text-sky-700 hover:text-sky-900'
               }`}
             >
@@ -1122,7 +1122,7 @@ function AdvisorTable({
                 onClick={() => setViewMode('simulator')}
                 className={`rounded-md px-2.5 py-1 text-xs font-medium transition-all ${
                   viewMode === 'simulator'
-                    ? 'bg-white text-sky-950 shadow-2xs font-semibold'
+                    ? 'bg-white text-sky-950 shadow-sm font-semibold'
                     : 'text-sky-700 hover:text-sky-900'
                 }`}
               >
@@ -1187,7 +1187,7 @@ function AdvisorTable({
       {viewMode === 'chart' && activeMetricColumn && (
         <div className="p-4 space-y-3 bg-white/50">
           <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
-            <p className="text-xs text-zinc-500">
+            <p className="text-xs text-slate-500">
               เปรียบเทียบสัดส่วนและผลลัพธ์ของแต่ละรายการ:{' '}
               <span className="font-semibold text-sky-900">
                 {activeMetricColumn.header}
@@ -1195,7 +1195,7 @@ function AdvisorTable({
               </span>
             </p>
             {metricColumns.length > 1 && (
-              <label className="flex items-center gap-1.5 text-xs text-zinc-600">
+              <label className="flex items-center gap-1.5 text-xs text-slate-600">
                 <span>ตัวชี้วัด:</span>
                 <select
                   aria-label="เลือกคอลัมน์ตัวชี้วัด"
@@ -1267,7 +1267,7 @@ function AdvisorTable({
                     </div>
                     <div className="flex-1 bg-sky-50 h-6 rounded-lg overflow-hidden flex items-center p-0.5">
                       {isMissing ? (
-                        <span className="px-2 text-[11px] italic text-zinc-400">ไม่มีข้อมูล</span>
+                        <span className="px-2 text-[11px] italic text-slate-500">ไม่มีข้อมูล</span>
                       ) : (
                         <div
                           data-bar-width={widthPct}
@@ -1276,8 +1276,8 @@ function AdvisorTable({
                             val === 0
                               ? 'bg-transparent'
                               : isPos
-                                ? 'bg-emerald-500/80 shadow-xs'
-                                : 'bg-rose-500/80 shadow-xs'
+                                ? 'bg-emerald-500/80 shadow-sm'
+                                : 'bg-rose-500/80 shadow-sm'
                           }`}
                         />
                       )}
@@ -1286,9 +1286,9 @@ function AdvisorTable({
                       <span
                         className={
                           isMissing
-                            ? 'text-zinc-400 font-normal'
+                            ? 'text-slate-500 font-normal'
                             : val === 0
-                              ? 'text-zinc-600'
+                              ? 'text-slate-600'
                               : isPos
                                 ? 'text-emerald-700'
                                 : 'text-rose-700'
@@ -1354,7 +1354,7 @@ function AdvisorTable({
           </div>
 
           <div className="flex items-center justify-between gap-3 pt-2 border-t border-sky-100">
-            <p className="text-xs text-zinc-500">
+            <p className="text-xs text-slate-500">
               {isStreaming
                 ? '⏳ รอข้อมูลสตรีมครบก่อนส่งคำนวณ'
                 : !onActionClick
@@ -1367,7 +1367,7 @@ function AdvisorTable({
               type="button"
               disabled={!canSubmitSimulator}
               onClick={handleApplySimulator}
-              className="rounded-xl border border-sky-300 bg-sky-600 hover:bg-sky-700 disabled:cursor-not-allowed disabled:opacity-50 text-white px-3.5 py-1.5 text-xs font-semibold shadow-xs transition-colors"
+              className="rounded-xl border border-sky-300 bg-sky-600 hover:bg-sky-700 disabled:cursor-not-allowed disabled:opacity-50 text-white px-3.5 py-1.5 text-xs font-semibold shadow-sm transition-colors"
             >
               🚀 ส่งแผนสัดส่วนให้ Hermes คำนวณ
             </button>
@@ -1388,7 +1388,7 @@ function AdvisorTable({
             <button
               type="button"
               onClick={() => setSelectedTicker(null)}
-              className="text-zinc-400 hover:text-zinc-600 text-xs px-2 py-1 rounded-md hover:bg-sky-100/50"
+              className="text-slate-500 hover:text-slate-600 text-xs px-2 py-1 rounded-md hover:bg-sky-100/50"
             >
               ✕ ปิด
             </button>
@@ -1408,7 +1408,7 @@ function AdvisorTable({
                   ['@Portfolio', `$${selectedTicker}`]
                 )
               }
-              className="rounded-xl border border-sky-200 bg-sky-50 px-3 py-1.5 text-xs font-semibold text-sky-800 hover:bg-sky-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-2xs"
+              className="rounded-xl border border-sky-200 bg-sky-50 px-3 py-1.5 text-xs font-semibold text-sky-800 hover:bg-sky-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-sm"
             >
               🔬 วิเคราะห์ Valuation & DCF (${selectedTicker})
             </button>
@@ -1421,7 +1421,7 @@ function AdvisorTable({
                   ['@Portfolio', `$${selectedTicker}`]
                 )
               }
-              className="rounded-xl border border-sky-200 bg-white px-3 py-1.5 text-xs font-semibold text-sky-700 hover:bg-sky-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-2xs"
+              className="rounded-xl border border-sky-200 bg-white px-3 py-1.5 text-xs font-semibold text-sky-700 hover:bg-sky-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-sm"
             >
               🛡️ ตรวจสุขภาพ Thesis (${selectedTicker})
             </button>
@@ -1500,7 +1500,7 @@ function RebalanceSimulatorWidget({
   const canSubmit = !isStreaming && totalWeight === 100 && typeof onActionClick === 'function'
 
   return (
-    <div className="my-4 rounded-2xl border border-sky-200/80 bg-white/85 p-4 space-y-3 shadow-xs">
+    <div className="my-4 rounded-2xl border border-sky-200/80 bg-white/85 p-4 space-y-3 shadow-sm">
       <div className="flex items-center justify-between">
         <h4 className="text-xs font-bold text-sky-950">{title || '🎛️ จำลองปรับสัดส่วนพอร์ต'}</h4>
         <span
@@ -1542,7 +1542,7 @@ function RebalanceSimulatorWidget({
         })}
       </div>
       <div className="flex items-center justify-between pt-2 border-t border-sky-100">
-        <span className="text-xs text-zinc-500">
+        <span className="text-xs text-slate-500">
           {totalWeight !== 100 ? '⚠️ สัดส่วนต้องรวมกันได้ 100%' : '✅ พร้อมส่งคำนวณ'}
         </span>
         <button
@@ -1672,7 +1672,7 @@ const markdownComponents: Components = {
     </h5>
   ),
   p: ({ children }) => (
-    <p className="mt-2.5 text-sm sm:text-[15px] leading-relaxed text-zinc-800 first:mt-0">
+    <p className="mt-2.5 text-sm sm:text-[15px] leading-relaxed text-slate-800 first:mt-0">
       {React.Children.map(children, renderWithEvidenceBadges)}
     </p>
   ),
@@ -1682,7 +1682,7 @@ const markdownComponents: Components = {
     </strong>
   ),
   em: ({ children }) => (
-    <em className="italic text-zinc-600">
+    <em className="italic text-slate-600">
       {children}
     </em>
   ),
@@ -1692,12 +1692,12 @@ const markdownComponents: Components = {
     </ul>
   ),
   ol: ({ children }) => (
-    <ol className="my-2.5 space-y-2 pl-4 list-decimal text-zinc-800 text-sm sm:text-[15px]">
+    <ol className="my-2.5 space-y-2 pl-4 list-decimal text-slate-800 text-sm sm:text-[15px]">
       {children}
     </ol>
   ),
   li: ({ children }) => (
-    <li className="ml-4 list-disc pl-1 text-sm sm:text-[15px] leading-relaxed text-zinc-800 marker:text-sky-400">
+    <li className="ml-4 list-disc pl-1 text-sm sm:text-[15px] leading-relaxed text-slate-800 marker:text-sky-400">
       {React.Children.map(children, renderWithEvidenceBadges)}
     </li>
   ),
@@ -1720,7 +1720,7 @@ const markdownComponents: Components = {
     )
   },
   blockquote: ({ children }) => (
-    <blockquote className="my-3 rounded-r-xl border-l-3 border-sky-400 bg-sky-50/40 py-2 pl-3.5 pr-2.5 text-sm italic leading-relaxed text-zinc-700">
+    <blockquote className="my-3 rounded-r-xl border-l-3 border-sky-400 bg-sky-50/40 py-2 pl-3.5 pr-2.5 text-sm italic leading-relaxed text-slate-700">
       {children}
     </blockquote>
   ),

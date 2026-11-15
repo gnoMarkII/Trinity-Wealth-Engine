@@ -83,21 +83,21 @@ export function ThaiMarketRadarCard({ className = '' }: Props) {
         <div>
           <div className="flex items-center gap-2">
             <span className="text-xl">🇹🇭</span>
-            <h2 className="text-base font-bold tracking-tight text-zinc-900">
+            <h2 className="text-base font-bold tracking-tight text-slate-900">
               Thailand Market Radar & Stance
             </h2>
-            <span className="rounded-full bg-emerald-100 px-2.5 py-0.5 font-mono text-[10px] font-bold text-emerald-800">
+            <span className="rounded-full bg-emerald-100 px-2.5 py-0.5 font-mono text-[11px] font-bold text-emerald-800">
               TERMINAL V2
             </span>
           </div>
-          <p className="mt-0.5 text-xs text-zinc-500">
+          <p className="mt-0.5 text-xs text-slate-500">
             SET & mai Market Microstructure, Foreign Investor Flow, Market Breadth & GTA Physical Gold
           </p>
         </div>
 
         <div className="flex items-center gap-2">
           {lastRefreshed && (
-            <span className="text-[11px] text-zinc-400">
+            <span className="text-[11px] text-slate-500">
               อัปเดตเมื่อ {lastRefreshed}
             </span>
           )}
@@ -117,17 +117,17 @@ export function ThaiMarketRadarCard({ className = '' }: Props) {
       <div className="rounded-xl border border-amber-200/80 bg-amber-50/70 p-3.5 text-xs">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div className="flex items-center gap-2">
-            <span className="rounded-md border border-amber-300 bg-amber-100 px-2 py-0.5 font-mono text-[10px] font-bold uppercase text-amber-900">
+            <span className="rounded-md border border-amber-300 bg-amber-100 px-2 py-0.5 font-mono text-[11px] font-bold uppercase text-amber-900">
               Thailand Macro Regime: UNKNOWN
             </span>
-            <span className="text-zinc-500 font-medium">Confidence: 0.0% (Fail-Closed Policy)</span>
+            <span className="text-slate-500 font-medium">Confidence: 0.0% (Fail-Closed Policy)</span>
           </div>
           <div className="flex items-center gap-1.5">
             <span className="text-[11px] font-medium text-amber-900">Data Gaps:</span>
-            <span className="rounded bg-amber-200/70 px-1.5 py-0.5 font-mono text-[10px] text-amber-950">
+            <span className="rounded bg-amber-200/70 px-1.5 py-0.5 font-mono text-[11px] text-amber-950">
               NESDC Real GDP YoY
             </span>
-            <span className="rounded bg-amber-200/70 px-1.5 py-0.5 font-mono text-[10px] text-amber-950">
+            <span className="rounded bg-amber-200/70 px-1.5 py-0.5 font-mono text-[11px] text-amber-950">
               MOC TPSO CPI YoY
             </span>
           </div>
@@ -148,32 +148,32 @@ export function ThaiMarketRadarCard({ className = '' }: Props) {
         {/* Panel 1: 4-Investor Flow */}
         <div className="rounded-xl border border-edge bg-white/80 p-4 shadow-sm">
           <div className="flex items-center justify-between">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-zinc-500">SET Flow (4 กลุ่ม)</span>
-            <span className="text-[10px] font-medium text-zinc-400">Settrade ({flow?.as_of || 'T-0'})</span>
+            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">SET Flow (4 กลุ่ม)</span>
+            <span className="text-[11px] font-medium text-slate-500">Settrade ({flow?.as_of || 'T-0'})</span>
           </div>
 
           <div className="mt-3">
-            <div className="text-[11px] text-zinc-500">Foreign Net Flow (ต่างชาติ)</div>
+            <div className="text-[11px] text-slate-500">Foreign Net Flow (ต่างชาติ)</div>
             <div className={`font-mono text-xl font-extrabold ${foreignNet !== null && foreignNet >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
               {formatThbMil(foreignNet)}
             </div>
           </div>
 
-          <div className="mt-3 space-y-1.5 border-t border-zinc-100 pt-2 text-[11px]">
+          <div className="mt-3 space-y-1.5 border-t border-slate-100 pt-2 text-[11px]">
             <div className="flex justify-between">
-              <span className="text-zinc-600">สถาบันในประเทศ:</span>
+              <span className="text-slate-600">สถาบันในประเทศ:</span>
               <span className={`font-mono font-semibold ${instNet !== null && instNet >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
                 {formatThbMil(instNet)}
               </span>
             </div>
             <div className="flex justify-between">
-              <span className="text-zinc-600">บัญชี บล. (Prop):</span>
+              <span className="text-slate-600">บัญชี บล. (Prop):</span>
               <span className={`font-mono font-semibold ${propNet !== null && propNet >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
                 {formatThbMil(propNet)}
               </span>
             </div>
             <div className="flex justify-between">
-              <span className="text-zinc-600">รายย่อย (Retail):</span>
+              <span className="text-slate-600">รายย่อย (Retail):</span>
               <span className={`font-mono font-semibold ${retailNet !== null && retailNet >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
                 {formatThbMil(retailNet)}
               </span>
@@ -184,20 +184,20 @@ export function ThaiMarketRadarCard({ className = '' }: Props) {
         {/* Panel 2: Market Breadth */}
         <div className="rounded-xl border border-edge bg-white/80 p-4 shadow-sm">
           <div className="flex items-center justify-between">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-zinc-500">Market Breadth</span>
-            <span className="text-[10px] font-medium text-zinc-400">Settrade ({breadth?.as_of || 'T-0'})</span>
+            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">Market Breadth</span>
+            <span className="text-[11px] font-medium text-slate-500">Settrade ({breadth?.as_of || 'T-0'})</span>
           </div>
 
           <div className="mt-3">
-            <div className="text-[11px] text-zinc-500">A/D Ratio (Advance / Decline)</div>
+            <div className="text-[11px] text-slate-500">A/D Ratio (Advance / Decline)</div>
             <div className="flex items-baseline gap-2">
-              <span className="font-mono text-xl font-extrabold text-zinc-900">{adRatio}x</span>
-              <span className={`rounded px-1.5 py-0.5 text-[10px] font-bold uppercase ${
+              <span className="font-mono text-xl font-extrabold text-slate-900">{adRatio}x</span>
+              <span className={`rounded px-1.5 py-0.5 text-[11px] font-bold uppercase ${
                 losers > 0 && gainers / losers >= 1.2
                   ? 'bg-emerald-100 text-emerald-800'
                   : losers > 0 && gainers / losers <= 0.8
                   ? 'bg-red-100 text-red-800'
-                  : 'bg-zinc-100 text-zinc-700'
+                  : 'bg-slate-100 text-slate-700'
               }`}>
                 {losers > 0 && gainers / losers >= 1.2 ? 'Bullish' : losers > 0 && gainers / losers <= 0.8 ? 'Bearish' : 'Neutral'}
               </span>
@@ -207,26 +207,26 @@ export function ThaiMarketRadarCard({ className = '' }: Props) {
           {/* Visual Distribution Bar */}
           {totalBreadth > 0 && (
             <div className="mt-3">
-              <div className="h-2 w-full overflow-hidden rounded-full bg-zinc-100 flex">
+              <div className="h-2 w-full overflow-hidden rounded-full bg-slate-100 flex">
                 <div style={{ width: `${(gainers / totalBreadth) * 100}%` }} className="bg-emerald-500" title={`บวก: ${gainers}`} />
-                <div style={{ width: `${(unchanged / totalBreadth) * 100}%` }} className="bg-zinc-300" title={`เสมอ: ${unchanged}`} />
+                <div style={{ width: `${(unchanged / totalBreadth) * 100}%` }} className="bg-slate-300" title={`เสมอ: ${unchanged}`} />
                 <div style={{ width: `${(losers / totalBreadth) * 100}%` }} className="bg-red-500" title={`ลบ: ${losers}`} />
               </div>
             </div>
           )}
 
-          <div className="mt-3 grid grid-cols-3 gap-1 border-t border-zinc-100 pt-2 text-center text-[11px]">
+          <div className="mt-3 grid grid-cols-3 gap-1 border-t border-slate-100 pt-2 text-center text-[11px]">
             <div>
               <div className="text-emerald-700 font-bold font-mono">{gainers}</div>
-              <div className="text-[10px] text-zinc-400">บวก</div>
+              <div className="text-[11px] text-slate-500">บวก</div>
             </div>
             <div>
-              <div className="text-zinc-600 font-bold font-mono">{unchanged}</div>
-              <div className="text-[10px] text-zinc-400">เสมอ</div>
+              <div className="text-slate-600 font-bold font-mono">{unchanged}</div>
+              <div className="text-[11px] text-slate-500">เสมอ</div>
             </div>
             <div>
               <div className="text-red-700 font-bold font-mono">{losers}</div>
-              <div className="text-[10px] text-zinc-400">ลบ</div>
+              <div className="text-[11px] text-slate-500">ลบ</div>
             </div>
           </div>
         </div>
@@ -234,19 +234,19 @@ export function ThaiMarketRadarCard({ className = '' }: Props) {
         {/* Panel 3: SET Valuation */}
         <div className="rounded-xl border border-edge bg-white/80 p-4 shadow-sm">
           <div className="flex items-center justify-between">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-zinc-500">SET Valuation</span>
-            <span className="text-[10px] font-medium text-zinc-400">Settrade ({valuation?.as_of || 'T-0'})</span>
+            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">SET Valuation</span>
+            <span className="text-[11px] font-medium text-slate-500">Settrade ({valuation?.as_of || 'T-0'})</span>
           </div>
 
           <div className="mt-3">
-            <div className="text-[11px] text-zinc-500">SET P/E Ratio</div>
+            <div className="text-[11px] text-slate-500">SET P/E Ratio</div>
             <div className="flex items-baseline gap-2">
-              <span className="font-mono text-xl font-extrabold text-zinc-900">
+              <span className="font-mono text-xl font-extrabold text-slate-900">
                 {valuation?.pe_ratio !== null && valuation?.pe_ratio !== undefined ? `${valuation.pe_ratio.toFixed(2)}x` : '—'}
               </span>
               {valuation?.pe_ratio && (
-                <span className={`rounded px-1.5 py-0.5 text-[10px] font-bold ${
-                  valuation.pe_ratio < 15 ? 'bg-emerald-100 text-emerald-800' : valuation.pe_ratio > 18 ? 'bg-amber-100 text-amber-800' : 'bg-zinc-100 text-zinc-700'
+                <span className={`rounded px-1.5 py-0.5 text-[11px] font-bold ${
+                  valuation.pe_ratio < 15 ? 'bg-emerald-100 text-emerald-800' : valuation.pe_ratio > 18 ? 'bg-amber-100 text-amber-800' : 'bg-slate-100 text-slate-700'
                 }`}>
                   {valuation.pe_ratio < 15 ? 'Undervalued' : valuation.pe_ratio > 18 ? 'Premium' : 'Fair'}
                 </span>
@@ -254,22 +254,22 @@ export function ThaiMarketRadarCard({ className = '' }: Props) {
             </div>
           </div>
 
-          <div className="mt-3 space-y-1.5 border-t border-zinc-100 pt-2 text-[11px]">
+          <div className="mt-3 space-y-1.5 border-t border-slate-100 pt-2 text-[11px]">
             <div className="flex justify-between">
-              <span className="text-zinc-600">P/BV Ratio:</span>
-              <span className="font-mono font-semibold text-zinc-900">
+              <span className="text-slate-600">P/BV Ratio:</span>
+              <span className="font-mono font-semibold text-slate-900">
                 {valuation?.pbv_ratio !== null && valuation?.pbv_ratio !== undefined ? `${valuation.pbv_ratio.toFixed(2)}x` : '—'}
               </span>
             </div>
             <div className="flex justify-between">
-              <span className="text-zinc-600">Dividend Yield:</span>
+              <span className="text-slate-600">Dividend Yield:</span>
               <span className="font-mono font-semibold text-emerald-700">
                 {valuation?.dividend_yield !== null && valuation?.dividend_yield !== undefined ? `${valuation.dividend_yield.toFixed(2)}%` : '—'}
               </span>
             </div>
             <div className="flex justify-between">
-              <span className="text-zinc-600">Turnover Ratio:</span>
-              <span className="font-mono font-semibold text-zinc-700">
+              <span className="text-slate-600">Turnover Ratio:</span>
+              <span className="font-mono font-semibold text-slate-700">
                 {valuation?.turnover_ratio !== null && valuation?.turnover_ratio !== undefined ? `${valuation.turnover_ratio.toFixed(2)}%` : '—'}
               </span>
             </div>
@@ -280,34 +280,34 @@ export function ThaiMarketRadarCard({ className = '' }: Props) {
         <div className="rounded-xl border border-edge bg-white/80 p-4 shadow-sm">
           <div className="flex items-center justify-between">
             <span className="text-[11px] font-bold uppercase tracking-wider text-amber-700">GTA Physical Gold</span>
-            <span className="text-[10px] font-medium text-zinc-400">
+            <span className="text-[11px] font-medium text-slate-500">
               {gold?.revision ? `รอบที่ ${gold.revision}` : 'GTA Thailand'}
             </span>
           </div>
 
           <div className="mt-3">
-            <div className="text-[11px] text-zinc-500">ทองคำแท่ง 96.5% (ขายออก)</div>
+            <div className="text-[11px] text-slate-500">ทองคำแท่ง 96.5% (ขายออก)</div>
             <div className="font-mono text-xl font-extrabold text-amber-700">
-              {formatThb(gold?.bar?.sell)} <span className="text-xs font-normal text-zinc-500">THB/บาท</span>
+              {formatThb(gold?.bar?.sell)} <span className="text-xs font-normal text-slate-500">THB/บาท</span>
             </div>
           </div>
 
-          <div className="mt-3 space-y-1.5 border-t border-zinc-100 pt-2 text-[11px]">
+          <div className="mt-3 space-y-1.5 border-t border-slate-100 pt-2 text-[11px]">
             <div className="flex justify-between">
-              <span className="text-zinc-600">ทองคำแท่ง (รับซื้อ):</span>
-              <span className="font-mono font-semibold text-zinc-900">
+              <span className="text-slate-600">ทองคำแท่ง (รับซื้อ):</span>
+              <span className="font-mono font-semibold text-slate-900">
                 {formatThb(gold?.bar?.buy)} THB
               </span>
             </div>
             <div className="flex justify-between">
-              <span className="text-zinc-600">ทองรูปพรรณ (ขายออก):</span>
-              <span className="font-mono font-semibold text-zinc-900">
+              <span className="text-slate-600">ทองรูปพรรณ (ขายออก):</span>
+              <span className="font-mono font-semibold text-slate-900">
                 {formatThb(gold?.ornament?.sell)} THB
               </span>
             </div>
             <div className="flex justify-between">
-              <span className="text-zinc-600">ประกาศเมื่อ:</span>
-              <span className="font-mono text-[10px] text-zinc-500">
+              <span className="text-slate-600">ประกาศเมื่อ:</span>
+              <span className="font-mono text-[11px] text-slate-500">
                 {gold?.announced_at || 'T-0'}
               </span>
             </div>

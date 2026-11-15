@@ -68,6 +68,22 @@ from api.db.repositories.outbox_repository import (
     mark_sent,
     mark_failed,
 )
+from api.db.repositories.roundtable_repository import (
+    create_roundtable_session,
+    get_roundtable_session,
+    list_roundtable_sessions,
+    list_roundtable_sessions_by_ticker,
+    update_roundtable_session_playbook,
+    update_roundtable_session_context,
+    update_roundtable_session_settlement,
+    get_next_roundtable_turn_seq,
+    append_roundtable_turn,
+    update_roundtable_turn_audio_key,
+    get_roundtable_turns,
+    list_roundtable_guru_profiles,
+    upsert_roundtable_guru_profiles,
+    reset_roundtable_guru_profiles,
+)
 
 __all__ = [
     "_SCHEMA",
@@ -121,4 +137,18 @@ __all__ = [
     "list_pending",
     "mark_sent",
     "mark_failed",
+    "create_roundtable_session",
+    "get_roundtable_session",
+    "list_roundtable_sessions",
+    "list_roundtable_sessions_by_ticker",
+    "update_roundtable_session_playbook",
+    "update_roundtable_session_context",
+    "update_roundtable_session_settlement",
+    "get_next_roundtable_turn_seq",
+    "append_roundtable_turn",
+    "update_roundtable_turn_audio_key",
+    "get_roundtable_turns",
+    "list_roundtable_guru_profiles",
+    "upsert_roundtable_guru_profiles",
+    "reset_roundtable_guru_profiles",
 ]

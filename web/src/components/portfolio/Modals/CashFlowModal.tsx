@@ -65,12 +65,12 @@ export default function CashFlowModal({ selectedPortfolioId, onClose, onSuccess 
       panelClassName="max-w-md rounded-2xl border border-sky-100 bg-white p-6 shadow-2xl"
     >
       <FormField label="ประเภทการทำรายการ">
-        <div className="flex rounded-xl bg-zinc-100 p-1 font-bold">
+        <div className="flex rounded-xl bg-slate-100 p-1 font-bold">
           <button
             type="button"
             onClick={() => setAction('deposit')}
             className={`flex-1 rounded-lg py-2 text-center transition-all ${
-              action === 'deposit' ? 'bg-emerald-600 text-white shadow-sm' : 'text-zinc-600 hover:text-zinc-900'
+              action === 'deposit' ? 'bg-emerald-600 text-white shadow-sm' : 'text-slate-600 hover:text-slate-900'
             }`}
           >
             ➕ ฝากเงินเข้าพอร์ต (Deposit)
@@ -79,7 +79,7 @@ export default function CashFlowModal({ selectedPortfolioId, onClose, onSuccess 
             type="button"
             onClick={() => setAction('withdraw')}
             className={`flex-1 rounded-lg py-2 text-center transition-all ${
-              action === 'withdraw' ? 'bg-rose-600 text-white shadow-sm' : 'text-zinc-600 hover:text-zinc-900'
+              action === 'withdraw' ? 'bg-rose-600 text-white shadow-sm' : 'text-slate-600 hover:text-slate-900'
             }`}
           >
             ➖ ถอนเงินออก (Withdraw)

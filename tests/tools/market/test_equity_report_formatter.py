@@ -191,3 +191,35 @@ def test_earnings_momentum_section_renders_values():
     assert "4.2" in report
     assert "92.0" in report
     assert "ไม่รวมใน Composite Score" in report
+
+
+def test_valuation_triangulation_renders_consensus_mean_and_exit_multiple():
+    from schemas.micro_quant_schemas import ReverseDCFResult, ValuationSanityAudit
+
+    output = _make_output()
+    output.quant_signals.raw_analysis_price = 62.50
+    output.quant_signals.data_quality_flags = ["tax_policy:normalized_statutory"]
+    output.quant_signals.reverse_dcf_result = ReverseDCFResult(
+        status="available",
+        is_eligible=True,
+        valuation_verdict="overvalued",
+        intrinsic_value_today=12.0,
+        target_price_12m=13.23,
+        upside_12m_pct=-78.8,
+        target_price_exit_multiple_12m=64.50,
+        exit_multiple_used=25.0,
+        implied_exit_ebitda_multiple=4.2,
+        consensus_target_price=90.65,
+        consensus_target_low=25.0,
+        consensus_target_high=160.0,
+        analyst_count=39,
+        valuation_sanity_audit=ValuationSanityAudit(
+            sanity_warnings=["Depressed terminal exit multiple"],
+        ),
+    )
+    report = format_equity_analysis_report(output)
+    assert "Consensus Target Mean:** **$90.65** (Upside: +45.0%) | Range: $25.00 - $160.00 | 39 analysts" in report
+    assert "Exit-Multiple Target Price (12M, EV/EBITDA 25.0x):** **$64.50** (Upside: +3.2%)" in report
+    assert "Implied Exit EV/EBITDA (Gordon TV):** 4.2x" in report
+    assert "Valuation Sanity Notes:** Depressed terminal exit multiple" in report
+    assert "tax_policy:normalized_statutory" in report

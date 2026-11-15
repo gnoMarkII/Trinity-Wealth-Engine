@@ -20,7 +20,7 @@ class ResumeState(TypedDict):
 
 
 def test_resolve_stream_input_with_resume_value():
-    """When resume_value is provided, it must wrap it in Command(resume=resume_value)."""
+    """When resume_value is provided (mid-graph HITL), it must wrap it in Command(resume=resume_value)."""
     resume_val = {"approved": True}
     resolved = _resolve_stream_input(
         graph=None,
@@ -30,6 +30,18 @@ def test_resolve_stream_input_with_resume_value():
     )
     assert isinstance(resolved, Command)
     assert resolved.resume == resume_val
+
+
+def test_resolve_stream_input_with_pre_run_approved_returns_fresh_inputs():
+    """When resume_value carries pre_run_approved=True, the graph has not started yet and must receive fresh_inputs."""
+    fresh = {"instruction": "วิเคราะห์หุ้น INTC แบบละเอียด"}
+    resolved = _resolve_stream_input(
+        graph=None,
+        config={},
+        fresh_inputs=fresh,
+        resume_value={"pre_run_approved": True, "action": "approve"},
+    )
+    assert resolved == fresh
 
 
 def test_resolve_stream_input_fresh_when_no_checkpoint(tmp_path):

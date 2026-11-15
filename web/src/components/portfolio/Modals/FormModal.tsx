@@ -1,4 +1,5 @@
 import React, { type ReactNode, type InputHTMLAttributes, type SelectHTMLAttributes, type TextareaHTMLAttributes } from 'react'
+import { AlertTriangleIcon, CloseIcon } from '../../ui/AppIcons'
 import Modal from '../../ui/Modal'
 
 export interface FormModalProps {
@@ -43,18 +44,18 @@ export default function FormModal({
       zIndexClassName={zIndexClassName}
       panelClassName={panelClassName}
     >
-      <div className="flex items-center justify-between border-b border-zinc-100 pb-3">
-        <h3 id={titleId} className="flex items-center gap-2 text-base font-bold text-zinc-900">
+      <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+        <h3 id={titleId} className="flex items-center gap-2 text-base font-bold text-slate-900">
           {icon && <span className="flex items-center justify-center flex-shrink-0 text-flow-blue">{icon}</span>}
           <span>{title}</span>
         </h3>
         <button
           type="button"
           onClick={onClose}
-          className="rounded-lg p-1 text-zinc-400 hover:bg-zinc-100 hover:text-zinc-600 transition-colors"
+          className="rounded-lg p-2 sm:p-1.5 text-slate-500 hover:bg-slate-100 hover:text-slate-600 transition-colors"
           aria-label="Close"
         >
-          ✕
+          <CloseIcon className="h-4 w-4" />
         </button>
       </div>
 
@@ -62,7 +63,7 @@ export default function FormModal({
         {error && (
           <div className="flex flex-col gap-2 rounded-xl border border-rose-200 bg-rose-50 p-3 font-semibold text-rose-800">
             <div className="flex items-start gap-2">
-              <span className="flex-shrink-0 mt-0.5">⚠️</span>
+              <AlertTriangleIcon className="h-4 w-4 shrink-0 text-rose-600 mt-0.5" />
               <div className="flex-1">{error}</div>
             </div>
           </div>
@@ -72,11 +73,11 @@ export default function FormModal({
           {children}
         </div>
 
-        <div className="flex justify-end gap-2 border-t border-zinc-100 pt-4">
+        <div className="flex justify-end gap-2 border-t border-slate-100 pt-4">
           <button
             type="button"
             onClick={onClose}
-            className="rounded-xl border border-zinc-300 bg-white px-4 py-2 font-semibold text-zinc-700 hover:bg-zinc-50 transition-colors"
+            className="rounded-xl border border-slate-300 bg-white px-4 py-2 font-semibold text-slate-700 hover:bg-slate-50 transition-colors"
           >
             {cancelText}
           </button>
@@ -105,12 +106,12 @@ export interface FormFieldProps {
 export function FormField({ label, hint, required, className = '', children }: FormFieldProps) {
   return (
     <div className={className}>
-      <label className="block font-bold text-zinc-700 mb-1">
+      <label className="block font-bold text-slate-700 mb-1">
         {label}
         {required && <span className="ml-1 text-rose-500">*</span>}
       </label>
       {children}
-      {hint && <div className="mt-1 text-[11px] text-zinc-400">{hint}</div>}
+      {hint && <div className="mt-1 text-[11px] text-slate-500">{hint}</div>}
     </div>
   )
 }
@@ -119,7 +120,7 @@ export function FormField({ label, hint, required, className = '', children }: F
 export function FormInput({ className = '', ...props }: InputHTMLAttributes<HTMLInputElement>) {
   return (
     <input
-      className={`w-full rounded-xl border border-zinc-300 px-3 py-2 text-zinc-900 disabled:bg-zinc-100 disabled:text-zinc-500 focus:border-flow-blue focus:outline-none transition-colors ${className}`}
+      className={`w-full rounded-xl border border-slate-300 px-3 py-2 text-slate-900 disabled:bg-slate-100 disabled:text-slate-500 focus:border-flow-blue focus:outline-none transition-colors ${className}`}
       {...props}
     />
   )
@@ -129,7 +130,7 @@ export function FormInput({ className = '', ...props }: InputHTMLAttributes<HTML
 export function FormSelect({ className = '', ...props }: SelectHTMLAttributes<HTMLSelectElement>) {
   return (
     <select
-      className={`w-full rounded-xl border border-zinc-300 bg-white px-3 py-2 font-medium text-zinc-800 disabled:bg-zinc-100 disabled:text-zinc-500 focus:border-flow-blue focus:outline-none transition-colors ${className}`}
+      className={`w-full rounded-xl border border-slate-300 bg-white px-3 py-2 font-medium text-slate-800 disabled:bg-slate-100 disabled:text-slate-500 focus:border-flow-blue focus:outline-none transition-colors ${className}`}
       {...props}
     />
   )
@@ -139,7 +140,7 @@ export function FormSelect({ className = '', ...props }: SelectHTMLAttributes<HT
 export function FormTextarea({ className = '', ...props }: TextareaHTMLAttributes<HTMLTextAreaElement>) {
   return (
     <textarea
-      className={`w-full rounded-xl border border-zinc-300 px-3 py-2 text-zinc-800 disabled:bg-zinc-100 disabled:text-zinc-500 focus:border-flow-blue focus:outline-none transition-colors ${className}`}
+      className={`w-full rounded-xl border border-slate-300 px-3 py-2 text-slate-800 disabled:bg-slate-100 disabled:text-slate-500 focus:border-flow-blue focus:outline-none transition-colors ${className}`}
       {...props}
     />
   )

@@ -317,7 +317,7 @@ def test_ownership_uses_derive_canonical_transactions_for_sec_snapshot(monkeypat
     )
 
     class _FakeTerminal:
-        def get_insider_trades(self, ticker, limit=30):
+        def get_sec_insider_trades(self, ticker, limit=30):
             return fake_snap
 
     monkeypatch.setattr(
